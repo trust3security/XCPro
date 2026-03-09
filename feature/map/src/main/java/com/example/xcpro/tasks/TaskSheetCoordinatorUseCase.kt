@@ -1,17 +1,28 @@
 package com.example.xcpro.tasks
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.aat.models.AATFinishPointType
+import com.example.xcpro.tasks.aat.models.AATStartPointType
+import com.example.xcpro.tasks.aat.models.AATTurnPointType
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.WaypointRole
+import com.example.xcpro.tasks.racing.models.RacingFinishPointType
+import com.example.xcpro.tasks.racing.models.RacingStartPointType
+import com.example.xcpro.tasks.racing.models.RacingTurnPointType
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
+import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import java.time.Duration
 import javax.inject.Inject
 
 data class TaskCoordinatorSnapshot(
     val task: Task,
     val taskType: TaskType,
-    val activeLeg: Int
+    val activeLeg: Int,
+    val racingValidationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT
 )
 
 class TaskSheetCoordinatorUseCase @Inject constructor(
@@ -20,7 +31,8 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
     fun snapshot(): TaskCoordinatorSnapshot = TaskCoordinatorSnapshot(
         task = taskManager.currentTask,
         taskType = taskManager.taskType,
-        activeLeg = taskManager.currentLeg
+        activeLeg = taskManager.currentLeg,
+        racingValidationProfile = taskManager.getRacingValidationProfile()
     )
 
     fun setProximityHandler(handler: (Boolean, Boolean) -> Unit) {
@@ -103,9 +115,9 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
 
     fun updateWaypointPointType(
         index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
+        startType: RacingStartPointType?,
+        finishType: RacingFinishPointType?,
+        turnType: RacingTurnPointType?,
         gateWidthMeters: Double?,
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
@@ -125,9 +137,9 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
 
     fun updateAATWaypointPointTypeMeters(
         index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
+        startType: AATStartPointType?,
+        finishType: AATFinishPointType?,
+        turnType: AATTurnPointType?,
         gateWidthMeters: Double?,
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
@@ -151,6 +163,18 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
 
     fun updateAATArea(index: Int, radiusMeters: Double) {
         taskManager.updateAATArea(index, radiusMeters)
+    }
+
+    internal fun updateRacingStartRules(command: UpdateRacingStartRulesCommand) {
+        taskManager.updateRacingStartRules(command)
+    }
+
+    internal fun updateRacingFinishRules(command: UpdateRacingFinishRulesCommand) {
+        taskManager.updateRacingFinishRules(command)
+    }
+
+    internal fun updateRacingValidationRules(command: UpdateRacingValidationRulesCommand) {
+        taskManager.updateRacingValidationRules(command)
     }
 
     fun updateAATParameters(minimumTime: Duration, maximumTime: Duration) {

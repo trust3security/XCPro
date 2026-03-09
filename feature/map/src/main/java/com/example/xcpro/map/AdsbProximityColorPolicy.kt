@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import android.graphics.Color
-import com.example.xcpro.adsb.AdsbProximityTier
+
 import org.maplibre.android.style.expressions.Expression
 
 internal object AdsbProximityColorPolicy {

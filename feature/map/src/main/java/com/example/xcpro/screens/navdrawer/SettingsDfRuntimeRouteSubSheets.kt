@@ -15,7 +15,7 @@ import com.example.xcpro.screens.navdrawer.LevoVarioSettingsScreen
 import com.example.xcpro.screens.navdrawer.PolarSettingsScreen
 import com.example.xcpro.screens.navdrawer.UnitsSettingsScreen
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
-import com.example.xcpro.screens.replay.IgcReplayScreen
+import com.example.xcpro.screens.replay.IgcFilesScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -207,25 +207,6 @@ internal fun ForecastSettingsSubSheet(
 }
 
 @Composable
-internal fun AdsbSettingsSubSheet(
-    navController: NavHostController,
-    drawerState: DrawerState,
-    onDismiss: () -> Unit,
-    onNavigateToDrawer: () -> Unit,
-    onNavigateToMap: () -> Unit
-) {
-    SettingsRouteSubSheetContainer(onDismiss = onDismiss) {
-        AdsbSettingsScreen(
-            navController = navController,
-            drawerState = drawerState,
-            onNavigateUp = onDismiss,
-            onSecondaryNavigate = onNavigateToDrawer,
-            onNavigateToMap = onNavigateToMap
-        )
-    }
-}
-
-@Composable
 internal fun NavboxesSettingsSubSheet(
     navController: NavHostController,
     drawerState: DrawerState,
@@ -246,12 +227,12 @@ internal fun NavboxesSettingsSubSheet(
 }
 
 @Composable
-internal fun IgcReplaySettingsSubSheet(
+internal fun IgcFilesSettingsSubSheet(
     navController: NavHostController,
     onDismiss: () -> Unit
 ) {
     SettingsRouteSubSheetContainer(onDismiss = onDismiss) {
-        IgcReplayScreen(
+        IgcFilesScreen(
             navController = navController,
             onNavigateBack = onDismiss
         )

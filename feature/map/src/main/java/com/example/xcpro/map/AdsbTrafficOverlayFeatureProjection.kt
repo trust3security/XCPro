@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
+
 import com.example.xcpro.common.units.UnitsPreferences
 import org.maplibre.geojson.Feature
 

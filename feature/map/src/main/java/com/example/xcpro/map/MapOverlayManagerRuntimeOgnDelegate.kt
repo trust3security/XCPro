@@ -4,14 +4,7 @@ import android.util.Log
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.ogn.OgnDisplayUpdateMode
-import com.example.xcpro.ogn.OgnGliderTrailSegment
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.clampOgnIconSizePx
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
@@ -395,43 +388,7 @@ internal class MapOverlayManagerRuntimeOgnDelegate(
         ognTrailRenderState.pendingJob = null
     }
 
-    private fun gliderTrailSegmentIdentitySignature(segments: List<OgnGliderTrailSegment>): Int {
-        var hash = 1
-        for (segment in segments) {
-            hash = 31 * hash + segment.id.hashCode()
-        }
-        return hash
-    }
-
-    private fun sameGliderTrailSegmentsByIdentity(
-        previous: List<OgnGliderTrailSegment>,
-        current: List<OgnGliderTrailSegment>
-    ): Boolean {
-        if (previous === current) return true
-        if (previous.size != current.size) return false
-        for (index in previous.indices) {
-            if (previous[index].id != current[index].id) {
-                return false
-            }
-        }
-        return true
-    }
-
-    private data class OgnRenderThrottleState(
-        var lastRenderMonoMs: Long = 0L,
-        var pendingJob: Job? = null
-    )
-
     private companion object {
         private const val TAG = "MapOverlayManager"
     }
 }
-
-internal data class OgnOverlayStatusSnapshot(
-    val displayUpdateMode: OgnDisplayUpdateMode,
-    val targetsCount: Int,
-    val thermalHotspotsCount: Int,
-    val gliderTrailSegmentsCount: Int,
-    val targetEnabled: Boolean,
-    val targetResolved: Boolean
-)

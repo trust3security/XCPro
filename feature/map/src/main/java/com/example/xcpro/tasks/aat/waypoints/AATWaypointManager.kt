@@ -3,6 +3,7 @@ package com.example.xcpro.tasks.aat.waypoints
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
+import com.example.xcpro.tasks.core.Task
 import java.time.Duration
 
 /**
@@ -16,6 +17,10 @@ class AATWaypointManager {
 
     fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.core.TaskWaypoint>): SimpleAATTask {
         return AATWaypointInitializationSupport.initializeFromGenericWaypoints(genericWaypoints)
+    }
+
+    fun initializeFromCoreTask(task: Task): SimpleAATTask {
+        return AATWaypointInitializationSupport.initializeFromCoreTask(task)
     }
 
     fun addWaypoint(currentTask: SimpleAATTask, searchWaypoint: SearchWaypoint): SimpleAATTask {

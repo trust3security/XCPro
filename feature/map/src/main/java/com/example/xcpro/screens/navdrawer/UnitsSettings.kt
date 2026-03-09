@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -33,6 +34,8 @@ import com.example.xcpro.common.units.SpeedUnit
 import com.example.xcpro.common.units.TemperatureUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedUnit
+import com.example.xcpro.profiles.ProfileIdResolver
+import com.example.xcpro.profiles.ProfileViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +47,13 @@ fun UnitsSettingsScreen(
     onSecondaryNavigate: (() -> Unit)? = null,
     onNavigateToMap: (() -> Unit)? = null
 ) {
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val viewModel: UnitsSettingsViewModel = hiltViewModel()
+    val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+    val profileId = ProfileIdResolver.canonicalOrDefault(profileUiState.activeProfile?.id)
+    LaunchedEffect(profileId) {
+        viewModel.setProfileId(profileId)
+    }
     val units by viewModel.units.collectAsStateWithLifecycle(initialValue = UnitsPreferences())
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()

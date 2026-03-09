@@ -1,8 +1,9 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbProximityTier
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.map.AdsbProximityTier
+import com.example.xcpro.map.AdsbProximityReason
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.common.units.UnitsPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -288,10 +289,10 @@ class AdsbGeoJsonMapperTest {
             else -> AdsbProximityTier.AMBER
         }
         val reason = when {
-            !usesOwnshipReference -> com.example.xcpro.adsb.AdsbProximityReason.NO_OWNSHIP_REFERENCE
-            isEmergencyCollisionRisk -> com.example.xcpro.adsb.AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED
-            isCirclingEmergencyRedRule -> com.example.xcpro.adsb.AdsbProximityReason.CIRCLING_RULE_APPLIED
-            else -> com.example.xcpro.adsb.AdsbProximityReason.APPROACH_CLOSING
+            !usesOwnshipReference -> AdsbProximityReason.NO_OWNSHIP_REFERENCE
+            isEmergencyCollisionRisk -> AdsbProximityReason.GEOMETRY_EMERGENCY_APPLIED
+            isCirclingEmergencyRedRule -> AdsbProximityReason.CIRCLING_RULE_APPLIED
+            else -> AdsbProximityReason.APPROACH_CLOSING
         }
         return AdsbTrafficUiModel(
             id = id,

@@ -148,6 +148,17 @@ test-safe.bat testDebugUnitTest --tests "com.example.xcpro.sensors.domain.Calcul
 `-Pxcpro.test.maxParallelForks=2` unless overridden by
 `XC_TEST_PARALLEL_FORKS`.
 
+For Windows KSP/generated-state corruption recovery, use `repair-build.bat`
+before falling back to broad `clean` runs:
+```bat
+repair-build.bat
+repair-build.bat feature:map test
+repair-build.bat all assemble
+```
+`repair-build.bat` stops repo-local Gradle daemons, removes module-local
+`build/kspCaches` plus generated KSP output, clears wrapper `.lck` files, and
+re-runs a narrow Gradle task.
+
 Unit-test hang protection policy:
 - Default per-test timeout is `60s` (override via `-Pxcpro.test.timeout.seconds=<10..120>`).
 - Known flaky Robolectric retries are CI-only (`CI=true`) with `maxRetries=1`,

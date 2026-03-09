@@ -41,11 +41,23 @@ fun ProfileSettingsScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
+    var pendingMutation by remember { mutableStateOf<PendingProfileMutation?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.importResult) {
         val result = uiState.importResult ?: return@LaunchedEffect
         exportMessage = formatProfileImportFeedback(result)
         viewModel.clearImportResult()
+    }
+    LaunchedEffect(uiState.error) {
+        val message = uiState.error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+        viewModel.clearError()
+    }
+    LaunchedEffect(exportMessage) {
+        val message = exportMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+        exportMessage = null
     }
     
     if (profile == null) {
@@ -59,8 +71,23 @@ fun ProfileSettingsScreen(
     LaunchedEffect(profile) {
         editedProfile = profile
     }
+    LaunchedEffect(uiState.isLoading, uiState.error, uiState.profiles, pendingMutation) {
+        val resolution = resolvePendingProfileMutation(
+            pendingMutation = pendingMutation,
+            isLoading = uiState.isLoading,
+            hasError = uiState.error != null,
+            profileExists = uiState.profiles.any { it.id == profileId }
+        )
+        if (resolution.pendingMutation != pendingMutation) {
+            pendingMutation = resolution.pendingMutation
+        }
+        if (resolution.shouldPopBackStack) {
+            navController.popBackStack()
+        }
+    }
     
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Profile Settings") },
@@ -72,9 +99,10 @@ fun ProfileSettingsScreen(
                 actions = {
                     TextButton(
                         onClick = {
+                            pendingMutation = PendingProfileMutation(PendingProfileMutationType.SAVE)
                             viewModel.updateProfile(editedProfile)
-                            navController.popBackStack()
-                        }
+                        },
+                        enabled = !uiState.isLoading
                     ) {
                         Text("Save")
                     }
@@ -105,12 +133,12 @@ fun ProfileSettingsScreen(
             
             item {
                 ProfileActionButtons(
-                    profile = profile,
                     onExport = { showExportDialog = true },
                     onImport = { showImportDialog = true },
+                    isLoading = uiState.isLoading,
                     onDelete = {
+                        pendingMutation = PendingProfileMutation(PendingProfileMutationType.DELETE)
                         viewModel.deleteProfile(profile.id)
-                        navController.popBackStack()
                     }
                 )
             }
@@ -121,6 +149,9 @@ fun ProfileSettingsScreen(
         ProfileExportDialog(
             profile = profile,
             onDismiss = { showExportDialog = false },
+            onRequestExportJson = {
+                viewModel.exportBundle(profileIds = setOf(profile.id))
+            },
             onExport = { message ->
                 exportMessage = message
                 showExportDialog = false
@@ -131,9 +162,9 @@ fun ProfileSettingsScreen(
     if (showImportDialog) {
         ProfileImportDialog(
             onDismiss = { showImportDialog = false },
-            onImport = { importedProfiles, keepCurrentActive ->
-                viewModel.importProfiles(
-                    profiles = importedProfiles,
+            onImportJson = { json, keepCurrentActive ->
+                viewModel.importBundle(
+                    json = json,
                     keepCurrentActive = keepCurrentActive
                 )
                 showImportDialog = false
@@ -143,13 +174,6 @@ fun ProfileSettingsScreen(
                 showImportDialog = false
             }
         )
-    }
-    
-    exportMessage?.let { message ->
-        LaunchedEffect(message) {
-            // Show snackbar or similar feedback
-            exportMessage = null
-        }
     }
 }
 
@@ -432,64 +456,6 @@ fun ProfilePreferencesSettings(
                         )
                     }
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun ProfileActionButtons(
-    profile: UserProfile,
-    onExport: () -> Unit,
-    onImport: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Actions",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onExport,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.FileUpload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Export")
-                }
-                
-                OutlinedButton(
-                    onClick = onImport,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.FileDownload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Import")
-                }
-            }
-            
-            Button(
-                onClick = onDelete,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Profile")
             }
         }
     }

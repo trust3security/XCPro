@@ -2,13 +2,21 @@ package com.example.xcpro.tasks
 
 import androidx.lifecycle.ViewModel
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.aat.models.AATFinishPointType
+import com.example.xcpro.tasks.aat.models.AATStartPointType
+import com.example.xcpro.tasks.aat.models.AATTurnPointType
 import com.example.xcpro.tasks.core.PersistedOzParams
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
+import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
+import com.example.xcpro.tasks.racing.models.RacingTurnPointType
+import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Duration
 import javax.inject.Inject
@@ -186,9 +194,9 @@ class TaskSheetViewModel @Inject constructor(
 
     fun onUpdateWaypointPointType(
         index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
+        startType: RacingStartPointType?,
+        finishType: RacingFinishPointType?,
+        turnType: RacingTurnPointType?,
         gateWidthMeters: Double?,
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
@@ -212,9 +220,9 @@ class TaskSheetViewModel @Inject constructor(
 
     fun onUpdateAATWaypointPointTypeMeters(
         index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
+        startType: AATStartPointType?,
+        finishType: AATFinishPointType?,
+        turnType: AATTurnPointType?,
         gateWidthMeters: Double?,
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
@@ -232,13 +240,11 @@ class TaskSheetViewModel @Inject constructor(
         )
     }
 
-    fun onSetTaskType(taskType: TaskType) = mutate {
-        taskCoordinator.setTaskType(taskType)
-    }
-
-    fun onClearTask() = mutate {
-        taskCoordinator.clearTask()
-    }
+    fun onSetTaskType(taskType: TaskType) = mutate { taskCoordinator.setTaskType(taskType) }
+    internal fun onUpdateRacingStartRules(command: UpdateRacingStartRulesCommand) = mutate { taskCoordinator.updateRacingStartRules(command) }
+    internal fun onUpdateRacingFinishRules(command: UpdateRacingFinishRulesCommand) = mutate { taskCoordinator.updateRacingFinishRules(command) }
+    internal fun onUpdateRacingValidationRules(command: UpdateRacingValidationRulesCommand) = mutate { taskCoordinator.updateRacingValidationRules(command) }
+    fun onClearTask() = mutate { taskCoordinator.clearTask() }
 
     private fun mutate(block: () -> Unit) {
         block()
@@ -338,7 +344,8 @@ class TaskSheetViewModel @Inject constructor(
         useCase.updateFrom(
             task = snapshot.task,
             taskType = snapshot.taskType,
-            activeIndex = snapshot.activeLeg
+            activeIndex = snapshot.activeLeg,
+            racingValidationProfile = snapshot.racingValidationProfile
         )
     }
 }

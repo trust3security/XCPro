@@ -13,6 +13,7 @@ import com.example.ui1.screens.SettingsScreen
 import com.example.ui1.screens.closeGeneralToDrawer
 import com.example.ui1.screens.closeGeneralToMap
 import com.example.xcpro.navigation.SettingsRoutes
+import com.example.xcpro.navigation.TrafficSettingsRoutes
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,12 +34,12 @@ class GeneralSettingsScreenPolicyTest {
 
     @Test
     fun hotspotsRouteConstant_matchesContract() {
-        assertEquals("hotspots_settings", SettingsRoutes.HOTSPOTS_SETTINGS)
+        assertEquals("hotspots_settings", TrafficSettingsRoutes.HOTSPOTS_SETTINGS)
     }
 
     @Test
     fun adsbRouteConstant_matchesContract() {
-        assertEquals("adsb_settings", SettingsRoutes.ADSB_SETTINGS)
+        assertEquals("adsb_settings", TrafficSettingsRoutes.ADSB_SETTINGS)
     }
 
     @Test

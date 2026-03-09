@@ -1,12 +1,11 @@
 package com.example.xcpro.tasks.racing.navigation
 
+import com.example.xcpro.tasks.core.RacingStartCustomParams
+import com.example.xcpro.tasks.core.RacingFinishCustomParams
 import com.example.xcpro.tasks.racing.SimpleRacingTask
-import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossing
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlanner
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEpsilonPolicy
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryTransition
-import com.example.xcpro.tasks.racing.models.RacingFinishPointType
-import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
@@ -14,27 +13,35 @@ import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 internal class RacingNavigationEngine(
     private val zoneDetector: RacingZoneDetector = RacingZoneDetector(),
     private val crossingPlanner: RacingBoundaryCrossingPlanner = RacingBoundaryCrossingPlanner(),
-    private val epsilonPolicy: RacingBoundaryEpsilonPolicy = RacingBoundaryEpsilonPolicy()
+    private val epsilonPolicy: RacingBoundaryEpsilonPolicy = RacingBoundaryEpsilonPolicy(),
+    private val startEvaluator: RacingStartEvaluator = RacingStartEvaluator()
 ) {
 
     fun step(
-        task: SimpleRacingTask,
+        taskWaypoints: List<RacingWaypoint>,
         previousState: RacingNavigationState,
-        fix: RacingNavigationFix
+        fix: RacingNavigationFix,
+        startRules: RacingStartCustomParams = RacingStartCustomParams(),
+        finishRules: RacingFinishCustomParams = RacingFinishCustomParams()
     ): RacingNavigationDecision {
-        val signature = buildTaskSignature(task)
-        val state = normalizeNavigationState(previousState, task, signature)
+        val signature = buildTaskSignature(taskWaypoints)
+        val state = normalizeNavigationState(previousState, taskWaypoints, signature)
 
-        if (state.status == RacingNavigationStatus.FINISHED ||
-            state.status == RacingNavigationStatus.INVALIDATED
-        ) {
+        if (state.status == RacingNavigationStatus.INVALIDATED) {
             return RacingNavigationDecision(
                 state = state.copy(lastFix = fix),
                 event = null
             )
         }
+        if (state.status == RacingNavigationStatus.FINISHED) {
+            val postFinishState = evaluatePostFinishState(state, fix, finishRules)
+            return RacingNavigationDecision(
+                state = postFinishState.copy(lastFix = fix),
+                event = null
+            )
+        }
 
-        if (task.waypoints.isEmpty()) {
+        if (taskWaypoints.isEmpty()) {
             return RacingNavigationDecision(
                 state = state.copy(lastFix = fix, taskSignature = signature, currentLegIndex = 0),
                 event = null
@@ -42,10 +49,10 @@ internal class RacingNavigationEngine(
         }
 
         val lastFix = state.lastFix
-        val activeIndex = state.currentLegIndex.coerceIn(0, task.waypoints.lastIndex)
-        val activeWaypoint = task.waypoints[activeIndex]
-        val previousWaypoint = task.waypoints.getOrNull(activeIndex - 1)
-        val nextWaypoint = task.waypoints.getOrNull(activeIndex + 1)
+        val activeIndex = state.currentLegIndex.coerceIn(0, taskWaypoints.lastIndex)
+        val activeWaypoint = taskWaypoints[activeIndex]
+        val previousWaypoint = taskWaypoints.getOrNull(activeIndex - 1)
+        val nextWaypoint = taskWaypoints.getOrNull(activeIndex + 1)
 
         val status = if (state.status == RacingNavigationStatus.STARTED) {
             RacingNavigationStatus.IN_PROGRESS
@@ -72,7 +79,6 @@ internal class RacingNavigationEngine(
 
         val currentNavPoint = NavPoint(fix.lat, fix.lon)
         val previousNavPoint = lastFix?.let { NavPoint(it.lat, it.lon) }
-        val previousFixTimestampMillis = lastFix?.timestampMillis
 
         val insideNow = isInside(activeWaypoint, currentNavPoint, previousWaypoint, nextWaypoint)
         val insidePrevious = previousNavPoint?.let {
@@ -80,29 +86,32 @@ internal class RacingNavigationEngine(
         } ?: false
 
         val decision = when (status) {
-            RacingNavigationStatus.PENDING_START -> handleStartTransition(
-                task = task,
+            RacingNavigationStatus.PENDING_START -> evaluateStartTransition(
+                taskWaypoints = taskWaypoints,
                 state = state.copy(status = status),
                 fix = fix,
                 previousFix = lastFix,
                 previousNavPoint = previousNavPoint,
-                previousFixTimestampMillis = previousFixTimestampMillis,
                 activeWaypoint = activeWaypoint,
                 nextWaypoint = nextWaypoint,
                 insidePrevious = insidePrevious,
-                insideNow = insideNow
+                insideNow = insideNow,
+                startRules = startRules,
+                zoneDetector = zoneDetector,
+                crossingPlanner = crossingPlanner,
+                startEvaluator = startEvaluator
             )
             RacingNavigationStatus.IN_PROGRESS -> handleProgressTransition(
-                task = task,
+                taskWaypoints = taskWaypoints,
                 state = state.copy(status = status),
                 fix = fix,
                 previousFix = lastFix,
-                previousNavPoint = previousNavPoint,
                 activeWaypoint = activeWaypoint,
                 previousWaypoint = previousWaypoint,
                 nextWaypoint = nextWaypoint,
                 insidePrevious = insidePrevious,
-                insideNow = insideNow
+                insideNow = insideNow,
+                finishRules = finishRules
             )
             RacingNavigationStatus.STARTED -> RacingNavigationDecision(state = state, event = null)
             RacingNavigationStatus.FINISHED,
@@ -113,98 +122,26 @@ internal class RacingNavigationEngine(
         return RacingNavigationDecision(state = updatedState, event = decision.event)
     }
 
-    private fun handleStartTransition(
+    fun step(
         task: SimpleRacingTask,
-        state: RacingNavigationState,
+        previousState: RacingNavigationState,
         fix: RacingNavigationFix,
-        previousFix: RacingNavigationFix?,
-        previousNavPoint: NavPoint?,
-        previousFixTimestampMillis: Long?,
-        activeWaypoint: RacingWaypoint,
-        nextWaypoint: RacingWaypoint?,
-        insidePrevious: Boolean,
-        insideNow: Boolean
-    ): RacingNavigationDecision {
-        if (activeWaypoint.role != RacingWaypointRole.START) {
-            return RacingNavigationDecision(state = state, event = null)
-        }
-
-        val currentNavPoint = NavPoint(fix.lat, fix.lon)
-        val lineTransitionAllowed = previousNavPoint?.let { navPoint ->
-            zoneDetector.isLineTransitionAllowed(navPoint, currentNavPoint, activeWaypoint)
-        } ?: false
-
-        var crossing: RacingBoundaryCrossing? = null
-            val startTriggered = when (activeWaypoint.startPointType) {
-                RacingStartPointType.START_LINE -> {
-                    crossing = detectStartLineCrossing(
-                        crossingPlanner = crossingPlanner,
-                        waypoint = activeWaypoint,
-                        nextWaypoint = nextWaypoint,
-                        previousFix = previousFix,
-                        currentFix = fix
-                    )
-                    crossing != null || (lineTransitionAllowed && insidePrevious && !insideNow)
-                }
-                RacingStartPointType.START_CYLINDER -> {
-                    crossing = detectCylinderCrossing(
-                        crossingPlanner = crossingPlanner,
-                        waypoint = activeWaypoint,
-                        previousFix = previousFix,
-                        currentFix = fix,
-                    transition = RacingBoundaryTransition.EXIT
-                )
-                crossing != null || (insidePrevious && !insideNow)
-                }
-                RacingStartPointType.FAI_START_SECTOR -> {
-                    crossing = detectStartSectorCrossing(
-                        crossingPlanner = crossingPlanner,
-                        waypoint = activeWaypoint,
-                        nextWaypoint = nextWaypoint,
-                        previousFix = previousFix,
-                        currentFix = fix
-                    )
-                    crossing != null || (insidePrevious && !insideNow)
-                }
-            }
-
-        if (!startTriggered) {
-            return RacingNavigationDecision(state = state, event = null)
-        }
-
-        val startTimestampMillis = crossing?.crossingTimeMillis
-            ?: previousFixTimestampMillis
-            ?: return RacingNavigationDecision(state = state, event = null)
-
-        val nextIndex = minOf(state.currentLegIndex + 1, task.waypoints.lastIndex)
-        val nextState = state.copy(
-            status = RacingNavigationStatus.STARTED,
-            currentLegIndex = nextIndex,
-            lastTransitionTimeMillis = startTimestampMillis
-        )
-        val event = RacingNavigationEvent(
-            type = RacingNavigationEventType.START,
-            fromLegIndex = state.currentLegIndex,
-            toLegIndex = nextIndex,
-            waypointRole = activeWaypoint.role,
-            timestampMillis = startTimestampMillis
-        )
-        return RacingNavigationDecision(state = nextState, event = event)
-    }
+        startRules: RacingStartCustomParams = RacingStartCustomParams(),
+        finishRules: RacingFinishCustomParams = RacingFinishCustomParams()
+    ): RacingNavigationDecision = step(task.waypoints, previousState, fix, startRules, finishRules)
 
     private fun handleProgressTransition(
-        task: SimpleRacingTask,
+        taskWaypoints: List<RacingWaypoint>,
         state: RacingNavigationState,
         fix: RacingNavigationFix,
         previousFix: RacingNavigationFix?,
-        previousNavPoint: NavPoint?,
         activeWaypoint: RacingWaypoint,
         previousWaypoint: RacingWaypoint?,
         nextWaypoint: RacingWaypoint?,
         insidePrevious: Boolean,
-        insideNow: Boolean
+        insideNow: Boolean,
+        finishRules: RacingFinishCustomParams
     ): RacingNavigationDecision {
-        val currentNavPoint = NavPoint(fix.lat, fix.lon)
         return when (activeWaypoint.role) {
             RacingWaypointRole.TURNPOINT -> {
                 val crossing = when (activeWaypoint.turnPointType) {
@@ -223,76 +160,83 @@ internal class RacingNavigationEngine(
                         previousFix = previousFix,
                         currentFix = fix
                     )
-                    RacingTurnPointType.FAI_QUADRANT -> null
+                    RacingTurnPointType.FAI_QUADRANT -> detectFaiQuadrantCrossing(
+                        crossingPlanner = crossingPlanner,
+                        waypoint = activeWaypoint,
+                        previousWaypoint = previousWaypoint,
+                        nextWaypoint = nextWaypoint,
+                        previousFix = previousFix,
+                        currentFix = fix
+                    )
                 }
 
-                val shouldTrigger = crossing != null || (!insidePrevious && insideNow)
+                val achievedByInsideFix = !insidePrevious && insideNow
+                val shouldTrigger = crossing != null || achievedByInsideFix
 
                 if (shouldTrigger) {
                     val transitionTime = crossing?.crossingTimeMillis ?: fix.timestampMillis
-                    val nextIndex = minOf(state.currentLegIndex + 1, task.waypoints.lastIndex)
+                    val nextIndex = minOf(state.currentLegIndex + 1, taskWaypoints.lastIndex)
                     val nextState = state.copy(
                         status = RacingNavigationStatus.IN_PROGRESS,
                         currentLegIndex = nextIndex,
-                        lastTransitionTimeMillis = transitionTime
+                        lastTransitionTimeMillis = transitionTime,
+                        reportedNearMissTurnpointLegIndices = state.reportedNearMissTurnpointLegIndices -
+                            state.currentLegIndex
                     )
                     val event = RacingNavigationEvent(
                         type = RacingNavigationEventType.TURNPOINT,
                         fromLegIndex = state.currentLegIndex,
                         toLegIndex = nextIndex,
                         waypointRole = activeWaypoint.role,
-                        timestampMillis = transitionTime
+                        timestampMillis = transitionTime,
+                        crossingEvidence = crossing?.let { boundaryCrossing ->
+                            RacingBoundaryCrossingEvidence(
+                                crossingPoint = boundaryCrossing.crossingPoint,
+                                insideAnchor = boundaryCrossing.insideAnchor,
+                                outsideAnchor = boundaryCrossing.outsideAnchor,
+                                evidenceSource = boundaryCrossing.evidenceSource
+                            )
+                        }
                     )
                     RacingNavigationDecision(state = nextState, event = event)
                 } else {
-                    RacingNavigationDecision(state = state, event = null)
+                    val nearMissDistance = turnpointNearMissDistanceMeters(
+                        waypoint = activeWaypoint,
+                        previousFix = previousFix,
+                        currentFix = fix
+                    )
+                    val hasReportedNearMiss = state.reportedNearMissTurnpointLegIndices.contains(state.currentLegIndex)
+                    if (nearMissDistance != null && !hasReportedNearMiss) {
+                        val nextState = state.copy(
+                            reportedNearMissTurnpointLegIndices = state.reportedNearMissTurnpointLegIndices +
+                                state.currentLegIndex
+                        )
+                        val event = RacingNavigationEvent(
+                            type = RacingNavigationEventType.TURNPOINT_NEAR_MISS,
+                            fromLegIndex = state.currentLegIndex,
+                            toLegIndex = state.currentLegIndex,
+                            waypointRole = activeWaypoint.role,
+                            timestampMillis = fix.timestampMillis,
+                            turnpointNearMissDistanceMeters = nearMissDistance
+                        )
+                        RacingNavigationDecision(state = nextState, event = event)
+                    } else {
+                        RacingNavigationDecision(state = state, event = null)
+                    }
                 }
             }
             RacingWaypointRole.FINISH -> {
-                var crossing: RacingBoundaryCrossing? = null
-                val lineTransitionAllowed = previousNavPoint?.let { navPoint ->
-                    zoneDetector.isLineTransitionAllowed(navPoint, currentNavPoint, activeWaypoint)
-                } ?: false
-                val finishTriggered = when (activeWaypoint.finishPointType) {
-                    RacingFinishPointType.FINISH_LINE -> {
-                        crossing = detectFinishLineCrossing(
-                            crossingPlanner = crossingPlanner,
-                            waypoint = activeWaypoint,
-                            previousWaypoint = previousWaypoint,
-                            previousFix = previousFix,
-                            currentFix = fix
-                        )
-                        crossing != null || (lineTransitionAllowed && !insidePrevious && insideNow)
-                    }
-                    RacingFinishPointType.FINISH_CYLINDER -> {
-                        crossing = detectCylinderCrossing(
-                            crossingPlanner = crossingPlanner,
-                            waypoint = activeWaypoint,
-                            previousFix = previousFix,
-                            currentFix = fix,
-                            transition = RacingBoundaryTransition.ENTER
-                        )
-                        crossing != null || (!insidePrevious && insideNow)
-                    }
-                }
-
-                if (!finishTriggered) {
-                    return RacingNavigationDecision(state = state, event = null)
-                }
-
-                val transitionTime = crossing?.crossingTimeMillis ?: fix.timestampMillis
-                val nextState = state.copy(
-                    status = RacingNavigationStatus.FINISHED,
-                    lastTransitionTimeMillis = transitionTime
+                evaluateFinishProgressTransition(
+                    state = state,
+                    fix = fix,
+                    previousFix = previousFix,
+                    activeWaypoint = activeWaypoint,
+                    previousWaypoint = previousWaypoint,
+                    insidePrevious = insidePrevious,
+                    insideNow = insideNow,
+                    crossingPlanner = crossingPlanner,
+                    finishRules = finishRules
                 )
-                val event = RacingNavigationEvent(
-                    type = RacingNavigationEventType.FINISH,
-                    fromLegIndex = state.currentLegIndex,
-                    toLegIndex = state.currentLegIndex,
-                    waypointRole = activeWaypoint.role,
-                    timestampMillis = transitionTime
-                )
-                RacingNavigationDecision(state = nextState, event = event)
             }
             RacingWaypointRole.START -> RacingNavigationDecision(state = state, event = null)
         }

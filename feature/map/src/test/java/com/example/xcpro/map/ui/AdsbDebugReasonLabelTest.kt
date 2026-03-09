@@ -1,21 +1,25 @@
 package com.example.xcpro.map.ui
 
-import com.example.xcpro.adsb.AdsbAuthMode
-import com.example.xcpro.adsb.AdsbConnectionState
-import com.example.xcpro.adsb.AdsbNetworkFailureKind
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_OPEN
-import com.example.xcpro.adsb.ADSB_ERROR_CIRCUIT_BREAKER_PROBE
+import com.example.xcpro.map.AdsbAuthMode
+import com.example.xcpro.map.AdsbNetworkFailureKind
+import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.ADSB_ERROR_CIRCUIT_BREAKER_OPEN
+import com.example.xcpro.map.ADSB_ERROR_CIRCUIT_BREAKER_PROBE
+import com.example.xcpro.map.adsbConnectionStateActive
+import com.example.xcpro.map.adsbConnectionStateBackingOff
+import com.example.xcpro.map.adsbConnectionStateError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+
+import com.example.xcpro.map.AdsbConnectionState
 
 class AdsbDebugReasonLabelTest {
 
     @Test
     fun breakerOpen_usesCircuitReasonLabel() {
         val snapshot = snapshot(
-            connectionState = AdsbConnectionState.Error(ADSB_ERROR_CIRCUIT_BREAKER_OPEN),
+            connectionState = adsbConnectionStateError(ADSB_ERROR_CIRCUIT_BREAKER_OPEN),
             lastError = ADSB_ERROR_CIRCUIT_BREAKER_OPEN
         )
         assertEquals("Circuit breaker open", snapshot.debugReasonLabel())
@@ -24,7 +28,7 @@ class AdsbDebugReasonLabelTest {
     @Test
     fun breakerProbe_usesHalfOpenReasonLabel() {
         val snapshot = snapshot(
-            connectionState = AdsbConnectionState.Error(ADSB_ERROR_CIRCUIT_BREAKER_PROBE),
+            connectionState = adsbConnectionStateError(ADSB_ERROR_CIRCUIT_BREAKER_PROBE),
             lastError = ADSB_ERROR_CIRCUIT_BREAKER_PROBE
         )
         assertEquals("Circuit breaker half-open probe", snapshot.debugReasonLabel())
@@ -33,7 +37,7 @@ class AdsbDebugReasonLabelTest {
     @Test
     fun authFailed_usesCredentialFallbackReason() {
         val snapshot = snapshot(
-            connectionState = AdsbConnectionState.Error("Credential error"),
+            connectionState = adsbConnectionStateError("Credential error"),
             authMode = AdsbAuthMode.AuthFailed
         )
         assertEquals("Credential auth failed; using anonymous fallback", snapshot.debugReasonLabel())
@@ -42,7 +46,7 @@ class AdsbDebugReasonLabelTest {
     @Test
     fun anonymous429_usesQuotaReasonLabel() {
         val snapshot = snapshot(
-            connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 30),
+            connectionState = adsbConnectionStateBackingOff(retryAfterSec = 30),
             authMode = AdsbAuthMode.Anonymous,
             lastHttpStatus = 429
         )
@@ -52,7 +56,7 @@ class AdsbDebugReasonLabelTest {
     @Test
     fun networkFailure_usesNetworkReasonLabel() {
         val snapshot = snapshot(
-            connectionState = AdsbConnectionState.Error("Socket timeout"),
+            connectionState = adsbConnectionStateError("Socket timeout"),
             lastNetworkFailureKind = AdsbNetworkFailureKind.TIMEOUT
         )
         assertEquals("Network: Socket timeout", snapshot.debugReasonLabel())
@@ -60,7 +64,7 @@ class AdsbDebugReasonLabelTest {
 
     @Test
     fun activeState_withoutFailureReason_returnsNull() {
-        val snapshot = snapshot(connectionState = AdsbConnectionState.Active)
+        val snapshot = snapshot(connectionState = adsbConnectionStateActive())
         assertNull(snapshot.debugReasonLabel())
     }
 
@@ -88,3 +92,4 @@ class AdsbDebugReasonLabelTest {
         lastNetworkFailureKind = lastNetworkFailureKind
     )
 }
+

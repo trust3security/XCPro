@@ -1,9 +1,6 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.core.common.logging.AppLogger
-import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.clampOgnIconSizePx
 import kotlin.math.abs
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap

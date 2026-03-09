@@ -9,7 +9,7 @@ import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
-import java.util.UUID
+import java.util.Locale
 
 /**
  * Racing Task Initializer - Handles all Racing task initialization operations
@@ -44,7 +44,7 @@ class RacingTaskInitializer {
         }
 
         val task = SimpleRacingTask(
-            id = UUID.randomUUID().toString(),
+            id = deterministicTaskIdFromSearchWaypoints(waypoints),
             waypoints = racingWaypoints
         )
 
@@ -113,7 +113,7 @@ class RacingTaskInitializer {
         }
 
         val task = SimpleRacingTask(
-            id = UUID.randomUUID().toString(),
+            id = deterministicTaskIdFromTaskWaypoints(genericWaypoints),
             waypoints = racingWaypoints
         )
 
@@ -123,5 +123,52 @@ class RacingTaskInitializer {
         }
 
         return task
+    }
+
+    fun initializeFromCoreTask(task: com.example.xcpro.tasks.core.Task): SimpleRacingTask {
+        val hydrated = initializeFromGenericWaypoints(task.waypoints)
+        return hydrated.copy(
+            id = task.id.ifBlank { hydrated.id }
+        )
+    }
+
+    private fun deterministicTaskIdFromSearchWaypoints(waypoints: List<SearchWaypoint>): String {
+        val fingerprint = buildString {
+            waypoints.forEachIndexed { index, waypoint ->
+                append(index)
+                append('|')
+                append(waypoint.id.trim())
+                append('|')
+                append(waypoint.title.trim())
+                append('|')
+                append(String.format(Locale.US, "%.6f", waypoint.lat))
+                append('|')
+                append(String.format(Locale.US, "%.6f", waypoint.lon))
+                append(';')
+            }
+        }
+        val suffix = fingerprint.hashCode().toUInt().toString(16).padStart(8, '0')
+        return "racing_$suffix"
+    }
+
+    private fun deterministicTaskIdFromTaskWaypoints(waypoints: List<TaskWaypoint>): String {
+        val fingerprint = buildString {
+            waypoints.forEachIndexed { index, waypoint ->
+                append(index)
+                append('|')
+                append(waypoint.id.trim())
+                append('|')
+                append(waypoint.title.trim())
+                append('|')
+                append(String.format(Locale.US, "%.6f", waypoint.lat))
+                append('|')
+                append(String.format(Locale.US, "%.6f", waypoint.lon))
+                append('|')
+                append(waypoint.role.name)
+                append(';')
+            }
+        }
+        val suffix = fingerprint.hashCode().toUInt().toString(16).padStart(8, '0')
+        return "racing_$suffix"
     }
 }

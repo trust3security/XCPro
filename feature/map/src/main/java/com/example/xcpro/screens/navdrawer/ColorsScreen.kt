@@ -21,6 +21,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.ui.theme.AppColorTheme
 import com.example.xcpro.ui.theme.CustomColorScheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.profiles.ProfileIdResolver
 import org.json.JSONObject
 
 /**
@@ -40,7 +41,7 @@ fun ColorsScreen(
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val colorsViewModel: ColorsViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
-    val profileId = profileUiState.activeProfile?.id ?: "default"
+    val profileId = ProfileIdResolver.canonicalOrDefault(profileUiState.activeProfile?.id)
     LaunchedEffect(profileId) {
         colorsViewModel.setProfileId(profileId)
     }

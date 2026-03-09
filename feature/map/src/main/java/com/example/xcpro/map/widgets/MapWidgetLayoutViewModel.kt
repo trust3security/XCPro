@@ -16,9 +16,22 @@ class MapWidgetLayoutViewModel @Inject constructor(
 
     private val _offsets = MutableStateFlow<MapWidgetOffsets?>(null)
     val offsets: StateFlow<MapWidgetOffsets?> = _offsets.asStateFlow()
+    private var activeProfileId: String = DEFAULT_PROFILE_ID
+
+    fun setProfileId(profileId: String) {
+        val resolved = profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
+        if (activeProfileId == resolved) return
+        activeProfileId = resolved
+        _offsets.value = null
+    }
 
     fun loadLayout(screenWidthPx: Float, screenHeightPx: Float, density: DensityScale) {
-        _offsets.value = useCase.loadLayout(screenWidthPx, screenHeightPx, density)
+        _offsets.value = useCase.loadLayout(
+            profileId = activeProfileId,
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx,
+            density = density
+        )
     }
 
     fun updateOffset(
@@ -29,10 +42,11 @@ class MapWidgetLayoutViewModel @Inject constructor(
     ) {
         val current = _offsets.value
         if (current == null) {
-            useCase.saveOffset(widgetId, offset)
+            useCase.saveOffset(activeProfileId, widgetId, offset)
             return
         }
         _offsets.value = useCase.commitOffset(
+            profileId = activeProfileId,
             current = current,
             widgetId = widgetId,
             offset = offset,
@@ -50,10 +64,11 @@ class MapWidgetLayoutViewModel @Inject constructor(
     ) {
         val current = _offsets.value
         if (current == null) {
-            useCase.saveSizePx(widgetId, sizePx)
+            useCase.saveSizePx(activeProfileId, widgetId, sizePx)
             return
         }
         _offsets.value = useCase.commitSize(
+            profileId = activeProfileId,
             current = current,
             widgetId = widgetId,
             sizePx = sizePx,
@@ -61,5 +76,9 @@ class MapWidgetLayoutViewModel @Inject constructor(
             screenHeightPx = screenHeightPx,
             density = density
         )
+    }
+
+    private companion object {
+        private const val DEFAULT_PROFILE_ID = "default-profile"
     }
 }

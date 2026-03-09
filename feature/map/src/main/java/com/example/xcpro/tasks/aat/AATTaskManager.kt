@@ -138,6 +138,16 @@ class AATTaskManager(val context: Context? = null) {
         saveAATTask()
     }
 
+    fun initializeFromCoreTask(task: Task, activeLegIndex: Int = 0) {
+        _currentAATTask = waypointManager.initializeFromCoreTask(task)
+        _currentLeg = if (_currentAATTask.waypoints.isEmpty()) {
+            0
+        } else {
+            activeLegIndex.coerceIn(0, _currentAATTask.waypoints.lastIndex)
+        }
+        saveAATTask()
+    }
+
     fun calculateAATDistanceMeters(): Double {
         if (_currentAATTask.waypoints.size < 2) return 0.0
 
@@ -205,28 +215,6 @@ class AATTaskManager(val context: Context? = null) {
             _currentAATTask = _currentAATTask.copy(waypoints = currentWaypoints)
             saveAATTask()
         }
-    }
-
-    fun updateWaypointPointTypeBridge(
-        index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
-        gateWidthMeters: Double?,
-        keyholeInnerRadiusMeters: Double?,
-        keyholeAngle: Double?,
-        sectorOuterRadiusMeters: Double?
-    ) {
-        updateAATWaypointPointTypeMeters(
-            index = index,
-            startType = startType as? com.example.xcpro.tasks.aat.models.AATStartPointType,
-            finishType = finishType as? com.example.xcpro.tasks.aat.models.AATFinishPointType,
-            turnType = turnType as? com.example.xcpro.tasks.aat.models.AATTurnPointType,
-            gateWidthMeters = gateWidthMeters,
-            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-            keyholeAngle = keyholeAngle,
-            sectorOuterRadiusMeters = sectorOuterRadiusMeters
-        )
     }
 
     /** Clear AAT task */
@@ -323,7 +311,7 @@ class AATTaskManager(val context: Context? = null) {
     fun getTaskImprovementSuggestions(): List<String> =
         validationWrapper.getTaskImprovementSuggestions(_currentAATTask)
 
-    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, Any>? =
+    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>? =
         editModeManager.checkAreaTap(_currentAATTask, lat, lon)
 
     fun setEditMode(waypointIndex: Int, enabled: Boolean) =

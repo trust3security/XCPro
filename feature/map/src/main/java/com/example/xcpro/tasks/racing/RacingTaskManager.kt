@@ -2,12 +2,9 @@ package com.example.xcpro.tasks.racing
 
 import android.content.Context
 import com.example.xcpro.common.waypoint.SearchWaypoint
-import com.example.xcpro.tasks.core.RacingWaypointCustomParams
 import com.example.xcpro.tasks.core.Task
-import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
-import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -40,20 +37,23 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     private val racingTaskPersistence = context?.let { RacingTaskPersistence(it) }
 
     private val racingTaskCalculator = RacingTaskCalculator()
-    private val racingTaskValidator = RacingTaskValidator()
+    private var validationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT
 
     private val waypointManager = RacingWaypointManager()
 
     private val racingTaskInitializer = RacingTaskInitializer()
 
+    private val currentCoreTaskState = MutableStateFlow(Task(id = "", waypoints = emptyList()))
     private val currentRacingTaskState = MutableStateFlow(SimpleRacingTask())
     private val currentLegState = MutableStateFlow(0)
+    val currentTaskFlow: StateFlow<Task> = currentCoreTaskState.asStateFlow()
     val currentRacingTaskFlow: StateFlow<SimpleRacingTask> = currentRacingTaskState.asStateFlow()
     val currentLegFlow: StateFlow<Int> = currentLegState.asStateFlow()
-    internal var _currentRacingTask: SimpleRacingTask
-        get() = currentRacingTaskState.value
+    internal var _currentTask: Task
+        get() = currentCoreTaskState.value
         set(value) {
-            currentRacingTaskState.value = value
+            currentCoreTaskState.value = value
+            currentRacingTaskState.value = value.toSimpleRacingTask()
         }
     internal var _currentLeg: Int
         get() = currentLegState.value
@@ -61,57 +61,64 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
             currentLegState.value = value
         }
 
-    val currentRacingTask: SimpleRacingTask get() = _currentRacingTask
+    val currentRacingTask: SimpleRacingTask get() = currentRacingTaskState.value
+    val currentTask: Task get() = _currentTask
     val currentLeg: Int get() = _currentLeg
 
-    fun getCoreTask(): Task {
-        return Task(
-            id = _currentRacingTask.id,
-            waypoints = _currentRacingTask.waypoints.map { waypoint ->
-                TaskWaypoint(
-                    id = waypoint.id,
-                    title = waypoint.title,
-                    subtitle = waypoint.subtitle,
-                    lat = waypoint.lat,
-                    lon = waypoint.lon,
-                    role = when (waypoint.role) {
-                        RacingWaypointRole.START -> WaypointRole.START
-                        RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
-                        RacingWaypointRole.FINISH -> WaypointRole.FINISH
-                    },
-                    customRadius = null,
-                    customRadiusMeters = waypoint.gateWidthMeters,
-                    customPointType = when (waypoint.role) {
-                        RacingWaypointRole.START -> waypoint.startPointType.name
-                        RacingWaypointRole.FINISH -> waypoint.finishPointType.name
-                        else -> waypoint.turnPointType.name
-                    },
-                    customParameters = mutableMapOf<String, Any>().apply {
-                        RacingWaypointCustomParams(
-                            keyholeInnerRadiusMeters = waypoint.keyholeInnerRadiusMeters,
-                            keyholeAngle = waypoint.keyholeAngle,
-                            faiQuadrantOuterRadiusMeters = waypoint.faiQuadrantOuterRadiusMeters
-                        ).applyTo(this)
-                    }
-                )
-            }
-        )
+    fun getCoreTask(): Task = _currentTask
+
+    private fun currentSimpleTask(): SimpleRacingTask = _currentTask.toSimpleRacingTask()
+
+    private fun updateTaskFromSimple(task: SimpleRacingTask) {
+        val previousTask = _currentTask
+        val previousCustomById = previousTask.waypoints.associate { it.id to it.customParameters }
+        val startRules = previousTask.extractRoleRules(WaypointRole.START, RACING_START_RULE_KEYS)
+        val finishRules = previousTask.extractRoleRules(WaypointRole.FINISH, RACING_FINISH_RULE_KEYS)
+        val mappedTask = task.toCoreTask(existingCustomParametersById = previousCustomById)
+        _currentTask = mappedTask.applyRoleRules(startRules, finishRules).withValidationProfile(validationProfile)
+    }
+
+    private fun currentRacingWaypoints(): List<RacingWaypoint> = _currentTask.toRacingWaypoints()
+    private fun currentValidation(): RacingTaskStructureRules.ValidationResult =
+        RacingTaskStructureRules.validate(_currentTask, validationProfile)
+
+    fun setRacingValidationProfile(profile: RacingTaskStructureRules.Profile) {
+        validationProfile = profile
+        _currentTask = _currentTask.withValidationProfile(validationProfile)
+    }
+
+    fun getRacingValidationProfile(): RacingTaskStructureRules.Profile = validationProfile
+
+    internal fun updateRacingValidationRules(command: UpdateRacingValidationRulesCommand) {
+        setRacingValidationProfile(command.profile)
+        saveRacingTask()
     }
 
     fun initializeRacingTask(waypoints: List<SearchWaypoint>) {
-        _currentRacingTask = racingTaskInitializer.initializeRacingTask(waypoints)
+        updateTaskFromSimple(racingTaskInitializer.initializeRacingTask(waypoints))
         _currentLeg = 0
     }
 
     fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.core.TaskWaypoint>) {
-        _currentRacingTask = racingTaskInitializer.initializeFromGenericWaypoints(genericWaypoints)
+        updateTaskFromSimple(racingTaskInitializer.initializeFromGenericWaypoints(genericWaypoints))
         _currentLeg = 0
     }
 
-    fun calculateRacingDistanceMeters(): Double {
-        if (_currentRacingTask.waypoints.size < 2) return 0.0
+    fun initializeFromCoreTask(task: Task, activeLegIndex: Int = 0) {
+        validationProfile = resolveRacingValidationProfile(task)
+        _currentTask = task.withValidationProfile(validationProfile)
+        _currentLeg = if (_currentTask.waypoints.isEmpty()) {
+            0
+        } else {
+            activeLegIndex.coerceIn(0, _currentTask.waypoints.lastIndex)
+        }
+    }
 
-        val optimalPath = racingTaskCalculator.findOptimalFAIPath(_currentRacingTask.waypoints)
+    fun calculateRacingDistanceMeters(): Double {
+        val waypoints = currentRacingWaypoints()
+        if (!currentValidation().isValid) return 0.0
+
+        val optimalPath = racingTaskCalculator.findOptimalFAIPath(waypoints)
 
         if (optimalPath.size < 2) return 0.0
 
@@ -128,7 +135,7 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         calculateRacingDistanceMeters() / METERS_PER_KILOMETER
 
     fun getOptimalRacingPath(): List<Pair<Double, Double>> {
-        return racingTaskCalculator.findOptimalFAIPath(_currentRacingTask.waypoints)
+        return racingTaskCalculator.findOptimalFAIPath(currentRacingWaypoints())
     }
 
     override fun findOptimalFAIPath(waypoints: List<RacingWaypoint>): List<Pair<Double, Double>> {
@@ -136,15 +143,15 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     }
 
     fun addRacingWaypoint(searchWaypoint: SearchWaypoint) {
-        _currentRacingTask = waypointManager.addWaypoint(_currentRacingTask, searchWaypoint)
+        updateTaskFromSimple(waypointManager.addWaypoint(currentSimpleTask(), searchWaypoint))
         _currentLeg = 0
         saveRacingTask()
     }
 
     fun removeRacingWaypoint(index: Int) {
-        val waypointCountBefore = _currentRacingTask.waypoints.size
-        _currentRacingTask = waypointManager.removeWaypoint(_currentRacingTask, index)
-        val waypointCountAfter = _currentRacingTask.waypoints.size
+        val waypointCountBefore = _currentTask.waypoints.size
+        updateTaskFromSimple(waypointManager.removeWaypoint(currentSimpleTask(), index))
+        val waypointCountAfter = _currentTask.waypoints.size
 
         if (waypointCountAfter < waypointCountBefore) {
             _currentLeg = waypointManager.calculateLegAfterRemoval(_currentLeg, index, waypointCountAfter)
@@ -163,40 +170,32 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
         keyholeAngle: Double? = null,
         faiQuadrantOuterRadiusMeters: Double? = null
     ) {
-        _currentRacingTask = waypointManager.updateWaypointType(
-            _currentRacingTask,
-            index,
-            startType,
-            finishType,
-            turnType,
-            gateWidthMeters,
-            keyholeInnerRadiusMeters,
-            keyholeAngle,
-            faiQuadrantOuterRadiusMeters
+        updateTaskFromSimple(
+            waypointManager.updateWaypointType(
+                currentSimpleTask(),
+                index,
+                startType,
+                finishType,
+                turnType,
+                gateWidthMeters,
+                keyholeInnerRadiusMeters,
+                keyholeAngle,
+                faiQuadrantOuterRadiusMeters
+            )
         )
         saveRacingTask()
     }
 
-    fun updateWaypointPointTypeBridge(
-        index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
-        gateWidthMeters: Double?,
-        keyholeInnerRadiusMeters: Double?,
-        keyholeAngle: Double?,
-        faiQuadrantOuterRadiusMeters: Double?
-    ) {
-        updateRacingWaypointType(
-            index = index,
-            startType = startType as? RacingStartPointType,
-            finishType = finishType as? RacingFinishPointType,
-            turnType = turnType as? RacingTurnPointType,
-            gateWidthMeters = gateWidthMeters,
-            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-            keyholeAngle = keyholeAngle,
-            faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
-        )
+    internal fun updateRacingStartRules(command: UpdateRacingStartRulesCommand) {
+        updateRoleRules(role = WaypointRole.START, keys = RACING_START_RULE_KEYS) { destination ->
+            command.rules.applyTo(destination)
+        }
+    }
+
+    internal fun updateRacingFinishRules(command: UpdateRacingFinishRulesCommand) {
+        updateRoleRules(role = WaypointRole.FINISH, keys = RACING_FINISH_RULE_KEYS) { destination ->
+            command.rules.applyTo(destination)
+        }
     }
 
     fun calculateOptimalLineCrossingPoint(
@@ -216,41 +215,43 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     }
 
     fun replaceRacingWaypoint(index: Int, newWaypoint: SearchWaypoint) {
-        _currentRacingTask = waypointManager.replaceWaypoint(_currentRacingTask, index, newWaypoint)
+        updateTaskFromSimple(waypointManager.replaceWaypoint(currentSimpleTask(), index, newWaypoint))
         saveRacingTask()
     }
 
     fun reorderRacingWaypoints(fromIndex: Int, toIndex: Int) {
-        _currentRacingTask = waypointManager.reorderWaypoints(_currentRacingTask, fromIndex, toIndex)
+        updateTaskFromSimple(waypointManager.reorderWaypoints(currentSimpleTask(), fromIndex, toIndex))
         saveRacingTask()
     }
 
     fun validateRacingCourse(): CourseLineValidation {
-        return if (_currentRacingTask.waypoints.size >= 2) {
+        val waypoints = currentRacingWaypoints()
+        val validation = currentValidation()
+        return if (validation.isValid) {
             CourseLineValidation(
                 isValid = true,
-                message = "Racing course is valid with ${_currentRacingTask.waypoints.size} waypoints",
-                touchPointResults = _currentRacingTask.waypoints.map {
+                message = RacingTaskStructureRules.summarize(validation),
+                touchPointResults = waypoints.map {
                     TouchPointResult(isValid = true, message = "Waypoint ${it.title} is valid")
                 }
             )
         } else {
             CourseLineValidation(
                 isValid = false,
-                message = "Racing course needs at least 2 waypoints",
+                message = RacingTaskStructureRules.summarize(validation),
                 touchPointResults = emptyList()
             )
         }
     }
 
     fun clearRacingTask() {
-        _currentRacingTask = SimpleRacingTask()
+        _currentTask = Task(id = "", waypoints = emptyList())
         _currentLeg = 0
         saveRacingTask()
     }
 
     fun advanceToNextLeg() {
-        val task = _currentRacingTask
+        val task = _currentTask
         if (task.waypoints.isNotEmpty() && _currentLeg < task.waypoints.size - 1) {
             _currentLeg++
         }
@@ -263,40 +264,42 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     }
 
     fun setRacingLeg(index: Int) {
-        if (_currentRacingTask.waypoints.isEmpty()) return
-        val clamped = index.coerceIn(0, _currentRacingTask.waypoints.lastIndex)
+        if (_currentTask.waypoints.isEmpty()) return
+        val clamped = index.coerceIn(0, _currentTask.waypoints.lastIndex)
         _currentLeg = clamped
     }
 
     fun saveRacingTask() {
-        racingTaskPersistence?.saveRacingTask(_currentRacingTask)
+        racingTaskPersistence?.saveRacingTask(currentSimpleTask())
     }
 
     fun loadRacingTask(): SimpleRacingTask? {
         return racingTaskPersistence?.loadRacingTask()?.also { task ->
-            _currentRacingTask = task
+            updateTaskFromSimple(task)
             _currentLeg = 0
         }
     }
 
     fun getRacingTaskSummary(): String {
-        return racingTaskPersistence?.getRacingTaskSummary(_currentRacingTask) { calculateRacingDistanceKmBoundary() } ?: "Racing Task: No persistence available"
+        return racingTaskPersistence?.getRacingTaskSummary(currentSimpleTask()) { calculateRacingDistanceKmBoundary() }
+            ?: "Racing Task: No persistence available"
     }
 
     fun calculateRacingTaskDistanceMeters(): Double =
-        (racingTaskPersistence?.calculateRacingTaskDistance(_currentRacingTask) { calculateRacingDistanceKmBoundary() } ?: 0.0) * METERS_PER_KILOMETER
+        (racingTaskPersistence?.calculateRacingTaskDistance(currentSimpleTask()) { calculateRacingDistanceKmBoundary() }
+            ?: 0.0) * METERS_PER_KILOMETER
 
     fun getSavedRacingTasks(): List<String> {
         return racingTaskPersistence?.getSavedRacingTasks() ?: emptyList()
     }
 
     fun saveRacingTask(taskName: String): Boolean {
-        return racingTaskPersistence?.saveRacingTask(_currentRacingTask, taskName) ?: false
+        return racingTaskPersistence?.saveRacingTask(currentSimpleTask(), taskName) ?: false
     }
 
     fun loadRacingTaskFromFile(taskName: String): Boolean {
         return racingTaskPersistence?.loadRacingTaskFromFile(taskName)?.let { task ->
-            _currentRacingTask = task
+            updateTaskFromSimple(task)
             _currentLeg = 0
             saveRacingTask()
             true
@@ -308,7 +311,7 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
     }
 
     fun isRacingTaskValid(): Boolean {
-        return _currentRacingTask.waypoints.size >= 2
+        return currentValidation().isValid
     }
 
     fun calculateSegmentDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double =
@@ -319,11 +322,29 @@ class RacingTaskManager(val context: Context? = null) : RacingTaskCalculatorInte
             gpsLat = gpsLat,
             gpsLon = gpsLon,
             waypointIndex = currentLeg,
-            waypoints = _currentRacingTask.waypoints
+            waypoints = currentRacingWaypoints()
         )
     }
 
     fun getRacingTaskParameters(): String {
-        return racingTaskPersistence?.getRacingTaskParameters(_currentRacingTask) { calculateRacingDistanceKmBoundary() } ?: "Racing Task: No persistence available"
+        return racingTaskPersistence?.getRacingTaskParameters(currentSimpleTask()) { calculateRacingDistanceKmBoundary() }
+            ?: "Racing Task: No persistence available"
+    }
+
+    private fun updateRoleRules(
+        role: WaypointRole,
+        keys: Set<String>,
+        applyUpdate: (MutableMap<String, Any>) -> Unit
+    ) {
+        val index = _currentTask.waypoints.indexOfFirst { it.role == role }
+        if (index < 0) return
+        val waypoints = _currentTask.waypoints.toMutableList()
+        val current = waypoints[index]
+        val updatedParameters = current.customParameters.toMutableMap()
+        keys.forEach { key -> updatedParameters.remove(key) }
+        applyUpdate(updatedParameters)
+        waypoints[index] = current.copy(customParameters = updatedParameters)
+        _currentTask = _currentTask.copy(waypoints = waypoints).withValidationProfile(validationProfile)
+        saveRacingTask()
     }
 }

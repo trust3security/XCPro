@@ -14,15 +14,25 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileRepositoryTest {
 
-    private class RepositoryHarness(scope: CoroutineScope) {
+    private class RepositoryHarness(
+        scope: CoroutineScope,
+        initialSnapshot: ProfileStorageSnapshot = ProfileStorageSnapshot(
+            profilesJson = null,
+            activeProfileId = null,
+            readStatus = ProfileStorageReadStatus.OK
+        )
+    ) {
         val snapshotState = MutableStateFlow(
-            ProfileStorageSnapshot(
-                profilesJson = null,
-                activeProfileId = null,
-                readStatus = ProfileStorageReadStatus.OK
-            )
+            initialSnapshot
         )
         var writeActiveCalls = 0
+        var writeStateCalls = 0
+        val diagnosticsEvents = mutableListOf<Pair<String, Map<String, String>>>()
+        private val diagnosticsReporter = object : ProfileDiagnosticsReporter {
+            override fun report(event: String, attributes: Map<String, String>) {
+                diagnosticsEvents += event to attributes
+            }
+        }
 
         val storage = object : ProfileStorage {
             override val snapshotFlow = snapshotState
@@ -43,6 +53,7 @@ class ProfileRepositoryTest {
             }
 
             override suspend fun writeState(profilesJson: String?, activeProfileId: String?) {
+                writeStateCalls++
                 snapshotState.value = snapshotState.value.copy(
                     profilesJson = profilesJson,
                     activeProfileId = activeProfileId,
@@ -51,10 +62,20 @@ class ProfileRepositoryTest {
             }
         }
 
-        val repository = ProfileRepository(storage, scope)
+        val repository = ProfileRepository(storage, scope, diagnosticsReporter)
     }
 
-    private fun createHarness(scope: CoroutineScope): RepositoryHarness = RepositoryHarness(scope)
+    private fun createHarness(
+        scope: CoroutineScope,
+        initialSnapshot: ProfileStorageSnapshot = ProfileStorageSnapshot(
+            profilesJson = null,
+            activeProfileId = null,
+            readStatus = ProfileStorageReadStatus.OK
+        )
+    ): RepositoryHarness = RepositoryHarness(
+        scope = scope,
+        initialSnapshot = initialSnapshot
+    )
 
     private val snapshotState = MutableStateFlow(
         ProfileStorageSnapshot(
@@ -192,6 +213,51 @@ class ProfileRepositoryTest {
     }
 
     @Test
+    fun bootstrap_emptyState_provisionsDefaultProfileAndActiveId() = runTest {
+        val harness = createHarness(backgroundScope)
+
+        val persisted = harness.snapshotState.first {
+            !it.profilesJson.isNullOrBlank() && !it.activeProfileId.isNullOrBlank()
+        }
+
+        val profiles = harness.repository.profiles.first { it.isNotEmpty() }
+        assertEquals(1, profiles.size)
+        assertEquals(profiles.first().id, harness.repository.activeProfile.value?.id)
+        assertEquals(profiles.first().id, persisted.activeProfileId)
+        assertEquals(1, harness.writeStateCalls)
+        assertTrue((persisted.profilesJson ?: "").contains(profiles.first().id))
+    }
+
+    @Test
+    fun bootstrap_nonEmptySnapshot_withoutCanonicalDefault_insertsCanonicalDefault() = runTest {
+        val harness = createHarness(
+            scope = backgroundScope,
+            initialSnapshot = ProfileStorageSnapshot(
+                profilesJson = """
+                    [
+                      {"id":"p1","name":"Pilot One","aircraftType":"GLIDER"}
+                    ]
+                """.trimIndent(),
+                activeProfileId = "p1",
+                readStatus = ProfileStorageReadStatus.OK
+            )
+        )
+
+        val hydrated = harness.repository.profiles.first { profiles ->
+            profiles.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID } &&
+                profiles.any { it.id == "p1" }
+        }
+
+        assertEquals(2, hydrated.size)
+        assertEquals("p1", harness.repository.activeProfile.value?.id)
+        assertTrue(harness.writeStateCalls > 0)
+        assertTrue(
+            (harness.snapshotState.value.profilesJson ?: "")
+                .contains(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
+        )
+    }
+
+    @Test
     fun parseFailure_preservesLastKnownGoodProfiles() = runTest {
         val harness = createHarness(backgroundScope)
         val created = harness.repository.createProfile(
@@ -215,6 +281,32 @@ class ProfileRepositoryTest {
         assertEquals(beforeProfiles, harness.repository.profiles.value)
         assertEquals(beforeActiveId, harness.repository.activeProfile.value?.id)
         assertEquals(baselineActiveWrites, harness.writeActiveCalls)
+    }
+
+    @Test
+    fun parseFailure_withoutLastKnownGood_recoversDefaultProfileAndPersistsState() = runTest {
+        val harness = createHarness(
+            scope = backgroundScope,
+            initialSnapshot = ProfileStorageSnapshot(
+                profilesJson = "{invalid-json",
+                activeProfileId = "missing-id",
+                readStatus = ProfileStorageReadStatus.OK
+            )
+        )
+
+        val hydrated = harness.repository.profiles.first { it.isNotEmpty() }
+        assertEquals(1, hydrated.size)
+        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, hydrated.first().id)
+        assertEquals(
+            ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
+            harness.repository.activeProfile.value?.id
+        )
+        assertTrue(harness.writeStateCalls > 0)
+        assertTrue(
+            (harness.snapshotState.value.profilesJson ?: "")
+                .contains(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
+        )
+        assertTrue(harness.diagnosticsEvents.any { it.first == "profile_bootstrap_parse_failed" })
     }
 
     @Test
@@ -388,9 +480,44 @@ class ProfileRepositoryTest {
         ).getOrThrow()
 
         val names = repository.profiles.value.map { it.name }
-        assertTrue(names.contains("Pilot"))
-        assertTrue(names.contains("Pilot (Imported)"))
-        assertTrue(names.contains("Pilot (Imported 2)"))
+        val pilotNames = names.filter { it.startsWith("Pilot") }
+        assertTrue(pilotNames.contains("Pilot"))
+        val importedPilotNames = pilotNames.filter { it.startsWith("Pilot (Imported") }
+        assertEquals(2, importedPilotNames.distinct().size)
+    }
+
+    @Test
+    fun importProfiles_replaceExistingPolicy_reusesExistingIdAndAvoidsDuplicate() = runTest {
+        val existing = repository.createProfile(
+            ProfileCreationRequest(
+                name = "Replace Me",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+        repository.setActiveProfile(existing).getOrThrow()
+        val beforeCount = repository.profiles.value.size
+
+        val incoming = UserProfile(
+            id = "incoming-replace-id",
+            name = "Replace Me",
+            aircraftType = AircraftType.GLIDER,
+            description = "Updated"
+        )
+
+        val result = repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(incoming),
+                nameCollisionPolicy = ProfileNameCollisionPolicy.REPLACE_EXISTING
+            )
+        ).getOrThrow()
+
+        val afterProfiles = repository.profiles.value
+        assertEquals(beforeCount, afterProfiles.size)
+        assertEquals(1, afterProfiles.count { it.name == "Replace Me" })
+        val replaced = afterProfiles.first { it.name == "Replace Me" }
+        assertEquals(existing.id, replaced.id)
+        assertEquals(AircraftType.GLIDER, replaced.aircraftType)
+        assertEquals(existing.id, result.importedProfileIdMap["incoming-replace-id"])
     }
 
     @Test
@@ -543,12 +670,12 @@ class ProfileRepositoryTest {
             activeProfileId = "p2",
             readStatus = ProfileStorageReadStatus.OK
         )
+        assertTrue(harness.repository.bootstrapComplete.first { it })
 
-        val hydrated = harness.repository.profiles.first { profiles -> profiles.any { it.id == "p2" } }
-        assertEquals(1, hydrated.size)
-        assertEquals("p2", hydrated.first().id)
-        val warning = harness.repository.bootstrapError.first { it != null }
-        assertNotNull(warning)
+        val hydrated = harness.repository.profiles.first { it.isNotEmpty() }
+        assertEquals(2, hydrated.size)
+        assertTrue(hydrated.any { it.id == "p2" })
+        assertTrue(hydrated.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID })
     }
 
     @Test
@@ -568,7 +695,74 @@ class ProfileRepositoryTest {
         )
 
         val hydrated = harness.repository.profiles.first { profiles -> profiles.any { it.id == "p3" } }
-        assertEquals(1, hydrated.size)
-        assertEquals("p3", hydrated.first().id)
+        assertEquals(2, hydrated.size)
+        assertTrue(hydrated.any { it.id == "p3" })
+        assertTrue(hydrated.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID })
+    }
+
+    @Test
+    fun recoverWithDefaultProfile_afterReadError_provisionsCanonicalDefaultAndClearsError() = runTest {
+        val harness = createHarness(
+            scope = backgroundScope,
+            initialSnapshot = ProfileStorageSnapshot(
+                profilesJson = null,
+                activeProfileId = null,
+                readStatus = ProfileStorageReadStatus.IO_ERROR
+            )
+        )
+        assertTrue(harness.repository.bootstrapComplete.first { it })
+        assertTrue(harness.repository.profiles.value.isEmpty())
+        assertEquals(null, harness.repository.activeProfile.value)
+        assertNotNull(harness.repository.bootstrapError.value)
+
+        val recovery = harness.repository.recoverWithDefaultProfile()
+
+        assertTrue(recovery.isSuccess)
+        val recoveredProfiles = harness.repository.profiles.value
+        val recoveredActive = harness.repository.activeProfile.value
+        assertNotNull(recoveredActive)
+        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, recoveredActive?.id)
+        assertTrue(recoveredProfiles.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID })
+        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, harness.snapshotState.value.activeProfileId)
+        assertEquals(null, harness.repository.bootstrapError.value)
+        assertTrue(harness.diagnosticsEvents.any { it.first == "profile_recovery_start" })
+        assertTrue(harness.diagnosticsEvents.any { it.first == "profile_recovery_success" })
+    }
+
+    @Test
+    fun recoverWithDefaultProfile_preservesExistingProfilesAndSetsDefaultActive() = runTest {
+        val harness = createHarness(backgroundScope)
+        val created = harness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Recovery Pilot",
+                aircraftType = AircraftType.GLIDER
+            )
+        ).getOrThrow()
+        harness.repository.setActiveProfile(created).getOrThrow()
+        val baselineProfileCount = harness.repository.profiles.value.size
+
+        val recovery = harness.repository.recoverWithDefaultProfile()
+
+        assertTrue(recovery.isSuccess)
+        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, harness.repository.activeProfile.value?.id)
+        assertTrue(harness.repository.profiles.value.any { it.id == created.id })
+        assertEquals(baselineProfileCount, harness.repository.profiles.value.size)
+    }
+
+    @Test
+    fun deleteProfile_cannotDeleteProvisionedDefaultProfile() = runTest {
+        val harness = createHarness(backgroundScope)
+        val defaultProfile = harness.repository.profiles.first { it.isNotEmpty() }.first()
+        val second = harness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Pilot D",
+                aircraftType = AircraftType.GLIDER
+            )
+        ).getOrThrow()
+        harness.repository.setActiveProfile(second).getOrThrow()
+
+        val deletion = harness.repository.deleteProfile(defaultProfile.id)
+        assertTrue(deletion.isFailure)
+        assertTrue((deletion.exceptionOrNull()?.message ?: "").contains("default profile"))
     }
 }

@@ -492,6 +492,173 @@ $racingWaypointKmViewArgs = @(
 )
 Assert-NoMatches -Name "#18 guard: deprecated racing km view properties reintroduced" -RgArgs $racingWaypointKmViewArgs
 
+# 32E) RT hardening: no UUID randomness in racing runtime task initialization path.
+$racingRuntimeUuidArgs = @(
+    "-n",
+    "UUID\.randomUUID\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt"
+)
+Assert-NoMatches -Name "RT hardening: UUID randomness in racing runtime init path" -RgArgs $racingRuntimeUuidArgs
+
+# 32F) RT hardening: point-type mutation APIs in task stack must use typed enums (no Any?).
+$taskPointTypeAnyBridgeArgs = @(
+    "-n",
+    "Any\?",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/AATCoordinatorDelegate.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt"
+)
+Assert-NoMatches -Name "RT hardening: Any? point-type mutation bridge reintroduced" -RgArgs $taskPointTypeAnyBridgeArgs
+
+# 32G) RT hardening: racing validity paths must use shared structure rules (no inline >=2 shortcut).
+$racingValidityShortcutArgs = @(
+    "-n",
+    "waypoints\.size\s*>=\s*2",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt"
+)
+Assert-NoMatches -Name "RT hardening: inline racing validity shortcut reintroduced" -RgArgs $racingValidityShortcutArgs
+
+# 32H) Phase-1 guard: no runtime toSimpleRacingTask bypass in navigation/render routers.
+$runtimeSimpleTaskBypassArgs = @(
+    "-n",
+    "toSimpleRacingTask\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt"
+)
+Assert-NoMatches -Name "Phase-1 guard: runtime toSimpleRacingTask bypass reintroduced" -RgArgs $runtimeSimpleTaskBypassArgs
+
+# 32I) Phase-1 guard: coordinator/bridge hydrate paths must not be waypoint-only.
+$waypointOnlyHydrateArgs = @(
+    "-n",
+    "initializeFromGenericWaypoints\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt"
+)
+Assert-NoMatches -Name "Phase-1 guard: waypoint-only coordinator hydrate path reintroduced" -RgArgs $waypointOnlyHydrateArgs
+
+# 32J) Phase-1 guard: replay helper must use canonical task path (no simple-task mapper bypass).
+$racingReplayHelperSimpleBypassArgs = @(
+    "-n",
+    "toSimpleRacingTask\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt"
+)
+Assert-NoMatches -Name "Phase-1 guard: replay helper simple-task bypass reintroduced" -RgArgs $racingReplayHelperSimpleBypassArgs
+
+# 32K) Phase-1 guard: coordinator runtime path must avoid manager simple-task state authority.
+$coordinatorSimpleStateArgs = @(
+    "-n",
+    "currentRacingTask\.",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt"
+)
+Assert-NoMatches -Name "Phase-1 guard: coordinator simple-task state authority reintroduced" -RgArgs $coordinatorSimpleStateArgs
+
+# 32L) Phase-2 guard: racing validity authority must use validator contract (no minimum-waypoint shortcut path).
+$racingValidatorBypassArgs = @(
+    "-n",
+    "hasMinimumWaypoints\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt"
+)
+Assert-NoMatches -Name "Phase-2 guard: racing validity shortcut bypass reintroduced" -RgArgs $racingValidatorBypassArgs
+
+# 32M) Phase-3 guard: start candidate selection must not default to "latest wins".
+$startCandidateLatestSelectionArgs = @(
+    "-n",
+    "selectedStartCandidateIndex\s*=\s*state\.startCandidates\.lastIndex",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationStartTransition.kt"
+)
+Assert-NoMatches -Name "Phase-3 guard: latest-only start candidate selection reintroduced" -RgArgs $startCandidateLatestSelectionArgs
+
+# 32N) Phase-3 guard: start altitude checks must not be hard-wired to MSL-only comparisons.
+$startAltitudeMslOnlyArgs = @(
+    "-n",
+    "fix\.altitudeMslMeters\s*>\s*rules\.maxStartAltitudeMeters",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingStartEvaluator.kt"
+)
+Assert-NoMatches -Name "Phase-3 guard: MSL-only start altitude comparison reintroduced" -RgArgs $startAltitudeMslOnlyArgs
+
+# 32O) Phase-4 guard: FAI quadrant path must not regress to null-only crossing detection.
+$faiQuadrantNullCrossingArgs = @(
+    "-n",
+    "RacingTurnPointType\.FAI_QUADRANT\s*->\s*null",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
+)
+Assert-NoMatches -Name "Phase-4 guard: FAI quadrant null crossing fallback reintroduced" -RgArgs $faiQuadrantNullCrossingArgs
+
+# 32P) Phase-4 guard: turnpoint near-miss must never auto-advance.
+$nearMissAutoAdvanceArgs = @(
+    "-n",
+    "TURNPOINT_NEAR_MISS\s*->\s*true",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingAdvanceState.kt"
+)
+Assert-NoMatches -Name "Phase-4 guard: near-miss auto-advance regression reintroduced" -RgArgs $nearMissAutoAdvanceArgs
+
+# 32Q) Phase-4 guard: near-miss threshold remains fixed at 500m.
+$nearMissThresholdDriftArgs = @(
+    "-n",
+    "-P",
+    "TURNPOINT_NEAR_MISS_DISTANCE_METERS\s*=\s*(?!\s*500(?:\.0+)?\s*$)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngineSupport.kt"
+)
+Assert-NoMatches -Name "Phase-4 guard: near-miss threshold drifted from 500m" -RgArgs $nearMissThresholdDriftArgs
+
+# 32R) Phase-5 guard: finish line must not regress to coarse inside/outside fallback trigger.
+$finishLineCoarseFallbackArgs = @(
+    "-n",
+    "crossing\s*!=\s*null\s*\|\|\s*\(lineTransitionAllowed\s*&&\s*!insidePrevious\s*&&\s*insideNow\)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
+)
+Assert-NoMatches -Name "Phase-5 guard: finish line coarse fallback trigger reintroduced" -RgArgs $finishLineCoarseFallbackArgs
+
+# 32S) Phase-5 guard: post-finish landing outcome must not be bypassed by early FINISHED short-circuit.
+$finishEarlyReturnBypassArgs = @(
+    "-n",
+    "RacingNavigationStatus\.FINISHED\s*\|\|\s*state\.status\s*==\s*RacingNavigationStatus\.INVALIDATED",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
+)
+Assert-NoMatches -Name "Phase-5 guard: FINISHED early-return bypass reintroduced" -RgArgs $finishEarlyReturnBypassArgs
+
+# 32T) Phase-5 guard: navigation controller must pass explicit finish rules to navigation engine.
+$finishRulesControllerBypassArgs = @(
+    "-n",
+    "startRules\s*=\s*startRules\s*\)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt"
+)
+Assert-NoMatches -Name "Phase-5 guard: controller finish-rules wiring bypass reintroduced" -RgArgs $finishRulesControllerBypassArgs
+
+# 32U) Phase-5 guard: close-time outlanding must not run before crossing interpolation.
+$finishCloseOrderingRegressionArgs = @(
+    "-n",
+    "-U",
+    "--multiline",
+    "-P",
+    "val\s+finishCloseTimeMillis\s*=\s*finishRules\.closeTimeMillis[\s\S]*if\s*\(\s*finishCloseTimeMillis\s*!=\s*null\s*&&\s*fix\.timestampMillis\s*>\s*finishCloseTimeMillis\s*\)\s*\{[\s\S]*var\s+crossing\s*:\s*RacingBoundaryCrossing\?\s*=\s*null",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationFinishTransition.kt"
+)
+Assert-NoMatches -Name "Phase-5 guard: close-time outlanding preempts crossing interpolation" -RgArgs $finishCloseOrderingRegressionArgs
+
+# 32V) Phase-6 guard: line-crossing detection must not short-circuit on coarse radius proximity.
+$lineCrossingCoarseRadiusArgs = @(
+    "-n",
+    "if\s*\(\s*previousDistance\s*>\s*radiusMeters\s*\|\|\s*currentDistance\s*>\s*radiusMeters\s*\)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt"
+)
+Assert-NoMatches -Name "Phase-6 guard: line-crossing coarse radius short-circuit reintroduced" -RgArgs $lineCrossingCoarseRadiusArgs
+
+# 32W) Phase-6 guard: boundary BORDER states must not be blanket-rejected in transition gate.
+$borderBlanketDropArgs = @(
+    "-n",
+    "if\s*\(\s*previousRelation\s*==\s*ZoneRelation\.BORDER\s*\|\|\s*currentRelation\s*==\s*ZoneRelation\.BORDER\s*\)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt"
+)
+Assert-NoMatches -Name "Phase-6 guard: BORDER transition blanket-drop reintroduced" -RgArgs $borderBlanketDropArgs
+
 # 33) Maintainability size budget for map/task hotspots.
 Assert-MaxLines `
     -Name "MapCameraManager line budget" `
@@ -785,7 +952,7 @@ Assert-MaxLines `
 # 34) Top-20 hotspot line budgets (RULES-20260302-LINEBUDGET500).
 Assert-MaxLines `
     -Name "Top20: AdsbTrafficRepositoryTest line budget" `
-    -FilePath "feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt" `
+    -FilePath "feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt" `
     -MaxLines 450
 Assert-MaxLines `
     -Name "Top20: MapScreenViewModelTest line budget" `
@@ -793,7 +960,7 @@ Assert-MaxLines `
     -MaxLines 450
 Assert-MaxLines `
     -Name "Top20: OgnTrafficRepository line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt" `
+    -FilePath "feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: MapOverlayManager line budget" `
@@ -801,7 +968,7 @@ Assert-MaxLines `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: AdsbTrafficRepository line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt" `
+    -FilePath "feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: MapScreenContent line budget" `
@@ -813,7 +980,7 @@ Assert-MaxLines `
     -MaxLines 450
 Assert-MaxLines `
     -Name "Top20: OgnThermalRepositoryTest line budget" `
-    -FilePath "feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt" `
+    -FilePath "feature/traffic/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt" `
     -MaxLines 450
 Assert-MaxLines `
     -Name "Top20: ForecastRasterOverlay line budget" `
@@ -821,7 +988,7 @@ Assert-MaxLines `
     -MaxLines 300
 Assert-MaxLines `
     -Name "Top20: OgnThermalRepository line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt" `
+    -FilePath "feature/traffic/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: IgcReplayController line budget" `
@@ -853,7 +1020,7 @@ Assert-MaxLines `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: AdsbSettingsScreen line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/AdsbSettingsScreen.kt" `
+    -FilePath "feature/traffic/src/main/java/com/example/xcpro/screens/navdrawer/AdsbSettingsScreen.kt" `
     -MaxLines 500
 Assert-MaxLines `
     -Name "Top20: CardPreferences line budget" `

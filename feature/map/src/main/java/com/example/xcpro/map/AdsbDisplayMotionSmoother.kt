@@ -1,7 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
 import kotlin.math.abs
 
 /**

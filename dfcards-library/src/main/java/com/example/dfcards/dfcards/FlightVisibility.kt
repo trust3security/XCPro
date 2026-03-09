@@ -1,9 +1,12 @@
 package com.example.dfcards.dfcards
 
 import com.example.dfcards.FlightModeSelection
+import java.util.Locale
 
 internal object FlightVisibility {
-    private const val DEFAULT_PROFILE_ID = "__default_profile__"
+    private const val DEFAULT_PROFILE_ID = "default-profile"
+    private const val LEGACY_DEFAULT_ALIAS = "default"
+    private const val LEGACY_DFCARDS_ALIAS = "__default_profile__"
 
     fun defaultVisibilityMap(): MutableMap<FlightModeSelection, Boolean> =
         FlightModeSelection.values().associateWith { true }.toMutableMap().apply {
@@ -21,5 +24,13 @@ internal object FlightVisibility {
         return defaults.toMap()
     }
 
-    fun normalizeProfileId(profileId: String?): String = profileId ?: DEFAULT_PROFILE_ID
+    fun normalizeProfileId(profileId: String?): String {
+        val trimmed = profileId?.trim()?.takeIf { it.isNotEmpty() } ?: return DEFAULT_PROFILE_ID
+        return when (trimmed.lowercase(Locale.ROOT)) {
+            DEFAULT_PROFILE_ID,
+            LEGACY_DEFAULT_ALIAS,
+            LEGACY_DFCARDS_ALIAS -> DEFAULT_PROFILE_ID
+            else -> trimmed
+        }
+    }
 }

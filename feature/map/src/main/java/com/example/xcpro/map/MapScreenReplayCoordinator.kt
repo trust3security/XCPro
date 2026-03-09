@@ -58,7 +58,7 @@ internal class MapScreenReplayCoordinator(
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
     private val racingFixFlow = flightDataFlow
-        .mapNotNull { data -> data?.gps?.let(RacingNavigationFixAdapter::toFix) }
+        .mapNotNull { data -> data?.let(RacingNavigationFixAdapter::toFix) }
         .onEach { fix -> lastRacingFix = fix }
     private val liveGpsProfileFlow = flightDataFlow
         .mapNotNull { data -> data?.gps }
@@ -220,7 +220,9 @@ internal class MapScreenReplayCoordinator(
                 if (task == null) {
                     racingReplayActive = false
                     uiEffects.emit(
-                        MapUiEffect.ShowToast("Racing replay needs an active racing task with at least 2 waypoints")
+                        MapUiEffect.ShowToast(
+                            "Racing replay needs a valid racing task (start, at least 2 turnpoints, finish)"
+                        )
                     )
                     return@launch
                 }

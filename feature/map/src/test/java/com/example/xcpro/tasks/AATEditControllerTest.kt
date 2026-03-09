@@ -1,5 +1,13 @@
 package com.example.xcpro.tasks
 
+import com.example.xcpro.tasks.aat.models.AATAssignedArea
+import com.example.xcpro.tasks.aat.models.AATFinishPointType
+import com.example.xcpro.tasks.aat.models.AATLatLng
+import com.example.xcpro.tasks.aat.models.AATAreaShape
+import com.example.xcpro.tasks.aat.models.AATStartPointType
+import com.example.xcpro.tasks.aat.models.AATTurnPointType
+import com.example.xcpro.tasks.aat.models.AATWaypoint
+import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -73,9 +81,9 @@ class AATEditControllerTest {
     @Test
     fun `checkAreaTap delegates to operations`() {
         val controller = controller()
-        fakeOperations.areaTapResult = 2 to "area"
+        fakeOperations.areaTapResult = 2 to sampleWaypoint()
 
-        assertEquals(2 to "area", controller.checkAreaTap(1.0, 2.0))
+        assertEquals(2 to sampleWaypoint(), controller.checkAreaTap(1.0, 2.0))
     }
 
     private fun controller() =
@@ -87,13 +95,13 @@ class AATEditControllerTest {
 
         var isEditMode: Boolean = false
         var editIndex: Int? = null
-        var areaTapResult: Pair<Int, Any>? = null
+        var areaTapResult: Pair<Int, AATWaypoint>? = null
 
         override fun updateTargetPoint(index: Int, lat: Double, lon: Double) {
             updateCalls += Triple(index, lat, lon)
         }
 
-        override fun checkAreaTap(lat: Double, lon: Double): Pair<Int, Any>? = areaTapResult
+        override fun checkAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>? = areaTapResult
 
         override fun setEditMode(waypointIndex: Int, enabled: Boolean) {
             editModeCalls += waypointIndex to enabled
@@ -105,4 +113,22 @@ class AATEditControllerTest {
 
         override fun getEditWaypointIndex(): Int? = editIndex
     }
+
+    private fun sampleWaypoint(): AATWaypoint = AATWaypoint(
+        id = "aat-1",
+        title = "AAT 1",
+        subtitle = "",
+        lat = 0.0,
+        lon = 0.0,
+        role = AATWaypointRole.TURNPOINT,
+        assignedArea = AATAssignedArea(
+            shape = AATAreaShape.CIRCLE,
+            radiusMeters = 1_000.0,
+            outerRadiusMeters = 1_000.0
+        ),
+        targetPoint = AATLatLng(0.0, 0.0),
+        startPointType = AATStartPointType.AAT_START_LINE,
+        turnPointType = AATTurnPointType.AAT_CYLINDER,
+        finishPointType = AATFinishPointType.AAT_FINISH_LINE
+    )
 }

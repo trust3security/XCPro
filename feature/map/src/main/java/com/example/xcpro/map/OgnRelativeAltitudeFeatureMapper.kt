@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.common.units.AltitudeUnit
-import com.example.xcpro.ogn.OgnAircraftIcon
+
 
 internal data class OgnRelativeAltitudeFeatureMapperInput(
     val targetAltitudeMeters: Double?,

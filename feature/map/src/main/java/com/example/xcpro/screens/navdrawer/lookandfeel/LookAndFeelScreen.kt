@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.profiles.ProfileViewModel
+import com.example.xcpro.profiles.ProfileIdResolver
 import kotlinx.coroutines.launch
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
@@ -39,7 +40,7 @@ fun LookAndFeelScreen(
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val lookAndFeelViewModel: LookAndFeelViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
-    val profileId = profileUiState.activeProfile?.id ?: "default"
+    val profileId = ProfileIdResolver.canonicalOrDefault(profileUiState.activeProfile?.id)
 
     val snailTrailViewModel: SnailTrailSettingsViewModel = hiltViewModel()
     val trailSettings by snailTrailViewModel.settings.collectAsStateWithLifecycle()

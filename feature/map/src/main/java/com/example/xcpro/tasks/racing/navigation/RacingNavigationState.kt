@@ -12,7 +12,11 @@ data class RacingNavigationFix(
     val lat: Double,
     val lon: Double,
     val timestampMillis: Long,
-    val accuracyMeters: Double? = null
+    val accuracyMeters: Double? = null,
+    val altitudeMslMeters: Double? = null,
+    val altitudeQnhMeters: Double? = null,
+    val groundSpeedMs: Double? = null,
+    val bearingDeg: Double? = null
 )
 
 data class RacingNavigationState(
@@ -20,7 +24,18 @@ data class RacingNavigationState(
     val currentLegIndex: Int = 0,
     val lastFix: RacingNavigationFix? = null,
     val lastTransitionTimeMillis: Long = 0L,
-    val taskSignature: String = ""
+    val taskSignature: String = "",
+    val startCandidates: List<RacingStartCandidate> = emptyList(),
+    val selectedStartCandidateIndex: Int? = null,
+    val preStartAltitudeSatisfied: Boolean = false,
+    val reportedNearMissTurnpointLegIndices: Set<Int> = emptySet(),
+    val finishOutcome: RacingFinishOutcome? = null,
+    val finishUsedStraightInException: Boolean = false,
+    val finishCrossingTimeMillis: Long? = null,
+    val finishLandingDeadlineMillis: Long? = null,
+    val finishLandingStopStartTimeMillis: Long? = null,
+    val finishBoundaryStopStartTimeMillis: Long? = null,
+    val lastFixBeforeFinishClose: RacingNavigationFix? = null
 )
 
 data class RacingNavigationDecision(

@@ -5,9 +5,13 @@ import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.replay.IgcLog
 import com.example.xcpro.replay.IgcMetadata
 import com.example.xcpro.replay.IgcPoint
+import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.racing.SimpleRacingTask
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEpsilonPolicy
+import com.example.xcpro.tasks.racing.models.RacingWaypoint
+import com.example.xcpro.tasks.racing.toRacingWaypoints
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -19,10 +23,25 @@ class RacingReplayLogBuilder(
     private val stepMillis: Long = DEFAULT_STEP_MS,
     private val altitudeMeters: Double = DEFAULT_ALTITUDE_M,
     private val targetSpeedKmh: Double = DEFAULT_TARGET_SPEED_KMH,
-    private val epsilonPolicy: RacingBoundaryEpsilonPolicy = RacingBoundaryEpsilonPolicy()
+    private val epsilonPolicy: RacingBoundaryEpsilonPolicy = RacingBoundaryEpsilonPolicy(),
+    private val validationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT
 ) {
 
     private val anchorBuilder = RacingReplayAnchorBuilder(epsilonPolicy = epsilonPolicy)
+
+    fun build(
+        task: Task,
+        startTimestampMillis: Long = DEFAULT_START_TIME_MS,
+        stepMillisOverride: Long? = null,
+        targetSpeedKmhOverride: Double? = null,
+        logPoints: Boolean = false
+    ): IgcLog = build(
+        waypoints = task.toRacingWaypoints(),
+        startTimestampMillis = startTimestampMillis,
+        stepMillisOverride = stepMillisOverride,
+        targetSpeedKmhOverride = targetSpeedKmhOverride,
+        logPoints = logPoints
+    )
 
     fun build(
         task: SimpleRacingTask,
@@ -30,9 +49,25 @@ class RacingReplayLogBuilder(
         stepMillisOverride: Long? = null,
         targetSpeedKmhOverride: Double? = null,
         logPoints: Boolean = false
+    ): IgcLog = build(
+        waypoints = task.waypoints,
+        startTimestampMillis = startTimestampMillis,
+        stepMillisOverride = stepMillisOverride,
+        targetSpeedKmhOverride = targetSpeedKmhOverride,
+        logPoints = logPoints
+    )
+
+    private fun build(
+        waypoints: List<RacingWaypoint>,
+        startTimestampMillis: Long,
+        stepMillisOverride: Long?,
+        targetSpeedKmhOverride: Double?,
+        logPoints: Boolean
     ): IgcLog {
-        val waypoints = task.waypoints
-        require(waypoints.size >= 2) { "Racing replay requires at least 2 waypoints" }
+        val validation = RacingTaskStructureRules.validate(waypoints, validationProfile)
+        require(validation.isValid) {
+            "Racing replay requires a valid racing task: ${RacingTaskStructureRules.summarize(validation)}"
+        }
 
         val stepMillis = stepMillisOverride ?: this.stepMillis
         require(stepMillis > 0L) { "Replay step must be > 0ms" }

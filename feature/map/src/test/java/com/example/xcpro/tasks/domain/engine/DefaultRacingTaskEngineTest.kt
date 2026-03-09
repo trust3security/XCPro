@@ -3,6 +3,7 @@ package com.example.xcpro.tasks.domain.engine
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,21 +16,29 @@ class DefaultRacingTaskEngineTest {
 
         engine.addWaypoint(waypoint("a", 0.0, 0.0))
         engine.addWaypoint(waypoint("b", 0.0, 0.5))
-        engine.addWaypoint(waypoint("c", 0.0, 1.0))
+        engine.addWaypoint(waypoint("c", 0.0, 0.8))
+        engine.addWaypoint(waypoint("d", 0.0, 1.0))
 
         val initial = engine.state.value.base.task.waypoints
-        assertEquals(listOf(WaypointRole.START, WaypointRole.TURNPOINT, WaypointRole.FINISH), initial.map { it.role })
+        assertEquals(
+            listOf(WaypointRole.START, WaypointRole.TURNPOINT, WaypointRole.TURNPOINT, WaypointRole.FINISH),
+            initial.map { it.role }
+        )
         assertTrue(engine.state.value.base.isTaskValid)
 
-        engine.reorderWaypoints(2, 1)
+        engine.reorderWaypoints(3, 1)
         val reordered = engine.state.value.base.task.waypoints
-        assertEquals(listOf("a", "c", "b"), reordered.map { it.id })
-        assertEquals(listOf(WaypointRole.START, WaypointRole.TURNPOINT, WaypointRole.FINISH), reordered.map { it.role })
+        assertEquals(listOf("a", "d", "b", "c"), reordered.map { it.id })
+        assertEquals(
+            listOf(WaypointRole.START, WaypointRole.TURNPOINT, WaypointRole.TURNPOINT, WaypointRole.FINISH),
+            reordered.map { it.role }
+        )
 
         engine.removeWaypoint(1)
         val afterRemove = engine.state.value.base.task.waypoints
-        assertEquals(listOf("a", "b"), afterRemove.map { it.id })
-        assertEquals(listOf(WaypointRole.START, WaypointRole.FINISH), afterRemove.map { it.role })
+        assertEquals(listOf("a", "b", "c"), afterRemove.map { it.id })
+        assertEquals(listOf(WaypointRole.START, WaypointRole.TURNPOINT, WaypointRole.FINISH), afterRemove.map { it.role })
+        assertEquals(false, engine.state.value.base.isTaskValid)
     }
 
     @Test
@@ -54,12 +63,25 @@ class DefaultRacingTaskEngineTest {
     fun `setActiveLeg clamps to valid range`() {
         val engine = DefaultRacingTaskEngine()
         engine.addWaypoint(waypoint("start", 0.0, 0.0))
+        engine.addWaypoint(waypoint("tp1", 0.0, 0.03))
+        engine.addWaypoint(waypoint("tp2", 0.0, 0.06))
         engine.addWaypoint(waypoint("finish", 0.1, 0.1))
 
         engine.setActiveLeg(99)
 
         assertEquals(TaskType.RACING, engine.state.value.base.taskType)
-        assertEquals(1, engine.state.value.base.activeLegIndex)
+        assertEquals(3, engine.state.value.base.activeLegIndex)
+    }
+
+    @Test
+    fun `extended profile can opt in to short racing task validity`() {
+        val engine = DefaultRacingTaskEngine(
+            validationProfile = RacingTaskStructureRules.Profile.XC_PRO_EXTENDED
+        )
+        engine.addWaypoint(waypoint("start", 0.0, 0.0))
+        engine.addWaypoint(waypoint("finish", 0.1, 0.1))
+
+        assertTrue(engine.state.value.base.isTaskValid)
     }
 
     private fun waypoint(

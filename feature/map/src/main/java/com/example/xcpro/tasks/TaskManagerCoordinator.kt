@@ -6,6 +6,10 @@ import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.aat.gestures.AatGestureHandler
+import com.example.xcpro.tasks.aat.models.AATFinishPointType
+import com.example.xcpro.tasks.aat.models.AATStartPointType
+import com.example.xcpro.tasks.aat.models.AATTurnPointType
+import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -13,7 +17,15 @@ import com.example.xcpro.tasks.domain.engine.AATTaskEngine
 import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
 import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
 import com.example.xcpro.tasks.racing.RacingTaskManager
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
+import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import com.example.xcpro.tasks.racing.gestures.RacingGestureHandler
+import com.example.xcpro.tasks.racing.models.RacingFinishPointType
+import com.example.xcpro.tasks.racing.models.RacingStartPointType
+import com.example.xcpro.tasks.racing.models.RacingTurnPointType
+import com.example.xcpro.tasks.racing.toRacingWaypoints
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -87,8 +99,8 @@ class TaskManagerCoordinator(
         if (newTaskType == _taskType.value) {
             log("Already using ${newTaskType.name} task type"); return
         }
-        val currentWaypoints = currentTask.waypoints
-        val hasWaypoints = currentWaypoints.isNotEmpty()
+        val sourceTask = currentTask
+        val hasWaypoints = sourceTask.waypoints.isNotEmpty()
         log("Switching from ${_taskType.value.name} to ${newTaskType.name} (preserveWaypoints=$hasWaypoints)")
 
         clearCurrentTask()
@@ -97,10 +109,10 @@ class TaskManagerCoordinator(
         if (hasWaypoints) {
             withManager(
                 newTaskType,
-                racingBlock = { initializeFromGenericWaypoints(currentWaypoints) },
-                aatBlock = { initializeFromGenericWaypoints(currentWaypoints) }
+                racingBlock = { initializeFromCoreTask(sourceTask) },
+                aatBlock = { initializeFromCoreTask(sourceTask) }
             )
-            log("Preserved ${currentWaypoints.size} waypoints for ${newTaskType.name} task")
+            log("Preserved ${sourceTask.waypoints.size} waypoints for ${newTaskType.name} task")
         } else {
             log("No waypoints to preserve during task switch")
         }
@@ -141,36 +153,28 @@ class TaskManagerCoordinator(
 
     fun updateWaypointPointType(
         index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
+        startType: RacingStartPointType?,
+        finishType: RacingFinishPointType?,
+        turnType: RacingTurnPointType?,
         gateWidthMeters: Double?,
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
         faiQuadrantOuterRadiusMeters: Double?
     ) {
-        when (_taskType.value) {
-            TaskType.RACING -> racingTaskManager.updateWaypointPointTypeBridge(
-                index = index,
-                startType = startType,
-                finishType = finishType,
-                turnType = turnType,
-                gateWidthMeters = gateWidthMeters,
-                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-                keyholeAngle = keyholeAngle,
-                faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
-            )
-            TaskType.AAT -> aatTaskManager.updateWaypointPointTypeBridge(
-                index = index,
-                startType = startType,
-                finishType = finishType,
-                turnType = turnType,
-                gateWidthMeters = gateWidthMeters,
-                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-                keyholeAngle = keyholeAngle,
-                sectorOuterRadiusMeters = faiQuadrantOuterRadiusMeters
-            )
+        if (_taskType.value != TaskType.RACING) {
+            log("Cannot update racing point type - current task type is ${_taskType.value}")
+            return
         }
+        racingTaskManager.updateRacingWaypointType(
+            index = index,
+            startType = startType,
+            finishType = finishType,
+            turnType = turnType,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
+            keyholeAngle = keyholeAngle,
+            faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
+        )
     }
 
     fun replaceWaypoint(index: Int, newWaypoint: SearchWaypoint) =
@@ -224,7 +228,7 @@ class TaskManagerCoordinator(
 
     fun calculateOptimalStartLineCrossingPoint(startWaypoint: TaskWaypoint, nextWaypoint: TaskWaypoint): Pair<Double, Double> {
         if (_taskType.value == TaskType.RACING) {
-            racingTaskManager.currentRacingTask.waypoints.firstOrNull { it.id == startWaypoint.id }?.let { wp ->
+            racingTaskManager.getCoreTask().toRacingWaypoints().firstOrNull { it.id == startWaypoint.id }?.let { wp ->
                 val lineWidthMeters = wp.gateWidthMeters
                 return racingTaskManager.calculateOptimalLineCrossingPoint(
                     wp.lat,
@@ -263,9 +267,9 @@ class TaskManagerCoordinator(
 
     fun updateAATWaypointPointTypeMeters(
         index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
+        startType: AATStartPointType?,
+        finishType: AATFinishPointType?,
+        turnType: AATTurnPointType?,
         gateWidthMeters: Double?,
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
@@ -307,6 +311,33 @@ class TaskManagerCoordinator(
         aatDelegate.updateArea(index, radiusMeters)
     }
 
+    internal fun updateRacingStartRules(command: UpdateRacingStartRulesCommand) {
+        if (_taskType.value != TaskType.RACING) {
+            log("Cannot update racing start rules - current task type is ${_taskType.value}")
+            return
+        }
+        racingTaskManager.updateRacingStartRules(command)
+    }
+
+    internal fun updateRacingFinishRules(command: UpdateRacingFinishRulesCommand) {
+        if (_taskType.value != TaskType.RACING) {
+            log("Cannot update racing finish rules - current task type is ${_taskType.value}")
+            return
+        }
+        racingTaskManager.updateRacingFinishRules(command)
+    }
+
+    internal fun updateRacingValidationRules(command: UpdateRacingValidationRulesCommand) {
+        if (_taskType.value != TaskType.RACING) {
+            log("Cannot update racing validation rules - current task type is ${_taskType.value}")
+            return
+        }
+        racingTaskManager.updateRacingValidationRules(command)
+    }
+
+    fun getRacingValidationProfile(): RacingTaskStructureRules.Profile =
+        racingTaskManager.getRacingValidationProfile()
+
     private fun clearCurrentTask() {
         currentDelegate().clearTask()
     }
@@ -335,7 +366,8 @@ class TaskManagerCoordinator(
     @VisibleForTesting internal fun replaceAATDelegateForTesting(delegate: AATCoordinatorDelegate) { aatDelegate = delegate }
     @VisibleForTesting internal fun replaceRacingDelegateForTesting(delegate: RacingCoordinatorDelegate) { racingDelegate = delegate }
 
-    fun checkAATAreaTap(lat: Double, lon: Double): Pair<Int, Any>? = if (_taskType.value == TaskType.AAT) aatDelegate.checkAreaTap(lat, lon) else null
+    fun checkAATAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>? =
+        if (_taskType.value == TaskType.AAT) aatDelegate.checkAreaTap(lat, lon) else null
     fun enterAATEditMode(waypointIndex: Int) { if (_taskType.value == TaskType.AAT) aatDelegate.enterEditMode(waypointIndex) }
     fun exitAATEditMode() { if (_taskType.value == TaskType.AAT) aatDelegate.exitEditMode() }
     fun isInAATEditMode(): Boolean = _taskType.value == TaskType.AAT && aatDelegate.isInEditMode()

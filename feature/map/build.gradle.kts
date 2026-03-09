@@ -28,6 +28,10 @@ fun readSecretProperty(name: String): String {
     return localProperties.getProperty(name)?.trim().orEmpty()
 }
 
+val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
+val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
+val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
+
 android {
     namespace = "com.example.xcpro.map"
     compileSdk = 35
@@ -39,9 +43,6 @@ android {
 
     buildTypes {
         debug {
-            val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
-            val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
-            val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
             buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
             buildConfigField(
                 "String",
@@ -51,8 +52,6 @@ android {
             buildConfigField("String", "SKYSIGHT_API_KEY", skySightApiKey.asBuildConfigString())
         }
         release {
-            val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
-            val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
             buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
             buildConfigField(
                 "String",
@@ -88,7 +87,9 @@ dependencies {
     implementation(project(":core:geometry"))
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
+    implementation(project(":feature:igc"))
     implementation(project(":feature:profile"))
+    implementation(project(":feature:traffic"))
     implementation(project(":feature:variometer"))
 
     implementation(libs.androidx.core.ktx)
@@ -146,10 +147,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
 }
 
-val hasAndroidTests = file("src/androidTest").walkTopDown().any { entry ->
-    entry.isFile && (entry.extension == "kt" || entry.extension == "java")
+val hasAndroidTests = providers.provider {
+    file("src/androidTest/java").exists() || file("src/androidTest/kotlin").exists()
 }
 
 tasks.matching { it.name.startsWith("connected") && it.name.endsWith("AndroidTest") }.configureEach {
-    onlyIf("Skip connected tests when no androidTest sources are present.") { hasAndroidTests }
+    onlyIf("Skip connected tests when no androidTest sources are present.") { hasAndroidTests.get() }
 }

@@ -101,32 +101,6 @@ fun MainActivityScreen(
         return
     }
 
-    if (profileUiState.activeProfile == null && !profileUiState.bootstrapError.isNullOrBlank()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            contentAlignment = androidx.compose.ui.Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Profile Storage Error",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = profileUiState.bootstrapError ?: "Failed to load stored profiles.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        return
-    }
-
     val showProfileSelection =
         profileUiState.profiles.isEmpty() || profileUiState.activeProfile == null
     if (showProfileSelection) {
@@ -138,7 +112,18 @@ fun MainActivityScreen(
                 "bootstrapError=${profileUiState.bootstrapError}"
         )
         ProfileSelectionScreen(
-            onProfileSelected = {}
+            onProfileSelected = {
+                val poppedToMap = navController.popBackStack("map", inclusive = false)
+                if (!poppedToMap) {
+                    navController.navigate("map") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            },
+            onEditProfile = { profile ->
+                navController.navigate("profile_settings/${profile.id}")
+            }
         )
         return
     }

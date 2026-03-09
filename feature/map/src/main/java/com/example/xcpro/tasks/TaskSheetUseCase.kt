@@ -5,6 +5,7 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import com.example.xcpro.tasks.domain.logic.TaskProximityDecision
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 
@@ -13,8 +14,18 @@ class TaskSheetUseCase @Inject constructor(
 ) {
     val state: StateFlow<TaskUiState> = repository.state
 
-    fun updateFrom(task: Task, taskType: TaskType, activeIndex: Int) {
-        repository.updateFrom(task, taskType, activeIndex)
+    fun updateFrom(
+        task: Task,
+        taskType: TaskType,
+        activeIndex: Int,
+        racingValidationProfile: RacingTaskStructureRules.Profile
+    ) {
+        repository.updateFrom(
+            task = task,
+            taskType = taskType,
+            activeIndex = activeIndex,
+            racingValidationProfile = racingValidationProfile
+        )
     }
 
     fun setTargetParam(index: Int, param: Double) {

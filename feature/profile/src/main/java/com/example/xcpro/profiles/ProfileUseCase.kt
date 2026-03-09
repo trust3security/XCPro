@@ -20,9 +20,18 @@ class ProfileUseCase @Inject constructor(
     suspend fun importProfiles(request: ProfileImportRequest): Result<ProfileImportResult> =
         repository.importProfiles(request)
 
+    suspend fun exportBundle(profileIds: Set<String>? = null): Result<String> =
+        repository.exportBundle(profileIds)
+
+    suspend fun importBundle(request: ProfileBundleImportRequest): Result<ProfileBundleImportResult> =
+        repository.importBundle(request)
+
     suspend fun updateProfile(profile: UserProfile): Result<Unit> =
         repository.updateProfile(profile)
 
     suspend fun deleteProfile(profileId: String): Result<Unit> =
         repository.deleteProfile(profileId)
+
+    suspend fun recoverWithDefaultProfile(): Result<Unit> =
+        repository.recoverWithDefaultProfile()
 }

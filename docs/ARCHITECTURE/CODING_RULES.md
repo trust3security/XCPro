@@ -35,6 +35,15 @@ The following checks must fail the build when violated:
 - Task UDF boundaries: no direct TaskManagerCoordinator mutation/query calls from Composables.
 - UseCase boundary: use-case wrappers must not expose raw manager/controller handles that bypass use-case APIs.
 - Manager state model: non-UI managers/domain classes must not use Compose runtime state (mutableStateOf, derivedStateOf, remember).
+- Racing task runtime IDs: no `UUID.randomUUID()` in racing runtime initialization paths; use deterministic IDs.
+- Task point-type mutation contract: no `Any?` bridge signatures in task VM/use-case/coordinator/manager mutation chain.
+- Racing validity contract: no inline `waypoints.size >= 2` shortcuts in `RacingTaskManager` and `DefaultRacingTaskEngine`; use shared structure rules.
+- Phase-1 canonical runtime contract: no `toSimpleRacingTask()` runtime bypass in `TaskNavigationController` or `TaskMapRenderRouter`.
+- Phase-1 hydrate contract: coordinator persistence/switch paths must not use waypoint-only `initializeFromGenericWaypoints(...)`.
+- Phase-1 replay contract: replay task helpers must not bypass canonical task flow via `toSimpleRacingTask()`.
+- Phase-1 coordinator authority: `TaskManagerCoordinator` must not read manager `currentRacingTask` state directly.
+- Phase-2 RT validity contract: manager/engine/replay validity must route through `RacingTaskStructureRules.validate(...)` (no `hasMinimumWaypoints(...)` shortcut authority).
+- Phase-2 RT profile gate: default validation profile is `FAI_STRICT`; `XC_PRO_EXTENDED` is opt-in only.
 - Vendor strings: no "xcsoar" or "XCSoar" literals in production Kotlin source.
 - Encoding: no non-ASCII characters in production Kotlin source.
 - App identity stability: `app/build.gradle.kts` must keep the approved

@@ -7,14 +7,6 @@ import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.AdsbSelectedTargetDetails
-import com.example.xcpro.adsb.Icao24
-import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
-import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.adsb.ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT
-import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
@@ -30,12 +22,6 @@ import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnTrafficSnapshot
-import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.ogn.OgnDisplayUpdateMode
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.tasks.core.TaskType
@@ -64,7 +50,7 @@ class MapScreenViewModel @Inject constructor(
     private val trailSettingsUseCase: MapTrailSettingsUseCase, private val calibrateQnhUseCase: CalibrateQnhUseCase,
     private val variometerLayoutUseCase: VariometerLayoutUseCase,
     private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase, private val hawkVarioUseCase: HawkVarioUseCase,
-    private val ognTrafficUseCase: OgnTrafficUseCase, private val adsbTrafficUseCase: AdsbTrafficUseCase,
+    private val ognTrafficFacade: OgnTrafficFacade, private val adsbTrafficFacade: AdsbTrafficFacade,
     private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase,
     private val thermallingModeUseCase: ThermallingModeRuntimeUseCase
 ) : ViewModel() {
@@ -115,27 +101,27 @@ class MapScreenViewModel @Inject constructor(
     val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
     private val ownshipIsCircling: StateFlow<Boolean> = createOwnshipCirclingState(viewModelScope, flightDataUseCase)
     private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> = createCirclingFeatureEnabledState(viewModelScope, thermallingModeUseCase)
-    val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficUseCase.targets
-    val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficUseCase.snapshot
-    val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficUseCase.overlayEnabled
+    val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficFacade.targets
+    val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficFacade.snapshot
+    val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficFacade.overlayEnabled
         .eagerState(scope = viewModelScope, initial = false)
-    val ognIconSizePx: StateFlow<Int> = ognTrafficUseCase.iconSizePx
+    val ognIconSizePx: StateFlow<Int> = ognTrafficFacade.iconSizePx
         .eagerState(scope = viewModelScope, initial = OGN_ICON_SIZE_DEFAULT_PX)
-    val ognDisplayUpdateMode: StateFlow<OgnDisplayUpdateMode> = ognTrafficUseCase.displayUpdateMode
+    val ognDisplayUpdateMode: StateFlow<OgnDisplayUpdateMode> = ognTrafficFacade.displayUpdateMode
         .eagerState(scope = viewModelScope, initial = OgnDisplayUpdateMode.DEFAULT)
-    val showOgnSciaEnabled: StateFlow<Boolean> = ognTrafficUseCase.showSciaEnabled
+    val showOgnSciaEnabled: StateFlow<Boolean> = ognTrafficFacade.showSciaEnabled
         .eagerState(scope = viewModelScope, initial = false)
-    val ognTargetEnabled: StateFlow<Boolean> = ognTrafficUseCase.targetEnabled
+    val ognTargetEnabled: StateFlow<Boolean> = ognTrafficFacade.targetEnabled
         .eagerState(scope = viewModelScope, initial = false)
-    val ognTargetAircraftKey: StateFlow<String?> = ognTrafficUseCase.targetAircraftKey
+    val ognTargetAircraftKey: StateFlow<String?> = ognTrafficFacade.targetAircraftKey
         .eagerState(scope = viewModelScope, initial = null)
     val ognResolvedTarget: StateFlow<OgnTrafficTarget?> =
         createSelectedOgnTargetState(scope = viewModelScope, selectedOgnId = ognTargetAircraftKey, ognTargets = ognTargets)
-    val ognThermalHotspots: StateFlow<List<OgnThermalHotspot>> = ognTrafficUseCase.thermalHotspots
-    val showOgnThermalsEnabled: StateFlow<Boolean> = ognTrafficUseCase.showThermalsEnabled
+    val ognThermalHotspots: StateFlow<List<OgnThermalHotspot>> = ognTrafficFacade.thermalHotspots
+    val showOgnThermalsEnabled: StateFlow<Boolean> = ognTrafficFacade.showThermalsEnabled
         .eagerState(scope = viewModelScope, initial = false)
-    val ognGliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = ognTrafficUseCase.gliderTrailSegments.eagerState(scope = viewModelScope, initial = emptyList())
-    private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficUseCase.targets
+    val ognGliderTrailSegments: StateFlow<List<OgnGliderTrailSegment>> = ognTrafficFacade.gliderTrailSegments.eagerState(scope = viewModelScope, initial = emptyList())
+    private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> = adsbTrafficFacade.targets
     private val enrichedAdsbTargets: StateFlow<List<AdsbTrafficUiModel>> =
         adsbMetadataEnrichmentUseCase.targetsWithMetadata(rawAdsbTargets)
             .eagerState(scope = viewModelScope, initial = emptyList())
@@ -145,14 +131,14 @@ class MapScreenViewModel @Inject constructor(
             rawAdsbTargets = rawAdsbTargets,
             enrichedAdsbTargets = enrichedAdsbTargets
         )
-    val adsbSnapshot: StateFlow<AdsbTrafficSnapshot> = adsbTrafficUseCase.snapshot
-    val adsbOverlayEnabled: StateFlow<Boolean> = adsbTrafficUseCase.overlayEnabled
+    val adsbSnapshot: StateFlow<AdsbTrafficSnapshot> = adsbTrafficFacade.snapshot
+    val adsbOverlayEnabled: StateFlow<Boolean> = adsbTrafficFacade.overlayEnabled
         .eagerState(scope = viewModelScope, initial = false)
-    val adsbIconSizePx: StateFlow<Int> = adsbTrafficUseCase.iconSizePx
+    val adsbIconSizePx: StateFlow<Int> = adsbTrafficFacade.iconSizePx
         .eagerState(scope = viewModelScope, initial = ADSB_ICON_SIZE_DEFAULT_PX)
-    val adsbEmergencyFlashEnabled: StateFlow<Boolean> = adsbTrafficUseCase.emergencyFlashEnabled
+    val adsbEmergencyFlashEnabled: StateFlow<Boolean> = adsbTrafficFacade.emergencyFlashEnabled
         .eagerState(scope = viewModelScope, initial = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
-    val adsbDefaultMediumUnknownIconEnabled: StateFlow<Boolean> = adsbTrafficUseCase.defaultMediumUnknownIconEnabled
+    val adsbDefaultMediumUnknownIconEnabled: StateFlow<Boolean> = adsbTrafficFacade.defaultMediumUnknownIconEnabled
         .eagerState(scope = viewModelScope, initial = ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT)
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
     private val _uiState = MutableStateFlow(MapUiState())
@@ -178,7 +164,7 @@ class MapScreenViewModel @Inject constructor(
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
     private val _isAATEditMode = MutableStateFlow(false)
-    private val adsbFilterStates: AdsbFilterStateFlows = createAdsbFilterStateFlows(viewModelScope, adsbTrafficUseCase)
+    private val adsbFilterStates: AdsbFilterStateFlows = createAdsbFilterStateFlows(viewModelScope, adsbTrafficFacade)
     val cardHydrationReady: StateFlow<Boolean> = createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
     private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
         mapReplayUseCase = mapReplayUseCase,
@@ -234,15 +220,15 @@ class MapScreenViewModel @Inject constructor(
         selectedOgnId = trafficSelectionState.selectedOgnId,
         ognTargetEnabled = ognTargetEnabled,
         ognTargetAircraftKey = ognTargetAircraftKey,
-        ognSuppressedTargetIds = ognTrafficUseCase.suppressedTargetIds,
+        ognSuppressedTargetIds = ognTrafficFacade.suppressedTargetIds,
         showSciaEnabled = showOgnSciaEnabled,
         showThermalsEnabled = showOgnThermalsEnabled,
         thermalHotspots = ognThermalHotspots,
         selectedThermalId = trafficSelectionState.selectedOgnThermalId,
         rawAdsbTargets = rawAdsbTargets,
         selectedAdsbId = trafficSelectionState.selectedAdsbId,
-        ognTrafficUseCase = ognTrafficUseCase,
-        adsbTrafficUseCase = adsbTrafficUseCase,
+        ognTrafficFacade = ognTrafficFacade,
+        adsbTrafficFacade = adsbTrafficFacade,
         uiEffects = _uiEffects
     )
     val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
@@ -268,7 +254,7 @@ class MapScreenViewModel @Inject constructor(
         bindThermallingRuntimeWiring(viewModelScope, thermallingModeUseCase, thermallingModeUseCase.settingsFlow, flightDataUseCase.flightData, flightDataManager.visibleModesFlow, mapStateStore, mapStateActions, ::setFlightMode)
         flightDataUiAdapter.start()
         replayCoordinator.start()
-        viewModelScope.launch { adsbTrafficUseCase.bootstrapMetadataSync() }
+        viewModelScope.launch { adsbTrafficFacade.bootstrapMetadataSync() }
         if (featureFlags.loadSavedTasksOnInit) viewModelScope.launch { mapTasksUseCase.loadSavedTasks() }
         onEvent(MapUiEvent.RefreshWaypoints)
     }
@@ -330,6 +316,6 @@ class MapScreenViewModel @Inject constructor(
     fun submitBallastCommand(command: BallastCommand) = ballastController.submit(command)
     fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
-    override fun onCleared() { ognTrafficUseCase.stop(); adsbTrafficUseCase.stop(); thermallingModeUseCase.reset(); ballastController.dispose(); super.onCleared() }
+    override fun onCleared() { ognTrafficFacade.stop(); adsbTrafficFacade.stop(); thermallingModeUseCase.reset(); ballastController.dispose(); super.onCleared() }
     private companion object { private const val DEFAULT_PROFILE_ID = "default-profile" }
 }

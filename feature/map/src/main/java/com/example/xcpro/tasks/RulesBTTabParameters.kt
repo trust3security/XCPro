@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -35,32 +34,6 @@ import com.example.xcpro.tasks.core.AATTaskTimeCustomParams
 import com.example.xcpro.tasks.core.Task
 import java.time.Duration
 import java.util.Locale
-
-@Composable
-internal fun RulesRacingTaskParameters() {
-    RulesParameterSection(
-        title = "Racing Task Rules",
-        icon = Icons.Default.Speed,
-        color = RacingTaskColor
-    ) {
-        RulesParameterItem(
-            label = "Start Type",
-            value = "Start Line / Start Circle"
-        )
-        RulesParameterItem(
-            label = "Turnpoints",
-            value = "Fixed cylinders (500m radius)"
-        )
-        RulesParameterItem(
-            label = "Finish",
-            value = "Finish line or cylinder"
-        )
-        RulesParameterItem(
-            label = "Scoring",
-            value = "Speed: Distance  Time"
-        )
-    }
-}
 
 @Composable
 internal fun RulesAatTaskParameters(
@@ -149,7 +122,7 @@ private fun extractAatTimes(task: Task): Pair<Float, Float> {
 }
 
 @Composable
-private fun RulesParameterSection(
+internal fun RulesParameterSection(
     title: String,
     icon: ImageVector,
     color: Color,
@@ -193,7 +166,7 @@ private fun RulesParameterSection(
 }
 
 @Composable
-private fun RulesParameterItem(
+internal fun RulesParameterItem(
     label: String,
     value: String
 ) {

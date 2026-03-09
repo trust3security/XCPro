@@ -118,6 +118,9 @@ interface AircraftMetadataRepository {
 Rules:
 - If not ready, `getMetadataFor` returns empty map.
 - Never run one query per aircraft. Always query with `IN (:icao24s)`.
+- Existing local rows that are still incomplete for identification or icon resolution
+  (missing registration/typecode/model and/or ICAO class) must remain eligible for
+  bounded on-demand hydration. Presence in Room alone must not suppress repair lookups.
 
 ---
 
@@ -163,7 +166,11 @@ Must support both of these OpenSky metadata shapes:
 Required behavior:
 - Accept aliases for both `icaoaircrafttype` and `icaoaircraftclass`.
 - Strip wrapping single/double quotes before per-field normalization.
-- Preserve class metadata during dedupe/upsert (do not drop non-null class due tie/ordering alone).
+- Dedupe/upsert must be winner-first with field-level backfill:
+  the preferred row keeps authority for conflicting non-null values, but null fields
+  must be filled from the losing duplicate when available.
+- Preserve typecode and class metadata during dedupe/upsert (do not drop non-null
+  icon/identification hints due tie/ordering alone).
 
 ---
 

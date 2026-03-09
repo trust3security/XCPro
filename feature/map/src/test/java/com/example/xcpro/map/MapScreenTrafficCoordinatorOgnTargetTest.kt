@@ -1,10 +1,10 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.map.OgnThermalHotspot
+import com.example.xcpro.map.OgnTrafficTarget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelChildren
@@ -28,9 +28,9 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
             scope = this,
             ognOverlayEnabled = MutableStateFlow(false)
         )
-        whenever(fixture.ognTrafficUseCase.setOverlayEnabled(true)).thenReturn(Unit)
+        whenever(fixture.ognTrafficFacade.setOverlayEnabled(true)).thenReturn(Unit)
         whenever(
-            fixture.ognTrafficUseCase.setTargetSelection(
+            fixture.ognTrafficFacade.setTargetSelection(
                 enabled = true,
                 aircraftKey = "FLARM:AB12CD"
             )
@@ -39,12 +39,12 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
         fixture.coordinator.onSetOgnTarget(" flarm:ab12cd ", enabled = true)
         advanceUntilIdle()
 
-        verify(fixture.ognTrafficUseCase).setOverlayEnabled(true)
-        verify(fixture.ognTrafficUseCase).setTargetSelection(
+        verify(fixture.ognTrafficFacade).setOverlayEnabled(true)
+        verify(fixture.ognTrafficFacade).setTargetSelection(
             enabled = eq(true),
             aircraftKey = eq("FLARM:AB12CD")
         )
-        verify(fixture.ognTrafficUseCase, never()).clearTargetSelection()
+        verify(fixture.ognTrafficFacade, never()).clearTargetSelection()
     }
 
     @Test
@@ -53,13 +53,13 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
             scope = this,
             ognOverlayEnabled = MutableStateFlow(true)
         )
-        whenever(fixture.ognTrafficUseCase.clearTargetSelection()).thenReturn(Unit)
+        whenever(fixture.ognTrafficFacade.clearTargetSelection()).thenReturn(Unit)
 
         fixture.coordinator.onSetOgnTarget("FLARM:AB12CD", enabled = false)
         advanceUntilIdle()
 
-        verify(fixture.ognTrafficUseCase).clearTargetSelection()
-        verify(fixture.ognTrafficUseCase, never()).setTargetSelection(
+        verify(fixture.ognTrafficFacade).clearTargetSelection()
+        verify(fixture.ognTrafficFacade, never()).setTargetSelection(
             enabled = eq(true),
             aircraftKey = eq("FLARM:AB12CD")
         )
@@ -74,14 +74,14 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
             ognTargetAircraftKey = MutableStateFlow("FLARM:DDA85C"),
             ognSuppressedTargetIds = MutableStateFlow(emptySet())
         )
-        whenever(fixture.ognTrafficUseCase.clearTargetSelection()).thenReturn(Unit)
+        whenever(fixture.ognTrafficFacade.clearTargetSelection()).thenReturn(Unit)
 
         fixture.coordinator.bind()
         advanceUntilIdle()
         fixture.ognSuppressedTargetIds.value = setOf("FLARM:DDA85C")
         advanceUntilIdle()
 
-        verify(fixture.ognTrafficUseCase, times(1)).clearTargetSelection()
+        verify(fixture.ognTrafficFacade, times(1)).clearTargetSelection()
         coroutineContext.cancelChildren()
     }
 
@@ -100,7 +100,7 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
         fixture.ognSuppressedTargetIds.value = setOf("FLARM:112233")
         advanceUntilIdle()
 
-        verify(fixture.ognTrafficUseCase, never()).clearTargetSelection()
+        verify(fixture.ognTrafficFacade, never()).clearTargetSelection()
         coroutineContext.cancelChildren()
     }
 
@@ -111,9 +111,9 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
         ognTargetAircraftKey: MutableStateFlow<String?> = MutableStateFlow(null),
         ognSuppressedTargetIds: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet())
     ): OgnTargetCoordinatorFixture {
-        val ognTrafficUseCase: OgnTrafficUseCase = mock()
-        val adsbTrafficUseCase: AdsbTrafficUseCase = mock()
-        whenever(adsbTrafficUseCase.isStreamingEnabled).thenReturn(MutableStateFlow(false))
+        val ognTrafficFacade: OgnTrafficFacade = mock()
+        val adsbTrafficFacade: AdsbTrafficFacade = mock()
+        whenever(adsbTrafficFacade.isStreamingEnabled).thenReturn(MutableStateFlow(false))
         val coordinator = MapScreenTrafficCoordinator(
             scope = scope,
             allowSensorStart = MutableStateFlow(true),
@@ -140,21 +140,21 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
             selectedThermalId = MutableStateFlow<String?>(null),
             rawAdsbTargets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList()),
             selectedAdsbId = MutableStateFlow<Icao24?>(null),
-            ognTrafficUseCase = ognTrafficUseCase,
-            adsbTrafficUseCase = adsbTrafficUseCase,
+            ognTrafficFacade = ognTrafficFacade,
+            adsbTrafficFacade = adsbTrafficFacade,
             emitUiEffect = {}
         )
 
         return OgnTargetCoordinatorFixture(
             coordinator = coordinator,
-            ognTrafficUseCase = ognTrafficUseCase,
+            ognTrafficFacade = ognTrafficFacade,
             ognSuppressedTargetIds = ognSuppressedTargetIds
         )
     }
 
     private data class OgnTargetCoordinatorFixture(
         val coordinator: MapScreenTrafficCoordinator,
-        val ognTrafficUseCase: OgnTrafficUseCase,
+        val ognTrafficFacade: OgnTrafficFacade,
         val ognSuppressedTargetIds: MutableStateFlow<Set<String>>
     )
 }

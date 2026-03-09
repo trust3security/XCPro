@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbProximityTier
-import com.example.xcpro.adsb.AdsbTrafficUiModel
+
+
 
 internal object AdsbEmergencyFlashPolicy {
     private const val EMERGENCY_FLASH_PERIOD_MS = 800L

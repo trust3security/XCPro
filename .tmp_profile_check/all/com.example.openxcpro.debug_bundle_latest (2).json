@@ -1,0 +1,294 @@
+{
+  "activeProfileId": "default-profile",
+  "exportedAtWallMs": 1772883474518,
+  "profiles": [
+    {
+      "aircraftType": "PARAGLIDER",
+      "createdAt": 1772883472624,
+      "id": "default-profile",
+      "isActive": false,
+      "lastUsed": 1772883472624,
+      "name": "Default",
+      "polar": {
+        "highSinkMs": 2.0,
+        "highSpeedKmh": 180.0,
+        "lowSinkMs": 0.5,
+        "lowSpeedKmh": 80.0,
+        "midSinkMs": 0.8,
+        "midSpeedKmh": 120.0
+      },
+      "preferences": {
+        "autoSwitchModes": true,
+        "cardAnimations": true,
+        "theme": "default",
+        "uiLayout": {
+          "variometerPosition": {
+            "x": 50.0,
+            "y": 50.0
+          },
+          "variometerSize": 150.0
+        },
+        "units": "METRIC"
+      }
+    }
+  ],
+  "settings": {
+    "sections": {
+      "tier_a.card_preferences": {
+        "cardsAcrossPortrait": 3,
+        "cardsAnchorPortrait": "TOP",
+        "profileCardPositions": {
+          "default-profile": {
+            "CRUISE": {},
+            "THERMAL": {},
+            "FINAL_GLIDE": {}
+          }
+        },
+        "profileFlightModeTemplates": {
+          "default-profile": {}
+        },
+        "profileFlightModeVisibilities": {
+          "default-profile": {
+            "CRUISE": true,
+            "THERMAL": true,
+            "FINAL_GLIDE": true
+          }
+        },
+        "profileTemplateCards": {
+          "default-profile": {}
+        },
+        "templates": [
+          {
+            "cardIds": [
+              "agl"
+            ],
+            "createdAt": 0,
+            "description": "Single AGL card for cruise mode",
+            "id": "id01",
+            "isPreset": true,
+            "name": "Cruise"
+          },
+          {
+            "cardIds": [
+              "thermal_tc_gain",
+              "thermal_tc_avg",
+              "thermal_t_avg"
+            ],
+            "createdAt": 0,
+            "description": "Core thermal efficiency cards",
+            "id": "id02",
+            "isPreset": true,
+            "name": "Thermal"
+          },
+          {
+            "cardIds": [
+              "gps_alt",
+              "final_gld",
+              "ground_speed"
+            ],
+            "createdAt": 0,
+            "description": "Three cards for final glide mode",
+            "id": "id03",
+            "isPreset": true,
+            "name": "Final Glide"
+          },
+          {
+            "cardIds": [
+              "gps_alt",
+              "track",
+              "wpt_dist",
+              "wpt_brg",
+              "final_gld",
+              "ground_speed",
+              "thermal_t_avg",
+              "thermal_tc_avg",
+              "ld_curr"
+            ],
+            "createdAt": 0,
+            "description": "Navigation and performance",
+            "id": "id04",
+            "isPreset": true,
+            "name": "Cross Country"
+          },
+          {
+            "cardIds": [
+              "task_spd",
+              "task_dist",
+              "start_alt",
+              "wpt_eta",
+              "final_gld",
+              "ld_curr",
+              "mc_speed",
+              "flight_time"
+            ],
+            "createdAt": 0,
+            "description": "Racing and task management",
+            "id": "id05",
+            "isPreset": true,
+            "name": "Competition"
+          }
+        ],
+        "varioSmoothingAlpha": 0.25
+      },
+      "tier_a.flight_mgmt_preferences": {
+        "lastActiveTab": "screens",
+        "profileLastFlightModes": {
+          "default-profile": "CRUISE"
+        }
+      },
+      "tier_a.look_and_feel_preferences": {
+        "cardStyleByProfile": {
+          "default-profile": "standard"
+        },
+        "colorThemeByProfile": {
+          "default-profile": "default"
+        },
+        "statusBarStyleByProfile": {
+          "default-profile": "transparent"
+        }
+      },
+      "tier_a.theme_preferences": {
+        "customColorsByProfileAndTheme": {
+          "default-profile": {}
+        },
+        "themeIdByProfile": {
+          "default-profile": "default"
+        }
+      },
+      "tier_a.map_widget_layout": {
+        "widgetsByProfile": {
+          "default-profile": {
+            "SIDE_HAMBURGER": {},
+            "FLIGHT_MODE": {},
+            "SETTINGS_SHORTCUT": {},
+            "BALLAST": {}
+          }
+        }
+      },
+      "tier_a.variometer_widget_layout": {
+        "layoutsByProfile": {
+          "default-profile": {
+            "hasPersistedOffset": false,
+            "hasPersistedSize": false,
+            "offset": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "sizePx": 0.0
+          }
+        }
+      },
+      "tier_a.glider_config": {
+        "profiles": {
+          "default-profile": {
+            "config": {
+              "ballastDrainMinutes": 5.0,
+              "bugsPercent": 0,
+              "hideBallastPill": false,
+              "pilotAndGearKg": 90.0,
+              "waterBallastKg": 0.0
+            },
+            "effectiveModelId": "club-default-fallback",
+            "isFallbackPolarActive": true
+          }
+        }
+      },
+      "tier_a.levo_vario_preferences": {
+        "audioDeadbandMax": 0.1,
+        "audioDeadbandMin": -0.3,
+        "audioDutyCycle": 0.6666666666666666,
+        "audioEnabled": true,
+        "audioLiftThreshold": 0.1,
+        "audioSinkSilenceThreshold": 0.0,
+        "audioVolume": 0.8,
+        "autoMcEnabled": true,
+        "enableHawkUi": false,
+        "hawkNeedleDriftTauMaxSec": 8.0,
+        "hawkNeedleDriftTauMinSec": 3.5,
+        "hawkNeedleOmegaMaxHz": 2.0,
+        "hawkNeedleOmegaMinHz": 0.9,
+        "hawkNeedleTargetTauSec": 0.8,
+        "macCready": 0.0,
+        "macCreadyRisk": 0.0,
+        "showHawkCard": false,
+        "showWindSpeedOnVario": true,
+        "teCompensationEnabled": true
+      },
+      "tier_a.thermalling_mode_preferences": {
+        "applyZoomOnEnter": true,
+        "enabled": false,
+        "enterDelaySeconds": 5,
+        "exitDelaySeconds": 8,
+        "rememberManualThermalZoomInSession": true,
+        "restorePreviousModeOnExit": true,
+        "restorePreviousZoomOnExit": true,
+        "switchToThermalMode": true,
+        "thermalZoomLevel": 13.0,
+        "zoomOnlyFallbackWhenThermalHidden": true
+      },
+      "tier_a.ogn_traffic_preferences": {
+        "autoReceiveRadiusEnabled": false,
+        "displayUpdateMode": "real_time",
+        "enabled": false,
+        "hotspotsDisplayPercent": 100,
+        "iconSizePx": 124,
+        "receiveRadiusKm": 150,
+        "showSciaEnabled": false,
+        "showThermalsEnabled": false,
+        "targetEnabled": false,
+        "thermalRetentionHours": 24
+      },
+      "tier_a.ogn_trail_selection_preferences": {
+        "selectedAircraftKeys": []
+      },
+      "tier_a.adsb_traffic_preferences": {
+        "emergencyAudioCohortBucket": 76,
+        "emergencyAudioCohortPercent": 100,
+        "emergencyAudioCooldownMs": 45000,
+        "emergencyAudioEnabled": false,
+        "emergencyAudioMasterEnabled": true,
+        "emergencyAudioRollbackLatched": false,
+        "emergencyAudioShadowMode": false,
+        "emergencyFlashEnabled": true,
+        "enabled": false,
+        "iconSizePx": 124,
+        "maxDistanceKm": 10,
+        "verticalAboveMeters": 914.4000000000001,
+        "verticalBelowMeters": 609.6
+      },
+      "tier_a.weather_overlay_preferences": {
+        "animatePastWindow": false,
+        "animationSpeed": "normal",
+        "animationWindow": "10m",
+        "enabled": false,
+        "frameMode": "latest",
+        "manualFrameIndex": 0,
+        "opacity": 0.45,
+        "smooth": true,
+        "snow": true,
+        "transitionQuality": "balanced"
+      },
+      "tier_a.forecast_preferences": {
+        "autoTimeEnabled": true,
+        "followTimeOffsetMinutes": 0,
+        "opacity": 0.65,
+        "overlayEnabled": false,
+        "selectedPrimaryParameterId": "wstar_bsratio",
+        "selectedRegion": "WEST_US",
+        "selectedWindParameterId": "sfcwind0",
+        "skySightSatelliteAnimateEnabled": true,
+        "skySightSatelliteHistoryFrames": 3,
+        "skySightSatelliteImageryEnabled": true,
+        "skySightSatelliteLightningEnabled": true,
+        "skySightSatelliteOverlayEnabled": false,
+        "skySightSatelliteRadarEnabled": true,
+        "windDisplayMode": "ARROW",
+        "windOverlayEnabled": false,
+        "windOverlayScale": 1.0
+      },
+      "tier_a.wind_override_preferences": {}
+    },
+    "version": "1.0"
+  },
+  "version": "2.0"
+}

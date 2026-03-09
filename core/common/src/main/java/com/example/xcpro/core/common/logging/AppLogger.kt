@@ -16,35 +16,43 @@ object AppLogger {
 
     fun d(tag: String, message: String, throwable: Throwable? = null) {
         if (!isDebug) return
-        if (throwable != null) {
-            Log.d(tag, message, throwable)
-        } else {
-            Log.d(tag, message)
+        emitSafely {
+            if (throwable != null) {
+                Log.d(tag, message, throwable)
+            } else {
+                Log.d(tag, message)
+            }
         }
     }
 
     fun i(tag: String, message: String, throwable: Throwable? = null) {
         if (!isDebug) return
-        if (throwable != null) {
-            Log.i(tag, message, throwable)
-        } else {
-            Log.i(tag, message)
+        emitSafely {
+            if (throwable != null) {
+                Log.i(tag, message, throwable)
+            } else {
+                Log.i(tag, message)
+            }
         }
     }
 
     fun w(tag: String, message: String, throwable: Throwable? = null) {
-        if (throwable != null) {
-            Log.w(tag, message, throwable)
-        } else {
-            Log.w(tag, message)
+        emitSafely {
+            if (throwable != null) {
+                Log.w(tag, message, throwable)
+            } else {
+                Log.w(tag, message)
+            }
         }
     }
 
     fun e(tag: String, message: String, throwable: Throwable? = null) {
-        if (throwable != null) {
-            Log.e(tag, message, throwable)
-        } else {
-            Log.e(tag, message)
+        emitSafely {
+            if (throwable != null) {
+                Log.e(tag, message, throwable)
+            } else {
+                Log.e(tag, message)
+            }
         }
     }
 
@@ -88,4 +96,13 @@ object AppLogger {
     }
 
     private fun formatCoord(value: Double): String = String.format("%.5f", value)
+
+    // Local JVM tests use android.jar stubs; logging must stay non-fatal there.
+    private inline fun emitSafely(block: () -> Unit) {
+        try {
+            block()
+        } catch (_: RuntimeException) {
+        } catch (_: LinkageError) {
+        }
+    }
 }

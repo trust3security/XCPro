@@ -1,10 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
-import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
-import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -12,18 +7,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
-
-internal data class MapOverlayRuntimeTrafficCounters(
-    val overlayFrontOrderApplyCount: Long,
-    val overlayFrontOrderSkippedCount: Long,
-    val adsbIconUnknownRenderCount: Long,
-    val adsbIconLegacyUnknownRenderCount: Long,
-    val adsbIconResolveLatencySampleCount: Long,
-    val adsbIconResolveLatencyLastMs: Long?,
-    val adsbIconResolveLatencyMaxMs: Long?,
-    val adsbIconResolveLatencyAverageMs: Long?,
-    val adsbDefaultMediumUnknownIconEnabled: Boolean
-)
 
 internal class MapOverlayManagerRuntimeTrafficDelegate(
     private val mapState: MapScreenState,
@@ -252,20 +235,4 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         )
     }
 
-    private data class OverlayFrontOrderSignature(
-        val mapId: Int,
-        val styleId: Int,
-        val layerCount: Int,
-        val topLayerId: String?,
-        val blueOverlayId: Int,
-        val ognOverlayId: Int,
-        val ognTargetRingOverlayId: Int,
-        val ognTargetLineOverlayId: Int,
-        val adsbOverlayId: Int
-    )
-
-    private data class AdsbRenderThrottleState(
-        var lastRenderMonoMs: Long = 0L,
-        var pendingJob: Job? = null
-    )
 }

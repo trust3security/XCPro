@@ -1,13 +1,13 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.ogn.buildOgnSelectionLookup
-import com.example.xcpro.ogn.expandOgnSelectionAliases
-import com.example.xcpro.ogn.legacyOgnKeyFromCanonicalOrNull
-import com.example.xcpro.ogn.normalizeOgnAircraftKey
-import com.example.xcpro.ogn.selectionLookupContainsOgnKey
+import com.example.xcpro.map.buildOgnSelectionLookup
+import com.example.xcpro.map.expandOgnSelectionAliases
+import com.example.xcpro.map.legacyOgnKeyFromCanonicalOrNull
+import com.example.xcpro.map.normalizeOgnAircraftKey
+import com.example.xcpro.map.selectionLookupContainsOgnKey
 import kotlin.math.max
 import org.junit.Assert.assertTrue
 import org.junit.Test

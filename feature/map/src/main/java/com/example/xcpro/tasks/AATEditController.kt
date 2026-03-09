@@ -1,8 +1,10 @@
 package com.example.xcpro.tasks
 
+import com.example.xcpro.tasks.aat.models.AATWaypoint
+
 internal interface AATEditOperations {
     fun updateTargetPoint(index: Int, lat: Double, lon: Double)
-    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, Any>?
+    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>?
     fun setEditMode(waypointIndex: Int, enabled: Boolean)
     fun isInEditMode(): Boolean
     fun getEditWaypointIndex(): Int?
@@ -18,7 +20,7 @@ internal class AATEditController(
         operations.updateTargetPoint(index, lat, lon)
     }
 
-    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, Any>? =
+    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>? =
         operations.checkAreaTap(lat, lon)
 
     fun enterEditMode(waypointIndex: Int) {

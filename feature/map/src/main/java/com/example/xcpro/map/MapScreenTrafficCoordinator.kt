@@ -1,15 +1,7 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.buildOgnSelectionLookup
-import com.example.xcpro.ogn.normalizeOgnAircraftKey
-import com.example.xcpro.ogn.normalizeOgnAircraftKeyOrNull
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,8 +40,8 @@ internal class MapScreenTrafficCoordinator(
     private val selectedThermalId: MutableStateFlow<String?>,
     private val rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>>,
     private val selectedAdsbId: MutableStateFlow<Icao24?>,
-    private val ognTrafficUseCase: OgnTrafficUseCase,
-    private val adsbTrafficUseCase: AdsbTrafficUseCase,
+    private val ognTrafficFacade: OgnTrafficFacade,
+    private val adsbTrafficFacade: AdsbTrafficFacade,
     private val emitUiEffect: suspend (MapUiEffect) -> Unit
 ) {
     private val mutationGateMutex = Mutex()
@@ -65,7 +57,7 @@ internal class MapScreenTrafficCoordinator(
         }
             .distinctUntilChanged()
             .onEach { shouldStream ->
-                ognTrafficUseCase.setStreamingEnabled(shouldStream)
+                ognTrafficFacade.setStreamingEnabled(shouldStream)
             }
             .launchIn(scope)
 
@@ -81,7 +73,7 @@ internal class MapScreenTrafficCoordinator(
                 if (shouldStream) {
                     seedAdsbPositionFromCurrentPosition()
                 }
-                adsbTrafficUseCase.setStreamingEnabled(shouldStream)
+                adsbTrafficFacade.setStreamingEnabled(shouldStream)
             }
             .launchIn(scope)
 
@@ -95,14 +87,14 @@ internal class MapScreenTrafficCoordinator(
                     return@onEach
                 }
                 val (latitude, longitude) = gpsPosition
-                ognTrafficUseCase.updateCenter(
+                ognTrafficFacade.updateCenter(
                     latitude = latitude,
                     longitude = longitude
                 )
-                if (!adsbTrafficUseCase.isStreamingEnabled.value) {
+                if (!adsbTrafficFacade.isStreamingEnabled.value) {
                     return@onEach
                 }
-                adsbTrafficUseCase.updateCenter(
+                adsbTrafficFacade.updateCenter(
                     latitude = latitude,
                     longitude = longitude
                 )
@@ -112,22 +104,22 @@ internal class MapScreenTrafficCoordinator(
         mapLocation
             .onEach { location ->
                 if (location == null) {
-                    if (adsbTrafficUseCase.isStreamingEnabled.value) {
-                        adsbTrafficUseCase.clearOwnshipOrigin()
-                        adsbTrafficUseCase.updateOwnshipMotion(trackDeg = null, speedMps = null)
+                    if (adsbTrafficFacade.isStreamingEnabled.value) {
+                        adsbTrafficFacade.clearOwnshipOrigin()
+                        adsbTrafficFacade.updateOwnshipMotion(trackDeg = null, speedMps = null)
                     }
                     return@onEach
                 }
-                if (!adsbTrafficUseCase.isStreamingEnabled.value) {
+                if (!adsbTrafficFacade.isStreamingEnabled.value) {
                     return@onEach
                 }
                 // Keep ownship reference fresh even when lat/lon are unchanged while stationary.
-                adsbTrafficUseCase.updateOwnshipOrigin(
+                adsbTrafficFacade.updateOwnshipOrigin(
                     latitude = location.latitude,
                     longitude = location.longitude
                 )
                 val ownshipMotion = toOwnshipMotion(location)
-                adsbTrafficUseCase.updateOwnshipMotion(
+                adsbTrafficFacade.updateOwnshipMotion(
                     trackDeg = ownshipMotion.trackDeg,
                     speedMps = ownshipMotion.speedMps
                 )
@@ -147,7 +139,7 @@ internal class MapScreenTrafficCoordinator(
         }
             .distinctUntilChanged()
             .onEach { input ->
-                ognTrafficUseCase.updateAutoReceiveRadiusContext(
+                ognTrafficFacade.updateAutoReceiveRadiusContext(
                     zoomLevel = input.zoomLevel,
                     groundSpeedMs = input.groundSpeedMs,
                     isFlying = input.isFlying
@@ -157,7 +149,7 @@ internal class MapScreenTrafficCoordinator(
 
         ownshipAltitudeMeters
             .onEach { altitudeMeters ->
-                adsbTrafficUseCase.updateOwnshipAltitudeMeters(altitudeMeters)
+                adsbTrafficFacade.updateOwnshipAltitudeMeters(altitudeMeters)
             }
             .launchIn(scope)
 
@@ -166,7 +158,7 @@ internal class MapScreenTrafficCoordinator(
         }
             .distinctUntilChanged()
             .onEach { (isCircling, featureEnabled) ->
-                adsbTrafficUseCase.updateOwnshipCirclingContext(
+                adsbTrafficFacade.updateOwnshipCirclingContext(
                     isCircling = isCircling,
                     circlingFeatureEnabled = featureEnabled
                 )
@@ -182,7 +174,7 @@ internal class MapScreenTrafficCoordinator(
         }
             .distinctUntilChanged()
             .onEach { (maxDistanceKm, verticalAboveMeters, verticalBelowMeters) ->
-                adsbTrafficUseCase.updateDisplayFilters(
+                adsbTrafficFacade.updateDisplayFilters(
                     maxDistanceKm = maxDistanceKm,
                     verticalAboveMeters = verticalAboveMeters,
                     verticalBelowMeters = verticalBelowMeters
@@ -236,7 +228,7 @@ internal class MapScreenTrafficCoordinator(
                     userMessage = OGN_SETTINGS_FAILURE_MESSAGE,
                     coalesceKey = MUTATION_KEY_CLEAR_SUPPRESSED_TARGET
                 ) {
-                    ognTrafficUseCase.clearTargetSelection()
+                    ognTrafficFacade.clearTargetSelection()
                 }
             }
             .launchIn(scope)
@@ -269,7 +261,7 @@ internal class MapScreenTrafficCoordinator(
                         userMessage = OGN_SETTINGS_FAILURE_MESSAGE,
                         coalesceKey = MUTATION_KEY_SCIA_OVERLAY_SYNC
                     ) {
-                        ognTrafficUseCase.setOverlayEnabled(true)
+                        ognTrafficFacade.setOverlayEnabled(true)
                     }
                 }
             }
@@ -291,7 +283,7 @@ internal class MapScreenTrafficCoordinator(
             coalesceKey = MUTATION_KEY_TOGGLE_OGN
         ) {
             val next = !ognOverlayEnabled.value
-            ognTrafficUseCase.setOverlayEnabled(next)
+            ognTrafficFacade.setOverlayEnabled(next)
             if (!next) {
                 selectedOgnId.value = null
                 selectedThermalId.value = null
@@ -307,9 +299,9 @@ internal class MapScreenTrafficCoordinator(
         ) {
             val next = !showThermalsEnabled.value
             if (next && !ognOverlayEnabled.value) {
-                ognTrafficUseCase.setOverlayEnabled(true)
+                ognTrafficFacade.setOverlayEnabled(true)
             }
-            ognTrafficUseCase.setShowThermalsEnabled(next)
+            ognTrafficFacade.setShowThermalsEnabled(next)
             if (!next) {
                 selectedThermalId.value = null
             }
@@ -324,12 +316,12 @@ internal class MapScreenTrafficCoordinator(
         ) {
             val next = !showSciaEnabled.value
             if (next && !ognOverlayEnabled.value) {
-                ognTrafficUseCase.setOverlayAndShowSciaEnabled(
+                ognTrafficFacade.setOverlayAndShowSciaEnabled(
                     overlayEnabled = true,
                     showSciaEnabled = true
                 )
             } else {
-                ognTrafficUseCase.setShowSciaEnabled(next)
+                ognTrafficFacade.setShowSciaEnabled(next)
             }
         }
     }
@@ -341,14 +333,14 @@ internal class MapScreenTrafficCoordinator(
             coalesceKey = MUTATION_KEY_TARGET_SELECTION
         ) {
             if (!enabled) {
-                ognTrafficUseCase.clearTargetSelection()
+                ognTrafficFacade.clearTargetSelection()
                 return@launchPreferenceMutation
             }
             val normalizedAircraftKey = normalizeOgnAircraftKeyOrNull(aircraftKey) ?: return@launchPreferenceMutation
             if (!ognOverlayEnabled.value) {
-                ognTrafficUseCase.setOverlayEnabled(true)
+                ognTrafficFacade.setOverlayEnabled(true)
             }
-            ognTrafficUseCase.setTargetSelection(enabled = true, aircraftKey = normalizedAircraftKey)
+            ognTrafficFacade.setTargetSelection(enabled = true, aircraftKey = normalizedAircraftKey)
         }
     }
 
@@ -362,9 +354,9 @@ internal class MapScreenTrafficCoordinator(
             if (next) {
                 seedAdsbPositionFromCurrentPosition()
             }
-            adsbTrafficUseCase.setOverlayEnabled(next)
+            adsbTrafficFacade.setOverlayEnabled(next)
             if (!next) {
-                adsbTrafficUseCase.clearTargets()
+                adsbTrafficFacade.clearTargets()
                 selectedAdsbId.value = null
             }
         }
@@ -403,27 +395,27 @@ internal class MapScreenTrafficCoordinator(
     private fun seedAdsbPositionFromCurrentPosition() {
         val gps = mapLocation.value
         if (gps != null) {
-            adsbTrafficUseCase.updateCenter(
+            adsbTrafficFacade.updateCenter(
                 latitude = gps.latitude,
                 longitude = gps.longitude
             )
-            adsbTrafficUseCase.updateOwnshipOrigin(
+            adsbTrafficFacade.updateOwnshipOrigin(
                 latitude = gps.latitude,
                 longitude = gps.longitude
             )
             val ownshipMotion = toOwnshipMotion(gps)
-            adsbTrafficUseCase.updateOwnshipMotion(
+            adsbTrafficFacade.updateOwnshipMotion(
                 trackDeg = ownshipMotion.trackDeg,
                 speedMps = ownshipMotion.speedMps
             )
             return
         }
 
-        adsbTrafficUseCase.clearOwnshipOrigin()
-        adsbTrafficUseCase.updateOwnshipMotion(trackDeg = null, speedMps = null)
+        adsbTrafficFacade.clearOwnshipOrigin()
+        adsbTrafficFacade.updateOwnshipMotion(trackDeg = null, speedMps = null)
         val cameraTarget = mapState.lastCameraSnapshot.value?.target
         if (cameraTarget != null) {
-            adsbTrafficUseCase.updateCenter(
+            adsbTrafficFacade.updateCenter(
                 latitude = cameraTarget.latitude,
                 longitude = cameraTarget.longitude
             )

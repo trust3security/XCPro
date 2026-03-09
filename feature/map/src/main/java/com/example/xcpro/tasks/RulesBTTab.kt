@@ -17,13 +17,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
+import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import java.time.Duration
 
 @Composable
-fun RulesBTTab(
+internal fun RulesBTTab(
     uiState: TaskUiState,
     onSelect: (TaskType) -> Unit,
-    onUpdateAATParameters: (Duration, Duration) -> Unit
+    onUpdateAATParameters: (Duration, Duration) -> Unit,
+    onUpdateRacingStartRules: (UpdateRacingStartRulesCommand) -> Unit,
+    onUpdateRacingFinishRules: (UpdateRacingFinishRulesCommand) -> Unit,
+    onUpdateRacingValidationRules: (UpdateRacingValidationRulesCommand) -> Unit
 ) {
     val selected = uiState.taskType
     val currentWaypoints = uiState.task.waypoints
@@ -72,7 +78,12 @@ fun RulesBTTab(
         Spacer(Modifier.height(16.dp))
 
         when (selected) {
-            TaskType.RACING -> RulesRacingTaskParameters()
+            TaskType.RACING -> RulesRacingTaskParameters(
+                uiState = uiState,
+                onUpdateRacingStartRules = onUpdateRacingStartRules,
+                onUpdateRacingFinishRules = onUpdateRacingFinishRules,
+                onUpdateRacingValidationRules = onUpdateRacingValidationRules
+            )
             TaskType.AAT -> RulesAatTaskParameters(uiState.task, onUpdateAATParameters)
         }
     }

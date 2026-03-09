@@ -8,6 +8,10 @@ class UnitsSettingsUseCase @Inject constructor(
 ) {
     val unitsFlow: Flow<UnitsPreferences> = repository.unitsFlow
 
+    fun setActiveProfileId(profileId: String) {
+        repository.setActiveProfileId(profileId)
+    }
+
     suspend fun setUnits(preferences: UnitsPreferences) {
         repository.setUnits(preferences)
     }

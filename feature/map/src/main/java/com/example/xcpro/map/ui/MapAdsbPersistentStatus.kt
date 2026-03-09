@@ -10,9 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.example.xcpro.adsb.AdsbAuthMode
-import com.example.xcpro.adsb.AdsbConnectionState
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbAuthMode
+import com.example.xcpro.map.AdsbConnectionState
+import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.isBackingOff
+import com.example.xcpro.map.isError
 
 @Composable
 internal fun AdsbPersistentStatusBadge(
@@ -50,8 +52,8 @@ internal fun AdsbPersistentStatusBadge(
 }
 
 internal fun shouldSurfacePersistentAdsbStatus(snapshot: AdsbTrafficSnapshot): Boolean =
-    snapshot.connectionState is AdsbConnectionState.Error ||
-        snapshot.connectionState is AdsbConnectionState.BackingOff ||
+    snapshot.connectionState.isError() ||
+        snapshot.connectionState.isBackingOff() ||
         snapshot.authMode == AdsbAuthMode.AuthFailed
 
 internal fun persistentAdsbStatusPresentation(
@@ -59,13 +61,13 @@ internal fun persistentAdsbStatusPresentation(
 ): Triple<String, String?, Color> {
     val reason = snapshot.debugReasonLabel() ?: snapshot.lastError?.takeIf { it.isNotBlank() }
     return when {
-        snapshot.connectionState is AdsbConnectionState.Error -> Triple(
+        snapshot.connectionState.isError() -> Triple(
             "ADS-B Offline",
             reason,
             Color(0xFF991B1B)
         )
 
-        snapshot.connectionState is AdsbConnectionState.BackingOff -> Triple(
+        snapshot.connectionState.isBackingOff() -> Triple(
             "ADS-B Backoff",
             reason ?: "Waiting before next retry",
             Color(0xFF92400E)

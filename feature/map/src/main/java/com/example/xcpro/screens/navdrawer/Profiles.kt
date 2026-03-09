@@ -241,7 +241,7 @@ fun ProfilesScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            if (profile.isActive) {
+                            if (uiState.activeProfile?.id == profile.id) {
                                 Text(
                                     text = "ACTIVE",
                                     style = MaterialTheme.typography.labelSmall,
@@ -326,8 +326,8 @@ fun ProfilesScreen(
     if (showExportDialog) {
         ProfileExportDialog(
             profile = null, // Export all profiles
-            allProfiles = uiState.profiles,
             onDismiss = { showExportDialog = false },
+            onRequestExportJson = { profileViewModel.exportBundle() },
             onExport = { message ->
                 exportMessage = message
                 showExportDialog = false
@@ -338,9 +338,9 @@ fun ProfilesScreen(
     if (showImportDialog) {
         ProfileImportDialog(
             onDismiss = { showImportDialog = false },
-            onImport = { importedProfiles, keepCurrentActive ->
-                profileViewModel.importProfiles(
-                    profiles = importedProfiles,
+            onImportJson = { json, keepCurrentActive ->
+                profileViewModel.importBundle(
+                    json = json,
                     keepCurrentActive = keepCurrentActive
                 )
                 showImportDialog = false

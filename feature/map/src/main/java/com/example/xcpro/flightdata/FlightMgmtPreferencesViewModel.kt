@@ -3,6 +3,7 @@ package com.example.xcpro.flightdata
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.profiles.ProfileIdResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,7 @@ class FlightMgmtPreferencesViewModel @Inject constructor(
     private val useCase: FlightMgmtPreferencesUseCase
 ) : ViewModel() {
 
-    private val profileId = MutableStateFlow("default")
+    private val profileId = MutableStateFlow(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
 
     val activeTab: StateFlow<String> = useCase.observeLastActiveTab()
         .stateIn(

@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbProximityTier
+
 import org.maplibre.android.style.expressions.Expression
 
 internal object AdsbProximityIconOutlinePolicy {

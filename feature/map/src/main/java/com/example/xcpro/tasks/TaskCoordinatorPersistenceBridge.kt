@@ -96,18 +96,18 @@ internal class TaskCoordinatorPersistenceBridge(
         when (taskType) {
             TaskType.RACING -> {
                 val state = racingTaskEngine?.state?.value ?: return
-                racingTaskManager.initializeFromGenericWaypoints(state.base.task.waypoints)
-                racingTaskManager.setRacingLeg(state.base.activeLegIndex)
+                racingTaskManager.initializeFromCoreTask(
+                    task = state.base.task,
+                    activeLegIndex = state.base.activeLegIndex
+                )
             }
 
             TaskType.AAT -> {
                 val state = aatTaskEngine?.state?.value ?: return
-                aatTaskManager.initializeFromGenericWaypoints(state.base.task.waypoints)
-                aatTaskManager.updateAATTimes(
-                    minTime = state.minimumTime,
-                    maxTime = state.maximumTime.takeIf { !it.isNegative && !it.isZero }
+                aatTaskManager.initializeFromCoreTask(
+                    task = state.base.task,
+                    activeLegIndex = state.base.activeLegIndex
                 )
-                aatTaskManager.setAATLeg(state.base.activeLegIndex)
             }
         }
     }

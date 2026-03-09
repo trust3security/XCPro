@@ -3,7 +3,12 @@ package com.example.xcpro.tasks.racing.navigation
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.replay.IgcParser
 import com.example.xcpro.replay.IgcPoint
+import com.example.xcpro.tasks.core.RacingFinishCustomParams
+import com.example.xcpro.tasks.core.RacingPevCustomParams
+import com.example.xcpro.tasks.core.RacingStartCustomParams
 import com.example.xcpro.tasks.racing.SimpleRacingTask
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryGeometry
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -38,13 +43,14 @@ class RacingReplayValidationTest {
         assertEquals(firstRunEvents, secondRunEvents)
 
         val startMillis = log.points.first().timestampMillis
-        assertEquals(3, firstRunEvents.size)
-        assertEquals(RacingNavigationEventType.START, firstRunEvents[0].type)
-        assertEquals(RacingNavigationEventType.TURNPOINT, firstRunEvents[1].type)
-        assertEquals(RacingNavigationEventType.FINISH, firstRunEvents[2].type)
-        assertTrue(firstRunEvents[0].timestampMillis >= startMillis)
-        assertTrue(firstRunEvents[1].timestampMillis >= firstRunEvents[0].timestampMillis)
-        assertTrue(firstRunEvents[2].timestampMillis >= firstRunEvents[1].timestampMillis)
+        val scoredEvents = firstRunEvents.filter { it.type != RacingNavigationEventType.TURNPOINT_NEAR_MISS }
+        assertEquals(3, scoredEvents.size)
+        assertEquals(RacingNavigationEventType.START, scoredEvents[0].type)
+        assertEquals(RacingNavigationEventType.TURNPOINT, scoredEvents[1].type)
+        assertEquals(RacingNavigationEventType.FINISH, scoredEvents[2].type)
+        assertTrue(scoredEvents[0].timestampMillis >= startMillis)
+        assertTrue(scoredEvents[1].timestampMillis >= scoredEvents[0].timestampMillis)
+        assertTrue(scoredEvents[2].timestampMillis >= scoredEvents[1].timestampMillis)
     }
 
     @Test
@@ -61,6 +67,140 @@ class RacingReplayValidationTest {
 
         assertEquals(firstTrace, secondTrace)
         assertTrue(firstTrace.any { it.eventType != null })
+    }
+
+    @Test
+    fun replayStartOutcomes_areDeterministicForRejectedAndToleranceAndPevPenaltyCases() {
+        val task = buildSimpleTask()
+        val rules = RacingStartCustomParams(
+            gateOpenTimeMillis = 2_000L,
+            toleranceMeters = 500.0,
+            pev = RacingPevCustomParams(
+                enabled = true,
+                waitTimeMinutes = 5,
+                startWindowMinutes = 5
+            )
+        )
+        val fixes = listOf(
+            RacingNavigationFix(lat = 37.0, lon = -122.001, timestampMillis = 1_000L),
+            RacingNavigationFix(lat = 37.0, lon = -121.999, timestampMillis = 1_200L),
+            RacingNavigationFix(lat = 37.0, lon = -122.0, timestampMillis = 2_500L)
+        )
+
+        val firstRun = replayStartEventsWithRules(task, fixes, rules)
+        val secondRun = replayStartEventsWithRules(task, fixes, rules)
+
+        assertEquals(firstRun, secondRun)
+        assertEquals(2, firstRun.size)
+        assertEquals(RacingNavigationEventType.START_REJECTED, firstRun[0].type)
+        assertEquals(RacingNavigationEventType.START, firstRun[1].type)
+        assertEquals(RacingStartRejectionReason.GATE_NOT_OPEN, firstRun[0].startCandidate?.rejectionReason)
+        assertEquals(RacingStartCandidateType.TOLERANCE, firstRun[1].startCandidate?.candidateType)
+        assertTrue(
+            firstRun[1].startCandidate?.penaltyFlags?.contains(RacingStartPenaltyFlag.PEV_MISSING) == true
+        )
+    }
+
+    @Test
+    fun replayNearMissPath_isDeterministicAcrossRepeatedRuns() {
+        val task = buildSimpleTask()
+        val turnpoint = task.waypoints[1]
+        val center = RacingBoundaryPoint(turnpoint.lat, turnpoint.lon)
+        val farOutside = RacingBoundaryGeometry.pointOnBearing(
+            center,
+            90.0,
+            turnpoint.gateWidthMeters + 900.0
+        )
+        val nearOutside = RacingBoundaryGeometry.pointOnBearing(
+            center,
+            90.0,
+            turnpoint.gateWidthMeters + 250.0
+        )
+        val inside = RacingBoundaryGeometry.pointOnBearing(
+            center,
+            90.0,
+            turnpoint.gateWidthMeters - 100.0
+        )
+        val initialState = RacingNavigationState(
+            status = RacingNavigationStatus.IN_PROGRESS,
+            currentLegIndex = 1,
+            lastFix = RacingNavigationFix(
+                lat = farOutside.lat,
+                lon = farOutside.lon,
+                timestampMillis = 1_000L
+            )
+        )
+        val fixes = listOf(
+            RacingNavigationFix(
+                lat = nearOutside.lat,
+                lon = nearOutside.lon,
+                timestampMillis = 2_000L
+            ),
+            RacingNavigationFix(
+                lat = inside.lat,
+                lon = inside.lon,
+                timestampMillis = 3_000L
+            )
+        )
+
+        val firstRun = replayEvents(task, fixes, initialState)
+        val secondRun = replayEvents(task, fixes, initialState)
+
+        assertEquals(firstRun, secondRun)
+        assertEquals(2, firstRun.size)
+        assertEquals(RacingNavigationEventType.TURNPOINT_NEAR_MISS, firstRun[0].type)
+        assertEquals(RacingNavigationEventType.TURNPOINT, firstRun[1].type)
+        assertTrue(firstRun[1].timestampMillis >= firstRun[0].timestampMillis)
+    }
+
+    @Test
+    fun replayFinishLandingOutcome_isDeterministicAcrossRepeatedRuns() {
+        val task = buildSimpleTask()
+        val finish = task.waypoints.last()
+        val finishRules = RacingFinishCustomParams(
+            requireLandWithoutDelay = true,
+            landWithoutDelayWindowSeconds = 120L,
+            landingSpeedThresholdMs = 4.0,
+            landingHoldSeconds = 20L
+        )
+        val initialState = RacingNavigationState(
+            status = RacingNavigationStatus.IN_PROGRESS,
+            currentLegIndex = task.waypoints.lastIndex,
+            lastFix = RacingNavigationFix(
+                lat = finish.lat,
+                lon = finish.lon + 0.05,
+                timestampMillis = 1_000L,
+                groundSpeedMs = 30.0
+            )
+        )
+        val fixes = listOf(
+            RacingNavigationFix(
+                lat = finish.lat,
+                lon = finish.lon + 0.005,
+                timestampMillis = 2_000L,
+                groundSpeedMs = 25.0
+            ),
+            RacingNavigationFix(
+                lat = finish.lat,
+                lon = finish.lon + 0.005,
+                timestampMillis = 10_000L,
+                groundSpeedMs = 2.0
+            ),
+            RacingNavigationFix(
+                lat = finish.lat,
+                lon = finish.lon + 0.005,
+                timestampMillis = 35_000L,
+                groundSpeedMs = 2.0
+            )
+        )
+
+        val firstRun = replayEvents(task, fixes, initialState, finishRules)
+        val secondRun = replayEvents(task, fixes, initialState, finishRules)
+
+        assertEquals(firstRun, secondRun)
+        assertEquals(1, firstRun.size)
+        assertEquals(RacingNavigationEventType.FINISH, firstRun[0].type)
+        assertEquals(RacingFinishOutcome.LANDING_PENDING, firstRun[0].finishOutcome)
     }
 
     private fun replayEvents(
@@ -104,6 +244,45 @@ class RacingReplayValidationTest {
             )
         }
         return trace
+    }
+
+    private fun replayStartEventsWithRules(
+        task: SimpleRacingTask,
+        fixes: List<RacingNavigationFix>,
+        rules: RacingStartCustomParams
+    ): List<RacingNavigationEvent> {
+        val events = mutableListOf<RacingNavigationEvent>()
+        var state = RacingNavigationState()
+        fixes.forEach { fix ->
+            val decision = engine.step(task, state, fix, rules)
+            state = decision.state
+            decision.event?.let(events::add)
+        }
+        return events
+    }
+
+    private fun replayEvents(
+        task: SimpleRacingTask,
+        fixes: List<RacingNavigationFix>,
+        initialState: RacingNavigationState
+    ): List<RacingNavigationEvent> {
+        return replayEvents(task, fixes, initialState, RacingFinishCustomParams())
+    }
+
+    private fun replayEvents(
+        task: SimpleRacingTask,
+        fixes: List<RacingNavigationFix>,
+        initialState: RacingNavigationState,
+        finishRules: RacingFinishCustomParams
+    ): List<RacingNavigationEvent> {
+        val events = mutableListOf<RacingNavigationEvent>()
+        var state = initialState
+        fixes.forEach { fix ->
+            val decision = engine.step(task, state, fix, finishRules = finishRules)
+            state = decision.state
+            decision.event?.let(events::add)
+        }
+        return events
     }
 
     private fun buildSimpleTask(): SimpleRacingTask {

@@ -1,7 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.ogn.OgnDisplayUpdateMode
-
 internal fun buildMapOverlayManagerStatus(
     mapState: MapScreenState,
     showDistanceCircles: Boolean,

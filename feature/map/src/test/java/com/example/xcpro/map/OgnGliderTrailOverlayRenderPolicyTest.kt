@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.map.OgnGliderTrailSegment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

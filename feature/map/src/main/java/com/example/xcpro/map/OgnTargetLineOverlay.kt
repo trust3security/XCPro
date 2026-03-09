@@ -2,7 +2,6 @@ package com.example.xcpro.map
 
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OgnTrafficTarget
 import kotlin.math.abs
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style

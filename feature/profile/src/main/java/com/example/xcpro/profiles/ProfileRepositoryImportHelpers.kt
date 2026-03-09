@@ -28,6 +28,7 @@ internal fun resolveImportedName(
     return when (policy) {
         ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX ->
             resolveImportedNameWithSuffix(normalizedBase, knownNames)
+        ProfileNameCollisionPolicy.REPLACE_EXISTING -> normalizedBase
     }
 }
 
@@ -54,7 +55,8 @@ internal fun resolveImportActiveProfile(
     profiles: List<UserProfile>,
     currentActiveId: String?,
     importedProfiles: List<UserProfile>,
-    keepCurrentActive: Boolean
+    keepCurrentActive: Boolean,
+    preferredImportedActiveId: String?
 ): UserProfile? {
     if (profiles.isEmpty()) {
         return null
@@ -65,6 +67,9 @@ internal fun resolveImportActiveProfile(
     }
 
     if (!keepCurrentActive) {
+        if (!preferredImportedActiveId.isNullOrBlank()) {
+            return profiles.find { it.id == preferredImportedActiveId } ?: profiles.firstOrNull()
+        }
         val newestImportedId = importedProfiles.lastOrNull()?.id
         if (!newestImportedId.isNullOrBlank()) {
             return profiles.find { it.id == newestImportedId } ?: profiles.firstOrNull()

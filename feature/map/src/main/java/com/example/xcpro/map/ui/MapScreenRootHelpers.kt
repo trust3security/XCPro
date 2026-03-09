@@ -29,6 +29,7 @@ import kotlin.math.min
 
 @Composable
 internal fun rememberMapScreenWidgetLayoutBinding(
+    activeProfileId: String,
     density: Density
 ): MapScreenWidgetLayoutBinding {
     val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
@@ -36,7 +37,10 @@ internal fun rememberMapScreenWidgetLayoutBinding(
     val widgetLayoutViewModel: MapWidgetLayoutViewModel = hiltViewModel()
     val densityScale = remember(density) { DensityScale(density = density.density, fontScale = density.fontScale) }
     val widgetOffsets by widgetLayoutViewModel.offsets.collectAsStateWithLifecycle()
-    LaunchedEffect(screenWidthPx, screenHeightPx, densityScale) {
+    LaunchedEffect(activeProfileId) {
+        widgetLayoutViewModel.setProfileId(activeProfileId)
+    }
+    LaunchedEffect(activeProfileId, screenWidthPx, screenHeightPx, densityScale) {
         widgetLayoutViewModel.loadLayout(screenWidthPx, screenHeightPx, densityScale)
     }
     val resolvedWidgetOffsets = widgetOffsets ?: MapWidgetOffsets(
@@ -171,6 +175,7 @@ internal fun rememberMapWidgetOffsets(
 @Composable
 internal fun rememberVariometerLayout(
     mapViewModel: MapScreenViewModel,
+    activeProfileId: String,
     screenWidthPx: Float,
     screenHeightPx: Float,
     density: Density
@@ -180,8 +185,9 @@ internal fun rememberVariometerLayout(
     val maxVariometerSizePx = min(screenWidthPx, screenHeightPx)
     val defaultVariometerSizePx = with(density) { 150.dp.toPx() }
 
-    LaunchedEffect(screenWidthPx, screenHeightPx) {
+    LaunchedEffect(activeProfileId, screenWidthPx, screenHeightPx) {
         mapViewModel.ensureVariometerLayout(
+            profileId = activeProfileId,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             defaultSizePx = defaultVariometerSizePx,

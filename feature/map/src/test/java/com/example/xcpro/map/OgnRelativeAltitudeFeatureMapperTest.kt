@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.common.units.AltitudeUnit
-import com.example.xcpro.ogn.OgnAircraftIcon
+import com.example.xcpro.map.OgnAircraftIcon
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

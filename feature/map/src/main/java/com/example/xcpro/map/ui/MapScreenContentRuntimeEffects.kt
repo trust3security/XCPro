@@ -2,7 +2,7 @@ package com.example.xcpro.map.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastTileSpec
 import com.example.xcpro.forecast.ForecastLegendSpec
@@ -12,7 +12,7 @@ import com.example.xcpro.forecast.forecastRegionLikelyContainsCoordinate
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OgnTrafficSnapshot
+import com.example.xcpro.map.OgnTrafficSnapshot
 import kotlinx.coroutines.delay
 import org.maplibre.android.maps.MapLibreMap
 

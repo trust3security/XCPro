@@ -42,4 +42,4 @@ class IgcReplayController @Inject constructor(
     replayAirspeedRepository = replayAirspeedRepository,
     replayPipelineFactory = replayPipelineFactory,
     igcParser = igcParser
-)
+), IgcReplayControllerPort

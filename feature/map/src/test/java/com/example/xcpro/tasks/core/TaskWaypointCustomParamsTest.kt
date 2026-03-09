@@ -143,4 +143,83 @@ class TaskWaypointCustomParamsTest {
         assertFalse(map.containsKey(TaskWaypointParamKeys.INNER_RADIUS_METERS))
         assertFalse(map.containsKey(TaskWaypointParamKeys.OZ_LENGTH_METERS))
     }
+
+    @Test
+    fun `racing start params round trip preserves gate tolerance and pev fields`() {
+        val expected = RacingStartCustomParams(
+            gateOpenTimeMillis = 10_000L,
+            gateCloseTimeMillis = 20_000L,
+            toleranceMeters = 500.0,
+            preStartAltitudeMeters = 1500.0,
+            altitudeReference = RacingAltitudeReference.QNH,
+            directionOverrideDegrees = 145.0,
+            maxStartAltitudeMeters = 2200.0,
+            maxStartGroundspeedMs = 55.0,
+            pev = RacingPevCustomParams(
+                enabled = true,
+                waitTimeMinutes = 5,
+                startWindowMinutes = 6,
+                maxPressesPerLaunch = 3,
+                dedupeSeconds = 30L,
+                minIntervalMinutes = 10,
+                pressTimestampsMillis = listOf(1_000L, 5_000L)
+            )
+        )
+        val destination = mutableMapOf<String, Any>()
+        expected.applyTo(destination)
+        val decoded = RacingStartCustomParams.from(destination)
+
+        assertEquals(expected, decoded)
+    }
+
+    @Test
+    fun `racing start params default tolerance when invalid value provided`() {
+        val parsed = RacingStartCustomParams.from(
+            mapOf(
+                TaskWaypointParamKeys.START_TOLERANCE_METERS to -1.0
+            )
+        )
+
+        assertEquals(500.0, parsed.toleranceMeters, 0.0)
+    }
+
+    @Test
+    fun `racing finish params round trip preserves finish policy fields`() {
+        val expected = RacingFinishCustomParams(
+            closeTimeMillis = 30_000L,
+            minAltitudeMeters = 900.0,
+            altitudeReference = RacingAltitudeReference.QNH,
+            directionOverrideDegrees = 180.0,
+            allowStraightInBelowMinAltitude = true,
+            requireLandWithoutDelay = true,
+            landWithoutDelayWindowSeconds = 480L,
+            landingSpeedThresholdMs = 4.0,
+            landingHoldSeconds = 25L,
+            contestBoundaryRadiusMeters = 2_000.0,
+            stopPlusFiveEnabled = true,
+            stopPlusFiveMinutes = 5L
+        )
+        val destination = mutableMapOf<String, Any>()
+        expected.applyTo(destination)
+        val decoded = RacingFinishCustomParams.from(destination)
+
+        assertEquals(expected, decoded)
+    }
+
+    @Test
+    fun `racing finish params clamp invalid values to safe defaults`() {
+        val parsed = RacingFinishCustomParams.from(
+            mapOf(
+                TaskWaypointParamKeys.FINISH_LAND_WITHOUT_DELAY_WINDOW_SECONDS to -1L,
+                TaskWaypointParamKeys.FINISH_LANDING_SPEED_THRESHOLD_MS to 0.0,
+                TaskWaypointParamKeys.FINISH_LANDING_HOLD_SECONDS to 1L,
+                TaskWaypointParamKeys.FINISH_STOP_PLUS_FIVE_MINUTES to 0L
+            )
+        )
+
+        assertEquals(30L, parsed.landWithoutDelayWindowSeconds)
+        assertEquals(0.5, parsed.landingSpeedThresholdMs, 0.0)
+        assertEquals(5L, parsed.landingHoldSeconds)
+        assertEquals(1L, parsed.stopPlusFiveMinutes)
+    }
 }

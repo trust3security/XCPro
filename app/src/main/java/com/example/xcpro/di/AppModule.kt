@@ -3,6 +3,9 @@ package com.example.xcpro.di
 import android.content.Context
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.AirspaceRepository
+import com.example.xcpro.BuildConfig
+import com.example.xcpro.adsb.OpenSkyClientCredentials
+import com.example.xcpro.adsb.OpenSkyConfiguredCredentialsProvider
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.common.waypoint.HomeWaypointRepository
 import com.example.xcpro.core.time.Clock
@@ -13,9 +16,19 @@ import com.example.xcpro.tasks.domain.engine.AATTaskEngine
 import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
 import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
 import com.example.xcpro.tasks.racing.RacingTaskManager
+import com.example.xcpro.profiles.AppProfileDiagnosticsReporter
+import com.example.xcpro.profiles.DownloadsProfileBackupSink
+import com.example.xcpro.profiles.ProfileBackupSink
+import com.example.xcpro.profiles.ProfileDiagnosticsReporter
 import com.example.xcpro.profiles.ProfileStorage
 import com.example.xcpro.profiles.DataStoreProfileStorage
+import com.example.xcpro.profiles.AppProfileSettingsRestoreApplier
+import com.example.xcpro.profiles.AppProfileSettingsSnapshotProvider
+import com.example.xcpro.profiles.ProfileSettingsRestoreApplier
+import com.example.xcpro.profiles.ProfileSettingsSnapshotProvider
+import com.example.xcpro.profiles.ProfileScopedDataCleaner
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
+import com.example.xcpro.profiles.AppProfileScopedDataCleaner
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -97,4 +110,52 @@ object AppModule {
     fun provideProfileStorage(
         @ApplicationContext context: Context
     ): ProfileStorage = DataStoreProfileStorage(context)
+
+    @Provides
+    @Singleton
+    fun provideProfileBackupSink(
+        @ApplicationContext context: Context
+    ): ProfileBackupSink = DownloadsProfileBackupSink(context)
+
+    @Provides
+    @Singleton
+    fun provideProfileSettingsSnapshotProvider(
+        provider: AppProfileSettingsSnapshotProvider
+    ): ProfileSettingsSnapshotProvider = provider
+
+    @Provides
+    @Singleton
+    fun provideProfileSettingsRestoreApplier(
+        applier: AppProfileSettingsRestoreApplier
+    ): ProfileSettingsRestoreApplier = applier
+
+    @Provides
+    @Singleton
+    fun provideProfileScopedDataCleaner(
+        cleaner: AppProfileScopedDataCleaner
+    ): ProfileScopedDataCleaner = cleaner
+
+    @Provides
+    @Singleton
+    fun provideProfileDiagnosticsReporter(
+        reporter: AppProfileDiagnosticsReporter
+    ): ProfileDiagnosticsReporter = reporter
+
+    @Provides
+    @Singleton
+    fun provideOpenSkyConfiguredCredentialsProvider(): OpenSkyConfiguredCredentialsProvider {
+        return object : OpenSkyConfiguredCredentialsProvider {
+            override fun loadConfiguredCredentials(): OpenSkyClientCredentials? {
+                val clientId = BuildConfig.OPENSKY_CLIENT_ID.trim()
+                val clientSecret = BuildConfig.OPENSKY_CLIENT_SECRET.trim()
+                if (clientId.isBlank() || clientSecret.isBlank()) {
+                    return null
+                }
+                return OpenSkyClientCredentials(
+                    clientId = clientId,
+                    clientSecret = clientSecret
+                )
+            }
+        }
+    }
 }

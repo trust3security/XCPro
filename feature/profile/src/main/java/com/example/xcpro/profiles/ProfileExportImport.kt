@@ -10,109 +10,49 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.core.time.TimeBridge
-import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.google.gson.GsonBuilder
 import kotlinx.coroutines.withContext
-import java.io.FileOutputStream
-import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
-data class ProfileExport(
-    val version: String = "1.0",
-    val exportDate: String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-        .format(TimeBridge.nowWallMs()),
-    val profiles: List<UserProfile>
-)
-
-class ProfileExportImport(private val context: Context) {
-    private val gson = GsonBuilder().setPrettyPrinting().create()
-    
-    suspend fun exportProfile(profile: UserProfile): Result<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val export = ProfileExport(profiles = listOf(profile))
-                val json = gson.toJson(export)
-                Result.success(json)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-    
-    suspend fun exportAllProfiles(profiles: List<UserProfile>): Result<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                if (profiles.isEmpty()) {
-                    return@withContext Result.failure(
-                        IllegalArgumentException("No profiles available to export.")
-                    )
-                }
-                val export = ProfileExport(profiles = profiles)
-                val json = gson.toJson(export)
-                Result.success(json)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-    
-    suspend fun importProfiles(json: String): Result<List<UserProfile>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val export = gson.fromJson(json, ProfileExport::class.java)
-                
-                // Validate import version compatibility
-                if (export.version != "1.0") {
-                    return@withContext Result.failure(Exception("Unsupported profile export version: ${export.version}"))
-                }
-                
-                // Generate new IDs for imported profiles to avoid conflicts
-                val importedProfiles = export.profiles.map { profile ->
-                    profile.copy(
-                        id = UUID.randomUUID().toString(),
-                        isActive = false // Don't import as active
-                    )
-                }
-                
-                Result.success(importedProfiles)
-            } catch (e: Exception) {
-                Result.failure(Exception("Failed to parse profile data: ${e.message}"))
-            }
-        }
-    }
-    
-    fun generateFileName(profile: UserProfile?): String {
-        val timestamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(TimeBridge.nowWallMs())
-        return if (profile != null) {
-            "profile_${profile.name.replace(" ", "_")}_$timestamp.json"
-        } else {
-            "all_profiles_$timestamp.json"
-        }
+private fun buildExportFileName(profile: UserProfile?): String {
+    val timestamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(TimeBridge.nowWallMs())
+    return if (profile != null) {
+        "profile_bundle_${profile.name.replace(" ", "_")}_$timestamp.json"
+    } else {
+        "profiles_bundle_$timestamp.json"
     }
 }
 
 @Composable
 fun ProfileExportDialog(
     profile: UserProfile?,
-    allProfiles: List<UserProfile> = emptyList(),
     onDismiss: () -> Unit,
-    onExport: (String) -> Unit
+    onExport: (String) -> Unit,
+    onRequestExportJson: suspend () -> Result<String>
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val exportImport = remember { ProfileExportImport(context) }
     var isExporting by remember { mutableStateOf(false) }
     var exportResult by remember { mutableStateOf<Result<String>?>(null) }
-    
+
     val documentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -121,27 +61,27 @@ fun ProfileExportDialog(
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.write(exportResult!!.getOrNull()!!.toByteArray())
                 }
-                onExport("Profile exported successfully!")
-            } catch (e: Exception) {
-                onExport("Failed to save file: ${e.message}")
+                onExport("Profile bundle exported successfully.")
+            } catch (error: Exception) {
+                onExport("Failed to save bundle: ${error.message}")
             }
         }
     }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (profile != null) "Export Profile" else "Export All Profiles")
+            Text(if (profile != null) "Export Profile Bundle" else "Export Profiles Bundle")
         },
         text = {
             if (isExporting) {
-                Text("Preparing export...")
+                Text("Preparing export bundle...")
             } else {
                 Text(
                     if (profile != null) {
-                        "Export profile '${profile.name}' to share or backup your configuration."
+                        "Export this profile with its settings bundle."
                     } else {
-                        "Export all profiles to backup your configurations."
+                        "Export all profiles and settings as one bundle."
                     }
                 )
             }
@@ -150,18 +90,12 @@ fun ProfileExportDialog(
             TextButton(
                 onClick = {
                     isExporting = true
-                    
                     coroutineScope.launch {
-                        val result = if (profile != null) {
-                            exportImport.exportProfile(profile)
-                        } else {
-                            exportImport.exportAllProfiles(allProfiles)
-                        }
+                        val result = onRequestExportJson()
                         exportResult = result
                         isExporting = false
-                        
                         if (result.isSuccess) {
-                            documentLauncher.launch(exportImport.generateFileName(profile))
+                            documentLauncher.launch(buildExportFileName(profile))
                         }
                     }
                 },
@@ -176,7 +110,7 @@ fun ProfileExportDialog(
             }
         }
     )
-    
+
     exportResult?.let { result ->
         if (result.isFailure) {
             LaunchedEffect(result) {
@@ -187,66 +121,49 @@ fun ProfileExportDialog(
     }
 }
 
-@Composable  
+@Composable
 fun ProfileImportDialog(
     onDismiss: () -> Unit,
-    onImport: (List<UserProfile>, Boolean) -> Unit,
+    onImportJson: (String, Boolean) -> Unit,
     onError: (String) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val exportImport = remember { ProfileExportImport(context) }
     var isImporting by remember { mutableStateOf(false) }
     var keepCurrentActive by remember { mutableStateOf(true) }
-    
+
     val documentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
             isImporting = true
             coroutineScope.launch {
-                val json = runCatching {
-                    withContext(Dispatchers.IO) {
-                        context.contentResolver.openInputStream(uri)
-                            ?.bufferedReader()
-                            ?.use { it.readText() }
-                    }
-                }.getOrElse { error ->
-                    isImporting = false
-                    onError("Failed to read file: ${error.message}")
-                    return@launch
-                }
-
-                if (json == null) {
-                    isImporting = false
-                    onError("Failed to read file")
-                    return@launch
-                }
-
-                val result = exportImport.importProfiles(json)
+                val json = readJsonFromUri(context, uri = uri)
                 isImporting = false
-
-                if (result.isSuccess) {
-                    onImport(result.getOrNull()!!, keepCurrentActive)
-                } else {
-                    onError("Import failed: ${result.exceptionOrNull()?.message}")
+                json.onSuccess { content ->
+                    onImportJson(content, keepCurrentActive)
+                }.onFailure { error ->
+                    onError("Failed to read file: ${error.message}")
                 }
             }
         }
     }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Import Profiles") },
+        title = { Text("Import Profile Bundle") },
         text = {
             Column {
                 if (isImporting) {
-                    Text("Importing profiles...")
+                    Text("Importing profile bundle...")
                 } else {
-                    Text("Select a profile export file to import configurations.")
-                    Spacer(modifier = androidx.compose.ui.Modifier.height(12.dp))
+                    Text(
+                        "Select *_bundle_latest.json (recommended), a profile bundle export, " +
+                            "or a compatible profile JSON file."
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     Row(
-                        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Switch(
@@ -254,7 +171,7 @@ fun ProfileImportDialog(
                             onCheckedChange = { keepCurrentActive = it },
                             enabled = !isImporting
                         )
-                        Spacer(modifier = androidx.compose.ui.Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text("Keep current active profile")
                     }
                 }
@@ -262,9 +179,7 @@ fun ProfileImportDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    documentLauncher.launch(arrayOf("application/json"))
-                },
+                onClick = { documentLauncher.launch(arrayOf("application/json")) },
                 enabled = !isImporting
             ) {
                 Text("Select File")
@@ -276,4 +191,21 @@ fun ProfileImportDialog(
             }
         }
     )
+}
+
+private suspend fun readJsonFromUri(context: Context, uri: Uri): Result<String> {
+    return runCatching {
+        withContext(Dispatchers.IO) {
+            val selectedJson = context.contentResolver.openInputStream(uri)
+                ?.bufferedReader()
+                ?.use { it.readText() }
+                ?: error("No readable content in selected file.")
+            val indexPointer = ProfileBundleCodec.parseManagedIndexPointer(selectedJson)
+            if (indexPointer != null) {
+                val bundleHint = indexPointer.bundleFileName ?: "*_bundle_latest.json"
+                error("Index-only backup file selected. Choose $bundleHint directly.")
+            }
+            selectedJson
+        }
+    }
 }

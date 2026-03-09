@@ -1,8 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.ui.aircraftIcon
-
 internal data class AdsbIconTelemetrySnapshot(
     val unknownRenderCount: Long = 0L,
     val legacyUnknownRenderCount: Long = 0L,

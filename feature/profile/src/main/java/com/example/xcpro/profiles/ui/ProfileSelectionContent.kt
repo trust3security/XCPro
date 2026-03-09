@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
@@ -20,7 +21,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,8 +40,8 @@ fun ProfileSelectionContent(
     onShowImportDialog: () -> Unit,
     onShowCreateDialog: () -> Unit,
     onHideCreateDialog: () -> Unit,
+    onRecoverWithDefaultProfile: () -> Unit,
     onClearError: () -> Unit,
-    onSkip: () -> Unit,
     onContinue: () -> Unit,
     onEditProfile: (UserProfile) -> Unit = {},
     storageNamespaceLabel: String? = null
@@ -91,22 +91,12 @@ fun ProfileSelectionContent(
             )
         }
         if (state.error == null && !state.bootstrapError.isNullOrBlank()) {
-            ProfileErrorCard(
+            BootstrapRecoveryCard(
                 message = state.bootstrapError,
-                onDismiss = null
+                isLoading = state.isLoading,
+                onRecoverWithDefaultProfile = onRecoverWithDefaultProfile,
+                onImportBackup = onShowImportDialog
             )
-        }
-        if (state.profiles.isNotEmpty() &&
-            state.activeProfile == null &&
-            state.bootstrapError == null &&
-            !state.isLoading
-        ) {
-            TextButton(
-                onClick = onSkip,
-                modifier = Modifier.padding(top = 16.dp)
-            ) {
-                Text("Skip for now (continue without profile)")
-            }
         }
     }
 
@@ -209,6 +199,55 @@ private fun ProfileEmptyState(
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BootstrapRecoveryCard(
+    message: String,
+    isLoading: Boolean,
+    onRecoverWithDefaultProfile: () -> Unit,
+    onImportBackup: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Button(
+                    onClick = onRecoverWithDefaultProfile,
+                    enabled = !isLoading,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Recover Default")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(
+                    onClick = onImportBackup,
+                    enabled = !isLoading,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Import Backup")
+                }
             }
         }
     }

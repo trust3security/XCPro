@@ -24,6 +24,7 @@ import android.widget.Toast
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
+import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.ui.theme.Baseui1Theme
 import com.example.xcpro.service.VarioForegroundService
 import dagger.hilt.android.AndroidEntryPoint
@@ -105,13 +106,12 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
     }
 
     override fun applyUserStatusBarStyle(profileId: String?) {
-        currentProfileId = profileId
+        currentProfileId = ProfileIdResolver.normalizeOrNull(profileId)
         Log.d(TAG, "applyUserStatusBarStyle: profile=$profileId")
 
         try {
-            val styleId = profileId?.let {
-                lookAndFeelPreferences.getStatusBarStyleId(it)
-            } ?: StatusBarStyle.TRANSPARENT.id
+            val resolvedProfileId = ProfileIdResolver.canonicalOrDefault(profileId)
+            val styleId = lookAndFeelPreferences.getStatusBarStyleId(resolvedProfileId)
 
             val selectedStyle = StatusBarStyle.values().find { it.id == styleId } ?: StatusBarStyle.TRANSPARENT
             Log.d(TAG, "applyUserStatusBarStyle: resolved style ${selectedStyle.id}")

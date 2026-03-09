@@ -65,7 +65,8 @@ class RacingBoundaryCrossingPlanner(
             crossingPoint = crossingPoint,
             crossingTimeMillis = crossingTime,
             insideAnchor = insideAnchor,
-            outsideAnchor = outsideAnchor
+            outsideAnchor = outsideAnchor,
+            evidenceSource = RacingBoundaryEvidenceSource.CYLINDER_INTERSECTION
         )
     }
 
@@ -80,40 +81,10 @@ class RacingBoundaryCrossingPlanner(
     ): RacingBoundaryCrossing? {
         if (lineLengthMeters <= 0.0) return null
 
-        val radiusMeters = lineLengthMeters / 2.0
         val epsilon = max(
             epsilonPolicy.epsilonMeters(previousFix),
             epsilonPolicy.epsilonMeters(currentFix)
         )
-
-        val previousDistance = distanceMeters(center, previousFix)
-        val currentDistance = distanceMeters(center, currentFix)
-        if (previousDistance > radiusMeters || currentDistance > radiusMeters) {
-            return null
-        }
-
-        val previousInside = RacingBoundaryCrossingMath.isInsideLineSector(
-            center = center,
-            sectorBearingDegrees = sectorBearingDegrees,
-            radiusMeters = radiusMeters,
-            epsilonMeters = epsilon,
-            fix = previousFix
-        )
-        val currentInside = RacingBoundaryCrossingMath.isInsideLineSector(
-            center = center,
-            sectorBearingDegrees = sectorBearingDegrees,
-            radiusMeters = radiusMeters,
-            epsilonMeters = epsilon,
-            fix = currentFix
-        )
-        if (!isTransition(
-                previousRelation = if (previousInside) ZoneRelation.INSIDE else ZoneRelation.OUTSIDE,
-                currentRelation = if (currentInside) ZoneRelation.INSIDE else ZoneRelation.OUTSIDE,
-                transition = transition
-            )
-        ) {
-            return null
-        }
 
         val halfLength = lineLengthMeters / 2.0
         val endA = RacingBoundaryGeometry.pointOnBearing(center, lineBearingDegrees, halfLength)
@@ -123,6 +94,27 @@ class RacingBoundaryCrossingPlanner(
         val q0 = RacingBoundaryGeometry.toLocalMeters(center, endA)
         val q1 = RacingBoundaryGeometry.toLocalMeters(center, endB)
         val intersection = RacingBoundaryGeometry.segmentIntersection(p0, p1, q0, q1) ?: return null
+
+        val previousRelation = classifyLineRelation(
+            center = center,
+            sectorBearingDegrees = sectorBearingDegrees,
+            fix = previousFix,
+            epsilonMeters = epsilon
+        )
+        val currentRelation = classifyLineRelation(
+            center = center,
+            sectorBearingDegrees = sectorBearingDegrees,
+            fix = currentFix,
+            epsilonMeters = epsilon
+        )
+        if (!isTransition(
+                previousRelation = previousRelation,
+                currentRelation = currentRelation,
+                transition = transition
+            )
+        ) {
+            return null
+        }
 
         val crossingPoint = RacingBoundaryGeometry.fromLocalMeters(center, intersection.x, intersection.y)
         val crossingTime = RacingBoundaryCrossingMath.interpolateTime(
@@ -141,7 +133,8 @@ class RacingBoundaryCrossingPlanner(
             crossingPoint = crossingPoint,
             crossingTimeMillis = crossingTime,
             insideAnchor = insideAnchor,
-            outsideAnchor = outsideAnchor
+            outsideAnchor = outsideAnchor,
+            evidenceSource = RacingBoundaryEvidenceSource.LINE_INTERSECTION
         )
     }
 
@@ -217,7 +210,8 @@ class RacingBoundaryCrossingPlanner(
             crossingPoint = crossingPoint,
             crossingTimeMillis = crossingTime,
             insideAnchor = insideAnchor,
-            outsideAnchor = outsideAnchor
+            outsideAnchor = outsideAnchor,
+            evidenceSource = RacingBoundaryEvidenceSource.SECTOR_INTERSECTION
         )
     }
 
@@ -244,15 +238,36 @@ class RacingBoundaryCrossingPlanner(
         currentRelation: ZoneRelation,
         transition: RacingBoundaryTransition
     ): Boolean {
-        if (previousRelation == ZoneRelation.BORDER || currentRelation == ZoneRelation.BORDER) {
-            return false
-        }
         return when (transition) {
-            RacingBoundaryTransition.ENTER ->
-                previousRelation == ZoneRelation.OUTSIDE && currentRelation == ZoneRelation.INSIDE
+            RacingBoundaryTransition.ENTER -> when {
+                previousRelation == ZoneRelation.OUTSIDE && currentRelation == ZoneRelation.INSIDE -> true
+                previousRelation == ZoneRelation.BORDER && currentRelation == ZoneRelation.INSIDE -> true
+                else -> false
+            }
 
-            RacingBoundaryTransition.EXIT ->
-                previousRelation == ZoneRelation.INSIDE && currentRelation == ZoneRelation.OUTSIDE
+            RacingBoundaryTransition.EXIT -> when {
+                previousRelation == ZoneRelation.INSIDE && currentRelation == ZoneRelation.OUTSIDE -> true
+                previousRelation == ZoneRelation.BORDER && currentRelation == ZoneRelation.OUTSIDE -> true
+                else -> false
+            }
+        }
+    }
+
+    private fun classifyLineRelation(
+        center: RacingBoundaryPoint,
+        sectorBearingDegrees: Double,
+        fix: RacingNavigationFix,
+        epsilonMeters: Double
+    ): ZoneRelation {
+        val point = RacingBoundaryGeometry.toLocalMeters(center, RacingBoundaryPoint(fix.lat, fix.lon))
+        val sectorRad = Math.toRadians(sectorBearingDegrees)
+        val axisX = kotlin.math.sin(sectorRad)
+        val axisY = kotlin.math.cos(sectorRad)
+        val projection = point.first * axisX + point.second * axisY
+        return when {
+            projection > epsilonMeters -> ZoneRelation.INSIDE
+            projection < -epsilonMeters -> ZoneRelation.OUTSIDE
+            else -> ZoneRelation.BORDER
         }
     }
 }

@@ -45,6 +45,10 @@ class FlightMgmtPreferencesRepository @Inject constructor(
         prefs.edit().putString(profileModeKey(profileId), mode.name).apply()
     }
 
+    fun clearProfile(profileId: String) {
+        prefs.edit().remove(profileModeKey(profileId)).apply()
+    }
+
     private fun profileModeKey(profileId: String): String =
         "profile_${profileId}_last_flight_mode"
 

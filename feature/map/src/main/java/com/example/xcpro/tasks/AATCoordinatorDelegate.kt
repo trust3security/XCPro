@@ -1,6 +1,10 @@
 package com.example.xcpro.tasks
 
 import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.aat.models.AATFinishPointType
+import com.example.xcpro.tasks.aat.models.AATStartPointType
+import com.example.xcpro.tasks.aat.models.AATTurnPointType
+import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.core.TaskWaypoint
 import java.time.Duration
 
@@ -17,7 +21,7 @@ internal class AATCoordinatorDelegate(
         override fun updateTargetPoint(index: Int, lat: Double, lon: Double) =
             taskManager.updateTargetPoint(index, lat, lon)
 
-        override fun checkAreaTap(lat: Double, lon: Double): Pair<Int, Any>? =
+        override fun checkAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>? =
             taskManager.checkAreaTap(lat, lon)
 
         override fun setEditMode(waypointIndex: Int, enabled: Boolean) =
@@ -32,9 +36,9 @@ internal class AATCoordinatorDelegate(
 
     fun updateWaypointPointTypeMeters(
         index: Int,
-        startType: Any?,
-        finishType: Any?,
-        turnType: Any?,
+        startType: AATStartPointType?,
+        finishType: AATFinishPointType?,
+        turnType: AATTurnPointType?,
         gateWidthMeters: Double?,
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
@@ -55,7 +59,7 @@ internal class AATCoordinatorDelegate(
             }
         }
 
-        taskManager.updateWaypointPointTypeBridge(
+        taskManager.updateAATWaypointPointTypeMeters(
             index = index,
             startType = startType,
             finishType = finishType,
@@ -83,7 +87,7 @@ internal class AATCoordinatorDelegate(
         // Map re-plotting intentionally left to caller to avoid duplicate renders.
     }
 
-    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, Any>? =
+    fun checkAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>? =
         editController.checkAreaTap(lat, lon)
 
     fun enterEditMode(waypointIndex: Int) {

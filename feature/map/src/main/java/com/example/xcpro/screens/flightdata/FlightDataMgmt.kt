@@ -43,6 +43,7 @@ import com.example.xcpro.flightdata.WaypointsViewModel
 import com.example.xcpro.flightdata.FlightMgmtPreferencesViewModel
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.profiles.UserProfile
 import com.example.xcpro.screens.flightdata.FlightDataWaypointsTab
 import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
@@ -100,7 +101,7 @@ fun FlightMgmt(
 
     LaunchedEffect(activeProfile?.id) {
         flightViewModel.setActiveProfile(activeProfile?.id)
-        prefsViewModel.setProfileId(activeProfile?.id ?: "default")
+        prefsViewModel.setProfileId(ProfileIdResolver.canonicalOrDefault(activeProfile?.id))
     }
 
     LaunchedEffect(activeProfile?.id, lastFlightMode) {

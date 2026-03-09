@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbProximityTier
+import com.example.xcpro.map.AdsbProximityTier
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

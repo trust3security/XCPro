@@ -8,10 +8,13 @@ import com.example.xcpro.tasks.aat.models.AATLatLng
 import com.example.xcpro.tasks.aat.models.AATRadiusAuthority
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
+import com.example.xcpro.tasks.core.AATTaskTimeCustomParams
+import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.core.AATWaypointCustomParams
 import java.time.Duration
+import java.util.Locale
 import java.util.UUID
 
 internal object AATWaypointInitializationSupport {
@@ -98,5 +101,40 @@ internal object AATWaypointInitializationSupport {
             minimumTime = Duration.ofHours(3),
             maximumTime = Duration.ofHours(6)
         )
+    }
+
+    fun initializeFromCoreTask(task: Task): SimpleAATTask {
+        val hydrated = initializeFromGenericWaypoints(task.waypoints)
+        val timeParams = AATTaskTimeCustomParams.from(
+            source = task.waypoints.firstOrNull()?.customParameters.orEmpty(),
+            fallbackMinimumTimeSeconds = Duration.ofHours(3).seconds.toDouble(),
+            fallbackMaximumTimeSeconds = Duration.ofHours(6).seconds.toDouble()
+        )
+        return hydrated.copy(
+            id = task.id.ifBlank { deterministicTaskIdFromTaskWaypoints(task.waypoints) },
+            minimumTime = Duration.ofSeconds(timeParams.minimumTimeSeconds.toLong()),
+            maximumTime = timeParams.maximumTimeSeconds?.toLong()?.let(Duration::ofSeconds)
+        )
+    }
+
+    private fun deterministicTaskIdFromTaskWaypoints(waypoints: List<TaskWaypoint>): String {
+        val fingerprint = buildString {
+            waypoints.forEachIndexed { index, waypoint ->
+                append(index)
+                append('|')
+                append(waypoint.id.trim())
+                append('|')
+                append(waypoint.title.trim())
+                append('|')
+                append(String.format(Locale.US, "%.6f", waypoint.lat))
+                append('|')
+                append(String.format(Locale.US, "%.6f", waypoint.lon))
+                append('|')
+                append(waypoint.role.name)
+                append(';')
+            }
+        }
+        val suffix = fingerprint.hashCode().toUInt().toString(16).padStart(8, '0')
+        return "aat_$suffix"
     }
 }

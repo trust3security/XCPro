@@ -3,13 +3,9 @@ package com.example.xcpro.map
 import android.content.Context
 import android.util.Log
 import com.example.xcpro.core.time.TimeBridge
-import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.adsb.clampAdsbIconSizePx
 import com.example.xcpro.airspace.AirspaceUseCase
-import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.forecast.FORECAST_OPACITY_DEFAULT
 import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_ANIMATE_ENABLED_DEFAULT
 import com.example.xcpro.forecast.FORECAST_SKYSIGHT_SATELLITE_HISTORY_FRAMES_DEFAULT
@@ -28,12 +24,6 @@ import com.example.xcpro.forecast.FORECAST_WIND_DISPLAY_MODE_DEFAULT
 import com.example.xcpro.forecast.clampSkySightSatelliteHistoryFrames
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.map.BuildConfig
-import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.ogn.OgnDisplayUpdateMode
-import com.example.xcpro.ogn.OgnGliderTrailSegment
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.clampOgnIconSizePx
 import com.example.xcpro.weather.rain.WEATHER_RAIN_OPACITY_DEFAULT
 import com.example.xcpro.weather.rain.WEATHER_RAIN_STALE_DIMMED_OPACITY_MAX
 import com.example.xcpro.weather.rain.WEATHER_RAIN_TRANSITION_DURATION_BALANCED_MS

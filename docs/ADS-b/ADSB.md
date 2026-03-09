@@ -32,6 +32,8 @@ Reference:
 2. Aircraft metadata (ICAO24 keyed):
 - `https://opensky-network.org/datasets/metadata/aircraftDatabase.csv`
 - imported locally into Room and joined by ICAO24
+- bounded per-ICAO on-demand metadata lookup repairs incomplete local rows so
+  existing-but-partial metadata does not block identification or icon upgrades
 
 Reference:
 - https://opensky-network.org/data

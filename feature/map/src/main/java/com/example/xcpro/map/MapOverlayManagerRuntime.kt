@@ -2,9 +2,6 @@ package com.example.xcpro.map
 
 import android.content.Context
 import android.util.Log
-import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
@@ -15,10 +12,6 @@ import com.example.xcpro.forecast.ForecastTileSpec
 import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.trail.SnailTrailManager
-import com.example.xcpro.ogn.OgnDisplayUpdateMode
-import com.example.xcpro.ogn.OgnGliderTrailSegment
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.weather.rain.WeatherRainFrameSelection
 import com.example.xcpro.weather.rain.WeatherRadarStatusCode
 import kotlinx.coroutines.CoroutineScope

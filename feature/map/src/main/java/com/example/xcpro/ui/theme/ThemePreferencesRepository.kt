@@ -52,6 +52,19 @@ class ThemePreferencesRepository @Inject constructor(
         }.apply()
     }
 
+    fun clearProfile(profileId: String) {
+        val customPrefix = "profile_${profileId}_theme_"
+        val editor = prefs.edit()
+            .remove(themeKey(profileId))
+        prefs.all.keys
+            .asSequence()
+            .filter { key ->
+                key.startsWith(customPrefix) && key.endsWith("_custom_colors")
+            }
+            .forEach { key -> editor.remove(key) }
+        editor.apply()
+    }
+
     private fun themeKey(profileId: String): String = "profile_${profileId}_color_theme"
 
     private fun customColorsKey(profileId: String, themeId: String): String {

@@ -2,9 +2,6 @@ package com.example.xcpro.map
 
 import android.graphics.Color
 import com.example.xcpro.core.common.logging.AppLogger
-import com.example.xcpro.ogn.OgnGliderTrailSegment
-import com.example.xcpro.ogn.isValidThermalCoordinate
-import com.example.xcpro.ogn.snailColorHexStops
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.LineLayer
@@ -69,8 +66,8 @@ class OgnGliderTrailOverlay(
             val features = ArrayList<Feature>(renderSegments.size)
             for (segment in renderSegments) {
                 if (
-                    !isValidThermalCoordinate(segment.startLatitude, segment.startLongitude) ||
-                    !isValidThermalCoordinate(segment.endLatitude, segment.endLongitude)
+                    !isValidOgnThermalCoordinate(segment.startLatitude, segment.startLongitude) ||
+                    !isValidOgnThermalCoordinate(segment.endLatitude, segment.endLongitude)
                 ) {
                     continue
                 }

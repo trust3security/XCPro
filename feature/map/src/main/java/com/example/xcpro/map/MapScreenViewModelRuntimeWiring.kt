@@ -1,12 +1,8 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.domain.FlyingState
@@ -86,8 +82,8 @@ internal fun createTrafficCoordinatorForViewModel(
     selectedThermalId: MutableStateFlow<String?>,
     rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>>,
     selectedAdsbId: MutableStateFlow<Icao24?>,
-    ognTrafficUseCase: OgnTrafficUseCase,
-    adsbTrafficUseCase: AdsbTrafficUseCase,
+    ognTrafficFacade: OgnTrafficFacade,
+    adsbTrafficFacade: AdsbTrafficFacade,
     uiEffects: MutableSharedFlow<MapUiEffect>
 ): MapScreenTrafficCoordinator = MapScreenTrafficCoordinator(
     scope = scope,
@@ -115,7 +111,7 @@ internal fun createTrafficCoordinatorForViewModel(
     selectedThermalId = selectedThermalId,
     rawAdsbTargets = rawAdsbTargets,
     selectedAdsbId = selectedAdsbId,
-    ognTrafficUseCase = ognTrafficUseCase,
-    adsbTrafficUseCase = adsbTrafficUseCase,
+    ognTrafficFacade = ognTrafficFacade,
+    adsbTrafficFacade = adsbTrafficFacade,
     emitUiEffect = { effect -> uiEffects.emit(effect) }
 )

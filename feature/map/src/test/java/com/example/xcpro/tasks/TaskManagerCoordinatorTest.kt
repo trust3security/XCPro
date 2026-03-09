@@ -145,10 +145,13 @@ class TaskManagerCoordinatorTest {
 
         localCoordinator.setTaskType(TaskType.AAT)
         assertEquals(TaskType.AAT, localCoordinator.taskType)
+        val transferredTaskId = localCoordinator.currentTask.id
+        assertTrue(transferredTaskId.isNotBlank())
         assertEquals(expectedIds, localCoordinator.currentTask.waypoints.map { it.id })
 
         localCoordinator.setTaskType(TaskType.RACING)
         assertEquals(TaskType.RACING, localCoordinator.taskType)
+        assertEquals(transferredTaskId, localCoordinator.currentTask.id)
         assertEquals(expectedIds, localCoordinator.currentTask.waypoints.map { it.id })
     }
 

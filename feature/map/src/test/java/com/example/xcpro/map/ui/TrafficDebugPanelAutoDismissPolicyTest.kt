@@ -1,15 +1,20 @@
 package com.example.xcpro.map.ui
 
-import com.example.xcpro.adsb.AdsbAuthMode
-import com.example.xcpro.adsb.AdsbConnectionState
-import com.example.xcpro.adsb.AdsbNetworkFailureKind
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.ogn.OgnConnectionState
-import com.example.xcpro.ogn.OgnTrafficSnapshot
+import com.example.xcpro.map.AdsbAuthMode
+import com.example.xcpro.map.AdsbNetworkFailureKind
+import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.OgnConnectionState
+import com.example.xcpro.map.OgnTrafficSnapshot
+import com.example.xcpro.map.adsbConnectionStateActive
+import com.example.xcpro.map.adsbConnectionStateBackingOff
+import com.example.xcpro.map.adsbConnectionStateDisabled
+import com.example.xcpro.map.adsbConnectionStateError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+
+import com.example.xcpro.map.AdsbConnectionState
 
 class TrafficDebugPanelAutoDismissPolicyTest {
 
@@ -26,7 +31,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             isAdsbReadyForAutoDismiss(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -34,7 +39,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             isAdsbReadyForAutoDismiss(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.Anonymous
                 )
             )
@@ -46,7 +51,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             isAdsbReadyForAutoDismiss(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.AuthFailed
                 )
             )
@@ -54,7 +59,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             isAdsbReadyForAutoDismiss(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    connectionState = adsbConnectionStateBackingOff(retryAfterSec = 5),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -74,7 +79,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             shouldSurfaceAdsbDebugPanel(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Disabled,
+                    connectionState = adsbConnectionStateDisabled(),
                     authMode = AdsbAuthMode.Anonymous
                 )
             )
@@ -82,7 +87,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             shouldSurfaceAdsbDebugPanel(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -90,7 +95,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldSurfaceAdsbDebugPanel(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    connectionState = adsbConnectionStateBackingOff(retryAfterSec = 5),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -98,7 +103,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldSurfaceAdsbDebugPanel(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Error("Network unavailable"),
+                    connectionState = adsbConnectionStateError("Network unavailable"),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -110,7 +115,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             shouldFlashAdsbIssue(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Disabled,
+                    connectionState = adsbConnectionStateDisabled(),
                     authMode = AdsbAuthMode.Anonymous
                 )
             )
@@ -118,7 +123,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             shouldFlashAdsbIssue(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -126,7 +131,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldFlashAdsbIssue(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    connectionState = adsbConnectionStateBackingOff(retryAfterSec = 5),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -134,7 +139,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldFlashAdsbIssue(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Error("Network unavailable"),
+                    connectionState = adsbConnectionStateError("Network unavailable"),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -146,7 +151,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldSurfacePersistentAdsbStatus(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Error("Network unavailable"),
+                    connectionState = adsbConnectionStateError("Network unavailable"),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -154,7 +159,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldSurfacePersistentAdsbStatus(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    connectionState = adsbConnectionStateBackingOff(retryAfterSec = 5),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -162,7 +167,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldSurfacePersistentAdsbStatus(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.AuthFailed
                 )
             )
@@ -170,7 +175,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             shouldSurfacePersistentAdsbStatus(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -181,7 +186,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
     fun adsb_persistentStatusPresentation_mapsTitleAndReason() {
         val offline = persistentAdsbStatusPresentation(
             adsbSnapshot(
-                connectionState = AdsbConnectionState.Error("Socket timeout"),
+                connectionState = adsbConnectionStateError("Socket timeout"),
                 authMode = AdsbAuthMode.Authenticated,
                 lastNetworkFailureKind = AdsbNetworkFailureKind.TIMEOUT
             )
@@ -191,7 +196,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
 
         val backoff = persistentAdsbStatusPresentation(
             adsbSnapshot(
-                connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                connectionState = adsbConnectionStateBackingOff(retryAfterSec = 5),
                 authMode = AdsbAuthMode.Authenticated
             )
         )
@@ -200,7 +205,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
 
         val authFailed = persistentAdsbStatusPresentation(
             adsbSnapshot(
-                connectionState = AdsbConnectionState.Active,
+                connectionState = adsbConnectionStateActive(),
                 authMode = AdsbAuthMode.AuthFailed
             )
         )
@@ -232,7 +237,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertTrue(
             shouldHideAdsbDebugPanelWhileConnecting(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Disabled,
+                    connectionState = adsbConnectionStateDisabled(),
                     authMode = AdsbAuthMode.Anonymous
                 )
             )
@@ -240,7 +245,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             shouldHideAdsbDebugPanelWhileConnecting(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    connectionState = adsbConnectionStateBackingOff(retryAfterSec = 5),
                     authMode = AdsbAuthMode.Anonymous
                 )
             )
@@ -248,7 +253,7 @@ class TrafficDebugPanelAutoDismissPolicyTest {
         assertFalse(
             shouldHideAdsbDebugPanelWhileConnecting(
                 adsbSnapshot(
-                    connectionState = AdsbConnectionState.Active,
+                    connectionState = adsbConnectionStateActive(),
                     authMode = AdsbAuthMode.Anonymous
                 )
             )
@@ -298,3 +303,4 @@ class TrafficDebugPanelAutoDismissPolicyTest {
             lastNetworkFailureKind = lastNetworkFailureKind
         )
 }
+

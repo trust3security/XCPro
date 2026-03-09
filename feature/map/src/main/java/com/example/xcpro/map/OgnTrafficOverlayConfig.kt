@@ -1,8 +1,6 @@
 package com.example.xcpro.map
 
 import android.graphics.Color
-import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
-
 internal const val TAG = "OgnTrafficOverlay"
 
 internal const val SOURCE_ID = "ogn-traffic-source"
@@ -29,7 +27,7 @@ internal const val STALE_VISUAL_AFTER_MS = 60_000L
 internal const val LIVE_ALPHA = 0.90
 internal const val STALE_ALPHA = 0.45
 
-internal const val ICON_BITMAP_BASE_SIZE_PX = OGN_ICON_SIZE_DEFAULT_PX
+internal val ICON_BITMAP_BASE_SIZE_PX = OGN_ICON_SIZE_DEFAULT_PX
 
 internal const val LABEL_TEXT_SIZE_BASE_SP = 13f
 internal const val MIN_LABEL_TEXT_SIZE_SP = 12f

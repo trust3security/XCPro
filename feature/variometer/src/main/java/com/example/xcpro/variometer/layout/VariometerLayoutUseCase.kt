@@ -16,6 +16,14 @@ class VariometerLayoutUseCase @Inject constructor(
 ) {
     private val _state = MutableStateFlow(VariometerUiState())
     val state: StateFlow<VariometerUiState> = _state.asStateFlow()
+    private var activeProfileId: String = VariometerWidgetRepository.DEFAULT_PROFILE_ID
+
+    fun setActiveProfileId(profileId: String) {
+        val resolved = profileId.trim().ifBlank { VariometerWidgetRepository.DEFAULT_PROFILE_ID }
+        if (activeProfileId == resolved) return
+        activeProfileId = resolved
+        _state.value = VariometerUiState()
+    }
 
     fun ensureLayout(
         screenWidthPx: Float,
@@ -29,7 +37,11 @@ class VariometerLayoutUseCase @Inject constructor(
             x = ((screenWidthPx - defaultSizePx) / 2f).coerceAtLeast(0f),
             y = ((screenHeightPx - defaultSizePx) / 2f).coerceAtLeast(0f)
         )
-        val persistedLayout = repository.load(centeredOffset, defaultSizePx)
+        val persistedLayout = repository.load(
+            profileId = activeProfileId,
+            defaultOffset = centeredOffset,
+            defaultSizePx = defaultSizePx
+        )
         val sanitizedSize = persistedLayout.sizePx.coerceIn(minSizePx, maxSizePx)
         val targetOffset = if (persistedLayout.hasPersistedOffset) {
             persistedLayout.offset
@@ -43,10 +55,10 @@ class VariometerLayoutUseCase @Inject constructor(
             isInitialized = true
         )
         if (!persistedLayout.hasPersistedOffset) {
-            repository.saveOffset(boundedOffset)
+            repository.saveOffset(activeProfileId, boundedOffset)
         }
         if (!persistedLayout.hasPersistedSize) {
-            repository.saveSize(sanitizedSize)
+            repository.saveSize(activeProfileId, sanitizedSize)
         }
     }
 
@@ -58,7 +70,7 @@ class VariometerLayoutUseCase @Inject constructor(
         if (!_state.value.isInitialized) return
         val clamped = clampOffset(offset, _state.value.sizePx, screenWidthPx, screenHeightPx)
         _state.update { it.copy(offset = clamped) }
-        repository.saveOffset(clamped)
+        repository.saveOffset(activeProfileId, clamped)
     }
 
     fun onSizeCommitted(
@@ -72,8 +84,8 @@ class VariometerLayoutUseCase @Inject constructor(
         val clampedSize = sizePx.coerceIn(minSizePx, maxSizePx)
         val clampedOffset = clampOffset(_state.value.offset, clampedSize, screenWidthPx, screenHeightPx)
         _state.update { it.copy(sizePx = clampedSize, offset = clampedOffset) }
-        repository.saveSize(clampedSize)
-        repository.saveOffset(clampedOffset)
+        repository.saveSize(activeProfileId, clampedSize)
+        repository.saveOffset(activeProfileId, clampedOffset)
     }
 
     private fun clampOffset(

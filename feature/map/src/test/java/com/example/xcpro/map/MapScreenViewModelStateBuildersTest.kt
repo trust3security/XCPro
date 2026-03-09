@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.replay.Selection

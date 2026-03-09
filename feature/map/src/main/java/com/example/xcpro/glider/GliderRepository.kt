@@ -37,9 +37,10 @@ class GliderRepository @Inject constructor(
 
     private val _config = MutableStateFlow(GliderConfig())
     override val config: StateFlow<GliderConfig> = _config.asStateFlow()
+    private var activeProfileId: String = DEFAULT_PROFILE_ID
 
     init {
-        load()
+        loadActiveProfile()
     }
 
     override fun listModels(): List<GliderModel> = models
@@ -48,14 +49,38 @@ class GliderRepository @Inject constructor(
         val model = models.find { it.id == id }
         _selectedModel.value = model
         refreshDerivedModelState()
-        save()
+        saveActiveProfile()
     }
 
     override fun updateConfig(update: (GliderConfig) -> GliderConfig) {
         val next = sanitizeConfig(update(_config.value))
         _config.value = next
         refreshDerivedModelState()
-        save()
+        saveActiveProfile()
+    }
+
+    override fun setActiveProfileId(profileId: String) {
+        val resolved = resolveProfileId(profileId)
+        if (activeProfileId == resolved) return
+        activeProfileId = resolved
+        loadActiveProfile()
+    }
+
+    override fun clearProfile(profileId: String) {
+        val resolved = resolveProfileId(profileId)
+        val editor = prefs.edit()
+            .remove(scopedSelectedKey(resolved))
+            .remove(scopedConfigKey(resolved))
+        if (isLegacyFallbackEligible(resolved)) {
+            editor.remove(KEY_SELECTED_ID)
+            editor.remove(KEY_CONFIG_JSON)
+        }
+        editor.apply()
+        if (activeProfileId == resolved) {
+            _selectedModel.value = null
+            _config.value = GliderConfig()
+            refreshDerivedModelState()
+        }
     }
 
     fun setThreePointPolar(p: ThreePointPolar?) {
@@ -86,25 +111,62 @@ class GliderRepository @Inject constructor(
         setIasMaxMs(value?.let(UnitsConverter::kmhToMs))
     }
 
-    private fun load() {
-        val id = prefs.getString(KEY_SELECTED_ID, null)
-        val json = prefs.getString(KEY_CONFIG_JSON, null)
+    fun loadProfileSnapshot(profileId: String): GliderProfileSnapshot {
+        val persisted = readPersistedState(resolveProfileId(profileId))
+        val selected = persisted.selectedId?.let { id -> models.find { it.id == id } }
+        val config = persisted.configJson?.let { json ->
+            runCatching { loadPersistedConfig(json) }.getOrNull()
+        } ?: GliderConfig()
+        val effective = resolveEffectiveModel(selected, config)
+        val fallbackPolarActive =
+            selected == null || !GliderSpeedBoundsResolver.hasPolar(selected, config)
+        return GliderProfileSnapshot(
+            selectedModelId = selected?.id,
+            effectiveModelId = effective.id,
+            isFallbackPolarActive = fallbackPolarActive,
+            config = config
+        )
+    }
+
+    fun saveProfileSnapshot(profileId: String, selectedModelId: String?, config: GliderConfig) {
+        val resolvedProfileId = resolveProfileId(profileId)
+        val sanitizedConfig = sanitizeConfig(config)
+        writeScopedState(
+            profileId = resolvedProfileId,
+            selectedModelId = selectedModelId,
+            config = sanitizedConfig
+        )
+        if (activeProfileId != resolvedProfileId) return
+        _selectedModel.value = selectedModelId?.let { id -> models.find { it.id == id } }
+        _config.value = sanitizedConfig
+        refreshDerivedModelState()
+    }
+
+    private fun loadActiveProfile() {
+        val persisted = readPersistedState(activeProfileId)
+        val id = persisted.selectedId
+        val json = persisted.configJson
         if (id != null) {
             _selectedModel.value = models.find { it.id == id }
+        } else {
+            _selectedModel.value = null
         }
         if (json != null) {
             try {
                 _config.value = loadPersistedConfig(json)
             } catch (_: Exception) { /* keep defaults */ }
+        } else {
+            _config.value = GliderConfig()
         }
         refreshDerivedModelState()
     }
 
-    private fun save() {
-        prefs.edit()
-            .putString(KEY_SELECTED_ID, _selectedModel.value?.id)
-            .putString(KEY_CONFIG_JSON, gson.toJson(_config.value))
-            .apply()
+    private fun saveActiveProfile() {
+        writeScopedState(
+            profileId = activeProfileId,
+            selectedModelId = _selectedModel.value?.id,
+            config = _config.value
+        )
     }
 
     private fun sanitizeConfig(config: GliderConfig): GliderConfig {
@@ -119,14 +181,92 @@ class GliderRepository @Inject constructor(
     private fun refreshDerivedModelState() {
         val configValue = _config.value
         val selectedValue = _selectedModel.value
-        val selectedHasUsablePolar = selectedValue != null && GliderSpeedBoundsResolver.hasPolar(selectedValue, configValue)
-        val fallbackPolarActive = !selectedHasUsablePolar && !GliderSpeedBoundsResolver.hasPolar(null, configValue)
-        _effectiveModel.value = if (selectedHasUsablePolar) {
-            selectedValue ?: fallbackModel
+        val selectedHasUsablePolar =
+            selectedValue != null && GliderSpeedBoundsResolver.hasPolar(selectedValue, configValue)
+        val fallbackPolarActive =
+            !selectedHasUsablePolar && !GliderSpeedBoundsResolver.hasPolar(null, configValue)
+        _effectiveModel.value = resolveEffectiveModel(selectedValue, configValue)
+        _isFallbackPolarActive.value = fallbackPolarActive
+    }
+
+    private fun resolveEffectiveModel(
+        selectedModel: GliderModel?,
+        config: GliderConfig
+    ): GliderModel {
+        val selectedHasUsablePolar =
+            selectedModel != null && GliderSpeedBoundsResolver.hasPolar(selectedModel, config)
+        return if (selectedHasUsablePolar) {
+            selectedModel ?: fallbackModel
         } else {
             fallbackModel
         }
-        _isFallbackPolarActive.value = fallbackPolarActive
+    }
+
+    private fun writeScopedState(
+        profileId: String,
+        selectedModelId: String?,
+        config: GliderConfig
+    ) {
+        val configJson = gson.toJson(config)
+        val editor = prefs.edit()
+            .putString(scopedSelectedKey(profileId), selectedModelId)
+            .putString(scopedConfigKey(profileId), configJson)
+        if (isLegacyFallbackEligible(profileId)) {
+            editor.putString(KEY_SELECTED_ID, selectedModelId)
+            editor.putString(KEY_CONFIG_JSON, configJson)
+        }
+        editor.apply()
+    }
+
+    private fun readPersistedState(profileId: String): PersistedState {
+        val scopedSelectedKey = scopedSelectedKey(profileId)
+        val scopedConfigKey = scopedConfigKey(profileId)
+        val scopedSelected = prefs.getString(scopedSelectedKey, null)
+        val scopedConfig = prefs.getString(scopedConfigKey, null)
+        if (scopedSelected != null || scopedConfig != null || hasScopedState(profileId)) {
+            return PersistedState(
+                selectedId = scopedSelected,
+                configJson = scopedConfig
+            )
+        }
+
+        if (!isLegacyFallbackEligible(profileId)) {
+            return PersistedState(selectedId = null, configJson = null)
+        }
+
+        val legacySelected = prefs.getString(KEY_SELECTED_ID, null)
+        val legacyConfig = prefs.getString(KEY_CONFIG_JSON, null)
+        if (legacySelected != null || legacyConfig != null) {
+            writeScopedState(
+                profileId = profileId,
+                selectedModelId = legacySelected,
+                config = legacyConfig?.let { json ->
+                    runCatching { loadPersistedConfig(json) }.getOrElse { GliderConfig() }
+                } ?: GliderConfig()
+            )
+            return PersistedState(
+                selectedId = legacySelected,
+                configJson = legacyConfig
+            )
+        }
+        return PersistedState(selectedId = null, configJson = null)
+    }
+
+    private fun hasScopedState(profileId: String): Boolean {
+        return prefs.contains(scopedSelectedKey(profileId)) || prefs.contains(scopedConfigKey(profileId))
+    }
+
+    private fun scopedSelectedKey(profileId: String): String =
+        "profile_${profileId}_${KEY_SELECTED_ID}"
+
+    private fun scopedConfigKey(profileId: String): String =
+        "profile_${profileId}_${KEY_CONFIG_JSON}"
+
+    private fun resolveProfileId(profileId: String): String =
+        profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
+
+    private fun isLegacyFallbackEligible(profileId: String): Boolean {
+        return profileId == DEFAULT_PROFILE_ID
     }
 
     private fun loadPersistedConfig(json: String): GliderConfig {
@@ -183,9 +323,15 @@ class GliderRepository @Inject constructor(
     }
 
     companion object {
+        private const val DEFAULT_PROFILE_ID = "default-profile"
         private const val KEY_SELECTED_ID = "selected_model_id"
         private const val KEY_CONFIG_JSON = "glider_config_json"
     }
+
+    private data class PersistedState(
+        val selectedId: String?,
+        val configJson: String?
+    )
 
     private data class GliderConfigPersistence(
         val pilotAndGearKg: Double? = null,
@@ -214,3 +360,10 @@ class GliderRepository @Inject constructor(
         val highKmh: Double? = null
     )
 }
+
+data class GliderProfileSnapshot(
+    val selectedModelId: String?,
+    val effectiveModelId: String?,
+    val isFallbackPolarActive: Boolean,
+    val config: GliderConfig
+)

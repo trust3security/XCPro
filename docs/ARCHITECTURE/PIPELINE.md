@@ -145,6 +145,39 @@ Flight-state detector feed:
   - "Real airspeed" classification is fail-safe and trust-list based:
     only `WIND` and `SENSOR` source labels are treated as non-GPS real-airspeed inputs.
 
+- IGC recorder SSOT wiring:
+- `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+  - Subscribes to `FlightStateSource.flightState`.
+  - Subscribes to `FlightDataRepository.flightData` (LIVE source only) and maps samples to B-record lines in `Recording`/`Finalizing` phases.
+  - Applies Phase 3 cadence/validity/dropout/fallback domain policies before emitting B lines.
+  - Exposes `bRecordLines` stream (`SharedFlow<String>`) for diagnostics and regression validation.
+  - Forwards each emitted B line to `IgcRecordingActionSink.onBRecord(sessionId, line, sampleWallTimeMs)` using active session state and sample UTC wall timestamp.
+  - Enforces `IgcSessionStateMachine` transition contract and persists restart snapshots.
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
+  - Concrete Phase 4 sink bound in DI from `feature:igc`.
+  - On `StartRecording`, assembles deterministic preamble (`A/H/I`) and feature-gated task declaration snapshot output.
+  - `HFDTEDATE` starts with deterministic fallback (`session-start UTC date`, `FF=01`) and is rewritten from first valid B-record sample UTC date when available.
+  - Invalid/incomplete declaration snapshots are omitted and surfaced via deterministic diagnostic `L` line (`LXCPDECLARATION_OMITTED:<REASON>`).
+  - Appends forwarded B lines and emits deduped `E` records (`FLT`/`TSK`/`SYS`) using monotonic dedupe/rate policy.
+  - On `FinalizeRecording`, publishes a finalized `.IGC` file through `IgcFlightLogRepository`; publish success/failure is fed back into session transition completion.
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - Writes finalized sessions to app-private staging (`files/igc/staging/`) and atomically publishes to MediaStore Downloads (`Download/XCPro/IGC`).
+  - Uses `IgcFileNamingPolicy` to enforce deterministic naming and per-day collision resolution.
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
+  - Owns finalized IGC files index (`StateFlow<List<IgcLogEntry>>`) and list/query/copy-out file operations for UI.
+- `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcFilesUseCase.kt`
+  - Implements IGC Files search/sort/share/copy metadata action wiring.
+- `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
+  - State/event owner for IGC Files UX; no file I/O in ViewModel.
+  - Replay-open action is delegated via injected `IgcReplayLauncher` port, preserving UI -> use-case boundary direction.
+- `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt`
+  - `feature:map` adapter layer for app-owned metadata sources bound into `feature:igc` contracts.
+  - Profile metadata source: active profile -> pilot/glider header fields.
+  - Task declaration source: task SSOT snapshot at recording start -> C record mapping input.
+  - Recorder metadata source: firmware/hardware/sensor-derived header inputs and altitude datum policy defaults.
+- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+  - Observes `IgcSessionStateMachine.Action`, dispatches lifecycle actions to `IgcRecordingActionSink`, and routes finalize publish success/failure back to `IgcRecordingUseCase` (`onFinalizeSucceeded` / `onFinalizeFailed`).
+
 ## 4) Use Case -> ViewModel
 
 Use case:
@@ -204,23 +237,25 @@ Map bindings:
     when provided by `NavigationDrawer`; route navigation remains as compatibility fallback.
 
 OGN settings path:
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
   - SSOT for OGN overlay enabled + icon size + receive radius (`20..300 km`, default `150`) + advanced auto-radius toggle + display update mode (`real_time` / `balanced` / `battery`) + `showSciaEnabled` +
     `showThermalsEnabled` + `thermalRetentionHours` + `hotspotsDisplayPercent` + ownship IDs
     (`ownFlarmHex`, `ownIcaoHex`) preferences.
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
   - SSOT for selected OGN aircraft keys used by trail display filtering.
 - `app/src/main/java/com/example/xcpro/XCProApplication.kt`
   - On fresh app process start, resets SCIA startup state to disabled (`showSciaEnabled = false`, selected trail aircraft = empty) so SCIA choices are session-local and must be re-enabled by user after restart.
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `OgnTrafficUseCase` combines trail segments with selected OGN aircraft keys
+- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficMapApi.kt`
+  - `OgnTrafficFacade` is the map-facing OGN contract consumed by the map shell.
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapTrafficUseCases.kt`
+  - `OgnTrafficUseCase` implements `OgnTrafficFacade` and combines trail segments with selected OGN aircraft keys
     from trail-selection SSOT before ViewModel/UI collection.
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionViewModel.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionViewModel.kt`
   - Observes OGN suppressed-key stream and prunes suppressed keys from persisted trail selections.
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `OgnTrafficUseCase` exposes OGN settings, thermal-hotspot flows, and OGN glider trail segment flows.
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapTrafficUseCases.kt`
+  - `OgnTrafficUseCase` exposes OGN settings, thermal-hotspot flows, and OGN glider trail segment flows through `OgnTrafficFacade`.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - Converts OGN settings, thermal-hotspot state, and OGN trail state to lifecycle-aware UI/runtime state.
+  - Converts OGN settings, thermal-hotspot state, and OGN trail state to lifecycle-aware UI/runtime state via `OgnTrafficFacade`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - Pushes OGN overlay targets, thermal hotspots, and OGN trail segments into runtime overlay manager.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
@@ -229,7 +264,7 @@ OGN settings path:
   - Owns OGN/ADS-b traffic overlay creation on startup/style recreation (MapInitializer delegates traffic overlay construction to this runtime owner).
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
   - Derives thermal hotspots from OGN targets and applies retention policy from
     `thermalRetentionHours` (`1h..23h` rolling window, `all day` until local midnight).
   - Applies strongest-first display share filtering from `hotspotsDisplayPercent` (`5..100`).
@@ -292,14 +327,16 @@ OGN lifecycle/position semantics:
   - Renders selected thermal details in a half-sheet style `ModalBottomSheet`.
 
 ADS-b settings path:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
   - SSOT for ADS-b overlay enabled + icon size + max distance + vertical above/below preferences.
   - SSOT for default-unknown-icon rollout controls (`defaultMediumUnknownIconEnabled`, rollback latch/reason).
   - SSOT for ADS-B EMERGENCY audio policy preferences (`emergencyAudioEnabled`, `emergencyAudioCooldownMs`).
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `AdsbTrafficUseCase` exposes ADS-b settings flows (`iconSizePx`, `maxDistanceKm`, `verticalAboveMeters`, `verticalBelowMeters`, default-unknown rollout effective enabled).
+- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficMapApi.kt`
+  - `AdsbTrafficFacade` is the map-facing ADS-B contract consumed by the map shell.
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapTrafficUseCases.kt`
+  - `AdsbTrafficUseCase` exposes ADS-b settings flows (`iconSizePx`, `maxDistanceKm`, `verticalAboveMeters`, `verticalBelowMeters`, default-unknown rollout effective enabled) through `AdsbTrafficFacade`.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - Converts ADS-b settings flows and ownship altitude into lifecycle-aware state for UI/runtime wiring.
+  - Converts ADS-b settings flows and ownship altitude into lifecycle-aware state for UI/runtime wiring via `AdsbTrafficFacade`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - Pushes icon-size and default-unknown rollout toggles into overlay runtime controller.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
@@ -318,15 +355,15 @@ ADS-b lifecycle/visibility semantics:
   - Map marker positions are not gated by metadata-enrichment latency.
   - Selected ADS-b details are sourced from raw ADS-b targets plus metadata; distance/bearing remain ownship-relative.
   - OGN traffic streams do not influence ADS-b details distance/bearing or ADS-b proximity color tiers.
-- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
   - On-demand ICAO metadata upserts emit a metadata revision signal.
-- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
   - Target/icon enrichment and selected-target details recompute when metadata revision changes,
     so icon/category overrides refresh immediately after metadata persistence (no extra poll wait).
-- `feature/map/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`
   - ADS-B live polling HTTP client and ADS-B metadata HTTP client are split:
     polling stays low-latency cadence-focused, metadata uses longer download-safe timeouts.
-- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/OpenSkyMetadataClient.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/data/OpenSkyMetadataClient.kt`
   - Metadata CSV downloads are staged to a temp file first; importer callback runs after HTTP response closure
     to reduce socket-timeout pressure during long Room import work.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
@@ -597,6 +634,16 @@ Flight state:
 
 ## 8) Replay Pipeline (High-Level)
 
+Replay/UI contract layer:
+- `feature/igc/src/main/java/com/example/xcpro/replay/IgcParser.kt`
+  - Parses IGC logs into deterministic replay points/metadata.
+- `feature/igc/src/main/java/com/example/xcpro/replay/IgcReplayUseCase.kt`
+  - Thin replay/session facade for UI; depends only on `IgcReplayControllerPort`.
+- `feature/igc/src/main/java/com/example/xcpro/replay/IgcReplayViewModel.kt`
+  - Replay screen state/event owner; no runtime wiring.
+- `feature/igc/src/main/java/com/example/xcpro/screens/replay/IgcReplayScreen.kt`
+  - Replay file picker / speed / timeline UI.
+
 Replay sensors:
 - `feature/map/src/main/java/com/example/xcpro/replay/ReplaySensorSource.kt`
   - `SensorDataSource` implementation for replay samples.
@@ -614,7 +661,8 @@ Replay pipeline:
 
 Controller:
 - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
-  - Owns session state, sample emission, and source gating.
+  - Implements `IgcReplayControllerPort` for `feature:igc`.
+  - Owns runtime session state, sample emission, and source gating.
   - Clears repository on stop to avoid stale UI data.
 
 ## 9) Time Base Rules (Enforced by Design)
@@ -644,6 +692,11 @@ Audio:
 - `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
 
 Replay:
+- `feature/igc/src/main/java/com/example/xcpro/replay/IgcParser.kt`
+- `feature/igc/src/main/java/com/example/xcpro/replay/IgcReplayUseCase.kt`
+- `feature/igc/src/main/java/com/example/xcpro/screens/replay/IgcReplayScreen.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcFilesUseCase.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
 - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
 - `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`
 

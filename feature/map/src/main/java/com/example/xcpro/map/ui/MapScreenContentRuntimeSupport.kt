@@ -41,11 +41,10 @@ import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.adsb.Icao24
-import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.AdsbSelectedTargetDetails
+import com.example.xcpro.map.AdsbSelectedTargetDetails
+import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastOverlayViewModel
 import com.example.xcpro.forecast.ForecastWindDisplayMode
@@ -71,17 +70,16 @@ import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OgnConnectionState
-import com.example.xcpro.ogn.OgnMarkerDetailsSheet
-import com.example.xcpro.ogn.OgnSubscriptionPolicy
-import com.example.xcpro.ogn.OgnTrafficSnapshot
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnTrailSelectionViewModel
-import com.example.xcpro.ogn.OgnThermalDetailsSheet
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.buildOgnSelectionLookup
-import com.example.xcpro.ogn.normalizeOgnAircraftKey
-import com.example.xcpro.ogn.selectionLookupContainsOgnKey
+import com.example.xcpro.map.OgnConnectionState
+import com.example.xcpro.map.OgnThermalHotspot
+import com.example.xcpro.map.OgnTrafficSnapshot
+import com.example.xcpro.map.OgnTrafficTarget
+import com.example.xcpro.map.OgnTrailSelectionViewModel
+import com.example.xcpro.map.OgnSelectionLookup
+import com.example.xcpro.map.buildOgnSelectionLookup
+import com.example.xcpro.map.haversineMeters
+import com.example.xcpro.map.normalizeOgnAircraftKey
+import com.example.xcpro.map.selectionLookupContainsOgnKey
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import android.util.Log
@@ -120,7 +118,7 @@ internal fun computeOwnshipDistanceToHotspotMeters(
     if (ownshipLat !in -90.0..90.0 || hotspotLat !in -90.0..90.0) return null
     if (ownshipLon !in -180.0..180.0 || hotspotLon !in -180.0..180.0) return null
 
-    return OgnSubscriptionPolicy.haversineMeters(
+    return haversineMeters(
         lat1 = ownshipLat,
         lon1 = ownshipLon,
         lat2 = hotspotLat,
@@ -159,7 +157,7 @@ internal fun formatWindSpeedForTap(speedKt: Double): String =
 
 internal fun buildOgnTrailAircraftRows(
     targets: List<OgnTrafficTarget>,
-    selectionLookup: com.example.xcpro.ogn.OgnSelectionLookup
+    selectionLookup: OgnSelectionLookup
 ): List<OgnTrailAircraftRowUi> {
     val seenKeys = HashSet<String>(targets.size)
     val rows = ArrayList<OgnTrailAircraftRowSortModel>(targets.size)

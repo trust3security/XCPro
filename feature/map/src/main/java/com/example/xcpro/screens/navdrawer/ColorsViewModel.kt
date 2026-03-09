@@ -2,6 +2,7 @@ package com.example.xcpro.screens.navdrawer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.ui.theme.ThemePreferencesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class ColorsUiState(
-    val profileId: String = "default",
+    val profileId: String = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
     val themeId: String = "default",
     val customColorsJson: String? = null
 )
@@ -23,7 +24,7 @@ class ColorsViewModel @Inject constructor(
     private val useCase: ThemePreferencesUseCase
 ) : ViewModel() {
 
-    private val profileId = MutableStateFlow("default")
+    private val profileId = MutableStateFlow(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
 
     val uiState: StateFlow<ColorsUiState> = profileId
         .flatMapLatest { id ->

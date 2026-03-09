@@ -13,11 +13,13 @@ import com.example.xcpro.MapOrientationManagerFactory
 import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.OrientationDataSourceFactory
 import com.example.xcpro.common.geo.GeoPoint
+import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderModel
+import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
@@ -76,41 +78,41 @@ import com.example.xcpro.variometer.layout.VariometerWidgetRepository
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.ConfigurationRepository
-import com.example.xcpro.adsb.AdsbProximityTier
+import com.example.xcpro.map.AdsbProximityTier
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
-import com.example.xcpro.adsb.AdsbConnectionState
-import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.adsb.ADSB_ICON_SIZE_MAX_PX
-import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
-import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
-import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
-import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
-import com.example.xcpro.adsb.AdsbTrafficRepository
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
-import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
-import com.example.xcpro.adsb.metadata.domain.AircraftMetadata
-import com.example.xcpro.adsb.metadata.domain.AircraftMetadataRepository
-import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncRepository
-import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
-import com.example.xcpro.adsb.metadata.domain.MetadataSyncRunResult
-import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
-import com.example.xcpro.ogn.OgnConnectionState
-import com.example.xcpro.ogn.OgnDisplayUpdateMode
-import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.ogn.OGN_ICON_SIZE_MAX_PX
-import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
-import com.example.xcpro.ogn.OgnTrafficRepository
-import com.example.xcpro.ogn.OgnTrafficSnapshot
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnThermalHotspotState
-import com.example.xcpro.ogn.OgnThermalRepository
-import com.example.xcpro.ogn.OgnGliderTrailRepository
-import com.example.xcpro.ogn.OgnGliderTrailSegment
-import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
+import com.example.xcpro.map.AdsbConnectionState
+import com.example.xcpro.map.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.map.ADSB_ICON_SIZE_MAX_PX
+import com.example.xcpro.map.ADSB_MAX_DISTANCE_DEFAULT_KM
+import com.example.xcpro.map.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
+import com.example.xcpro.map.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
+import com.example.xcpro.map.AdsbTrafficPreferencesRepository
+import com.example.xcpro.map.AdsbTrafficRepository
+import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
+import com.example.xcpro.map.AdsbMetadataEnrichmentUseCase
+import com.example.xcpro.map.AircraftMetadata
+import com.example.xcpro.map.AircraftMetadataRepository
+import com.example.xcpro.map.AircraftMetadataSyncRepository
+import com.example.xcpro.map.AircraftMetadataSyncScheduler
+import com.example.xcpro.map.MetadataSyncRunResult
+import com.example.xcpro.map.MetadataSyncState
+import com.example.xcpro.map.OgnConnectionState
+import com.example.xcpro.map.OgnDisplayUpdateMode
+import com.example.xcpro.map.OGN_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.map.OGN_ICON_SIZE_MAX_PX
+import com.example.xcpro.map.OgnTrafficPreferencesRepository
+import com.example.xcpro.map.OgnTrafficRepository
+import com.example.xcpro.map.OgnTrafficSnapshot
+import com.example.xcpro.map.OgnTrafficTarget
+import com.example.xcpro.map.OgnThermalHotspot
+import com.example.xcpro.map.OgnThermalHotspotState
+import com.example.xcpro.map.OgnThermalRepository
+import com.example.xcpro.map.OgnGliderTrailRepository
+import com.example.xcpro.map.OgnGliderTrailSegment
+import com.example.xcpro.map.OgnTrailSelectionPreferencesRepository
 import com.example.xcpro.thermalling.ThermallingModeCoordinator
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import org.junit.Assert.assertEquals
@@ -310,6 +312,27 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
 
         assertEquals(4_321.0, viewModel.selectedAdsbTarget.value?.distanceMeters ?: Double.NaN, 1e-6)
         assertEquals(220.0, viewModel.selectedAdsbTarget.value?.bearingDegFromUser ?: Double.NaN, 1e-6)
+    }
+
+    @Test
+    fun setActiveProfileId_updatesUnitsPreferencesForProfileScope() = runBlocking {
+        val viewModel = createViewModel()
+        unitsRepository.writeProfileUnits(
+            profileId = "pilot-a",
+            preferences = UnitsPreferences(altitude = AltitudeUnit.FEET)
+        )
+        unitsRepository.writeProfileUnits(
+            profileId = "pilot-b",
+            preferences = UnitsPreferences(altitude = AltitudeUnit.METERS)
+        )
+
+        viewModel.setActiveProfileId("pilot-a")
+        drainMain()
+        assertEquals(AltitudeUnit.FEET, viewModel.unitsPreferencesFlow.value.altitude)
+
+        viewModel.setActiveProfileId("pilot-b")
+        drainMain()
+        assertEquals(AltitudeUnit.METERS, viewModel.unitsPreferencesFlow.value.altitude)
     }
 
     @Test

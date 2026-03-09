@@ -312,7 +312,10 @@ private fun ExpandedContent(
                 RulesBTTab(
                     uiState = uiState,
                     onSelect = taskViewModel::onSetTaskType,
-                    onUpdateAATParameters = taskViewModel::onUpdateAATParameters
+                    onUpdateAATParameters = taskViewModel::onUpdateAATParameters,
+                    onUpdateRacingStartRules = taskViewModel::onUpdateRacingStartRules,
+                    onUpdateRacingFinishRules = taskViewModel::onUpdateRacingFinishRules,
+                    onUpdateRacingValidationRules = taskViewModel::onUpdateRacingValidationRules
                 )
             }
             TaskCategory.FILES -> {

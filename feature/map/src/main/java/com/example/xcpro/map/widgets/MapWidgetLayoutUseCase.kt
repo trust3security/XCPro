@@ -8,79 +8,87 @@ import javax.inject.Inject
 class MapWidgetLayoutUseCase @Inject constructor(
     private val repository: MapWidgetLayoutRepository
 ) {
-    fun loadLayout(screenWidthPx: Float, screenHeightPx: Float, density: DensityScale): MapWidgetOffsets {
+    fun loadLayout(
+        profileId: String,
+        screenWidthPx: Float,
+        screenHeightPx: Float,
+        density: DensityScale
+    ): MapWidgetOffsets {
         val sideSize = resolvedSize(
+            profileId = profileId,
             widgetId = MapWidgetId.SIDE_HAMBURGER,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             density = density
         )
-        val sideRawOffset = repository.readOffset(MapWidgetId.SIDE_HAMBURGER)
+        val sideRawOffset = repository.readOffset(profileId, MapWidgetId.SIDE_HAMBURGER)
             ?: OffsetPx(
                 x = HAMBURGER_DEFAULT_X,
                 y = hamburgerDefaultY(density)
             )
-        val side = clampOffset(
+        val sideOffset = clampOffset(
             offset = sideRawOffset,
             sizePx = sideSize,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx
         )
-        val flightMode = repository.readOffset(MapWidgetId.FLIGHT_MODE)
+        val flightMode = repository.readOffset(profileId, MapWidgetId.FLIGHT_MODE)
             ?: OffsetPx(
                 x = FLIGHT_MODE_DEFAULT_X,
                 y = flightModeDefaultY(density)
             )
         val settingsSize = resolvedSize(
+            profileId = profileId,
             widgetId = MapWidgetId.SETTINGS_SHORTCUT,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             density = density
         )
-        val settingsRawOffset = repository.readOffset(MapWidgetId.SETTINGS_SHORTCUT)
+        val settingsRawOffset = repository.readOffset(profileId, MapWidgetId.SETTINGS_SHORTCUT)
             ?: OffsetPx(
                 x = SETTINGS_SHORTCUT_DEFAULT_X,
                 y = settingsShortcutDefaultY(density)
             )
-        val settings = clampOffset(
+        val settingsOffset = clampOffset(
             offset = settingsRawOffset,
             sizePx = settingsSize,
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx
         )
-        val ballast = repository.readOffset(MapWidgetId.BALLAST)
+        val ballast = repository.readOffset(profileId, MapWidgetId.BALLAST)
             ?: OffsetPx(
                 x = ballastDefaultX(screenWidthPx, density),
                 y = ballastDefaultY(density)
             )
 
-        if (side != sideRawOffset) {
-            repository.saveOffset(MapWidgetId.SIDE_HAMBURGER, side)
+        if (sideOffset != sideRawOffset) {
+            repository.saveOffset(profileId, MapWidgetId.SIDE_HAMBURGER, sideOffset)
         }
-        if (settings != settingsRawOffset) {
-            repository.saveOffset(MapWidgetId.SETTINGS_SHORTCUT, settings)
+        if (settingsOffset != settingsRawOffset) {
+            repository.saveOffset(profileId, MapWidgetId.SETTINGS_SHORTCUT, settingsOffset)
         }
 
         return MapWidgetOffsets(
-            sideHamburger = side,
+            sideHamburger = sideOffset,
             flightMode = flightMode,
-            settingsShortcut = settings,
+            settingsShortcut = settingsOffset,
             ballast = ballast,
             sideHamburgerSizePx = sideSize,
             settingsShortcutSizePx = settingsSize
         )
     }
 
-    fun saveOffset(widgetId: MapWidgetId, offset: OffsetPx) {
-        repository.saveOffset(widgetId, offset)
+    fun saveOffset(profileId: String, widgetId: MapWidgetId, offset: OffsetPx) {
+        repository.saveOffset(profileId, widgetId, offset)
     }
 
-    fun saveSizePx(widgetId: MapWidgetId, sizePx: Float) {
+    fun saveSizePx(profileId: String, widgetId: MapWidgetId, sizePx: Float) {
         if (!MapWidgetSizePolicy.supportsSize(widgetId)) return
-        repository.saveSizePx(widgetId, sizePx)
+        repository.saveSizePx(profileId, widgetId, sizePx)
     }
 
     fun commitOffset(
+        profileId: String,
         current: MapWidgetOffsets,
         widgetId: MapWidgetId,
         offset: OffsetPx,
@@ -109,11 +117,12 @@ class MapWidgetLayoutUseCase @Inject constructor(
             }
             MapWidgetId.BALLAST -> current.copy(ballast = offset)
         }
-        repository.saveOffset(widgetId, offsetFor(updated, widgetId))
+        repository.saveOffset(profileId, widgetId, offsetFor(updated, widgetId))
         return updated
     }
 
     fun commitSize(
+        profileId: String,
         current: MapWidgetOffsets,
         widgetId: MapWidgetId,
         sizePx: Float,
@@ -159,8 +168,8 @@ class MapWidgetLayoutUseCase @Inject constructor(
             else -> current
         }
 
-        repository.saveSizePx(widgetId, clampedSize)
-        repository.saveOffset(widgetId, offsetFor(updated, widgetId))
+        repository.saveSizePx(profileId, widgetId, clampedSize)
+        repository.saveOffset(profileId, widgetId, offsetFor(updated, widgetId))
         return updated
     }
 
@@ -183,12 +192,13 @@ class MapWidgetLayoutUseCase @Inject constructor(
         density.dpToPx(BALLAST_PADDING_TOP_DP)
 
     private fun resolvedSize(
+        profileId: String,
         widgetId: MapWidgetId,
         screenWidthPx: Float,
         screenHeightPx: Float,
         density: DensityScale
     ): Float {
-        val persisted = repository.readSizePx(widgetId)
+        val persisted = repository.readSizePx(profileId, widgetId)
         val defaultSize = MapWidgetSizePolicy.defaultSizePx(widgetId, density)
         val clamped = MapWidgetSizePolicy.clampSizePx(
             widgetId = widgetId,
@@ -198,7 +208,7 @@ class MapWidgetLayoutUseCase @Inject constructor(
             density = density
         )
         if (persisted == null || persisted != clamped) {
-            repository.saveSizePx(widgetId, clamped)
+            repository.saveSizePx(profileId, widgetId, clamped)
         }
         return clamped
     }

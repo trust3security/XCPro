@@ -16,6 +16,8 @@ import org.robolectric.annotation.Config
 class MapWidgetLayoutUseCaseTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
+    private val defaultProfileId = "default-profile"
+    private val secondProfileId = "pilot-b"
 
     @Before
     fun setUp() {
@@ -31,6 +33,7 @@ class MapWidgetLayoutUseCaseTest {
         val useCase = MapWidgetLayoutUseCase(repository)
 
         val offsets = useCase.loadLayout(
+            profileId = defaultProfileId,
             screenWidthPx = 1080f,
             screenHeightPx = 1920f,
             density = DensityScale(density = 2f, fontScale = 1f)
@@ -48,9 +51,10 @@ class MapWidgetLayoutUseCaseTest {
         val useCase = MapWidgetLayoutUseCase(repository)
         val expected = OffsetPx(x = 222f, y = 333f)
 
-        useCase.saveOffset(MapWidgetId.SETTINGS_SHORTCUT, expected)
+        useCase.saveOffset(defaultProfileId, MapWidgetId.SETTINGS_SHORTCUT, expected)
 
         val offsets = useCase.loadLayout(
+            profileId = defaultProfileId,
             screenWidthPx = 1080f,
             screenHeightPx = 1920f,
             density = DensityScale(density = 3f, fontScale = 1f)
@@ -65,9 +69,10 @@ class MapWidgetLayoutUseCaseTest {
         val repository = MapWidgetLayoutRepository(context)
         val useCase = MapWidgetLayoutUseCase(repository)
 
-        useCase.saveSizePx(MapWidgetId.SETTINGS_SHORTCUT, 145f)
+        useCase.saveSizePx(defaultProfileId, MapWidgetId.SETTINGS_SHORTCUT, 145f)
 
         val offsets = useCase.loadLayout(
+            profileId = defaultProfileId,
             screenWidthPx = 1080f,
             screenHeightPx = 1920f,
             density = DensityScale(density = 3f, fontScale = 1f)
@@ -83,12 +88,14 @@ class MapWidgetLayoutUseCaseTest {
         val density = DensityScale(density = 2f, fontScale = 1f)
 
         val initial = useCase.loadLayout(
+            profileId = defaultProfileId,
             screenWidthPx = 1080f,
             screenHeightPx = 1920f,
             density = density
         )
 
         val nearEdge = useCase.commitOffset(
+            profileId = defaultProfileId,
             current = initial,
             widgetId = MapWidgetId.SETTINGS_SHORTCUT,
             offset = OffsetPx(x = 1000f, y = 1900f),
@@ -97,6 +104,7 @@ class MapWidgetLayoutUseCaseTest {
         )
 
         val resized = useCase.commitSize(
+            profileId = defaultProfileId,
             current = nearEdge,
             widgetId = MapWidgetId.SETTINGS_SHORTCUT,
             sizePx = 10_000f,
@@ -108,5 +116,61 @@ class MapWidgetLayoutUseCaseTest {
         assertEquals(192f, resized.settingsShortcutSizePx, 0.001f)
         assertEquals(888f, resized.settingsShortcut.x, 0.001f)
         assertEquals(1728f, resized.settingsShortcut.y, 0.001f)
+    }
+
+    @Test
+    fun loadLayout_isolatedBetweenProfiles() {
+        val repository = MapWidgetLayoutRepository(context)
+        val useCase = MapWidgetLayoutUseCase(repository)
+
+        useCase.saveOffset(defaultProfileId, MapWidgetId.SIDE_HAMBURGER, OffsetPx(220f, 330f))
+        useCase.saveOffset(secondProfileId, MapWidgetId.SIDE_HAMBURGER, OffsetPx(40f, 60f))
+
+        val defaultOffsets = useCase.loadLayout(
+            profileId = defaultProfileId,
+            screenWidthPx = 1080f,
+            screenHeightPx = 1920f,
+            density = DensityScale(density = 2f, fontScale = 1f)
+        )
+        val secondOffsets = useCase.loadLayout(
+            profileId = secondProfileId,
+            screenWidthPx = 1080f,
+            screenHeightPx = 1920f,
+            density = DensityScale(density = 2f, fontScale = 1f)
+        )
+
+        assertEquals(220f, defaultOffsets.sideHamburger.x, 0.001f)
+        assertEquals(330f, defaultOffsets.sideHamburger.y, 0.001f)
+        assertEquals(40f, secondOffsets.sideHamburger.x, 0.001f)
+        assertEquals(60f, secondOffsets.sideHamburger.y, 0.001f)
+    }
+
+    @Test
+    fun loadLayout_legacyFallbackAppliesOnlyToDefaultProfile() {
+        context.getSharedPreferences("MapPrefs", Context.MODE_PRIVATE)
+            .edit()
+            .putFloat("side_hamburger_x", 123f)
+            .putFloat("side_hamburger_y", 456f)
+            .commit()
+        val repository = MapWidgetLayoutRepository(context)
+        val useCase = MapWidgetLayoutUseCase(repository)
+
+        val defaultOffsets = useCase.loadLayout(
+            profileId = defaultProfileId,
+            screenWidthPx = 1080f,
+            screenHeightPx = 1920f,
+            density = DensityScale(density = 2f, fontScale = 1f)
+        )
+        val secondOffsets = useCase.loadLayout(
+            profileId = secondProfileId,
+            screenWidthPx = 1080f,
+            screenHeightPx = 1920f,
+            density = DensityScale(density = 2f, fontScale = 1f)
+        )
+
+        assertEquals(123f, defaultOffsets.sideHamburger.x, 0.001f)
+        assertEquals(456f, defaultOffsets.sideHamburger.y, 0.001f)
+        assertEquals(16f, secondOffsets.sideHamburger.x, 0.001f)
+        assertEquals(32f, secondOffsets.sideHamburger.y, 0.001f)
     }
 }

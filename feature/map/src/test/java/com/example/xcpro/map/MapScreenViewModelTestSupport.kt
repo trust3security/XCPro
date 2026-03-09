@@ -1,26 +1,26 @@
 package com.example.xcpro.map
 
 import com.example.dfcards.calculations.ConfidenceLevel
-import com.example.xcpro.adsb.AdsbConnectionState
-import com.example.xcpro.adsb.AdsbProximityTier
-import com.example.xcpro.adsb.AdsbTrafficRepository
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.map.AdsbConnectionState
+import com.example.xcpro.map.AdsbProximityTier
+import com.example.xcpro.map.AdsbTrafficRepository
+import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.ogn.OgnConnectionState
-import com.example.xcpro.ogn.OgnGliderTrailRepository
-import com.example.xcpro.ogn.OgnGliderTrailSegment
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnThermalHotspotState
-import com.example.xcpro.ogn.OgnThermalRepository
-import com.example.xcpro.ogn.OgnTrafficRepository
-import com.example.xcpro.ogn.OgnTrafficSnapshot
-import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.map.OgnConnectionState
+import com.example.xcpro.map.OgnGliderTrailRepository
+import com.example.xcpro.map.OgnGliderTrailSegment
+import com.example.xcpro.map.OgnThermalHotspot
+import com.example.xcpro.map.OgnThermalHotspotState
+import com.example.xcpro.map.OgnThermalRepository
+import com.example.xcpro.map.OgnTrafficRepository
+import com.example.xcpro.map.OgnTrafficSnapshot
+import com.example.xcpro.map.OgnTrafficTarget
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.qnh.QnhConfidence
 import com.example.xcpro.qnh.QnhRepository
@@ -247,7 +247,7 @@ class FakeAdsbTrafficRepository : AdsbTrafficRepository {
     override val snapshot = MutableStateFlow(
         AdsbTrafficSnapshot(
             targets = emptyList(),
-            connectionState = AdsbConnectionState.Disabled,
+            connectionState = adsbConnectionStateDisabled(),
             centerLat = null,
             centerLon = null,
             receiveRadiusKm = 20,
@@ -359,3 +359,4 @@ class FakeQnhRepository : QnhRepository {
         calibrationFlow.value = state
     }
 }
+

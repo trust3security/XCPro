@@ -1,11 +1,12 @@
 package com.example.xcpro.tasks.racing.navigation
 
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryGeometry
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import com.example.xcpro.tasks.racing.SimpleRacingTask
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossing
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlanner
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEpsilonPolicy
-import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryTransition
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
@@ -15,9 +16,11 @@ import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 import kotlin.math.abs
 import kotlin.math.max
 
+internal const val TURNPOINT_NEAR_MISS_DISTANCE_METERS = 500.0
+
 internal fun normalizeNavigationState(
     state: RacingNavigationState,
-    task: SimpleRacingTask,
+    taskWaypoints: List<RacingWaypoint>,
     signature: String
 ): RacingNavigationState {
     val normalized = if (state.taskSignature.isNotEmpty() && state.taskSignature != signature) {
@@ -25,18 +28,24 @@ internal fun normalizeNavigationState(
     } else {
         state
     }
-    if (task.waypoints.isEmpty()) {
+    if (taskWaypoints.isEmpty()) {
         return normalized.copy(currentLegIndex = 0, taskSignature = signature)
     }
     return normalized.copy(
-        currentLegIndex = normalized.currentLegIndex.coerceIn(0, task.waypoints.lastIndex),
+        currentLegIndex = normalized.currentLegIndex.coerceIn(0, taskWaypoints.lastIndex),
         taskSignature = signature
     )
 }
 
-internal fun buildTaskSignature(task: SimpleRacingTask): String {
-    if (task.waypoints.isEmpty()) return "empty"
-    return task.waypoints.joinToString("|") { waypoint ->
+internal fun normalizeNavigationState(
+    state: RacingNavigationState,
+    task: SimpleRacingTask,
+    signature: String
+): RacingNavigationState = normalizeNavigationState(state, task.waypoints, signature)
+
+internal fun buildTaskSignature(taskWaypoints: List<RacingWaypoint>): String {
+    if (taskWaypoints.isEmpty()) return "empty"
+    return taskWaypoints.joinToString("|") { waypoint ->
         buildString {
             append(waypoint.id)
             append(":")
@@ -63,6 +72,8 @@ internal fun buildTaskSignature(task: SimpleRacingTask): String {
     }
 }
 
+internal fun buildTaskSignature(task: SimpleRacingTask): String = buildTaskSignature(task.waypoints)
+
 internal fun shouldEvaluateTransitions(
     activeWaypoint: RacingWaypoint,
     previousWaypoint: RacingWaypoint?,
@@ -73,7 +84,15 @@ internal fun shouldEvaluateTransitions(
 ): Boolean {
     val radiusMeters = proximityRadiusMeters(activeWaypoint, previousWaypoint, nextWaypoint) ?: return true
     val margin = epsilonPolicy.epsilonMeters(fix)
-    val limit = radiusMeters + margin
+    val nearMissAllowance = if (
+        activeWaypoint.role == RacingWaypointRole.TURNPOINT &&
+        activeWaypoint.turnPointType == RacingTurnPointType.TURN_POINT_CYLINDER
+    ) {
+        TURNPOINT_NEAR_MISS_DISTANCE_METERS
+    } else {
+        0.0
+    }
+    val limit = radiusMeters + margin + nearMissAllowance
     val currentDistance = waypointDistanceMeters(activeWaypoint, fix)
     if (currentDistance <= limit) return true
     val lastDistance = lastFix?.let { waypointDistanceMeters(activeWaypoint, it) } ?: currentDistance
@@ -168,10 +187,15 @@ internal fun detectStartLineCrossing(
     waypoint: RacingWaypoint,
     nextWaypoint: RacingWaypoint?,
     previousFix: RacingNavigationFix?,
-    currentFix: RacingNavigationFix
+    currentFix: RacingNavigationFix,
+    directionOverrideDegrees: Double? = null
 ): RacingBoundaryCrossing? {
-    if (previousFix == null || nextWaypoint == null) return null
-    val bearingToNext = RacingGeometryUtils.calculateBearing(waypoint.lat, waypoint.lon, nextWaypoint.lat, nextWaypoint.lon)
+    if (previousFix == null) return null
+    val bearingToNext = directionOverrideDegrees
+        ?: nextWaypoint?.let {
+            RacingGeometryUtils.calculateBearing(waypoint.lat, waypoint.lon, it.lat, it.lon)
+        }
+        ?: return null
     val lineBearing = (bearingToNext + 90.0) % 360.0
     val sectorBearing = (bearingToNext + 180.0) % 360.0
     return crossingPlanner.detectLineCrossing(
@@ -185,15 +209,44 @@ internal fun detectStartLineCrossing(
     )
 }
 
+internal fun detectStartLineWrongDirectionCrossing(
+    crossingPlanner: RacingBoundaryCrossingPlanner,
+    waypoint: RacingWaypoint,
+    nextWaypoint: RacingWaypoint?,
+    previousFix: RacingNavigationFix?,
+    currentFix: RacingNavigationFix,
+    directionOverrideDegrees: Double? = null
+): RacingBoundaryCrossing? {
+    if (previousFix == null) return null
+    val bearingToNext = directionOverrideDegrees
+        ?: nextWaypoint?.let {
+            RacingGeometryUtils.calculateBearing(waypoint.lat, waypoint.lon, it.lat, it.lon)
+        }
+        ?: return null
+    val lineBearing = (bearingToNext + 90.0) % 360.0
+    val sectorBearing = (bearingToNext + 180.0) % 360.0
+    return crossingPlanner.detectLineCrossing(
+        center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
+        lineLengthMeters = waypoint.gateWidthMeters,
+        lineBearingDegrees = lineBearing,
+        sectorBearingDegrees = sectorBearing,
+        previousFix = previousFix,
+        currentFix = currentFix,
+        transition = RacingBoundaryTransition.ENTER
+    )
+}
+
 internal fun detectFinishLineCrossing(
     crossingPlanner: RacingBoundaryCrossingPlanner,
     waypoint: RacingWaypoint,
     previousWaypoint: RacingWaypoint?,
     previousFix: RacingNavigationFix?,
-    currentFix: RacingNavigationFix
+    currentFix: RacingNavigationFix,
+    directionOverrideDegrees: Double? = null
 ): RacingBoundaryCrossing? {
     if (previousFix == null || previousWaypoint == null) return null
-    val inboundBearing = RacingGeometryUtils.calculateBearing(previousWaypoint.lat, previousWaypoint.lon, waypoint.lat, waypoint.lon)
+    val inboundBearing = directionOverrideDegrees
+        ?: RacingGeometryUtils.calculateBearing(previousWaypoint.lat, previousWaypoint.lon, waypoint.lat, waypoint.lon)
     val lineBearing = (inboundBearing + 90.0) % 360.0
     val sectorBearing = inboundBearing % 360.0
     return crossingPlanner.detectLineCrossing(
@@ -212,10 +265,15 @@ internal fun detectStartSectorCrossing(
     waypoint: RacingWaypoint,
     nextWaypoint: RacingWaypoint?,
     previousFix: RacingNavigationFix?,
-    currentFix: RacingNavigationFix
+    currentFix: RacingNavigationFix,
+    directionOverrideDegrees: Double? = null
 ): RacingBoundaryCrossing? {
-    if (previousFix == null || nextWaypoint == null) return null
-    val bearingToNext = RacingGeometryUtils.calculateBearing(waypoint.lat, waypoint.lon, nextWaypoint.lat, nextWaypoint.lon)
+    if (previousFix == null) return null
+    val bearingToNext = directionOverrideDegrees
+        ?: nextWaypoint?.let {
+            RacingGeometryUtils.calculateBearing(waypoint.lat, waypoint.lon, it.lat, it.lon)
+        }
+        ?: return null
     val halfAngle = 45.0
     return crossingPlanner.detectSectorCrossing(
         center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
@@ -264,6 +322,113 @@ internal fun detectKeyholeCrossing(
     )
 }
 
+internal fun detectFaiQuadrantCrossing(
+    crossingPlanner: RacingBoundaryCrossingPlanner,
+    waypoint: RacingWaypoint,
+    previousWaypoint: RacingWaypoint?,
+    nextWaypoint: RacingWaypoint?,
+    previousFix: RacingNavigationFix?,
+    currentFix: RacingNavigationFix
+): RacingBoundaryCrossing? {
+    if (previousFix == null || previousWaypoint == null || nextWaypoint == null) return null
+    val sectorBearing = calculateFAISectorBisector(waypoint, previousWaypoint, nextWaypoint)
+    return crossingPlanner.detectSectorCrossing(
+        center = RacingBoundaryPoint(waypoint.lat, waypoint.lon),
+        radiusMeters = waypoint.faiQuadrantOuterRadiusMeters,
+        sectorBearingDegrees = sectorBearing,
+        halfAngleDegrees = 45.0,
+        previousFix = previousFix,
+        currentFix = currentFix,
+        transition = RacingBoundaryTransition.ENTER
+    )
+}
+
+internal fun turnpointNearMissDistanceMeters(
+    waypoint: RacingWaypoint,
+    previousFix: RacingNavigationFix?,
+    currentFix: RacingNavigationFix
+): Double? {
+    if (waypoint.turnPointType != RacingTurnPointType.TURN_POINT_CYLINDER) {
+        return null
+    }
+    val currentGap = cylinderBoundaryGapMeters(waypoint, currentFix)
+    val previousGap = previousFix?.let { fix -> cylinderBoundaryGapMeters(waypoint, fix) }
+    val minGap = if (previousGap != null) minOf(previousGap, currentGap) else currentGap
+    return minGap.takeIf { gap ->
+        gap > 0.0 && gap <= TURNPOINT_NEAR_MISS_DISTANCE_METERS
+    }
+}
+
+internal fun distanceToStartBoundaryMeters(
+    waypoint: RacingWaypoint,
+    nextWaypoint: RacingWaypoint?,
+    fix: RacingNavigationFix,
+    directionOverrideDegrees: Double?
+): Double? {
+    return when (waypoint.startPointType) {
+        RacingStartPointType.START_LINE -> {
+            val courseBearing = directionOverrideDegrees
+                ?: nextWaypoint?.let {
+                    RacingGeometryUtils.calculateBearing(waypoint.lat, waypoint.lon, it.lat, it.lon)
+                }
+                ?: return null
+            val lineBearing = (courseBearing + 90.0) % 360.0
+            val halfLength = waypoint.gateWidthMeters / 2.0
+            val left = RacingGeometryUtils.calculateDestinationPoint(
+                waypoint.lat,
+                waypoint.lon,
+                lineBearing,
+                halfLength
+            )
+            val right = RacingGeometryUtils.calculateDestinationPoint(
+                waypoint.lat,
+                waypoint.lon,
+                (lineBearing + 180.0) % 360.0,
+                halfLength
+            )
+            val center = RacingBoundaryPoint(waypoint.lat, waypoint.lon)
+            val fixLocal = RacingBoundaryGeometry.toLocalMeters(center, RacingBoundaryPoint(fix.lat, fix.lon))
+            val leftLocal = RacingBoundaryGeometry.toLocalMeters(center, RacingBoundaryPoint(left.first, left.second))
+            val rightLocal = RacingBoundaryGeometry.toLocalMeters(center, RacingBoundaryPoint(right.first, right.second))
+            distancePointToSegmentMeters(fixLocal, leftLocal, rightLocal)
+        }
+        RacingStartPointType.START_CYLINDER,
+        RacingStartPointType.FAI_START_SECTOR -> {
+            kotlin.math.abs(
+                RacingGeometryUtils.haversineDistanceMeters(
+                    waypoint.lat,
+                    waypoint.lon,
+                    fix.lat,
+                    fix.lon
+                ) - waypoint.gateWidthMeters
+            )
+        }
+    }
+}
+
+private fun distancePointToSegmentMeters(
+    point: Pair<Double, Double>,
+    start: Pair<Double, Double>,
+    end: Pair<Double, Double>
+): Double {
+    val dx = end.first - start.first
+    val dy = end.second - start.second
+    val lengthSquared = dx * dx + dy * dy
+    if (lengthSquared <= 0.0) {
+        val ex = point.first - start.first
+        val ey = point.second - start.second
+        return kotlin.math.sqrt(ex * ex + ey * ey)
+    }
+
+    val t = (((point.first - start.first) * dx) + ((point.second - start.second) * dy)) / lengthSquared
+    val clamped = t.coerceIn(0.0, 1.0)
+    val projX = start.first + clamped * dx
+    val projY = start.second + clamped * dy
+    val ex = point.first - projX
+    val ey = point.second - projY
+    return kotlin.math.sqrt(ex * ex + ey * ey)
+}
+
 private fun calculateFAISectorBisector(
     waypoint: RacingWaypoint,
     previousWaypoint: RacingWaypoint,
@@ -277,5 +442,25 @@ private fun calculateFAISectorBisector(
         (trackBisector - 90.0 + 360.0) % 360.0
     } else {
         (trackBisector + 90.0) % 360.0
+    }
+}
+
+private fun cylinderBoundaryGapMeters(waypoint: RacingWaypoint, fix: RacingNavigationFix): Double {
+    val distanceMeters = RacingGeometryUtils.haversineDistanceMeters(
+        waypoint.lat,
+        waypoint.lon,
+        fix.lat,
+        fix.lon
+    )
+    return abs(distanceMeters - waypoint.gateWidthMeters)
+}
+
+internal fun resolveNavigationAltitudeMeters(
+    fix: RacingNavigationFix,
+    reference: com.example.xcpro.tasks.core.RacingAltitudeReference
+): Double? {
+    return when (reference) {
+        com.example.xcpro.tasks.core.RacingAltitudeReference.MSL -> fix.altitudeMslMeters
+        com.example.xcpro.tasks.core.RacingAltitudeReference.QNH -> fix.altitudeQnhMeters ?: fix.altitudeMslMeters
     }
 }

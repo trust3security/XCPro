@@ -4,6 +4,9 @@ import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.aat.SimpleAATTask
 import com.example.xcpro.tasks.aat.models.AATAreaShape
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
+import com.example.xcpro.tasks.aat.models.AATFinishPointType
+import com.example.xcpro.tasks.aat.models.AATStartPointType
+import com.example.xcpro.tasks.aat.models.AATTurnPointType
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import java.time.Duration
@@ -36,20 +39,20 @@ class AATCoordinatorDelegateTest {
 
         delegate.updateWaypointPointTypeMeters(
             index = 1,
-            startType = "start",
-            finishType = "finish",
-            turnType = "turn",
+            startType = AATStartPointType.AAT_START_LINE,
+            finishType = AATFinishPointType.AAT_FINISH_LINE,
+            turnType = AATTurnPointType.AAT_CYLINDER,
             gateWidthMeters = 1200.0,
             keyholeInnerRadiusMeters = 3400.0,
             keyholeAngle = 45.0,
             sectorOuterRadiusMeters = 5600.0
         )
 
-        verify(taskManager).updateWaypointPointTypeBridge(
+        verify(taskManager).updateAATWaypointPointTypeMeters(
             index = 1,
-            startType = "start",
-            finishType = "finish",
-            turnType = "turn",
+            startType = AATStartPointType.AAT_START_LINE,
+            finishType = AATFinishPointType.AAT_FINISH_LINE,
+            turnType = AATTurnPointType.AAT_CYLINDER,
             gateWidthMeters = 1200.0,
             keyholeInnerRadiusMeters = 3400.0,
             keyholeAngle = 45.0,
@@ -73,7 +76,7 @@ class AATCoordinatorDelegateTest {
             sectorOuterRadiusMeters = null
         )
 
-        verify(taskManager).updateWaypointPointTypeBridge(
+        verify(taskManager).updateAATWaypointPointTypeMeters(
             index = 0,
             startType = null,
             finishType = null,

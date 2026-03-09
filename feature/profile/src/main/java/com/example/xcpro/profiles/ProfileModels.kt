@@ -89,7 +89,8 @@ data class ProfileCreationRequest(
 )
 
 enum class ProfileNameCollisionPolicy {
-    KEEP_BOTH_SUFFIX
+    KEEP_BOTH_SUFFIX,
+    REPLACE_EXISTING
 }
 
 enum class ProfileImportFailureReason {
@@ -106,7 +107,8 @@ data class ProfileImportRequest(
     val profiles: List<UserProfile>,
     val keepCurrentActive: Boolean = true,
     val nameCollisionPolicy: ProfileNameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX,
-    val preserveImportedPreferences: Boolean = true
+    val preserveImportedPreferences: Boolean = true,
+    val preferredImportedActiveSourceId: String? = null
 )
 
 data class ProfileImportResult(
@@ -115,6 +117,7 @@ data class ProfileImportResult(
     val skippedCount: Int,
     val failures: List<ProfileImportFailure>,
     val activeProfileBefore: String?,
-    val activeProfileAfter: String?
+    val activeProfileAfter: String?,
+    val importedProfileIdMap: Map<String, String> = emptyMap()
 )
 

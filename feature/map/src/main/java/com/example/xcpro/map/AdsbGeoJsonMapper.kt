@@ -1,7 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.ui.aircraftIcon
 import com.example.xcpro.common.units.UnitsPreferences
 import com.google.gson.JsonObject
 import org.maplibre.geojson.Feature

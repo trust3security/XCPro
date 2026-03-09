@@ -109,7 +109,11 @@ internal object RacingBoundaryCrossingMath {
 
     fun interpolateTime(startMillis: Long, endMillis: Long, t: Double): Long {
         val delta = endMillis - startMillis
-        return startMillis + (delta * t).toLong()
+        val raw = startMillis + (delta * t)
+        val rounded = ((raw + 500.0) / 1000.0).toLong() * 1000L
+        val lower = minOf(startMillis, endMillis)
+        val upper = maxOf(startMillis, endMillis)
+        return rounded.coerceIn(lower, upper)
     }
 
     fun isInsideLineSector(

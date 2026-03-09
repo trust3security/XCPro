@@ -15,6 +15,7 @@ import com.example.xcpro.profiles.ui.ProfileSelectionContent
 @Composable
 fun ProfileSelectionScreen(
     onProfileSelected: () -> Unit,
+    onEditProfile: (UserProfile) -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -36,18 +37,19 @@ fun ProfileSelectionScreen(
         onShowImportDialog = { showImportDialog = true },
         onShowCreateDialog = viewModel::showCreateDialog,
         onHideCreateDialog = viewModel::hideCreateDialog,
+        onRecoverWithDefaultProfile = viewModel::recoverWithDefaultProfile,
         onClearError = viewModel::clearError,
-        onSkip = onProfileSelected,
         onContinue = onProfileSelected,
+        onEditProfile = onEditProfile,
         storageNamespaceLabel = context.packageName
     )
 
     if (showImportDialog) {
         ProfileImportDialog(
             onDismiss = { showImportDialog = false },
-            onImport = { importedProfiles, keepCurrentActive ->
-                viewModel.importProfiles(
-                    profiles = importedProfiles,
+            onImportJson = { json, keepCurrentActive ->
+                viewModel.importBundle(
+                    json = json,
                     keepCurrentActive = keepCurrentActive
                 )
                 showImportDialog = false

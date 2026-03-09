@@ -43,6 +43,8 @@ class RacingAdvanceState {
         if (mode == Mode.MANUAL) return false
         return when (eventType) {
             RacingNavigationEventType.START -> armState == ArmState.START_ARMED
+            RacingNavigationEventType.START_REJECTED -> false
+            RacingNavigationEventType.TURNPOINT_NEAR_MISS -> false
             RacingNavigationEventType.TURNPOINT,
             RacingNavigationEventType.FINISH -> armState == ArmState.TURN_ARMED
         }

@@ -2,6 +2,10 @@ package com.example.xcpro.vario
 
 import android.util.Log
 import com.example.xcpro.audio.AudioFocusManager
+import com.example.xcpro.igc.IgcRecordingActionSink
+import com.example.xcpro.igc.NoopIgcRecordingActionSink
+import com.example.xcpro.igc.domain.IgcSessionStateMachine
+import com.example.xcpro.igc.usecase.IgcRecordingUseCase
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.hawk.HawkConfigRepository
 import com.example.xcpro.hawk.HawkVarioRepository
@@ -36,7 +40,9 @@ open class VarioServiceManager @Inject constructor(
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
     private val hawkConfigRepository: HawkConfigRepository,
     private val hawkVarioRepository: HawkVarioRepository,
-    val flightStateSource: FlightStateSource
+    val flightStateSource: FlightStateSource,
+    private val igcRecordingUseCase: IgcRecordingUseCase? = null,
+    private val igcRecordingActionSink: IgcRecordingActionSink = NoopIgcRecordingActionSink
 ) {
 
     companion object {
@@ -52,6 +58,7 @@ open class VarioServiceManager @Inject constructor(
     private var collectionJob: Job? = null
     private var configJob: Job? = null
     private var gpsCadenceJob: Job? = null
+    private var igcActionJob: Job? = null
     private var lastGpsIntervalMs: Long? = null
     private val sensorRetryCoordinator = SensorRetryCoordinator(serviceScope, SENSOR_RETRY_DELAY_MS)
 
@@ -69,6 +76,7 @@ open class VarioServiceManager @Inject constructor(
             Log.d(TAG, "Starting sensors + flight data collection")
             observeLevoPreferences()
             startCollection()
+            observeIgcSessionActions()
             hawkVarioRepository.start()
             observeGpsCadence()
         }
@@ -102,6 +110,8 @@ open class VarioServiceManager @Inject constructor(
         configJob = null
         gpsCadenceJob?.cancel()
         gpsCadenceJob = null
+        igcActionJob?.cancel()
+        igcActionJob = null
         lastGpsIntervalMs = null
         flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
         collectionJob?.cancel()
@@ -150,6 +160,67 @@ open class VarioServiceManager @Inject constructor(
                     }
                     applyGpsUpdateInterval(interval)
                 }
+        }
+    }
+
+    private fun observeIgcSessionActions() {
+        val useCase = igcRecordingUseCase ?: return
+        if (igcActionJob != null) return
+        igcActionJob = serviceScope.launch {
+            useCase.actions.collectLatest { action ->
+                when (action) {
+                    is IgcSessionStateMachine.Action.EnterArmed -> {
+                        Log.d(
+                            TAG,
+                            "IGC session armed at mono=${action.monoTimeMs}"
+                        )
+                        igcRecordingActionSink.onSessionArmed(action.monoTimeMs)
+                    }
+                    is IgcSessionStateMachine.Action.StartRecording -> {
+                        Log.d(
+                            TAG,
+                            "IGC recording started: sessionId=${action.sessionId}, preFlightWindowMs=${action.preFlightGroundWindowMs}"
+                        )
+                        igcRecordingActionSink.onStartRecording(
+                            action.sessionId,
+                            action.preFlightGroundWindowMs
+                        )
+                    }
+                    is IgcSessionStateMachine.Action.FinalizeRecording -> {
+                        Log.d(
+                            TAG,
+                            "IGC finalize requested: sessionId=${action.sessionId}, postFlightWindowMs=${action.postFlightGroundWindowMs}"
+                        )
+                        val finalizeError = runCatching {
+                            igcRecordingActionSink.onFinalizeRecording(
+                                action.sessionId,
+                                action.postFlightGroundWindowMs
+                            )
+                        }.exceptionOrNull()
+                        if (finalizeError == null) {
+                            useCase.onFinalizeSucceeded()
+                        } else {
+                            useCase.onFinalizeFailed(
+                                finalizeError.message ?: "IGC finalization failed"
+                            )
+                        }
+                    }
+                    is IgcSessionStateMachine.Action.MarkCompleted -> {
+                        Log.d(
+                            TAG,
+                            "IGC session completed: sessionId=${action.sessionId}"
+                        )
+                        igcRecordingActionSink.onMarkCompleted(action.sessionId)
+                    }
+                    is IgcSessionStateMachine.Action.MarkFailed -> {
+                        Log.d(
+                            TAG,
+                            "IGC session failed: sessionId=${action.sessionId}, reason=${action.reason}"
+                        )
+                        igcRecordingActionSink.onMarkFailed(action.sessionId, action.reason)
+                    }
+                }
+            }
         }
     }
 

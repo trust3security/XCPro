@@ -1,9 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.ui.AdsbAircraftIcon
-import com.example.xcpro.adsb.ui.aircraftIcon
-
 /**
  * Session-level sticky icon projection cache.
  *

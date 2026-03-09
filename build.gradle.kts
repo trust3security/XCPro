@@ -28,13 +28,15 @@ val isCi = providers.environmentVariable("CI")
     .orNull
     ?.equals("true", ignoreCase = true)
     ?: false
-val flakyRobolectricAllowlist = rootProject
-    .file("config/test/flaky-robolectric-allowlist.txt")
-    .takeIf { it.exists() }
-    ?.readLines()
-    ?.map { it.trim() }
-    ?.filter { it.isNotEmpty() && !it.startsWith("#") }
-    ?: emptyList()
+val flakyRobolectricAllowlistProvider = providers.provider {
+    rootProject
+        .file("config/test/flaky-robolectric-allowlist.txt")
+        .takeIf { it.exists() }
+        ?.readLines()
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() && !it.startsWith("#") }
+        ?: emptyList()
+}
 
 subprojects {
     tasks.withType<Test>().configureEach {
@@ -47,15 +49,18 @@ subprojects {
         }
     }
 
-    if (isCi && flakyRobolectricAllowlist.isNotEmpty()) {
-        apply(plugin = "org.gradle.test-retry")
-        tasks.withType<Test>().configureEach {
-            extensions.configure(TestRetryTaskExtension::class.java) {
-                maxRetries.set(1)
-                maxFailures.set(20)
-                failOnPassedAfterRetry.set(false)
-                filter {
-                    includeClasses.addAll(flakyRobolectricAllowlist)
+    if (isCi) {
+        val flakyRobolectricAllowlist = flakyRobolectricAllowlistProvider.get()
+        if (flakyRobolectricAllowlist.isNotEmpty()) {
+            apply(plugin = "org.gradle.test-retry")
+            tasks.withType<Test>().configureEach {
+                extensions.configure(TestRetryTaskExtension::class.java) {
+                    maxRetries.set(1)
+                    maxFailures.set(20)
+                    failOnPassedAfterRetry.set(false)
+                    filter {
+                        includeClasses.addAll(flakyRobolectricAllowlist)
+                    }
                 }
             }
         }

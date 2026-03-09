@@ -7,6 +7,7 @@ import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.profiles.ProfileIdResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -282,18 +283,14 @@ class FlightDataManager(
     }
 
     suspend fun loadVisibleModes(profileId: String?, profileName: String?) {
-        if (profileId == null) {
-            Log.d(TAG, "No profileId provided - keeping existing visible modes")
-            return
-        }
-
-        val visibilities = cardPreferences.getProfileAllFlightModeVisibilities(profileId).first()
+        val resolvedProfileId = ProfileIdResolver.canonicalOrDefault(profileId)
+        val visibilities = cardPreferences.getProfileAllFlightModeVisibilities(resolvedProfileId).first()
         val filtered = mutableListOf<FlightMode>()
         filtered.add(FlightMode.CRUISE)
         if (visibilities["THERMAL"] != false) filtered.add(FlightMode.THERMAL)
         if (visibilities["FINAL_GLIDE"] != false) filtered.add(FlightMode.FINAL_GLIDE)
         _visibleModes.value = filtered
-        Log.d(TAG, "Visible modes for profile '$profileName': ${filtered.map { it.name }}")
+        Log.d(TAG, "Visible modes for profile '$profileName' ($resolvedProfileId): ${filtered.map { it.name }}")
     }
 
     fun updateUnitsPreferences(preferences: UnitsPreferences) {

@@ -1,21 +1,9 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.MapOrientationManager
-import com.example.xcpro.adsb.ADSB_MAX_DISTANCE_DEFAULT_KM
-import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
-import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
-import com.example.xcpro.adsb.AdsbSelectedTargetDetails
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
-import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.buildOgnSelectionLookup
-import com.example.xcpro.ogn.normalizeOgnAircraftKey
-import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import kotlinx.coroutines.CoroutineScope
@@ -165,17 +153,17 @@ internal data class AdsbFilterStateFlows(
 
 internal fun createAdsbFilterStateFlows(
     scope: CoroutineScope,
-    adsbTrafficUseCase: AdsbTrafficUseCase
+    adsbTrafficFacade: AdsbTrafficFacade
 ): AdsbFilterStateFlows = AdsbFilterStateFlows(
-    maxDistanceKm = adsbTrafficUseCase.maxDistanceKm.eagerState(
+    maxDistanceKm = adsbTrafficFacade.maxDistanceKm.eagerState(
         scope = scope,
         initial = ADSB_MAX_DISTANCE_DEFAULT_KM
     ),
-    verticalAboveMeters = adsbTrafficUseCase.verticalAboveMeters.eagerState(
+    verticalAboveMeters = adsbTrafficFacade.verticalAboveMeters.eagerState(
         scope = scope,
         initial = ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
     ),
-    verticalBelowMeters = adsbTrafficUseCase.verticalBelowMeters.eagerState(
+    verticalBelowMeters = adsbTrafficFacade.verticalBelowMeters.eagerState(
         scope = scope,
         initial = ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
     )

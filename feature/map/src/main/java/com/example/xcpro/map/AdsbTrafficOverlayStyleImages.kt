@@ -8,6 +8,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import androidx.core.content.ContextCompat
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.traffic.R
 import com.example.xcpro.adsb.ui.AdsbAircraftIcon
 import com.example.xcpro.adsb.ui.emergencyStyleImageId
 import org.maplibre.android.maps.Style
@@ -37,7 +38,10 @@ internal fun ensureAdsbTrafficOverlayStyleImages(
     val legacyNormal = runCatching { style.getImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY) }.getOrNull()
     val legacyEmergency = runCatching { style.getImage(legacyEmergencyId) }.getOrNull()
     if (legacyNormal == null || legacyEmergency == null) {
-        val baseBitmap = drawableToBitmap(context = context, drawableId = R.drawable.ic_adsb_unknown)
+        val baseBitmap = drawableToBitmap(
+            context = context,
+            drawableId = R.drawable.ic_adsb_unknown
+        )
         if (baseBitmap != null) {
             if (legacyNormal == null) {
                 style.addImage(ADSB_ICON_STYLE_UNKNOWN_LEGACY, baseBitmap, true)

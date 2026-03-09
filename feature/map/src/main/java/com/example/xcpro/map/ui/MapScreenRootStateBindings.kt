@@ -13,6 +13,7 @@ import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.airspace.AirspaceUiState
 import com.example.xcpro.airspace.AirspaceViewModel
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.profiles.ProfileViewModel
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
@@ -58,7 +59,7 @@ internal fun rememberMapScreenProfileLookAndFeelBinding(): MapScreenProfileLookA
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val lookAndFeelViewModel: LookAndFeelViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
-    val activeProfileId = profileUiState.activeProfile?.id ?: "default"
+    val activeProfileId = ProfileIdResolver.canonicalOrDefault(profileUiState.activeProfile?.id)
     LaunchedEffect(activeProfileId) {
         lookAndFeelViewModel.setProfileId(activeProfileId)
     }

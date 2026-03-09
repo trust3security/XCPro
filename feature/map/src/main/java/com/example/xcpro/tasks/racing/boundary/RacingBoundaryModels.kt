@@ -10,10 +10,17 @@ enum class RacingBoundaryTransition {
     EXIT
 }
 
+enum class RacingBoundaryEvidenceSource {
+    CYLINDER_INTERSECTION,
+    LINE_INTERSECTION,
+    SECTOR_INTERSECTION
+}
+
 data class RacingBoundaryCrossing(
     val transition: RacingBoundaryTransition,
     val crossingPoint: RacingBoundaryPoint,
     val crossingTimeMillis: Long,
     val insideAnchor: RacingBoundaryPoint,
-    val outsideAnchor: RacingBoundaryPoint
+    val outsideAnchor: RacingBoundaryPoint,
+    val evidenceSource: RacingBoundaryEvidenceSource
 )

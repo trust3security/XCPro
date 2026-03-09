@@ -26,6 +26,9 @@ This folder was reduced to a minimal, current set so future agents have one clea
 10. `docs/ADS-b/AGENT_CONTRACT_ADSB_DEFAULT_ICON_PHASE_EXECUTION_2026-03-08.md`
     - Autonomous execution contract for running Phase 0-4 with mandatory basic build
       (`assembleDebug`) after each phase and auto-proceed behavior.
+11. `docs/ADS-b/CHANGE_PLAN_ADSB_ICON_CORRECTNESS_RELEASE_GRADE_2026-03-09.md`
+   - Release-grade plan for eliminating avoidable metadata lookup starvation and
+     improving icon correctness.
 
 ## Notes
 
@@ -36,6 +39,8 @@ This folder was reduced to a minimal, current set so future agents have one clea
 - The socket hardening baseline remains recorded in `CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md`.
 - Use `CHANGE_PLAN_ADSB_DEFAULT_ICON_MEDIUM_PHASED_IP_2026-03-08.md` for
   default-icon UX and icon-resolution-latency hardening work.
+- Use `CHANGE_PLAN_ADSB_ICON_CORRECTNESS_RELEASE_GRADE_2026-03-09.md` to execute the
+  targeted release-grade icon correctness tightening pass.
 - Use `AGENT_CONTRACT_ADSB_DEFAULT_ICON_PHASE_EXECUTION_2026-03-08.md` when
   executing the default-icon phased plan autonomously.
 - If ADS-B runtime wiring changes, update `docs/ARCHITECTURE/PIPELINE.md` in the same change.

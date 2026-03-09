@@ -1,13 +1,13 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
+import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastTileSpec
 import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnTrafficTarget
+import com.example.xcpro.map.OgnThermalHotspot
+import com.example.xcpro.map.OgnTrafficTarget
 import com.example.xcpro.weather.rain.WeatherRadarRenderOptions
 import com.example.xcpro.weather.rain.WeatherRainFrameSelection
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,10 +39,10 @@ class HotspotsOverlayPolicyTest {
 
     @Test
     fun thermalToggle_autoEnablesOgnOverlayWhenTurningOn() = runTest {
-        val ognTrafficUseCase: OgnTrafficUseCase = mock()
-        val adsbTrafficUseCase: AdsbTrafficUseCase = mock()
-        whenever(ognTrafficUseCase.setOverlayEnabled(true)).thenReturn(Unit)
-        whenever(ognTrafficUseCase.setShowThermalsEnabled(true)).thenReturn(Unit)
+        val ognTrafficFacade: OgnTrafficFacade = mock()
+        val adsbTrafficFacade: AdsbTrafficFacade = mock()
+        whenever(ognTrafficFacade.setOverlayEnabled(true)).thenReturn(Unit)
+        whenever(ognTrafficFacade.setShowThermalsEnabled(true)).thenReturn(Unit)
 
         val coordinator = MapScreenTrafficCoordinator(
             scope = this,
@@ -70,16 +70,16 @@ class HotspotsOverlayPolicyTest {
             selectedThermalId = MutableStateFlow<String?>(null),
             rawAdsbTargets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList()),
             selectedAdsbId = MutableStateFlow<Icao24?>(null),
-            ognTrafficUseCase = ognTrafficUseCase,
-            adsbTrafficUseCase = adsbTrafficUseCase,
+            ognTrafficFacade = ognTrafficFacade,
+            adsbTrafficFacade = adsbTrafficFacade,
             emitUiEffect = {}
         )
 
         coordinator.onToggleOgnThermals()
         advanceUntilIdle()
 
-        verify(ognTrafficUseCase).setOverlayEnabled(true)
-        verify(ognTrafficUseCase).setShowThermalsEnabled(true)
+        verify(ognTrafficFacade).setOverlayEnabled(true)
+        verify(ognTrafficFacade).setShowThermalsEnabled(true)
     }
 
     @Test

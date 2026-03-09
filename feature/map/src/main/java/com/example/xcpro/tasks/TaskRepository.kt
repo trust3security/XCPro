@@ -5,6 +5,7 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TargetStateCustomParams
 import com.example.xcpro.tasks.core.WaypointRole
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.domain.logic.AATTargetOptimizer
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import com.example.xcpro.tasks.domain.logic.TaskProximityDecision
@@ -45,7 +46,12 @@ class TaskRepository @Inject constructor(
         var target: GeoPoint?
     )
 
-    fun updateFrom(task: Task, taskType: TaskType, activeIndex: Int = 0) {
+    fun updateFrom(
+        task: Task,
+        taskType: TaskType,
+        activeIndex: Int = 0,
+        racingValidationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT
+    ) {
         val domain = task.waypoints.toDomainPoints(taskType)
         val validation = validator.validate(taskType, domain.points)
 
@@ -66,6 +72,7 @@ class TaskRepository @Inject constructor(
                 stats = stats,
                 validationErrors = emptyList(),
                 targets = domain.targetSnapshots,
+                racingValidationProfile = racingValidationProfile,
                 advanceSnapshot = advanceState.snapshot()
             )
             is TaskValidator.ValidationResult.Invalid -> TaskUiState(
@@ -74,6 +81,7 @@ class TaskRepository @Inject constructor(
                 stats = stats.copy(isTaskValid = false),
                 validationErrors = validation.errors,
                 targets = domain.targetSnapshots,
+                racingValidationProfile = racingValidationProfile,
                 advanceSnapshot = advanceState.snapshot()
             )
         }
@@ -236,7 +244,12 @@ class TaskRepository @Inject constructor(
             locked = existing?.locked ?: false,
             target = existing?.target ?: current.targets.getOrNull(index)?.target
         )
-        updateFrom(current.task, current.taskType, current.stats.activeIndex)
+        updateFrom(
+            task = current.task,
+            taskType = current.taskType,
+            activeIndex = current.stats.activeIndex,
+            racingValidationProfile = current.racingValidationProfile
+        )
     }
 
     fun toggleTargetLock(index: Int) {
@@ -254,7 +267,12 @@ class TaskRepository @Inject constructor(
                 existing?.target
             }
         )
-        updateFrom(current.task, current.taskType, current.stats.activeIndex)
+        updateFrom(
+            task = current.task,
+            taskType = current.taskType,
+            activeIndex = current.stats.activeIndex,
+            racingValidationProfile = current.racingValidationProfile
+        )
     }
 
     fun setTargetLock(index: Int, locked: Boolean) {
@@ -271,7 +289,12 @@ class TaskRepository @Inject constructor(
                 existing?.target
             }
         )
-        updateFrom(current.task, current.taskType, current.stats.activeIndex)
+        updateFrom(
+            task = current.task,
+            taskType = current.taskType,
+            activeIndex = current.stats.activeIndex,
+            racingValidationProfile = current.racingValidationProfile
+        )
     }
 
     fun shouldAutoAdvance(hasEntered: Boolean, closeToTarget: Boolean): Boolean =

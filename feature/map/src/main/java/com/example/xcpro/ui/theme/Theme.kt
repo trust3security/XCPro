@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.profiles.ProfileViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -41,7 +42,7 @@ fun Baseui1Theme(
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val themeViewModel: ThemeViewModel = hiltViewModel()
     val profileUiState = profileViewModel.uiState.collectAsStateWithLifecycle()
-    val profileId = profileUiState.value.activeProfile?.id ?: "default"
+    val profileId = ProfileIdResolver.canonicalOrDefault(profileUiState.value.activeProfile?.id)
     LaunchedEffect(profileId) {
         themeViewModel.setProfileId(profileId)
     }

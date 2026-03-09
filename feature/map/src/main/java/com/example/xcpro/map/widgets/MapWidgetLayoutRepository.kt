@@ -12,37 +12,97 @@ class MapWidgetLayoutRepository @Inject constructor(
 ) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun readOffset(widgetId: MapWidgetId): OffsetPx? {
+    fun readOffset(profileId: String, widgetId: MapWidgetId): OffsetPx? {
+        val resolvedProfileId = resolveProfileId(profileId)
         val key = keyPrefix(widgetId)
-        val xKey = "${key}_x"
-        val yKey = "${key}_y"
-        if (!prefs.contains(xKey) || !prefs.contains(yKey)) return null
-        return OffsetPx(
-            x = prefs.getFloat(xKey, 0f),
-            y = prefs.getFloat(yKey, 0f)
+        val scopedKey = scopedKeyPrefix(resolvedProfileId, widgetId)
+        val scopedXKey = "${scopedKey}_x"
+        val scopedYKey = "${scopedKey}_y"
+        if (prefs.contains(scopedXKey) && prefs.contains(scopedYKey)) {
+            return OffsetPx(
+                x = prefs.getFloat(scopedXKey, 0f),
+                y = prefs.getFloat(scopedYKey, 0f)
+            )
+        }
+        val legacyXKey = "${key}_x"
+        val legacyYKey = "${key}_y"
+        if (!isLegacyFallbackEligible(resolvedProfileId)) return null
+        if (!prefs.contains(legacyXKey) || !prefs.contains(legacyYKey)) return null
+        val migrated = OffsetPx(
+            x = prefs.getFloat(legacyXKey, 0f),
+            y = prefs.getFloat(legacyYKey, 0f)
         )
+        saveOffset(resolvedProfileId, widgetId, migrated)
+        return migrated
     }
+
+    fun saveOffset(profileId: String, widgetId: MapWidgetId, offset: OffsetPx) {
+        val scopedKey = scopedKeyPrefix(resolveProfileId(profileId), widgetId)
+        prefs.edit()
+            .putFloat("${scopedKey}_x", offset.x)
+            .putFloat("${scopedKey}_y", offset.y)
+            .apply()
+    }
+
+    fun readSizePx(profileId: String, widgetId: MapWidgetId): Float? {
+        val resolvedProfileId = resolveProfileId(profileId)
+        val key = keyPrefix(widgetId)
+        val scopedKey = scopedKeyPrefix(resolvedProfileId, widgetId)
+        val scopedSizeKey = "${scopedKey}_size"
+        if (prefs.contains(scopedSizeKey)) {
+            return prefs.getFloat(scopedSizeKey, 0f)
+        }
+        val legacySizeKey = "${key}_size"
+        if (!isLegacyFallbackEligible(resolvedProfileId)) return null
+        if (!prefs.contains(legacySizeKey)) return null
+        val migrated = prefs.getFloat(legacySizeKey, 0f)
+        saveSizePx(resolvedProfileId, widgetId, migrated)
+        return migrated
+    }
+
+    fun saveSizePx(profileId: String, widgetId: MapWidgetId, sizePx: Float) {
+        val scopedKey = scopedKeyPrefix(resolveProfileId(profileId), widgetId)
+        prefs.edit()
+            .putFloat("${scopedKey}_size", sizePx)
+            .apply()
+    }
+
+    fun deleteProfileLayout(profileId: String) {
+        val resolvedProfileId = resolveProfileId(profileId)
+        val editor = prefs.edit()
+        MapWidgetId.entries.forEach { widgetId ->
+            val scopedKey = scopedKeyPrefix(resolvedProfileId, widgetId)
+            editor.remove("${scopedKey}_x")
+            editor.remove("${scopedKey}_y")
+            editor.remove("${scopedKey}_size")
+        }
+        editor.apply()
+    }
+
+    fun readOffset(widgetId: MapWidgetId): OffsetPx? =
+        readOffset(DEFAULT_PROFILE_ID, widgetId)
 
     fun saveOffset(widgetId: MapWidgetId, offset: OffsetPx) {
-        val key = keyPrefix(widgetId)
-        prefs.edit()
-            .putFloat("${key}_x", offset.x)
-            .putFloat("${key}_y", offset.y)
-            .apply()
+        saveOffset(DEFAULT_PROFILE_ID, widgetId, offset)
     }
 
-    fun readSizePx(widgetId: MapWidgetId): Float? {
-        val key = keyPrefix(widgetId)
-        val sizeKey = "${key}_size"
-        if (!prefs.contains(sizeKey)) return null
-        return prefs.getFloat(sizeKey, 0f)
-    }
+    fun readSizePx(widgetId: MapWidgetId): Float? =
+        readSizePx(DEFAULT_PROFILE_ID, widgetId)
 
     fun saveSizePx(widgetId: MapWidgetId, sizePx: Float) {
-        val key = keyPrefix(widgetId)
-        prefs.edit()
-            .putFloat("${key}_size", sizePx)
-            .apply()
+        saveSizePx(DEFAULT_PROFILE_ID, widgetId, sizePx)
+    }
+
+    private fun scopedKeyPrefix(profileId: String, widgetId: MapWidgetId): String {
+        return "profile_${profileId}_${keyPrefix(widgetId)}"
+    }
+
+    private fun resolveProfileId(profileId: String): String {
+        return profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
+    }
+
+    private fun isLegacyFallbackEligible(profileId: String): Boolean {
+        return profileId == DEFAULT_PROFILE_ID
     }
 
     private fun keyPrefix(widgetId: MapWidgetId): String = when (widgetId) {
@@ -54,6 +114,7 @@ class MapWidgetLayoutRepository @Inject constructor(
 
     private companion object {
         private const val PREFS_NAME = "MapPrefs"
+        private const val DEFAULT_PROFILE_ID = "default-profile"
         private const val KEY_SIDE_HAMBURGER = "side_hamburger"
         private const val KEY_FLIGHT_MODE = "flight_mode_menu"
         private const val KEY_SETTINGS_SHORTCUT = "settings_shortcut"

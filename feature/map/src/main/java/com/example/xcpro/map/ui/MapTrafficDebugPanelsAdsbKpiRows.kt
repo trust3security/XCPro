@@ -4,8 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.example.xcpro.adsb.AdsbEmergencyAudioKpiPolicy
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbEmergencyAudioKpiPolicy
+import com.example.xcpro.map.AdsbTrafficSnapshot
 
 @Composable
 internal fun AdsbDebugPolicyAndKpiRows(snapshot: AdsbTrafficSnapshot) {

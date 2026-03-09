@@ -7,6 +7,7 @@ import com.example.xcpro.tasks.core.RacingWaypointCustomParams
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.RacingTaskCalculator
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -20,7 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * Pure Racing task engine backed by StateFlow and core task models.
  */
 class DefaultRacingTaskEngine(
-    private val calculator: RacingTaskCalculator = RacingTaskCalculator()
+    private val calculator: RacingTaskCalculator = RacingTaskCalculator(),
+    private val validationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT
 ) : RacingTaskEngine {
 
     private val _state = MutableStateFlow(
@@ -113,7 +115,7 @@ class DefaultRacingTaskEngine(
         } else {
             requestedActiveLeg.coerceIn(0, task.waypoints.lastIndex)
         }
-        val valid = task.waypoints.size >= 2
+        val valid = RacingTaskStructureRules.validate(task, validationProfile).isValid
         _state.value = RacingTaskEngineState(
             base = TaskEngineState(
                 taskType = TaskType.RACING,

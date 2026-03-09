@@ -57,10 +57,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.xcpro.map.R
 import com.example.xcpro.navigation.SettingsRoutes
-import com.example.xcpro.screens.navdrawer.HotspotsSettingsContent
-import com.example.xcpro.screens.navdrawer.HotspotsSettingsViewModel
-import com.example.xcpro.screens.navdrawer.OgnSettingsContent
-import com.example.xcpro.screens.navdrawer.OgnSettingsViewModel
 import com.example.xcpro.screens.navdrawer.OrientationSettingsContent
 import com.example.xcpro.screens.navdrawer.OrientationSettingsSheet
 import com.example.xcpro.screens.navdrawer.OrientationSettingsViewModel
@@ -156,101 +152,6 @@ internal fun WeatherSettingsSubSheet(
         onSecondaryNavigate = null,
         onNavigateToMap = onNavigateToMap
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun OgnSettingsSubSheet(
-    onDismiss: () -> Unit,
-    onNavigateToDrawer: () -> Unit,
-    onNavigateToMap: () -> Unit
-) {
-    val viewModel: OgnSettingsViewModel = hiltViewModel()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = null
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-        ) {
-            SettingsTopAppBar(
-                title = "OGN",
-                onNavigateUp = onDismiss,
-                onSecondaryNavigate = onNavigateToDrawer,
-                onNavigateToMap = onNavigateToMap
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                OgnSettingsContent(
-                    uiState = uiState,
-                    onSetOgnOverlayEnabled = viewModel::setOgnOverlayEnabled,
-                    onSetIconSizePx = viewModel::setIconSizePx,
-                    onSetReceiveRadiusKm = viewModel::setReceiveRadiusKm,
-                    onSetAutoReceiveRadiusEnabled = viewModel::setAutoReceiveRadiusEnabled,
-                    onSetDisplayUpdateMode = viewModel::setDisplayUpdateMode,
-                    onOwnFlarmDraftChanged = viewModel::onOwnFlarmDraftChanged,
-                    onCommitOwnFlarmDraft = viewModel::commitOwnFlarmDraft,
-                    onOwnIcaoDraftChanged = viewModel::onOwnIcaoDraftChanged,
-                    onCommitOwnIcaoDraft = viewModel::commitOwnIcaoDraft
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun HotspotsSettingsSubSheet(
-    onDismiss: () -> Unit,
-    onNavigateToDrawer: () -> Unit,
-    onNavigateToMap: () -> Unit
-) {
-    val viewModel: HotspotsSettingsViewModel = hiltViewModel()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = null
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-        ) {
-            SettingsTopAppBar(
-                title = "Hotspots",
-                onNavigateUp = onDismiss,
-                onSecondaryNavigate = onNavigateToDrawer,
-                onNavigateToMap = onNavigateToMap
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                HotspotsSettingsContent(
-                    uiState = uiState,
-                    onSetRetentionHours = viewModel::setRetentionHours,
-                    onSetDisplayPercent = viewModel::setDisplayPercent
-                )
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

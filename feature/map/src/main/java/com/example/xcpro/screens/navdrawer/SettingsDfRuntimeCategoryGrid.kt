@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.igc.ui.IGC_FILES_LABEL
 import com.example.xcpro.map.R
 
 @Composable
@@ -231,7 +232,7 @@ internal fun GeneralSettingsCategoryGrid(
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
-                            title = "IGC Replay",
+                            title = IGC_FILES_LABEL,
                             icon = Icons.Default.PlayArrow,
                             onClick = { onSubSheetSelected(GeneralSubSheet.IGC_REPLAY) },
                             modifier = Modifier.weight(1f)

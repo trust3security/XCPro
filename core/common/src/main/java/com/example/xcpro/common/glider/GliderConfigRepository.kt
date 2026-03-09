@@ -11,4 +11,8 @@ interface GliderConfigRepository {
     fun listModels(): List<GliderModel>
     fun selectModelById(id: String)
     fun updateConfig(update: (GliderConfig) -> GliderConfig)
+
+    fun setActiveProfileId(profileId: String) = Unit
+
+    fun clearProfile(profileId: String) = Unit
 }

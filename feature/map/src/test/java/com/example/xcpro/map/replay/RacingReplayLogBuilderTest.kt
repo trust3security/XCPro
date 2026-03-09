@@ -2,6 +2,8 @@ package com.example.xcpro.map.replay
 
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.SimpleRacingTask
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
+import com.example.xcpro.tasks.racing.toCoreTask
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -20,7 +22,8 @@ class RacingReplayLogBuilderTest {
         val stepMillis = 1_000L
         val builder = RacingReplayLogBuilder(
             stepMillis = stepMillis,
-            targetSpeedKmh = 36.0
+            targetSpeedKmh = 36.0,
+            validationProfile = RacingTaskStructureRules.Profile.XC_PRO_EXTENDED
         )
         val task = simpleLineTask()
         val distanceMeters = RacingGeometryUtils.haversineDistanceMeters(
@@ -57,7 +60,8 @@ class RacingReplayLogBuilderTest {
         val speedKmh = 47.0
         val builder = RacingReplayLogBuilder(
             stepMillis = stepMillis,
-            targetSpeedKmh = speedKmh
+            targetSpeedKmh = speedKmh,
+            validationProfile = RacingTaskStructureRules.Profile.XC_PRO_EXTENDED
         )
         val task = simpleLineTask()
         val distanceMeters = RacingGeometryUtils.haversineDistanceMeters(
@@ -76,6 +80,26 @@ class RacingReplayLogBuilderTest {
 
         assertEquals(0L, durationMs % stepMillis)
         assertEquals(expectedDurationMs, durationMs)
+    }
+
+    @Test
+    fun build_coreTaskInputMatchesSimpleTaskCompatibilityPath() {
+        val builder = RacingReplayLogBuilder(
+            stepMillis = 1_000L,
+            targetSpeedKmh = 60.0,
+            validationProfile = RacingTaskStructureRules.Profile.XC_PRO_EXTENDED
+        )
+        val task = simpleTaskWithExplicitGateWidths()
+        val simpleLog = builder.build(task = task, startTimestampMillis = 0L)
+        val coreLog = builder.build(task = task.toCoreTask(), startTimestampMillis = 0L)
+
+        assertEquals(simpleLog.points, coreLog.points)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun build_defaultStrictProfileRejectsShortRacingTask() {
+        val builder = RacingReplayLogBuilder(stepMillis = 1_000L, targetSpeedKmh = 60.0)
+        builder.build(task = simpleLineTask(), startTimestampMillis = 0L)
     }
 
     private fun simpleLineTask(): SimpleRacingTask {
@@ -103,6 +127,35 @@ class RacingReplayLogBuilderTest {
         )
         return SimpleRacingTask(
             id = "task",
+            waypoints = listOf(start, finish)
+        )
+    }
+
+    private fun simpleTaskWithExplicitGateWidths(): SimpleRacingTask {
+        val start = RacingWaypoint(
+            id = "S2",
+            title = "Start2",
+            subtitle = "",
+            lat = 0.0,
+            lon = 0.0,
+            role = RacingWaypointRole.START,
+            startPointType = RacingStartPointType.START_LINE,
+            turnPointType = RacingTurnPointType.TURN_POINT_CYLINDER,
+            gateWidthMeters = 5_000.0
+        )
+        val finish = RacingWaypoint(
+            id = "F2",
+            title = "Finish2",
+            subtitle = "",
+            lat = 0.0,
+            lon = 0.01,
+            role = RacingWaypointRole.FINISH,
+            finishPointType = RacingFinishPointType.FINISH_LINE,
+            turnPointType = RacingTurnPointType.TURN_POINT_CYLINDER,
+            gateWidthMeters = 3_000.0
+        )
+        return SimpleRacingTask(
+            id = "task-2",
             waypoints = listOf(start, finish)
         )
     }

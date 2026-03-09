@@ -40,6 +40,7 @@ class LookAndFeelPreferences @Inject constructor(
     }
 
     fun observeStatusBarStyleId(profileId: String): Flow<String> = stringFlow(
+        lookAndFeelPrefs,
         "profile_${profileId}_status_bar_style",
         DEFAULT_STATUS_BAR_STYLE_ID
     )
@@ -64,6 +65,7 @@ class LookAndFeelPreferences @Inject constructor(
     }
 
     fun observeCardStyleId(profileId: String): Flow<String> = stringFlow(
+        lookAndFeelPrefs,
         cardStyleKey(profileId),
         DEFAULT_CARD_STYLE_ID
     )
@@ -76,6 +78,7 @@ class LookAndFeelPreferences @Inject constructor(
     }
 
     fun observeColorThemeId(profileId: String): Flow<String> = stringFlow(
+        colorPrefs,
         "profile_${profileId}_color_theme",
         DEFAULT_COLOR_THEME_ID
     )
@@ -86,16 +89,30 @@ class LookAndFeelPreferences @Inject constructor(
             .apply()
     }
 
+    fun clearProfile(profileId: String) {
+        lookAndFeelPrefs.edit()
+            .remove("profile_${profileId}_status_bar_style")
+            .remove(cardStyleKey(profileId))
+            .apply()
+        colorPrefs.edit()
+            .remove("profile_${profileId}_color_theme")
+            .apply()
+    }
+
     private fun cardStyleKey(profileId: String): String = "profile_${profileId}_card_style"
 
-    private fun stringFlow(key: String, defaultValue: String): Flow<String> = callbackFlow {
+    private fun stringFlow(
+        sourcePrefs: SharedPreferences,
+        key: String,
+        defaultValue: String
+    ): Flow<String> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
             if (changedKey == key) {
-                trySend(lookAndFeelPrefs.getString(key, defaultValue) ?: defaultValue)
+                trySend(sourcePrefs.getString(key, defaultValue) ?: defaultValue)
             }
         }
-        trySend(lookAndFeelPrefs.getString(key, defaultValue) ?: defaultValue)
-        lookAndFeelPrefs.registerOnSharedPreferenceChangeListener(listener)
-        awaitClose { lookAndFeelPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        trySend(sourcePrefs.getString(key, defaultValue) ?: defaultValue)
+        sourcePrefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { sourcePrefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }.distinctUntilChanged()
 }

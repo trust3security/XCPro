@@ -1,7 +1,9 @@
 package com.example.xcpro.tasks.racing
 
-import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.RacingWaypointCustomParams
+import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -9,6 +11,51 @@ import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 
 internal fun Task.toSimpleRacingTask(): SimpleRacingTask {
+    return SimpleRacingTask(
+        id = id,
+        waypoints = toRacingWaypoints()
+    )
+}
+
+internal fun SimpleRacingTask.toCoreTask(
+    existingCustomParametersById: Map<String, Map<String, Any>> = emptyMap()
+): Task {
+    return Task(
+        id = id,
+        waypoints = waypoints.map { waypoint ->
+            val customParameters = existingCustomParametersById[waypoint.id]
+                ?.toMutableMap()
+                ?: mutableMapOf()
+            RacingWaypointCustomParams(
+                keyholeInnerRadiusMeters = waypoint.keyholeInnerRadiusMeters,
+                keyholeAngle = waypoint.keyholeAngle,
+                faiQuadrantOuterRadiusMeters = waypoint.faiQuadrantOuterRadiusMeters
+            ).applyTo(customParameters)
+            TaskWaypoint(
+                id = waypoint.id,
+                title = waypoint.title,
+                subtitle = waypoint.subtitle,
+                lat = waypoint.lat,
+                lon = waypoint.lon,
+                role = when (waypoint.role) {
+                    RacingWaypointRole.START -> WaypointRole.START
+                    RacingWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
+                    RacingWaypointRole.FINISH -> WaypointRole.FINISH
+                },
+                customRadius = null,
+                customRadiusMeters = waypoint.gateWidthMeters,
+                customPointType = when (waypoint.role) {
+                    RacingWaypointRole.START -> waypoint.startPointType.name
+                    RacingWaypointRole.TURNPOINT -> waypoint.turnPointType.name
+                    RacingWaypointRole.FINISH -> waypoint.finishPointType.name
+                },
+                customParameters = customParameters
+            )
+        }
+    )
+}
+
+internal fun Task.toRacingWaypoints(): List<RacingWaypoint> {
     val racingWaypoints = waypoints.mapIndexed { index, waypoint ->
         val role = when {
             waypoints.size == 1 -> RacingWaypointRole.START
@@ -44,8 +91,5 @@ internal fun Task.toSimpleRacingTask(): SimpleRacingTask {
         )
     }
 
-    return SimpleRacingTask(
-        id = id.ifBlank { "racing-task" },
-        waypoints = racingWaypoints
-    )
+    return racingWaypoints
 }

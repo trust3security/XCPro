@@ -46,6 +46,7 @@ import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
 import com.example.xcpro.navigation.MapNavigationSignals
 import com.example.xcpro.navigation.SettingsRoutes
+import com.example.xcpro.navigation.TrafficSettingsRoutes
 
 @Composable
 fun AppNavGraph(
@@ -154,7 +155,14 @@ fun AppNavGraph(
         }
         composable(SettingsRoutes.FILES) { FilesScreen(navController, drawerState) }
         composable(SettingsRoutes.PROFILES) { ProfilesScreen(navController, drawerState) }
-        composable("profile_selection") { ProfileSelectionScreen(onProfileSelected = { navController.popBackStack() }) }
+        composable("profile_selection") {
+            ProfileSelectionScreen(
+                onProfileSelected = { navController.popBackStack() },
+                onEditProfile = { profile ->
+                    navController.navigate("profile_settings/${profile.id}")
+                }
+            )
+        }
         composable("profile_settings/{profileId}") { backStackEntry ->
             val profileId = backStackEntry.arguments?.getString("profileId") ?: ""
             com.example.xcpro.profiles.ProfileSettingsScreen(profileId = profileId, navController = navController)
@@ -165,11 +173,11 @@ fun AppNavGraph(
         composable("manage_account") { ManageAccount(navController, drawerState) }
         composable("logbook") { Logbook(navController, drawerState) }
         composable("layouts") { LayoutScreen(navController, drawerState) }
-        composable(SettingsRoutes.ADSB_SETTINGS) { AdsbSettingsScreen(navController, drawerState) }
-        composable("ogn_settings") { OgnSettingsScreen(navController, drawerState) }
+        composable(TrafficSettingsRoutes.ADSB_SETTINGS) { AdsbSettingsScreen(navController, drawerState) }
+        composable(TrafficSettingsRoutes.OGN_SETTINGS) { OgnSettingsScreen(navController, drawerState) }
         composable("forecast_settings") { ForecastSettingsScreen(navController, drawerState) }
         composable(SettingsRoutes.WEATHER_SETTINGS) { WeatherSettingsScreen(navController, drawerState) }
-        composable(SettingsRoutes.HOTSPOTS_SETTINGS) { HotspotsSettingsScreen(navController, drawerState) }
+        composable(TrafficSettingsRoutes.HOTSPOTS_SETTINGS) { HotspotsSettingsScreen(navController, drawerState) }
         composable(SettingsRoutes.THERMALLING_SETTINGS) {
             ThermallingSettingsScreen(navController, drawerState)
         }

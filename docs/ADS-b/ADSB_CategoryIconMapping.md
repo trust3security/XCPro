@@ -44,6 +44,14 @@ Resolution order:
 - `14` -> `DRONE`
 - else -> `UNKNOWN`
 
+## Unknown visual fallback contract
+
+- Semantic classification remains `UNKNOWN` when category/metadata cannot classify.
+- Map icon rendering for `UNKNOWN` uses a neutral fixed-wing asset:
+  - drawable: `ic_adsb_plane_medium.png`
+  - style id: `adsb_icon_unknown`
+- This avoids question-mark icon churn while preserving unknown truth semantics for details/state.
+
 ## Helicopter typecode coverage
 
 Runtime prefix list includes:

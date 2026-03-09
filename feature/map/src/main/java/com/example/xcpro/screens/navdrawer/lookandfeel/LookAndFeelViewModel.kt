@@ -2,6 +2,7 @@ package com.example.xcpro.screens.navdrawer.lookandfeel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.xcpro.profiles.ProfileIdResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 
 data class LookAndFeelUiState(
-    val profileId: String = "default",
+    val profileId: String = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
     val statusBarStyleId: String = "transparent",
     val cardStyleId: String = "standard",
     val colorThemeId: String = "default"
@@ -23,7 +24,7 @@ class LookAndFeelViewModel @Inject constructor(
     private val useCase: LookAndFeelUseCase
 ) : ViewModel() {
 
-    private val profileId = MutableStateFlow("default")
+    private val profileId = MutableStateFlow(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
 
     val uiState: StateFlow<LookAndFeelUiState> = profileId
         .flatMapLatest { id ->

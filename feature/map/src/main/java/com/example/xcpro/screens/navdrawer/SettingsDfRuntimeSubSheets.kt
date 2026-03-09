@@ -152,7 +152,7 @@ internal fun GeneralSettingsSubSheetContent(
             )
         }
         GeneralSubSheet.IGC_REPLAY -> {
-            IgcReplaySettingsSubSheet(
+            IgcFilesSettingsSubSheet(
                 navController = navController,
                 onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) }
             )

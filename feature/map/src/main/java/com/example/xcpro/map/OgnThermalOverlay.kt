@@ -2,9 +2,6 @@ package com.example.xcpro.map
 
 import android.graphics.Color
 import com.example.xcpro.core.common.logging.AppLogger
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnThermalHotspotState
-import com.example.xcpro.ogn.snailColorHexStops
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.expressions.Expression

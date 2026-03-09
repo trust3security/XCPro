@@ -1,6 +1,8 @@
 package com.example.xcpro.tasks
 
 import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.RacingFinishCustomParams
+import com.example.xcpro.tasks.core.RacingStartCustomParams
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationDecision
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
@@ -9,7 +11,7 @@ import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
-import com.example.xcpro.tasks.racing.toSimpleRacingTask
+import com.example.xcpro.tasks.racing.toRacingWaypoints
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -62,8 +64,20 @@ class TaskNavigationController internal constructor(
             return
         }
 
-        val racingTask = taskManager.currentTask.toSimpleRacingTask()
-        val decision = engine.step(racingTask, stateStore.state.value, fix)
+        val task = taskManager.currentTask
+        val startRules = task.waypoints.firstOrNull()?.let { waypoint ->
+            RacingStartCustomParams.from(waypoint.customParameters)
+        } ?: RacingStartCustomParams()
+        val finishRules = task.waypoints.lastOrNull()?.let { waypoint ->
+            RacingFinishCustomParams.from(waypoint.customParameters)
+        } ?: RacingFinishCustomParams()
+        val decision = engine.step(
+            taskWaypoints = task.toRacingWaypoints(),
+            previousState = stateStore.state.value,
+            fix = fix,
+            startRules = startRules,
+            finishRules = finishRules
+        )
         applyDecision(decision)
     }
 
@@ -96,8 +110,7 @@ class TaskNavigationController internal constructor(
         if (taskManager.taskType != TaskType.RACING) {
             return
         }
-        val racingTask = taskManager.currentTask.toSimpleRacingTask()
-        val maxIndex = racingTask.waypoints.lastIndex
+        val maxIndex = taskManager.currentTask.waypoints.lastIndex
         val clampedIndex = if (maxIndex >= 0) newLegIndex.coerceIn(0, maxIndex) else 0
         val status = if (clampedIndex <= 0) {
             advanceState.resetToStartPhase()

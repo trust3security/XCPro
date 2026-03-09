@@ -18,7 +18,8 @@ data class ProfileUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showCreateDialog: Boolean = false,
-    val importResult: ProfileImportResult? = null
+    val importResult: ProfileImportResult? = null,
+    val bundleImportResult: ProfileBundleImportResult? = null
 )
 
 @HiltViewModel
@@ -75,7 +76,8 @@ class ProfileViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 error = null,
-                importResult = null
+                importResult = null,
+                bundleImportResult = null
             )
             useCase.createProfile(request)
                 .onSuccess { newProfile ->
@@ -103,7 +105,8 @@ class ProfileViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 error = null,
-                importResult = null
+                importResult = null,
+                bundleImportResult = null
             )
             useCase.importProfiles(
                 ProfileImportRequest(
@@ -114,7 +117,8 @@ class ProfileViewModel @Inject constructor(
             ).onSuccess { result ->
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    importResult = result
+                    importResult = result,
+                    bundleImportResult = null
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -157,6 +161,22 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun recoverWithDefaultProfile() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            useCase.recoverWithDefaultProfile()
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Failed to recover with default profile: ${error.message}"
+                    )
+                }
+        }
+    }
+
     fun showCreateDialog() {
         _uiState.value = _uiState.value.copy(showCreateDialog = true)
     }
@@ -171,6 +191,56 @@ class ProfileViewModel @Inject constructor(
 
     fun clearImportResult() {
         _uiState.value = _uiState.value.copy(importResult = null)
+    }
+
+    fun clearBundleImportResult() {
+        _uiState.value = _uiState.value.copy(bundleImportResult = null)
+    }
+
+    fun importBundle(
+        json: String,
+        keepCurrentActive: Boolean = true,
+        nameCollisionPolicy: ProfileNameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                importResult = null,
+                bundleImportResult = null
+            )
+            useCase.importBundle(
+                ProfileBundleImportRequest(
+                    json = json,
+                    keepCurrentActive = keepCurrentActive,
+                    nameCollisionPolicy = nameCollisionPolicy
+                )
+            ).onSuccess { bundleResult ->
+                val restoreError = if (bundleResult.settingsRestoreResult.failedSections.isEmpty()) {
+                    null
+                } else {
+                    val failedSections = bundleResult.settingsRestoreResult.failedSections.keys
+                        .sorted()
+                        .joinToString(", ")
+                    "Imported profiles but failed to apply some settings sections: $failedSections"
+                }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    importResult = bundleResult.profileImportResult,
+                    bundleImportResult = bundleResult,
+                    error = restoreError
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Failed to import bundle: ${error.message}"
+                )
+            }
+        }
+    }
+
+    suspend fun exportBundle(profileIds: Set<String>? = null): Result<String> {
+        return useCase.exportBundle(profileIds)
     }
 
     fun needsProfileSelection(): Boolean =

@@ -8,7 +8,7 @@ import com.example.xcpro.tasks.racing.RacingTaskCalculator
 import com.example.xcpro.tasks.racing.RacingTaskCalculatorInterface
 import com.example.xcpro.tasks.racing.RacingTaskDisplay
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
-import com.example.xcpro.tasks.racing.toSimpleRacingTask
+import com.example.xcpro.tasks.racing.toRacingWaypoints
 import org.maplibre.android.maps.MapLibreMap
 
 /**
@@ -67,10 +67,9 @@ object TaskMapRenderRouter {
         val coreTask = snapshot.task
         when (snapshot.taskType) {
             TaskType.RACING -> {
-                val racingTask = coreTask.toSimpleRacingTask()
                 racingTaskDisplay.plotRacingOnMap(
                     map = currentMap,
-                    waypoints = racingTask.waypoints,
+                    waypoints = coreTask.toRacingWaypoints(),
                     racingTaskCalculator = racingCalculatorDelegate
                 )
             }

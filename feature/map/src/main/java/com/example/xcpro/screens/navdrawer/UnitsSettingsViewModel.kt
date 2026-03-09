@@ -29,6 +29,10 @@ class UnitsSettingsViewModel @Inject constructor(
             initialValue = UnitsPreferences()
         )
 
+    fun setProfileId(profileId: String) {
+        useCase.setActiveProfileId(profileId)
+    }
+
     fun setAltitude(unit: AltitudeUnit) {
         viewModelScope.launch { useCase.setAltitude(unit) }
     }

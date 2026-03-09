@@ -1,11 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.adsb.AdsbSelectedTargetDetails
-import com.example.xcpro.adsb.AdsbTrafficUiModel
-import com.example.xcpro.adsb.Icao24
-import com.example.xcpro.adsb.metadata.domain.AdsbMetadataEnrichmentUseCase
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnTrafficTarget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

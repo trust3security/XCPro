@@ -16,9 +16,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertQnhInputToHpa
-import com.example.xcpro.adsb.AdsbSelectedTargetDetails
-import com.example.xcpro.adsb.AdsbMarkerDetailsSheet
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbMarkerDetailsSheet
+import com.example.xcpro.map.AdsbSelectedTargetDetails
+import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastPointCallout
@@ -26,12 +26,12 @@ import com.example.xcpro.forecast.ForecastOverlayViewModel
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.ogn.OgnMarkerDetailsSheet
-import com.example.xcpro.ogn.OgnThermalDetailsSheet
-import com.example.xcpro.ogn.OgnThermalHotspot
-import com.example.xcpro.ogn.OgnTrafficSnapshot
-import com.example.xcpro.ogn.OgnTrafficTarget
-import com.example.xcpro.ogn.OgnTrailSelectionViewModel
+import com.example.xcpro.map.OgnMarkerDetailsSheet
+import com.example.xcpro.map.OgnThermalDetailsSheet
+import com.example.xcpro.map.OgnThermalHotspot
+import com.example.xcpro.map.OgnTrafficSnapshot
+import com.example.xcpro.map.OgnTrafficTarget
+import com.example.xcpro.map.OgnTrailSelectionViewModel
 import com.example.xcpro.qnh.QnhCalibrationState
 import kotlin.math.roundToInt
 

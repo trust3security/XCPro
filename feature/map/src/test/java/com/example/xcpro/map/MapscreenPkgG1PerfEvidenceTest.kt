@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.common.documents.DocumentRef
-import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.map.OgnGliderTrailSegment
 import com.example.xcpro.replay.Selection
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus

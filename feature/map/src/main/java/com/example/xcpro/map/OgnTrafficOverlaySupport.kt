@@ -1,0 +1,367 @@
+package com.example.xcpro.map
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
+import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.UnitsPreferences
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
+import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
+import org.maplibre.android.style.layers.PropertyFactory.iconImage
+import org.maplibre.android.style.layers.PropertyFactory.iconKeepUpright
+import org.maplibre.android.style.layers.PropertyFactory.iconOpacity
+import org.maplibre.android.style.layers.PropertyFactory.iconRotate
+import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
+import org.maplibre.android.style.layers.PropertyFactory.iconSize
+import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.textAnchor
+import org.maplibre.android.style.layers.PropertyFactory.textColor
+import org.maplibre.android.style.layers.PropertyFactory.textField
+import org.maplibre.android.style.layers.PropertyFactory.textFont
+import org.maplibre.android.style.layers.PropertyFactory.textIgnorePlacement
+import org.maplibre.android.style.layers.PropertyFactory.textOffset
+import org.maplibre.android.style.layers.PropertyFactory.textOpacity
+import org.maplibre.android.style.layers.PropertyFactory.textSize
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.Point
+
+internal fun ensureOgnStyleImages(context: Context, style: Style) {
+    OgnAircraftIcon.values().forEach { icon ->
+        val existing = runCatching { style.getImage(icon.styleImageId) }.getOrNull()
+        if (existing != null) return@forEach
+        val bitmap = drawableToBitmap(context = context, drawableId = icon.resId) ?: return@forEach
+        style.addImage(icon.styleImageId, bitmap)
+    }
+    ensureOgnSatelliteGliderStyleImage(style, context)
+    ensureOgnRelativeGliderStyleImages(style, context)
+}
+
+internal fun createOgnIconLayer(currentIconSizePx: Int): SymbolLayer =
+    SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
+        .withProperties(
+            iconImage(
+                Expression.coalesce(
+                    Expression.get(PROP_ICON_ID),
+                    Expression.literal(DEFAULT_ICON_IMAGE_ID)
+                )
+            ),
+            iconSize(ognIconScaleForPx(currentIconSizePx)),
+            iconRotate(
+                Expression.coalesce(
+                    Expression.get(PROP_TRACK_DEG),
+                    Expression.literal(0.0)
+                )
+            ),
+            iconRotationAlignment("map"),
+            iconKeepUpright(false),
+            iconAllowOverlap(true),
+            iconIgnorePlacement(true),
+            iconAnchor("center"),
+            iconOpacity(Expression.get(PROP_ALPHA))
+        )
+
+internal fun createOgnTopLabelLayer(currentIconSizePx: Int): SymbolLayer =
+    SymbolLayer(TOP_LABEL_LAYER_ID, SOURCE_ID)
+        .withProperties(
+            textField(Expression.get(PROP_TOP_LABEL)),
+            textFont(LABEL_FONT_STACK),
+            textSize(ognLabelTextSizeForPx(currentIconSizePx)),
+            textColor(LABEL_TEXT_COLOR),
+            textOffset(arrayOf(0f, ognTopLabelOffsetYForPx(currentIconSizePx))),
+            textAnchor("center"),
+            textAllowOverlap(true),
+            textIgnorePlacement(true),
+            textOpacity(Expression.get(PROP_ALPHA))
+        )
+
+internal fun createOgnBottomLabelLayer(currentIconSizePx: Int): SymbolLayer =
+    SymbolLayer(BOTTOM_LABEL_LAYER_ID, SOURCE_ID)
+        .withProperties(
+            textField(Expression.get(PROP_BOTTOM_LABEL)),
+            textFont(LABEL_FONT_STACK),
+            textSize(ognLabelTextSizeForPx(currentIconSizePx)),
+            textColor(LABEL_TEXT_COLOR),
+            textOffset(arrayOf(0f, ognBottomLabelOffsetYForPx(currentIconSizePx))),
+            textAnchor("center"),
+            textAllowOverlap(true),
+            textIgnorePlacement(true),
+            textOpacity(Expression.get(PROP_ALPHA))
+        )
+
+internal fun ensureOgnLayerOrder(style: Style, currentIconSizePx: Int) {
+    val anchorId = BlueLocationOverlay.LAYER_ID
+    if (style.getLayer(anchorId) == null) return
+    if (style.getLayer(ICON_LAYER_ID) == null ||
+        style.getLayer(TOP_LABEL_LAYER_ID) == null ||
+        style.getLayer(BOTTOM_LABEL_LAYER_ID) == null
+    ) {
+        return
+    }
+
+    val layerIds = style.layers.map { it.id }
+    val anchorIndex = layerIds.indexOf(anchorId)
+    val iconIndex = layerIds.indexOf(ICON_LAYER_ID)
+    val topIndex = layerIds.indexOf(TOP_LABEL_LAYER_ID)
+    val bottomIndex = layerIds.indexOf(BOTTOM_LABEL_LAYER_ID)
+    if (anchorIndex < 0 || iconIndex < 0 || topIndex < 0 || bottomIndex < 0) return
+
+    val iconNeedsMove = iconIndex <= anchorIndex
+    val topNeedsMove = topIndex <= iconIndex
+    val bottomNeedsMove = bottomIndex <= topIndex
+    if (!iconNeedsMove && !topNeedsMove && !bottomNeedsMove) return
+
+    style.removeLayer(BOTTOM_LABEL_LAYER_ID)
+    style.removeLayer(TOP_LABEL_LAYER_ID)
+    style.removeLayer(ICON_LAYER_ID)
+    style.addLayerAbove(createOgnIconLayer(currentIconSizePx), anchorId)
+    style.addLayerAbove(createOgnTopLabelLayer(currentIconSizePx), ICON_LAYER_ID)
+    style.addLayerAbove(createOgnBottomLabelLayer(currentIconSizePx), TOP_LABEL_LAYER_ID)
+}
+
+internal fun applyOgnIconSizeToStyle(style: Style, iconSizePx: Int) {
+    val iconLayer = style.getLayer(ICON_LAYER_ID) as? SymbolLayer
+    iconLayer?.setProperties(iconSize(ognIconScaleForPx(iconSizePx)))
+
+    val labelSize = ognLabelTextSizeForPx(iconSizePx)
+    val topLabelLayer = style.getLayer(TOP_LABEL_LAYER_ID) as? SymbolLayer
+    topLabelLayer?.setProperties(
+        textSize(labelSize),
+        textOffset(arrayOf(0f, ognTopLabelOffsetYForPx(iconSizePx)))
+    )
+
+    val bottomLabelLayer = style.getLayer(BOTTOM_LABEL_LAYER_ID) as? SymbolLayer
+    bottomLabelLayer?.setProperties(
+        textSize(labelSize),
+        textOffset(arrayOf(0f, ognBottomLabelOffsetYForPx(iconSizePx)))
+    )
+}
+
+internal fun isValidOgnCoordinate(latitude: Double, longitude: Double): Boolean {
+    if (!latitude.isFinite() || !longitude.isFinite()) return false
+    if (kotlin.math.abs(latitude) > 90.0) return false
+    if (kotlin.math.abs(longitude) > 180.0) return false
+    return true
+}
+
+internal fun isOgnInVisibleBounds(
+    latitude: Double,
+    longitude: Double,
+    bounds: LatLngBounds?
+): Boolean {
+    if (bounds == null) return true
+    return isInViewport(
+        latitude = latitude,
+        longitude = longitude,
+        bounds = OgnViewportBounds(
+            northLat = bounds.latitudeNorth,
+            southLat = bounds.latitudeSouth,
+            eastLon = bounds.longitudeEast,
+            westLon = bounds.longitudeWest
+        )
+    )
+}
+
+internal fun resolveOgnStyleImageId(
+    icon: OgnAircraftIcon,
+    useSatelliteContrastIcons: Boolean
+): String {
+    if (useSatelliteContrastIcons && icon == OgnAircraftIcon.Glider) {
+        return SATELLITE_GLIDER_ICON_IMAGE_ID
+    }
+    return icon.styleImageId
+}
+
+internal fun drawableToBitmap(context: Context, drawableId: Int, tintColor: Int? = null): Bitmap? {
+    val baseDrawable = ContextCompat.getDrawable(context, drawableId) ?: return null
+    val drawable = baseDrawable.mutate()
+    if (tintColor != null) {
+        DrawableCompat.setTint(drawable, tintColor)
+    }
+    val bitmap = Bitmap.createBitmap(
+        ICON_BITMAP_BASE_SIZE_PX,
+        ICON_BITMAP_BASE_SIZE_PX,
+        Bitmap.Config.ARGB_8888
+    )
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, ICON_BITMAP_BASE_SIZE_PX, ICON_BITMAP_BASE_SIZE_PX)
+    drawable.draw(canvas)
+    return bitmap
+}
+
+private fun ensureOgnRelativeGliderStyleImages(style: Style, context: Context) {
+    ensureOgnTintedStyleImage(
+        style = style,
+        context = context,
+        imageId = RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID,
+        drawableId = OgnAircraftIcon.Glider.resId,
+        tintColor = RELATIVE_GLIDER_ABOVE_TINT
+    )
+    ensureOgnTintedStyleImage(
+        style = style,
+        context = context,
+        imageId = RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID,
+        drawableId = OgnAircraftIcon.Glider.resId,
+        tintColor = RELATIVE_GLIDER_BELOW_TINT
+    )
+    ensureOgnTintedStyleImage(
+        style = style,
+        context = context,
+        imageId = RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID,
+        drawableId = OgnAircraftIcon.Glider.resId,
+        tintColor = RELATIVE_GLIDER_NEAR_TINT
+    )
+}
+
+private fun ensureOgnTintedStyleImage(
+    style: Style,
+    context: Context,
+    imageId: String,
+    drawableId: Int,
+    tintColor: Int
+) {
+    val existing = runCatching { style.getImage(imageId) }.getOrNull()
+    if (existing != null) return
+    val bitmap = drawableToBitmap(context = context, drawableId = drawableId, tintColor = tintColor) ?: return
+    style.addImage(imageId, bitmap)
+}
+
+private fun ensureOgnSatelliteGliderStyleImage(style: Style, context: Context) {
+    val existing = runCatching { style.getImage(SATELLITE_GLIDER_ICON_IMAGE_ID) }.getOrNull()
+    if (existing != null) return
+    val bitmap = drawableToBitmap(
+        context = context,
+        drawableId = OgnAircraftIcon.Glider.resId,
+        tintColor = Color.WHITE
+    ) ?: return
+    style.addImage(SATELLITE_GLIDER_ICON_IMAGE_ID, bitmap)
+}
+
+internal fun ognIconScaleForPx(iconSizePx: Int): Float =
+    iconSizePx.toFloat() / ICON_BITMAP_BASE_SIZE_PX.toFloat()
+
+internal fun ognLabelTextSizeForPx(iconSizePx: Int): Float {
+    val scaled = LABEL_TEXT_SIZE_BASE_SP * ognIconScaleForPx(iconSizePx)
+    return scaled.coerceIn(MIN_LABEL_TEXT_SIZE_SP, MAX_LABEL_TEXT_SIZE_SP)
+}
+
+internal fun ognTopLabelOffsetYForPx(iconSizePx: Int): Float =
+    -LABEL_TEXT_OFFSET_BASE_Y * ognIconScaleForPx(iconSizePx)
+
+internal fun ognBottomLabelOffsetYForPx(iconSizePx: Int): Float =
+    LABEL_TEXT_OFFSET_BASE_Y * ognIconScaleForPx(iconSizePx)
+
+internal fun buildOgnTrafficOverlayFeatures(
+    nowMonoMs: Long,
+    targets: List<OgnTrafficTarget>,
+    ownshipAltitudeMeters: Double?,
+    visibleBounds: LatLngBounds?,
+    altitudeUnit: AltitudeUnit,
+    useSatelliteContrastIcons: Boolean,
+    unitsPreferences: UnitsPreferences,
+    maxTargets: Int,
+    staleVisualAfterMs: Long,
+    liveAlpha: Double,
+    staleAlpha: Double
+): List<Feature> {
+    val features = ArrayList<Feature>(targets.size.coerceAtMost(maxTargets))
+    for (target in targets) {
+        if (features.size >= maxTargets) break
+        if (!isValidOgnCoordinate(target.latitude, target.longitude)) continue
+        if (!isOgnInVisibleBounds(
+                latitude = target.latitude,
+                longitude = target.longitude,
+                bounds = visibleBounds
+            )
+        ) {
+            continue
+        }
+
+        val feature = Feature.fromGeometry(
+            Point.fromLngLat(target.longitude, target.latitude)
+        )
+        feature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
+        feature.addStringProperty(PROP_TARGET_ID, target.id)
+
+        val icon = iconForOgnAircraftIdentity(
+            aircraftTypeCode = target.identity?.aircraftTypeCode,
+            competitionNumber = target.identity?.competitionNumber
+        )
+        val secondaryLabel = OgnIdentifierDistanceLabelMapper.map(
+            competitionId = target.identity?.competitionNumber,
+            registration = target.identity?.registration,
+            distanceMeters = target.distanceMeters,
+            unitsPreferences = unitsPreferences
+        )
+        val mapping = OgnRelativeAltitudeFeatureMapper.map(
+            OgnRelativeAltitudeFeatureMapperInput(
+                targetAltitudeMeters = target.altitudeMeters,
+                ownshipAltitudeMeters = ownshipAltitudeMeters,
+                altitudeUnit = altitudeUnit,
+                icon = icon,
+                defaultIconStyleImageId = resolveOgnStyleImageId(
+                    icon = icon,
+                    useSatelliteContrastIcons = useSatelliteContrastIcons
+                ),
+                gliderAboveIconStyleImageId = RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID,
+                gliderBelowIconStyleImageId = RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID,
+                gliderNearIconStyleImageId = RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID,
+                secondaryLabelText = secondaryLabel.text
+            )
+        )
+        feature.addStringProperty(PROP_ICON_ID, mapping.iconStyleImageId)
+        feature.addStringProperty(PROP_TOP_LABEL, mapping.topLabel)
+        feature.addStringProperty(PROP_BOTTOM_LABEL, mapping.bottomLabel)
+        feature.addNumberProperty(
+            PROP_ALPHA,
+            if (target.isStale(nowMonoMs, staleVisualAfterMs)) staleAlpha else liveAlpha
+        )
+        if (target.trackDegrees?.isFinite() == true) {
+            feature.addNumberProperty(PROP_TRACK_DEG, target.trackDegrees)
+        }
+        features.add(feature)
+    }
+    return features
+}
+
+internal fun renderOgnTrafficFrame(
+    source: GeoJsonSource,
+    nowMonoMs: Long,
+    targets: List<OgnTrafficTarget>,
+    ownshipAltitudeMeters: Double?,
+    visibleBounds: LatLngBounds?,
+    altitudeUnit: AltitudeUnit,
+    useSatelliteContrastIcons: Boolean,
+    unitsPreferences: UnitsPreferences,
+    maxTargets: Int,
+    staleVisualAfterMs: Long,
+    liveAlpha: Double,
+    staleAlpha: Double
+) {
+    source.setGeoJson(
+        FeatureCollection.fromFeatures(
+            buildOgnTrafficOverlayFeatures(
+                nowMonoMs = nowMonoMs,
+                targets = targets,
+                ownshipAltitudeMeters = ownshipAltitudeMeters,
+                visibleBounds = visibleBounds,
+                altitudeUnit = altitudeUnit,
+                useSatelliteContrastIcons = useSatelliteContrastIcons,
+                unitsPreferences = unitsPreferences,
+                maxTargets = maxTargets,
+                staleVisualAfterMs = staleVisualAfterMs,
+                liveAlpha = liveAlpha,
+                staleAlpha = staleAlpha
+            ).toTypedArray()
+        )
+    )
+}

@@ -8,14 +8,18 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.example.xcpro.adsb.AdsbAuthMode
-import com.example.xcpro.adsb.AdsbConnectionState
-import com.example.xcpro.adsb.AdsbNetworkFailureKind
-import com.example.xcpro.adsb.AdsbTrafficSnapshot
+import com.example.xcpro.map.AdsbAuthMode
+import com.example.xcpro.map.AdsbNetworkFailureKind
+import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.adsbConnectionStateActive
+import com.example.xcpro.map.adsbConnectionStateBackingOff
+import com.example.xcpro.map.adsbConnectionStateError
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+
+import com.example.xcpro.map.AdsbConnectionState
 
 @RunWith(RobolectricTestRunner::class)
 class AdsbStatusBadgesUiTest {
@@ -29,7 +33,7 @@ class AdsbStatusBadgesUiTest {
             AdsbPersistentStatusBadge(
                 visible = true,
                 snapshot = snapshot(
-                    connectionState = AdsbConnectionState.Error("Socket timeout"),
+                    connectionState = adsbConnectionStateError("Socket timeout"),
                     authMode = AdsbAuthMode.Authenticated,
                     lastNetworkFailureKind = AdsbNetworkFailureKind.TIMEOUT
                 )
@@ -45,7 +49,7 @@ class AdsbStatusBadgesUiTest {
         var badgeVisible by mutableStateOf(false)
         var badgeSnapshot by mutableStateOf(
             snapshot(
-                connectionState = AdsbConnectionState.Error("Network unavailable"),
+                connectionState = adsbConnectionStateError("Network unavailable"),
                 authMode = AdsbAuthMode.Authenticated
             )
         )
@@ -61,7 +65,7 @@ class AdsbStatusBadgesUiTest {
         composeTestRule.runOnIdle {
             badgeVisible = true
             badgeSnapshot = snapshot(
-                connectionState = AdsbConnectionState.Active,
+                connectionState = adsbConnectionStateActive(),
                 authMode = AdsbAuthMode.Authenticated
             )
         }
@@ -76,7 +80,7 @@ class AdsbStatusBadgesUiTest {
             AdsbIssueFlashBadge(
                 visible = true,
                 snapshot = snapshot(
-                    connectionState = AdsbConnectionState.BackingOff(retryAfterSec = 5),
+                    connectionState = adsbConnectionStateBackingOff(retryAfterSec = 5),
                     authMode = AdsbAuthMode.Authenticated
                 )
             )
@@ -113,3 +117,4 @@ class AdsbStatusBadgesUiTest {
             lastNetworkFailureKind = lastNetworkFailureKind
         )
 }
+

@@ -25,7 +25,7 @@ internal object FlightCardStateMapper {
         profileTemplates: Map<String, Map<FlightModeSelection, String>>,
         profileCards: Map<String, Map<FlightModeSelection, List<String>>>
     ): FlightTemplate? {
-        val normalized = profileId ?: DEFAULT_PROFILE_ID
+        val normalized = FlightVisibility.normalizeProfileId(profileId)
         val profileTemplateId = profileTemplates[normalized]?.get(flightMode)
         val cards = profileCards[normalized]?.get(flightMode)
 
@@ -60,6 +60,4 @@ internal object FlightCardStateMapper {
         return templates.firstOrNull { it.id == fallbackId }
             ?: FlightTemplates.getDefaultTemplates().firstOrNull { it.id == fallbackId }
     }
-
-    private const val DEFAULT_PROFILE_ID = "__default_profile__"
 }

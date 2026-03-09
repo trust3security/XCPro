@@ -14,9 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ui1.icons.Reply_all
+
+internal const val SETTINGS_TOP_APP_BAR_NAV_BACK_TAG = "settings_top_app_bar_nav_back"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +42,10 @@ fun SettingsTopAppBar(
         navigationIcon = {
             Row {
                 if (onNavigateUp != null) {
-                    IconButton(onClick = onNavigateUp) {
+                    IconButton(
+                        onClick = onNavigateUp,
+                        modifier = Modifier.testTag(SETTINGS_TOP_APP_BAR_NAV_BACK_TAG)
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Navigate back"

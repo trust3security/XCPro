@@ -14,12 +14,12 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.xcpro.adsb.Icao24
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapGestureSetup

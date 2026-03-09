@@ -1,0 +1,464 @@
+{
+  "activeProfileId": "7533265e-21ca-4e27-a4e2-5d474efcc5cf",
+  "exportedAtWallMs": 1772875084057,
+  "profiles": [
+    {
+      "aircraftType": "PARAGLIDER",
+      "createdAt": 1772872738899,
+      "id": "default-profile",
+      "isActive": false,
+      "lastUsed": 1772872738899,
+      "name": "Default",
+      "polar": {
+        "highSinkMs": 2.0,
+        "highSpeedKmh": 180.0,
+        "lowSinkMs": 0.5,
+        "lowSpeedKmh": 80.0,
+        "midSinkMs": 0.8,
+        "midSpeedKmh": 120.0
+      },
+      "preferences": {
+        "autoSwitchModes": true,
+        "cardAnimations": true,
+        "theme": "default",
+        "uiLayout": {
+          "variometerPosition": {
+            "x": 50.0,
+            "y": 50.0
+          },
+          "variometerSize": 150.0
+        },
+        "units": "METRIC"
+      }
+    },
+    {
+      "aircraftType": "SAILPLANE",
+      "createdAt": 1772704872654,
+      "id": "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6",
+      "isActive": false,
+      "lastUsed": 1772704872654,
+      "name": "1",
+      "preferences": {
+        "autoSwitchModes": true,
+        "cardAnimations": true,
+        "theme": "default",
+        "uiLayout": {
+          "variometerPosition": {
+            "x": 50.0,
+            "y": 50.0
+          },
+          "variometerSize": 150.0
+        },
+        "units": "METRIC"
+      }
+    },
+    {
+      "aircraftType": "HANG_GLIDER",
+      "createdAt": 1772707863671,
+      "id": "7533265e-21ca-4e27-a4e2-5d474efcc5cf",
+      "isActive": false,
+      "lastUsed": 1772707863671,
+      "name": "hg",
+      "preferences": {
+        "autoSwitchModes": true,
+        "cardAnimations": true,
+        "theme": "default",
+        "uiLayout": {
+          "variometerPosition": {
+            "x": 50.0,
+            "y": 50.0
+          },
+          "variometerSize": 150.0
+        },
+        "units": "METRIC"
+      }
+    }
+  ],
+  "settings": {
+    "sections": {
+      "tier_a.card_preferences": {
+        "cardsAcrossPortrait": 3,
+        "cardsAnchorPortrait": "TOP",
+        "profileCardPositions": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {
+            "CRUISE": {},
+            "THERMAL": {},
+            "FINAL_GLIDE": {}
+          },
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {
+            "CRUISE": {},
+            "THERMAL": {},
+            "FINAL_GLIDE": {}
+          },
+          "default-profile": {
+            "CRUISE": {},
+            "THERMAL": {},
+            "FINAL_GLIDE": {}
+          }
+        },
+        "profileFlightModeTemplates": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {
+            "CRUISE": "id01"
+          },
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {
+            "CRUISE": "id01",
+            "FINAL_GLIDE": "id03",
+            "THERMAL": "id02"
+          },
+          "default-profile": {
+            "CRUISE": "id01"
+          }
+        },
+        "profileFlightModeVisibilities": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {
+            "CRUISE": true,
+            "THERMAL": true,
+            "FINAL_GLIDE": true
+          },
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {
+            "CRUISE": true,
+            "THERMAL": false,
+            "FINAL_GLIDE": false
+          },
+          "default-profile": {
+            "CRUISE": true,
+            "THERMAL": true,
+            "FINAL_GLIDE": true
+          }
+        },
+        "profileTemplateCards": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {
+            "id01": [
+              "agl"
+            ]
+          },
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {
+            "id01": [],
+            "id03": [
+              "gps_alt"
+            ],
+            "id02": [
+              "vario"
+            ]
+          },
+          "default-profile": {
+            "id01": [
+              "agl"
+            ]
+          }
+        },
+        "templates": [
+          {
+            "cardIds": [
+              "agl"
+            ],
+            "createdAt": 0,
+            "description": "Single AGL card for cruise mode",
+            "id": "id01",
+            "isPreset": true,
+            "name": "Cruise"
+          },
+          {
+            "cardIds": [
+              "thermal_tc_gain",
+              "thermal_tc_avg",
+              "thermal_t_avg"
+            ],
+            "createdAt": 0,
+            "description": "Core thermal efficiency cards",
+            "id": "id02",
+            "isPreset": true,
+            "name": "Thermal"
+          },
+          {
+            "cardIds": [
+              "gps_alt",
+              "final_gld",
+              "ground_speed"
+            ],
+            "createdAt": 0,
+            "description": "Three cards for final glide mode",
+            "id": "id03",
+            "isPreset": true,
+            "name": "Final Glide"
+          },
+          {
+            "cardIds": [
+              "gps_alt",
+              "track",
+              "wpt_dist",
+              "wpt_brg",
+              "final_gld",
+              "ground_speed",
+              "thermal_t_avg",
+              "thermal_tc_avg",
+              "ld_curr"
+            ],
+            "createdAt": 0,
+            "description": "Navigation and performance",
+            "id": "id04",
+            "isPreset": true,
+            "name": "Cross Country"
+          },
+          {
+            "cardIds": [
+              "task_spd",
+              "task_dist",
+              "start_alt",
+              "wpt_eta",
+              "final_gld",
+              "ld_curr",
+              "mc_speed",
+              "flight_time"
+            ],
+            "createdAt": 0,
+            "description": "Racing and task management",
+            "id": "id05",
+            "isPreset": true,
+            "name": "Competition"
+          }
+        ],
+        "varioSmoothingAlpha": 0.25
+      },
+      "tier_a.flight_mgmt_preferences": {
+        "lastActiveTab": "screens",
+        "profileLastFlightModes": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": "CRUISE",
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": "CRUISE",
+          "default-profile": "CRUISE"
+        }
+      },
+      "tier_a.look_and_feel_preferences": {
+        "cardStyleByProfile": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": "standard",
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": "standard",
+          "default-profile": "standard"
+        },
+        "colorThemeByProfile": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": "default",
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": "default",
+          "default-profile": "default"
+        },
+        "statusBarStyleByProfile": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": "transparent",
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": "transparent",
+          "default-profile": "transparent"
+        }
+      },
+      "tier_a.theme_preferences": {
+        "customColorsByProfileAndTheme": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {},
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {},
+          "default-profile": {}
+        },
+        "themeIdByProfile": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": "default",
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": "default",
+          "default-profile": "default"
+        }
+      },
+      "tier_a.map_widget_layout": {
+        "widgetsByProfile": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {
+            "SIDE_HAMBURGER": {},
+            "FLIGHT_MODE": {},
+            "SETTINGS_SHORTCUT": {},
+            "BALLAST": {}
+          },
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {
+            "SIDE_HAMBURGER": {},
+            "FLIGHT_MODE": {},
+            "SETTINGS_SHORTCUT": {},
+            "BALLAST": {}
+          },
+          "default-profile": {
+            "SIDE_HAMBURGER": {
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "sizePx": 186.15848
+            },
+            "FLIGHT_MODE": {},
+            "SETTINGS_SHORTCUT": {
+              "offset": {
+                "x": 960.0,
+                "y": 0.0
+              },
+              "sizePx": 120.0
+            },
+            "BALLAST": {}
+          }
+        }
+      },
+      "tier_a.variometer_widget_layout": {
+        "layoutsByProfile": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {
+            "hasPersistedOffset": true,
+            "hasPersistedSize": true,
+            "offset": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "sizePx": 0.0
+          },
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {
+            "hasPersistedOffset": true,
+            "hasPersistedSize": true,
+            "offset": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "sizePx": 0.0
+          },
+          "default-profile": {
+            "hasPersistedOffset": true,
+            "hasPersistedSize": true,
+            "offset": {
+              "x": 21.006134,
+              "y": 1508.1663
+            },
+            "sizePx": 450.0
+          }
+        }
+      },
+      "tier_a.glider_config": {
+        "profiles": {
+          "57e8b6fc-6ec6-4332-aa0b-499185d1d0c6": {
+            "config": {
+              "ballastDrainMinutes": 5.0,
+              "bugsPercent": 0,
+              "hideBallastPill": false,
+              "pilotAndGearKg": 90.0,
+              "waterBallastKg": 0.0
+            },
+            "effectiveModelId": "club-default-fallback",
+            "isFallbackPolarActive": true
+          },
+          "7533265e-21ca-4e27-a4e2-5d474efcc5cf": {
+            "config": {
+              "ballastDrainMinutes": 5.0,
+              "bugsPercent": 0,
+              "hideBallastPill": false,
+              "pilotAndGearKg": 90.0,
+              "waterBallastKg": 0.0
+            },
+            "effectiveModelId": "club-default-fallback",
+            "isFallbackPolarActive": true
+          },
+          "default-profile": {
+            "config": {
+              "ballastDrainMinutes": 5.0,
+              "bugsPercent": 0,
+              "hideBallastPill": true,
+              "pilotAndGearKg": 90.0,
+              "waterBallastKg": 0.0
+            },
+            "effectiveModelId": "js1c-18",
+            "isFallbackPolarActive": false,
+            "selectedModelId": "js1c-18"
+          }
+        }
+      },
+      "tier_a.levo_vario_preferences": {
+        "audioDeadbandMax": 0.1,
+        "audioDeadbandMin": -0.3,
+        "audioDutyCycle": 0.6666666666666666,
+        "audioEnabled": true,
+        "audioLiftThreshold": 0.1,
+        "audioSinkSilenceThreshold": 0.0,
+        "audioVolume": 0.8,
+        "autoMcEnabled": true,
+        "enableHawkUi": false,
+        "hawkNeedleDriftTauMaxSec": 8.0,
+        "hawkNeedleDriftTauMinSec": 3.5,
+        "hawkNeedleOmegaMaxHz": 2.0,
+        "hawkNeedleOmegaMinHz": 0.9,
+        "hawkNeedleTargetTauSec": 0.8,
+        "macCready": 0.0,
+        "macCreadyRisk": 0.0,
+        "showHawkCard": false,
+        "showWindSpeedOnVario": true,
+        "teCompensationEnabled": true
+      },
+      "tier_a.thermalling_mode_preferences": {
+        "applyZoomOnEnter": true,
+        "enabled": true,
+        "enterDelaySeconds": 6,
+        "exitDelaySeconds": 8,
+        "rememberManualThermalZoomInSession": true,
+        "restorePreviousModeOnExit": true,
+        "restorePreviousZoomOnExit": true,
+        "switchToThermalMode": true,
+        "thermalZoomLevel": 13.0,
+        "zoomOnlyFallbackWhenThermalHidden": true
+      },
+      "tier_a.ogn_traffic_preferences": {
+        "autoReceiveRadiusEnabled": false,
+        "clientCallsign": "XCPC38325",
+        "displayUpdateMode": "real_time",
+        "enabled": true,
+        "hotspotsDisplayPercent": 100,
+        "iconSizePx": 124,
+        "ownFlarmHex": "DF0CBB",
+        "receiveRadiusKm": 300,
+        "showSciaEnabled": false,
+        "showThermalsEnabled": false,
+        "targetEnabled": false,
+        "thermalRetentionHours": 24
+      },
+      "tier_a.ogn_trail_selection_preferences": {
+        "selectedAircraftKeys": []
+      },
+      "tier_a.adsb_traffic_preferences": {
+        "emergencyAudioCohortBucket": 76,
+        "emergencyAudioCohortPercent": 100,
+        "emergencyAudioCooldownMs": 45000,
+        "emergencyAudioEnabled": false,
+        "emergencyAudioMasterEnabled": true,
+        "emergencyAudioRollbackLatched": true,
+        "emergencyAudioRollbackReason": "determinism_mismatch_count",
+        "emergencyAudioShadowMode": false,
+        "emergencyFlashEnabled": true,
+        "enabled": true,
+        "iconSizePx": 124,
+        "maxDistanceKm": 10,
+        "verticalAboveMeters": 3048.0,
+        "verticalBelowMeters": 3048.0
+      },
+      "tier_a.weather_overlay_preferences": {
+        "animatePastWindow": true,
+        "animationSpeed": "normal",
+        "animationWindow": "120m",
+        "enabled": false,
+        "frameMode": "latest",
+        "manualFrameIndex": 0,
+        "opacity": 0.5655076,
+        "smooth": true,
+        "snow": false,
+        "transitionQuality": "balanced"
+      },
+      "tier_a.forecast_preferences": {
+        "autoTimeEnabled": true,
+        "followTimeOffsetMinutes": 0,
+        "opacity": 0.65,
+        "overlayEnabled": true,
+        "selectedPrimaryParameterId": "wblmaxmin",
+        "selectedRegion": "WEST_US",
+        "selectedWindParameterId": "sfcwind0",
+        "skySightSatelliteAnimateEnabled": true,
+        "skySightSatelliteHistoryFrames": 3,
+        "skySightSatelliteImageryEnabled": false,
+        "skySightSatelliteLightningEnabled": true,
+        "skySightSatelliteOverlayEnabled": true,
+        "skySightSatelliteRadarEnabled": true,
+        "windDisplayMode": "ARROW",
+        "windOverlayEnabled": false,
+        "windOverlayScale": 1.0
+      },
+      "tier_a.wind_override_preferences": {}
+    },
+    "version": "1.0"
+  },
+  "version": "2.0"
+}
