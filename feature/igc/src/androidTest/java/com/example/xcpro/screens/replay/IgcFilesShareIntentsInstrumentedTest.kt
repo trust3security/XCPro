@@ -1,4 +1,4 @@
-package com.example.xcpro.igc
+package com.example.xcpro.screens.replay
 
 import android.content.Intent
 import android.net.Uri
@@ -7,7 +7,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.igc.usecase.IgcShareRequest
-import com.example.xcpro.screens.replay.buildIgcShareChooserIntent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -15,7 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class IgcFilesShareInstrumentedTest {
+class IgcFilesShareIntentsInstrumentedTest {
 
     @Test
     fun buildIgcShareChooserIntent_setsReadGrantClipDataAndStreamUri() {

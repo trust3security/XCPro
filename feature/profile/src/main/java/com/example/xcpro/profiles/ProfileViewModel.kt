@@ -200,7 +200,10 @@ class ProfileViewModel @Inject constructor(
     fun importBundle(
         json: String,
         keepCurrentActive: Boolean = true,
-        nameCollisionPolicy: ProfileNameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX
+        nameCollisionPolicy: ProfileNameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX,
+        settingsImportScope: ProfileSettingsImportScope =
+            ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS,
+        strictSettingsRestore: Boolean = false
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -213,7 +216,9 @@ class ProfileViewModel @Inject constructor(
                 ProfileBundleImportRequest(
                     json = json,
                     keepCurrentActive = keepCurrentActive,
-                    nameCollisionPolicy = nameCollisionPolicy
+                    nameCollisionPolicy = nameCollisionPolicy,
+                    settingsImportScope = settingsImportScope,
+                    strictSettingsRestore = strictSettingsRestore
                 )
             ).onSuccess { bundleResult ->
                 val restoreError = if (bundleResult.settingsRestoreResult.failedSections.isEmpty()) {

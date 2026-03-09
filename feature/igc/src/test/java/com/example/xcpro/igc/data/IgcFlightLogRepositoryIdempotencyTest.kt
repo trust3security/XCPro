@@ -41,6 +41,7 @@ class IgcFlightLogRepositoryIdempotencyTest {
         val repository = MediaStoreIgcFlightLogRepository(
             appContext = context,
             downloadsRepository = downloads,
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
             namingPolicy = IgcFileNamingPolicy()
         )
 

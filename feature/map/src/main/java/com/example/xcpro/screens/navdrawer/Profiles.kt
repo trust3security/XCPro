@@ -338,10 +338,12 @@ fun ProfilesScreen(
     if (showImportDialog) {
         ProfileImportDialog(
             onDismiss = { showImportDialog = false },
-            onImportJson = { json, keepCurrentActive ->
+            onImportJson = { json, keepCurrentActive, settingsImportScope, strictSettingsRestore ->
                 profileViewModel.importBundle(
                     json = json,
-                    keepCurrentActive = keepCurrentActive
+                    keepCurrentActive = keepCurrentActive,
+                    settingsImportScope = settingsImportScope,
+                    strictSettingsRestore = strictSettingsRestore
                 )
                 showImportDialog = false
             },

@@ -110,23 +110,36 @@ Dependency direction:
 
 ## 4) Target Design (Implementation Shape)
 
-Proposed packages (initially under `feature/map` unless module extraction is approved):
+Proposed packages (aligned to the current module split):
 
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/`
   - `IgcRecordFormatter`
   - `IgcSessionStateMachine`
-  - `IgcValidationRules`
-- `feature/map/src/main/java/com/example/xcpro/igc/data/`
+  - `IgcBRecordValidationPolicy`
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/`
   - `IgcFlightLogRepository`
   - `IgcDownloadsRepository`
   - `IgcTextWriter`
-  - `IgcFileWriter`
+  - `IgcRecordingRuntimeActionSink`
+- `feature/igc/src/main/java/com/example/xcpro/igc/usecase/`
+  - `IgcFilesUseCase`
+  - `IgcReplayLauncher`
+- `feature/igc/src/main/java/com/example/xcpro/igc/ui/`
+  - `IgcFilesViewModel`
+  - `IgcFilesUiContract`
+- `feature/igc/src/main/java/com/example/xcpro/screens/replay/`
+  - `IgcFilesScreen`
+  - `IgcFilesShareIntents`
+- `feature/igc/src/main/java/com/example/xcpro/replay/`
+  - `IgcParser`
+  - `IgcReplayUseCase`
+  - `IgcReplayControllerPort`
 - `feature/map/src/main/java/com/example/xcpro/igc/usecase/`
   - `IgcRecordingUseCase`
-  - `IgcDownloadsUseCase`
-- `feature/map/src/main/java/com/example/xcpro/igc/ui/`
-  - `IgcLogsScreen`
-  - `IgcLogsViewModel`
+- `feature/map/src/main/java/com/example/xcpro/igc/data/`
+  - `IgcMetadataSources`
+- `feature/map/src/main/java/com/example/xcpro/replay/`
+  - `IgcReplayControllerRuntime*`
 
 ### 4.1 Formatter And Output Contracts (Spec-Locked)
 
@@ -282,19 +295,20 @@ Scoring method: weighted by behavior, test confidence, recovery hardening, wirin
 
 Evidence:
 - [State machine transitions + debounce + idempotent finalize + touch-and-go coverage]
-  - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcSessionStateMachineTest.kt`
+  - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcSessionStateMachineTest.kt`
 - [Restart persistence + terminal recovery]
-  - `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcSessionStateMachine.kt`
+  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSessionStateMachine.kt`
   - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/igc/data/IgcSessionStateSnapshotStore.kt`
+  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcSessionStateSnapshotStore.kt`
   - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
 - [Snapshot restore hardening]
-  - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcSessionStateMachineTest.kt#fromSnapshot_sanitizesInvalidNextSessionIdAndKeepsRecoveryMonotonic`
+  - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcSessionStateMachineTest.kt#fromSnapshot_sanitizesInvalidNextSessionIdAndKeepsRecoveryMonotonic`
 - [Runtime action collection wiring]
   - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/igc/IgcRecordingActionSink.kt`
+  - `feature/igc/src/main/java/com/example/xcpro/igc/IgcRecordingActionSink.kt`
   - `feature/map/src/test/java/com/example/xcpro/vario/VarioServiceManagerConstructionTest.kt`
 - [Dependency binding]
+  - `feature/igc/src/main/java/com/example/xcpro/di/IgcCoreBindingsModule.kt`
   - `feature/map/src/main/java/com/example/xcpro/di/IgcBindingsModule.kt`
 
 Scoring notes:
@@ -318,20 +332,20 @@ Deliverables:
 
 Add new domain/data contracts for sample ingestion and conversion:
 
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcSampleToBRecordMapper.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSampleToBRecordMapper.kt`
   - Input: live flight sample + live sensor state.
   - Output: validated `IgcRecordFormatter.BRecord`.
   - Responsibility: coordinate validity classification, altitude selection/fallbacks, extension population.
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcBRecordCadencePolicy.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcBRecordCadencePolicy.kt`
   - Encapsulates cadence and jitter handling.
   - Default cadence `1s`; explicit config for `1..5s` in domain config.
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcBRecordValidationPolicy.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcBRecordValidationPolicy.kt`
   - Validity states: `A` vs `V` with explicit reasons.
   - Staleness thresholds:
     - GNSS location stale window: 5s (must be configurable).
     - altitude stale window: 8s (configurable).
     - accuracy gate: if source provides precision metadata, reject low-accuracy fixes.
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcSampleStreamErrorPolicy.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSampleStreamErrorPolicy.kt`
   - Malformed sample detection and sanitization policy.
   - Explicit handling for missing longitude/latitude/pressure and impossible coordinates.
 
@@ -504,6 +518,16 @@ Finalized IGC index:
   - UI/manual filesystem scans for IGC list state
   - ad-hoc ViewModel-maintained file caches
 
+Existing finalized/staged IGC bytes:
+
+- authoritative owner: `feature/igc` data adapter boundary
+- exposed as: typed raw-byte or streaming-read contract on
+  `IgcDownloadsRepository` or an adjacent IGC document-read port
+- forbidden duplicates:
+  - UI/use-case direct `ContentResolver.openInputStream(...)` calls
+  - replay/share helper-owned stream openers
+  - private one-off document readers that bypass typed diagnostics
+
 Dependency direction:
 
 - UI -> use-case -> repository/adapter
@@ -612,18 +636,27 @@ Phase 5 scoring target (release bar):
 1. Confirm existing Phase 1-4 IGC tests are green before starting Phase 5 implementation.
 2. Lock target files and owners in change notes:
    - production: `igc/domain`, `igc/data`, `igc/usecase`, `screens/replay|navdrawer`.
-   - tests: `feature/map/src/test/java/com/example/xcpro/igc/*`, `feature/map/src/androidTest/java/com/example/xcpro/igc/*`.
+   - tests:
+     - `feature/igc/src/test/java/com/example/xcpro/igc/*`
+     - `feature/igc/src/androidTest/java/com/example/xcpro/igc/*`
+     - `feature/map/src/test/java/com/example/xcpro/igc/usecase/*`
+     - `feature/map/src/androidTest/java/com/example/xcpro/igc/*`
 
 `P5-1` Add Phase 5 production contracts (ports first):
 
 1. Add:
-   - `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcFileNamingPolicy.kt`
-   - `feature/map/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-   - `feature/map/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
-   - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcFilesUseCase.kt`
-   - `feature/map/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
-2. Bind adapters in DI (`IgcBindingsModule`) and keep `UI -> use-case -> repository` direction only.
-3. Keep ViewModel free of file I/O and Android storage APIs.
+   - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcFileNamingPolicy.kt`
+   - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
+   - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
+   - `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcFilesUseCase.kt`
+   - `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
+2. Bind core adapters in `feature/igc/src/main/java/com/example/xcpro/di/IgcCoreBindingsModule.kt`
+   and keep runtime/navigation wiring in
+   `feature/map/src/main/java/com/example/xcpro/di/IgcBindingsModule.kt`.
+3. Add typed raw-byte read access for existing IGC documents in the same
+   boundary layer so replay-open, validation, and redaction do not reopen files
+   through scattered Android-only helpers.
+4. Keep ViewModel free of file I/O and Android storage APIs.
 
 `P5-2` Deterministic naming and collision implementation:
 
@@ -631,7 +664,7 @@ Phase 5 scoring target (release bar):
 2. Implement same-day collision scan + lowest-free `FF` selection.
 3. Implement typed fail path `IGC_NAME_SPACE_EXHAUSTED`.
 4. Add unit tests:
-   - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcFileNamingPolicyTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcFileNamingPolicyTest.kt`
    - test vectors: first-valid-`B`, no-valid-`B` fallback, rollover day, collision chain, exhaustion.
 
 `P5-3` Staging + atomic publish implementation:
@@ -641,17 +674,17 @@ Phase 5 scoring target (release bar):
 3. Use `RELATIVE_PATH=Download/XCPro/IGC`.
 4. Enforce idempotent finalize by `sessionId`.
 5. Add unit tests:
-   - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
 
 `P5-4` Index/query/list implementation:
 
 1. Implement MediaStore-backed `Flow<List<IgcLogEntry>>` in `IgcDownloadsRepository`.
 2. Implement list filtering/sorting/search in `IgcFilesUseCase`.
 3. Add unit tests:
-   - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcDownloadsRepositoryTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcDownloadsRepositoryTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
 
 `P5-5` UX and interaction implementation:
 
@@ -664,10 +697,10 @@ Phase 5 scoring target (release bar):
 `P5-6` Instrumentation suite (mandatory for 100):
 
 1. Add:
-   - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesListInstrumentedTest.kt`
+   - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcFilesListInstrumentedTest.kt`
    - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesShareInstrumentedTest.kt`
-   - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesCopyToInstrumentedTest.kt`
-   - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesReplayOpenInstrumentedTest.kt`
+   - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcFilesCopyToInstrumentedTest.kt`
+   - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcFilesReplayOpenInstrumentedTest.kt`
    - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesNavigationLabelInstrumentedTest.kt`
 2. Cover download/query/share, chooser/email/copy-to URI grants, replay-open, and label rename acceptance.
 
@@ -675,12 +708,16 @@ Phase 5 scoring target (release bar):
 
 1. `python scripts/arch_gate.py`
 2. `./gradlew enforceRules`
-3. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`
-4. `./gradlew :feature:map:assembleDebug`
-5. `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`
-6. `./gradlew connectedDebugAndroidTest --no-parallel`
-7. `./gradlew testDebugUnitTest`
-8. `./gradlew assembleDebug`
+3. `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*" --tests "com.example.xcpro.replay.Igc*"`
+4. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`
+5. `./gradlew :feature:igc:assembleDebug`
+6. `./gradlew :feature:map:assembleDebug`
+7. `./gradlew :feature:igc:connectedDebugAndroidTest --no-parallel`
+8. `./gradlew :feature:map:connectedDebugAndroidTest --no-parallel`
+9. `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`
+10. `./gradlew connectedDebugAndroidTest --no-parallel`
+11. `./gradlew testDebugUnitTest`
+12. `./gradlew assembleDebug`
 
 `P5-8` 100/100 claim criteria (all required, no partial credit):
 
@@ -725,7 +762,10 @@ Recovery algorithm (startup + finalize path):
      clear orphan artifacts, keep deterministic diagnostic.
 3. Recovery publish uses the same idempotent finalize contract as Phase 5
    (`sessionId` authority).
-4. After successful finalize or terminal failure handling, clear snapshot/staging
+4. Recovery validation must inspect staged raw bytes before any
+   `readLines()`/newline-normalizing path; recovery must not mask CRLF or
+   whitespace violations by reparsing normalized text.
+5. After successful finalize or terminal failure handling, clear snapshot/staging
    artifacts for that `sessionId`.
 
 Kill-point matrix (mandatory test set):
@@ -752,6 +792,13 @@ Typed recovery error taxonomy (minimum):
 - `IGC_RECOVERY_PENDING_ROW_WRITE_FAILED`
 - `IGC_RECOVERY_NAME_COLLISION_UNRESOLVED`
 - `IGC_RECOVERY_DUPLICATE_SESSION_GUARD`
+
+Recovery mapping contract:
+
+- every expanded `IgcFinalizeResult.ErrorCode` added in Phase 7 must map to an
+  explicit recovery outcome
+- no default collapse of new lint/compatibility failures into generic
+  `WRITE_FAILED`/`PENDING_ROW_WRITE_FAILED`
 
 ### 6.2 Retention contract (spec-locked)
 
@@ -895,8 +942,8 @@ Each artifact must include:
 2. Implement deterministic cleanup of orphan staging/pending artifacts.
 3. Enforce finalize idempotency for recovered sessions (`sessionId` authority).
 4. Add unit tests:
-   - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecoveryUseCaseTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
+   - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
    - cover `K1..K7` matrix with explicit expected outcomes.
 
 `P6-3` Retention implementation:
@@ -906,18 +953,20 @@ Each artifact must include:
 2. Add user-control wiring (`maxFileCount`, `maxFileAgeDays`,
    `autoPruneOnFinalize`, manual run).
 3. Add unit tests:
-   - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcRetentionPolicyTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcDownloadsRepositoryRetentionTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcFilesUseCaseRetentionTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcRetentionPolicyTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcDownloadsRepositoryRetentionTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/usecase/IgcFilesUseCaseRetentionTest.kt`
 
 `P6-4` Privacy/redaction implementation:
 
 1. Implement deterministic redaction transformer by share mode.
 2. Generate redacted share copy without mutating canonical archive file.
 3. Surface typed share/redaction failure reasons to UX.
-4. Add unit tests:
-   - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcRedactionPolicyTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcShareRedactionUseCaseTest.kt`
+4. Consume canonical file bytes through the `feature/igc` document-read boundary
+   rather than UI/replay helper-owned `ContentResolver` calls.
+5. Add unit tests:
+   - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcRedactionPolicyTest.kt`
+   - `feature/igc/src/test/java/com/example/xcpro/igc/usecase/IgcShareRedactionUseCaseTest.kt`
 
 `P6-5` UX and docs sync:
 
@@ -931,8 +980,8 @@ Each artifact must include:
 
 1. Add:
    - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
-   - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcRetentionInstrumentedTest.kt`
-   - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcShareRedactionInstrumentedTest.kt`
+   - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcRetentionInstrumentedTest.kt`
+   - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcShareRedactionInstrumentedTest.kt`
 2. Cover startup recovery, retention delete/query behavior, and redacted share
    URI grant correctness.
 
@@ -940,12 +989,16 @@ Each artifact must include:
 
 1. `python scripts/arch_gate.py`
 2. `./gradlew enforceRules`
-3. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`
-4. `./gradlew :feature:map:assembleDebug`
-5. `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`
-6. `./gradlew connectedDebugAndroidTest --no-parallel`
-7. `./gradlew testDebugUnitTest`
-8. `./gradlew assembleDebug`
+3. `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*" --tests "com.example.xcpro.replay.Igc*"`
+4. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`
+5. `./gradlew :feature:igc:assembleDebug`
+6. `./gradlew :feature:map:assembleDebug`
+7. `./gradlew :feature:igc:connectedDebugAndroidTest --no-parallel`
+8. `./gradlew :feature:map:connectedDebugAndroidTest --no-parallel`
+9. `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`
+10. `./gradlew connectedDebugAndroidTest --no-parallel`
+11. `./gradlew testDebugUnitTest`
+12. `./gradlew assembleDebug`
 
 `P6-8` 100/100 claim criteria (all required, no partial credit):
 
@@ -990,19 +1043,66 @@ Before Phase 7 can claim `100/100`, all of the following must already be true:
 
 Add or extend explicit contracts for validation and diagnostics:
 
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcLintValidator.kt`
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcLintIssue.kt`
-- `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcLintRuleSet.kt`
-- `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcLintMessageMapper.kt`
-- `feature/map/src/main/java/com/example/xcpro/igc/data/IgcExportValidationAdapter.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintValidator.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintIssue.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintRuleSet.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcLintMessageMapper.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportValidationAdapter.kt`
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
+- `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
 
 Contract rules:
 
 - Lint and compatibility decisions are domain/use-case outputs, not UI-local
   string parsing.
+- Core formatter/writer/repository/UI contracts live in `feature/igc`; live
+  sensor/runtime orchestration stays in `feature/map`.
+- Share/export UI helpers under `feature/igc/src/main/java/com/example/xcpro/screens/replay/`
+  must consume typed diagnostics mapping, not keep independent failure semantics.
+- Existing-file validation, redaction, and replay-open preflight must consume a
+  typed raw-byte read boundary in `feature/igc` (extend
+  `IgcDownloadsRepository` or add an adjacent document-read port); do not keep
+  direct `ContentResolver.openInputStream(...)` side paths in UI/use-case/replay
+  helpers.
 - Repositories return typed failure outcomes for lint/compatibility failures;
   generic throw-only error paths are not sufficient.
 - Runtime wiring and UI consume typed outcomes and render actionable messages.
+
+### 7.2A Diagnostics SSOT ownership (mandatory)
+
+Authoritative owner:
+
+- latest export/finalize diagnostics -> IGC diagnostics repository in
+  `feature/igc`
+
+Exposed as:
+
+- `StateFlow<IgcExportDiagnostic?>` (or equivalent typed stream)
+
+Forbidden duplicates:
+
+- ViewModel-local finalize failure strings
+- log-only failure handling in `VarioServiceManager`
+- ad-hoc UI parsing of exception text
+
+### 7.2B Existing document byte authority (mandatory)
+
+Authoritative owner:
+
+- raw bytes for finalized IGC documents and staged recovery files -> IGC data
+  adapter in `feature/igc`
+
+Exposed as:
+
+- typed `Result<ByteArray>` or streaming-read boundary contract
+
+Forbidden duplicates:
+
+- replay helper direct `Context.contentResolver.openInputStream(...)`
+- private `IgcDownloadsRepository`-local stream readers that are unavailable to
+  validation/redaction flows
+- screen/use-case-owned document re-open logic
 
 ### 7.3 Strict sanity validator matrix (spec-locked)
 
@@ -1022,6 +1122,25 @@ Minimum rule set (all required):
 - at most one `I` record and only before first `B`.
 - reject embedded line-break characters in any record payload.
 
+### 7.3A Parser, formatter, and lint parity contract
+
+The same `I`-record and line-structure rules must be enforced consistently by:
+
+- `IgcRecordFormatter`
+- `IgcParser`
+- `IgcLintValidator`
+
+Required parity checks:
+
+- `I` byte start floor matches writer contract (`>=36` for `B` extensions)
+- overlap/ordering rules are consistent
+- late or repeated `I` records are rejected consistently
+- invalid-extension fixtures are tested against parser + lint behavior together
+- parser permissiveness is explicitly accounted for: lint must validate raw bytes
+  or unsanitized lines before parser normalization/trimming
+- staged recovery bytes are linted before any recovery reserialize path so CRLF
+  and whitespace violations cannot be hidden by newline normalization
+
 ### 7.4 Error taxonomy and UI surfacing contract (spec-locked)
 
 Minimum typed error taxonomy:
@@ -1040,9 +1159,15 @@ Integration requirements:
 
 - Extend `IgcFinalizeResult.ErrorCode` and repository failure outputs so lint and
   compatibility failures are typed.
+- Update recovery translation so every expanded finalize/lint/compatibility code
+  has an explicit recovery mapping.
 - Replace generic finalize exception-only propagation with structured typed
   propagation.
+- Route background finalize/export failures through diagnostics SSOT so they are
+  observable even when the IGC Files screen is not currently open.
 - Surface actionable lint/compatibility messages in export failure UI states.
+- Ensure replay-open does not remain an unvalidated direct-load side path for
+  finalized files.
 - Keep verbose parser diagnostics in logs/evidence artifacts, not end-user copy.
 
 ### 7.5 Compatibility and round-trip suite contract
@@ -1072,6 +1197,7 @@ Gate (all required):
 - compatibility suite green (internal + external).
 - explicit lint/error taxonomy documented and mapped to typed failures.
 - lint diagnostics surfaced in export failure UI states.
+- background finalize diagnostics are observable from SSOT and not log-only.
 - no generic "unknown error" fallback for typed lint/compatibility failures.
 - Phase 7 evidence artifacts complete and linked.
 
@@ -1089,6 +1215,7 @@ Phase 7 scoring target (claim bar):
 - `docs/IGC/phase7_evidence/phase7_roundtrip_tolerance_matrix.md`
 - `docs/IGC/phase7_evidence/phase7_external_compatibility_matrix.md`
 - `docs/IGC/phase7_evidence/phase7_lint_rule_matrix.md`
+- `docs/IGC/phase7_evidence/phase7_parser_lint_parity_matrix.md`
 - `docs/IGC/phase7_evidence/phase7_error_taxonomy_mapping.md`
 - `docs/IGC/phase7_evidence/phase7_manual_checklist.md`
 
@@ -1113,23 +1240,31 @@ Each artifact must include:
 1. Add lint domain contracts and issue taxonomy.
 2. Add message-mapping use-case contract for UI-safe diagnostics.
 3. Keep adapter/platform parser invocations in data layer only.
+4. Add diagnostics SSOT contract for background finalize/export failures.
 
 `P7-2` Implement lint validation in finalize/export path:
 
 1. Validate assembled file lines before publish.
 2. Return typed lint failures from repository/use-case boundary.
 3. Add unit tests for each lint rule and mixed-failure precedence.
+4. Keep validation implementation in `feature/igc`; use `feature/map` only for
+   orchestration/wiring.
 
 `P7-3` Implement typed failure surfacing:
 
 1. Extend finalize failure codes for lint/compatibility.
 2. Replace generic finalize exception propagation with typed outcomes.
-3. Map typed outcomes to actionable UI copy in IGC file/export flows.
+3. Publish finalize/export diagnostics to SSOT from background runtime paths.
+4. Map typed outcomes to actionable UI copy in IGC file/export flows.
+5. Remove screen-local failure taxonomy drift from replay/share helpers and use
+   the shared diagnostics/message mapper.
 
 `P7-4` Implement round-trip tolerance suite:
 
 1. Add deterministic round-trip tests for standard and edge fixtures.
 2. Add tolerance-threshold assertions with explicit failure messages.
+3. Add parser-vs-lint parity tests for invalid `I` definitions and line-order
+   failures.
 
 `P7-5` Implement external compatibility harness:
 
@@ -1147,12 +1282,16 @@ Each artifact must include:
 
 1. `python scripts/arch_gate.py`
 2. `./gradlew enforceRules`
-3. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`
-4. `./gradlew :feature:map:assembleDebug`
-5. `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`
-6. `./gradlew connectedDebugAndroidTest --no-parallel`
-7. `./gradlew testDebugUnitTest`
-8. `./gradlew assembleDebug`
+3. `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*" --tests "com.example.xcpro.replay.Igc*"`
+4. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`
+5. `./gradlew :feature:igc:assembleDebug`
+6. `./gradlew :feature:map:assembleDebug`
+7. `./gradlew :feature:igc:connectedDebugAndroidTest --no-parallel`
+8. `./gradlew :feature:map:connectedDebugAndroidTest --no-parallel`
+9. `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`
+10. `./gradlew connectedDebugAndroidTest --no-parallel`
+11. `./gradlew testDebugUnitTest`
+12. `./gradlew assembleDebug`
 
 `P7-8` 100/100 claim criteria (all required, no partial credit):
 
@@ -1161,7 +1300,10 @@ Each artifact must include:
 3. No open Phase 7 architecture deviations in
    `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md`.
 4. Full verification order from `P7-7` passes in two consecutive runs.
-5. Release scorecard for Phase 7 is exactly:
+5. Evidence demonstrates both module paths are covered:
+   - `feature/igc` core formatter/parser/repository/UI
+   - `feature/map` live runtime orchestration/wiring
+6. Release scorecard for Phase 7 is exactly:
    - spec coverage/parity: `40/40`
    - automated test depth: `30/30`
    - determinism/architecture compliance: `20/20`
@@ -1249,16 +1391,16 @@ Gate:
 - Work-Pack sequence (ordered, minimum-risk):
   1. Add contracts and shared domain models
      - New files:
-       - `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcSampleToBRecordMapper.kt`
-       - `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcBRecordCadencePolicy.kt`
-       - `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcBRecordValidationPolicy.kt`
-       - `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcSampleStreamErrorPolicy.kt`
-       - `feature/map/src/main/java/com/example/xcpro/igc/domain/IgcSamplingState.kt`
+       - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSampleToBRecordMapper.kt`
+       - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcBRecordCadencePolicy.kt`
+       - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcBRecordValidationPolicy.kt`
+       - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSampleStreamErrorPolicy.kt`
+       - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSamplingState.kt`
   2. Add unit test skeletons for pure policies/mappers (new test classes only)
-     - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcBRecordCadencePolicyTest.kt`
-     - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcBRecordValidationPolicyTest.kt`
-     - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcSampleToBRecordMapperTest.kt`
-     - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcSampleStreamErrorPolicyTest.kt`
+     - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcBRecordCadencePolicyTest.kt`
+     - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcBRecordValidationPolicyTest.kt`
+     - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcSampleToBRecordMapperTest.kt`
+     - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcSampleStreamErrorPolicyTest.kt`
   3. Wire stream subscription in `IgcRecordingUseCase`
      - subscribe to SSOT sample stream in addition to flight-state stream.
      - only emit B payloads in `Recording` / `Finalizing`.
@@ -1271,8 +1413,8 @@ Gate:
      - altitude fallback policy
      - malformed sample rejection path
   6. Add integration stream tests
-     - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcBStreamIntegrationTest.kt`
-     - long-flight fixture stream under `feature/map/src/test/resources/replay/phase3-long-flight-igc-stream.csv`
+     - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseBRecordStreamTest.kt`
+     - long-flight fixture stream under `feature/map/src/test/resources/igc/phase3-long-flight-igc-stream.csv`
   7. Add evidence package
      - `docs/IGC/phase3_evidence/phase3_runbook.md`
      - `docs/IGC/phase3_evidence/phase3_gates.md`

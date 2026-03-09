@@ -161,15 +161,15 @@ class ProfileRepositoryTest {
     }
 
     @Test
-    fun updateProfile_persistsPolarSettingsPerProfile() = runTest {
-        val created = repository.createProfile(
-            ProfileCreationRequest(
-                name = "Polar Pilot",
-                aircraftType = AircraftType.SAILPLANE
-            )
-        ).getOrThrow()
-
-        val updated = created.copy(
+    fun updateProfile_keepsNonAuthoritativeCompatibilityFieldsUnchanged() = runTest {
+        val imported = UserProfile(
+            name = "Compatibility Baseline",
+            aircraftType = AircraftType.SAILPLANE,
+            preferences = ProfilePreferences(
+                units = UnitSystem.IMPERIAL,
+                autoSwitchModes = false,
+                cardAnimations = false
+            ),
             polar = ProfilePolarSettings(
                 lowSpeedKmh = 85.0,
                 lowSinkMs = 0.55,
@@ -179,16 +179,90 @@ class ProfileRepositoryTest {
                 highSinkMs = 1.95
             )
         )
+        repository.importProfiles(ProfileImportRequest(profiles = listOf(imported))).getOrThrow()
+        val created = repository.profiles.value.first { it.name == "Compatibility Baseline" }
 
+        val updated = created.copy(
+            name = "Compatibility Updated",
+            preferences = ProfilePreferences(),
+            polar = ProfilePolarSettings()
+        )
         repository.updateProfile(updated).getOrThrow()
 
         val stored = repository.profiles.value.first { it.id == created.id }
+        assertEquals("Compatibility Updated", stored.name)
+        assertEquals(UnitSystem.IMPERIAL, stored.preferences.units)
+        assertEquals(false, stored.preferences.autoSwitchModes)
+        assertEquals(false, stored.preferences.cardAnimations)
         assertEquals(85.0, stored.polar.lowSpeedKmh, 0.0)
         assertEquals(0.55, stored.polar.lowSinkMs, 0.0)
         assertEquals(115.0, stored.polar.midSpeedKmh, 0.0)
         assertEquals(0.78, stored.polar.midSinkMs, 0.0)
         assertEquals(175.0, stored.polar.highSpeedKmh, 0.0)
         assertEquals(1.95, stored.polar.highSinkMs, 0.0)
+    }
+
+    @Test
+    fun createProfile_copyFromProfile_copiesCompatibilityFieldsAndOptionalMetadata() = runTest {
+        val source = repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(
+                    UserProfile(
+                        name = "Source",
+                        aircraftType = AircraftType.SAILPLANE,
+                        aircraftModel = "JS3",
+                        description = "Source profile",
+                        preferences = ProfilePreferences(
+                            units = UnitSystem.IMPERIAL,
+                            autoSwitchModes = false,
+                            cardAnimations = false
+                        ),
+                        polar = ProfilePolarSettings(
+                            lowSpeedKmh = 90.0,
+                            lowSinkMs = 0.6,
+                            midSpeedKmh = 120.0,
+                            midSinkMs = 0.8,
+                            highSpeedKmh = 180.0,
+                            highSinkMs = 1.9
+                        )
+                    )
+                )
+            )
+        ).map {
+            repository.profiles.value.first { profile -> profile.name == "Source" }
+        }.getOrThrow()
+
+        val created = repository.createProfile(
+            ProfileCreationRequest(
+                name = "Copied",
+                aircraftType = AircraftType.GLIDER,
+                copyFromProfile = source
+            )
+        ).getOrThrow()
+
+        assertEquals("Copied", created.name)
+        assertEquals(AircraftType.GLIDER, created.aircraftType)
+        assertEquals("JS3", created.aircraftModel)
+        assertEquals("Source profile", created.description)
+        assertEquals(UnitSystem.IMPERIAL, created.preferences.units)
+        assertEquals(false, created.preferences.autoSwitchModes)
+        assertEquals(false, created.preferences.cardAnimations)
+        assertEquals(90.0, created.polar.lowSpeedKmh, 0.0)
+        assertEquals(1.9, created.polar.highSinkMs, 0.0)
+    }
+
+    @Test
+    fun updateProfile_blankNameFailsValidation() = runTest {
+        val created = repository.createProfile(
+            ProfileCreationRequest(
+                name = "Validate Update",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+
+        val result = repository.updateProfile(created.copy(name = "   "))
+        assertTrue(result.isFailure)
+        assertTrue((result.exceptionOrNull()?.message ?: "").contains("cannot be blank"))
     }
 
     @Test

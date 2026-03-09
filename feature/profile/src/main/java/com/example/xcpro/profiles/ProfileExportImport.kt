@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -124,13 +125,17 @@ fun ProfileExportDialog(
 @Composable
 fun ProfileImportDialog(
     onDismiss: () -> Unit,
-    onImportJson: (String, Boolean) -> Unit,
+    onImportJson: (String, Boolean, ProfileSettingsImportScope, Boolean) -> Unit,
     onError: (String) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var isImporting by remember { mutableStateOf(false) }
     var keepCurrentActive by remember { mutableStateOf(true) }
+    var settingsImportScope by remember {
+        mutableStateOf(ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS)
+    }
+    var strictSettingsRestore by remember { mutableStateOf(false) }
 
     val documentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -141,7 +146,12 @@ fun ProfileImportDialog(
                 val json = readJsonFromUri(context, uri = uri)
                 isImporting = false
                 json.onSuccess { content ->
-                    onImportJson(content, keepCurrentActive)
+                    onImportJson(
+                        content,
+                        keepCurrentActive,
+                        settingsImportScope,
+                        strictSettingsRestore
+                    )
                 }.onFailure { error ->
                     onError("Failed to read file: ${error.message}")
                 }
@@ -174,6 +184,38 @@ fun ProfileImportDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Keep current active profile")
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Import settings scope")
+                    ImportScopeOptionRow(
+                        label = "Profiles only",
+                        selected = settingsImportScope == ProfileSettingsImportScope.PROFILES_ONLY,
+                        onSelect = { settingsImportScope = ProfileSettingsImportScope.PROFILES_ONLY }
+                    )
+                    ImportScopeOptionRow(
+                        label = "Profiles + profile settings",
+                        selected = settingsImportScope == ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS,
+                        onSelect = {
+                            settingsImportScope = ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS
+                        }
+                    )
+                    ImportScopeOptionRow(
+                        label = "Full bundle settings",
+                        selected = settingsImportScope == ProfileSettingsImportScope.FULL_BUNDLE,
+                        onSelect = { settingsImportScope = ProfileSettingsImportScope.FULL_BUNDLE }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Switch(
+                            checked = strictSettingsRestore,
+                            onCheckedChange = { strictSettingsRestore = it },
+                            enabled = !isImporting
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Strict restore (fail on section errors)")
+                    }
                 }
             }
         },
@@ -191,6 +233,22 @@ fun ProfileImportDialog(
             }
         }
     )
+}
+
+@Composable
+private fun ImportScopeOptionRow(
+    label: String,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label)
+    }
 }
 
 private suspend fun readJsonFromUri(context: Context, uri: Uri): Result<String> {

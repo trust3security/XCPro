@@ -13,6 +13,56 @@ File:
 
 - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt`
 
+## SSOT Ownership Matrix (Authoritative)
+
+This matrix is the contract for profile-related state ownership.
+
+| Data | Authoritative Owner | Scoped By Profile ID | Bundle Section |
+|---|---|---|---|
+| Profile list, profile identity metadata, active profile id | `ProfileStorage` + `ProfileRepository` | n/a (list + active id) | Bundle document root (`profiles`, `activeProfileId`) |
+| Card templates/cards/positions/mode visibility | `CardPreferences` | Yes | `tier_a.card_preferences` |
+| Flight mgmt last mode | `FlightMgmtPreferencesRepository` | Yes | `tier_a.flight_mgmt_preferences` |
+| Look and feel + status bar/card style | `LookAndFeelPreferences` | Yes | `tier_a.look_and_feel_preferences` |
+| Theme id + custom colors | `ThemePreferencesRepository` | Yes | `tier_a.theme_preferences` |
+| Map widget offsets/sizes | `MapWidgetLayoutRepository` | Yes | `tier_a.map_widget_layout` |
+| Variometer offset/size | `VariometerWidgetRepository` | Yes | `tier_a.variometer_widget_layout` |
+| Glider model/config/polar inputs | `GliderRepository` | Yes | `tier_a.glider_config` |
+| Units | `UnitsRepository` | Yes | `tier_a.units_preferences` |
+| Levo vario preferences | `LevoVarioPreferencesRepository` | No (global) | `tier_a.levo_vario_preferences` |
+| Thermalling mode prefs | `ThermallingModePreferencesRepository` | No (global) | `tier_a.thermalling_mode_preferences` |
+| OGN traffic prefs | `OgnTrafficPreferencesRepository` | No (global) | `tier_a.ogn_traffic_preferences` |
+| OGN trail selection | `OgnTrailSelectionPreferencesRepository` | No (global) | `tier_a.ogn_trail_selection_preferences` |
+| ADS-B prefs | `AdsbTrafficPreferencesRepository` | No (global) | `tier_a.adsb_traffic_preferences` |
+| Weather overlay prefs | `WeatherOverlayPreferencesRepository` | No (global) | `tier_a.weather_overlay_preferences` |
+| Forecast prefs | `ForecastPreferencesRepository` | No (global) | `tier_a.forecast_preferences` |
+| Manual wind override | `WindOverrideRepository` | No (global) | `tier_a.wind_override_preferences` |
+
+## UserProfile Field Classification
+
+`UserProfile` is identity metadata for selection/import/export behavior.
+Runtime settings authority is in dedicated settings repositories listed above.
+
+Identity metadata fields:
+
+- `id`
+- `name`
+- `aircraftType`
+- `aircraftModel`
+- `description`
+- `createdAt`
+- `lastUsed` (selection metadata only)
+
+Non-authoritative compatibility fields (must not be treated as runtime SSOT):
+
+- `preferences`
+- `polar`
+- `isActive` (active profile authority is `active_profile_id` in `ProfileStorage`)
+
+Runtime edit policy:
+
+- Profile edit UI only mutates identity metadata.
+- Repository update path preserves compatibility fields (`preferences`, `polar`, `isActive`) and does not treat them as runtime settings authority.
+
 ## Why Settings Can Look "Lost"
 
 Many UI and map settings are namespaced by `profileId` using keys like
@@ -41,6 +91,30 @@ The old settings still exist but under the previous profile id.
 
 This reduces accidental profile-id churn during startup and keeps settings attached
 to a stable profile identity by default.
+
+## Import Scope and Strict Restore Policy
+
+Bundle import supports explicit scope:
+
+- `PROFILES_ONLY`: import profile identities only, skip settings restore.
+- `PROFILE_SCOPED_SETTINGS`: import profiles plus profile-scoped settings sections only.
+- `FULL_BUNDLE`: import profiles plus all bundle sections.
+
+Strict mode:
+
+- Optional strict restore fails bundle import result when any selected settings section fails to apply.
+- Non-strict restore keeps best-effort section apply behavior and reports failed section IDs.
+
+## Bundle and Schema Compatibility
+
+Supported import versions:
+
+- Bundle document: `1.x`, `2.x` (`1.x` accepted as compatibility migration input).
+- Legacy profile export: `1.x`.
+- Backup profile document: `1.x`.
+- Settings snapshot schema: `1.x`.
+
+Unsupported major versions are rejected with actionable errors.
 
 ## App Identity Note
 

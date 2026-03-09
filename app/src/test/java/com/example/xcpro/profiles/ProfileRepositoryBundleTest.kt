@@ -33,14 +33,19 @@ class ProfileRepositoryBundleTest {
         )
 
         val calls = mutableListOf<Call>()
+        val failSections = mutableSetOf<String>()
 
         override suspend fun apply(
             settingsSnapshot: ProfileSettingsSnapshot,
             importedProfileIdMap: Map<String, String>
         ): ProfileSettingsRestoreResult {
             calls += Call(settingsSnapshot, importedProfileIdMap)
+            val failed = settingsSnapshot.sections.keys
+                .filter { sectionId -> failSections.contains(sectionId) }
+                .associateWith { "forced failure" }
             return ProfileSettingsRestoreResult(
-                appliedSections = settingsSnapshot.sections.keys
+                appliedSections = settingsSnapshot.sections.keys - failed.keys,
+                failedSections = failed
             )
         }
     }
@@ -246,5 +251,112 @@ class ProfileRepositoryBundleTest {
         assertEquals(existing.id, replaced.id)
         assertEquals(AircraftType.GLIDER, replaced.aircraftType)
         assertEquals(existing.id, result.profileImportResult.importedProfileIdMap["incoming-replace"])
+    }
+
+    @Test
+    fun importBundle_profilesOnlyScope_skipsSettingsRestore() = runTest {
+        val harness = Harness(backgroundScope)
+        advanceUntilIdle()
+        val incoming = UserProfile(
+            id = "incoming-1",
+            name = "Scope Profiles Only",
+            aircraftType = AircraftType.GLIDER
+        )
+        val bundleJson = ProfileBundleCodec.serialize(
+            ProfileBundleDocument(
+                activeProfileId = incoming.id,
+                profiles = listOf(incoming),
+                settings = ProfileSettingsSnapshot(
+                    sections = mapOf(
+                        ProfileSettingsSectionIds.CARD_PREFERENCES to JsonPrimitive("settings")
+                    )
+                )
+            )
+        )
+
+        val result = harness.repository.importBundle(
+            ProfileBundleImportRequest(
+                json = bundleJson,
+                keepCurrentActive = false,
+                settingsImportScope = ProfileSettingsImportScope.PROFILES_ONLY
+            )
+        ).getOrThrow()
+
+        assertEquals(1, result.profileImportResult.importedCount)
+        assertTrue(harness.restoreApplier.calls.isEmpty())
+    }
+
+    @Test
+    fun importBundle_profileScopedScope_filtersOutGlobalSections() = runTest {
+        val harness = Harness(backgroundScope)
+        advanceUntilIdle()
+        val incoming = UserProfile(
+            id = "incoming-2",
+            name = "Scope Profile Settings",
+            aircraftType = AircraftType.GLIDER
+        )
+        val bundleJson = ProfileBundleCodec.serialize(
+            ProfileBundleDocument(
+                activeProfileId = incoming.id,
+                profiles = listOf(incoming),
+                settings = ProfileSettingsSnapshot(
+                    sections = mapOf(
+                        ProfileSettingsSectionIds.UNITS_PREFERENCES to JsonPrimitive("units"),
+                        ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES to JsonPrimitive("weather")
+                    )
+                )
+            )
+        )
+
+        harness.repository.importBundle(
+            ProfileBundleImportRequest(
+                json = bundleJson,
+                keepCurrentActive = false,
+                settingsImportScope = ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS
+            )
+        ).getOrThrow()
+
+        assertEquals(1, harness.restoreApplier.calls.size)
+        val restoredSections = harness.restoreApplier.calls.first().settingsSnapshot.sections.keys
+        assertTrue(restoredSections.contains(ProfileSettingsSectionIds.UNITS_PREFERENCES))
+        assertTrue(!restoredSections.contains(ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES))
+    }
+
+    @Test
+    fun importBundle_strictRestore_failsWhenAnySectionFails() = runTest {
+        val harness = Harness(backgroundScope)
+        advanceUntilIdle()
+        harness.restoreApplier.failSections += ProfileSettingsSectionIds.CARD_PREFERENCES
+        val incoming = UserProfile(
+            id = "incoming-3",
+            name = "Strict Restore",
+            aircraftType = AircraftType.GLIDER
+        )
+        val bundleJson = ProfileBundleCodec.serialize(
+            ProfileBundleDocument(
+                activeProfileId = incoming.id,
+                profiles = listOf(incoming),
+                settings = ProfileSettingsSnapshot(
+                    sections = mapOf(
+                        ProfileSettingsSectionIds.CARD_PREFERENCES to JsonPrimitive("settings")
+                    )
+                )
+            )
+        )
+
+        val result = harness.repository.importBundle(
+            ProfileBundleImportRequest(
+                json = bundleJson,
+                keepCurrentActive = false,
+                settingsImportScope = ProfileSettingsImportScope.FULL_BUNDLE,
+                strictSettingsRestore = true
+            )
+        )
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            (result.exceptionOrNull()?.message ?: "")
+                .contains(ProfileSettingsSectionIds.CARD_PREFERENCES)
+        )
     }
 }

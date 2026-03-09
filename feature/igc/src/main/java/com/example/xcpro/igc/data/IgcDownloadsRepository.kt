@@ -72,7 +72,8 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
             MediaStore.Downloads._ID,
             MediaStore.Downloads.DISPLAY_NAME,
             MediaStore.Downloads.SIZE,
-            MediaStore.Downloads.DATE_MODIFIED
+            MediaStore.Downloads.DATE_MODIFIED,
+            MediaStore.Downloads.IS_PENDING
         )
         val selection = "(" +
             "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? OR ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?" +
@@ -86,8 +87,10 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
             val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
             val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.SIZE)
             val modifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
+            val pendingColumn = cursor.getColumnIndex(MediaStore.Downloads.IS_PENDING)
 
             while (cursor.moveToNext()) {
+                if (pendingColumn >= 0 && cursor.getInt(pendingColumn) == 1) continue
                 val name = cursor.getString(nameColumn) ?: continue
                 val id = cursor.getLong(idColumn)
                 val size = cursor.getLong(sizeColumn).coerceAtLeast(0L)

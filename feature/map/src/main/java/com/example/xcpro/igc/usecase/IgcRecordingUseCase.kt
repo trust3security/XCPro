@@ -5,6 +5,8 @@ import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.igc.IgcRecordingActionSink
 import com.example.xcpro.igc.NoopIgcRecordingActionSink
+import com.example.xcpro.igc.data.IgcFlightLogRepository
+import com.example.xcpro.igc.data.NoopIgcFlightLogRepository
 import com.example.xcpro.igc.data.IgcSessionStateSnapshotStore
 import com.example.xcpro.igc.domain.IgcBRecordCadencePolicy
 import com.example.xcpro.igc.domain.IgcLiveSample
@@ -43,7 +45,9 @@ class IgcRecordingUseCase private constructor(
     private val bRecordCadencePolicy: IgcBRecordCadencePolicy,
     private val bRecordMapper: IgcSampleToBRecordMapper,
     private val formatter: IgcRecordFormatter,
-    private val recordingActionSink: IgcRecordingActionSink
+    private val recordingActionSink: IgcRecordingActionSink,
+    private val flightLogRepository: IgcFlightLogRepository,
+    private val recoveryBootstrapUseCase: IgcRecoveryBootstrapUseCase
 ) {
 
     @Inject
@@ -53,6 +57,8 @@ class IgcRecordingUseCase private constructor(
         clock: Clock,
         snapshotStore: IgcSessionStateSnapshotStore,
         recordingActionSink: IgcRecordingActionSink,
+        flightLogRepository: IgcFlightLogRepository,
+        recoveryBootstrapUseCase: IgcRecoveryBootstrapUseCase,
         @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
     ) : this(
         flightStateSource = flightStateSource,
@@ -64,7 +70,9 @@ class IgcRecordingUseCase private constructor(
         bRecordCadencePolicy = IgcBRecordCadencePolicy(),
         bRecordMapper = IgcSampleToBRecordMapper(),
         formatter = IgcRecordFormatter(),
-        recordingActionSink = recordingActionSink
+        recordingActionSink = recordingActionSink,
+        flightLogRepository = flightLogRepository,
+        recoveryBootstrapUseCase = recoveryBootstrapUseCase
     )
 
     constructor(
@@ -81,7 +89,12 @@ class IgcRecordingUseCase private constructor(
         snapshotStore = snapshotStore,
         defaultDispatcher = defaultDispatcher,
         config = config,
-        recordingActionSink = NoopIgcRecordingActionSink
+        bRecordCadencePolicy = IgcBRecordCadencePolicy(),
+        bRecordMapper = IgcSampleToBRecordMapper(),
+        formatter = IgcRecordFormatter(),
+        recordingActionSink = NoopIgcRecordingActionSink,
+        flightLogRepository = NoopIgcFlightLogRepository,
+        recoveryBootstrapUseCase = IgcRecoveryBootstrapUseCase(NoopIgcFlightLogRepository)
     )
 
     constructor(
@@ -102,7 +115,33 @@ class IgcRecordingUseCase private constructor(
         bRecordCadencePolicy = IgcBRecordCadencePolicy(),
         bRecordMapper = IgcSampleToBRecordMapper(),
         formatter = IgcRecordFormatter(),
-        recordingActionSink = recordingActionSink
+        recordingActionSink = recordingActionSink,
+        flightLogRepository = NoopIgcFlightLogRepository,
+        recoveryBootstrapUseCase = IgcRecoveryBootstrapUseCase(NoopIgcFlightLogRepository)
+    )
+
+    constructor(
+        flightStateSource: FlightStateSource,
+        flightDataRepository: FlightDataRepository,
+        clock: Clock,
+        snapshotStore: IgcSessionStateSnapshotStore,
+        defaultDispatcher: CoroutineDispatcher,
+        config: IgcSessionStateMachine.Config,
+        recordingActionSink: IgcRecordingActionSink,
+        flightLogRepository: IgcFlightLogRepository
+    ) : this(
+        flightStateSource = flightStateSource,
+        flightDataRepository = flightDataRepository,
+        clock = clock,
+        snapshotStore = snapshotStore,
+        defaultDispatcher = defaultDispatcher,
+        config = config,
+        bRecordCadencePolicy = IgcBRecordCadencePolicy(),
+        bRecordMapper = IgcSampleToBRecordMapper(),
+        formatter = IgcRecordFormatter(),
+        recordingActionSink = recordingActionSink,
+        flightLogRepository = flightLogRepository,
+        recoveryBootstrapUseCase = IgcRecoveryBootstrapUseCase(flightLogRepository)
     )
 
     private val scope = CoroutineScope(SupervisorJob() + defaultDispatcher)
@@ -158,6 +197,23 @@ class IgcRecordingUseCase private constructor(
                 config = config,
                 initialSessionId = snapshot.nextSessionId
             )
+        } else if (snapshot.state.phase == IgcSessionStateMachine.Phase.Recording ||
+            snapshot.state.phase == IgcSessionStateMachine.Phase.Finalizing
+        ) {
+            when (recoveryBootstrapUseCase.bootstrap(snapshot)) {
+                is IgcRecoveryBootstrapUseCase.BootstrapResult.Recovered,
+                is IgcRecoveryBootstrapUseCase.BootstrapResult.TerminalFailure -> {
+                    snapshotStore.clearSnapshot()
+                    IgcSessionStateMachine(
+                        config = config,
+                        initialSessionId = snapshot.nextSessionId
+                    )
+                }
+                is IgcRecoveryBootstrapUseCase.BootstrapResult.ResumeExisting,
+                is IgcRecoveryBootstrapUseCase.BootstrapResult.Unsupported -> {
+                    IgcSessionStateMachine.fromSnapshot(snapshot, config)
+                }
+            }
         } else {
             IgcSessionStateMachine.fromSnapshot(snapshot, config)
         }
@@ -177,11 +233,15 @@ class IgcRecordingUseCase private constructor(
     }
 
     fun onFinalizeSucceeded() {
+        val sessionId = activeFinalizingSessionIdOrNull()
         applyTransition(stateMachine.onFinalizeSucceeded())
+        sessionId?.let(::cleanupRecoveryArtifacts)
     }
 
     fun onFinalizeFailed(reason: String) {
+        val sessionId = activeFinalizingSessionIdOrNull()
         applyTransition(stateMachine.onFinalizeFailed(reason))
+        sessionId?.let(::cleanupRecoveryArtifacts)
     }
 
     fun snapshot(): IgcSessionStateMachine.Snapshot = stateMachine.snapshot()
@@ -246,6 +306,19 @@ class IgcRecordingUseCase private constructor(
             IgcSessionStateMachine.Phase.Finalizing -> true
             else -> false
         }
+    }
+
+    private fun activeFinalizingSessionIdOrNull(): Long? {
+        val currentState = stateMachine.currentState()
+        return if (currentState.phase == IgcSessionStateMachine.Phase.Finalizing) {
+            currentState.activeSessionId
+        } else {
+            null
+        }
+    }
+
+    private fun cleanupRecoveryArtifacts(sessionId: Long) {
+        runCatching { flightLogRepository.deleteRecoveryArtifacts(sessionId) }
     }
 
     private fun CompleteFlightData.toIgcLiveSample(): IgcLiveSample {

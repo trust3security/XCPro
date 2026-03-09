@@ -219,4 +219,86 @@ class ProfileExportImportTest {
 
         assertNull(pointer)
     }
+
+    @Test
+    fun parseBundleV1_isAcceptedAsCompatibleMigrationInput() {
+        val json = """
+            {
+              "version": "1.5",
+              "activeProfileId": "pilot-legacy",
+              "profiles": [
+                {
+                  "id": "pilot-legacy",
+                  "name": "Legacy Bundle Pilot",
+                  "aircraftType": "GLIDER"
+                }
+              ],
+              "settings": {
+                "version": "1.0",
+                "sections": {
+                  "tier_a.units_preferences": "ok"
+                }
+              }
+            }
+        """.trimIndent()
+
+        val parsed = ProfileBundleCodec.parse(json).getOrThrow()
+        assertEquals(ProfileBundleSourceFormat.BUNDLE_V2, parsed.sourceFormat)
+        assertEquals("pilot-legacy", parsed.activeProfileId)
+        assertEquals(1, parsed.profiles.size)
+    }
+
+    @Test
+    fun parseBundleV3_isRejectedWithActionableError() {
+        val json = """
+            {
+              "version": "3.0",
+              "activeProfileId": "pilot-future",
+              "profiles": [
+                {
+                  "id": "pilot-future",
+                  "name": "Future Pilot",
+                  "aircraftType": "GLIDER"
+                }
+              ],
+              "settings": {
+                "version": "1.0",
+                "sections": {}
+              }
+            }
+        """.trimIndent()
+
+        val result = ProfileBundleCodec.parse(json)
+        assertTrue(result.isFailure)
+        val message = result.exceptionOrNull()?.message ?: ""
+        assertTrue(message.contains("Unsupported profile bundle version"))
+        assertTrue(message.contains("1.x, 2.x"))
+    }
+
+    @Test
+    fun parseUnsupportedSettingsSnapshotVersion_isRejected() {
+        val json = """
+            {
+              "version": "2.0",
+              "activeProfileId": "pilot-1",
+              "profiles": [
+                {
+                  "id": "pilot-1",
+                  "name": "Pilot",
+                  "aircraftType": "GLIDER"
+                }
+              ],
+              "settings": {
+                "version": "2.0",
+                "sections": {}
+              }
+            }
+        """.trimIndent()
+
+        val result = ProfileBundleCodec.parse(json)
+        assertTrue(result.isFailure)
+        val message = result.exceptionOrNull()?.message ?: ""
+        assertTrue(message.contains("Unsupported profile settings snapshot version"))
+        assertTrue(message.contains("1.x"))
+    }
 }

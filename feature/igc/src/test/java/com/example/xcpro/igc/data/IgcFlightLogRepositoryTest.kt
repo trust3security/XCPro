@@ -40,6 +40,7 @@ class IgcFlightLogRepositoryTest {
         val repository = MediaStoreIgcFlightLogRepository(
             appContext = context,
             downloadsRepository = downloads,
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
             namingPolicy = IgcFileNamingPolicy()
         )
 
@@ -65,6 +66,7 @@ class IgcFlightLogRepositoryTest {
         val repository = MediaStoreIgcFlightLogRepository(
             appContext = context,
             downloadsRepository = downloads,
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
             namingPolicy = IgcFileNamingPolicy()
         )
 

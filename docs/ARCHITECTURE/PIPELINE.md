@@ -149,19 +149,24 @@ Flight-state detector feed:
 - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
   - Subscribes to `FlightStateSource.flightState`.
   - Subscribes to `FlightDataRepository.flightData` (LIVE source only) and maps samples to B-record lines in `Recording`/`Finalizing` phases.
+  - On production startup, inspects persisted `Recording`/`Finalizing` snapshots and invokes `IgcRecoveryBootstrapUseCase` before restoring live session state; `Recording` snapshots resume existing live state, while `Finalizing` snapshots route terminal recovery through `IgcFlightLogRepository`.
+  - `IgcRecoveryBootstrapUseCase` publishes typed startup recovery diagnostics through `IgcRecoveryDiagnosticsReporter` so operators can distinguish `resume`, `recovered`, `unsupported`, repository-classified failure, and bootstrap exception paths.
   - Applies Phase 3 cadence/validity/dropout/fallback domain policies before emitting B lines.
   - Exposes `bRecordLines` stream (`SharedFlow<String>`) for diagnostics and regression validation.
   - Forwards each emitted B line to `IgcRecordingActionSink.onBRecord(sessionId, line, sampleWallTimeMs)` using active session state and sample UTC wall timestamp.
-  - Enforces `IgcSessionStateMachine` transition contract and persists restart snapshots.
+  - Enforces `IgcSessionStateMachine` transition contract, persists restart snapshots, and clears staged recovery artifacts after finalize success/failure terminal handling.
 - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
   - Concrete Phase 4 sink bound in DI from `feature:igc`.
   - On `StartRecording`, assembles deterministic preamble (`A/H/I`) and feature-gated task declaration snapshot output.
+  - Persists structured recovery metadata by `sessionId` through `IgcRecoveryMetadataStore` at recording start and updates first-fix wall time on the first valid forwarded B-record.
   - `HFDTEDATE` starts with deterministic fallback (`session-start UTC date`, `FF=01`) and is rewritten from first valid B-record sample UTC date when available.
   - Invalid/incomplete declaration snapshots are omitted and surfaced via deterministic diagnostic `L` line (`LXCPDECLARATION_OMITTED:<REASON>`).
   - Appends forwarded B lines and emits deduped `E` records (`FLT`/`TSK`/`SYS`) using monotonic dedupe/rate policy.
   - On `FinalizeRecording`, publishes a finalized `.IGC` file through `IgcFlightLogRepository`; publish success/failure is fed back into session transition completion.
 - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
   - Writes finalized sessions to app-private staging (`files/igc/staging/`) and atomically publishes to MediaStore Downloads (`Download/XCPro/IGC`).
+  - Uses `IgcRecoveryMetadataStore` as primary recovery identity authority; staged `.igc.tmp` header parsing is fallback/validation only for terminal recovery publish.
+  - Startup recovery now deletes orphan pending rows from structured metadata keys and classifies multiple finalized matches for one session as `DUPLICATE_SESSION_GUARD`.
   - Uses `IgcFileNamingPolicy` to enforce deterministic naming and per-day collision resolution.
 - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
   - Owns finalized IGC files index (`StateFlow<List<IgcLogEntry>>`) and list/query/copy-out file operations for UI.

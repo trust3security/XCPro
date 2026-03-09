@@ -3,10 +3,12 @@ package com.example.xcpro.di
 import com.example.xcpro.igc.IgcRecordingActionSink
 import com.example.xcpro.igc.data.IgcDownloadsRepository
 import com.example.xcpro.igc.data.IgcFlightLogRepository
+import com.example.xcpro.igc.data.IgcRecoveryMetadataStore
 import com.example.xcpro.igc.data.IgcRecordingRuntimeActionSink
 import com.example.xcpro.igc.data.IgcSessionStateSnapshotStore
 import com.example.xcpro.igc.data.MediaStoreIgcDownloadsRepository
 import com.example.xcpro.igc.data.MediaStoreIgcFlightLogRepository
+import com.example.xcpro.igc.data.SharedPrefsIgcRecoveryMetadataStore
 import com.example.xcpro.igc.data.SharedPrefsIgcSessionStateSnapshotStore
 import com.example.xcpro.igc.usecase.IgcReplayLauncher
 import com.example.xcpro.igc.usecase.IgcReplayUseCaseLauncher
@@ -24,6 +26,12 @@ abstract class IgcCoreBindingsModule {
     abstract fun bindIgcSessionStateSnapshotStore(
         impl: SharedPrefsIgcSessionStateSnapshotStore
     ): IgcSessionStateSnapshotStore
+
+    @Binds
+    @Singleton
+    abstract fun bindIgcRecoveryMetadataStore(
+        impl: SharedPrefsIgcRecoveryMetadataStore
+    ): IgcRecoveryMetadataStore
 
     @Binds
     @Singleton

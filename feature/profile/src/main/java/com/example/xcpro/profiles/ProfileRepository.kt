@@ -79,6 +79,16 @@ class ProfileRepository(
     private companion object {
         private const val TAG = "ProfileRepository"
         private const val DEFAULT_PROFILE_NAME = "Default"
+        private val PROFILE_SCOPED_SETTINGS_SECTION_IDS = setOf(
+            ProfileSettingsSectionIds.CARD_PREFERENCES,
+            ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES,
+            ProfileSettingsSectionIds.LOOK_AND_FEEL_PREFERENCES,
+            ProfileSettingsSectionIds.THEME_PREFERENCES,
+            ProfileSettingsSectionIds.MAP_WIDGET_LAYOUT,
+            ProfileSettingsSectionIds.VARIOMETER_WIDGET_LAYOUT,
+            ProfileSettingsSectionIds.GLIDER_CONFIG,
+            ProfileSettingsSectionIds.UNITS_PREFERENCES
+        )
     }
 
     private val mutationMutex = Mutex()
@@ -499,6 +509,16 @@ class ProfileRepository(
             )
             return Result.failure(error)
         }
+        val scopedSettingsSnapshot = when (request.settingsImportScope) {
+            ProfileSettingsImportScope.PROFILES_ONLY -> ProfileSettingsSnapshot.empty()
+            ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS ->
+                parsed.settingsSnapshot.copy(
+                    sections = parsed.settingsSnapshot.sections.filterKeys { sectionId ->
+                        PROFILE_SCOPED_SETTINGS_SECTION_IDS.contains(sectionId)
+                    }
+                )
+            ProfileSettingsImportScope.FULL_BUNDLE -> parsed.settingsSnapshot
+        }
         val importResult = importProfiles(
             ProfileImportRequest(
                 profiles = parsed.profiles,
@@ -510,14 +530,20 @@ class ProfileRepository(
         ).mapCatching { profileImportResult ->
             val settingsRestoreResult = if (
                 profileImportResult.importedCount > 0 &&
-                    parsed.settingsSnapshot.sections.isNotEmpty()
+                    scopedSettingsSnapshot.sections.isNotEmpty()
             ) {
                 profileSettingsRestoreApplier.apply(
-                    settingsSnapshot = parsed.settingsSnapshot,
+                    settingsSnapshot = scopedSettingsSnapshot,
                     importedProfileIdMap = profileImportResult.importedProfileIdMap
                 )
             } else {
                 ProfileSettingsRestoreResult()
+            }
+            if (request.strictSettingsRestore && settingsRestoreResult.failedSections.isNotEmpty()) {
+                val failedSections = settingsRestoreResult.failedSections.keys
+                    .sorted()
+                    .joinToString(", ")
+                error("Strict restore failed for sections: $failedSections")
             }
             ProfileBundleImportResult(
                 profileImportResult = profileImportResult,
@@ -551,15 +577,21 @@ class ProfileRepository(
             runCatching {
                 val normalizedName = request.name.trim()
                 require(normalizedName.isNotBlank()) { "Profile name cannot be blank" }
+                val previousProfiles = _profiles.value
+                val sourceProfile = request.copyFromProfile?.let { source ->
+                    previousProfiles.find { it.id == source.id }
+                        ?: error("Source profile for copy not found")
+                }
 
                 val newProfile = UserProfile(
                     name = normalizedName,
                     aircraftType = request.aircraftType,
-                    aircraftModel = request.aircraftModel,
-                    description = request.description
+                    aircraftModel = request.aircraftModel ?: sourceProfile?.aircraftModel,
+                    description = request.description ?: sourceProfile?.description,
+                    preferences = sourceProfile?.preferences ?: ProfilePreferences(),
+                    polar = sourceProfile?.polar ?: ProfilePolarSettings()
                 )
 
-                val previousProfiles = _profiles.value
                 val updatedProfiles = previousProfiles + newProfile
                 val currentActiveId = _activeProfile.value?.id
                 val onlyDefaultBeforeCreate = previousProfiles.size == 1 &&
@@ -738,14 +770,25 @@ class ProfileRepository(
         awaitBootstrapCompletion()
         return mutationMutex.withLock {
             runCatching {
+                val normalizedName = updatedProfile.name.trim()
+                require(normalizedName.isNotBlank()) { "Profile name cannot be blank" }
                 val currentProfiles = _profiles.value
                 val index = currentProfiles.indexOfFirst { it.id == updatedProfile.id }
                 if (index < 0) {
                     error("Profile not found")
                 }
-                val updatedProfiles = currentProfiles.toMutableList().apply { this[index] = updatedProfile }
+                val existing = currentProfiles[index]
+                val metadataOnlyUpdate = existing.copy(
+                    name = normalizedName,
+                    aircraftType = updatedProfile.aircraftType,
+                    aircraftModel = updatedProfile.aircraftModel,
+                    description = updatedProfile.description
+                )
+                val updatedProfiles = currentProfiles.toMutableList().apply {
+                    this[index] = metadataOnlyUpdate
+                }
                 val updatedActive = if (_activeProfile.value?.id == updatedProfile.id) {
-                    updatedProfile
+                    metadataOnlyUpdate
                 } else {
                     _activeProfile.value?.let { active -> updatedProfiles.find { it.id == active.id } }
                 }

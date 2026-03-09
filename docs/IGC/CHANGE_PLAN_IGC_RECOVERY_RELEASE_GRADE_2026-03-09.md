@@ -31,13 +31,62 @@ Read first:
 - Owner: XCPro Team
 - Date: 2026-03-09
 - Issue/PR: IGC-P6-RECOVERY-RELEASE-GRADE
-- Status: Draft
+- Status: In Progress
 - Depends on:
   - current recovery slice implementation in:
     - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
     - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
   - Phase 6 recovery contract in:
     - `docs/IGC/CHANGE_PLAN_IGC_FLIGHT_LOGGING_PRODUCTION_GRADE_PHASED_IP_2026-03-08.md`
+
+Execution update (2026-03-10 / Phase 5 complete):
+
+- Status:
+  - Phase 0 complete
+  - Phase 1 complete
+  - Phase 2 complete
+  - Phase 3 complete
+  - Phase 4 complete
+  - Phase 5 complete
+  - Phase 6 not started
+- Delivered in Phase 1:
+  - dedicated `IgcRecoveryBootstrapUseCase`
+  - explicit bootstrap outcome taxonomy
+  - `Recording -> ResumeExisting`
+  - `Finalizing -> repository terminal recovery`
+- Delivered in Phase 2:
+  - dedicated `IgcRecoveryMetadataStore`
+  - runtime sink persistence for start and first-valid-fix recovery metadata
+  - structured metadata used as primary recovery authority
+  - duplicate finalized-match guard promoted to typed failure
+  - pending-row cleanup no longer depends on staged-byte metadata parse success
+  - short-form `HFDTE` parsing fixed
+  - dead `fallbackSessionStartWallTimeMs` removed from the recovery contract
+- Delivered in Phase 3:
+  - explicit `K2..K6` repository kill-point tests
+  - explicit `K1` bootstrap/use-case restart failure tests
+  - explicit `K7` restart-after-snapshot-clear test
+  - named restart coverage proving `Recording -> ResumeExisting`
+- Delivered in Phase 4:
+  - real MediaStore restart instrumentation running on a connected Android device
+  - pending-row cleanup proven against actual resolver behavior
+  - rerun proof showing no duplicate finalized output after successful recovery
+- Delivered in Phase 5:
+  - feature-level `IgcRecoveryDiagnosticsReporter` contract
+  - app-level diagnostics capture with `Clock`-backed wall timestamps
+  - typed bootstrap outcome mapping for `resume`, `recovered`, `unsupported`,
+    repository failure, and exception-originated terminal failure
+  - Phase 6 evidence pack populated for kill matrix, gates, and manual signoff
+- Interim score after Phase 5:
+  - Architecture and ownership clarity: `24/25`
+  - Deterministic recovery semantics: `24/25`
+  - Automated kill-point and restart proof: `30/30`
+  - Operational diagnostics and docs/evidence: `20/20`
+  - Total: `98/100`
+- Remaining blockers to release-grade:
+  - branch diff hygiene is still open because unrelated Phase 6/profile WIP remains
+  - release-grade verification is green, but final signoff still requires
+    isolating unrelated dirty worktree state from the recovery slice
 
 Focused code pass update (2026-03-09):
 

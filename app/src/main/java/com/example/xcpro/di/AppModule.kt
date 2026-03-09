@@ -9,6 +9,8 @@ import com.example.xcpro.adsb.OpenSkyConfiguredCredentialsProvider
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.common.waypoint.HomeWaypointRepository
 import com.example.xcpro.core.time.Clock
+import com.example.xcpro.igc.AppIgcRecoveryDiagnosticsReporter
+import com.example.xcpro.igc.domain.IgcRecoveryDiagnosticsReporter
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -140,6 +142,12 @@ object AppModule {
     fun provideProfileDiagnosticsReporter(
         reporter: AppProfileDiagnosticsReporter
     ): ProfileDiagnosticsReporter = reporter
+
+    @Provides
+    @Singleton
+    fun provideIgcRecoveryDiagnosticsReporter(
+        reporter: AppIgcRecoveryDiagnosticsReporter
+    ): IgcRecoveryDiagnosticsReporter = reporter
 
     @Provides
     @Singleton

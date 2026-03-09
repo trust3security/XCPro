@@ -7,6 +7,7 @@ import com.example.xcpro.igc.domain.IgcHeaderContext
 import com.example.xcpro.igc.domain.IgcHeaderMapper
 import com.example.xcpro.igc.domain.IgcProfileMetadataSource
 import com.example.xcpro.igc.domain.IgcRecordFormatter
+import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecorderMetadataSource
 import com.example.xcpro.igc.domain.IgcTaskDeclarationMapper
 import com.example.xcpro.igc.domain.IgcTaskDeclarationStartSnapshot
@@ -30,6 +31,7 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
     private val profileMetadataSource: IgcProfileMetadataSource,
     private val recorderMetadataSource: IgcRecorderMetadataSource,
     private val taskDeclarationSource: IgcTaskDeclarationSource,
+    private val recoveryMetadataStore: IgcRecoveryMetadataStore,
     private val flightLogRepository: IgcFlightLogRepository
 ) : IgcRecordingActionSink {
 
@@ -65,6 +67,7 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
         profileMetadataSource = profileMetadataSource,
         recorderMetadataSource = recorderMetadataSource,
         taskDeclarationSource = taskDeclarationSource,
+        recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
         flightLogRepository = NoopIgcFlightLogRepository
     )
 
@@ -73,6 +76,7 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
     override fun onStartRecording(sessionId: Long, preFlightGroundWindowMs: Long) {
         val wallNow = clock.nowWallMs()
         val sessionStartUtcDate = Instant.ofEpochMilli(wallNow).atOffset(ZoneOffset.UTC).toLocalDate()
+        var recoveryMetadata: IgcRecoveryMetadata? = null
         synchronized(lock) {
             if (activeSessions.containsKey(sessionId)) return
             val recorderMetadata = recorderMetadataSource.recorderMetadata()
@@ -111,11 +115,15 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
             appendTaskDeclarationLocked(session, declarationSnapshot)
 
             activeSessions[sessionId] = session
+            recoveryMetadata = session.toRecoveryMetadata()
             emitEventLocked(
                 session = session,
                 code = "FLT",
                 payload = "START"
             )
+        }
+        recoveryMetadata?.let { metadata ->
+            recoveryMetadataStore.saveMetadata(sessionId = sessionId, metadata = metadata)
         }
     }
 
@@ -187,6 +195,7 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
     }
 
     override fun onBRecord(sessionId: Long, line: String, sampleWallTimeMs: Long) {
+        var recoveryMetadata: IgcRecoveryMetadata? = null
         synchronized(lock) {
             val session = activeSessions[sessionId] ?: return
             if (!line.startsWith("B")) return
@@ -195,8 +204,12 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
             resolveDteFromFirstBLocked(session, sampleWallTimeMs)
             if (session.firstValidBWallTimeMs == null) {
                 session.firstValidBWallTimeMs = sampleWallTimeMs
+                recoveryMetadata = session.toRecoveryMetadata()
             }
             session.lines += line
+        }
+        recoveryMetadata?.let { metadata ->
+            recoveryMetadataStore.saveMetadata(sessionId = sessionId, metadata = metadata)
         }
     }
 
@@ -349,6 +362,15 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
         val clamped = next.coerceAtMost(99)
         flightCounterByUtcDate[dateKey] = clamped
         return clamped
+    }
+
+    private fun SessionBuffer.toRecoveryMetadata(): IgcRecoveryMetadata {
+        return IgcRecoveryMetadata(
+            manufacturerId = MANUFACTURER_ID,
+            sessionSerial = sessionSerial,
+            sessionStartWallTimeMs = sessionStartWallTimeMs,
+            firstValidFixWallTimeMs = firstValidBWallTimeMs
+        )
     }
 
     companion object {

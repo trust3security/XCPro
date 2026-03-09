@@ -7,6 +7,92 @@ Execution log for:
 - `docs/PROFILES/AGENT_CONTRACT_PROFILE_PHASES_0_TO_6_2026-03-07.md`
 - `docs/PROFILES/CHANGE_PLAN_PROFILE_FULL_SETTINGS_BUNDLE_2026-03-07.md`
 
+---
+
+## 2026-03-09 Contract Run
+
+Contract:
+
+- `docs/PROFILES/AGENT_CONTRACT_PROFILE_IMPLEMENTATION_AUTOMATION_2026-03-09.md`
+
+### Phase 0 - Contract Freeze and SSOT Matrix
+
+Status:
+
+- Completed.
+
+Implemented:
+
+- Added explicit profile/settings SSOT ownership matrix and section mapping.
+- Added explicit `UserProfile` field classification (identity metadata vs non-authoritative compatibility fields).
+
+Files:
+
+- `docs/PROFILES/PROFILE_STORAGE_AND_SETTINGS_SCOPE.md`
+
+Mandatory basic build gate:
+
+- Pending run in this phase block (see verification update below).
+
+### 2026-03-09 Contract Continuation - Focused Gap Closure (Phases 1, 2, 4, 5)
+
+Status:
+
+- Completed (targeted production-gap closure pass).
+
+Implemented:
+
+- Phase 0 gate closure:
+  - Ran mandatory basic build gate and passed: `./gradlew assembleDebug`.
+- Phase 1 split-SSOT closure:
+  - Removed runtime-misleading metadata editing controls from profile settings screen.
+  - Profile settings UI now edits identity metadata only and shows runtime settings ownership notice.
+  - Repository update path now preserves non-authoritative compatibility fields (`preferences`, `polar`, `isActive`) and enforces metadata-only updates.
+- Phase 2 CRUD contract closure:
+  - Implemented `copyFromProfile` create-path behavior for compatibility metadata copy.
+  - Added update validation parity (`name` must be non-blank on update).
+  - Added default-profile delete guard in UI action surfaces (settings actions and profile list row action).
+- Phase 4 import hardening:
+  - Added import scope policy to bundle import request:
+    - `PROFILES_ONLY`
+    - `PROFILE_SCOPED_SETTINGS`
+    - `FULL_BUNDLE`
+  - Added strict restore option (`strictSettingsRestore`) to fail import when selected settings sections fail.
+  - Added import dialog controls for scope + strict mode and wired through ViewModel/repository.
+- Phase 5 schema/compatibility gates:
+  - Added explicit bundle/settings/legacy/backup version compatibility checks in codec parser.
+  - Added deterministic rejection messages for unsupported versions.
+  - Added compatibility acceptance path for bundle `1.x` migration input.
+
+Files:
+
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBundleCodec.kt`
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileExportImport.kt`
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileActionButtons.kt`
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSelectionScreen.kt`
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionList.kt`
+- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Profiles.kt`
+- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`
+- `app/src/test/java/com/example/xcpro/profiles/ProfileExportImportTest.kt`
+- `app/src/test/java/com/example/xcpro/profiles/ProfileActionButtonsTest.kt`
+- `docs/PROFILES/PROFILE_STORAGE_AND_SETTINGS_SCOPE.md`
+
+Verification:
+
+- `./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileRepositoryTest" --tests "com.example.xcpro.profiles.ProfileRepositoryBundleTest" --tests "com.example.xcpro.profiles.ProfileExportImportTest" --tests "com.example.xcpro.profiles.ProfileActionButtonsTest"`: PASS
+- `./gradlew assembleDebug`: PASS
+- `./gradlew enforceRules`: PASS
+- `./gradlew testDebugUnitTest`: PASS
+
+Residual risks:
+
+- `copyFromProfile` now has repository behavior and tests, but create-profile UI still does not expose source-profile selection; this remains a UX enhancement opportunity.
+- Strict restore currently reports failure after apply attempt; it is fail-on-error semantics, not transactional rollback.
+
 ## Phase 0 - Baseline and Contract Freeze
 
 ### Status

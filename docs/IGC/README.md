@@ -29,6 +29,12 @@ All IGC planning and contract docs should be discoverable from this file.
 - `docs/IGC/phase5_evidence/phase5_naming_collision_matrix.md`
 - `docs/IGC/phase5_evidence/phase5_share_uri_grants.md`
 
+## Recovery Phase 6 Evidence
+
+- `docs/IGC/phase6_evidence/phase6_recovery_kill_matrix.md`
+- `docs/IGC/phase6_evidence/phase6_gates.md`
+- `docs/IGC/phase6_evidence/phase6_manual_checklist.md`
+
 ## Phase 0 Closeout Checklist
 
 - [x] Freeze IGC record contract and XCPro field mapping.

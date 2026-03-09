@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.profiles.AircraftType
+import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.profiles.UserProfile
 
 @Composable
@@ -63,6 +64,7 @@ internal fun ProfileListSection(
                     profile = profile,
                     isActive = profile.id == activeProfileId,
                     onSelect = { onSelectProfile(profile) },
+                    canDelete = !ProfileIdResolver.isCanonicalDefault(profile.id),
                     onDelete = { onDeleteProfile(profile.id) },
                     onEdit = { onEditProfile(profile) }
                 )
@@ -95,6 +97,7 @@ private fun ProfileListItem(
     profile: UserProfile,
     isActive: Boolean,
     onSelect: () -> Unit,
+    canDelete: Boolean,
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
@@ -166,11 +169,15 @@ private fun ProfileListItem(
                             }
                         )
                     }
-                    IconButton(onClick = onDelete) {
+                    IconButton(onClick = onDelete, enabled = canDelete) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete Profile",
-                            tint = MaterialTheme.colorScheme.error
+                            tint = if (canDelete) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
                         )
                     }
                 }

@@ -6,6 +6,7 @@ import com.example.xcpro.igc.domain.IgcPressureAltitudeDatum
 import com.example.xcpro.igc.domain.IgcProfileMetadata
 import com.example.xcpro.igc.domain.IgcProfileMetadataSource
 import com.example.xcpro.igc.domain.IgcRecorderMetadata
+import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecorderMetadataSource
 import com.example.xcpro.igc.domain.IgcTaskDeclarationSnapshot
 import com.example.xcpro.igc.domain.IgcTaskDeclarationStartSnapshot
@@ -187,6 +188,51 @@ class IgcRecordingRuntimeActionSinkTest {
     }
 
     @Test
+    fun startRecording_persistsStructuredRecoveryMetadata_andFirstBUpdatesFirstFix() {
+        val clock = FakeClock(
+            monoMs = 0L,
+            wallMs = 1_741_483_200_000L
+        )
+        val metadataStore = InMemoryRecoveryMetadataStore()
+        val sink = IgcRecordingRuntimeActionSink(
+            clock = clock,
+            profileMetadataSource = FixedProfileSource(),
+            recorderMetadataSource = FixedRecorderSource(),
+            taskDeclarationSource = MutableTaskSource(IgcTaskDeclarationStartSnapshot.Absent),
+            recoveryMetadataStore = metadataStore,
+            flightLogRepository = NoopIgcFlightLogRepository
+        )
+
+        sink.onStartRecording(sessionId = 14L, preFlightGroundWindowMs = 20_000L)
+
+        assertEquals(
+            IgcRecoveryMetadata(
+                manufacturerId = "XCP",
+                sessionSerial = "000014",
+                sessionStartWallTimeMs = 1_741_483_200_000L,
+                firstValidFixWallTimeMs = null
+            ),
+            metadataStore.loadMetadata(14L)
+        )
+
+        sink.onBRecord(
+            sessionId = 14L,
+            line = "B0000023351900S15112540EA0085000900072080",
+            sampleWallTimeMs = 1_741_483_202_000L
+        )
+
+        assertEquals(
+            IgcRecoveryMetadata(
+                manufacturerId = "XCP",
+                sessionSerial = "000014",
+                sessionStartWallTimeMs = 1_741_483_200_000L,
+                firstValidFixWallTimeMs = 1_741_483_202_000L
+            ),
+            metadataStore.loadMetadata(14L)
+        )
+    }
+
+    @Test
     fun finalizeRecording_publishesSessionPayloadWithCompletionLine() {
         val clock = FakeClock(
             monoMs = 0L,
@@ -200,6 +246,7 @@ class IgcRecordingRuntimeActionSinkTest {
             taskDeclarationSource = MutableTaskSource(
                 IgcTaskDeclarationStartSnapshot.Available(sampleDeclaration("TASK-PUBLISH"))
             ),
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
             flightLogRepository = flightLogRepository
         )
 
@@ -257,6 +304,22 @@ class IgcRecordingRuntimeActionSinkTest {
                 ),
                 fileName = "2025-03-09-XCP-000005-01.IGC"
             )
+        }
+    }
+
+    private class InMemoryRecoveryMetadataStore : IgcRecoveryMetadataStore {
+        private val metadataBySessionId = mutableMapOf<Long, IgcRecoveryMetadata>()
+
+        override fun saveMetadata(sessionId: Long, metadata: IgcRecoveryMetadata) {
+            metadataBySessionId[sessionId] = metadata
+        }
+
+        override fun loadMetadata(sessionId: Long): IgcRecoveryMetadata? {
+            return metadataBySessionId[sessionId]
+        }
+
+        override fun clearMetadata(sessionId: Long) {
+            metadataBySessionId.remove(sessionId)
         }
     }
 

@@ -28,6 +28,7 @@ fun ProfileActionButtons(
     onExport: () -> Unit,
     onImport: () -> Unit,
     isLoading: Boolean,
+    canDelete: Boolean = true,
     onDelete: () -> Unit
 ) {
     Card(
@@ -71,7 +72,7 @@ fun ProfileActionButtons(
             Button(
                 onClick = onDelete,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading,
+                enabled = !isLoading && canDelete,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 )
@@ -79,6 +80,13 @@ fun ProfileActionButtons(
                 Icon(Icons.Default.Delete, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Delete Profile")
+            }
+            if (!canDelete) {
+                Text(
+                    text = "Default profile cannot be deleted.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

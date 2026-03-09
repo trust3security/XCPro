@@ -37,6 +37,7 @@ class ProfileActionButtonsTest {
                 onExport = {},
                 onImport = {},
                 isLoading = true,
+                canDelete = true,
                 onDelete = {}
             )
         }
@@ -57,6 +58,7 @@ class ProfileActionButtonsTest {
                 onExport = { exportCalls++ },
                 onImport = { importCalls++ },
                 isLoading = false,
+                canDelete = true,
                 onDelete = { deleteCalls++ }
             )
         }
@@ -68,6 +70,24 @@ class ProfileActionButtonsTest {
         assertEquals(1, exportCalls)
         assertEquals(1, importCalls)
         assertEquals(1, deleteCalls)
+    }
+
+    @Test
+    fun defaultProfile_disablesDeleteAction() {
+        var deleteCalls = 0
+
+        composeRule.setContent {
+            ProfileActionButtons(
+                onExport = {},
+                onImport = {},
+                isLoading = false,
+                canDelete = false,
+                onDelete = { deleteCalls++ }
+            )
+        }
+
+        composeRule.onNodeWithText("Delete Profile").assertIsDisplayed().assertIsNotEnabled()
+        assertEquals(0, deleteCalls)
     }
 }
 

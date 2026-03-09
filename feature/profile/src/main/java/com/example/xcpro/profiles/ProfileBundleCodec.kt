@@ -12,8 +12,17 @@ data class ProfileBundleImportRequest(
     val json: String,
     val keepCurrentActive: Boolean = true,
     val nameCollisionPolicy: ProfileNameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX,
-    val preserveImportedPreferences: Boolean = true
+    val preserveImportedPreferences: Boolean = true,
+    val settingsImportScope: ProfileSettingsImportScope =
+        ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS,
+    val strictSettingsRestore: Boolean = false
 )
+
+enum class ProfileSettingsImportScope {
+    PROFILES_ONLY,
+    PROFILE_SCOPED_SETTINGS,
+    FULL_BUNDLE
+}
 
 data class ProfileBundleImportResult(
     val profileImportResult: ProfileImportResult,
@@ -61,6 +70,7 @@ private data class LegacyProfileBackupDocument(
 )
 
 private const val BUNDLE_VERSION = "2.0"
+private val VERSION_REGEX = Regex("""^(\d+)(?:\.(\d+))?.*$""")
 
 object ProfileBundleCodec {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
@@ -94,6 +104,18 @@ object ProfileBundleCodec {
 
     private fun parseAsBackupDocument(root: JsonObject): ParsedProfileBundle? {
         if (!root.has("profile")) return null
+        val version = parseVersionOrDefault(
+            rawVersion = root.getStringOrNull("version"),
+            defaultMajor = 1,
+            defaultMinor = 0
+        )
+        require(version.major == 1) {
+            unsupportedVersionMessage(
+                format = "backup profile document",
+                rawVersion = root.getStringOrNull("version"),
+                supported = "1.x"
+            )
+        }
         val document = gson.fromJson(root, LegacyProfileBackupDocument::class.java)
         return ParsedProfileBundle(
             profiles = listOf(document.profile),
@@ -115,6 +137,18 @@ object ProfileBundleCodec {
             root.has("activeProfileId")
 
         return if (hasBundleMarkers) {
+            val version = parseVersionOrDefault(
+                rawVersion = root.getStringOrNull("version"),
+                defaultMajor = 2,
+                defaultMinor = 0
+            )
+            require(version.major == 1 || version.major == 2) {
+                unsupportedVersionMessage(
+                    format = "profile bundle",
+                    rawVersion = root.getStringOrNull("version"),
+                    supported = "1.x, 2.x"
+                )
+            }
             val activeProfileId = root.getStringOrNull("activeProfileId")
             val settingsElement = when {
                 root.has("settings") -> root.get("settings")
@@ -129,6 +163,18 @@ object ProfileBundleCodec {
                 sourceFormat = ProfileBundleSourceFormat.BUNDLE_V2
             )
         } else {
+            val legacyVersion = parseVersionOrDefault(
+                rawVersion = root.getStringOrNull("version"),
+                defaultMajor = 1,
+                defaultMinor = 0
+            )
+            require(legacyVersion.major == 1) {
+                unsupportedVersionMessage(
+                    format = "legacy profile export",
+                    rawVersion = root.getStringOrNull("version"),
+                    supported = "1.x"
+                )
+            }
             val legacy = gson.fromJson(root, LegacyProfileExportDocument::class.java)
             ParsedProfileBundle(
                 profiles = legacy.profiles,
@@ -148,9 +194,24 @@ object ProfileBundleCodec {
         if (element == null || element.isJsonNull || !element.isJsonObject) {
             return ProfileSettingsSnapshot.empty()
         }
+        val root = element.asJsonObject
+        val settingsVersion = parseVersionOrDefault(
+            rawVersion = root.getStringOrNull("version"),
+            defaultMajor = 1,
+            defaultMinor = 0
+        )
+        require(settingsVersion.major == 1) {
+            unsupportedVersionMessage(
+                format = "profile settings snapshot",
+                rawVersion = root.getStringOrNull("version"),
+                supported = "1.x"
+            )
+        }
         return runCatching {
             gson.fromJson(element, ProfileSettingsSnapshot::class.java)
-        }.getOrElse { ProfileSettingsSnapshot.empty() }
+        }.getOrElse { error ->
+            error("Invalid settings snapshot payload: ${error.message ?: "unknown"}")
+        }
     }
 
     private fun parseManagedIndexPointer(root: JsonObject): ManagedProfileIndexPointer? {
@@ -167,4 +228,31 @@ object ProfileBundleCodec {
         val text = runCatching { value.asString }.getOrNull()?.trim()
         return text?.takeIf { it.isNotEmpty() }
     }
+
+    private fun parseVersionOrDefault(
+        rawVersion: String?,
+        defaultMajor: Int,
+        defaultMinor: Int
+    ): ParsedVersion {
+        if (rawVersion.isNullOrBlank()) {
+            return ParsedVersion(defaultMajor, defaultMinor)
+        }
+        val match = VERSION_REGEX.matchEntire(rawVersion.trim())
+            ?: error("Unsupported version '$rawVersion'.")
+        val major = match.groupValues[1].toIntOrNull()
+            ?: error("Unsupported version '$rawVersion'.")
+        val minor = match.groupValues.getOrNull(2)?.takeIf { it.isNotBlank() }?.toIntOrNull() ?: 0
+        return ParsedVersion(major, minor)
+    }
+
+    private fun unsupportedVersionMessage(
+        format: String,
+        rawVersion: String?,
+        supported: String
+    ): String {
+        val actual = rawVersion?.ifBlank { "<blank>" } ?: "<missing>"
+        return "Unsupported $format version '$actual'. Supported versions: $supported."
+    }
+
+    private data class ParsedVersion(val major: Int, val minor: Int)
 }

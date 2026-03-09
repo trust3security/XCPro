@@ -123,19 +123,15 @@ fun ProfileSettingsScreen(
                     onProfileChanged = { editedProfile = it }
                 )
             }
-            
-            item {
-                ProfilePreferencesSettings(
-                    profile = editedProfile,
-                    onProfileChanged = { editedProfile = it }
-                )
-            }
+
+            item { ProfileRuntimeSettingsNotice() }
             
             item {
                 ProfileActionButtons(
                     onExport = { showExportDialog = true },
                     onImport = { showImportDialog = true },
                     isLoading = uiState.isLoading,
+                    canDelete = !ProfileIdResolver.isCanonicalDefault(profile.id),
                     onDelete = {
                         pendingMutation = PendingProfileMutation(PendingProfileMutationType.DELETE)
                         viewModel.deleteProfile(profile.id)
@@ -162,10 +158,12 @@ fun ProfileSettingsScreen(
     if (showImportDialog) {
         ProfileImportDialog(
             onDismiss = { showImportDialog = false },
-            onImportJson = { json, keepCurrentActive ->
+            onImportJson = { json, keepCurrentActive, settingsImportScope, strictSettingsRestore ->
                 viewModel.importBundle(
                     json = json,
-                    keepCurrentActive = keepCurrentActive
+                    keepCurrentActive = keepCurrentActive,
+                    settingsImportScope = settingsImportScope,
+                    strictSettingsRestore = strictSettingsRestore
                 )
                 showImportDialog = false
             },
@@ -239,127 +237,12 @@ fun ProfileBasicSettings(
                     )
                 }
             }
-
-            PolarSettingsSection(
-                profile = profile,
-                onProfileChanged = onProfileChanged
-            )
         }
     }
 }
 
 @Composable
-private fun PolarSettingsSection(
-    profile: UserProfile,
-    onProfileChanged: (UserProfile) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Polar (General)",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium
-        )
-        PolarInputRow(
-            speedLabel = "Low speed (km/h)",
-            speedValue = profile.polar.lowSpeedKmh,
-            sinkLabel = "Low sink (m/s)",
-            sinkValue = profile.polar.lowSinkMs,
-            onValueChanged = { speed, sink ->
-                onProfileChanged(
-                    profile.copy(
-                        polar = profile.polar.copy(
-                            lowSpeedKmh = speed,
-                            lowSinkMs = sink
-                        )
-                    )
-                )
-            }
-        )
-        PolarInputRow(
-            speedLabel = "Mid speed (km/h)",
-            speedValue = profile.polar.midSpeedKmh,
-            sinkLabel = "Mid sink (m/s)",
-            sinkValue = profile.polar.midSinkMs,
-            onValueChanged = { speed, sink ->
-                onProfileChanged(
-                    profile.copy(
-                        polar = profile.polar.copy(
-                            midSpeedKmh = speed,
-                            midSinkMs = sink
-                        )
-                    )
-                )
-            }
-        )
-        PolarInputRow(
-            speedLabel = "High speed (km/h)",
-            speedValue = profile.polar.highSpeedKmh,
-            sinkLabel = "High sink (m/s)",
-            sinkValue = profile.polar.highSinkMs,
-            onValueChanged = { speed, sink ->
-                onProfileChanged(
-                    profile.copy(
-                        polar = profile.polar.copy(
-                            highSpeedKmh = speed,
-                            highSinkMs = sink
-                        )
-                    )
-                )
-            }
-        )
-    }
-}
-
-@Composable
-private fun PolarInputRow(
-    speedLabel: String,
-    speedValue: Double,
-    sinkLabel: String,
-    sinkValue: Double,
-    onValueChanged: (Double, Double) -> Unit
-) {
-    var speedText by remember(speedValue) { mutableStateOf(speedValue.toString()) }
-    var sinkText by remember(sinkValue) { mutableStateOf(sinkValue.toString()) }
-
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = speedText,
-            onValueChange = { input ->
-                speedText = input
-                input.toDoubleOrNull()?.let { parsedSpeed ->
-                    onValueChanged(parsedSpeed, sinkValueFromText(sinkText, sinkValue))
-                }
-            },
-            label = { Text(speedLabel) },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = sinkText,
-            onValueChange = { input ->
-                sinkText = input
-                input.toDoubleOrNull()?.let { parsedSink ->
-                    onValueChanged(speedValueFromText(speedText, speedValue), parsedSink)
-                }
-            },
-            label = { Text(sinkLabel) },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-        )
-    }
-}
-
-private fun speedValueFromText(text: String, fallback: Double): Double =
-    text.toDoubleOrNull() ?: fallback
-
-private fun sinkValueFromText(text: String, fallback: Double): Double =
-    text.toDoubleOrNull() ?: fallback
-
-@Composable
-fun ProfilePreferencesSettings(
-    profile: UserProfile,
-    onProfileChanged: (UserProfile) -> Unit
-) {
+private fun ProfileRuntimeSettingsNotice() {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -368,95 +251,19 @@ fun ProfilePreferencesSettings(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Preferences",
+                text = "Runtime Settings",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-            
-            // Unit System
-            Column {
-                Text(
-                    text = "Unit System",
-                    style = MaterialTheme.typography.labelLarge
-                )
-                UnitSystem.values().forEach { unitSystem ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        RadioButton(
-                            selected = profile.preferences.units == unitSystem,
-                            onClick = {
-                                onProfileChanged(
-                                    profile.copy(
-                                        preferences = profile.preferences.copy(units = unitSystem)
-                                    )
-                                )
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(unitSystem.displayName)
-                    }
-                }
-            }
-            
-            // Auto Switch Modes
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Auto Switch Flight Modes",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "Automatically switch card layouts based on flight conditions",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = profile.preferences.autoSwitchModes,
-                    onCheckedChange = {
-                        onProfileChanged(
-                            profile.copy(
-                                preferences = profile.preferences.copy(autoSwitchModes = it)
-                            )
-                        )
-                    }
-                )
-            }
-            
-            // Card Animations
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Card Animations",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "Enable smooth animations for card transitions",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = profile.preferences.cardAnimations,
-                    onCheckedChange = {
-                        onProfileChanged(
-                            profile.copy(
-                                preferences = profile.preferences.copy(cardAnimations = it)
-                            )
-                        )
-                    }
-                )
-            }
+            Text(
+                text = "Profile metadata only: name, aircraft, and description are edited here.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Units, glider polar/config, cards, map widget positions, look and feel, and traffic/weather settings are managed in their own settings screens and restored via profile bundle import/export.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
