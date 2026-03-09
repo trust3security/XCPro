@@ -11,12 +11,16 @@ All IGC planning and contract docs should be discoverable from this file.
 - [IGC format research and XCPro data mapping](./IGC_FILE_FORMAT_RESEARCH_AND_DATA_MAPPING_2026-03-08.md)
 - [IGC file structure field reference](./IGC_FILE_STRUCTURE_FIELD_REFERENCE_2026-03-08.md)
 - [IGC production-grade phased implementation plan](./CHANGE_PLAN_IGC_FLIGHT_LOGGING_PRODUCTION_GRADE_PHASED_IP_2026-03-08.md)
+- [IGC recovery release-grade phased plan](./CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md)
+- [IGC recovery focused code pass review](./REVIEW_IGC_RECOVERY_FOCUSED_CODE_PASS_2026-03-09.md)
+- [IGC recovery automation agent contract](./AGENT_AUTOMATION_CONTRACT_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md)
+- [IGC recovery execution log](./EXECUTION_LOG_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md)
 
 ## Canonical Fixture
 
 - `docs/IGC/example.igc` is the canonical real-world sample fixture provided for production-shape validation.
 - Test runtime fixture copy for automated parser/regression tests:
-  - `feature/map/src/test/resources/replay/example-production.igc`
+  - `feature/igc/src/test/resources/replay/example-production.igc`
 
 ## Phase 5 Evidence Templates
 
@@ -47,3 +51,5 @@ All IGC planning and contract docs should be discoverable from this file.
 
 - User-visible IGC archive target remains `Downloads/XCPro/IGC/`.
 - In-progress writer staging remains app-private (`files/igc/staging/`).
+- Recovery review and release-grade hardening documents in this directory are
+  recovery-slice only; retention and privacy remain separate workstreams.
