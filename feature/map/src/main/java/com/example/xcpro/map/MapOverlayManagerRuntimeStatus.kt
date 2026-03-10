@@ -10,7 +10,7 @@ internal fun buildMapOverlayManagerStatus(
     ognTargetEnabled: Boolean,
     ognTargetResolved: Boolean,
     latestAdsbTargetsCount: Int,
-    runtimeCounters: MapOverlayManagerRuntime.RuntimeCounters,
+    runtimeCounters: MapOverlayRuntimeCounters,
     taskWaypointCount: Int,
     forecastWeatherStatus: MapOverlayForecastWeatherStatus
 ): String {

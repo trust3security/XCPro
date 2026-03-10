@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.util.Log
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
@@ -15,10 +14,7 @@ import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.weather.rain.WeatherRainFrameSelection
 import com.example.xcpro.weather.rain.WeatherRadarStatusCode
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 
@@ -66,13 +62,10 @@ open class MapOverlayManagerRuntime(
     private val nowMonoMs: () -> Long = TimeBridge::nowMonoMs
 ) {
     companion object {
-        private const val TAG = "MapOverlayManager"
         private const val OWN_ALTITUDE_RENDER_RESOLUTION_SCALE = 10.0
     }
 
     private var aatPreviewForwardCount = 0L
-    private var mapInteractionActive: Boolean = false
-    private var pendingInteractionDeactivateJob: Job? = null
     private val trafficRuntimeState = MapOverlayRuntimeStateAdapter(mapState)
 
     private val baseOpsDelegate = MapOverlayManagerRuntimeBaseOpsDelegate(
@@ -86,12 +79,30 @@ open class MapOverlayManagerRuntime(
         airspaceUseCase = airspaceUseCase,
         waypointFilesUseCase = waypointFilesUseCase
     )
+    private val mapLifecycleDelegate = MapOverlayRuntimeMapLifecycleDelegate(
+        context = context,
+        mapState = mapState,
+        baseOpsDelegate = baseOpsDelegate,
+        taskRenderSyncCoordinator = taskRenderSyncCoordinator,
+        initializeTrafficOverlaysFn = { map ->
+            ognDelegate.initializeTrafficOverlays(map)
+            trafficDelegate.initializeAdsbTrafficOverlay(map)
+        },
+        forecastOnMapStyleChanged = { map -> forecastWeatherDelegate.onMapStyleChanged(map) },
+        forecastOnInitialize = { map -> forecastWeatherDelegate.onInitialize(map) },
+        bringTrafficOverlaysToFront = { trafficDelegate.bringTrafficOverlaysToFront() },
+        snailTrailManager = snailTrailManager
+    )
     private lateinit var trafficDelegate: MapOverlayManagerRuntimeTrafficDelegate
     private val forecastWeatherDelegate = MapOverlayManagerRuntimeForecastWeatherDelegate(
         mapState = mapState,
         bringTrafficOverlaysToFront = { trafficDelegate.bringTrafficOverlaysToFront() },
         onSatelliteContrastIconsChanged = ::onSatelliteContrastIconsChanged,
         nowMonoMs = nowMonoMs
+    )
+    private val interactionDelegate = MapOverlayRuntimeInteractionDelegate(
+        coroutineScope = coroutineScope,
+        applyMapInteractionState = ::applyMapInteractionState
     )
     private val ognDelegate = MapOverlayManagerRuntimeOgnDelegate(
         runtimeState = trafficRuntimeState,
@@ -106,13 +117,22 @@ open class MapOverlayManagerRuntime(
         normalizeOwnshipAltitudeForRender = ::normalizeOwnshipAltitudeForRender,
         nowMonoMs = nowMonoMs
     )
+    private val statusCoordinator = MapOverlayRuntimeStatusCoordinator(
+        mapState = mapState,
+        showDistanceCircles = { mapStateReader.showDistanceCircles.value },
+        taskWaypointCount = taskWaypointCountProvider,
+        ognStatusSnapshot = { ognDelegate.statusSnapshot() },
+        latestAdsbTargetsCount = { trafficDelegate.latestAdsbTargetsCount() },
+        runtimeCounters = { runtimeCounters() },
+        forecastWeatherStatus = { forecastWeatherDelegate.statusSnapshot() }
+    )
 
     init {
         trafficDelegate = MapOverlayManagerRuntimeTrafficDelegate(
             runtimeState = trafficRuntimeState,
             coroutineScope = coroutineScope,
             adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,
-            interactionActiveProvider = { mapInteractionActive },
+            interactionActiveProvider = { interactionDelegate.isMapInteractionActive },
             bringOgnOverlaysToFront = { ognDelegate.bringOverlaysToFront() },
             nowMonoMs = nowMonoMs
         )
@@ -123,122 +143,29 @@ open class MapOverlayManagerRuntime(
     val skySightSatelliteRuntimeErrorMessage: StateFlow<String?> =
         forecastWeatherDelegate.skySightSatelliteRuntimeErrorMessage
 
-    fun toggleDistanceCircles() {
-        baseOpsDelegate.toggleDistanceCircles()
-    }
+    fun toggleDistanceCircles() = mapLifecycleDelegate.toggleDistanceCircles()
+    fun refreshAirspace(map: MapLibreMap?) = mapLifecycleDelegate.refreshAirspace(map)
+    fun refreshWaypoints(map: MapLibreMap?) = mapLifecycleDelegate.refreshWaypoints(map)
+    fun plotSavedTask(map: MapLibreMap?) = mapLifecycleDelegate.plotSavedTask(map)
+    fun clearTaskOverlays(map: MapLibreMap?) = mapLifecycleDelegate.clearTaskOverlays(map)
 
-    fun refreshAirspace(map: MapLibreMap?) {
-        baseOpsDelegate.refreshAirspace(map)
-    }
-
-    fun refreshWaypoints(map: MapLibreMap?) {
-        baseOpsDelegate.refreshWaypoints(map)
-    }
-
-    fun plotSavedTask(map: MapLibreMap?) {
-        baseOpsDelegate.plotSavedTask(map)
-    }
-
-    fun clearTaskOverlays(map: MapLibreMap?) {
-        baseOpsDelegate.clearTaskOverlays(map)
-    }
-
-    fun onMapStyleChanged(map: MapLibreMap?) {
-        try {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Map style changed, reloading overlays")
-            }
-            refreshAirspace(map)
-            refreshWaypoints(map)
-            taskRenderSyncCoordinator.onMapStyleChanged(map)
-            if (mapState.blueLocationOverlay == null && map != null) {
-                Log.d(TAG, "Blue location overlay missing after style change; creating now")
-                mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
-            }
-            mapState.blueLocationOverlay?.initialize()
-            mapState.blueLocationOverlay?.let {
-                Log.d(TAG, "Blue location overlay initialized via style change")
-            }
-            if (map != null) {
-                initializeTrafficOverlays(map)
-                forecastWeatherDelegate.onMapStyleChanged(map)
-            }
-            snailTrailManager.onMapStyleChanged(map)
-            trafficDelegate.bringTrafficOverlaysToFront()
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "All overlays reloaded for new style")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error handling map style change: ${e.message}", e)
-        }
-    }
-
-    fun initializeOverlays(map: MapLibreMap?) {
-        try {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Initializing map overlays")
-            }
-            refreshAirspace(map)
-            refreshWaypoints(map)
-            taskRenderSyncCoordinator.onOverlayRefresh(map)
-            if (map != null) {
-                initializeTrafficOverlays(map)
-                forecastWeatherDelegate.onInitialize(map)
-            }
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Map overlays initialized successfully")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error initializing overlays: ${e.message}", e)
-        }
-    }
-
-    fun initializeTrafficOverlays(map: MapLibreMap?) {
-        ognDelegate.initializeTrafficOverlays(map)
-        trafficDelegate.initializeAdsbTrafficOverlay(map)
-    }
+    fun onMapStyleChanged(map: MapLibreMap?) = mapLifecycleDelegate.onMapStyleChanged(map)
+    fun initializeOverlays(map: MapLibreMap?) = mapLifecycleDelegate.initializeOverlays(map)
+    fun initializeTrafficOverlays(map: MapLibreMap?) = mapLifecycleDelegate.initializeTrafficOverlays(map)
 
     fun setMapInteractionActive(active: Boolean) {
-        if (active) {
-            pendingInteractionDeactivateJob?.cancel()
-            pendingInteractionDeactivateJob = null
-            applyMapInteractionState(true)
-            return
-        }
-        val deactivateDelayMs = resolveMapInteractionDeactivateDelayMs(
-            interactionWasActive = mapInteractionActive,
-            requestedActive = false
-        )
-        if (deactivateDelayMs <= 0L) {
-            pendingInteractionDeactivateJob?.cancel()
-            pendingInteractionDeactivateJob = null
-            applyMapInteractionState(false)
-            return
-        }
-        if (pendingInteractionDeactivateJob != null) return
-        pendingInteractionDeactivateJob = coroutineScope.launch {
-            delay(deactivateDelayMs)
-            pendingInteractionDeactivateJob = null
-            applyMapInteractionState(false)
-        }
+        interactionDelegate.setMapInteractionActive(active)
     }
 
-    fun requestTaskRenderSync() {
-        taskRenderSyncCoordinator.onTaskMutation()
-    }
-
+    fun requestTaskRenderSync() = taskRenderSyncCoordinator.onTaskMutation()
     fun previewAatTargetPoint(index: Int, lat: Double, lon: Double) {
         aatPreviewForwardCount += 1
-        taskRenderSyncCoordinator.previewAatTargetPoint(
-            waypointIndex = index,
-            latitude = lat,
-            longitude = lon
-        )
+        taskRenderSyncCoordinator.previewAatTargetPoint(index, lat, lon)
     }
 
-    fun runtimeCounters(): RuntimeCounters {
+    internal fun runtimeCounters(): MapOverlayRuntimeCounters {
         val counters = trafficDelegate.runtimeCounters()
-        return RuntimeCounters(
+        return MapOverlayRuntimeCounters(
             overlayFrontOrderApplyCount = counters.overlayFrontOrderApplyCount,
             overlayFrontOrderSkippedCount = counters.overlayFrontOrderSkippedCount,
             aatPreviewForwardCount = aatPreviewForwardCount,
@@ -252,18 +179,12 @@ open class MapOverlayManagerRuntime(
         )
     }
 
-    fun onTaskStateChanged(signature: TaskRenderSyncCoordinator.TaskStateSignature) {
+    fun onTaskStateChanged(signature: TaskRenderSyncCoordinator.TaskStateSignature) =
         taskRenderSyncCoordinator.onTaskStateChanged(signature)
-    }
-
-    fun setOgnDisplayUpdateMode(mode: OgnDisplayUpdateMode) {
-        ognDelegate.setDisplayUpdateMode(mode)
-    }
+    fun setOgnDisplayUpdateMode(mode: OgnDisplayUpdateMode) = ognDelegate.setDisplayUpdateMode(mode)
 
     fun onMapDetached() {
-        pendingInteractionDeactivateJob?.cancel()
-        pendingInteractionDeactivateJob = null
-        applyMapInteractionState(false)
+        interactionDelegate.onMapDetached()
         trafficDelegate.onMapDetached()
         baseOpsDelegate.onMapDetached()
         ognDelegate.onMapDetached()
@@ -276,52 +197,44 @@ open class MapOverlayManagerRuntime(
         altitudeUnit: AltitudeUnit,
         unitsPreferences: UnitsPreferences = UnitsPreferences(),
         forceImmediate: Boolean = false
-    ) {
-        ognDelegate.updateTrafficTargets(
-            targets = targets,
-            ownshipAltitudeMeters = ownshipAltitudeMeters,
-            altitudeUnit = altitudeUnit,
-            unitsPreferences = unitsPreferences,
-            forceImmediate = forceImmediate
-        )
-    }
+    ) = ognDelegate.updateTrafficTargets(
+        targets = targets,
+        ownshipAltitudeMeters = ownshipAltitudeMeters,
+        altitudeUnit = altitudeUnit,
+        unitsPreferences = unitsPreferences,
+        forceImmediate = forceImmediate
+    )
 
-    fun updateOgnThermalHotspots(hotspots: List<OgnThermalHotspot>, forceImmediate: Boolean = false) {
+    fun updateOgnThermalHotspots(hotspots: List<OgnThermalHotspot>, forceImmediate: Boolean = false) =
         ognDelegate.updateThermalHotspots(hotspots, forceImmediate)
-    }
 
-    fun updateOgnGliderTrailSegments(segments: List<OgnGliderTrailSegment>, forceImmediate: Boolean = false) {
+    fun updateOgnGliderTrailSegments(segments: List<OgnGliderTrailSegment>, forceImmediate: Boolean = false) =
         ognDelegate.updateGliderTrailSegments(segments, forceImmediate)
-    }
 
     fun updateOgnTargetVisuals(
         enabled: Boolean,
         resolvedTarget: OgnTrafficTarget?,
         ownshipLocation: MapLocationUiModel?,
         forceImmediate: Boolean = false
-    ) {
-        ognDelegate.updateTargetVisuals(
-            enabled = enabled,
-            resolvedTarget = resolvedTarget,
-            ownshipLocation = ownshipLocation?.run {
-                OverlayCoordinate(latitude = latitude, longitude = longitude)
-            },
-            forceImmediate = forceImmediate
-        )
-    }
+    ) = ognDelegate.updateTargetVisuals(
+        enabled = enabled,
+        resolvedTarget = resolvedTarget,
+        ownshipLocation = ownshipLocation?.run {
+            OverlayCoordinate(latitude = latitude, longitude = longitude)
+        },
+        forceImmediate = forceImmediate
+    )
 
     fun updateAdsbTrafficTargets(
         targets: List<AdsbTrafficUiModel>,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences
-    ) {
-        trafficDelegate.updateAdsbTrafficTargets(
-            targets = targets,
-            ownshipAltitudeMeters = ownshipAltitudeMeters,
-            unitsPreferences = unitsPreferences,
-            normalizeOwnshipAltitudeForRender = ::normalizeOwnshipAltitudeForRender
-        )
-    }
+    ) = trafficDelegate.updateAdsbTrafficTargets(
+        targets = targets,
+        ownshipAltitudeMeters = ownshipAltitudeMeters,
+        unitsPreferences = unitsPreferences,
+        normalizeOwnshipAltitudeForRender = ::normalizeOwnshipAltitudeForRender
+    )
 
     fun setForecastOverlay(
         enabled: Boolean,
@@ -333,23 +246,19 @@ open class MapOverlayManagerRuntime(
         opacity: Float,
         windOverlayScale: Float,
         windDisplayMode: ForecastWindDisplayMode
-    ) {
-        forecastWeatherDelegate.setForecastOverlay(
-            enabled = enabled,
-            primaryTileSpec = primaryTileSpec,
-            primaryLegendSpec = primaryLegendSpec,
-            windOverlayEnabled = windOverlayEnabled,
-            windTileSpec = windTileSpec,
-            windLegendSpec = windLegendSpec,
-            opacity = opacity,
-            windOverlayScale = windOverlayScale,
-            windDisplayMode = windDisplayMode
-        )
-    }
+    ) = forecastWeatherDelegate.setForecastOverlay(
+        enabled = enabled,
+        primaryTileSpec = primaryTileSpec,
+        primaryLegendSpec = primaryLegendSpec,
+        windOverlayEnabled = windOverlayEnabled,
+        windTileSpec = windTileSpec,
+        windLegendSpec = windLegendSpec,
+        opacity = opacity,
+        windOverlayScale = windOverlayScale,
+        windDisplayMode = windDisplayMode
+    )
 
-    fun clearForecastOverlay() {
-        forecastWeatherDelegate.clearForecastOverlay()
-    }
+    fun clearForecastOverlay() = forecastWeatherDelegate.clearForecastOverlay()
 
     fun setSkySightSatelliteOverlay(
         enabled: Boolean,
@@ -359,21 +268,17 @@ open class MapOverlayManagerRuntime(
         animate: Boolean,
         historyFrameCount: Int,
         referenceTimeUtcMs: Long?
-    ) {
-        forecastWeatherDelegate.setSkySightSatelliteOverlay(
-            enabled = enabled,
-            showSatelliteImagery = showSatelliteImagery,
-            showRadar = showRadar,
-            showLightning = showLightning,
-            animate = animate,
-            historyFrameCount = historyFrameCount,
-            referenceTimeUtcMs = referenceTimeUtcMs
-        )
-    }
+    ) = forecastWeatherDelegate.setSkySightSatelliteOverlay(
+        enabled = enabled,
+        showSatelliteImagery = showSatelliteImagery,
+        showRadar = showRadar,
+        showLightning = showLightning,
+        animate = animate,
+        historyFrameCount = historyFrameCount,
+        referenceTimeUtcMs = referenceTimeUtcMs
+    )
 
-    fun clearSkySightSatelliteOverlay() {
-        forecastWeatherDelegate.clearSkySightSatelliteOverlay()
-    }
+    fun clearSkySightSatelliteOverlay() = forecastWeatherDelegate.clearSkySightSatelliteOverlay()
 
     fun setWeatherRainOverlay(
         enabled: Boolean,
@@ -382,86 +287,41 @@ open class MapOverlayManagerRuntime(
         transitionDurationMs: Long,
         statusCode: WeatherRadarStatusCode,
         stale: Boolean
-    ) {
-        forecastWeatherDelegate.setWeatherRainOverlay(
-            enabled = enabled,
-            frameSelection = frameSelection,
-            opacity = opacity,
-            transitionDurationMs = transitionDurationMs,
-            statusCode = statusCode,
-            stale = stale
-        )
-    }
+    ) = forecastWeatherDelegate.setWeatherRainOverlay(
+        enabled = enabled,
+        frameSelection = frameSelection,
+        opacity = opacity,
+        transitionDurationMs = transitionDurationMs,
+        statusCode = statusCode,
+        stale = stale
+    )
 
-    fun clearWeatherRainOverlay() {
-        forecastWeatherDelegate.clearWeatherRainOverlay()
-    }
+    fun clearWeatherRainOverlay() = forecastWeatherDelegate.clearWeatherRainOverlay()
+    fun reapplyWeatherRainOverlay() = forecastWeatherDelegate.reapplyWeatherRainOverlay()
+    fun reapplySkySightSatelliteOverlay() = forecastWeatherDelegate.reapplySkySightSatelliteOverlay()
+    fun reapplyForecastOverlay() = forecastWeatherDelegate.reapplyForecastOverlay()
 
-    fun reapplyWeatherRainOverlay() {
-        forecastWeatherDelegate.reapplyWeatherRainOverlay()
-    }
-
-    fun reapplySkySightSatelliteOverlay() {
-        forecastWeatherDelegate.reapplySkySightSatelliteOverlay()
-    }
-
-    fun reapplyForecastOverlay() {
-        forecastWeatherDelegate.reapplyForecastOverlay()
-    }
-
-    fun setAdsbIconSizePx(iconSizePx: Int) {
-        trafficDelegate.setAdsbIconSizePx(iconSizePx)
-    }
-
-    fun setAdsbEmergencyFlashEnabled(enabled: Boolean) {
+    fun setAdsbIconSizePx(iconSizePx: Int) = trafficDelegate.setAdsbIconSizePx(iconSizePx)
+    fun setAdsbEmergencyFlashEnabled(enabled: Boolean) =
         trafficDelegate.setAdsbEmergencyFlashEnabled(enabled)
-    }
 
-    fun setAdsbDefaultMediumUnknownIconEnabled(enabled: Boolean) {
+    fun setAdsbDefaultMediumUnknownIconEnabled(enabled: Boolean) =
         trafficDelegate.setAdsbDefaultMediumUnknownIconEnabled(enabled)
-    }
 
-    fun setOgnIconSizePx(iconSizePx: Int) {
-        ognDelegate.setIconSizePx(iconSizePx)
-    }
+    fun setOgnIconSizePx(iconSizePx: Int) = ognDelegate.setIconSizePx(iconSizePx)
 
-    fun findAdsbTargetAt(tap: LatLng): Icao24? {
-        return trafficDelegate.findAdsbTargetAt(tap)
-    }
+    fun findAdsbTargetAt(tap: LatLng): Icao24? = trafficDelegate.findAdsbTargetAt(tap)
+    fun findOgnTargetAt(tap: LatLng): String? = ognDelegate.findTargetAt(tap)
+    fun findOgnThermalHotspotAt(tap: LatLng): String? =
+        ognDelegate.findThermalHotspotAt(tap)
 
-    fun findOgnTargetAt(tap: LatLng): String? {
-        return ognDelegate.findTargetAt(tap)
-    }
+    fun findForecastWindArrowSpeedAt(tap: LatLng): Double? =
+        forecastWeatherDelegate.findForecastWindArrowSpeedAt(tap)
 
-    fun findOgnThermalHotspotAt(tap: LatLng): String? {
-        return ognDelegate.findThermalHotspotAt(tap)
-    }
-
-    fun findForecastWindArrowSpeedAt(tap: LatLng): Double? {
-        return forecastWeatherDelegate.findForecastWindArrowSpeedAt(tap)
-    }
-
-    fun onZoomChanged(map: MapLibreMap?) {
-        baseOpsDelegate.onZoomChanged(map)
-    }
+    fun onZoomChanged(map: MapLibreMap?) = mapLifecycleDelegate.onZoomChanged(map)
 
     fun getOverlayStatus(): String {
-        val ognStatus = ognDelegate.statusSnapshot()
-        val runtimeCountersSnapshot = runtimeCounters()
-        return buildMapOverlayManagerStatus(
-            mapState = mapState,
-            showDistanceCircles = mapStateReader.showDistanceCircles.value,
-            ognDisplayUpdateMode = ognStatus.displayUpdateMode,
-            latestOgnTargetsCount = ognStatus.targetsCount,
-            latestOgnThermalHotspotsCount = ognStatus.thermalHotspotsCount,
-            latestOgnGliderTrailSegmentsCount = ognStatus.gliderTrailSegmentsCount,
-            ognTargetEnabled = ognStatus.targetEnabled,
-            ognTargetResolved = ognStatus.targetResolved,
-            latestAdsbTargetsCount = trafficDelegate.latestAdsbTargetsCount(),
-            runtimeCounters = runtimeCountersSnapshot,
-            taskWaypointCount = taskWaypointCountProvider(),
-            forecastWeatherStatus = forecastWeatherDelegate.statusSnapshot()
-        )
+        return statusCoordinator.getOverlayStatus()
     }
 
     private fun onSatelliteContrastIconsChanged(enabled: Boolean) {
@@ -475,75 +335,10 @@ open class MapOverlayManagerRuntime(
     }
 
     private fun applyMapInteractionState(active: Boolean) {
-        if (mapInteractionActive == active) return
-        mapInteractionActive = active
         forecastWeatherDelegate.setMapInteractionActive(active)
         ognDelegate.setMapInteractionActive(active)
         if (!active) {
             trafficDelegate.flushDeferredAdsbRenderIfNeeded()
         }
     }
-
-    data class RuntimeCounters(
-        val overlayFrontOrderApplyCount: Long,
-        val overlayFrontOrderSkippedCount: Long,
-        val aatPreviewForwardCount: Long,
-        val adsbIconUnknownRenderCount: Long,
-        val adsbIconLegacyUnknownRenderCount: Long,
-        val adsbIconResolveLatencySampleCount: Long,
-        val adsbIconResolveLatencyLastMs: Long?,
-        val adsbIconResolveLatencyMaxMs: Long?,
-        val adsbIconResolveLatencyAverageMs: Long?,
-        val adsbDefaultMediumUnknownIconEnabled: Boolean
-    )
-}
-
-private class MapOverlayRuntimeStateAdapter(
-    private val mapState: MapScreenState
-) : TrafficOverlayRuntimeState {
-    override val mapLibreMap: MapLibreMap?
-        get() = mapState.mapLibreMap
-
-    override val blueLocationLayerId: String
-        get() = BlueLocationOverlay.LAYER_ID
-
-    override fun bringBlueLocationOverlayToFront() {
-        mapState.blueLocationOverlay?.bringToFront()
-    }
-
-    override var ognTrafficOverlay: OgnTrafficOverlay?
-        get() = mapState.ognTrafficOverlay
-        set(value) {
-            mapState.ognTrafficOverlay = value
-        }
-
-    override var ognTargetRingOverlay: OgnTargetRingOverlay?
-        get() = mapState.ognTargetRingOverlay
-        set(value) {
-            mapState.ognTargetRingOverlay = value
-        }
-
-    override var ognTargetLineOverlay: OgnTargetLineOverlay?
-        get() = mapState.ognTargetLineOverlay
-        set(value) {
-            mapState.ognTargetLineOverlay = value
-        }
-
-    override var ognThermalOverlay: OgnThermalOverlay?
-        get() = mapState.ognThermalOverlay
-        set(value) {
-            mapState.ognThermalOverlay = value
-        }
-
-    override var ognGliderTrailOverlay: OgnGliderTrailOverlay?
-        get() = mapState.ognGliderTrailOverlay
-        set(value) {
-            mapState.ognGliderTrailOverlay = value
-        }
-
-    override var adsbTrafficOverlay: AdsbTrafficOverlay?
-        get() = mapState.adsbTrafficOverlay
-        set(value) {
-            mapState.adsbTrafficOverlay = value
-        }
 }
