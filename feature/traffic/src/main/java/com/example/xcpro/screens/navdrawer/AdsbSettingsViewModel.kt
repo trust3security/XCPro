@@ -7,7 +7,6 @@ import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_ABOVE_DEFAULT_METERS
 import com.example.xcpro.adsb.ADSB_VERTICAL_FILTER_BELOW_DEFAULT_METERS
 import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS
-import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT
 import com.example.xcpro.adsb.ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
 import com.example.xcpro.adsb.OpenSkyClientCredentials
 import com.example.xcpro.common.units.UnitsPreferences
@@ -75,12 +74,6 @@ class AdsbSettingsViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = false
-        )
-    val emergencyAudioCohortPercent: StateFlow<Int> = useCase.emergencyAudioCohortPercentFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT
         )
     val emergencyAudioRollbackLatched: StateFlow<Boolean> = useCase.emergencyAudioRollbackLatchedFlow
         .stateIn(
@@ -152,12 +145,6 @@ class AdsbSettingsViewModel @Inject constructor(
     fun setEmergencyAudioShadowMode(enabled: Boolean) {
         viewModelScope.launch {
             useCase.setEmergencyAudioShadowMode(enabled)
-        }
-    }
-
-    fun setEmergencyAudioCohortPercent(percent: Int) {
-        viewModelScope.launch {
-            useCase.setEmergencyAudioCohortPercent(percent)
         }
     }
 

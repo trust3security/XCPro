@@ -57,7 +57,7 @@ class ProfileSelectionContentRecoveryTest {
         }
 
         composeRule.onNodeWithText("Recover Default").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("Import Backup").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Import Aircraft Profile").assertIsDisplayed().performClick()
 
         assertEquals(1, recoverCalls)
         assertEquals(1, importCalls)
@@ -84,7 +84,7 @@ class ProfileSelectionContentRecoveryTest {
         }
 
         composeRule.onAllNodesWithText("Recover Default").assertCountEquals(0)
-        composeRule.onAllNodesWithText("Import Backup").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Import Aircraft Profile").assertCountEquals(0)
     }
 
     @Test
@@ -108,7 +108,7 @@ class ProfileSelectionContentRecoveryTest {
         }
 
         composeRule.onNodeWithText("Recover Default").assertIsNotEnabled()
-        composeRule.onNodeWithText("Import Backup").assertIsNotEnabled()
+        composeRule.onNodeWithText("Import Aircraft Profile").assertIsNotEnabled()
     }
 
     @Test

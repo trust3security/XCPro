@@ -15,37 +15,37 @@ internal class MapOverlayRuntimeStateAdapter(
         mapState.blueLocationOverlay?.bringToFront()
     }
 
-    override var ognTrafficOverlay: OgnTrafficOverlay?
+    override var ognTrafficOverlay: OgnTrafficOverlayHandle?
         get() = mapState.ognTrafficOverlay
         set(value) {
             mapState.ognTrafficOverlay = value
         }
 
-    override var ognTargetRingOverlay: OgnTargetRingOverlay?
+    override var ognTargetRingOverlay: OgnTargetRingOverlayHandle?
         get() = mapState.ognTargetRingOverlay
         set(value) {
             mapState.ognTargetRingOverlay = value
         }
 
-    override var ognTargetLineOverlay: OgnTargetLineOverlay?
+    override var ognTargetLineOverlay: OgnTargetLineOverlayHandle?
         get() = mapState.ognTargetLineOverlay
         set(value) {
             mapState.ognTargetLineOverlay = value
         }
 
-    override var ognThermalOverlay: OgnThermalOverlay?
+    override var ognThermalOverlay: OgnThermalOverlayHandle?
         get() = mapState.ognThermalOverlay
         set(value) {
             mapState.ognThermalOverlay = value
         }
 
-    override var ognGliderTrailOverlay: OgnGliderTrailOverlay?
+    override var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle?
         get() = mapState.ognGliderTrailOverlay
         set(value) {
             mapState.ognGliderTrailOverlay = value
         }
 
-    override var adsbTrafficOverlay: AdsbTrafficOverlay?
+    override var adsbTrafficOverlay: AdsbTrafficOverlayHandle?
         get() = mapState.adsbTrafficOverlay
         set(value) {
             mapState.adsbTrafficOverlay = value

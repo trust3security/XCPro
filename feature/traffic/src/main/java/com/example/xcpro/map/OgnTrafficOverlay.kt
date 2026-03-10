@@ -20,11 +20,11 @@ class OgnTrafficOverlay(
     private val map: MapLibreMap,
     initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX,
     initialUseSatelliteContrastIcons: Boolean = false
-) {
+) : OgnTrafficOverlayHandle {
     private var currentIconSizePx: Int = clampOgnIconSizePx(initialIconSizePx)
     private var useSatelliteContrastIcons: Boolean = initialUseSatelliteContrastIcons
 
-    fun initialize() {
+    override fun initialize() {
         val style = map.style ?: return
         try {
             if (style.getSource(SOURCE_ID) == null) {
@@ -65,22 +65,22 @@ class OgnTrafficOverlay(
         }
     }
 
-    fun setIconSizePx(iconSizePx: Int) {
+    override fun setIconSizePx(iconSizePx: Int) {
         val clamped = clampOgnIconSizePx(iconSizePx)
         if (clamped == currentIconSizePx) return
         currentIconSizePx = clamped
         applyIconSizeToStyle()
     }
 
-    fun setUseSatelliteContrastIcons(enabled: Boolean) {
+    override fun setUseSatelliteContrastIcons(enabled: Boolean) {
         useSatelliteContrastIcons = enabled
     }
 
-    fun render(
+    override fun render(
         targets: List<OgnTrafficTarget>,
         ownshipAltitudeMeters: Double?,
-        altitudeUnit: AltitudeUnit = AltitudeUnit.METERS,
-        unitsPreferences: UnitsPreferences = UnitsPreferences()
+        altitudeUnit: AltitudeUnit,
+        unitsPreferences: UnitsPreferences
     ) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
@@ -102,7 +102,7 @@ class OgnTrafficOverlay(
         )
     }
 
-    fun findTargetAt(tap: LatLng): String? {
+    override fun findTargetAt(tap: LatLng): String? {
         val style = map.style ?: return null
         if (style.getSource(SOURCE_ID) == null) return null
         val screenPoint = map.projection.toScreenLocation(tap)
@@ -135,7 +135,7 @@ class OgnTrafficOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray<Feature>()))
     }
 
-    fun cleanup() {
+    override fun cleanup() {
         val style = map.style ?: return
         try {
             style.removeLayer(BOTTOM_LABEL_LAYER_ID)
@@ -154,7 +154,7 @@ class OgnTrafficOverlay(
         }
     }
 
-    fun bringToFront() {
+    override fun bringToFront() {
         val style = map.style ?: return
         if (style.getLayer(ICON_LAYER_ID) == null ||
             style.getLayer(TOP_LABEL_LAYER_ID) == null ||

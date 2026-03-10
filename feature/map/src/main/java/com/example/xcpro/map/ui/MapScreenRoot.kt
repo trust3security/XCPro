@@ -105,6 +105,9 @@ internal fun MapScreenRoot(
         airspaceUseCase = runtimeDependencies.airspaceUseCase,
         waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase
     )
+    LaunchedEffect(profileLookAndFeelBinding.activeProfileId, managers.locationManager) {
+        managers.locationManager.setActiveProfileId(profileLookAndFeelBinding.activeProfileId)
+    }
     LaunchedEffect(openGeneralSettingsOnStart) {
         if (openGeneralSettingsOnStart) {
             managers.modalManager.showGeneralSettingsModal()

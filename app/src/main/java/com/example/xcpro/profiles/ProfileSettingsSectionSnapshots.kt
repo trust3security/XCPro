@@ -82,6 +82,64 @@ internal data class UnitsSectionSnapshot(
     val unitsByProfile: Map<String, UnitsPreferences> = emptyMap()
 )
 
+internal data class MapStyleSectionSnapshot(
+    val stylesByProfile: Map<String, String> = emptyMap()
+)
+
+internal data class SnailTrailSectionSnapshot(
+    val settingsByProfile: Map<String, SnailTrailProfileSectionSnapshot> = emptyMap()
+)
+
+internal data class SnailTrailProfileSectionSnapshot(
+    val length: String,
+    val type: String,
+    val windDriftEnabled: Boolean,
+    val scalingEnabled: Boolean
+)
+
+internal data class OrientationSectionSnapshot(
+    val settingsByProfile: Map<String, OrientationProfileSectionSnapshot> = emptyMap()
+)
+
+internal data class OrientationProfileSectionSnapshot(
+    val cruiseMode: String,
+    val circlingMode: String,
+    val minSpeedThresholdMs: Double,
+    val gliderScreenPercent: Int,
+    val mapShiftBiasMode: String,
+    val mapShiftBiasStrength: Double,
+    val autoResetEnabled: Boolean? = null,
+    val autoResetTimeoutSeconds: Int? = null,
+    val bearingSmoothingEnabled: Boolean? = null
+)
+
+internal data class QnhSectionSnapshot(
+    val valuesByProfile: Map<String, QnhProfileSectionSnapshot> = emptyMap()
+)
+
+internal data class QnhProfileSectionSnapshot(
+    val manualQnhHpa: Double? = null,
+    val capturedAtWallMs: Long? = null,
+    val source: String? = null
+)
+
+internal data class WaypointFileSectionSnapshot(
+    val selectionsByProfile: Map<String, WaypointFileProfileSectionSnapshot> = emptyMap()
+)
+
+internal data class WaypointFileProfileSectionSnapshot(
+    val selectedFiles: Map<String, Boolean> = emptyMap()
+)
+
+internal data class AirspaceSectionSnapshot(
+    val settingsByProfile: Map<String, AirspaceProfileSectionSnapshot> = emptyMap()
+)
+
+internal data class AirspaceProfileSectionSnapshot(
+    val selectedFiles: Map<String, Boolean> = emptyMap(),
+    val selectedClasses: Map<String, Boolean> = emptyMap()
+)
+
 internal data class VariometerLayoutProfileSnapshot(
     val offset: OffsetSnapshot,
     val sizePx: Float,
@@ -159,14 +217,15 @@ internal data class AdsbTrafficSectionSnapshot(
     val verticalAboveMeters: Double,
     val verticalBelowMeters: Double,
     val emergencyFlashEnabled: Boolean,
+    val defaultMediumUnknownIconEnabled: Boolean? = null,
     val emergencyAudioEnabled: Boolean,
     val emergencyAudioCooldownMs: Long,
     val emergencyAudioMasterEnabled: Boolean,
     val emergencyAudioShadowMode: Boolean,
-    val emergencyAudioCohortPercent: Int,
-    val emergencyAudioCohortBucket: Int,
     val emergencyAudioRollbackLatched: Boolean,
-    val emergencyAudioRollbackReason: String?
+    val emergencyAudioRollbackReason: String?,
+    val defaultMediumUnknownIconRollbackLatched: Boolean? = null,
+    val defaultMediumUnknownIconRollbackReason: String? = null
 )
 
 internal data class WeatherOverlaySectionSnapshot(

@@ -19,10 +19,10 @@ import org.maplibre.geojson.Point
 
 class OgnGliderTrailOverlay(
     private val map: MapLibreMap
-) {
+) : OgnGliderTrailOverlayHandle {
     private var latestRenderedSegments: List<OgnGliderTrailSegment> = emptyList()
 
-    fun initialize() {
+    override fun initialize() {
         val style = map.style ?: return
         try {
             if (style.getSource(SOURCE_ID) == null) {
@@ -53,7 +53,7 @@ class OgnGliderTrailOverlay(
         }
     }
 
-    fun render(segments: List<OgnGliderTrailSegment>) {
+    override fun render(segments: List<OgnGliderTrailSegment>) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
 
@@ -103,7 +103,7 @@ class OgnGliderTrailOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
     }
 
-    fun cleanup() {
+    override fun cleanup() {
         val style = map.style ?: return
         latestRenderedSegments = emptyList()
         try {

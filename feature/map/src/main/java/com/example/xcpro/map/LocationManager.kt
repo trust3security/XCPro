@@ -46,11 +46,6 @@ class LocationManager(
     private val userCameraControllerProvider: MapCameraControllerProvider =
         MapLibreCameraControllerProvider(mapState)
     private val mapViewSizeProvider: MapViewSizeProvider = MapScreenSizeProvider(mapState)
-    private val iconRotationConfig = if (featureFlags.allowHeadingWhileStationary) {
-        IconRotationConfig.fromMinSpeedThreshold(0.0)
-    } else {
-        IconRotationConfig.fromPreferences(orientationPreferences)
-    }
     private val sensorsController = LocationSensorsController(
         context = context,
         scope = coroutineScope,
@@ -72,7 +67,13 @@ class LocationManager(
         maxBearingStepDegProvider = { featureFlags.maxTrackBearingStepDeg },
         headingSmoothingEnabledProvider = { featureFlags.useIconHeadingSmoothing },
         offsetHistorySize = featureFlags.locationOffsetHistorySize,
-        iconRotationConfig = iconRotationConfig
+        iconRotationConfigProvider = {
+            if (featureFlags.allowHeadingWhileStationary) {
+                IconRotationConfig.fromMinSpeedThreshold(0.0)
+            } else {
+                IconRotationConfig.fromPreferences(orientationPreferences)
+            }
+        }
     )
     private val mapShiftBiasCalculator = MapShiftBiasCalculator()
     private val mapShiftBiasResetter: MapShiftBiasResetter =
@@ -185,6 +186,10 @@ class LocationManager(
     }
 
     fun isGpsEnabled(): Boolean = sensorsUseCase.isGpsEnabled()
+
+    fun setActiveProfileId(profileId: String) {
+        orientationPreferences.setActiveProfileId(profileId)
+    }
 
 
     fun updateLocationFromGPS(

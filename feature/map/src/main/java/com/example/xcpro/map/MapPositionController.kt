@@ -15,7 +15,9 @@ class MapPositionController(
     private val maxBearingStepDegProvider: () -> Double = { 5.0 },
     private val headingSmoothingEnabledProvider: () -> Boolean = { true },
     offsetHistorySize: Int = 30,
-    iconRotationConfig: IconRotationConfig = IconRotationConfig.defaults()
+    private val iconRotationConfigProvider: () -> IconRotationConfig = {
+        IconRotationConfig.defaults()
+    }
 ) {
     companion object {
         private const val TAG = "MapPositionController"
@@ -27,7 +29,8 @@ class MapPositionController(
     private var lastPadding: IntArray? = null
     private var lastOverlayLogMs: Long = 0L
     private val verboseLogging = com.example.xcpro.map.BuildConfig.DEBUG
-    private val iconHeadingSmoother = IconHeadingSmoother(iconRotationConfig)
+    private var iconRotationConfig: IconRotationConfig = iconRotationConfigProvider()
+    private var iconHeadingSmoother = IconHeadingSmoother(iconRotationConfig)
 
     /**
      * Represents map padding to smooth (top, bottom) in pixels.
@@ -54,6 +57,7 @@ class MapPositionController(
         nowMs: Long,
         frameId: Long? = null
     ) {
+        refreshIconRotationConfigIfNeeded()
         val clampedBearing = clampBearingStep(trackBearing)
         val iconHeading = if (headingSmoothingEnabledProvider()) {
             iconHeadingSmoother.update(
@@ -152,6 +156,15 @@ class MapPositionController(
 
     private fun formatCoord(value: Double?): String =
         value?.let { "%.6f".format(it) } ?: "null"
+
+    private fun refreshIconRotationConfigIfNeeded() {
+        val latestConfig = iconRotationConfigProvider()
+        if (latestConfig == iconRotationConfig) {
+            return
+        }
+        iconRotationConfig = latestConfig
+        iconHeadingSmoother = IconHeadingSmoother(latestConfig)
+    }
 
     fun clampBearingStep(newBearing: Double): Double {
         val maxStep = maxBearingStepDegProvider()

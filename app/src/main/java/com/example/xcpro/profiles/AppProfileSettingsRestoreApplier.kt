@@ -14,12 +14,16 @@ import com.example.xcpro.forecast.ForecastParameterId
 import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.MapOrientationSettings
+import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutRepository
+import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
+import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import com.example.xcpro.ui.theme.ThemePreferencesRepository
@@ -46,6 +50,7 @@ class AppProfileSettingsRestoreApplier @Inject constructor(
     private val variometerWidgetRepository: VariometerWidgetRepository,
     private val gliderRepository: GliderRepository,
     private val unitsRepository: UnitsRepository,
+    private val orientationSettingsRepository: MapOrientationSettingsRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
     private val thermallingModePreferencesRepository: ThermallingModePreferencesRepository,
     private val ognTrafficPreferencesRepository: OgnTrafficPreferencesRepository,
@@ -108,6 +113,10 @@ class AppProfileSettingsRestoreApplier @Inject constructor(
         applySection(ProfileSettingsSectionIds.UNITS_PREFERENCES) { payload ->
             val section = gson.fromJson(payload, UnitsSectionSnapshot::class.java)
             applyUnitsSection(section, importedProfileIdMap)
+        }
+        applySection(ProfileSettingsSectionIds.ORIENTATION_PREFERENCES) { payload ->
+            val section = gson.fromJson(payload, OrientationSectionSnapshot::class.java)
+            applyOrientationSection(section, importedProfileIdMap)
         }
         applySection(ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES) { payload ->
             val section = gson.fromJson(payload, LevoVarioSectionSnapshot::class.java)
@@ -413,6 +422,25 @@ class AppProfileSettingsRestoreApplier @Inject constructor(
         }
     }
 
+    private fun applyOrientationSection(
+        section: OrientationSectionSnapshot,
+        importedProfileIdMap: Map<String, String>
+    ) {
+        section.settingsByProfile.forEach { (sourceProfileId, snapshot) ->
+            val profileId = resolveImportedProfileId(sourceProfileId, importedProfileIdMap)
+                ?: return@forEach
+            val settings = MapOrientationSettings(
+                cruiseMode = parseOrientationMode(snapshot.cruiseMode),
+                circlingMode = parseOrientationMode(snapshot.circlingMode),
+                minSpeedThresholdMs = snapshot.minSpeedThresholdMs,
+                gliderScreenPercent = snapshot.gliderScreenPercent,
+                mapShiftBiasMode = parseMapShiftBiasMode(snapshot.mapShiftBiasMode),
+                mapShiftBiasStrength = snapshot.mapShiftBiasStrength
+            )
+            orientationSettingsRepository.writeProfileSettings(profileId, settings)
+        }
+    }
+
     private suspend fun applyLevoVarioPreferences(section: LevoVarioSectionSnapshot) {
         levoVarioPreferencesRepository.setMacCready(section.macCready)
         levoVarioPreferencesRepository.setMacCreadyRisk(section.macCreadyRisk)
@@ -494,12 +522,6 @@ class AppProfileSettingsRestoreApplier @Inject constructor(
             section.emergencyAudioMasterEnabled
         )
         adsbTrafficPreferencesRepository.setEmergencyAudioShadowMode(section.emergencyAudioShadowMode)
-        adsbTrafficPreferencesRepository.setEmergencyAudioCohortPercent(
-            section.emergencyAudioCohortPercent
-        )
-        adsbTrafficPreferencesRepository.setEmergencyAudioCohortBucket(
-            section.emergencyAudioCohortBucket
-        )
         if (section.emergencyAudioRollbackLatched) {
             adsbTrafficPreferencesRepository.latchEmergencyAudioRollback(
                 section.emergencyAudioRollbackReason ?: "imported"
@@ -576,4 +598,12 @@ class AppProfileSettingsRestoreApplier @Inject constructor(
         return importedProfileIdMap[sourceProfileId]
             ?: importedProfileIdMap[canonicalSource]
     }
+
+    private fun parseOrientationMode(raw: String): MapOrientationMode =
+        runCatching { MapOrientationMode.valueOf(raw) }
+            .getOrDefault(MapOrientationMode.TRACK_UP)
+
+    private fun parseMapShiftBiasMode(raw: String): MapShiftBiasMode =
+        runCatching { MapShiftBiasMode.valueOf(raw) }
+            .getOrDefault(MapShiftBiasMode.NONE)
 }

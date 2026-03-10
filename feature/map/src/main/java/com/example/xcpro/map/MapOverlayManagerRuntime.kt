@@ -29,36 +29,18 @@ open class MapOverlayManagerRuntime(
     private val coroutineScope: CoroutineScope,
     private val airspaceUseCase: AirspaceUseCase,
     private val waypointFilesUseCase: WaypointFilesUseCase,
-    private val ognTrafficOverlayFactory: (MapLibreMap, Int, Boolean) -> OgnTrafficOverlay =
-        { map, iconSizePx, useSatelliteContrastIcons ->
-            OgnTrafficOverlay(
-                context = context,
-                map = map,
-                initialIconSizePx = iconSizePx,
-                initialUseSatelliteContrastIcons = useSatelliteContrastIcons
-            )
-        },
-    private val ognTargetRingOverlayFactory: (MapLibreMap, Int) -> OgnTargetRingOverlay =
-        { map, iconSizePx ->
-            OgnTargetRingOverlay(
-                map = map,
-                initialIconSizePx = iconSizePx
-            )
-        },
-    private val ognTargetLineOverlayFactory: (MapLibreMap) -> OgnTargetLineOverlay =
-        { map -> OgnTargetLineOverlay(map = map) },
-    private val ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay =
-        { map -> OgnThermalOverlay(map = map) },
-    private val ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay =
-        { map -> OgnGliderTrailOverlay(map = map) },
-    private val adsbTrafficOverlayFactory: (MapLibreMap, Int) -> AdsbTrafficOverlay =
-        { map, iconSizePx ->
-            AdsbTrafficOverlay(
-                context = context,
-                map = map,
-                initialIconSizePx = iconSizePx
-            )
-        },
+    private val ognTrafficOverlayFactory: OgnTrafficOverlayFactory =
+        TrafficOverlayFactories::createOgnTrafficOverlay,
+    private val ognTargetRingOverlayFactory: OgnTargetRingOverlayFactory =
+        TrafficOverlayFactories::createOgnTargetRingOverlay,
+    private val ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory =
+        TrafficOverlayFactories::createOgnTargetLineOverlay,
+    private val ognThermalOverlayFactory: OgnThermalOverlayFactory =
+        TrafficOverlayFactories::createOgnThermalOverlay,
+    private val ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory =
+        TrafficOverlayFactories::createOgnGliderTrailOverlay,
+    private val adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory =
+        TrafficOverlayFactories::createAdsbTrafficOverlay,
     private val nowMonoMs: () -> Long = TimeBridge::nowMonoMs
 ) {
     companion object {
@@ -107,6 +89,7 @@ open class MapOverlayManagerRuntime(
     private val ognDelegate = MapOverlayManagerRuntimeOgnDelegate(
         runtimeState = trafficRuntimeState,
         coroutineScope = coroutineScope,
+        context = context,
         ognTrafficOverlayFactory = ognTrafficOverlayFactory,
         ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
         ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
@@ -132,6 +115,7 @@ open class MapOverlayManagerRuntime(
             runtimeState = trafficRuntimeState,
             coroutineScope = coroutineScope,
             adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,
+            context = context,
             interactionActiveProvider = { interactionDelegate.isMapInteractionActive },
             bringOgnOverlaysToFront = { ognDelegate.bringOverlaysToFront() },
             nowMonoMs = nowMonoMs

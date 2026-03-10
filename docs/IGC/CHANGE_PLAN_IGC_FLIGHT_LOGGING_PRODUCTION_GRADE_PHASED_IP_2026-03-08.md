@@ -294,6 +294,7 @@ Phase 2 transition contract (spec-locked):
 | `Armed` | `isFlying=true` | takeoff debounce met | `Recording` | allocate sessionId, emit `StartRecording` |
 | `Recording` | sustained `onGround=true` | landing debounce met | `Finalizing` | hold post-flight window accumulation |
 | `Finalizing` | finalize condition met | baseline window met OR timeout met | `Finalizing` | emit `FinalizeRecording` exactly once |
+| `Finalizing` | grounded/fix confidence lost | `!isFlying && (!onGround OR !hasFix)` | `Finalizing` | pause finalize timeout until grounded fix resumes |
 | `Finalizing` | finalize success | active session exists | `Completed` | emit `MarkCompleted`, clear active session |
 | `Finalizing` | finalize failure | active session exists | `Failed` | emit `MarkFailed`, clear active session |
 | `Finalizing` | `isFlying=true` | touch-and-go | `Recording` | cancel pending finalize, keep same sessionId |
@@ -1378,7 +1379,7 @@ Gate:
 - No-Go conditions:
   - [ ] Any `B` emitted while no active session exists.
   - [ ] `B` emitted with backward/duplicate HHMMSS without explicit rollover policy.
-  - [ ] GNSS dropout handling differs across `Recording` vs `Finalizing`.
+  - [ ] GNSS dropout handling can still finalize a session while landing confidence is uncertain.
   - [ ] Unbounded cadence or scheduler drift without explicit clamp.
 
 ### A.2 Phase 3 risks and mitigations

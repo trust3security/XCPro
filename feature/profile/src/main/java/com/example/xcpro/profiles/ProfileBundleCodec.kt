@@ -90,7 +90,7 @@ object ProfileBundleCodec {
             val bundleHint = indexPointer.bundleFileName ?: "*_bundle_latest.json"
             error(
                 "Index-only backup file selected. Choose $bundleHint, " +
-                    "a profile file (profile_*.json), or a full bundle export."
+                    "an aircraft profile JSON file, or a full bundle export."
             )
         }
         error("Unsupported profile import format.")

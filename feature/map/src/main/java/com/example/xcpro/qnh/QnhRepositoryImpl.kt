@@ -12,7 +12,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Singleton
@@ -41,13 +40,13 @@ class QnhRepositoryImpl @Inject constructor(
 
     init {
         scope.launch {
-            val storedQnh = qnhPreferencesRepository.qnhHpaFlow.first()
-            if (storedQnh != null) {
-                applyManualInternal(storedQnh, persist = false)
-            } else {
-                resetToStandardInternal(persist = false)
-            }
+            hydrateFromActiveProfile()
         }
+    }
+
+    override suspend fun setActiveProfileId(profileId: String) {
+        qnhPreferencesRepository.setActiveProfileId(profileId)
+        hydrateFromActiveProfile()
     }
 
     override suspend fun setManualQnh(hpa: Double) {
@@ -68,15 +67,48 @@ class QnhRepositoryImpl @Inject constructor(
         _calibrationState.value = state
     }
 
+    private suspend fun hydrateFromActiveProfile() {
+        val storedManual = qnhPreferencesRepository.readActiveManualQnh()
+        if (storedManual != null) {
+            applyManualInternal(
+                hpa = storedManual.qnhHpa,
+                persist = false,
+                capturedAtWallMs = storedManual.capturedAtWallMs,
+                source = parseSource(storedManual.source)
+            )
+        } else {
+            resetToStandardInternal(persist = false)
+        }
+    }
+
     private suspend fun applyManualInternal(hpa: Double, persist: Boolean) {
+        applyManualInternal(
+            hpa = hpa,
+            persist = persist,
+            capturedAtWallMs = null,
+            source = QnhSource.MANUAL
+        )
+    }
+
+    private suspend fun applyManualInternal(
+        hpa: Double,
+        persist: Boolean,
+        capturedAtWallMs: Long?,
+        source: QnhSource
+    ) {
+        val capturedAt = capturedAtWallMs ?: clock.nowWallMs()
         sensorFusionRepository.setManualQnh(hpa)
         if (persist) {
-            qnhPreferencesRepository.setManualQnh(hpa)
+            qnhPreferencesRepository.setManualQnh(
+                qnhHpa = hpa,
+                capturedAtWallMs = capturedAt,
+                source = source.name
+            )
         }
         _qnhState.value = QnhValue(
             hpa = hpa,
-            source = QnhSource.MANUAL,
-            calibratedAtMillis = clock.nowWallMs(),
+            source = source,
+            calibratedAtMillis = capturedAt,
             confidence = QnhConfidence.HIGH
         )
         _calibrationState.value = QnhCalibrationState.Idle
@@ -98,5 +130,11 @@ class QnhRepositoryImpl @Inject constructor(
 
     private companion object {
         private const val DEFAULT_QNH_HPA = 1013.25
+    }
+
+    private fun parseSource(raw: String?): QnhSource {
+        return runCatching {
+            raw?.let(QnhSource::valueOf)
+        }.getOrNull() ?: QnhSource.MANUAL
     }
 }

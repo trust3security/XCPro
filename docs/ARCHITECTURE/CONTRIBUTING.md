@@ -121,15 +121,11 @@ Fast local loop for feature/debug work:
 ```bat
 dev-fast.bat feature:map compile
 dev-fast.bat feature:map assemble
-dev-fast.bat feature:map test com.example.xcpro.ogn.OgnGliderTrailRepositoryTest
 dev-fast.bat app install
 ```
 
-For fast test loops on Windows, use `dev-fast.bat ... test ...` (no clean by default).
-Use `test-clean` only when you explicitly need a clean build tree:
-```bat
-dev-fast.bat feature:map test-clean com.example.xcpro.ogn.OgnGliderTrailRepositoryTest
-```
+`dev-fast.bat` is optimized for compile/install loops; run tests with
+`gradlew` directly (or with explicit arguments via `check-quick.bat`).
 
 Use `preflight.bat` before PR/release validation.
 For fast daily local verification, use `check-quick.bat`:
@@ -138,25 +134,27 @@ check-quick.bat
 check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
 ```
 For Windows test file-lock resilience (`output.bin`/`.lck`), use
-`test-safe.bat` for ad-hoc test runs:
+`gradlew` directly:
 ```bat
-test-safe.bat
-test-safe.bat :feature:map:testDebugUnitTest
-test-safe.bat testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest"
+gradlew testDebugUnitTest
+gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest"
 ```
-`test-safe.bat` defaults to faster daemon/cache mode and uses
-`XC_TEST_PARALLEL_FORKS` (default `2`) as the test parallel-forks default.
+
+For lock resilience on a failing local test pass, run manual recovery:
+```bat
+gradlew --stop
+powershell -NoProfile -Command "Get-ChildItem .\feature\map\build\test-results\testDebugUnitTest\binary, .\app\build\test-results\testDebugUnitTest\binary, . -Recurse -Filter output.bin -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
+```
 
 For Windows KSP/generated-state corruption recovery, use `repair-build.bat`
 before falling back to broad `clean` runs:
 ```bat
 repair-build.bat
-repair-build.bat feature:map test
 repair-build.bat all assemble
 ```
 `repair-build.bat` stops repo-local Gradle daemons, removes module-local
 `build/kspCaches` plus generated KSP output, clears wrapper `.lck` files, and
-re-runs a narrow Gradle task.
+re-runs a narrow Gradle task in compile/assemble mode.
 
 Unit-test hang protection policy:
 - Default per-test timeout is `60s` (override via `-Pxcpro.test.timeout.seconds=<10..120>`).

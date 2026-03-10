@@ -87,7 +87,8 @@ class ProfileRepository(
             ProfileSettingsSectionIds.MAP_WIDGET_LAYOUT,
             ProfileSettingsSectionIds.VARIOMETER_WIDGET_LAYOUT,
             ProfileSettingsSectionIds.GLIDER_CONFIG,
-            ProfileSettingsSectionIds.UNITS_PREFERENCES
+            ProfileSettingsSectionIds.UNITS_PREFERENCES,
+            ProfileSettingsSectionIds.ORIENTATION_PREFERENCES
         )
     }
 

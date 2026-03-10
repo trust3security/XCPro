@@ -168,6 +168,62 @@ class IgcSessionStateMachineTest {
     }
 
     @Test
+    fun finalizing_timeout_pauses_while_fixIsUncertain() {
+        val machine = IgcSessionStateMachine(
+            config = IgcSessionStateMachine.Config(
+                armingDebounceMs = 0L,
+                takeoffDebounceMs = 0L,
+                landingDebounceMs = 0L,
+                baselineWindowMs = 50_000L,
+                finalizeTimeoutMs = 5_000L
+            )
+        )
+
+        step(machine, monoMs = 0L, isFlying = false, onGround = true)
+        val start = step(machine, monoMs = 1L, isFlying = true, onGround = false)
+        val sessionId = start.actions
+            .filterIsInstance<IgcSessionStateMachine.Action.StartRecording>()
+            .single()
+            .sessionId
+
+        step(machine, monoMs = 2L, isFlying = false, onGround = true)
+        val enteredFinalizing = step(machine, monoMs = 3L, isFlying = false, onGround = true)
+        assertEquals(IgcSessionStateMachine.Phase.Finalizing, enteredFinalizing.state.phase)
+        assertTrue(enteredFinalizing.actions.isEmpty())
+
+        val uncertain = step(
+            machine,
+            monoMs = 10_000L,
+            isFlying = false,
+            onGround = false,
+            hasFix = false
+        )
+        assertEquals(IgcSessionStateMachine.Phase.Finalizing, uncertain.state.phase)
+        assertTrue(uncertain.actions.isEmpty())
+
+        val stillPaused = step(
+            machine,
+            monoMs = 20_000L,
+            isFlying = false,
+            onGround = false,
+            hasFix = false
+        )
+        assertEquals(IgcSessionStateMachine.Phase.Finalizing, stillPaused.state.phase)
+        assertTrue(stillPaused.actions.isEmpty())
+
+        val resumedGround = step(machine, monoMs = 21_000L, isFlying = false, onGround = true)
+        assertEquals(IgcSessionStateMachine.Phase.Finalizing, resumedGround.state.phase)
+        assertTrue(resumedGround.actions.isEmpty())
+
+        val finalize = step(machine, monoMs = 27_000L, isFlying = false, onGround = true)
+            .actions
+            .filterIsInstance<IgcSessionStateMachine.Action.FinalizeRecording>()
+            .single()
+
+        assertEquals(sessionId, finalize.sessionId)
+    }
+
+    @Test
     fun preAndPostWindows_meetBaseline_whenDataExists() {
         val machine = IgcSessionStateMachine(
             config = IgcSessionStateMachine.Config(

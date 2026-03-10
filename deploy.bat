@@ -10,7 +10,7 @@ echo ====================================
 
 echo.
 echo [1/3] Building debug APK...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" assembleDebug
+call "%GRADLE%" assembleDebug
 if errorlevel 1 (
     echo ERROR: Build failed!
     pause

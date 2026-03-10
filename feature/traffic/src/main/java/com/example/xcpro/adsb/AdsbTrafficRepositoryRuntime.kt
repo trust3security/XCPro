@@ -175,10 +175,6 @@ internal class AdsbTrafficRepositoryRuntime(
     @Volatile
     internal var emergencyAudioShadowMode: Boolean = emergencyAudioFeatureFlags.emergencyAudioShadowMode
     @Volatile
-    internal var emergencyAudioCohortPercent: Int = ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT
-    @Volatile
-    internal var emergencyAudioCohortBucket: Int = ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN
-    @Volatile
     internal var emergencyAudioRollbackLatched: Boolean = false
     @Volatile
     internal var emergencyAudioRollbackReason: String? = null

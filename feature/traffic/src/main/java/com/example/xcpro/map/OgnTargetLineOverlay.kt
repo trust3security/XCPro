@@ -18,8 +18,8 @@ import org.maplibre.geojson.Point
 
 class OgnTargetLineOverlay(
     private val map: MapLibreMap
-) {
-    fun initialize() {
+) : OgnTargetLineOverlayHandle {
+    override fun initialize() {
         val style = map.style ?: return
         try {
             if (style.getSource(SOURCE_ID) == null) {
@@ -33,7 +33,7 @@ class OgnTargetLineOverlay(
         }
     }
 
-    fun render(enabled: Boolean, ownshipLocation: OverlayCoordinate?, target: OgnTrafficTarget?) {
+    override fun render(enabled: Boolean, ownshipLocation: OverlayCoordinate?, target: OgnTrafficTarget?) {
         if (!enabled || ownshipLocation == null || target == null) {
             clear()
             return
@@ -63,7 +63,7 @@ class OgnTargetLineOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
     }
 
-    fun cleanup() {
+    override fun cleanup() {
         val style = map.style ?: return
         try {
             style.removeLayer(LAYER_ID)
@@ -73,7 +73,7 @@ class OgnTargetLineOverlay(
         }
     }
 
-    fun bringToFront() {
+    override fun bringToFront() {
         val style = map.style ?: return
         if (style.getLayer(LAYER_ID) == null) return
         try {

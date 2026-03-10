@@ -47,6 +47,8 @@ class FlightStateRepository @Inject constructor(
 
     private val _flightState = MutableStateFlow(FlyingState())
     override val flightState: StateFlow<FlyingState> = _flightState.asStateFlow()
+    private var lastGpsSample: GPSData? = null
+    private var lastGpsSeenMonoMs: Long = 0L
 
     init {
         scope.launch {
@@ -102,12 +104,22 @@ class FlightStateRepository @Inject constructor(
     private fun resetForSourceSwitch() {
         detector.reset()
         _flightState.value = FlyingState()
+        lastGpsSample = null
+        lastGpsSeenMonoMs = 0L
     }
 
     private fun processSample(input: FlightStateInput) {
-        val gps = input.gps ?: run {
+        val nowMonoMs = clock.nowMonoMs()
+        val gps = input.gps ?: fallbackGpsForState(
+            nowMonoMs = nowMonoMs,
+            source = flightDataRepository.activeSource.value
+        )
+
+        if (gps == null) {
             detector.reset()
             _flightState.value = FlyingState()
+            lastGpsSample = null
+            lastGpsSeenMonoMs = 0L
             return
         }
 
@@ -132,7 +144,25 @@ class FlightStateRepository @Inject constructor(
             altitudeMeters = altitudeMeters,
             aglMeters = input.aglMeters
         )
+        if (input.gps != null) {
+            lastGpsSample = gps
+            lastGpsSeenMonoMs = nowMonoMs
+        }
         _flightState.value = state
+    }
+
+    private fun fallbackGpsForState(
+        nowMonoMs: Long,
+        source: FlightDataRepository.Source
+    ): GPSData? {
+        // AI-NOTE: Keep brief live GPS dropouts from collapsing an active
+        // flight into neutral state; replay remains explicit and deterministic.
+        if (source != FlightDataRepository.Source.LIVE) return null
+        val staleMs = nowMonoMs - lastGpsSeenMonoMs
+        if (lastGpsSample == null || staleMs < 0L || staleMs > GPS_STATE_GRACE_MS) {
+            return null
+        }
+        return lastGpsSample
     }
 
     private fun extractFreshAglMeters(flightData: CompleteFlightData?): Double? {
@@ -159,6 +189,7 @@ class FlightStateRepository @Inject constructor(
     private companion object {
         private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
         private const val AGL_STALE_AFTER_MS = 15_000L
+        private const val GPS_STATE_GRACE_MS = 20_000L
     }
 
     private fun isTrustedAirspeedSource(sourceLabel: String): Boolean {

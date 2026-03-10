@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.units.UnitsConverter
+import com.example.xcpro.map.domain.MapShiftBiasMode
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -48,6 +49,44 @@ class MapOrientationSettingsRepositoryTest {
 
         val settings = repository.settingsFlow.value
         assertEquals(UnitsConverter.knotsToMs(4.0), settings.minSpeedThresholdMs, 1e-3)
+    }
+
+    @Test
+    fun switchingActiveProfileSwapsScopedOrientationSettings() {
+        val repository = MapOrientationSettingsRepository(appContext)
+
+        repository.writeProfileSettings(
+            "sailplane-a",
+            MapOrientationSettings(
+                cruiseMode = MapOrientationMode.NORTH_UP,
+                circlingMode = MapOrientationMode.HEADING_UP,
+                minSpeedThresholdMs = 3.0,
+                gliderScreenPercent = 20,
+                mapShiftBiasMode = MapShiftBiasMode.TRACK,
+                mapShiftBiasStrength = 0.4
+            )
+        )
+        repository.writeProfileSettings(
+            "hangglider-b",
+            MapOrientationSettings(
+                cruiseMode = MapOrientationMode.TRACK_UP,
+                circlingMode = MapOrientationMode.NORTH_UP,
+                minSpeedThresholdMs = 5.0,
+                gliderScreenPercent = 45,
+                mapShiftBiasMode = MapShiftBiasMode.NONE,
+                mapShiftBiasStrength = 0.0
+            )
+        )
+
+        repository.setActiveProfileId("sailplane-a")
+        assertEquals(MapOrientationMode.NORTH_UP, repository.settingsFlow.value.cruiseMode)
+        assertEquals(20, repository.settingsFlow.value.gliderScreenPercent)
+        assertEquals(MapShiftBiasMode.TRACK, repository.settingsFlow.value.mapShiftBiasMode)
+
+        repository.setActiveProfileId("hangglider-b")
+        assertEquals(MapOrientationMode.TRACK_UP, repository.settingsFlow.value.cruiseMode)
+        assertEquals(45, repository.settingsFlow.value.gliderScreenPercent)
+        assertEquals(MapShiftBiasMode.NONE, repository.settingsFlow.value.mapShiftBiasMode)
     }
 
     private fun clearPrefs() {

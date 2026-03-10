@@ -343,6 +343,10 @@ class FakeQnhRepository : QnhRepository {
     override val qnhState = qnhFlow
     override val calibrationState = calibrationFlow
 
+    override suspend fun setActiveProfileId(profileId: String) {
+        // no-op in this fake
+    }
+
     override suspend fun setManualQnh(hpa: Double) {
         qnhFlow.value = initialValue.copy(hpa = hpa, source = QnhSource.MANUAL)
     }

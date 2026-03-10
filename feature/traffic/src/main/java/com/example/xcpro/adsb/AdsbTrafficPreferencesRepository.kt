@@ -1,7 +1,6 @@
 package com.example.xcpro.adsb
 
 import android.content.Context
-import android.provider.Settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -37,10 +36,6 @@ private val KEY_ADSB_EMERGENCY_AUDIO_MASTER_ENABLED =
     booleanPreferencesKey("adsb_emergency_audio_master_enabled")
 private val KEY_ADSB_EMERGENCY_AUDIO_SHADOW_MODE =
     booleanPreferencesKey("adsb_emergency_audio_shadow_mode")
-private val KEY_ADSB_EMERGENCY_AUDIO_COHORT_PERCENT =
-    intPreferencesKey("adsb_emergency_audio_cohort_percent")
-private val KEY_ADSB_EMERGENCY_AUDIO_COHORT_BUCKET =
-    intPreferencesKey("adsb_emergency_audio_cohort_bucket")
 private val KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_LATCHED =
     booleanPreferencesKey("adsb_emergency_audio_rollback_latched")
 private val KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_REASON =
@@ -50,25 +45,18 @@ private val KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_LATCHED =
 private val KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_REASON =
     stringPreferencesKey("adsb_default_medium_unknown_icon_rollback_reason")
 
-internal const val ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN = 0
-internal const val ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX = 100
-internal const val ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT = 100
-internal const val ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN = 0
-internal const val ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MAX = 99
 const val ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT = true
 const val ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT = true
 
 @Singleton
 class AdsbTrafficPreferencesRepository constructor(
-    private val dataStore: DataStore<Preferences>,
-    private val defaultRolloutCohortBucket: Int = ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN
+    private val dataStore: DataStore<Preferences>
 ) : AdsbEmergencyAudioSettingsPort, AdsbEmergencyAudioRolloutPort {
     @Inject
     constructor(
         @ApplicationContext context: Context
     ) : this(
         dataStore = context.adsbTrafficDataStore,
-        defaultRolloutCohortBucket = deviceRolloutCohortBucket(context)
     )
 
     val enabledFlow: Flow<Boolean> = dataStore.data
@@ -141,24 +129,6 @@ class AdsbTrafficPreferencesRepository constructor(
 
     override val emergencyAudioShadowModeFlow: Flow<Boolean> = dataStore.data
         .map { preferences -> preferences[KEY_ADSB_EMERGENCY_AUDIO_SHADOW_MODE] ?: false }
-        .distinctUntilChanged()
-
-    override val emergencyAudioCohortPercentFlow: Flow<Int> = dataStore.data
-        .map { preferences ->
-            clampEmergencyAudioCohortPercent(
-                preferences[KEY_ADSB_EMERGENCY_AUDIO_COHORT_PERCENT]
-                    ?: ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT
-            )
-        }
-        .distinctUntilChanged()
-
-    override val emergencyAudioCohortBucketFlow: Flow<Int> = dataStore.data
-        .map { preferences ->
-            clampEmergencyAudioCohortBucket(
-                preferences[KEY_ADSB_EMERGENCY_AUDIO_COHORT_BUCKET]
-                    ?: defaultRolloutCohortBucket
-            )
-        }
         .distinctUntilChanged()
 
     override val emergencyAudioRollbackLatchedFlow: Flow<Boolean> = dataStore.data
@@ -253,20 +223,6 @@ class AdsbTrafficPreferencesRepository constructor(
         }
     }
 
-    suspend fun setEmergencyAudioCohortPercent(percent: Int) {
-        val normalized = clampEmergencyAudioCohortPercent(percent)
-        dataStore.edit { preferences ->
-            preferences[KEY_ADSB_EMERGENCY_AUDIO_COHORT_PERCENT] = normalized
-        }
-    }
-
-    suspend fun setEmergencyAudioCohortBucket(bucket: Int) {
-        val normalized = clampEmergencyAudioCohortBucket(bucket)
-        dataStore.edit { preferences ->
-            preferences[KEY_ADSB_EMERGENCY_AUDIO_COHORT_BUCKET] = normalized
-        }
-    }
-
     override suspend fun latchEmergencyAudioRollback(reason: String) {
         dataStore.edit { preferences ->
             preferences[KEY_ADSB_EMERGENCY_AUDIO_ROLLBACK_LATCHED] = true
@@ -292,30 +248,6 @@ class AdsbTrafficPreferencesRepository constructor(
         dataStore.edit { preferences ->
             preferences[KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_LATCHED] = false
             preferences.remove(KEY_ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ROLLBACK_REASON)
-        }
-    }
-
-    private companion object {
-        fun clampEmergencyAudioCohortPercent(percent: Int): Int =
-            percent.coerceIn(
-                ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN,
-                ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX
-            )
-
-        fun clampEmergencyAudioCohortBucket(bucket: Int): Int =
-            bucket.coerceIn(
-                ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN,
-                ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MAX
-            )
-
-        fun deviceRolloutCohortBucket(context: Context): Int {
-            val bucketSeed = runCatching {
-                Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-            }.getOrNull()?.takeIf { value -> value.isNotBlank() }
-                ?: context.packageName
-            return clampEmergencyAudioCohortBucket(
-                bucketSeed.hashCode().and(Int.MAX_VALUE) % ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX
-            )
         }
     }
 }

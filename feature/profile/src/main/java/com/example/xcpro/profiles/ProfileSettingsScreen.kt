@@ -104,7 +104,7 @@ fun ProfileSettingsScreen(
                         },
                         enabled = !uiState.isLoading
                     ) {
-                        Text("Save")
+                        Text("Save Changes")
                     }
                 }
             )
@@ -260,7 +260,7 @@ private fun ProfileRuntimeSettingsNotice() {
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = "Units, glider polar/config, cards, map widget positions, look and feel, and traffic/weather settings are managed in their own settings screens and restored via profile bundle import/export.",
+                text = "Units, glider polar/config, cards, map widget positions, look and feel, and traffic/weather settings are managed in their own settings screens and restored via aircraft profile import/export.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

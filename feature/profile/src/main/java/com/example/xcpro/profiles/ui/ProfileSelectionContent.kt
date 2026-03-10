@@ -111,14 +111,14 @@ fun ProfileSelectionContent(
 @Composable
 private fun ProfileSelectionHeader() {
     Text(
-        text = "Select Flight Profile",
+        text = "Select Aircraft Profile",
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 24.dp)
     )
 
     Text(
-        text = "Choose the profile for your current aircraft and flight configuration.",
+        text = "Choose the aircraft profile for your current aircraft and flight configuration.",
         style = MaterialTheme.typography.bodyMedium,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,7 +189,7 @@ private fun ProfileEmptyState(
                 onClick = onImportProfiles,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Import Profile Backup")
+                Text("Import Aircraft Profile")
             }
             if (!storageNamespaceLabel.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -246,7 +246,7 @@ private fun BootstrapRecoveryCard(
                     enabled = !isLoading,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Import Backup")
+                    Text("Import Aircraft Profile")
                 }
             }
         }

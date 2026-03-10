@@ -13,6 +13,21 @@ File:
 
 - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt`
 
+## User-Facing Portable File Policy
+
+- XCPro should present a portable profile export as an "Aircraft Profile" file.
+- That file is a portability artifact for backup/import/export.
+- It is not runtime SSOT.
+- Runtime SSOT remains in the internal repositories and stores listed in this
+  document.
+- Switching profiles in-app should switch internal profile identity and hydrate
+  runtime stores; it should not depend on reading external JSON files on each
+  switch.
+
+Reference:
+
+- `docs/PROFILES/PROFILE_FILE_PORTABILITY_STRATEGY_2026-03-10.md`
+
 ## SSOT Ownership Matrix (Authoritative)
 
 This matrix is the contract for profile-related state ownership.
@@ -91,6 +106,18 @@ The old settings still exist but under the previous profile id.
 
 This reduces accidental profile-id churn during startup and keeps settings attached
 to a stable profile identity by default.
+
+## Recommended Portable File Shape
+
+Recommended product policy:
+
+- single-profile export/import is the primary user flow
+- multi-profile export/import is a secondary migration flow
+- both should use the same versioned JSON schema
+- a single-profile export is just a versioned bundle containing one profile
+
+This keeps one portable file per aircraft setup while avoiding a separate
+runtime-vs-export schema split.
 
 ## Import Scope and Strict Restore Policy
 

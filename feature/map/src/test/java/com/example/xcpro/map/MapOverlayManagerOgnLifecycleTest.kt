@@ -36,13 +36,13 @@ class MapOverlayManagerOgnLifecycleTest {
     @Test
     fun updateOgnTrafficTargets_renderPathCreatesOverlay_onceAndSkipsReinitialize() = runTest {
         val map: MapLibreMap = mock()
-        val trafficOverlay: OgnTrafficOverlay = mock()
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
         val fixture = createFixture(
             scope = this,
-            ognTrafficOverlayFactory = { _, _, _ -> trafficOverlay },
-            ognThermalOverlayFactory = { _ -> mock() },
-            ognGliderTrailOverlayFactory = { _ -> mock() },
-            adsbTrafficOverlayFactory = { _, _ -> mock() }
+            ognTrafficOverlayFactory = { _, _, _, _ -> trafficOverlay },
+            ognThermalOverlayFactory = { _ -> mock<OgnThermalOverlayHandle>() },
+            ognGliderTrailOverlayFactory = { _ -> mock<OgnGliderTrailOverlayHandle>() },
+            adsbTrafficOverlayFactory = { _, _, _ -> mock<AdsbTrafficOverlayHandle>() }
         )
         fixture.mapState.mapLibreMap = map
 
@@ -81,14 +81,14 @@ class MapOverlayManagerOgnLifecycleTest {
     fun initializeTrafficOverlays_styleRecreate_reinitsAndRendersLatestCachedData() = runTest {
         val map: MapLibreMap = mock()
 
-        val firstTraffic: OgnTrafficOverlay = mock()
-        val secondTraffic: OgnTrafficOverlay = mock()
-        val firstThermal: OgnThermalOverlay = mock()
-        val secondThermal: OgnThermalOverlay = mock()
-        val firstTrail: OgnGliderTrailOverlay = mock()
-        val secondTrail: OgnGliderTrailOverlay = mock()
-        val firstAdsb: AdsbTrafficOverlay = mock()
-        val secondAdsb: AdsbTrafficOverlay = mock()
+        val firstTraffic: OgnTrafficOverlayHandle = mock()
+        val secondTraffic: OgnTrafficOverlayHandle = mock()
+        val firstThermal: OgnThermalOverlayHandle = mock()
+        val secondThermal: OgnThermalOverlayHandle = mock()
+        val firstTrail: OgnGliderTrailOverlayHandle = mock()
+        val secondTrail: OgnGliderTrailOverlayHandle = mock()
+        val firstAdsb: AdsbTrafficOverlayHandle = mock()
+        val secondAdsb: AdsbTrafficOverlayHandle = mock()
 
         var trafficFactoryCount = 0
         var thermalFactoryCount = 0
@@ -97,7 +97,7 @@ class MapOverlayManagerOgnLifecycleTest {
 
         val fixture = createFixture(
             scope = this,
-            ognTrafficOverlayFactory = { _, _, _ ->
+            ognTrafficOverlayFactory = { _, _, _, _ ->
                 when (trafficFactoryCount++) {
                     0 -> firstTraffic
                     else -> secondTraffic
@@ -115,7 +115,7 @@ class MapOverlayManagerOgnLifecycleTest {
                     else -> secondTrail
                 }
             },
-            adsbTrafficOverlayFactory = { _, _ ->
+            adsbTrafficOverlayFactory = { _, _, _ ->
                 when (adsbFactoryCount++) {
                     0 -> firstAdsb
                     else -> secondAdsb
@@ -180,13 +180,13 @@ class MapOverlayManagerOgnLifecycleTest {
     @Test
     fun onMapDetached_cancelsDeferredTrafficRenderJob() = runTest {
         val map: MapLibreMap = mock()
-        val trafficOverlay: OgnTrafficOverlay = mock()
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
         val fixture = createFixture(
             scope = this,
-            ognTrafficOverlayFactory = { _, _, _ -> trafficOverlay },
-            ognThermalOverlayFactory = { _ -> mock() },
-            ognGliderTrailOverlayFactory = { _ -> mock() },
-            adsbTrafficOverlayFactory = { _, _ -> mock() }
+            ognTrafficOverlayFactory = { _, _, _, _ -> trafficOverlay },
+            ognThermalOverlayFactory = { _ -> mock<OgnThermalOverlayHandle>() },
+            ognGliderTrailOverlayFactory = { _ -> mock<OgnGliderTrailOverlayHandle>() },
+            adsbTrafficOverlayFactory = { _, _, _ -> mock<AdsbTrafficOverlayHandle>() }
         )
         fixture.mapState.mapLibreMap = map
         fixture.manager.initializeTrafficOverlays(map)
@@ -211,17 +211,17 @@ class MapOverlayManagerOgnLifecycleTest {
     @Test
     fun updateOgnTargetVisuals_rendersRingAndLineWithoutTrafficRerender() = runTest {
         val map: MapLibreMap = mock()
-        val trafficOverlay: OgnTrafficOverlay = mock()
-        val targetRingOverlay: OgnTargetRingOverlay = mock()
-        val targetLineOverlay: OgnTargetLineOverlay = mock()
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
+        val targetRingOverlay: OgnTargetRingOverlayHandle = mock()
+        val targetLineOverlay: OgnTargetLineOverlayHandle = mock()
         val fixture = createFixture(
             scope = this,
-            ognTrafficOverlayFactory = { _, _, _ -> trafficOverlay },
+            ognTrafficOverlayFactory = { _, _, _, _ -> trafficOverlay },
             ognTargetRingOverlayFactory = { _, _ -> targetRingOverlay },
             ognTargetLineOverlayFactory = { _ -> targetLineOverlay },
-            ognThermalOverlayFactory = { _ -> mock() },
-            ognGliderTrailOverlayFactory = { _ -> mock() },
-            adsbTrafficOverlayFactory = { _, _ -> mock() }
+            ognThermalOverlayFactory = { _ -> mock<OgnThermalOverlayHandle>() },
+            ognGliderTrailOverlayFactory = { _ -> mock<OgnGliderTrailOverlayHandle>() },
+            adsbTrafficOverlayFactory = { _, _, _ -> mock<AdsbTrafficOverlayHandle>() }
         )
         fixture.mapState.mapLibreMap = map
         fixture.manager.initializeTrafficOverlays(map)
@@ -255,12 +255,12 @@ class MapOverlayManagerOgnLifecycleTest {
 
     private fun createFixture(
         scope: TestScope,
-        ognTrafficOverlayFactory: (MapLibreMap, Int, Boolean) -> OgnTrafficOverlay,
-        ognTargetRingOverlayFactory: (MapLibreMap, Int) -> OgnTargetRingOverlay = { _, _ -> mock() },
-        ognTargetLineOverlayFactory: (MapLibreMap) -> OgnTargetLineOverlay = { _ -> mock() },
-        ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay,
-        ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay,
-        adsbTrafficOverlayFactory: (MapLibreMap, Int) -> AdsbTrafficOverlay
+        ognTrafficOverlayFactory: OgnTrafficOverlayFactory,
+        ognTargetRingOverlayFactory: OgnTargetRingOverlayFactory = { _, _ -> mock<OgnTargetRingOverlayHandle>() },
+        ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory = { _ -> mock<OgnTargetLineOverlayHandle>() },
+        ognThermalOverlayFactory: OgnThermalOverlayFactory,
+        ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory,
+        adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory
     ): Fixture {
         val mapState = MapScreenState()
         val mapStateStore = MapStateStore(initialStyleName = "Terrain")
@@ -352,3 +352,4 @@ class MapOverlayManagerOgnLifecycleTest {
         val mapState: MapScreenState
     )
 }
+

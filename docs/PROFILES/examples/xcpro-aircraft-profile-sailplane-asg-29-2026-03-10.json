@@ -1,0 +1,42 @@
+{
+  "version": "2.0",
+  "exportedAtWallMs": 1773100800000,
+  "activeProfileId": "aircraft-sailplane-asg29",
+  "profiles": [
+    {
+      "id": "aircraft-sailplane-asg29",
+      "name": "Sample Sailplane",
+      "aircraftType": "SAILPLANE",
+      "aircraftModel": "ASG 29",
+      "description": "Starter portable aircraft profile example for a sailplane.",
+      "preferences": {
+        "units": "METRIC",
+        "theme": "default",
+        "autoSwitchModes": true,
+        "cardAnimations": true,
+        "uiLayout": {
+          "variometerPosition": {
+            "x": 50.0,
+            "y": 50.0
+          },
+          "variometerSize": 150.0
+        }
+      },
+      "isActive": false,
+      "createdAt": 1773100800000,
+      "lastUsed": 1773122400000,
+      "polar": {
+        "lowSpeedKmh": 80.0,
+        "lowSinkMs": 0.5,
+        "midSpeedKmh": 120.0,
+        "midSinkMs": 0.8,
+        "highSpeedKmh": 180.0,
+        "highSinkMs": 2.0
+      }
+    }
+  ],
+  "settings": {
+    "version": "1.0",
+    "sections": {}
+  }
+}

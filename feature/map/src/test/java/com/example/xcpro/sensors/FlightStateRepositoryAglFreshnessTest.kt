@@ -189,6 +189,119 @@ class FlightStateRepositoryAglFreshnessTest {
         assertTrue(repository.flightState.value.isFlying)
     }
 
+    @Test
+    fun temporaryLiveGpsLoss_keepsFlyingStateWithinGraceWindow() = runTest {
+        val liveSensors = FakeSensorDataSource()
+        val replaySensors = FakeSensorDataSource()
+        val replayAirspeed = FakeAirspeedDataSource()
+        val flightDataRepository = FlightDataRepository()
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FlightStateRepository(
+            liveSensors = liveSensors,
+            replaySensors = replaySensors,
+            replayAirspeedSource = replayAirspeed,
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            defaultDispatcher = dispatcher
+        )
+
+        repeat(12) { index ->
+            val timestampMs = (index + 1) * 1_000L
+            clock.setMonoMs(timestampMs)
+            liveSensors.gpsFlow.value = gpsSample(
+                timestampMillis = timestampMs,
+                monotonicTimestampMillis = timestampMs,
+                speedMs = 12.0
+            )
+            advanceUntilIdle()
+        }
+
+        assertTrue(repository.flightState.value.isFlying)
+
+        clock.setMonoMs(20_000L)
+        liveSensors.gpsFlow.value = null
+        advanceUntilIdle()
+
+        assertTrue(repository.flightState.value.isFlying)
+    }
+
+    @Test
+    fun temporaryLiveGpsLoss_keepsOnGroundStateWithinGraceWindow() = runTest {
+        val liveSensors = FakeSensorDataSource()
+        val replaySensors = FakeSensorDataSource()
+        val replayAirspeed = FakeAirspeedDataSource()
+        val flightDataRepository = FlightDataRepository()
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FlightStateRepository(
+            liveSensors = liveSensors,
+            replaySensors = replaySensors,
+            replayAirspeedSource = replayAirspeed,
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            defaultDispatcher = dispatcher
+        )
+
+        repeat(12) { index ->
+            val timestampMs = (index + 1) * 1_000L
+            clock.setMonoMs(timestampMs)
+            liveSensors.gpsFlow.value = gpsSample(
+                timestampMillis = timestampMs,
+                monotonicTimestampMillis = timestampMs,
+                speedMs = 0.0
+            )
+            advanceUntilIdle()
+        }
+
+        assertTrue(repository.flightState.value.onGround)
+
+        clock.setMonoMs(20_000L)
+        liveSensors.gpsFlow.value = null
+        advanceUntilIdle()
+
+        assertTrue(repository.flightState.value.onGround)
+        assertFalse(repository.flightState.value.isFlying)
+    }
+
+    @Test
+    fun liveGpsLossBeyondGrace_resetsFlightState() = runTest {
+        val liveSensors = FakeSensorDataSource()
+        val replaySensors = FakeSensorDataSource()
+        val replayAirspeed = FakeAirspeedDataSource()
+        val flightDataRepository = FlightDataRepository()
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FlightStateRepository(
+            liveSensors = liveSensors,
+            replaySensors = replaySensors,
+            replayAirspeedSource = replayAirspeed,
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            defaultDispatcher = dispatcher
+        )
+
+        repeat(12) { index ->
+            val timestampMs = (index + 1) * 1_000L
+            clock.setMonoMs(timestampMs)
+            liveSensors.gpsFlow.value = gpsSample(
+                timestampMillis = timestampMs,
+                monotonicTimestampMillis = timestampMs,
+                speedMs = 12.0
+            )
+            advanceUntilIdle()
+        }
+
+        assertTrue(repository.flightState.value.isFlying)
+
+        clock.setMonoMs(35_000L)
+        liveSensors.gpsFlow.value = null
+        advanceUntilIdle()
+
+        assertFalse(repository.flightState.value.isFlying)
+        assertFalse(repository.flightState.value.onGround)
+    }
+
     private fun gpsSample(
         timestampMillis: Long,
         monotonicTimestampMillis: Long,

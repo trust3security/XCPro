@@ -37,6 +37,7 @@ import com.example.xcpro.sensors.domain.FlyingState
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.MapOrientationManagerFactory
+import com.example.xcpro.MapOrientationSettingsRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,10 +52,24 @@ import kotlinx.coroutines.CoroutineScope
 class MapStyleUseCase @Inject constructor(
     private val repository: MapStyleRepository
 ) {
+    fun setActiveProfileId(profileId: String) {
+        repository.setActiveProfileId(profileId)
+    }
+
     fun initialStyle(): String = repository.initialStyle()
+
+    fun readProfileStyle(profileId: String): String = repository.readProfileStyle(profileId)
 
     suspend fun saveStyle(style: String) {
         repository.saveStyle(style)
+    }
+
+    suspend fun writeProfileStyle(profileId: String, style: String) {
+        repository.writeProfileStyle(profileId, style)
+    }
+
+    suspend fun clearProfile(profileId: String) {
+        repository.clearProfile(profileId)
     }
 }
 
@@ -127,6 +142,10 @@ class QnhUseCase @Inject constructor(
 ) {
     val calibrationState = repository.calibrationState
 
+    suspend fun setActiveProfileId(profileId: String) {
+        repository.setActiveProfileId(profileId)
+    }
+
     suspend fun setManualQnh(hpa: Double) {
         repository.setManualQnh(hpa)
     }
@@ -164,6 +183,14 @@ class MapVarioPreferencesUseCase @Inject constructor(
 ) {
     val showWindSpeedOnVario: Flow<Boolean> = repository.config.map { it.showWindSpeedOnVario }
     val showHawkCard: Flow<Boolean> = repository.config.map { it.showHawkCard }
+}
+
+class MapOrientationSettingsUseCase @Inject constructor(
+    private val repository: MapOrientationSettingsRepository
+) {
+    fun setActiveProfileId(profileId: String) {
+        repository.setActiveProfileId(profileId)
+    }
 }
 
 data class TaskRenderSnapshot(

@@ -16,6 +16,11 @@ import org.json.JSONObject
 import java.io.File
 
 private const val CONFIG_FILE_NAME = "configuration.json"
+private const val DEFAULT_PROFILE_ID = "default-profile"
+private const val LEGACY_DEFAULT_ALIAS = "default"
+private const val LEGACY_DF_ALIAS = "__default_profile__"
+private const val KEY_PROFILES = "profiles"
+private const val KEY_SELECTED_FILES = "selected_files"
 
 @Singleton
 class ConfigurationRepository @Inject constructor(

@@ -11,7 +11,6 @@ private data class EmergencyAudioSnapshotProjection(
     val masterRolloutEnabled: Boolean,
     val masterRolloutConfigured: Boolean,
     val shadowModeEnabled: Boolean,
-    val cohortEligible: Boolean,
     val alertTriggerCount: Int,
     val cooldownBlockEpisodeCount: Int,
     val transitionEventCount: Int,
@@ -67,9 +66,6 @@ internal fun AdsbTrafficRepositoryRuntime.publishSnapshot() {
         emergencyAudioMasterRolloutEnabled = emergencyAudioProjection.masterRolloutEnabled,
         emergencyAudioMasterRolloutConfigured = emergencyAudioProjection.masterRolloutConfigured,
         emergencyAudioShadowModeEnabled = emergencyAudioProjection.shadowModeEnabled,
-        emergencyAudioRolloutCohortPercent = emergencyAudioCohortPercent,
-        emergencyAudioRolloutCohortBucket = emergencyAudioCohortBucket,
-        emergencyAudioRolloutCohortEligible = emergencyAudioProjection.cohortEligible,
         emergencyAudioRollbackLatched = emergencyAudioRollbackLatched,
         emergencyAudioRollbackReason = emergencyAudioRollbackReason,
         emergencyAudioCooldownMs = emergencyAudioSettings.normalizedCooldownMs,
@@ -89,7 +85,6 @@ private fun AdsbTrafficRepositoryRuntime.projectEmergencyAudioSnapshot(
     hasFreshOwnshipReference: Boolean
 ): EmergencyAudioSnapshotProjection {
     val emergencyAudioMasterRolloutConfigured = currentEmergencyAudioMasterConfigured()
-    val emergencyAudioCohortEligible = currentEmergencyAudioCohortEligible()
     val emergencyAudioMasterRolloutEnabled = currentEmergencyAudioMasterEnabled()
     val emergencyAudioShadowModeEnabled = currentEmergencyAudioShadowModeEnabled()
     val emergencyAudioFeatureGateOn = emergencyAudioMasterRolloutEnabled || emergencyAudioShadowModeEnabled
@@ -119,7 +114,6 @@ private fun AdsbTrafficRepositoryRuntime.projectEmergencyAudioSnapshot(
         masterRolloutEnabled = emergencyAudioMasterRolloutEnabled,
         masterRolloutConfigured = emergencyAudioMasterRolloutConfigured,
         shadowModeEnabled = emergencyAudioShadowModeEnabled,
-        cohortEligible = emergencyAudioCohortEligible,
         alertTriggerCount = emergencyAudioTelemetry.alertTriggerCount,
         cooldownBlockEpisodeCount = emergencyAudioTelemetry.cooldownBlockEpisodeCount,
         transitionEventCount = emergencyAudioTelemetry.transitionEventCount,
@@ -149,24 +143,8 @@ internal fun AdsbTrafficRepositoryRuntime.currentEmergencyAudioMasterConfigured(
         emergencyAudioMasterEnabled
     }
 
-internal fun AdsbTrafficRepositoryRuntime.currentEmergencyAudioCohortEligible(): Boolean {
-    val normalizedPercent = emergencyAudioCohortPercent.coerceIn(
-        ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN,
-        ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX
-    )
-    val normalizedBucket = emergencyAudioCohortBucket.coerceIn(
-        ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN,
-        ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MAX
-    )
-    if (normalizedPercent <= ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN) return false
-    if (normalizedPercent >= ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX) return true
-    return normalizedBucket < normalizedPercent
-}
-
 internal fun AdsbTrafficRepositoryRuntime.currentEmergencyAudioMasterEnabled(): Boolean =
-    currentEmergencyAudioMasterConfigured() &&
-        currentEmergencyAudioCohortEligible() &&
-        !emergencyAudioRollbackLatched
+    currentEmergencyAudioMasterConfigured() && !emergencyAudioRollbackLatched
 
 internal fun AdsbTrafficRepositoryRuntime.currentEmergencyAudioShadowModeEnabled(): Boolean =
     if (emergencyAudioRolloutPort == null) {

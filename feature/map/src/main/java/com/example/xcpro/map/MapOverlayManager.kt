@@ -56,36 +56,17 @@ class MapOverlayManager(
     coroutineScope: CoroutineScope,
     airspaceUseCase: AirspaceUseCase,
     waypointFilesUseCase: WaypointFilesUseCase,
-    ognTrafficOverlayFactory: (MapLibreMap, Int, Boolean) -> OgnTrafficOverlay =
-        { map, iconSizePx, useSatelliteContrastIcons ->
-            OgnTrafficOverlay(
-                context = context,
-                map = map,
-                initialIconSizePx = iconSizePx,
-                initialUseSatelliteContrastIcons = useSatelliteContrastIcons
-            )
-        },
-    ognTargetRingOverlayFactory: (MapLibreMap, Int) -> OgnTargetRingOverlay =
-        { map, iconSizePx ->
-            OgnTargetRingOverlay(
-                map = map,
-                initialIconSizePx = iconSizePx
-            )
-        },
-    ognTargetLineOverlayFactory: (MapLibreMap) -> OgnTargetLineOverlay =
-        { map -> OgnTargetLineOverlay(map = map) },
-    ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay =
-        { map -> OgnThermalOverlay(map = map) },
-    ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay =
-        { map -> OgnGliderTrailOverlay(map = map) },
-    adsbTrafficOverlayFactory: (MapLibreMap, Int) -> AdsbTrafficOverlay =
-        { map, iconSizePx ->
-            AdsbTrafficOverlay(
-                context = context,
-                map = map,
-                initialIconSizePx = iconSizePx
-            )
-        },
+    ognTrafficOverlayFactory: OgnTrafficOverlayFactory = TrafficOverlayFactories::createOgnTrafficOverlay,
+    ognTargetRingOverlayFactory: OgnTargetRingOverlayFactory =
+        TrafficOverlayFactories::createOgnTargetRingOverlay,
+    ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory =
+        TrafficOverlayFactories::createOgnTargetLineOverlay,
+    ognThermalOverlayFactory: OgnThermalOverlayFactory =
+        TrafficOverlayFactories::createOgnThermalOverlay,
+    ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory =
+        TrafficOverlayFactories::createOgnGliderTrailOverlay,
+    adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory =
+        TrafficOverlayFactories::createAdsbTrafficOverlay,
     monoTimeMs: () -> Long = TimeBridge::nowMonoMs
 ) : MapOverlayManagerRuntime(
     context = context,

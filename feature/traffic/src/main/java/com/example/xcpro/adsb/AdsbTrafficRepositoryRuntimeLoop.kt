@@ -71,15 +71,11 @@ internal fun AdsbTrafficRepositoryRuntime.observeEmergencyAudioRollout() {
     scope.launch {
         val rolloutConfigFlow = combine(
             rolloutPort.emergencyAudioMasterEnabledFlow,
-            rolloutPort.emergencyAudioShadowModeFlow,
-            rolloutPort.emergencyAudioCohortPercentFlow,
-            rolloutPort.emergencyAudioCohortBucketFlow
-        ) { masterEnabled, shadowModeEnabled, cohortPercent, cohortBucket ->
+            rolloutPort.emergencyAudioShadowModeFlow
+        ) { masterEnabled, shadowModeEnabled ->
             RolloutConfig(
                 masterEnabled = masterEnabled,
                 shadowModeEnabled = shadowModeEnabled,
-                cohortPercent = cohortPercent,
-                cohortBucket = cohortBucket
             )
         }
         val rollbackStateFlow = combine(
@@ -98,24 +94,12 @@ internal fun AdsbTrafficRepositoryRuntime.observeEmergencyAudioRollout() {
             RolloutSnapshot(
                 masterEnabled = rolloutConfig.masterEnabled,
                 shadowModeEnabled = rolloutConfig.shadowModeEnabled,
-                cohortPercent = rolloutConfig.cohortPercent,
-                cohortBucket = rolloutConfig.cohortBucket,
                 rollbackLatched = rollbackState.latched,
                 rollbackReason = rollbackState.reason
             )
         }.collect { rollout ->
             emergencyAudioMasterEnabled = rollout.masterEnabled
             emergencyAudioShadowMode = rollout.shadowModeEnabled
-            emergencyAudioCohortPercent = rollout.cohortPercent
-                .coerceIn(
-                    ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN,
-                    ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX
-                )
-            emergencyAudioCohortBucket = rollout.cohortBucket
-                .coerceIn(
-                    ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN,
-                    ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MAX
-                )
             emergencyAudioRollbackLatched = rollout.rollbackLatched
             emergencyAudioRollbackReason = rollout.rollbackReason
             emergencyAudioFeatureFlags.emergencyAudioEnabled = rollout.masterEnabled
@@ -127,9 +111,7 @@ internal fun AdsbTrafficRepositoryRuntime.observeEmergencyAudioRollout() {
 
 private data class RolloutConfig(
     val masterEnabled: Boolean,
-    val shadowModeEnabled: Boolean,
-    val cohortPercent: Int,
-    val cohortBucket: Int
+    val shadowModeEnabled: Boolean
 )
 
 private data class RollbackState(
@@ -140,8 +122,6 @@ private data class RollbackState(
 private data class RolloutSnapshot(
     val masterEnabled: Boolean,
     val shadowModeEnabled: Boolean,
-    val cohortPercent: Int,
-    val cohortBucket: Int,
     val rollbackLatched: Boolean,
     val rollbackReason: String?
 )

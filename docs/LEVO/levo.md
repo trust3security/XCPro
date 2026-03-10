@@ -533,6 +533,9 @@ If you change...
 ...sensor wiring:
   Check: SensorRegistry, UnifiedSensorManager, WindSensorInputAdapter,
   FlightStateRepository, replay sources.
+  Live `FlightStateRepository` now holds the last GPS-backed flight-state
+  input for a short monotonic grace window (`20s`) so temporary GPS/comms loss
+  does not immediately drop an active live flight or grounded-arm state.
 
 ...vario filters or fusion:
   Check: VarioSuite, FlightDataCalculatorEngineLoops,

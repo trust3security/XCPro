@@ -301,4 +301,27 @@ class ProfileExportImportTest {
         assertTrue(message.contains("Unsupported profile settings snapshot version"))
         assertTrue(message.contains("1.x"))
     }
+
+    @Test
+    fun parseStarterAircraftProfileExamples_areAcceptedAsBundleV2() {
+        val sailplaneJson = ProfileExampleFiles.readString(
+            "xcpro-aircraft-profile-sailplane-asg-29-2026-03-10.json"
+        )
+        val hangGliderJson = ProfileExampleFiles.readString(
+            "xcpro-aircraft-profile-hang-glider-moyes-litespeed-rs-2026-03-10.json"
+        )
+
+        val sailplane = ProfileBundleCodec.parse(sailplaneJson).getOrThrow()
+        val hangGlider = ProfileBundleCodec.parse(hangGliderJson).getOrThrow()
+
+        assertEquals(ProfileBundleSourceFormat.BUNDLE_V2, sailplane.sourceFormat)
+        assertEquals("Sample Sailplane", sailplane.profiles.single().name)
+        assertEquals(AircraftType.SAILPLANE, sailplane.profiles.single().aircraftType)
+        assertTrue(sailplane.settingsSnapshot.sections.isEmpty())
+
+        assertEquals(ProfileBundleSourceFormat.BUNDLE_V2, hangGlider.sourceFormat)
+        assertEquals("Sample Hang Glider", hangGlider.profiles.single().name)
+        assertEquals(AircraftType.HANG_GLIDER, hangGlider.profiles.single().aircraftType)
+        assertTrue(hangGlider.settingsSnapshot.sections.isEmpty())
+    }
 }

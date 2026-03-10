@@ -14,7 +14,10 @@ import com.example.xcpro.forecast.ForecastPreferences
 import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.glider.GliderProfileSnapshot
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.MapOrientationSettings
+import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.map.widgets.MapWidgetLayoutRepository
+import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
@@ -140,6 +143,32 @@ class AppProfileSettingsSnapshotProviderTest {
             .thenReturn(UnitsPreferences(altitude = AltitudeUnit.FEET))
         whenever(unitsRepository.readProfileUnits("pilot-1"))
             .thenReturn(UnitsPreferences(altitude = AltitudeUnit.METERS))
+        val orientationSettingsRepository = mock<MapOrientationSettingsRepository>()
+        whenever(
+            orientationSettingsRepository.readProfileSettings(
+                ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID
+            )
+        ).thenReturn(
+            MapOrientationSettings(
+                cruiseMode = com.example.xcpro.common.orientation.MapOrientationMode.NORTH_UP,
+                circlingMode = com.example.xcpro.common.orientation.MapOrientationMode.TRACK_UP,
+                minSpeedThresholdMs = 2.0,
+                gliderScreenPercent = 30,
+                mapShiftBiasMode = MapShiftBiasMode.TRACK,
+                mapShiftBiasStrength = 0.4
+            )
+        )
+        whenever(orientationSettingsRepository.readProfileSettings("pilot-1"))
+            .thenReturn(
+                MapOrientationSettings(
+                    cruiseMode = com.example.xcpro.common.orientation.MapOrientationMode.HEADING_UP,
+                    circlingMode = com.example.xcpro.common.orientation.MapOrientationMode.NORTH_UP,
+                    minSpeedThresholdMs = 3.0,
+                    gliderScreenPercent = 40,
+                    mapShiftBiasMode = MapShiftBiasMode.NONE,
+                    mapShiftBiasStrength = 0.0
+                )
+            )
 
         val levoVario = mock<LevoVarioPreferencesRepository>()
         whenever(levoVario.config).thenReturn(flowOf(LevoVarioConfig()))
@@ -177,8 +206,6 @@ class AppProfileSettingsSnapshotProviderTest {
         whenever(adsbTraffic.emergencyAudioCooldownMsFlow).thenReturn(flowOf(45_000L))
         whenever(adsbTraffic.emergencyAudioMasterEnabledFlow).thenReturn(flowOf(true))
         whenever(adsbTraffic.emergencyAudioShadowModeFlow).thenReturn(flowOf(false))
-        whenever(adsbTraffic.emergencyAudioCohortPercentFlow).thenReturn(flowOf(100))
-        whenever(adsbTraffic.emergencyAudioCohortBucketFlow).thenReturn(flowOf(1))
         whenever(adsbTraffic.emergencyAudioRollbackLatchedFlow).thenReturn(flowOf(false))
         whenever(adsbTraffic.emergencyAudioRollbackReasonFlow).thenReturn(flowOf(null))
 
@@ -200,6 +227,7 @@ class AppProfileSettingsSnapshotProviderTest {
             variometerWidgetRepository = variometerWidget,
             gliderRepository = gliderRepository,
             unitsRepository = unitsRepository,
+            orientationSettingsRepository = orientationSettingsRepository,
             levoVarioPreferencesRepository = levoVario,
             thermallingModePreferencesRepository = thermalling,
             ognTrafficPreferencesRepository = ognTraffic,
@@ -220,6 +248,7 @@ class AppProfileSettingsSnapshotProviderTest {
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.VARIOMETER_WIDGET_LAYOUT))
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.GLIDER_CONFIG))
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.UNITS_PREFERENCES))
+        assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.ORIENTATION_PREFERENCES))
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES))
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.THERMALLING_MODE_PREFERENCES))
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.OGN_TRAFFIC_PREFERENCES))
@@ -248,6 +277,20 @@ class AppProfileSettingsSnapshotProviderTest {
         assertEquals(
             AltitudeUnit.METERS,
             unitsSection.unitsByProfile["pilot-1"]?.altitude
+        )
+        val orientationSection = gson.fromJson(
+            snapshot.sections.getValue(ProfileSettingsSectionIds.ORIENTATION_PREFERENCES),
+            OrientationSectionSnapshot::class.java
+        )
+        assertEquals(
+            "NORTH_UP",
+            orientationSection.settingsByProfile
+                .getValue(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
+                .cruiseMode
+        )
+        assertEquals(
+            40,
+            orientationSection.settingsByProfile.getValue("pilot-1").gliderScreenPercent
         )
     }
 }

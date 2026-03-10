@@ -3,6 +3,7 @@ package com.example.xcpro
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
+import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -18,7 +19,10 @@ data class MapOrientationSettings(
     val minSpeedThresholdMs: Double = 2.0,
     val gliderScreenPercent: Int = 35,
     val mapShiftBiasMode: MapShiftBiasMode = MapShiftBiasMode.NONE,
-    val mapShiftBiasStrength: Double = 1.0
+    val mapShiftBiasStrength: Double = 1.0,
+    val autoResetEnabled: Boolean = true,
+    val autoResetTimeoutSeconds: Int = 10,
+    val bearingSmoothingEnabled: Boolean = true
 )
 
 @Singleton
@@ -26,6 +30,7 @@ class MapOrientationSettingsRepository @Inject constructor(
     @ApplicationContext context: Context
 ) {
     private val preferences = MapOrientationPreferences(context)
+    private var activeProfileId: String = MapOrientationPreferences.DEFAULT_PROFILE_ID
     private val _settingsFlow = MutableStateFlow(readSettings())
     val settingsFlow: StateFlow<MapOrientationSettings> = _settingsFlow.asStateFlow()
 
@@ -35,10 +40,19 @@ class MapOrientationSettingsRepository @Inject constructor(
 
     init {
         preferences.registerListener(listener)
+        preferences.setActiveProfileId(activeProfileId)
         emitSettings()
     }
 
     fun getSettings(): MapOrientationSettings = _settingsFlow.value
+
+    fun setActiveProfileId(profileId: String) {
+        val resolved = MapOrientationPreferences.resolveProfileId(profileId)
+        if (activeProfileId == resolved) return
+        activeProfileId = resolved
+        preferences.setActiveProfileId(resolved)
+        emitSettings()
+    }
 
     fun setCruiseOrientationMode(mode: MapOrientationMode) {
         preferences.setCruiseOrientationMode(mode)
@@ -70,6 +84,36 @@ class MapOrientationSettingsRepository @Inject constructor(
         emitSettings()
     }
 
+    fun readProfileSettings(profileId: String): MapOrientationSettings =
+        readSettings(profileId)
+
+    fun writeProfileSettings(profileId: String, settings: MapOrientationSettings) {
+        val resolved = MapOrientationPreferences.resolveProfileId(profileId)
+        preferences.setCruiseOrientationMode(settings.cruiseMode, resolved)
+        preferences.setCirclingOrientationMode(settings.circlingMode, resolved)
+        preferences.setMinSpeedThreshold(
+            UnitsConverter.msToKnots(settings.minSpeedThresholdMs),
+            resolved
+        )
+        preferences.setGliderScreenPercent(settings.gliderScreenPercent, resolved)
+        preferences.setMapShiftBiasMode(settings.mapShiftBiasMode, resolved)
+        preferences.setMapShiftBiasStrength(settings.mapShiftBiasStrength, resolved)
+        preferences.setAutoResetEnabled(settings.autoResetEnabled, resolved)
+        preferences.setAutoResetTimeoutSeconds(settings.autoResetTimeoutSeconds, resolved)
+        preferences.setBearingSmoothingEnabled(settings.bearingSmoothingEnabled, resolved)
+        if (activeProfileId == resolved) {
+            emitSettings()
+        }
+    }
+
+    fun clearProfile(profileId: String) {
+        val resolved = MapOrientationPreferences.resolveProfileId(profileId)
+        preferences.clearProfile(resolved)
+        if (activeProfileId == resolved) {
+            emitSettings()
+        }
+    }
+
     private fun emitSettings() {
         val settings = readSettings()
         if (settings != _settingsFlow.value) {
@@ -77,12 +121,16 @@ class MapOrientationSettingsRepository @Inject constructor(
         }
     }
 
-    private fun readSettings(): MapOrientationSettings = MapOrientationSettings(
-        cruiseMode = preferences.getCruiseOrientationMode(),
-        circlingMode = preferences.getCirclingOrientationMode(),
-        minSpeedThresholdMs = preferences.getMinSpeedThreshold(),
-        gliderScreenPercent = preferences.getGliderScreenPercent(),
-        mapShiftBiasMode = preferences.getMapShiftBiasMode(),
-        mapShiftBiasStrength = preferences.getMapShiftBiasStrength()
-    )
+    private fun readSettings(profileId: String = activeProfileId): MapOrientationSettings =
+        MapOrientationSettings(
+            cruiseMode = preferences.getCruiseOrientationMode(profileId),
+            circlingMode = preferences.getCirclingOrientationMode(profileId),
+            minSpeedThresholdMs = preferences.getMinSpeedThreshold(profileId),
+            gliderScreenPercent = preferences.getGliderScreenPercent(profileId),
+            mapShiftBiasMode = preferences.getMapShiftBiasMode(profileId),
+            mapShiftBiasStrength = preferences.getMapShiftBiasStrength(profileId),
+            autoResetEnabled = preferences.isAutoResetEnabled(profileId),
+            autoResetTimeoutSeconds = preferences.getAutoResetTimeoutSeconds(profileId),
+            bearingSmoothingEnabled = preferences.isBearingSmoothingEnabled(profileId)
+        )
 }

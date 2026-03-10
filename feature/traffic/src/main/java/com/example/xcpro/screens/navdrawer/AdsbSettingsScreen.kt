@@ -74,7 +74,6 @@ fun AdsbSettingsScreen(
     val emergencyAudioCooldownMs by viewModel.emergencyAudioCooldownMs.collectAsStateWithLifecycle()
     val emergencyAudioMasterEnabled by viewModel.emergencyAudioMasterEnabled.collectAsStateWithLifecycle()
     val emergencyAudioShadowMode by viewModel.emergencyAudioShadowMode.collectAsStateWithLifecycle()
-    val emergencyAudioCohortPercent by viewModel.emergencyAudioCohortPercent.collectAsStateWithLifecycle()
     val emergencyAudioRollbackLatched by viewModel.emergencyAudioRollbackLatched.collectAsStateWithLifecycle()
     val emergencyAudioRollbackReason by viewModel.emergencyAudioRollbackReason.collectAsStateWithLifecycle()
     val units by viewModel.units.collectAsStateWithLifecycle()
@@ -109,10 +108,6 @@ fun AdsbSettingsScreen(
     var emergencyCooldownSliderSeconds by remember {
         mutableStateOf(emergencyCooldownSeconds(emergencyAudioCooldownMs))
     }
-    var emergencyCohortPercentSliderValue by remember {
-        mutableStateOf(emergencyAudioCohortPercent.toFloat())
-    }
-
     var clientId by remember { mutableStateOf("") }
     var clientSecret by remember { mutableStateOf("") }
     var credentialsStatus by remember { mutableStateOf("OpenSky credentials not set") }
@@ -132,10 +127,6 @@ fun AdsbSettingsScreen(
     LaunchedEffect(emergencyAudioCooldownMs) {
         emergencyCooldownSliderSeconds = emergencyCooldownSeconds(emergencyAudioCooldownMs)
     }
-    LaunchedEffect(emergencyAudioCohortPercent) {
-        emergencyCohortPercentSliderValue = emergencyAudioCohortPercent.toFloat()
-    }
-
     LaunchedEffect(Unit) {
         val credentials = viewModel.loadOpenSkyCredentials()
         clientId = credentials?.clientId.orEmpty()
@@ -320,16 +311,6 @@ fun AdsbSettingsScreen(
                                     emergencyCooldownMillisFromSeconds(emergencyCooldownSliderSeconds)
                                 if (cooldownMs != emergencyAudioCooldownMs) {
                                     viewModel.setEmergencyAudioCooldownMs(cooldownMs)
-                                }
-                            },
-                            emergencyAudioCohortPercent = emergencyCohortPercentSliderValue.roundToInt(),
-                            onEmergencyAudioCohortPercentChanged = { value ->
-                                emergencyCohortPercentSliderValue = value.toFloat()
-                            },
-                            onEmergencyAudioCohortPercentValueChangeFinished = {
-                                val snapped = emergencyCohortPercentSliderValue.roundToInt()
-                                if (snapped != emergencyAudioCohortPercent) {
-                                    viewModel.setEmergencyAudioCohortPercent(snapped)
                                 }
                             },
                             emergencyAudioRollbackLatched = emergencyAudioRollbackLatched,

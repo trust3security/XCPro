@@ -19,10 +19,10 @@ import org.maplibre.geojson.Point
 class OgnTargetRingOverlay(
     private val map: MapLibreMap,
     initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
-) {
+) : OgnTargetRingOverlayHandle {
     private var currentIconSizePx: Int = clampOgnIconSizePx(initialIconSizePx)
 
-    fun initialize() {
+    override fun initialize() {
         val style = map.style ?: return
         try {
             if (style.getSource(SOURCE_ID) == null) {
@@ -37,14 +37,14 @@ class OgnTargetRingOverlay(
         }
     }
 
-    fun setIconSizePx(iconSizePx: Int) {
+    override fun setIconSizePx(iconSizePx: Int) {
         val clamped = clampOgnIconSizePx(iconSizePx)
         if (currentIconSizePx == clamped) return
         currentIconSizePx = clamped
         applyRingSizeToStyle()
     }
 
-    fun render(enabled: Boolean, target: OgnTrafficTarget?) {
+    override fun render(enabled: Boolean, target: OgnTrafficTarget?) {
         if (!enabled || target == null || !isValidCoordinate(target.latitude, target.longitude)) {
             clear()
             return
@@ -59,7 +59,7 @@ class OgnTargetRingOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
     }
 
-    fun findTargetAt(tap: LatLng): String? {
+    override fun findTargetAt(tap: LatLng): String? {
         val style = map.style ?: return null
         if (style.getSource(SOURCE_ID) == null || style.getLayer(LAYER_ID) == null) return null
         val screenPoint = map.projection.toScreenLocation(tap)
@@ -88,7 +88,7 @@ class OgnTargetRingOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
     }
 
-    fun cleanup() {
+    override fun cleanup() {
         val style = map.style ?: return
         try {
             style.removeLayer(LAYER_ID)
@@ -98,7 +98,7 @@ class OgnTargetRingOverlay(
         }
     }
 
-    fun bringToFront() {
+    override fun bringToFront() {
         val style = map.style ?: return
         if (style.getLayer(LAYER_ID) == null) return
         try {

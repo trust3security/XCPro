@@ -292,6 +292,12 @@ class IgcSessionStateMachine(
             postFlightGroundFixMonoTimes.clear()
             return
         }
+        if (!signal.hasFix || !signal.onGround) {
+            // AI-NOTE: Pause finalize timeout while landing confidence is
+            // uncertain so transient GNSS loss cannot terminate a valid flight.
+            finalizingSinceMs = null
+            return
+        }
         tryDispatchFinalize(signal, actions)
     }
 

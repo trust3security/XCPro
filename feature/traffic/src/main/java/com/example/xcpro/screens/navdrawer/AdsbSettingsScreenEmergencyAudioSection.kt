@@ -17,12 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
 import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS
-import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX
-import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN
 import kotlin.math.roundToInt
 
 private const val EMERGENCY_COOLDOWN_STEP_SECONDS = 5f
-private const val EMERGENCY_COHORT_PERCENT_STEP = 5f
 
 @Composable
 internal fun AdsbEmergencyAudioSection(
@@ -37,9 +34,6 @@ internal fun AdsbEmergencyAudioSection(
     emergencyCooldownSliderSeconds: Float,
     onEmergencyCooldownSliderSecondsChanged: (Float) -> Unit,
     onEmergencyCooldownValueChangeFinished: () -> Unit,
-    emergencyAudioCohortPercent: Int,
-    onEmergencyAudioCohortPercentChanged: (Int) -> Unit,
-    onEmergencyAudioCohortPercentValueChangeFinished: () -> Unit,
     emergencyAudioRollbackLatched: Boolean,
     emergencyAudioRollbackReason: String?,
     onClearEmergencyAudioRollback: () -> Unit
@@ -105,26 +99,6 @@ internal fun AdsbEmergencyAudioSection(
     )
 
     Spacer(modifier = Modifier.height(12.dp))
-
-    Text(
-        text = "Rollout cohort: $emergencyAudioCohortPercent%",
-        style = MaterialTheme.typography.bodyMedium
-    )
-    Slider(
-        value = emergencyAudioCohortPercent.toFloat(),
-        onValueChange = { value ->
-            val snapped = snapEmergencyCohortPercent(value)
-            onEmergencyAudioCohortPercentChanged(snapped)
-        },
-        onValueChangeFinished = onEmergencyAudioCohortPercentValueChangeFinished,
-        valueRange = emergencyCohortPercentSliderRange(),
-        steps = emergencyCohortPercentSliderSteps()
-    )
-    Text(
-        text = "Controls percentage of devices eligible for master rollout output.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
 
     if (emergencyAudioRollbackLatched) {
         Spacer(modifier = Modifier.height(8.dp))
@@ -208,19 +182,3 @@ internal fun emergencyCooldownSeconds(cooldownMs: Long): Float =
         ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
         ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
     ) / 1_000L).toFloat()
-
-internal fun emergencyCohortPercentSliderRange(): ClosedFloatingPointRange<Float> =
-    ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN.toFloat()..
-        ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX.toFloat()
-
-internal fun emergencyCohortPercentSliderSteps(): Int {
-    val range = emergencyCohortPercentSliderRange()
-    return (((range.endInclusive - range.start) / EMERGENCY_COHORT_PERCENT_STEP).roundToInt() - 1)
-        .coerceAtLeast(0)
-}
-
-internal fun snapEmergencyCohortPercent(value: Float): Int {
-    val range = emergencyCohortPercentSliderRange()
-    val snapped = (value / EMERGENCY_COHORT_PERCENT_STEP).roundToInt() * EMERGENCY_COHORT_PERCENT_STEP
-    return snapped.coerceIn(range.start, range.endInclusive).roundToInt()
-}

@@ -475,28 +475,20 @@ abstract class AdsbTrafficRepositoryTestBase {
 
     protected class FakeEmergencyAudioRolloutPort(
         masterEnabled: Boolean,
-        shadowModeEnabled: Boolean,
-        cohortPercent: Int = ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT,
-        cohortBucket: Int = ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN
+        shadowModeEnabled: Boolean
     ) : AdsbEmergencyAudioRolloutPort {
         private val _masterEnabled = MutableStateFlow(masterEnabled)
         private val _shadowModeEnabled = MutableStateFlow(shadowModeEnabled)
-        private val _cohortPercent = MutableStateFlow(cohortPercent)
-        private val _cohortBucket = MutableStateFlow(cohortBucket)
         private val _rollbackLatched = MutableStateFlow(false)
         private val _rollbackReason = MutableStateFlow<String?>(null)
         override val emergencyAudioMasterEnabledFlow: StateFlow<Boolean> = _masterEnabled
         override val emergencyAudioShadowModeFlow: StateFlow<Boolean> = _shadowModeEnabled
-        override val emergencyAudioCohortPercentFlow: StateFlow<Int> = _cohortPercent
-        override val emergencyAudioCohortBucketFlow: StateFlow<Int> = _cohortBucket
         override val emergencyAudioRollbackLatchedFlow: StateFlow<Boolean> = _rollbackLatched
         override val emergencyAudioRollbackReasonFlow: StateFlow<String?> = _rollbackReason
 
         fun setMasterEnabled(enabled: Boolean) { _masterEnabled.value = enabled }
 
         fun setShadowModeEnabled(enabled: Boolean) { _shadowModeEnabled.value = enabled }
-
-        fun setCohortPercent(percent: Int) { _cohortPercent.value = percent }
 
         override suspend fun latchEmergencyAudioRollback(reason: String) {
             _rollbackLatched.value = true

@@ -39,12 +39,7 @@ internal fun AdsbDebugPolicyAndKpiRows(snapshot: AdsbTrafficSnapshot) {
         style = MaterialTheme.typography.bodySmall
     )
     Text(
-        text = "Rollout (cfg/effective/shadow/cohort): ${snapshot.emergencyAudioMasterRolloutConfigured}/${snapshot.emergencyAudioMasterRolloutEnabled}/${snapshot.emergencyAudioShadowModeEnabled}/${snapshot.emergencyAudioRolloutCohortPercent}%",
-        color = Color(0xFFE5E7EB),
-        style = MaterialTheme.typography.bodySmall
-    )
-    Text(
-        text = "Rollout bucket/eligible/latch: ${snapshot.emergencyAudioRolloutCohortBucket}/${snapshot.emergencyAudioRolloutCohortEligible}/${snapshot.emergencyAudioRollbackLatched}",
+        text = "Rollout (cfg/effective/shadow): ${snapshot.emergencyAudioMasterRolloutConfigured}/${snapshot.emergencyAudioMasterRolloutEnabled}/${snapshot.emergencyAudioShadowModeEnabled}",
         color = Color(0xFFE5E7EB),
         style = MaterialTheme.typography.bodySmall
     )

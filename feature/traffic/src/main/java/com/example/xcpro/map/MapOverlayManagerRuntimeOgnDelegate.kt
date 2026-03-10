@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
+import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -12,11 +13,12 @@ import org.maplibre.android.maps.MapLibreMap
 class MapOverlayManagerRuntimeOgnDelegate(
     private val runtimeState: TrafficOverlayRuntimeState,
     private val coroutineScope: CoroutineScope,
-    private val ognTrafficOverlayFactory: (MapLibreMap, Int, Boolean) -> OgnTrafficOverlay,
-    private val ognTargetRingOverlayFactory: (MapLibreMap, Int) -> OgnTargetRingOverlay,
-    private val ognTargetLineOverlayFactory: (MapLibreMap) -> OgnTargetLineOverlay,
-    private val ognThermalOverlayFactory: (MapLibreMap) -> OgnThermalOverlay,
-    private val ognGliderTrailOverlayFactory: (MapLibreMap) -> OgnGliderTrailOverlay,
+    private val context: Context,
+    private val ognTrafficOverlayFactory: OgnTrafficOverlayFactory,
+    private val ognTargetRingOverlayFactory: OgnTargetRingOverlayFactory,
+    private val ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory,
+    private val ognThermalOverlayFactory: OgnThermalOverlayFactory,
+    private val ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory,
     private val bringTrafficOverlaysToFront: () -> Unit,
     private val satelliteContrastIconsEnabled: () -> Boolean,
     private val normalizeOwnshipAltitudeForRender: (Double?) -> Double?,
@@ -249,8 +251,9 @@ class MapOverlayManagerRuntimeOgnDelegate(
         targetResolved = latestResolvedTarget != null
     )
 
-    private fun createOgnTrafficOverlay(map: MapLibreMap): OgnTrafficOverlay =
+    private fun createOgnTrafficOverlay(map: MapLibreMap): OgnTrafficOverlayHandle =
         ognTrafficOverlayFactory(
+            context,
             map,
             ognIconSizePx,
             satelliteContrastIconsEnabled()

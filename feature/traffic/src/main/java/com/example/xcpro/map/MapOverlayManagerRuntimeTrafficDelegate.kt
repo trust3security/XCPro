@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import android.content.Context
 import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -11,7 +12,8 @@ import org.maplibre.android.maps.MapLibreMap
 class MapOverlayManagerRuntimeTrafficDelegate(
     private val runtimeState: TrafficOverlayRuntimeState,
     private val coroutineScope: CoroutineScope,
-    private val adsbTrafficOverlayFactory: (MapLibreMap, Int) -> AdsbTrafficOverlay,
+    private val adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory,
+    private val context: Context,
     private val interactionActiveProvider: () -> Boolean,
     private val bringOgnOverlaysToFront: () -> Unit,
     private val nowMonoMs: () -> Long
@@ -208,8 +210,8 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         bringTrafficOverlaysToFront()
     }
 
-    private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlay =
-        adsbTrafficOverlayFactory(map, adsbIconSizePx).also { overlay ->
+    private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlayHandle =
+        adsbTrafficOverlayFactory(context, map, adsbIconSizePx).also { overlay ->
             overlay.setEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
         }
 

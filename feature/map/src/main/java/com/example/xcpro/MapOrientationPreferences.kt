@@ -13,6 +13,7 @@ class MapOrientationPreferences(context: Context) {
         PREFS_NAME,
         Context.MODE_PRIVATE
     )
+    private var activeProfileId: String = DEFAULT_PROFILE_ID
 
     companion object {
         private const val PREFS_NAME = "map_orientation_prefs"
@@ -40,6 +41,20 @@ class MapOrientationPreferences(context: Context) {
         private const val DEFAULT_BEARING_SMOOTHING = true
         private const val DEFAULT_MAP_SHIFT_BIAS_MODE = "NONE"
         private const val DEFAULT_MAP_SHIFT_BIAS_STRENGTH = 1.0
+        internal const val DEFAULT_PROFILE_ID = "default-profile"
+        private const val LEGACY_DEFAULT_ALIAS = "default"
+        private const val LEGACY_DF_ALIAS = "__default_profile__"
+
+        internal fun resolveProfileId(profileId: String?): String {
+            val normalized = profileId?.trim().orEmpty()
+            if (normalized.isBlank()) return DEFAULT_PROFILE_ID
+            return when (normalized) {
+                DEFAULT_PROFILE_ID,
+                LEGACY_DEFAULT_ALIAS,
+                LEGACY_DF_ALIAS -> DEFAULT_PROFILE_ID
+                else -> normalized
+            }
+        }
     }
 
     init {
@@ -47,6 +62,10 @@ class MapOrientationPreferences(context: Context) {
         migrateRemovedWindUpMode()
         migrateMinSpeedThresholdToMeters()
         migrateMinSpeedThresholdDefault()
+    }
+
+    fun setActiveProfileId(profileId: String) {
+        activeProfileId = resolveProfileId(profileId)
     }
 
     private fun migrateLegacyOrientationMode() {
@@ -70,8 +89,15 @@ class MapOrientationPreferences(context: Context) {
             .apply()
     }
 
-    private fun readMode(key: String): MapOrientationMode {
-        val stored = preferences.getString(key, DEFAULT_ORIENTATION_MODE)
+    private fun readMode(
+        key: String,
+        profileId: String = activeProfileId
+    ): MapOrientationMode {
+        val stored = getScopedStringOrLegacy(
+            profileId = profileId,
+            key = key,
+            defaultValue = DEFAULT_ORIENTATION_MODE
+        )
         return try {
             MapOrientationMode.valueOf(stored ?: DEFAULT_ORIENTATION_MODE)
         } catch (_: IllegalArgumentException) {
@@ -79,9 +105,13 @@ class MapOrientationPreferences(context: Context) {
         }
     }
 
-    private fun writeMode(key: String, mode: MapOrientationMode) {
+    private fun writeMode(
+        key: String,
+        mode: MapOrientationMode,
+        profileId: String = activeProfileId
+    ) {
         preferences.edit()
-            .putString(key, mode.name)
+            .putString(scopedKey(profileId, key), mode.name)
             .apply()
     }
 
@@ -92,92 +122,109 @@ class MapOrientationPreferences(context: Context) {
         setCirclingOrientationMode(mode)
     }
 
-    fun getCruiseOrientationMode(): MapOrientationMode = readMode(KEY_CRUISE_ORIENTATION)
+    fun getCruiseOrientationMode(profileId: String = activeProfileId): MapOrientationMode =
+        readMode(KEY_CRUISE_ORIENTATION, profileId)
 
-    fun setCruiseOrientationMode(mode: MapOrientationMode) = writeMode(KEY_CRUISE_ORIENTATION, mode)
+    fun setCruiseOrientationMode(
+        mode: MapOrientationMode,
+        profileId: String = activeProfileId
+    ) = writeMode(KEY_CRUISE_ORIENTATION, mode, profileId)
 
-    fun getCirclingOrientationMode(): MapOrientationMode = readMode(KEY_CIRCLING_ORIENTATION)
+    fun getCirclingOrientationMode(profileId: String = activeProfileId): MapOrientationMode =
+        readMode(KEY_CIRCLING_ORIENTATION, profileId)
 
-    fun setCirclingOrientationMode(mode: MapOrientationMode) = writeMode(KEY_CIRCLING_ORIENTATION, mode)
+    fun setCirclingOrientationMode(
+        mode: MapOrientationMode,
+        profileId: String = activeProfileId
+    ) = writeMode(KEY_CIRCLING_ORIENTATION, mode, profileId)
 
-    fun isAutoResetEnabled(): Boolean {
-        return preferences.getBoolean(KEY_AUTO_RESET_ENABLED, DEFAULT_AUTO_RESET_ENABLED)
-    }
+    fun isAutoResetEnabled(profileId: String = activeProfileId): Boolean =
+        getScopedBooleanOrLegacy(profileId, KEY_AUTO_RESET_ENABLED, DEFAULT_AUTO_RESET_ENABLED)
 
-    fun setAutoResetEnabled(enabled: Boolean) {
+    fun setAutoResetEnabled(enabled: Boolean, profileId: String = activeProfileId) {
         preferences.edit()
-            .putBoolean(KEY_AUTO_RESET_ENABLED, enabled)
+            .putBoolean(scopedKey(profileId, KEY_AUTO_RESET_ENABLED), enabled)
             .apply()
     }
 
-    fun getAutoResetTimeoutSeconds(): Int {
-        return preferences.getInt(KEY_AUTO_RESET_TIMEOUT, DEFAULT_AUTO_RESET_TIMEOUT)
-    }
+    fun getAutoResetTimeoutSeconds(profileId: String = activeProfileId): Int =
+        getScopedIntOrLegacy(profileId, KEY_AUTO_RESET_TIMEOUT, DEFAULT_AUTO_RESET_TIMEOUT)
 
-    fun setAutoResetTimeoutSeconds(seconds: Int) {
+    fun setAutoResetTimeoutSeconds(seconds: Int, profileId: String = activeProfileId) {
         val clampedSeconds = seconds.coerceIn(5, 60) // Between 5 and 60 seconds
         preferences.edit()
-            .putInt(KEY_AUTO_RESET_TIMEOUT, clampedSeconds)
+            .putInt(scopedKey(profileId, KEY_AUTO_RESET_TIMEOUT), clampedSeconds)
             .apply()
     }
 
-    fun getMinSpeedThreshold(): Double {
-        return preferences.getFloat(
-            KEY_MIN_SPEED_THRESHOLD,
-            DEFAULT_MIN_SPEED_THRESHOLD_MS.toFloat()
+    fun getMinSpeedThreshold(profileId: String = activeProfileId): Double =
+        getScopedFloatOrLegacy(
+            profileId = profileId,
+            key = KEY_MIN_SPEED_THRESHOLD,
+            defaultValue = DEFAULT_MIN_SPEED_THRESHOLD_MS.toFloat()
         ).toDouble()
-    }
 
-    fun setMinSpeedThreshold(speedKnots: Double) {
+    fun setMinSpeedThreshold(speedKnots: Double, profileId: String = activeProfileId) {
         val clampedSpeed = speedKnots.coerceIn(0.0, 20.0) // Between 0 and 20 knots
         val speedMs = UnitsConverter.knotsToMs(clampedSpeed)
         preferences.edit()
-            .putFloat(KEY_MIN_SPEED_THRESHOLD, speedMs.toFloat())
-            .putBoolean(KEY_MIN_SPEED_IS_MS, true)
+            .putFloat(scopedKey(profileId, KEY_MIN_SPEED_THRESHOLD), speedMs.toFloat())
+            .putBoolean(scopedKey(profileId, KEY_MIN_SPEED_IS_MS), true)
             .apply()
     }
 
-    fun isBearingSmoothingEnabled(): Boolean {
-        return preferences.getBoolean(KEY_BEARING_SMOOTHING, DEFAULT_BEARING_SMOOTHING)
-    }
+    fun isBearingSmoothingEnabled(profileId: String = activeProfileId): Boolean =
+        getScopedBooleanOrLegacy(profileId, KEY_BEARING_SMOOTHING, DEFAULT_BEARING_SMOOTHING)
 
-    fun setBearingSmoothingEnabled(enabled: Boolean) {
+    fun setBearingSmoothingEnabled(enabled: Boolean, profileId: String = activeProfileId) {
         preferences.edit()
-            .putBoolean(KEY_BEARING_SMOOTHING, enabled)
+            .putBoolean(scopedKey(profileId, KEY_BEARING_SMOOTHING), enabled)
             .apply()
     }
 
-    fun resetToDefaults() {
+    fun resetToDefaults(profileId: String = activeProfileId) {
         preferences.edit()
-            .putString(KEY_CRUISE_ORIENTATION, DEFAULT_ORIENTATION_MODE)
-            .putString(KEY_CIRCLING_ORIENTATION, DEFAULT_ORIENTATION_MODE)
-            .putBoolean(KEY_AUTO_RESET_ENABLED, DEFAULT_AUTO_RESET_ENABLED)
-            .putInt(KEY_AUTO_RESET_TIMEOUT, DEFAULT_AUTO_RESET_TIMEOUT)
-            .putFloat(KEY_MIN_SPEED_THRESHOLD, DEFAULT_MIN_SPEED_THRESHOLD_MS.toFloat())
-            .putBoolean(KEY_MIN_SPEED_IS_MS, true)
-            .putInt(KEY_GLIDER_SCREEN_PERCENT, DEFAULT_GLIDER_SCREEN_PERCENT)
-            .putBoolean(KEY_BEARING_SMOOTHING, DEFAULT_BEARING_SMOOTHING)
-            .putString(KEY_MAP_SHIFT_BIAS_MODE, DEFAULT_MAP_SHIFT_BIAS_MODE)
-            .putFloat(KEY_MAP_SHIFT_BIAS_STRENGTH, DEFAULT_MAP_SHIFT_BIAS_STRENGTH.toFloat())
+            .putString(scopedKey(profileId, KEY_CRUISE_ORIENTATION), DEFAULT_ORIENTATION_MODE)
+            .putString(scopedKey(profileId, KEY_CIRCLING_ORIENTATION), DEFAULT_ORIENTATION_MODE)
+            .putBoolean(scopedKey(profileId, KEY_AUTO_RESET_ENABLED), DEFAULT_AUTO_RESET_ENABLED)
+            .putInt(scopedKey(profileId, KEY_AUTO_RESET_TIMEOUT), DEFAULT_AUTO_RESET_TIMEOUT)
+            .putFloat(
+                scopedKey(profileId, KEY_MIN_SPEED_THRESHOLD),
+                DEFAULT_MIN_SPEED_THRESHOLD_MS.toFloat()
+            )
+            .putBoolean(scopedKey(profileId, KEY_MIN_SPEED_IS_MS), true)
+            .putInt(
+                scopedKey(profileId, KEY_GLIDER_SCREEN_PERCENT),
+                DEFAULT_GLIDER_SCREEN_PERCENT
+            )
+            .putBoolean(
+                scopedKey(profileId, KEY_BEARING_SMOOTHING),
+                DEFAULT_BEARING_SMOOTHING
+            )
+            .putString(scopedKey(profileId, KEY_MAP_SHIFT_BIAS_MODE), DEFAULT_MAP_SHIFT_BIAS_MODE)
+            .putFloat(
+                scopedKey(profileId, KEY_MAP_SHIFT_BIAS_STRENGTH),
+                DEFAULT_MAP_SHIFT_BIAS_STRENGTH.toFloat()
+            )
             .apply()
     }
 
-    fun getAllSettings(): Map<String, Any> {
+    fun getAllSettings(profileId: String = activeProfileId): Map<String, Any> {
         return mapOf(
-            "cruiseOrientation" to getCruiseOrientationMode().name,
-            "circlingOrientation" to getCirclingOrientationMode().name,
-            "autoResetEnabled" to isAutoResetEnabled(),
-            "autoResetTimeoutSeconds" to getAutoResetTimeoutSeconds(),
-            "minSpeedThreshold" to getMinSpeedThreshold(),
-            "gliderScreenPercent" to getGliderScreenPercent(),
-            "bearingSmoothingEnabled" to isBearingSmoothingEnabled(),
-            "mapShiftBiasMode" to getMapShiftBiasMode().name,
-            "mapShiftBiasStrength" to getMapShiftBiasStrength()
+            "cruiseOrientation" to getCruiseOrientationMode(profileId).name,
+            "circlingOrientation" to getCirclingOrientationMode(profileId).name,
+            "autoResetEnabled" to isAutoResetEnabled(profileId),
+            "autoResetTimeoutSeconds" to getAutoResetTimeoutSeconds(profileId),
+            "minSpeedThreshold" to getMinSpeedThreshold(profileId),
+            "gliderScreenPercent" to getGliderScreenPercent(profileId),
+            "bearingSmoothingEnabled" to isBearingSmoothingEnabled(profileId),
+            "mapShiftBiasMode" to getMapShiftBiasMode(profileId).name,
+            "mapShiftBiasStrength" to getMapShiftBiasStrength(profileId)
         )
     }
 
-    fun exportSettings(): String {
-        val settings = getAllSettings()
+    fun exportSettings(profileId: String = activeProfileId): String {
+        val settings = getAllSettings(profileId)
         return settings.entries.joinToString(separator = "\n") { "${it.key}: ${it.value}" }
     }
 
@@ -233,20 +280,31 @@ class MapOrientationPreferences(context: Context) {
         }
     }
 
-    fun getGliderScreenPercent(): Int {
-        return preferences.getInt(KEY_GLIDER_SCREEN_PERCENT, DEFAULT_GLIDER_SCREEN_PERCENT)
+    fun getGliderScreenPercent(profileId: String = activeProfileId): Int {
+        return getScopedIntOrLegacy(
+            profileId,
+            KEY_GLIDER_SCREEN_PERCENT,
+            DEFAULT_GLIDER_SCREEN_PERCENT
+        )
             .coerceIn(10, 50)
     }
 
-    fun setGliderScreenPercent(percentFromBottom: Int) {
+    fun setGliderScreenPercent(
+        percentFromBottom: Int,
+        profileId: String = activeProfileId
+    ) {
         val clamped = percentFromBottom.coerceIn(10, 50)
         preferences.edit()
-            .putInt(KEY_GLIDER_SCREEN_PERCENT, clamped)
+            .putInt(scopedKey(profileId, KEY_GLIDER_SCREEN_PERCENT), clamped)
             .apply()
     }
 
-    fun getMapShiftBiasMode(): MapShiftBiasMode {
-        val stored = preferences.getString(KEY_MAP_SHIFT_BIAS_MODE, DEFAULT_MAP_SHIFT_BIAS_MODE)
+    fun getMapShiftBiasMode(profileId: String = activeProfileId): MapShiftBiasMode {
+        val stored = getScopedStringOrLegacy(
+            profileId = profileId,
+            key = KEY_MAP_SHIFT_BIAS_MODE,
+            defaultValue = DEFAULT_MAP_SHIFT_BIAS_MODE
+        )
         return try {
             MapShiftBiasMode.valueOf(stored ?: DEFAULT_MAP_SHIFT_BIAS_MODE)
         } catch (_: IllegalArgumentException) {
@@ -254,23 +312,40 @@ class MapOrientationPreferences(context: Context) {
         }
     }
 
-    fun setMapShiftBiasMode(mode: MapShiftBiasMode) {
+    fun setMapShiftBiasMode(mode: MapShiftBiasMode, profileId: String = activeProfileId) {
         preferences.edit()
-            .putString(KEY_MAP_SHIFT_BIAS_MODE, mode.name)
+            .putString(scopedKey(profileId, KEY_MAP_SHIFT_BIAS_MODE), mode.name)
             .apply()
     }
 
-    fun getMapShiftBiasStrength(): Double {
-        return preferences.getFloat(
-            KEY_MAP_SHIFT_BIAS_STRENGTH,
-            DEFAULT_MAP_SHIFT_BIAS_STRENGTH.toFloat()
+    fun getMapShiftBiasStrength(profileId: String = activeProfileId): Double {
+        return getScopedFloatOrLegacy(
+            profileId = profileId,
+            key = KEY_MAP_SHIFT_BIAS_STRENGTH,
+            defaultValue = DEFAULT_MAP_SHIFT_BIAS_STRENGTH.toFloat()
         ).toDouble().coerceIn(0.0, 1.0)
     }
 
-    fun setMapShiftBiasStrength(strength: Double) {
+    fun setMapShiftBiasStrength(strength: Double, profileId: String = activeProfileId) {
         val clamped = strength.coerceIn(0.0, 1.0)
         preferences.edit()
-            .putFloat(KEY_MAP_SHIFT_BIAS_STRENGTH, clamped.toFloat())
+            .putFloat(scopedKey(profileId, KEY_MAP_SHIFT_BIAS_STRENGTH), clamped.toFloat())
+            .apply()
+    }
+
+    fun clearProfile(profileId: String) {
+        val resolvedProfileId = resolveProfileId(profileId)
+        preferences.edit()
+            .remove(scopedKey(resolvedProfileId, KEY_CRUISE_ORIENTATION))
+            .remove(scopedKey(resolvedProfileId, KEY_CIRCLING_ORIENTATION))
+            .remove(scopedKey(resolvedProfileId, KEY_AUTO_RESET_ENABLED))
+            .remove(scopedKey(resolvedProfileId, KEY_AUTO_RESET_TIMEOUT))
+            .remove(scopedKey(resolvedProfileId, KEY_MIN_SPEED_THRESHOLD))
+            .remove(scopedKey(resolvedProfileId, KEY_MIN_SPEED_IS_MS))
+            .remove(scopedKey(resolvedProfileId, KEY_GLIDER_SCREEN_PERCENT))
+            .remove(scopedKey(resolvedProfileId, KEY_BEARING_SMOOTHING))
+            .remove(scopedKey(resolvedProfileId, KEY_MAP_SHIFT_BIAS_MODE))
+            .remove(scopedKey(resolvedProfileId, KEY_MAP_SHIFT_BIAS_STRENGTH))
             .apply()
     }
 
@@ -280,5 +355,56 @@ class MapOrientationPreferences(context: Context) {
 
     internal fun unregisterListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         preferences.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
+    private fun scopedKey(profileId: String, key: String): String =
+        "profile_${resolveProfileId(profileId)}_$key"
+
+    private fun getScopedStringOrLegacy(
+        profileId: String,
+        key: String,
+        defaultValue: String
+    ): String? {
+        val scoped = preferences.getString(scopedKey(profileId, key), null)
+        return scoped ?: preferences.getString(key, defaultValue)
+    }
+
+    private fun getScopedBooleanOrLegacy(
+        profileId: String,
+        key: String,
+        defaultValue: Boolean
+    ): Boolean {
+        val scopedKey = scopedKey(profileId, key)
+        return if (preferences.contains(scopedKey)) {
+            preferences.getBoolean(scopedKey, defaultValue)
+        } else {
+            preferences.getBoolean(key, defaultValue)
+        }
+    }
+
+    private fun getScopedIntOrLegacy(
+        profileId: String,
+        key: String,
+        defaultValue: Int
+    ): Int {
+        val scopedKey = scopedKey(profileId, key)
+        return if (preferences.contains(scopedKey)) {
+            preferences.getInt(scopedKey, defaultValue)
+        } else {
+            preferences.getInt(key, defaultValue)
+        }
+    }
+
+    private fun getScopedFloatOrLegacy(
+        profileId: String,
+        key: String,
+        defaultValue: Float
+    ): Float {
+        val scopedKey = scopedKey(profileId, key)
+        return if (preferences.contains(scopedKey)) {
+            preferences.getFloat(scopedKey, defaultValue)
+        } else {
+            preferences.getFloat(key, defaultValue)
+        }
     }
 }

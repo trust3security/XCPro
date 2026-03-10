@@ -34,8 +34,6 @@ class AdsbTrafficPreferencesRepositoryTest {
         repository.setEmergencyAudioCooldownMs(ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS)
         repository.setEmergencyAudioMasterEnabled(true)
         repository.setEmergencyAudioShadowMode(false)
-        repository.setEmergencyAudioCohortPercent(ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT)
-        repository.setEmergencyAudioCohortBucket(ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN)
         repository.clearEmergencyAudioRollback()
         repository.clearDefaultMediumUnknownIconRollback()
     }
@@ -235,10 +233,6 @@ class AdsbTrafficPreferencesRepositoryTest {
 
         assertEquals(true, repository.emergencyAudioMasterEnabledFlow.first())
         assertEquals(false, repository.emergencyAudioShadowModeFlow.first())
-        assertEquals(
-            ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_DEFAULT,
-            repository.emergencyAudioCohortPercentFlow.first()
-        )
         assertEquals(false, repository.emergencyAudioRollbackLatchedFlow.first())
         assertEquals(null, repository.emergencyAudioRollbackReasonFlow.first())
     }
@@ -252,40 +246,6 @@ class AdsbTrafficPreferencesRepositoryTest {
 
         assertEquals(false, repository.emergencyAudioMasterEnabledFlow.first())
         assertEquals(true, repository.emergencyAudioShadowModeFlow.first())
-    }
-
-    @Test
-    fun emergencyAudioRollout_cohortPercentAndBucket_clampAndPersist() = runTest {
-        val repository = AdsbTrafficPreferencesRepository(context)
-
-        repository.setEmergencyAudioCohortPercent(-1)
-        assertEquals(
-            ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MIN,
-            repository.emergencyAudioCohortPercentFlow.first()
-        )
-
-        repository.setEmergencyAudioCohortPercent(101)
-        assertEquals(
-            ADSB_EMERGENCY_AUDIO_COHORT_PERCENT_MAX,
-            repository.emergencyAudioCohortPercentFlow.first()
-        )
-
-        repository.setEmergencyAudioCohortBucket(-5)
-        assertEquals(
-            ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MIN,
-            repository.emergencyAudioCohortBucketFlow.first()
-        )
-
-        repository.setEmergencyAudioCohortBucket(999)
-        assertEquals(
-            ADSB_EMERGENCY_AUDIO_COHORT_BUCKET_MAX,
-            repository.emergencyAudioCohortBucketFlow.first()
-        )
-
-        repository.setEmergencyAudioCohortPercent(25)
-        repository.setEmergencyAudioCohortBucket(17)
-        assertEquals(25, repository.emergencyAudioCohortPercentFlow.first())
-        assertEquals(17, repository.emergencyAudioCohortBucketFlow.first())
     }
 
     @Test

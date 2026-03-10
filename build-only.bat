@@ -5,7 +5,7 @@ set "REPO_ROOT=%~dp0"
 set "GRADLE=%REPO_ROOT%gradlew.bat"
 
 echo Building debug APK...
-call ".\scripts\dev\gradle-run-with-lock-recovery.bat" "%GRADLE%" assembleDebug
+call "%GRADLE%" assembleDebug
 echo.
 if errorlevel 1 (
     echo ERROR: Build failed!

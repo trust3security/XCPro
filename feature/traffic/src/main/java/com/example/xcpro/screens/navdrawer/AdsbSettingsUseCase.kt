@@ -26,7 +26,6 @@ class AdsbSettingsUseCase @Inject constructor(
     val emergencyAudioCooldownMsFlow: Flow<Long> = repository.emergencyAudioCooldownMsFlow
     val emergencyAudioMasterEnabledFlow: Flow<Boolean> = repository.emergencyAudioMasterEnabledFlow
     val emergencyAudioShadowModeFlow: Flow<Boolean> = repository.emergencyAudioShadowModeFlow
-    val emergencyAudioCohortPercentFlow: Flow<Int> = repository.emergencyAudioCohortPercentFlow
     val emergencyAudioRollbackLatchedFlow: Flow<Boolean> = repository.emergencyAudioRollbackLatchedFlow
     val emergencyAudioRollbackReasonFlow: Flow<String?> = repository.emergencyAudioRollbackReasonFlow
     val unitsFlow: Flow<UnitsPreferences> = unitsRepository.unitsFlow
@@ -67,10 +66,6 @@ class AdsbSettingsUseCase @Inject constructor(
 
     suspend fun setEmergencyAudioShadowMode(enabled: Boolean) {
         repository.setEmergencyAudioShadowMode(enabled)
-    }
-
-    suspend fun setEmergencyAudioCohortPercent(percent: Int) {
-        repository.setEmergencyAudioCohortPercent(percent)
     }
 
     suspend fun clearEmergencyAudioRollback() {

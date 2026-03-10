@@ -302,6 +302,7 @@ class ProfileRepositoryBundleTest {
                 settings = ProfileSettingsSnapshot(
                     sections = mapOf(
                         ProfileSettingsSectionIds.UNITS_PREFERENCES to JsonPrimitive("units"),
+                        ProfileSettingsSectionIds.ORIENTATION_PREFERENCES to JsonPrimitive("orientation"),
                         ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES to JsonPrimitive("weather")
                     )
                 )
@@ -319,6 +320,7 @@ class ProfileRepositoryBundleTest {
         assertEquals(1, harness.restoreApplier.calls.size)
         val restoredSections = harness.restoreApplier.calls.first().settingsSnapshot.sections.keys
         assertTrue(restoredSections.contains(ProfileSettingsSectionIds.UNITS_PREFERENCES))
+        assertTrue(restoredSections.contains(ProfileSettingsSectionIds.ORIENTATION_PREFERENCES))
         assertTrue(!restoredSections.contains(ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES))
     }
 
@@ -358,5 +360,50 @@ class ProfileRepositoryBundleTest {
             (result.exceptionOrNull()?.message ?: "")
                 .contains(ProfileSettingsSectionIds.CARD_PREFERENCES)
         )
+    }
+
+    @Test
+    fun importStarterAircraftProfileExamples_canBeSwitchedBetween() = runTest {
+        val harness = Harness(backgroundScope)
+        advanceUntilIdle()
+
+        val sailplaneJson = ProfileExampleFiles.readString(
+            "xcpro-aircraft-profile-sailplane-asg-29-2026-03-10.json"
+        )
+        val hangGliderJson = ProfileExampleFiles.readString(
+            "xcpro-aircraft-profile-hang-glider-moyes-litespeed-rs-2026-03-10.json"
+        )
+
+        val sailplaneImport = harness.repository.importBundle(
+            ProfileBundleImportRequest(
+                json = sailplaneJson,
+                keepCurrentActive = false
+            )
+        ).getOrThrow()
+        val hangGliderImport = harness.repository.importBundle(
+            ProfileBundleImportRequest(
+                json = hangGliderJson,
+                keepCurrentActive = false
+            )
+        ).getOrThrow()
+
+        val sailplaneId = sailplaneImport.profileImportResult.importedProfileIdMap
+            .getValue("aircraft-sailplane-asg29")
+        val hangGliderId = hangGliderImport.profileImportResult.importedProfileIdMap
+            .getValue("aircraft-hangglider-moyes-litespeed-rs")
+
+        assertEquals(hangGliderId, harness.repository.activeProfile.value?.id)
+        assertTrue(harness.repository.profiles.value.any { it.aircraftModel == "ASG 29" })
+        assertTrue(
+            harness.repository.profiles.value.any { it.aircraftModel == "Moyes Litespeed RS" }
+        )
+
+        val sailplaneProfile = harness.repository.profiles.value.first { it.id == sailplaneId }
+        harness.repository.setActiveProfile(sailplaneProfile).getOrThrow()
+        assertEquals(sailplaneId, harness.repository.activeProfile.value?.id)
+
+        val hangGliderProfile = harness.repository.profiles.value.first { it.id == hangGliderId }
+        harness.repository.setActiveProfile(hangGliderProfile).getOrThrow()
+        assertEquals(hangGliderId, harness.repository.activeProfile.value?.id)
     }
 }

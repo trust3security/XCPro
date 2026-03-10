@@ -28,9 +28,9 @@ import org.maplibre.geojson.Point
 
 class OgnThermalOverlay(
     private val map: MapLibreMap
-) {
+) : OgnThermalOverlayHandle {
 
-    fun initialize() {
+    override fun initialize() {
         val style = map.style ?: return
         try {
             if (style.getSource(SOURCE_ID) == null) {
@@ -58,7 +58,7 @@ class OgnThermalOverlay(
         }
     }
 
-    fun render(hotspots: List<OgnThermalHotspot>) {
+    override fun render(hotspots: List<OgnThermalHotspot>) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
 
@@ -82,7 +82,7 @@ class OgnThermalOverlay(
         }
     }
 
-    fun findTargetAt(tap: LatLng): String? {
+    override fun findTargetAt(tap: LatLng): String? {
         val style = map.style ?: return null
         if (style.getSource(SOURCE_ID) == null) return null
 
@@ -110,7 +110,7 @@ class OgnThermalOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
     }
 
-    fun cleanup() {
+    override fun cleanup() {
         val style = map.style ?: return
         try {
             style.removeLayer(LABEL_LAYER_ID)

@@ -457,6 +457,9 @@ abstract class MapScreenViewModelTestBase {
         return MapScreenViewModel(
             mapStyleUseCase = mapStyleUseCase,
             unitsUseCase = unitsUseCase,
+            orientationSettingsUseCase = MapOrientationSettingsUseCase(
+                orientationSettingsRepository
+            ),
             mapWaypointsUseCase = mapWaypointsUseCase,
             mapAirspaceUseCase = mapAirspaceUseCase,
             mapWaypointFilesUseCase = mapWaypointFilesUseCase,

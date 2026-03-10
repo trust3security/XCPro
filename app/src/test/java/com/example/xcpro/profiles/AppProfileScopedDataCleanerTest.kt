@@ -4,6 +4,7 @@ import com.example.dfcards.CardPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.flightdata.FlightMgmtPreferencesRepository
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.map.widgets.MapWidgetLayoutRepository
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import com.example.xcpro.ui.theme.ThemePreferencesRepository
@@ -25,6 +26,7 @@ class AppProfileScopedDataCleanerTest {
         val variometerWidgetRepository = mock<VariometerWidgetRepository>()
         val gliderRepository = mock<GliderRepository>()
         val unitsRepository = mock<UnitsRepository>()
+        val orientationSettingsRepository = mock<MapOrientationSettingsRepository>()
         val cleaner = AppProfileScopedDataCleaner(
             cardPreferences = cardPreferences,
             flightMgmtPreferencesRepository = flightMgmtPreferencesRepository,
@@ -33,7 +35,8 @@ class AppProfileScopedDataCleanerTest {
             mapWidgetLayoutRepository = mapWidgetLayoutRepository,
             variometerWidgetRepository = variometerWidgetRepository,
             gliderRepository = gliderRepository,
-            unitsRepository = unitsRepository
+            unitsRepository = unitsRepository,
+            orientationSettingsRepository = orientationSettingsRepository
         )
 
         cleaner.clearProfileData("pilot-a")
@@ -46,5 +49,6 @@ class AppProfileScopedDataCleanerTest {
         verify(variometerWidgetRepository).deleteProfileLayout("pilot-a")
         verify(gliderRepository).clearProfile("pilot-a")
         verify(unitsRepository).clearProfile("pilot-a")
+        verify(orientationSettingsRepository).clearProfile("pilot-a")
     }
 }

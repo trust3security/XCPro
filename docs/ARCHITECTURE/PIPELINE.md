@@ -144,6 +144,10 @@ Flight-state detector feed:
   - Live mode consumes stabilized airspeed fields from `CompleteFlightData` (`trueAirspeed`, `airspeedSource`, `tasValid`).
   - "Real airspeed" classification is fail-safe and trust-list based:
     only `WIND` and `SENSOR` source labels are treated as non-GPS real-airspeed inputs.
+  - Live mode keeps the last GPS-backed flight-state input for a short monotonic
+    grace window (`20s`) so transient GPS/comms dropouts do not immediately
+    collapse `isFlying`/`onGround` back to neutral state; replay remains
+    explicit and does not use this grace policy.
 
 - IGC recorder SSOT wiring:
 - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`

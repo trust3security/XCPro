@@ -15,7 +15,7 @@ class AdsbTrafficOverlay(
     private val context: Context,
     private val map: MapLibreMap,
     initialIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
-) {
+) : AdsbTrafficOverlayHandle {
     private var currentIconSizePx: Int = clampAdsbIconSizePx(initialIconSizePx)
     private var emergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
     private var currentOwnshipAltitudeMeters: Double? = null
@@ -50,7 +50,7 @@ class AdsbTrafficOverlay(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         val style = map.style ?: return
         try {
             if (style.getSource(SOURCE_ID) == null) {
@@ -108,14 +108,14 @@ class AdsbTrafficOverlay(
         }
     }
 
-    fun setIconSizePx(iconSizePx: Int) {
+    override fun setIconSizePx(iconSizePx: Int) {
         val clamped = clampAdsbIconSizePx(iconSizePx)
         if (clamped == currentIconSizePx) return
         currentIconSizePx = clamped
         applyIconSizeToStyle()
     }
 
-    fun setEmergencyFlashEnabled(enabled: Boolean) {
+    override fun setEmergencyFlashEnabled(enabled: Boolean) {
         if (emergencyFlashEnabled == enabled) return
         emergencyFlashEnabled = enabled
         val nowMonoMs = nowMonoMs()
@@ -129,11 +129,11 @@ class AdsbTrafficOverlay(
         }
     }
 
-    fun render(
+    override fun render(
         targets: List<AdsbTrafficUiModel>,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences,
-        iconStyleIdOverrides: Map<String, String> = emptyMap()
+        iconStyleIdOverrides: Map<String, String>
     ) {
         initialize()
         val normalizedOwnshipAltitude = ownshipAltitudeMeters?.takeIf { it.isFinite() }
@@ -160,7 +160,7 @@ class AdsbTrafficOverlay(
         }
     }
 
-    fun findTargetAt(tap: LatLng): Icao24? {
+    override fun findTargetAt(tap: LatLng): Icao24? {
         val style = map.style ?: return null
         if (style.getSource(SOURCE_ID) == null) return null
         val screenPoint = map.projection.toScreenLocation(tap)
@@ -196,7 +196,7 @@ class AdsbTrafficOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray<Feature>()))
     }
 
-    fun cleanup() {
+    override fun cleanup() {
         stopFrameLoop()
         motionSmoother.clear()
         frameLoopController.resetRenderClock()
@@ -216,7 +216,7 @@ class AdsbTrafficOverlay(
         }
     }
 
-    fun bringToFront() {
+    override fun bringToFront() {
         val style = map.style ?: return
         if (style.getLayer(ADSB_TRAFFIC_ICON_LAYER_ID) == null ||
             style.getLayer(ADSB_TRAFFIC_TOP_LABEL_LAYER_ID) == null ||

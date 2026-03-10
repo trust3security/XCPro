@@ -9,6 +9,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -21,79 +23,205 @@ class MapTrailPreferences @Inject constructor(
 ) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val activeProfileId = MutableStateFlow(DEFAULT_PROFILE_ID)
 
-    val settingsFlow: Flow<TrailSettings> = callbackFlow {
+    private val preferenceChanges: Flow<Unit> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == KEY_LENGTH ||
-                key == KEY_TYPE ||
-                key == KEY_WIND_DRIFT ||
-                key == KEY_SCALING
-            ) {
-                trySend(readSettings())
-            }
+            if (key == null) return@OnSharedPreferenceChangeListener
+            if (!key.contains(KEY_LENGTH) &&
+                !key.contains(KEY_TYPE) &&
+                !key.contains(KEY_WIND_DRIFT) &&
+                !key.contains(KEY_SCALING)
+            ) return@OnSharedPreferenceChangeListener
+            trySend(Unit)
         }
-        trySend(readSettings())
+        trySend(Unit)
         prefs.registerOnSharedPreferenceChangeListener(listener)
         awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    val settingsFlow: Flow<TrailSettings> = combine(
+        activeProfileId,
+        preferenceChanges
+    ) { profileId, _ ->
+        readSettings(profileId)
     }.distinctUntilChanged()
 
-    fun getSettings(): TrailSettings = readSettings()
+    fun setActiveProfileId(profileId: String) {
+        val resolved = resolveProfileId(profileId)
+        if (activeProfileId.value != resolved) {
+            activeProfileId.value = resolved
+        }
+    }
+
+    fun getSettings(): TrailSettings = readSettings(activeProfileId.value)
+
+    fun readProfileSettings(profileId: String): TrailSettings = readSettings(resolveProfileId(profileId))
 
     fun setTrailLength(length: TrailLength) {
+        val profileId = activeProfileId.value
         prefs.edit()
-            .putString(KEY_LENGTH, length.name)
+            .putString(scopedKey(profileId, KEY_LENGTH), length.name)
+            .also { editor ->
+                if (isLegacyFallbackEligible(profileId)) {
+                    editor.putString(KEY_LENGTH, length.name)
+                }
+            }
             .apply()
     }
 
     fun setTrailType(type: TrailType) {
+        val profileId = activeProfileId.value
         prefs.edit()
-            .putString(KEY_TYPE, type.name)
+            .putString(scopedKey(profileId, KEY_TYPE), type.name)
+            .also { editor ->
+                if (isLegacyFallbackEligible(profileId)) {
+                    editor.putString(KEY_TYPE, type.name)
+                }
+            }
             .apply()
     }
 
     fun setWindDriftEnabled(enabled: Boolean) {
+        val profileId = activeProfileId.value
         prefs.edit()
-            .putBoolean(KEY_WIND_DRIFT, enabled)
+            .putBoolean(scopedKey(profileId, KEY_WIND_DRIFT), enabled)
+            .also { editor ->
+                if (isLegacyFallbackEligible(profileId)) {
+                    editor.putBoolean(KEY_WIND_DRIFT, enabled)
+                }
+            }
             .apply()
     }
 
     fun setScalingEnabled(enabled: Boolean) {
+        val profileId = activeProfileId.value
         prefs.edit()
-            .putBoolean(KEY_SCALING, enabled)
+            .putBoolean(scopedKey(profileId, KEY_SCALING), enabled)
+            .also { editor ->
+                if (isLegacyFallbackEligible(profileId)) {
+                    editor.putBoolean(KEY_SCALING, enabled)
+                }
+            }
             .apply()
     }
 
     fun setSettings(settings: TrailSettings) {
+        writeProfileSettings(activeProfileId.value, settings)
+    }
+
+    fun writeProfileSettings(profileId: String, settings: TrailSettings) {
+        val resolvedProfileId = resolveProfileId(profileId)
         prefs.edit()
-            .putString(KEY_LENGTH, settings.length.name)
-            .putString(KEY_TYPE, settings.type.name)
-            .putBoolean(KEY_WIND_DRIFT, settings.windDriftEnabled)
-            .putBoolean(KEY_SCALING, settings.scalingEnabled)
+            .putString(scopedKey(resolvedProfileId, KEY_LENGTH), settings.length.name)
+            .putString(scopedKey(resolvedProfileId, KEY_TYPE), settings.type.name)
+            .putBoolean(scopedKey(resolvedProfileId, KEY_WIND_DRIFT), settings.windDriftEnabled)
+            .putBoolean(scopedKey(resolvedProfileId, KEY_SCALING), settings.scalingEnabled)
+            .also { editor ->
+                if (isLegacyFallbackEligible(resolvedProfileId)) {
+                    editor.putString(KEY_LENGTH, settings.length.name)
+                    editor.putString(KEY_TYPE, settings.type.name)
+                    editor.putBoolean(KEY_WIND_DRIFT, settings.windDriftEnabled)
+                    editor.putBoolean(KEY_SCALING, settings.scalingEnabled)
+                }
+            }
             .apply()
     }
 
     fun resetToDefaults() {
-        setSettings(TrailSettings())
+        writeProfileSettings(activeProfileId.value, TrailSettings())
     }
 
-    private fun readSettings(): TrailSettings = TrailSettings(
-        length = readLength(),
-        type = readType(),
-        windDriftEnabled = prefs.getBoolean(KEY_WIND_DRIFT, DEFAULT_WIND_DRIFT),
-        scalingEnabled = prefs.getBoolean(KEY_SCALING, DEFAULT_SCALING)
+    fun clearProfile(profileId: String) {
+        val resolvedProfileId = resolveProfileId(profileId)
+        prefs.edit()
+            .remove(scopedKey(resolvedProfileId, KEY_LENGTH))
+            .remove(scopedKey(resolvedProfileId, KEY_TYPE))
+            .remove(scopedKey(resolvedProfileId, KEY_WIND_DRIFT))
+            .remove(scopedKey(resolvedProfileId, KEY_SCALING))
+            .also { editor ->
+                if (isLegacyFallbackEligible(resolvedProfileId)) {
+                    editor.remove(KEY_LENGTH)
+                    editor.remove(KEY_TYPE)
+                    editor.remove(KEY_WIND_DRIFT)
+                    editor.remove(KEY_SCALING)
+                }
+            }
+            .apply()
+    }
+
+    private fun readSettings(profileId: String): TrailSettings = TrailSettings(
+        length = readLength(profileId),
+        type = readType(profileId),
+        windDriftEnabled = readBoolean(
+            profileId = profileId,
+            key = KEY_WIND_DRIFT,
+            defaultValue = DEFAULT_WIND_DRIFT
+        ),
+        scalingEnabled = readBoolean(
+            profileId = profileId,
+            key = KEY_SCALING,
+            defaultValue = DEFAULT_SCALING
+        )
     )
 
-    private fun readLength(): TrailLength {
-        val stored = prefs.getString(KEY_LENGTH, DEFAULT_LENGTH.name) ?: DEFAULT_LENGTH.name
+    private fun readLength(profileId: String): TrailLength {
+        val stored = readString(
+            profileId = profileId,
+            key = KEY_LENGTH,
+            defaultValue = DEFAULT_LENGTH.name
+        ) ?: DEFAULT_LENGTH.name
         if (stored == "NONE") {
             return TrailLength.OFF
         }
         return runCatching { TrailLength.valueOf(stored) }.getOrDefault(DEFAULT_LENGTH)
     }
 
-    private fun readType(): TrailType {
-        val stored = prefs.getString(KEY_TYPE, DEFAULT_TYPE.name) ?: DEFAULT_TYPE.name
+    private fun readType(profileId: String): TrailType {
+        val stored = readString(
+            profileId = profileId,
+            key = KEY_TYPE,
+            defaultValue = DEFAULT_TYPE.name
+        ) ?: DEFAULT_TYPE.name
         return runCatching { TrailType.valueOf(stored) }.getOrDefault(DEFAULT_TYPE)
+    }
+
+    private fun readString(profileId: String, key: String, defaultValue: String): String? {
+        val scoped = prefs.getString(scopedKey(profileId, key), null)
+        if (scoped != null) return scoped
+        if (isLegacyFallbackEligible(profileId)) {
+            return prefs.getString(key, defaultValue)
+        }
+        return defaultValue
+    }
+
+    private fun readBoolean(profileId: String, key: String, defaultValue: Boolean): Boolean {
+        val scoped = scopedKey(profileId, key)
+        if (prefs.contains(scoped)) {
+            return prefs.getBoolean(scoped, defaultValue)
+        }
+        if (isLegacyFallbackEligible(profileId)) {
+            return prefs.getBoolean(key, defaultValue)
+        }
+        return defaultValue
+    }
+
+    private fun scopedKey(profileId: String, key: String): String =
+        "profile_${resolveProfileId(profileId)}_$key"
+
+    private fun resolveProfileId(profileId: String?): String {
+        val normalized = profileId?.trim().orEmpty()
+        if (normalized.isBlank()) return DEFAULT_PROFILE_ID
+        return when (normalized) {
+            DEFAULT_PROFILE_ID,
+            LEGACY_DEFAULT_ALIAS,
+            LEGACY_DF_ALIAS -> DEFAULT_PROFILE_ID
+            else -> normalized
+        }
+    }
+
+    private fun isLegacyFallbackEligible(profileId: String): Boolean {
+        return profileId == DEFAULT_PROFILE_ID
     }
 
     companion object {
@@ -102,6 +230,9 @@ class MapTrailPreferences @Inject constructor(
         private const val KEY_TYPE = "trail_type"
         private const val KEY_WIND_DRIFT = "trail_wind_drift_enabled"
         private const val KEY_SCALING = "trail_scaling_enabled"
+        private const val DEFAULT_PROFILE_ID = "default-profile"
+        private const val LEGACY_DEFAULT_ALIAS = "default"
+        private const val LEGACY_DF_ALIAS = "__default_profile__"
 
         private val DEFAULT_LENGTH = TrailLength.LONG
         private val DEFAULT_TYPE = TrailType.VARIO_1

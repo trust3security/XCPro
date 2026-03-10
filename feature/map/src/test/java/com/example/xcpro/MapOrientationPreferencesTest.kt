@@ -54,10 +54,31 @@ class MapOrientationPreferencesTest {
 
         val stored =
             appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getFloat(KEY_MIN_SPEED_THRESHOLD, 0f)
+                .getFloat(KEY_DEFAULT_PROFILE_MIN_SPEED_THRESHOLD, 0f)
                 .toDouble()
 
         assertEquals(UnitsConverter.knotsToMs(4.0), stored, 1e-3)
+    }
+
+    @Test
+    fun activeProfileId_scopesWritesAndReads() {
+        val subject = MapOrientationPreferences(appContext)
+
+        subject.setActiveProfileId("profile-a")
+        subject.setGliderScreenPercent(18)
+        subject.setMapShiftBiasStrength(0.25)
+
+        subject.setActiveProfileId("profile-b")
+        subject.setGliderScreenPercent(42)
+        subject.setMapShiftBiasStrength(0.75)
+
+        subject.setActiveProfileId("profile-a")
+        assertEquals(18, subject.getGliderScreenPercent())
+        assertEquals(0.25, subject.getMapShiftBiasStrength(), 1e-6)
+
+        subject.setActiveProfileId("profile-b")
+        assertEquals(42, subject.getGliderScreenPercent())
+        assertEquals(0.75, subject.getMapShiftBiasStrength(), 1e-6)
     }
 
     @Test
@@ -81,5 +102,7 @@ class MapOrientationPreferencesTest {
         private const val PREFS_NAME = "map_orientation_prefs"
         private const val KEY_MIN_SPEED_THRESHOLD = "min_speed_threshold_kt"
         private const val KEY_MIN_SPEED_IS_MS = "min_speed_threshold_is_ms"
+        private const val KEY_DEFAULT_PROFILE_MIN_SPEED_THRESHOLD =
+            "profile_default-profile_min_speed_threshold_kt"
     }
 }

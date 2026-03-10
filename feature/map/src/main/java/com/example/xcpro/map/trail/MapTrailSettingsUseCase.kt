@@ -13,10 +13,21 @@ class MapTrailSettingsUseCase @Inject constructor(
 ) {
     val settingsFlow: Flow<TrailSettings> = preferences.settingsFlow
 
+    fun setActiveProfileId(profileId: String) {
+        preferences.setActiveProfileId(profileId)
+    }
+
     fun getSettings(): TrailSettings = preferences.getSettings()
+
+    fun readProfileSettings(profileId: String): TrailSettings =
+        preferences.readProfileSettings(profileId)
 
     fun setSettings(settings: TrailSettings) {
         preferences.setSettings(settings)
+    }
+
+    fun writeProfileSettings(profileId: String, settings: TrailSettings) {
+        preferences.writeProfileSettings(profileId, settings)
     }
 
     fun setTrailLength(length: TrailLength) {
@@ -33,5 +44,9 @@ class MapTrailSettingsUseCase @Inject constructor(
 
     fun setScalingEnabled(enabled: Boolean) {
         preferences.setScalingEnabled(enabled)
+    }
+
+    fun clearProfile(profileId: String) {
+        preferences.clearProfile(profileId)
     }
 }

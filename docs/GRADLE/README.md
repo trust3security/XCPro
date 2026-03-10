@@ -22,9 +22,9 @@ Use this read order before changing build-performance structure:
   - `kotlin.compiler.execution.strategy=in-process`
 - `kotlin.incremental.useClasspathSnapshot=true`
 
-## Lock-recovery wiring
+## Lock handling
 
-The following local entrypoints now run through the shared lock-recovery wrapper:
+The local "speed-loop" scripts now run Gradle directly:
 
 - `preflight.bat`
 - `check-quick.bat`
@@ -32,35 +32,22 @@ The following local entrypoints now run through the shared lock-recovery wrapper
 - `dev-fast.bat`
 - `build-only.bat`
 - `deploy.bat`
-- `test-safe.bat`
 - `repair-build.bat`
 
-Wrapper chain:
+No helper retry wrapper is used in these fast loops.
 
-1. `scripts/dev/gradle-run-with-lock-recovery.bat`
-2. `scripts/dev/recover-gradle-file-locks.bat`
-3. `scripts/dev/recover-gradle-file-locks.ps1`
+## Fast local loop for compile-only iteration
 
-Behavior:
+The local speed scripts now default to compile-only loops:
 
-- On any command failure, run one recovery pass and retry once.
-- Recovery pass clears stale Gradle Java workers and known lock artifacts, then retries.
+- `preflight.bat`: rules + assemble only
+- `check-quick.bat`: rules + assemble only (tests only when passed as explicit args)
+- `auto-test.bat`: rules + assemble only
 
-### Parallelism control for wrappers
-
-To temporarily disable Gradle project parallelism from the shared wrapper chain,
-set `XC_DISABLE_GRADLE_PARALLEL=1` before running wrapper-driven build/test
-scripts (for example `test-safe.bat`, `repair-build.bat`, `dev-fast.bat`,
-`preflight.bat`, `check-quick.bat`, `auto-test.bat`, or `build-only.bat`).
+To add tests, pass Gradle args explicitly:
 
 ```bat
-set XC_DISABLE_GRADLE_PARALLEL=1
-```
-
-Unset it to restore normal wrapper defaults:
-
-```bat
-set XC_DISABLE_GRADLE_PARALLEL=
+check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
 ```
 
 ## What the measurements say
@@ -87,8 +74,8 @@ ABI churn from `core:common`.
 If Windows reports locked files during `compile`/`assemble`/`test` runs:
 
 ```bat
-.\scripts\dev\recover-gradle-file-locks.bat
-.\scripts\dev\recover-gradle-file-locks.bat --aggressive
+.\scripts\dev\kill_stale_gradle_processes.ps1 -ProjectRoot .
+powershell -NoProfile -Command "Get-ChildItem .\feature\map\build\test-results\testDebugUnitTest\binary, .\app\build\test-results\testDebugUnitTest\binary -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
 ```
 
 Run this, then rerun your build command.

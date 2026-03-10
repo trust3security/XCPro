@@ -3,10 +3,10 @@ setlocal EnableExtensions
 
 set "REPO_ROOT=%~dp0"
 set "GRADLE=%REPO_ROOT%gradlew.bat"
-set "TEST_SAFE=%REPO_ROOT%test-safe.bat"
 
 if /I "%~1"=="--help" goto :usage
 if /I "%~1"=="-h" goto :usage
+if /I "%~1"=="?" goto :usage
 
 pushd "%REPO_ROOT%" >nul
 
@@ -14,29 +14,33 @@ echo Running quick checks...
 echo.
 
 echo [1/3] Enforcing architecture/coding rules...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" enforceRules
+call "%GRADLE%" enforceRules
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Rule enforcement failed.
     popd >nul
     exit /b 1
 )
 
-echo [2/3] Running quick unit tests (safe runner with lock recovery)...
-if "%~1"=="" (
-    call "%TEST_SAFE%" :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest" --tests "com.example.xcpro.adsb.metadata.AircraftMetadataRepositoryImplTest" --tests "com.example.xcpro.map.MapLifecycleManagerScaleBarCleanupTest"
-) else (
-    call "%TEST_SAFE%" %*
-)
+echo [2/3] Assembling target modules...
+call "%GRADLE%" :feature:map:assembleDebug :dfcards-library:assembleDebug
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Quick unit tests failed.
+    echo ERROR: module assemble failed.
     popd >nul
     exit /b 1
 )
 
-echo [3/3] Assembling quick modules...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" :feature:map:assembleDebug :dfcards-library:assembleDebug
+if "%~1"=="" (
+    echo [3/3] Skipping unit tests (compile-only mode).
+    echo To run tests, pass gradle args explicitly, e.g.
+    echo   check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
+    popd >nul
+    exit /b 0
+)
+
+echo [3/3] Running requested task(s) explicitly...
+call "%GRADLE%" %*
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Quick assemble failed.
+    echo ERROR: Requested task(s) failed.
     popd >nul
     exit /b 1
 )
@@ -50,15 +54,13 @@ exit /b 0
 
 :usage
 echo Usage:
-echo   check-quick.bat [test-safe args]
+echo   check-quick.bat [gradle test args]
+echo   Add gradle args to run tests/retry tasks explicitly.
 echo.
-echo Default (no args):
+echo Default behavior:
 echo   - enforceRules
-echo   - safe targeted tests:
-echo       com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest
-echo       com.example.xcpro.adsb.metadata.AircraftMetadataRepositoryImplTest
-echo       com.example.xcpro.map.MapLifecycleManagerScaleBarCleanupTest
 echo   - :feature:map:assembleDebug :dfcards-library:assembleDebug
+echo   - no tests unless explicit gradle args are provided
 echo.
 echo Examples:
 echo   check-quick.bat

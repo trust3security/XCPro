@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
     private val mapStyleUseCase: MapStyleUseCase, private val unitsUseCase: UnitsPreferencesUseCase,
+    private val orientationSettingsUseCase: MapOrientationSettingsUseCase,
     private val mapWaypointsUseCase: MapWaypointsUseCase, private val mapAirspaceUseCase: AirspaceUseCase,
     private val mapWaypointFilesUseCase: WaypointFilesUseCase, private val gliderConfigUseCase: GliderConfigUseCase,
     private val sensorsUseCase: MapSensorsUseCase, private val flightDataUseCase: FlightDataUseCase,
@@ -288,6 +289,7 @@ class MapScreenViewModel @Inject constructor(
         if (activeProfileId == resolved) return
         activeProfileId = resolved
         unitsUseCase.setActiveProfileId(resolved)
+        orientationSettingsUseCase.setActiveProfileId(resolved)
         gliderConfigUseCase.setActiveProfileId(resolved)
         variometerLayoutUseCase.setActiveProfileId(resolved)
     }

@@ -34,7 +34,7 @@ if /I "%MODE%"=="none" (
 )
 
 echo Re-running %TASK%...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %TASK% --daemon --parallel --build-cache --configuration-cache --console=plain
+call "%GRADLE%" %TASK% --daemon --parallel --build-cache --configuration-cache --console=plain
 set "EXIT_CODE=%ERRORLEVEL%"
 
 popd >nul
@@ -97,14 +97,12 @@ if /I "%MODE%"=="none" exit /b 0
 if /I "%MODULE_SCOPE%"=="all" (
     if /I "%MODE%"=="compile" set "TASK=:app:compileDebugKotlin"
     if /I "%MODE%"=="assemble" set "TASK=:app:assembleDebug"
-    if /I "%MODE%"=="test" set "TASK=testDebugUnitTest"
 )
 
 if not "%TASK%"=="" exit /b 0
 
 if /I "%MODE%"=="compile" set "TASK=:%MODULE_SCOPE%:compileDebugKotlin"
 if /I "%MODE%"=="assemble" set "TASK=:%MODULE_SCOPE%:assembleDebug"
-if /I "%MODE%"=="test" set "TASK=:%MODULE_SCOPE%:testDebugUnitTest"
 
 if not "%TASK%"=="" exit /b 0
 
@@ -154,11 +152,10 @@ echo Scope:
 echo   map ^| app ^| profile ^| variometer ^| cards ^| all ^| Gradle module path
 echo.
 echo Mode:
-echo   compile ^| assemble ^| test ^| none
+echo   compile ^| assemble ^| none
 echo.
 echo Examples:
 echo   repair-build.bat
-echo   repair-build.bat feature:map test
 echo   repair-build.bat all assemble
 echo   repair-build.bat app none
 exit /b 1

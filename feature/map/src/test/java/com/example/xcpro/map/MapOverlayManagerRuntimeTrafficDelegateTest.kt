@@ -30,7 +30,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
     fun interactionThrottle_defersRender_untilExplicitFlush() = runTest {
         var nowMonoMs = 0L
         var interactionActive = true
-        val overlay: AdsbTrafficOverlay = mock()
+        val overlay: AdsbTrafficOverlayHandle = mock()
         val map: MapLibreMap = mock()
         val fixture = createFixture(
             scope = this,
@@ -91,7 +91,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
     @Test
     fun stickyProjection_appliesPriorStrongFixedWingStyleWithinTtl() = runTest {
         var nowMonoMs = 1_000L
-        val overlay: AdsbTrafficOverlay = mock()
+        val overlay: AdsbTrafficOverlayHandle = mock()
         val map: MapLibreMap = mock()
         val fixture = createFixture(
             scope = this,
@@ -140,7 +140,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
     @Test
     fun rolloutSwitchToLegacyUnknown_reRendersWithLegacyUnknownStyleAndCounters() = runTest {
         var nowMonoMs = 2_000L
-        val overlay: AdsbTrafficOverlay = mock()
+        val overlay: AdsbTrafficOverlayHandle = mock()
         val map: MapLibreMap = mock()
         val fixture = createFixture(
             scope = this,
@@ -180,7 +180,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
     @Test
     fun runtimeCounters_trackUnknownRenderAndResolveLatencyFromProjectedIcons() = runTest {
         var nowMonoMs = 3_000L
-        val overlay: AdsbTrafficOverlay = mock()
+        val overlay: AdsbTrafficOverlayHandle = mock()
         val map: MapLibreMap = mock()
         val fixture = createFixture(
             scope = this,
@@ -222,13 +222,14 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         scope: TestScope,
         nowMonoMsProvider: () -> Long,
         interactionActiveProvider: () -> Boolean,
-        overlay: AdsbTrafficOverlay
+        overlay: AdsbTrafficOverlayHandle
     ): Fixture {
         val mapState = MapScreenState()
         val delegate = MapOverlayManagerRuntimeTrafficDelegate(
             runtimeState = MapOverlayTestRuntimeStateAdapter(mapState),
             coroutineScope = scope,
-            adsbTrafficOverlayFactory = { _, _ -> overlay },
+            adsbTrafficOverlayFactory = { _, _, _ -> overlay },
+            context = mock(),
             interactionActiveProvider = interactionActiveProvider,
             bringOgnOverlaysToFront = {},
             nowMonoMs = nowMonoMsProvider
@@ -252,37 +253,37 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
             state.blueLocationOverlay?.bringToFront()
         }
 
-        override var ognTrafficOverlay: OgnTrafficOverlay?
+        override var ognTrafficOverlay: OgnTrafficOverlayHandle?
             get() = state.ognTrafficOverlay
             set(value) {
                 state.ognTrafficOverlay = value
             }
 
-        override var ognTargetRingOverlay: OgnTargetRingOverlay?
+        override var ognTargetRingOverlay: OgnTargetRingOverlayHandle?
             get() = state.ognTargetRingOverlay
             set(value) {
                 state.ognTargetRingOverlay = value
             }
 
-        override var ognTargetLineOverlay: OgnTargetLineOverlay?
+        override var ognTargetLineOverlay: OgnTargetLineOverlayHandle?
             get() = state.ognTargetLineOverlay
             set(value) {
                 state.ognTargetLineOverlay = value
             }
 
-        override var ognThermalOverlay: OgnThermalOverlay?
+        override var ognThermalOverlay: OgnThermalOverlayHandle?
             get() = state.ognThermalOverlay
             set(value) {
                 state.ognThermalOverlay = value
             }
 
-        override var ognGliderTrailOverlay: OgnGliderTrailOverlay?
+        override var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle?
             get() = state.ognGliderTrailOverlay
             set(value) {
                 state.ognGliderTrailOverlay = value
             }
 
-        override var adsbTrafficOverlay: AdsbTrafficOverlay?
+        override var adsbTrafficOverlay: AdsbTrafficOverlayHandle?
             get() = state.adsbTrafficOverlay
             set(value) {
                 state.adsbTrafficOverlay = value

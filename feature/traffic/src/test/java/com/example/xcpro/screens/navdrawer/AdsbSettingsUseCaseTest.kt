@@ -37,7 +37,6 @@ class AdsbSettingsUseCaseTest {
         whenever(repository.emergencyAudioCooldownMsFlow).thenReturn(flowOf(60_000L))
         whenever(repository.emergencyAudioMasterEnabledFlow).thenReturn(flowOf(true))
         whenever(repository.emergencyAudioShadowModeFlow).thenReturn(flowOf(false))
-        whenever(repository.emergencyAudioCohortPercentFlow).thenReturn(flowOf(25))
         whenever(repository.emergencyAudioRollbackLatchedFlow).thenReturn(flowOf(false))
         whenever(repository.emergencyAudioRollbackReasonFlow).thenReturn(flowOf(null))
         whenever(unitsRepository.unitsFlow).thenReturn(flowOf(UnitsPreferences()))
@@ -59,7 +58,6 @@ class AdsbSettingsUseCaseTest {
         assertEquals(60_000L, useCase.emergencyAudioCooldownMsFlow.first())
         assertTrue(useCase.emergencyAudioMasterEnabledFlow.first())
         assertEquals(false, useCase.emergencyAudioShadowModeFlow.first())
-        assertEquals(25, useCase.emergencyAudioCohortPercentFlow.first())
         assertEquals(false, useCase.emergencyAudioRollbackLatchedFlow.first())
         assertEquals(null, useCase.emergencyAudioRollbackReasonFlow.first())
     }
@@ -75,7 +73,6 @@ class AdsbSettingsUseCaseTest {
         whenever(repository.emergencyAudioCooldownMsFlow).thenReturn(flowOf(45_000L))
         whenever(repository.emergencyAudioMasterEnabledFlow).thenReturn(flowOf(true))
         whenever(repository.emergencyAudioShadowModeFlow).thenReturn(flowOf(false))
-        whenever(repository.emergencyAudioCohortPercentFlow).thenReturn(flowOf(100))
         whenever(repository.emergencyAudioRollbackLatchedFlow).thenReturn(flowOf(false))
         whenever(repository.emergencyAudioRollbackReasonFlow).thenReturn(flowOf(null))
         whenever(unitsRepository.unitsFlow).thenReturn(flowOf(UnitsPreferences()))
@@ -92,7 +89,6 @@ class AdsbSettingsUseCaseTest {
         useCase.setEmergencyAudioCooldownMs(90_000L)
         useCase.setEmergencyAudioMasterEnabled(false)
         useCase.setEmergencyAudioShadowMode(true)
-        useCase.setEmergencyAudioCohortPercent(50)
         useCase.clearEmergencyAudioRollback()
 
         verify(repository).setEmergencyFlashEnabled(false)
@@ -100,7 +96,6 @@ class AdsbSettingsUseCaseTest {
         verify(repository).setEmergencyAudioCooldownMs(90_000L)
         verify(repository).setEmergencyAudioMasterEnabled(false)
         verify(repository).setEmergencyAudioShadowMode(true)
-        verify(repository).setEmergencyAudioCohortPercent(50)
         verify(repository).clearEmergencyAudioRollback()
     }
 }

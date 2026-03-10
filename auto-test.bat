@@ -1,57 +1,27 @@
 @echo off
-echo Starting automated build and test cycle...
+echo Starting automated build cycle...
+set "REPO_ROOT=%~dp0"
+set "GRADLE=%REPO_ROOT%gradlew.bat"
 echo.
 
-echo [0/6] Running rule enforcement...
-call gradlew enforceRules
+echo [1/2] Running rule enforcement...
+call "%GRADLE%" enforceRules
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Rule enforcement failed
     exit /b 1
 )
 
-echo [cleanup] Removing stale Gradle worker/wrapper processes for this repo...
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\dev\kill_stale_gradle_processes.ps1" -ProjectRoot "%CD%"
-
-echo [1/6] Cleaning project...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat clean
-if %ERRORLEVEL% neq 0 (
-    echo ERROR: Clean failed.
-    exit /b 1
-)
-
-echo [2/6] Building debug version...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat assembleDebug
+echo [2/2] Building debug version...
+call "%GRADLE%" assembleDebug
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Build failed
     exit /b 1
 )
 
-echo [3/6] Running lint checks...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat lint
-if %ERRORLEVEL% neq 0 (
-    echo WARNING: Lint issues found - check reports
-)
-
-echo [4/6] Running unit tests...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat test
-if %ERRORLEVEL% neq 0 (
-    echo ERROR: Unit tests failed
-    exit /b 1
-)
-
-echo [5/6] Running instrumented tests (requires connected device)...
-call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat connectedAndroidTest
-if %ERRORLEVEL% neq 0 (
-    echo WARNING: Instrumented tests failed or no device connected
-)
-
 echo.
 echo ========================================
-echo Automated testing completed!
-echo Check the following for detailed reports:
-echo - Build: app/build/reports/
-echo - Lint: app/build/reports/lint-results.html
-echo - Tests: app/build/reports/tests/
+echo Automated build completed.
+echo For optional lint/tests/devices, run those tasks explicitly.
 echo ========================================
 
 exit /b 0

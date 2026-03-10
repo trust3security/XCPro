@@ -30,17 +30,6 @@ import com.example.xcpro.core.time.TimeBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Locale
-
-private fun buildExportFileName(profile: UserProfile?): String {
-    val timestamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(TimeBridge.nowWallMs())
-    return if (profile != null) {
-        "profile_bundle_${profile.name.replace(" ", "_")}_$timestamp.json"
-    } else {
-        "profiles_bundle_$timestamp.json"
-    }
-}
 
 @Composable
 fun ProfileExportDialog(
@@ -62,9 +51,15 @@ fun ProfileExportDialog(
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.write(exportResult!!.getOrNull()!!.toByteArray())
                 }
-                onExport("Profile bundle exported successfully.")
+                onExport(
+                    if (profile != null) {
+                        "Aircraft profile exported successfully."
+                    } else {
+                        "Aircraft profiles backup exported successfully."
+                    }
+                )
             } catch (error: Exception) {
-                onExport("Failed to save bundle: ${error.message}")
+                onExport("Failed to save file: ${error.message}")
             }
         }
     }
@@ -72,17 +67,23 @@ fun ProfileExportDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (profile != null) "Export Profile Bundle" else "Export Profiles Bundle")
+            Text(if (profile != null) "Export Aircraft Profile" else "Backup Aircraft Profiles")
         },
         text = {
             if (isExporting) {
-                Text("Preparing export bundle...")
+                Text(
+                    if (profile != null) {
+                        "Preparing aircraft profile file..."
+                    } else {
+                        "Preparing aircraft profiles backup..."
+                    }
+                )
             } else {
                 Text(
                     if (profile != null) {
-                        "Export this profile with its settings bundle."
+                        "Save this aircraft profile as a portable JSON file."
                     } else {
-                        "Export all profiles and settings as one bundle."
+                        "Save all aircraft profiles as one portable JSON backup."
                     }
                 )
             }
@@ -96,13 +97,18 @@ fun ProfileExportDialog(
                         exportResult = result
                         isExporting = false
                         if (result.isSuccess) {
-                            documentLauncher.launch(buildExportFileName(profile))
+                            documentLauncher.launch(
+                                AircraftProfileFileNames.buildExportFileName(
+                                    profile = profile,
+                                    nowWallMs = TimeBridge.nowWallMs()
+                                )
+                            )
                         }
                     }
                 },
                 enabled = !isExporting
             ) {
-                Text("Export")
+                Text(if (profile != null) "Save File" else "Save All Profiles")
             }
         },
         dismissButton = {
@@ -161,15 +167,15 @@ fun ProfileImportDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Import Profile Bundle") },
+        title = { Text("Load Aircraft Profile File") },
         text = {
             Column {
                 if (isImporting) {
-                    Text("Importing profile bundle...")
+                    Text("Importing aircraft profile...")
                 } else {
                     Text(
-                        "Select *_bundle_latest.json (recommended), a profile bundle export, " +
-                            "or a compatible profile JSON file."
+                        "Select an aircraft profile export, a managed *_bundle_latest.json " +
+                            "snapshot, or another compatible profile JSON file."
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
@@ -187,19 +193,19 @@ fun ProfileImportDialog(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("Import settings scope")
                     ImportScopeOptionRow(
-                        label = "Profiles only",
+                        label = "Profile only",
                         selected = settingsImportScope == ProfileSettingsImportScope.PROFILES_ONLY,
                         onSelect = { settingsImportScope = ProfileSettingsImportScope.PROFILES_ONLY }
                     )
                     ImportScopeOptionRow(
-                        label = "Profiles + profile settings",
+                        label = "Profile + aircraft settings",
                         selected = settingsImportScope == ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS,
                         onSelect = {
                             settingsImportScope = ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS
                         }
                     )
                     ImportScopeOptionRow(
-                        label = "Full bundle settings",
+                        label = "All included settings",
                         selected = settingsImportScope == ProfileSettingsImportScope.FULL_BUNDLE,
                         onSelect = { settingsImportScope = ProfileSettingsImportScope.FULL_BUNDLE }
                     )
@@ -224,7 +230,7 @@ fun ProfileImportDialog(
                 onClick = { documentLauncher.launch(arrayOf("application/json")) },
                 enabled = !isImporting
             ) {
-                Text("Select File")
+                Text("Choose File")
             }
         },
         dismissButton = {

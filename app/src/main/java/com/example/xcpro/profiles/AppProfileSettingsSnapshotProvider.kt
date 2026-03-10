@@ -7,6 +7,7 @@ import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.flightdata.FlightMgmtPreferencesRepository
 import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutRepository
@@ -36,6 +37,7 @@ class AppProfileSettingsSnapshotProvider @Inject constructor(
     private val variometerWidgetRepository: VariometerWidgetRepository,
     private val gliderRepository: GliderRepository,
     private val unitsRepository: UnitsRepository,
+    private val orientationSettingsRepository: MapOrientationSettingsRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
     private val thermallingModePreferencesRepository: ThermallingModePreferencesRepository,
     private val ognTrafficPreferencesRepository: OgnTrafficPreferencesRepository,
@@ -77,6 +79,9 @@ class AppProfileSettingsSnapshotProvider @Inject constructor(
         )
         sections[ProfileSettingsSectionIds.UNITS_PREFERENCES] = gson.toJsonTree(
             captureUnitsSection(normalizedProfileIds)
+        )
+        sections[ProfileSettingsSectionIds.ORIENTATION_PREFERENCES] = gson.toJsonTree(
+            captureOrientationSection(normalizedProfileIds)
         )
         sections[ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES] = gson.toJsonTree(
             captureLevoVarioSection()
@@ -271,6 +276,21 @@ class AppProfileSettingsSnapshotProvider @Inject constructor(
         return UnitsSectionSnapshot(unitsByProfile = unitsByProfile)
     }
 
+    private fun captureOrientationSection(profileIds: Set<String>): OrientationSectionSnapshot {
+        val settingsByProfile = profileIds.associateWith { profileId ->
+            val settings = orientationSettingsRepository.readProfileSettings(profileId)
+            OrientationProfileSectionSnapshot(
+                cruiseMode = settings.cruiseMode.name,
+                circlingMode = settings.circlingMode.name,
+                minSpeedThresholdMs = settings.minSpeedThresholdMs,
+                gliderScreenPercent = settings.gliderScreenPercent,
+                mapShiftBiasMode = settings.mapShiftBiasMode.name,
+                mapShiftBiasStrength = settings.mapShiftBiasStrength
+            )
+        }
+        return OrientationSectionSnapshot(settingsByProfile = settingsByProfile)
+    }
+
     private suspend fun captureLevoVarioSection(): LevoVarioSectionSnapshot {
         val config = levoVarioPreferencesRepository.config.first()
         return LevoVarioSectionSnapshot(
@@ -348,8 +368,6 @@ class AppProfileSettingsSnapshotProvider @Inject constructor(
             emergencyAudioCooldownMs = adsbTrafficPreferencesRepository.emergencyAudioCooldownMsFlow.first(),
             emergencyAudioMasterEnabled = adsbTrafficPreferencesRepository.emergencyAudioMasterEnabledFlow.first(),
             emergencyAudioShadowMode = adsbTrafficPreferencesRepository.emergencyAudioShadowModeFlow.first(),
-            emergencyAudioCohortPercent = adsbTrafficPreferencesRepository.emergencyAudioCohortPercentFlow.first(),
-            emergencyAudioCohortBucket = adsbTrafficPreferencesRepository.emergencyAudioCohortBucketFlow.first(),
             emergencyAudioRollbackLatched = adsbTrafficPreferencesRepository.emergencyAudioRollbackLatchedFlow.first(),
             emergencyAudioRollbackReason = adsbTrafficPreferencesRepository.emergencyAudioRollbackReasonFlow.first()
         )

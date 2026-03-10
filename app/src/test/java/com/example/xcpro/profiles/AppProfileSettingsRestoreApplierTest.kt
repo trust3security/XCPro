@@ -11,8 +11,11 @@ import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.flightdata.FlightMgmtPreferencesRepository
 import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.MapOrientationSettings
+import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutRepository
+import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
@@ -43,7 +46,8 @@ class AppProfileSettingsRestoreApplierTest {
         val mapWidgetLayoutRepository: MapWidgetLayoutRepository,
         val variometerWidgetRepository: VariometerWidgetRepository,
         val gliderRepository: GliderRepository,
-        val unitsRepository: UnitsRepository
+        val unitsRepository: UnitsRepository,
+        val orientationSettingsRepository: MapOrientationSettingsRepository
     )
 
     private val gson = Gson()
@@ -57,6 +61,7 @@ class AppProfileSettingsRestoreApplierTest {
         val variometerWidgetRepository = mock<VariometerWidgetRepository>()
         val gliderRepository = mock<GliderRepository>()
         val unitsRepository = mock<UnitsRepository>()
+        val orientationSettingsRepository = mock<MapOrientationSettingsRepository>()
         val levoVarioPreferencesRepository = mock<LevoVarioPreferencesRepository>()
         val thermallingModePreferencesRepository = mock<ThermallingModePreferencesRepository>()
         val ognTrafficPreferencesRepository = mock<OgnTrafficPreferencesRepository>()
@@ -76,6 +81,7 @@ class AppProfileSettingsRestoreApplierTest {
                 variometerWidgetRepository = variometerWidgetRepository,
                 gliderRepository = gliderRepository,
                 unitsRepository = unitsRepository,
+                orientationSettingsRepository = orientationSettingsRepository,
                 levoVarioPreferencesRepository = levoVarioPreferencesRepository,
                 thermallingModePreferencesRepository = thermallingModePreferencesRepository,
                 ognTrafficPreferencesRepository = ognTrafficPreferencesRepository,
@@ -90,7 +96,8 @@ class AppProfileSettingsRestoreApplierTest {
             mapWidgetLayoutRepository = mapWidgetLayoutRepository,
             variometerWidgetRepository = variometerWidgetRepository,
             gliderRepository = gliderRepository,
-            unitsRepository = unitsRepository
+            unitsRepository = unitsRepository,
+            orientationSettingsRepository = orientationSettingsRepository
         )
     }
 
@@ -356,5 +363,53 @@ class AppProfileSettingsRestoreApplierTest {
 
         assertTrue(result.failedSections.isEmpty())
         verify(harness.unitsRepository).writeProfileUnits(eq("target-default"), eq(feetUnits))
+    }
+
+    @Test
+    fun apply_orientationSection_appliesOnlyMappedProfileIds() = runTest {
+        val harness = createHarness()
+        val expected = MapOrientationSettings(
+            cruiseMode = com.example.xcpro.common.orientation.MapOrientationMode.NORTH_UP,
+            circlingMode = com.example.xcpro.common.orientation.MapOrientationMode.HEADING_UP,
+            minSpeedThresholdMs = 2.5,
+            gliderScreenPercent = 22,
+            mapShiftBiasMode = MapShiftBiasMode.TRACK,
+            mapShiftBiasStrength = 0.35
+        )
+        val snapshot = ProfileSettingsSnapshot(
+            sections = mapOf(
+                ProfileSettingsSectionIds.ORIENTATION_PREFERENCES to gson.toJsonTree(
+                    OrientationSectionSnapshot(
+                        settingsByProfile = mapOf(
+                            "source-a" to OrientationProfileSectionSnapshot(
+                                cruiseMode = expected.cruiseMode.name,
+                                circlingMode = expected.circlingMode.name,
+                                minSpeedThresholdMs = expected.minSpeedThresholdMs,
+                                gliderScreenPercent = expected.gliderScreenPercent,
+                                mapShiftBiasMode = expected.mapShiftBiasMode.name,
+                                mapShiftBiasStrength = expected.mapShiftBiasStrength
+                            ),
+                            "source-unmapped" to OrientationProfileSectionSnapshot(
+                                cruiseMode = "TRACK_UP",
+                                circlingMode = "TRACK_UP",
+                                minSpeedThresholdMs = 2.0,
+                                gliderScreenPercent = 35,
+                                mapShiftBiasMode = "NONE",
+                                mapShiftBiasStrength = 0.0
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val result = harness.applier.apply(
+            settingsSnapshot = snapshot,
+            importedProfileIdMap = mapOf("source-a" to "target-a")
+        )
+
+        assertTrue(result.failedSections.isEmpty())
+        verify(harness.orientationSettingsRepository).writeProfileSettings("target-a", expected)
+        verify(harness.orientationSettingsRepository, times(1)).writeProfileSettings(any(), any())
     }
 }
