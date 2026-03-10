@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-internal data class AdsbIconTelemetrySnapshot(
+data class AdsbIconTelemetrySnapshot(
     val unknownRenderCount: Long = 0L,
     val legacyUnknownRenderCount: Long = 0L,
     val resolveLatencySampleCount: Long = 0L,
@@ -17,7 +17,7 @@ internal data class AdsbIconTelemetrySnapshot(
  *
  * Tracks unknown icon render frequency and first-seen -> first-resolved icon latency per ICAO24.
  */
-internal class AdsbIconTelemetryTracker {
+class AdsbIconTelemetryTracker {
     private var unknownRenderCount = 0L
     private var legacyUnknownRenderCount = 0L
     private var resolveLatencySampleCount = 0L

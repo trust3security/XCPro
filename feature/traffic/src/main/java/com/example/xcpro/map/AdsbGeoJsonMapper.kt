@@ -5,7 +5,7 @@ import com.google.gson.JsonObject
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.Point
 
-internal object AdsbGeoJsonMapper {
+object AdsbGeoJsonMapper {
     const val PROP_ICAO24 = "icao24"
     const val PROP_LABEL_TOP = "label_top"
     const val PROP_LABEL_BOTTOM = "label_bottom"

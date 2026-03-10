@@ -6,7 +6,7 @@ package com.example.xcpro.map
  * Keeps last strong fixed-wing icon for a target when current classification is unknown,
  * bounded by a monotonic TTL.
  */
-internal class AdsbStickyIconProjectionCache(
+class AdsbStickyIconProjectionCache(
     private val holdTtlMs: Long = DEFAULT_HOLD_TTL_MS
 ) {
     private val stickyByIcao24 = LinkedHashMap<String, StickyEntry>()

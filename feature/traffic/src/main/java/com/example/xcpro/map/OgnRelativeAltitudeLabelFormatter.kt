@@ -5,7 +5,7 @@ import com.example.xcpro.common.units.AltitudeUnit
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-internal object OgnRelativeAltitudeLabelFormatter {
+object OgnRelativeAltitudeLabelFormatter {
     const val UNKNOWN_DELTA_TEXT = "--"
 
     /**
@@ -24,4 +24,3 @@ internal object OgnRelativeAltitudeLabelFormatter {
         }
     }
 }
-

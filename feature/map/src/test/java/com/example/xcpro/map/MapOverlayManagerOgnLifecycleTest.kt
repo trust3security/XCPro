@@ -247,7 +247,7 @@ class MapOverlayManagerOgnLifecycleTest {
         verify(targetRingOverlay, times(1)).render(enabled = eq(true), target = eq(target))
         verify(targetLineOverlay, times(1)).render(
             enabled = eq(true),
-            ownshipLocation = eq(ownship),
+            ownshipLocation = eq(OverlayCoordinate(ownship.latitude, ownship.longitude)),
             target = eq(target)
         )
         verifyNoInteractions(trafficOverlay)

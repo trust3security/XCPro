@@ -3,7 +3,7 @@ package com.example.xcpro.map
 
 import org.maplibre.android.style.expressions.Expression
 
-internal object AdsbProximityIconOutlinePolicy {
+object AdsbProximityIconOutlinePolicy {
     private const val OUTLINED_HALO_WIDTH = 0.8f
 
     @Suppress("UNUSED_PARAMETER")

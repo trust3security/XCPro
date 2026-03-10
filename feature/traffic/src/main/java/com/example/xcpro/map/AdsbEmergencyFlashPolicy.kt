@@ -3,7 +3,7 @@ package com.example.xcpro.map
 
 
 
-internal object AdsbEmergencyFlashPolicy {
+object AdsbEmergencyFlashPolicy {
     private const val EMERGENCY_FLASH_PERIOD_MS = 800L
     private const val EMERGENCY_FLASH_MIN_ALPHA = 0.35
 
@@ -26,7 +26,7 @@ internal object AdsbEmergencyFlashPolicy {
     private fun isStaleForVisual(target: AdsbTrafficUiModel): Boolean =
         target.isPositionStale || target.isStale
 
-    internal fun emergencyPulseAlpha(
+    fun emergencyPulseAlpha(
         nowMonoMs: Long,
         maxAlpha: Double,
         minAlpha: Double = EMERGENCY_FLASH_MIN_ALPHA,

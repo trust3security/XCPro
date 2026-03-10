@@ -4,12 +4,12 @@ import android.graphics.Color
 
 import org.maplibre.android.style.expressions.Expression
 
-internal object AdsbProximityColorPolicy {
-    internal const val GREEN_HEX = "#2E7D32"
-    internal const val AMBER_HEX = "#FF8F00"
-    internal const val RED_HEX = "#FF1744"
-    internal const val NEUTRAL_HEX = "#A7B4C4"
-    internal const val EMERGENCY_HEX = "#8E24AA"
+object AdsbProximityColorPolicy {
+    const val GREEN_HEX = "#2E7D32"
+    const val AMBER_HEX = "#FF8F00"
+    const val RED_HEX = "#FF1744"
+    const val NEUTRAL_HEX = "#A7B4C4"
+    const val EMERGENCY_HEX = "#8E24AA"
 
     fun colorHexFor(proximityTier: AdsbProximityTier): String {
         return when (proximityTier) {

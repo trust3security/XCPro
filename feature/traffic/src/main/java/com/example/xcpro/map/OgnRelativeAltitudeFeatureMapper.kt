@@ -3,7 +3,7 @@ package com.example.xcpro.map
 import com.example.xcpro.common.units.AltitudeUnit
 
 
-internal data class OgnRelativeAltitudeFeatureMapperInput(
+data class OgnRelativeAltitudeFeatureMapperInput(
     val targetAltitudeMeters: Double?,
     val ownshipAltitudeMeters: Double?,
     val altitudeUnit: AltitudeUnit,
@@ -15,7 +15,7 @@ internal data class OgnRelativeAltitudeFeatureMapperInput(
     val secondaryLabelText: String
 )
 
-internal data class OgnRelativeAltitudeFeatureMapping(
+data class OgnRelativeAltitudeFeatureMapping(
     val iconStyleImageId: String,
     val topLabel: String,
     val bottomLabel: String,
@@ -24,7 +24,7 @@ internal data class OgnRelativeAltitudeFeatureMapping(
     val secondaryLabelText: String
 )
 
-internal object OgnRelativeAltitudeFeatureMapper {
+object OgnRelativeAltitudeFeatureMapper {
     fun map(input: OgnRelativeAltitudeFeatureMapperInput): OgnRelativeAltitudeFeatureMapping {
         val deltaMeters = computeDeltaMeters(
             targetAltitudeMeters = input.targetAltitudeMeters,

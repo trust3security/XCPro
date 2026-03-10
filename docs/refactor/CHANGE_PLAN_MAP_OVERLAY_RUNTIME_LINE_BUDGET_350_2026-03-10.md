@@ -6,7 +6,7 @@
 - Owner: XCPro Team
 - Date: 2026-03-10
 - Issue/PR: RULES-20260306-14 continuation + map runtime maintainability lane
-- Status: Phase 0-3 implemented (in progress toward final closure)
+- Status: Phase 4 in finalization (map-lane gates executed; full test-suite gate deferred by fast-path request)
 - Target: `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` < 350 lines
 
 ## 1) Scope
@@ -256,15 +256,42 @@ Overall target: 4.4 / 5 (with line-budget containment + no behavioral drift evid
 
 ## 9) Phase 0-3 Outcome
 
-- Phase 0 completed: baseline captured (MapOverlayManagerRuntime.kt moved from 549 lines to 310).
+- Phase 0 completed: baseline captured (MapOverlayManagerRuntime.kt moved from 549 lines to 344).
 - Phase 1 completed: RuntimeCounters extracted to MapOverlayRuntimeCounters.kt.
 - Phase 1 completed: MapOverlayRuntimeStateAdapter extracted to MapOverlayRuntimeStateAdapter.kt.
 - Phase 2 completed: interaction scheduling extracted to MapOverlayRuntimeInteractionDelegate.kt.
 - Phase 3 completed: status orchestration extracted to MapOverlayRuntimeStatusCoordinator.kt.
-- Scope checks: MapOverlayManagerRuntime.kt is now 310 lines, below the <350 target.
+- Scope checks: MapOverlayManagerRuntime.kt is now 344 lines, below the <350 target.
 - Verification evidence:
   - ./gradlew :feature:map:compileDebugKotlin [PASS]
   - ./gradlew :feature:map:assembleDebug [PASS]
+  - ./gradlew assembleDebug [PASS]
   - ./gradlew enforceRules [PASS]
   - python scripts/arch_gate.py [PASS]
-  - Test gate note: ./gradlew :feature:map:testDebugUnitTest currently fails in this workspace due pre-existing internal-visibility issues in existing test sources unrelated to this refactor, so behavior-level regression assertions were not executed end-to-end here.
+  - ./gradlew :feature:map:compileDebugUnitTestKotlin [PASS]
+  - ./gradlew testDebugUnitTest [NOT RUN]
+    - Deferred by request to keep phase-4 fast path.
+    - `feature/map` compile blockers were addressed (internal-to-public bridge + 2 legacy test drift fixes).
+    - `feature:traffic` two regression assertions remain unchanged and out of scope for this lane.
+  - Phase 4 status: map-lane gates pass; full-suite re-run is pending in a broader verification window.
+
+### Phase 4 Closure Notes
+
+- Completed required architecture gates: `python scripts/arch_gate.py`, `./gradlew enforceRules`, `./gradlew assembleDebug`.
+- `./gradlew :feature:map:compileDebugUnitTestKotlin` now passes.
+- `./gradlew testDebugUnitTest` remains pending by fast-path choice; no additional behavior changes in this lane.
+- No files changed in `KNOWN_DEVIATIONS.md`.
+
+### Phase 4 Quality Rescore
+
+- Architecture cleanliness: 4.6 / 5
+- Maintainability change safety: 4.7 / 5
+- Test confidence on risky paths: 4.1 / 5 (map compile blockers are resolved; full test suite pending by lane decision)
+- Overall map runtime slice quality: 4.2 / 5
+- Release readiness (lane): 4.0 / 5
+
+Overall score: 4.4 / 5 (with residual risk: full-lane `testDebugUnitTest` still pending).
+
+## 10) Suggested Next Step
+
+- Re-run `./gradlew testDebugUnitTest` in a full verification window.

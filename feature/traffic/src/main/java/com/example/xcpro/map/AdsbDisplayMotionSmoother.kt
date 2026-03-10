@@ -6,7 +6,7 @@ import kotlin.math.abs
  * Visual-only per-aircraft interpolation between provider updates.
  * This does not mutate repository state; it only creates smoother map frames.
  */
-internal class AdsbDisplayMotionSmoother {
+class AdsbDisplayMotionSmoother {
 
     data class FrameSnapshot(
         val targets: List<AdsbTrafficUiModel>,

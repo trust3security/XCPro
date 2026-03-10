@@ -2,7 +2,7 @@ package com.example.xcpro.map
 
 import kotlin.math.abs
 
-internal enum class OgnRelativeAltitudeBand {
+enum class OgnRelativeAltitudeBand {
     ABOVE,
     BELOW,
     NEAR,
@@ -14,10 +14,10 @@ internal enum class OgnRelativeAltitudeBand {
  *
  * The black band is inclusive at +/-100 ft around ownship altitude.
  */
-internal object OgnRelativeAltitudeColorPolicy {
+object OgnRelativeAltitudeColorPolicy {
     private const val FEET_TO_METERS = 0.3048
     private const val BLACK_BAND_FEET = 100.0
-    internal const val BLACK_BAND_METERS = BLACK_BAND_FEET * FEET_TO_METERS
+    const val BLACK_BAND_METERS = BLACK_BAND_FEET * FEET_TO_METERS
 
     fun resolveBand(deltaMeters: Double?): OgnRelativeAltitudeBand {
         val delta = deltaMeters?.takeIf { it.isFinite() } ?: return OgnRelativeAltitudeBand.UNKNOWN
@@ -25,4 +25,3 @@ internal object OgnRelativeAltitudeColorPolicy {
         return if (delta > 0.0) OgnRelativeAltitudeBand.ABOVE else OgnRelativeAltitudeBand.BELOW
     }
 }
-

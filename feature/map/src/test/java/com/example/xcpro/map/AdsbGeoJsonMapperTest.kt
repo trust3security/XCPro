@@ -5,6 +5,7 @@ import com.example.xcpro.map.AdsbProximityReason
 import com.example.xcpro.map.AdsbTrafficUiModel
 import com.example.xcpro.map.Icao24
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.adsb.AdsbPositionFreshnessSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

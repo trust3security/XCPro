@@ -1,10 +1,10 @@
 package com.example.xcpro.map
 
-internal data class OgnRelativeAltitudeLabelLayout(
+data class OgnRelativeAltitudeLabelLayout(
     val deltaOnTop: Boolean
 )
 
-internal object OgnRelativeAltitudeLabelLayoutPolicy {
+object OgnRelativeAltitudeLabelLayoutPolicy {
     fun resolve(band: OgnRelativeAltitudeBand): OgnRelativeAltitudeLabelLayout {
         return when (band) {
             OgnRelativeAltitudeBand.ABOVE -> OgnRelativeAltitudeLabelLayout(deltaOnTop = true)
@@ -14,4 +14,3 @@ internal object OgnRelativeAltitudeLabelLayoutPolicy {
         }
     }
 }
-

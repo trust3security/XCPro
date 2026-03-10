@@ -134,7 +134,7 @@ class OgnGliderTrailOverlay(
             )
     }
 
-    internal companion object {
+    companion object {
         private const val TAG = "OgnGliderTrailOverlay"
 
         private const val SOURCE_ID = "ogn-glider-trail-source"
@@ -152,7 +152,7 @@ class OgnGliderTrailOverlay(
         // AI-NOTE: Keep map-side feature creation bounded even if repository history is large.
         private const val MAX_RENDER_SEGMENTS = 12_000
 
-        internal fun trimSegmentsForRender(
+        fun trimSegmentsForRender(
             segments: List<OgnGliderTrailSegment>,
             maxSegments: Int = MAX_RENDER_SEGMENTS
         ): List<OgnGliderTrailSegment> {
@@ -164,7 +164,7 @@ class OgnGliderTrailOverlay(
             }
         }
 
-        internal fun sameSegmentsByIdentity(
+        fun sameSegmentsByIdentity(
             previous: List<OgnGliderTrailSegment>,
             current: List<OgnGliderTrailSegment>
         ): Boolean {

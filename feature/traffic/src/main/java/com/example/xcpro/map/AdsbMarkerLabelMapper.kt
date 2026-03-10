@@ -7,13 +7,13 @@ import com.example.xcpro.common.units.UnitsPreferences
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-internal enum class AdsbRelativeAltitudeBand {
+enum class AdsbRelativeAltitudeBand {
     ABOVE,
     BELOW,
     UNKNOWN
 }
 
-internal data class AdsbMarkerLabelMapping(
+data class AdsbMarkerLabelMapping(
     val topLabel: String,
     val bottomLabel: String,
     val relativeBand: AdsbRelativeAltitudeBand,
@@ -21,7 +21,7 @@ internal data class AdsbMarkerLabelMapping(
     val distanceLabel: String
 )
 
-internal object AdsbMarkerLabelMapper {
+object AdsbMarkerLabelMapper {
     const val UNKNOWN_TEXT = "--"
 
     fun map(

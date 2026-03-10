@@ -5,12 +5,12 @@ import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import java.util.Locale
 
-internal data class OgnIdentifierDistanceLabel(
+data class OgnIdentifierDistanceLabel(
     val identifier: String,
     val text: String
 )
 
-internal object OgnIdentifierDistanceLabelMapper {
+object OgnIdentifierDistanceLabelMapper {
     const val UNKNOWN_IDENTIFIER = "--"
 
     fun map(
