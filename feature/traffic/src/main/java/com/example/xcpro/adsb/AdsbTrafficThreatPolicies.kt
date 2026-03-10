@@ -76,6 +76,21 @@ internal fun contactAgeSec(nowWallEpochSec: Long?, lastContactEpochSec: Long?): 
     return (nowWallEpochSec - lastContactEpochSec).toInt().coerceAtLeast(0)
 }
 
+internal fun advancedAgeSec(
+    nowMonoMs: Long,
+    sampleReceivedMonoMs: Long,
+    ageAtReceiptSec: Int
+): Int {
+    val elapsedSec = ((nowMonoMs - sampleReceivedMonoMs) / 1_000L).toInt().coerceAtLeast(0)
+    return (ageAtReceiptSec + elapsedSec).coerceAtLeast(0)
+}
+
+internal fun advancedNullableAgeSec(
+    nowMonoMs: Long,
+    sampleReceivedMonoMs: Long,
+    ageAtReceiptSec: Int?
+): Int? = ageAtReceiptSec?.let { advancedAgeSec(nowMonoMs, sampleReceivedMonoMs, it) }
+
 internal fun trendSampleMonoMs(
     targetReceivedMonoMs: Long,
     ownshipReferenceSampleMonoMs: Long?,

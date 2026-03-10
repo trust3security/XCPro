@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.maplibre.android)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation("com.squareup.retrofit2:retrofit:2.11.0")

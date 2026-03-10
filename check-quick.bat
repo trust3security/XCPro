@@ -14,7 +14,7 @@ echo Running quick checks...
 echo.
 
 echo [1/3] Enforcing architecture/coding rules...
-call "%GRADLE%" enforceRules
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" enforceRules
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Rule enforcement failed.
     popd >nul
@@ -34,7 +34,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo [3/3] Assembling quick modules...
-call "%GRADLE%" :feature:map:assembleDebug :dfcards-library:assembleDebug
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" :feature:map:assembleDebug :dfcards-library:assembleDebug
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Quick assemble failed.
     popd >nul
@@ -64,4 +64,3 @@ echo Examples:
 echo   check-quick.bat
 echo   check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
 exit /b 0
-

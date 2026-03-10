@@ -73,6 +73,7 @@ open class MapOverlayManagerRuntime(
     private var aatPreviewForwardCount = 0L
     private var mapInteractionActive: Boolean = false
     private var pendingInteractionDeactivateJob: Job? = null
+    private val trafficRuntimeState = MapOverlayRuntimeStateAdapter(mapState)
 
     private val baseOpsDelegate = MapOverlayManagerRuntimeBaseOpsDelegate(
         context = context,
@@ -93,7 +94,7 @@ open class MapOverlayManagerRuntime(
         nowMonoMs = nowMonoMs
     )
     private val ognDelegate = MapOverlayManagerRuntimeOgnDelegate(
-        mapState = mapState,
+        runtimeState = trafficRuntimeState,
         coroutineScope = coroutineScope,
         ognTrafficOverlayFactory = ognTrafficOverlayFactory,
         ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
@@ -108,7 +109,7 @@ open class MapOverlayManagerRuntime(
 
     init {
         trafficDelegate = MapOverlayManagerRuntimeTrafficDelegate(
-            mapState = mapState,
+            runtimeState = trafficRuntimeState,
             coroutineScope = coroutineScope,
             adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,
             interactionActiveProvider = { mapInteractionActive },
@@ -302,7 +303,9 @@ open class MapOverlayManagerRuntime(
         ognDelegate.updateTargetVisuals(
             enabled = enabled,
             resolvedTarget = resolvedTarget,
-            ownshipLocation = ownshipLocation,
+            ownshipLocation = ownshipLocation?.run {
+                OverlayCoordinate(latitude = latitude, longitude = longitude)
+            },
             forceImmediate = forceImmediate
         )
     }
@@ -493,4 +496,54 @@ open class MapOverlayManagerRuntime(
         val adsbIconResolveLatencyAverageMs: Long?,
         val adsbDefaultMediumUnknownIconEnabled: Boolean
     )
+}
+
+private class MapOverlayRuntimeStateAdapter(
+    private val mapState: MapScreenState
+) : TrafficOverlayRuntimeState {
+    override val mapLibreMap: MapLibreMap?
+        get() = mapState.mapLibreMap
+
+    override val blueLocationLayerId: String
+        get() = BlueLocationOverlay.LAYER_ID
+
+    override fun bringBlueLocationOverlayToFront() {
+        mapState.blueLocationOverlay?.bringToFront()
+    }
+
+    override var ognTrafficOverlay: OgnTrafficOverlay?
+        get() = mapState.ognTrafficOverlay
+        set(value) {
+            mapState.ognTrafficOverlay = value
+        }
+
+    override var ognTargetRingOverlay: OgnTargetRingOverlay?
+        get() = mapState.ognTargetRingOverlay
+        set(value) {
+            mapState.ognTargetRingOverlay = value
+        }
+
+    override var ognTargetLineOverlay: OgnTargetLineOverlay?
+        get() = mapState.ognTargetLineOverlay
+        set(value) {
+            mapState.ognTargetLineOverlay = value
+        }
+
+    override var ognThermalOverlay: OgnThermalOverlay?
+        get() = mapState.ognThermalOverlay
+        set(value) {
+            mapState.ognThermalOverlay = value
+        }
+
+    override var ognGliderTrailOverlay: OgnGliderTrailOverlay?
+        get() = mapState.ognGliderTrailOverlay
+        set(value) {
+            mapState.ognGliderTrailOverlay = value
+        }
+
+    override var adsbTrafficOverlay: AdsbTrafficOverlay?
+        get() = mapState.adsbTrafficOverlay
+        set(value) {
+            mapState.adsbTrafficOverlay = value
+        }
 }

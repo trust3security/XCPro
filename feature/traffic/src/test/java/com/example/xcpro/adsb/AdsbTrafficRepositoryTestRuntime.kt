@@ -308,7 +308,9 @@ abstract class AdsbTrafficRepositoryTestBase {
         timeSec: Long,
         latitude: Double,
         longitude: Double,
-        trueTrackDeg: Double? = 180.0
+        trueTrackDeg: Double? = 180.0,
+        timePositionSec: Long = 1_710_000_000L,
+        lastContactSec: Long = 1_710_000_001L
     ): ProviderResult.Success = ProviderResult.Success(
         response = OpenSkyResponse(
             timeSec = timeSec,
@@ -319,7 +321,9 @@ abstract class AdsbTrafficRepositoryTestBase {
                     longitude = longitude,
                     altitudeM = 500.0,
                     speedMps = 40.0,
-                    trueTrackDeg = trueTrackDeg
+                    trueTrackDeg = trueTrackDeg,
+                    timePositionSec = timePositionSec,
+                    lastContactSec = lastContactSec
                 )
             )
         ),
@@ -533,12 +537,14 @@ abstract class AdsbTrafficRepositoryTestBase {
         altitudeM: Double?,
         speedMps: Double?,
         positionSource: Int? = 0,
-        trueTrackDeg: Double? = 180.0
+        trueTrackDeg: Double? = 180.0,
+        timePositionSec: Long = 1_710_000_000L,
+        lastContactSec: Long = 1_710_000_001L
     ): OpenSkyStateVector = OpenSkyStateVector(
         icao24 = icao24,
         callsign = icao24.uppercase(),
-        timePositionSec = 1_710_000_000L,
-        lastContactSec = 1_710_000_001L,
+        timePositionSec = timePositionSec,
+        lastContactSec = lastContactSec,
         longitude = longitude,
         latitude = latitude,
         baroAltitudeM = altitudeM,

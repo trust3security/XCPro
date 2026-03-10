@@ -33,6 +33,9 @@ import com.example.xcpro.map.OgnTrafficSnapshot
 import com.example.xcpro.map.OgnTrafficTarget
 import com.example.xcpro.map.OgnTrailSelectionViewModel
 import com.example.xcpro.qnh.QnhCalibrationState
+import com.example.xcpro.map.ui.AdsbDebugPanel
+import com.example.xcpro.map.ui.AdsbIssueFlashBadge
+import com.example.xcpro.map.ui.OgnDebugPanel
 import kotlin.math.roundToInt
 
 @Composable

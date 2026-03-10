@@ -8,8 +8,8 @@ import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 
-internal class MapOverlayManagerRuntimeTrafficDelegate(
-    private val mapState: MapScreenState,
+class MapOverlayManagerRuntimeTrafficDelegate(
+    private val runtimeState: TrafficOverlayRuntimeState,
     private val coroutineScope: CoroutineScope,
     private val adsbTrafficOverlayFactory: (MapLibreMap, Int) -> AdsbTrafficOverlay,
     private val interactionActiveProvider: () -> Boolean,
@@ -33,12 +33,12 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
     fun initializeAdsbTrafficOverlay(map: MapLibreMap?) {
         adsbRenderState.pendingJob?.cancel()
         adsbRenderState.pendingJob = null
-        mapState.adsbTrafficOverlay?.cleanup()
+        runtimeState.adsbTrafficOverlay?.cleanup()
         if (map == null) return
-        mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
-        mapState.adsbTrafficOverlay?.initialize()
+        runtimeState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
+        runtimeState.adsbTrafficOverlay?.initialize()
         val projectedStyleIds = projectedAdsbStyleIds(nowMonoMs())
-        mapState.adsbTrafficOverlay?.render(
+        runtimeState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
             ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
             unitsPreferences = latestAdsbUnitsPreferences,
@@ -59,10 +59,11 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         val sameTargets = latestAdsbTargets == targets
         val sameOwnshipAltitude = latestAdsbOwnshipAltitudeMeters == normalizedOwnshipAltitude
         val sameUnitsPreferences = latestAdsbUnitsPreferences == unitsPreferences
-        if (sameTargets &&
+        if (
+            sameTargets &&
             sameOwnshipAltitude &&
             sameUnitsPreferences &&
-            mapState.adsbTrafficOverlay != null
+            runtimeState.adsbTrafficOverlay != null
         ) {
             return
         }
@@ -75,12 +76,12 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
     fun setAdsbIconSizePx(iconSizePx: Int) {
         val clamped = clampAdsbIconSizePx(iconSizePx)
         adsbIconSizePx = clamped
-        mapState.adsbTrafficOverlay?.setIconSizePx(clamped)
+        runtimeState.adsbTrafficOverlay?.setIconSizePx(clamped)
     }
 
     fun setAdsbEmergencyFlashEnabled(enabled: Boolean) {
         adsbEmergencyFlashEnabled = enabled
-        mapState.adsbTrafficOverlay?.setEmergencyFlashEnabled(enabled)
+        runtimeState.adsbTrafficOverlay?.setEmergencyFlashEnabled(enabled)
     }
 
     fun setAdsbDefaultMediumUnknownIconEnabled(enabled: Boolean) {
@@ -90,7 +91,7 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
     }
 
     fun findAdsbTargetAt(tap: LatLng): Icao24? {
-        return mapState.adsbTrafficOverlay?.findTargetAt(tap)
+        return runtimeState.adsbTrafficOverlay?.findTargetAt(tap)
     }
 
     fun latestAdsbTargetsCount(): Int = latestAdsbTargets.size
@@ -135,9 +136,9 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
             overlayFrontOrderSkippedCount += 1
             return
         }
-        mapState.blueLocationOverlay?.bringToFront()
+        runtimeState.bringBlueLocationOverlayToFront()
         bringOgnOverlaysToFront()
-        mapState.adsbTrafficOverlay?.bringToFront()
+        runtimeState.adsbTrafficOverlay?.bringToFront()
         overlayFrontOrderApplyCount += 1
         lastOverlayFrontOrderApplyMonoMs = nowMs
         lastOverlayFrontOrderSignature = captureOverlayFrontOrderSignature()
@@ -147,12 +148,12 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         val pending = adsbRenderState.pendingJob ?: return
         pending.cancel()
         adsbRenderState.pendingJob = null
-        val map = mapState.mapLibreMap ?: return
+        val map = runtimeState.mapLibreMap ?: return
         renderAdsbNow(map)
     }
 
     private fun scheduleAdsbRender(forceImmediate: Boolean) {
-        val map = mapState.mapLibreMap ?: return
+        val map = runtimeState.mapLibreMap ?: return
         val intervalMs = resolveInteractionAwareIntervalMs(
             baseIntervalMs = 0L,
             interactionActive = interactionActiveProvider(),
@@ -179,7 +180,7 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         adsbRenderState.pendingJob = coroutineScope.launch {
             delay(remainingMs)
             adsbRenderState.pendingJob = null
-            val currentMap = mapState.mapLibreMap
+            val currentMap = runtimeState.mapLibreMap
             if (currentMap == null || currentMap !== map) return@launch
             renderAdsbNow(currentMap)
         }
@@ -188,16 +189,16 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
     private fun renderAdsbNow(map: MapLibreMap) {
         val renderMonoMs = nowMonoMs()
         val projectedStyleIds = projectedAdsbStyleIds(renderMonoMs)
-        if (mapState.adsbTrafficOverlay == null) {
-            mapState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
-            mapState.adsbTrafficOverlay?.initialize()
+        if (runtimeState.adsbTrafficOverlay == null) {
+            runtimeState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
+            runtimeState.adsbTrafficOverlay?.initialize()
         }
         adsbIconTelemetryTracker.onRenderedTargets(
             targets = latestAdsbTargets,
             nowMonoMs = renderMonoMs,
             iconStyleIdOverrides = projectedStyleIds
         )
-        mapState.adsbTrafficOverlay?.render(
+        runtimeState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
             ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
             unitsPreferences = latestAdsbUnitsPreferences,
@@ -220,19 +221,18 @@ internal class MapOverlayManagerRuntimeTrafficDelegate(
         )
 
     private fun captureOverlayFrontOrderSignature(): OverlayFrontOrderSignature? {
-        val map = mapState.mapLibreMap ?: return null
+        val map = runtimeState.mapLibreMap ?: return null
         val style = map.style ?: return null
         return OverlayFrontOrderSignature(
             mapId = System.identityHashCode(map),
             styleId = System.identityHashCode(style),
             layerCount = style.layers.size,
             topLayerId = style.layers.lastOrNull()?.id,
-            blueOverlayId = mapState.blueLocationOverlay?.let { System.identityHashCode(it) } ?: 0,
-            ognOverlayId = mapState.ognTrafficOverlay?.let { System.identityHashCode(it) } ?: 0,
-            ognTargetRingOverlayId = mapState.ognTargetRingOverlay?.let { System.identityHashCode(it) } ?: 0,
-            ognTargetLineOverlayId = mapState.ognTargetLineOverlay?.let { System.identityHashCode(it) } ?: 0,
-            adsbOverlayId = mapState.adsbTrafficOverlay?.let { System.identityHashCode(it) } ?: 0
+            blueOverlayId = 0,
+            ognOverlayId = runtimeState.ognTrafficOverlay?.let { System.identityHashCode(it) } ?: 0,
+            ognTargetRingOverlayId = runtimeState.ognTargetRingOverlay?.let { System.identityHashCode(it) } ?: 0,
+            ognTargetLineOverlayId = runtimeState.ognTargetLineOverlay?.let { System.identityHashCode(it) } ?: 0,
+            adsbOverlayId = runtimeState.adsbTrafficOverlay?.let { System.identityHashCode(it) } ?: 0
         )
     }
-
 }

@@ -39,8 +39,8 @@ class OgnGliderTrailOverlay(
                         style.addLayerBelow(layer, OGN_ICON_LAYER_ID)
                     }
 
-                    style.getLayer(BlueLocationOverlay.LAYER_ID) != null -> {
-                        style.addLayerBelow(layer, BlueLocationOverlay.LAYER_ID)
+                    style.getLayer(BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK) != null -> {
+                        style.addLayerBelow(layer, BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK)
                     }
 
                     else -> {

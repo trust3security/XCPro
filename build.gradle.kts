@@ -17,6 +17,10 @@ val configuredMaxParallelForks = providers.gradleProperty("xcpro.test.maxParalle
     .orNull
     ?.toIntOrNull()
     ?.coerceAtLeast(1)
+    ?: providers.environmentVariable("XC_TEST_PARALLEL_FORKS")
+        .orNull
+    ?.toIntOrNull()
+    ?.coerceAtLeast(1)
     ?: 1
 val configuredTestTimeoutSeconds = providers.gradleProperty("xcpro.test.timeout.seconds")
     .orNull

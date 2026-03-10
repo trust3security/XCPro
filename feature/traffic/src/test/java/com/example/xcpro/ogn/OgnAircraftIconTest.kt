@@ -46,7 +46,7 @@ class OgnAircraftIconTest {
         assertEquals(R.drawable.ic_ogn_yellowtug, OgnAircraftIcon.TugplaneYellow.resId)
         assertEquals(R.drawable.ic_ogn_whitetug, OgnAircraftIcon.TugplaneWhite.resId)
         assertEquals(R.drawable.ic_adsb_helicopter, OgnAircraftIcon.Helicopter.resId)
-        assertEquals(R.drawable.ic_ogn_hangglider, OgnAircraftIcon.Paraglider.resId)
+        assertEquals(R.drawable.ic_paraglider, OgnAircraftIcon.Paraglider.resId)
         assertEquals(R.drawable.ic_ogn_hangglider, OgnAircraftIcon.Hangglider.resId)
         assertEquals(R.drawable.ic_adsb_balloon, OgnAircraftIcon.Balloon.resId)
         assertEquals(R.drawable.ic_adsb_drone, OgnAircraftIcon.Uav.resId)

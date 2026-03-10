@@ -115,8 +115,8 @@ class OgnTargetRingOverlay(
         when {
             style.getLayer(TOP_LABEL_LAYER_ID) != null -> style.addLayerAbove(layer, ICON_LAYER_ID)
             style.getLayer(ICON_LAYER_ID) != null -> style.addLayerAbove(layer, ICON_LAYER_ID)
-            style.getLayer(BlueLocationOverlay.LAYER_ID) != null ->
-                style.addLayerAbove(layer, BlueLocationOverlay.LAYER_ID)
+            style.getLayer(BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK) != null ->
+                style.addLayerAbove(layer, BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK)
 
             else -> style.addLayer(layer)
         }

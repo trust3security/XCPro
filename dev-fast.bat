@@ -1,6 +1,8 @@
 @echo off
 setlocal
 
+set "REPO_ROOT=%~dp0"
+set "GRADLE=%REPO_ROOT%gradlew.bat"
 set TARGET=%~1
 if "%TARGET%"=="" set TARGET=:app
 if not "%TARGET:~0,1%"==":" set TARGET=:%TARGET%
@@ -54,14 +56,8 @@ if /I "%MODE%"=="reinstall" call :require_adb_device
 
 call :run_task
 if %ERRORLEVEL% neq 0 (
-    echo First attempt failed. Cleaning stale Gradle workers and retrying once...
-    call :cleanup_stale_gradle_workers
-    call .\gradlew.bat --stop
-    call :run_task
-    if %ERRORLEVEL% neq 0 (
-        echo ERROR: %TASK% failed after retry
-        exit /b 1
-    )
+    echo ERROR: %TASK% failed
+    exit /b 1
 )
 
 echo SUCCESS: %TASK%
@@ -72,26 +68,26 @@ exit /b 0
 if /I "%MODE%"=="reinstall" (
     call adb shell am force-stop %DEBUG_PACKAGE% >nul 2>nul
     call adb uninstall %DEBUG_PACKAGE% >nul 2>nul
-    call .\gradlew.bat :app:clean :feature:map:clean :feature:variometer:clean %TASK% --no-build-cache --no-configuration-cache --rerun-tasks --console=plain
+    call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" :app:clean :feature:map:clean :feature:variometer:clean %TASK% --no-build-cache --no-configuration-cache --rerun-tasks --console=plain
     exit /b %ERRORLEVEL%
 )
 if /I "%MODE%"=="test-clean" (
     if not "%TEST_FILTER%"=="" (
-        call .\gradlew.bat %TARGET%:clean %TASK% --parallel --build-cache --configuration-cache --console=plain --tests "%TEST_FILTER%"
+        call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %TARGET%:clean %TASK% --parallel --build-cache --configuration-cache --console=plain --tests "%TEST_FILTER%"
     ) else (
-        call .\gradlew.bat %TARGET%:clean %TASK% --parallel --build-cache --configuration-cache --console=plain
+        call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %TARGET%:clean %TASK% --parallel --build-cache --configuration-cache --console=plain
     )
     exit /b %ERRORLEVEL%
 )
 if /I "%MODE%"=="test" (
     if not "%TEST_FILTER%"=="" (
-        call .\gradlew.bat %TASK% --parallel --build-cache --configuration-cache --console=plain --tests "%TEST_FILTER%"
+        call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %TASK% --parallel --build-cache --configuration-cache --console=plain --tests "%TEST_FILTER%"
     ) else (
-        call .\gradlew.bat %TASK% --parallel --build-cache --configuration-cache --console=plain
+        call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %TASK% --parallel --build-cache --configuration-cache --console=plain
     )
     exit /b %ERRORLEVEL%
 )
-call .\gradlew.bat %TASK% --parallel --build-cache --configuration-cache --console=plain
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %TASK% --parallel --build-cache --configuration-cache --console=plain
 exit /b %ERRORLEVEL%
 
 :cleanup_stale_gradle_workers

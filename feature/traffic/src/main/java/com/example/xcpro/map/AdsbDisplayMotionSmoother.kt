@@ -32,7 +32,23 @@ internal class AdsbDisplayMotionSmoother {
 
             val from = existing.frameAt(nowMonoMs)
             val to = mergeVisualValues(from = from, update = target)
-            if (from == to) {
+            val shouldSnap = shouldSnapToTarget(
+                previous = existing.to,
+                incoming = to
+            )
+            val hasMotionDelta = hasMotionFrameDelta(previous = from, next = to)
+            val hasRenderableDelta = hasRenderableStateDelta(previous = existing.to, next = to)
+
+            if (!hasMotionDelta || shouldSnap) {
+                existing.replaceWithoutAnimation(
+                    target = to,
+                    sampleMonoMs = nowMonoMs
+                )
+                changed = changed || hasRenderableDelta
+                continue
+            }
+
+            if (!hasRenderableDelta) {
                 existing.replaceWithoutAnimation(
                     target = to,
                     sampleMonoMs = nowMonoMs
@@ -107,6 +123,76 @@ internal class AdsbDisplayMotionSmoother {
             fallback?.isFinite() == true -> fallback
             else -> null
         }
+
+    private fun shouldSnapToTarget(
+        previous: AdsbTrafficUiModel,
+        incoming: AdsbTrafficUiModel
+    ): Boolean {
+        val previousPositionSec = previous.effectivePositionEpochSec
+        val incomingPositionSec = incoming.effectivePositionEpochSec
+
+        return when {
+            previousPositionSec != null && incomingPositionSec != null && incomingPositionSec < previousPositionSec ->
+                true
+
+            previousPositionSec != null && incomingPositionSec == previousPositionSec &&
+                hasGeometryDelta(previous = previous, next = incoming) ->
+                true
+
+            else -> false
+        }
+    }
+
+    private fun hasMotionFrameDelta(
+        previous: AdsbTrafficUiModel,
+        next: AdsbTrafficUiModel
+    ): Boolean =
+        previous.lat != next.lat ||
+            previous.lon != next.lon ||
+            previous.altitudeM != next.altitudeM ||
+            previous.speedMps != next.speedMps ||
+            previous.trackDeg != next.trackDeg ||
+            previous.climbMps != next.climbMps ||
+            previous.distanceMeters != next.distanceMeters ||
+            previous.bearingDegFromUser != next.bearingDegFromUser
+
+    private fun hasRenderableStateDelta(
+        previous: AdsbTrafficUiModel,
+        next: AdsbTrafficUiModel
+    ): Boolean =
+        previous.lat != next.lat ||
+            previous.lon != next.lon ||
+            previous.altitudeM != next.altitudeM ||
+            previous.speedMps != next.speedMps ||
+            previous.trackDeg != next.trackDeg ||
+            previous.climbMps != next.climbMps ||
+            previous.distanceMeters != next.distanceMeters ||
+            previous.bearingDegFromUser != next.bearingDegFromUser ||
+            previous.callsign != next.callsign ||
+            previous.positionSource != next.positionSource ||
+            previous.category != next.category ||
+            previous.proximityTier != next.proximityTier ||
+            previous.proximityReason != next.proximityReason ||
+            previous.isClosing != next.isClosing ||
+            previous.closingRateMps != next.closingRateMps ||
+            previous.isEmergencyCollisionRisk != next.isEmergencyCollisionRisk ||
+            previous.isEmergencyAudioEligible != next.isEmergencyAudioEligible ||
+            previous.emergencyAudioIneligibilityReason != next.emergencyAudioIneligibilityReason ||
+            previous.isCirclingEmergencyRedRule != next.isCirclingEmergencyRedRule ||
+            previous.isPositionStale != next.isPositionStale ||
+            previous.metadataTypecode != next.metadataTypecode ||
+            previous.metadataIcaoAircraftType != next.metadataIcaoAircraftType ||
+            previous.usesOwnshipReference != next.usesOwnshipReference ||
+            previous.positionTimestampEpochSec != next.positionTimestampEpochSec ||
+            previous.effectivePositionEpochSec != next.effectivePositionEpochSec
+
+    private fun hasGeometryDelta(
+        previous: AdsbTrafficUiModel,
+        next: AdsbTrafficUiModel
+    ): Boolean =
+        previous.lat != next.lat ||
+            previous.lon != next.lon ||
+            previous.altitudeM != next.altitudeM
 
     private fun computeDurationMs(
         previousSampleMonoMs: Long,

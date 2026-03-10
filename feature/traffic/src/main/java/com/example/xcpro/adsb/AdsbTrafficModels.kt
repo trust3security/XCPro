@@ -29,7 +29,15 @@ data class AdsbTarget(
     val positionSource: Int?,
     val category: Int?,
     val lastContactEpochSec: Long?,
-    val receivedMonoMs: Long
+    val receivedMonoMs: Long,
+    val contactReceivedMonoMs: Long = receivedMonoMs,
+    val positionTimestampEpochSec: Long? = null,
+    val responseTimestampEpochSec: Long? = null,
+    val effectivePositionEpochSec: Long? = null,
+    val positionAgeAtReceiptSec: Int = 0,
+    val contactAgeAtReceiptSec: Int? = null,
+    val positionFreshnessSource: AdsbPositionFreshnessSource =
+        AdsbPositionFreshnessSource.RECEIVED_MONO_FALLBACK
 )
 
 data class AdsbTrafficUiModel(
@@ -58,8 +66,21 @@ data class AdsbTrafficUiModel(
     val emergencyAudioIneligibilityReason: AdsbEmergencyAudioIneligibilityReason? = null,
     val isCirclingEmergencyRedRule: Boolean = false,
     val metadataTypecode: String? = null,
-    val metadataIcaoAircraftType: String? = null
+    val metadataIcaoAircraftType: String? = null,
+    val positionAgeSec: Int = ageSec,
+    val contactAgeSec: Int? = null,
+    val isPositionStale: Boolean = isStale,
+    val positionTimestampEpochSec: Long? = null,
+    val effectivePositionEpochSec: Long? = null,
+    val positionFreshnessSource: AdsbPositionFreshnessSource =
+        AdsbPositionFreshnessSource.RECEIVED_MONO_FALLBACK
 )
+
+enum class AdsbPositionFreshnessSource {
+    POSITION_TIME,
+    RESPONSE_TIME,
+    RECEIVED_MONO_FALLBACK
+}
 
 enum class AdsbProximityReason(val code: String) {
     NO_OWNSHIP_REFERENCE("no_ownship_reference"),

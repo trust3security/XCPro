@@ -36,7 +36,12 @@ internal class AdsbTrafficStore(
 
     fun upsertAll(targets: List<AdsbTarget>) {
         for (target in targets) {
-            targetsById[target.id] = target
+            val existing = targetsById[target.id]
+            targetsById[target.id] = if (existing == null) {
+                target
+            } else {
+                mergeTarget(existing = existing, incoming = target)
+            }
         }
     }
 
@@ -45,7 +50,7 @@ internal class AdsbTrafficStore(
         val iterator = targetsById.entries.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
-            val ageSec = ((nowMonoMs - entry.value.receivedMonoMs) / 1_000L).toInt()
+            val ageSec = positionAgeSec(entry.value, nowMonoMs)
             if (ageSec >= expiryAfterSec) {
                 iterator.remove()
                 proximityTrendEvaluator.removeTarget(entry.key)
@@ -105,13 +110,9 @@ internal class AdsbTrafficStore(
                     }
                 }
 
-                val receivedAgeSec =
-                    ((nowMonoMs - target.receivedMonoMs) / 1_000L).toInt().coerceAtLeast(0)
-                val contactAgeSec = contactAgeSec(
-                    nowWallEpochSec = nowWallEpochSec,
-                    lastContactEpochSec = target.lastContactEpochSec
-                )
-                val ageSec = maxOf(receivedAgeSec, contactAgeSec ?: 0)
+                val positionAgeSec = positionAgeSec(target, nowMonoMs)
+                val contactAgeSec = contactAgeSec(target, nowMonoMs)
+                val ageSec = positionAgeSec
                 val distanceMeters = AdsbGeoMath.haversineMeters(
                     lat1 = referenceLat,
                     lon1 = referenceLon,
@@ -244,7 +245,13 @@ internal class AdsbTrafficStore(
                         isEmergencyCollisionRisk = isEmergencyCollisionRiskCapped,
                         isEmergencyAudioEligible = isEmergencyAudioEligible,
                         emergencyAudioIneligibilityReason = emergencyAudioIneligibilityReason,
-                        isCirclingEmergencyRedRule = isCirclingEmergencyRedRule
+                        isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
+                        positionAgeSec = positionAgeSec,
+                        contactAgeSec = contactAgeSec,
+                        isPositionStale = positionAgeSec >= staleAfterSec,
+                        positionTimestampEpochSec = target.positionTimestampEpochSec,
+                        effectivePositionEpochSec = target.effectivePositionEpochSec,
+                        positionFreshnessSource = target.positionFreshnessSource
                     )
                 )
             }
@@ -265,4 +272,121 @@ internal class AdsbTrafficStore(
         )
     }
 
+    private fun positionAgeSec(target: AdsbTarget, nowMonoMs: Long): Int =
+        advancedAgeSec(
+            nowMonoMs = nowMonoMs,
+            sampleReceivedMonoMs = target.receivedMonoMs,
+            ageAtReceiptSec = target.positionAgeAtReceiptSec
+        )
+
+    private fun contactAgeSec(target: AdsbTarget, nowMonoMs: Long): Int? =
+        advancedNullableAgeSec(
+            nowMonoMs = nowMonoMs,
+            sampleReceivedMonoMs = normalizedContactReceivedMonoMs(target),
+            ageAtReceiptSec = target.contactAgeAtReceiptSec
+        )
+
+    private fun mergeTarget(existing: AdsbTarget, incoming: AdsbTarget): AdsbTarget {
+        val positionCompare = comparePositionAuthority(
+            incoming = incoming,
+            existing = existing
+        )
+        return when {
+            positionCompare > 0 -> incoming.withMergedMetadata(existing)
+            positionCompare < 0 -> existing.withNewerContactMetadataFrom(incoming)
+            hasSamePositionGeometry(existing = existing, incoming = incoming) ->
+                existing.withNewerContactMetadataFrom(incoming)
+
+            else -> incoming.withMergedMetadata(existing)
+        }
+    }
+
+    private fun comparePositionAuthority(incoming: AdsbTarget, existing: AdsbTarget): Int {
+        val incomingPositionEpochSec = incoming.effectivePositionEpochSec
+        val existingPositionEpochSec = existing.effectivePositionEpochSec
+        return when {
+            incomingPositionEpochSec != null && existingPositionEpochSec != null ->
+                incomingPositionEpochSec.compareTo(existingPositionEpochSec)
+
+            incomingPositionEpochSec != null -> 1
+            existingPositionEpochSec != null -> -1
+            else -> incoming.receivedMonoMs.compareTo(existing.receivedMonoMs)
+        }
+    }
+
+    private fun hasSamePositionGeometry(existing: AdsbTarget, incoming: AdsbTarget): Boolean =
+        existing.lat == incoming.lat &&
+            existing.lon == incoming.lon &&
+            existing.altitudeM == incoming.altitudeM
+
+    private fun AdsbTarget.withMergedMetadata(previous: AdsbTarget): AdsbTarget {
+        val newerContact = newerContactTarget(
+            incumbent = previous,
+            candidate = this
+        )
+        return copy(
+            callsign = callsign ?: previous.callsign,
+            trackDeg = trackDeg ?: previous.trackDeg,
+            climbMps = climbMps ?: previous.climbMps,
+            positionSource = positionSource ?: previous.positionSource,
+            category = category ?: previous.category,
+            lastContactEpochSec = newerContact.lastContactEpochSec,
+            contactReceivedMonoMs = normalizedContactReceivedMonoMs(newerContact),
+            responseTimestampEpochSec = maxNullableLong(
+                responseTimestampEpochSec,
+                previous.responseTimestampEpochSec
+            ),
+            contactAgeAtReceiptSec = newerContact.contactAgeAtReceiptSec
+        )
+    }
+
+    private fun AdsbTarget.withNewerContactMetadataFrom(candidate: AdsbTarget): AdsbTarget {
+        val newerContact = newerContactTarget(
+            incumbent = this,
+            candidate = candidate
+        )
+        return copy(
+            callsign = candidate.callsign ?: callsign,
+            trackDeg = trackDeg ?: candidate.trackDeg,
+            climbMps = climbMps ?: candidate.climbMps,
+            positionSource = candidate.positionSource ?: positionSource,
+            category = candidate.category ?: category,
+            lastContactEpochSec = newerContact.lastContactEpochSec,
+            contactReceivedMonoMs = normalizedContactReceivedMonoMs(newerContact),
+            responseTimestampEpochSec = maxNullableLong(
+                responseTimestampEpochSec,
+                candidate.responseTimestampEpochSec
+            ),
+            contactAgeAtReceiptSec = newerContact.contactAgeAtReceiptSec
+        )
+    }
+
+    private fun newerContactTarget(incumbent: AdsbTarget, candidate: AdsbTarget): AdsbTarget {
+        val incumbentContactEpochSec = incumbent.lastContactEpochSec
+        val candidateContactEpochSec = candidate.lastContactEpochSec
+        return when {
+            incumbentContactEpochSec != null && candidateContactEpochSec != null -> when {
+                candidateContactEpochSec > incumbentContactEpochSec -> candidate
+                candidateContactEpochSec < incumbentContactEpochSec -> incumbent
+                normalizedContactReceivedMonoMs(candidate) >=
+                    normalizedContactReceivedMonoMs(incumbent) -> candidate
+                else -> incumbent
+            }
+
+            candidateContactEpochSec != null -> candidate
+            incumbentContactEpochSec != null -> incumbent
+            normalizedContactReceivedMonoMs(candidate) >=
+                normalizedContactReceivedMonoMs(incumbent) -> candidate
+            else -> incumbent
+        }
+    }
+
+    private fun normalizedContactReceivedMonoMs(target: AdsbTarget): Long =
+        maxOf(target.contactReceivedMonoMs, target.receivedMonoMs)
+
+    private fun maxNullableLong(first: Long?, second: Long?): Long? = when {
+        first == null -> second
+        second == null -> first
+        else -> maxOf(first, second)
+    }
 }

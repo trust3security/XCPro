@@ -95,7 +95,13 @@ fun AdsbMarkerDetailsSheet(
                     AdsbDetailsFormatter.formatVerticalRate(target.climbMps, unitsPreferences)
                 )
             }
-            item { DetailRow("Age", "${target.ageSec}s") }
+            item { DetailRow("Position age", "${target.positionAgeSec}s") }
+            item {
+                DetailRow(
+                    "Contact age",
+                    target.contactAgeSec?.let { "${it}s" } ?: "--"
+                )
+            }
 
             item {
                 Text(

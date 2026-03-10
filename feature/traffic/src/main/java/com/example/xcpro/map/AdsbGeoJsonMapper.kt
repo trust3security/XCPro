@@ -23,6 +23,10 @@ internal object AdsbGeoJsonMapper {
     const val PROP_SPEED_MPS = "speed_mps"
     const val PROP_VS_MPS = "vs_mps"
     const val PROP_AGE_SEC = "age_s"
+    const val PROP_POSITION_AGE_SEC = "position_age_s"
+    const val PROP_CONTACT_AGE_SEC = "contact_age_s"
+    const val PROP_POSITION_IS_STALE = "position_is_stale"
+    const val PROP_POSITION_FRESHNESS_SOURCE = "position_freshness_source"
     const val PROP_CATEGORY = "category"
 
     fun toFeature(
@@ -82,6 +86,16 @@ internal object AdsbGeoJsonMapper {
             ?.takeIf { it.isFinite() }
             ?.let { feature.addNumberProperty(PROP_VS_MPS, it) }
         target.category?.let { feature.addNumberProperty(PROP_CATEGORY, it) }
+        feature.addNumberProperty(PROP_POSITION_AGE_SEC, target.positionAgeSec.toDouble())
+        target.contactAgeSec?.let { feature.addNumberProperty(PROP_CONTACT_AGE_SEC, it.toDouble()) }
+        feature.addNumberProperty(
+            PROP_POSITION_IS_STALE,
+            if (target.isPositionStale) 1 else 0
+        )
+        feature.addStringProperty(
+            PROP_POSITION_FRESHNESS_SOURCE,
+            target.positionFreshnessSource.name
+        )
         feature.addNumberProperty(PROP_AGE_SEC, target.ageSec)
         return feature
     }

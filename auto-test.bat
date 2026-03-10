@@ -13,40 +13,34 @@ echo [cleanup] Removing stale Gradle worker/wrapper processes for this repo...
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\dev\kill_stale_gradle_processes.ps1" -ProjectRoot "%CD%"
 
 echo [1/6] Cleaning project...
-call gradlew clean
+call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat clean
 if %ERRORLEVEL% neq 0 (
-    echo Clean failed, stopping Gradle daemons and retrying once...
-    call gradlew --stop
-    powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\dev\kill_stale_gradle_processes.ps1" -ProjectRoot "%CD%"
-    call gradlew clean
-    if %ERRORLEVEL% neq 0 (
-        echo ERROR: Clean failed after retry
-        exit /b 1
-    )
+    echo ERROR: Clean failed.
+    exit /b 1
 )
 
 echo [2/6] Building debug version...
-call gradlew assembleDebug
+call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat assembleDebug
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Build failed
     exit /b 1
 )
 
 echo [3/6] Running lint checks...
-call gradlew lint
+call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat lint
 if %ERRORLEVEL% neq 0 (
     echo WARNING: Lint issues found - check reports
 )
 
 echo [4/6] Running unit tests...
-call gradlew test
+call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat test
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Unit tests failed
     exit /b 1
 )
 
 echo [5/6] Running instrumented tests (requires connected device)...
-call gradlew connectedAndroidTest
+call .\scripts\dev\gradle-run-with-lock-recovery.bat .\gradlew.bat connectedAndroidTest
 if %ERRORLEVEL% neq 0 (
     echo WARNING: Instrumented tests failed or no device connected
 )
@@ -59,3 +53,5 @@ echo - Build: app/build/reports/
 echo - Lint: app/build/reports/lint-results.html
 echo - Tests: app/build/reports/tests/
 echo ========================================
+
+exit /b 0

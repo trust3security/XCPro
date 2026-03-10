@@ -33,7 +33,7 @@ class OgnTrafficOverlay(
             ensureOgnStyleImages(context, style)
             if (style.getLayer(ICON_LAYER_ID) == null) {
                 val iconLayer = createOgnIconLayer(currentIconSizePx)
-                val anchorId = BlueLocationOverlay.LAYER_ID
+                val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
                 if (style.getLayer(anchorId) != null) {
                     style.addLayerAbove(iconLayer, anchorId)
                 } else {

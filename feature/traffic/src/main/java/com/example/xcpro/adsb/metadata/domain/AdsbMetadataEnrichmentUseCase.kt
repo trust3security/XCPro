@@ -131,7 +131,13 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
                 operatorCallsign = metadata?.operatorCallsign,
                 icaoAircraftType = metadata?.icaoAircraftType,
                 metadataAvailability = availability,
-                metadataSyncState = syncState
+                metadataSyncState = syncState,
+                positionAgeSec = target.positionAgeSec,
+                contactAgeSec = target.contactAgeSec,
+                isPositionStale = target.isPositionStale,
+                positionTimestampEpochSec = target.positionTimestampEpochSec,
+                effectivePositionEpochSec = target.effectivePositionEpochSec,
+                positionFreshnessSource = target.positionFreshnessSource
             )
         }.distinctUntilChanged()
     }

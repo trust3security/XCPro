@@ -144,9 +144,8 @@ test-safe.bat
 test-safe.bat :feature:map:testDebugUnitTest
 test-safe.bat testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest"
 ```
-`test-safe.bat` defaults to faster daemon/cache mode and sets
-`-Pxcpro.test.maxParallelForks=2` unless overridden by
-`XC_TEST_PARALLEL_FORKS`.
+`test-safe.bat` defaults to faster daemon/cache mode and uses
+`XC_TEST_PARALLEL_FORKS` (default `2`) as the test parallel-forks default.
 
 For Windows KSP/generated-state corruption recovery, use `repair-build.bat`
 before falling back to broad `clean` runs:

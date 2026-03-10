@@ -5,7 +5,8 @@ set "REPO_ROOT=%~dp0"
 set "GRADLE=%REPO_ROOT%gradlew.bat"
 set "TEST_PARALLEL_FORKS=%XC_TEST_PARALLEL_FORKS%"
 if "%TEST_PARALLEL_FORKS%"=="" set "TEST_PARALLEL_FORKS=2"
-set "GRADLE_COMMON_ARGS=--daemon --parallel --build-cache --configuration-cache --console=plain -Pxcpro.test.maxParallelForks=%TEST_PARALLEL_FORKS%"
+set "XC_TEST_PARALLEL_FORKS=%TEST_PARALLEL_FORKS%"
+set "GRADLE_COMMON_ARGS=--daemon --parallel --build-cache --configuration-cache --console plain"
 
 if /I "%~1"=="--help" goto :usage
 if /I "%~1"=="-h" goto :usage
@@ -25,18 +26,7 @@ echo.
 
 call :purge_test_result_locks
 
-call "%GRADLE%" %GRADLE_COMMON_ARGS% %TEST_ARGS%
-if %ERRORLEVEL% equ 0 (
-    goto :success
-)
-
-echo WARN: Initial test command failed. Attempting one lock-recovery retry...
-call :recover_gradle_locks
-echo.
-echo Re-running:
-echo   "%GRADLE%" %GRADLE_COMMON_ARGS% %TEST_ARGS%
-echo.
-call "%GRADLE%" %GRADLE_COMMON_ARGS% %TEST_ARGS%
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %GRADLE_COMMON_ARGS% %TEST_ARGS%
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Test command failed after recovery retry.
     popd >nul
@@ -49,18 +39,6 @@ echo ========================================
 echo Safe test command completed successfully.
 echo ========================================
 popd >nul
-exit /b 0
-
-:recover_gradle_locks
-echo [LOCK-RECOVERY] Stopping Gradle daemons...
-call "%GRADLE%" --stop >nul 2>nul
-
-echo [LOCK-RECOVERY] Killing stale Gradle Java processes for this repo...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%REPO_ROOT%scripts\dev\kill_stale_gradle_processes.ps1" -ProjectRoot "%REPO_ROOT%."
-
-echo [LOCK-RECOVERY] Removing stale test output lock files...
-call :purge_test_result_locks
-for /r "%USERPROFILE%\.gradle\wrapper\dists" %%F in (*.lck) do del /f /q "%%F" >nul 2>nul
 exit /b 0
 
 :purge_test_result_locks

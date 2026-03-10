@@ -34,7 +34,7 @@ if /I "%MODE%"=="none" (
 )
 
 echo Re-running %TASK%...
-call "%GRADLE%" %TASK% --daemon --parallel --build-cache --configuration-cache --console=plain
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" %TASK% --daemon --parallel --build-cache --configuration-cache --console=plain
 set "EXIT_CODE=%ERRORLEVEL%"
 
 popd >nul

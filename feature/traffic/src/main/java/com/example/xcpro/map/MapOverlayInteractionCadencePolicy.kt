@@ -2,13 +2,13 @@ package com.example.xcpro.map
 
 import kotlin.math.max
 
-internal const val OGN_INTERACTION_MIN_RENDER_INTERVAL_MS = 900L
-internal const val ADSB_INTERACTION_MIN_RENDER_INTERVAL_MS = 750L
-internal const val WEATHER_RAIN_INTERACTION_MIN_APPLY_INTERVAL_MS = 1_200L
-internal const val OVERLAY_FRONT_ORDER_INTERACTION_MIN_APPLY_INTERVAL_MS = 500L
-internal const val MAP_INTERACTION_DEACTIVATION_GRACE_MS = 500L
+const val OGN_INTERACTION_MIN_RENDER_INTERVAL_MS = 900L
+const val ADSB_INTERACTION_MIN_RENDER_INTERVAL_MS = 750L
+const val WEATHER_RAIN_INTERACTION_MIN_APPLY_INTERVAL_MS = 1_200L
+const val OVERLAY_FRONT_ORDER_INTERACTION_MIN_APPLY_INTERVAL_MS = 500L
+const val MAP_INTERACTION_DEACTIVATION_GRACE_MS = 500L
 
-internal fun resolveInteractionAwareIntervalMs(
+fun resolveInteractionAwareIntervalMs(
     baseIntervalMs: Long,
     interactionActive: Boolean,
     interactionFloorMs: Long
@@ -17,7 +17,7 @@ internal fun resolveInteractionAwareIntervalMs(
     return max(baseIntervalMs, interactionFloorMs)
 }
 
-internal fun shouldSkipWeatherRainApplyDuringInteraction(
+fun shouldSkipWeatherRainApplyDuringInteraction(
     interactionActive: Boolean,
     enabled: Boolean,
     hasFrameSelection: Boolean,
@@ -31,12 +31,12 @@ internal fun shouldSkipWeatherRainApplyDuringInteraction(
     return elapsedMs in Long.MIN_VALUE until minIntervalMs
 }
 
-internal fun effectiveWeatherRainTransitionDurationMs(
+fun effectiveWeatherRainTransitionDurationMs(
     interactionActive: Boolean,
     requestedDurationMs: Long
 ): Long = if (interactionActive) 0L else requestedDurationMs.coerceAtLeast(0L)
 
-internal fun shouldThrottleOverlayFrontOrderDuringInteraction(
+fun shouldThrottleOverlayFrontOrderDuringInteraction(
     interactionActive: Boolean,
     lastAppliedMonoMs: Long,
     nowMonoMs: Long,
@@ -47,7 +47,7 @@ internal fun shouldThrottleOverlayFrontOrderDuringInteraction(
     return elapsedMs in Long.MIN_VALUE until minIntervalMs
 }
 
-internal fun resolveMapInteractionDeactivateDelayMs(
+fun resolveMapInteractionDeactivateDelayMs(
     interactionWasActive: Boolean,
     requestedActive: Boolean,
     graceMs: Long = MAP_INTERACTION_DEACTIVATION_GRACE_MS
@@ -55,3 +55,4 @@ internal fun resolveMapInteractionDeactivateDelayMs(
     if (requestedActive || !interactionWasActive) return 0L
     return graceMs.coerceAtLeast(0L)
 }
+

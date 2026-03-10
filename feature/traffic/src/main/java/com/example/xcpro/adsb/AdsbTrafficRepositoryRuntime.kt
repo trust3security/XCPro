@@ -287,7 +287,10 @@ internal class AdsbTrafficRepositoryRuntime(
         is OpenSkyTokenAccessState.TransientFailure -> AdsbAuthMode.Anonymous
     }
 
-    internal fun OpenSkyStateVector.toTarget(receivedMonoMs: Long): AdsbTarget? {
+    internal fun OpenSkyStateVector.toTarget(
+        responseTimeEpochSec: Long?,
+        receivedMonoMs: Long
+    ): AdsbTarget? {
         val id = Icao24.from(icao24) ?: return null
         val latitude = latitude ?: return null
         val longitude = longitude ?: return null
@@ -297,6 +300,15 @@ internal class AdsbTrafficRepositoryRuntime(
         val speedMetersPerSecond = velocityMps?.takeIf { it.isFinite() } ?: return null
         if (altitudeMeters <= MIN_AIRBORNE_ALTITUDE_M) return null
         if (speedMetersPerSecond <= MIN_AIRBORNE_SPEED_MPS) return null
+        val sanitizedResponseTimeEpochSec = sanitizeProviderEpochSec(responseTimeEpochSec)
+        val sanitizedPositionTimeEpochSec = sanitizeProviderEpochSec(timePositionSec)
+        val sanitizedLastContactEpochSec = sanitizeProviderEpochSec(lastContactSec)
+        val effectivePositionEpochSec = sanitizedPositionTimeEpochSec ?: sanitizedResponseTimeEpochSec
+        val positionFreshnessSource = when {
+            sanitizedPositionTimeEpochSec != null -> AdsbPositionFreshnessSource.POSITION_TIME
+            sanitizedResponseTimeEpochSec != null -> AdsbPositionFreshnessSource.RESPONSE_TIME
+            else -> AdsbPositionFreshnessSource.RECEIVED_MONO_FALLBACK
+        }
         return AdsbTarget(
             id = id,
             callsign = callsign?.takeIf { it.isNotBlank() },
@@ -308,9 +320,34 @@ internal class AdsbTrafficRepositoryRuntime(
             climbMps = verticalRateMps,
             positionSource = positionSource,
             category = category,
-            lastContactEpochSec = lastContactSec,
-            receivedMonoMs = receivedMonoMs
+            lastContactEpochSec = sanitizedLastContactEpochSec,
+            receivedMonoMs = receivedMonoMs,
+            contactReceivedMonoMs = receivedMonoMs,
+            positionTimestampEpochSec = sanitizedPositionTimeEpochSec,
+            responseTimestampEpochSec = sanitizedResponseTimeEpochSec,
+            effectivePositionEpochSec = effectivePositionEpochSec,
+            positionAgeAtReceiptSec = providerAgeAtReceiptSec(
+                responseTimeEpochSec = sanitizedResponseTimeEpochSec,
+                sampleTimeEpochSec = effectivePositionEpochSec
+            ) ?: 0,
+            contactAgeAtReceiptSec = providerAgeAtReceiptSec(
+                responseTimeEpochSec = sanitizedResponseTimeEpochSec,
+                sampleTimeEpochSec = sanitizedLastContactEpochSec
+            ),
+            positionFreshnessSource = positionFreshnessSource
         )
+    }
+
+    private fun sanitizeProviderEpochSec(value: Long?): Long? =
+        value?.takeIf { it > 0L }
+
+    private fun providerAgeAtReceiptSec(
+        responseTimeEpochSec: Long?,
+        sampleTimeEpochSec: Long?
+    ): Int? {
+        if (responseTimeEpochSec == null || sampleTimeEpochSec == null) return null
+        if (responseTimeEpochSec < sampleTimeEpochSec) return null
+        return (responseTimeEpochSec - sampleTimeEpochSec).toInt().coerceAtLeast(0)
     }
 
     internal fun withJitter(backoffMs: Long): Long {

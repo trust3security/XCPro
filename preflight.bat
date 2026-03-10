@@ -11,7 +11,7 @@ echo Running preflight checks...
 echo.
 
 echo [1/4] Enforcing architecture/coding rules...
-call "%GRADLE%" enforceRules
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" enforceRules
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Rule enforcement failed
     popd >nul
@@ -19,7 +19,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo [2/4] Building debug version...
-call "%GRADLE%" assembleDebug
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" assembleDebug
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Build failed
     popd >nul
@@ -47,7 +47,7 @@ for /f "skip=1 tokens=1,2" %%A in ('adb devices') do (
 )
 
 if "%DEVICE_FOUND%"=="1" (
-    call "%GRADLE%" :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
+    call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
     if %ERRORLEVEL% neq 0 (
         echo ERROR: App connected tests failed
         popd >nul

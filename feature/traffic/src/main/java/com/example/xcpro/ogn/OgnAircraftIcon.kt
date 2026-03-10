@@ -32,7 +32,7 @@ enum class OgnAircraftIcon(
         styleImageId = "ogn_icon_helicopter"
     ),
     Paraglider(
-        resId = R.drawable.ic_ogn_hangglider,
+        resId = R.drawable.ic_paraglider,
         styleImageId = "ogn_icon_paraglider"
     ),
     Hangglider(

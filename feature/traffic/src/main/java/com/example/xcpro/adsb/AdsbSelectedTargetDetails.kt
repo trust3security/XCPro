@@ -37,6 +37,13 @@ data class AdsbSelectedTargetDetails(
     val operatorCallsign: String?,
     val icaoAircraftType: String?,
     val metadataAvailability: MetadataAvailability,
-    val metadataSyncState: MetadataSyncState
+    val metadataSyncState: MetadataSyncState,
+    val positionAgeSec: Int = ageSec,
+    val contactAgeSec: Int? = null,
+    val isPositionStale: Boolean = isStale,
+    val positionTimestampEpochSec: Long? = null,
+    val effectivePositionEpochSec: Long? = null,
+    val positionFreshnessSource: AdsbPositionFreshnessSource =
+        AdsbPositionFreshnessSource.RECEIVED_MONO_FALLBACK
 )
 

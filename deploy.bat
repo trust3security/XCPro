@@ -1,11 +1,16 @@
 @echo off
+setlocal
+
+set "REPO_ROOT=%~dp0"
+set "GRADLE=%REPO_ROOT%gradlew.bat"
+
 echo ====================================
 echo Building and Deploying to Phone
 echo ====================================
 
 echo.
 echo [1/3] Building debug APK...
-call .\gradlew.bat assembleDebug
+call .\scripts\dev\gradle-run-with-lock-recovery.bat "%GRADLE%" assembleDebug
 if errorlevel 1 (
     echo ERROR: Build failed!
     pause
@@ -29,4 +34,5 @@ adb shell am start -n com.example.xcpro/.MainActivity
 echo.
 echo ... SUCCESS: App deployed and started!
 echo.
+endlocal
 pause

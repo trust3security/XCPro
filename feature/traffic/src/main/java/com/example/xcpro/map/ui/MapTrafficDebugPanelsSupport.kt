@@ -15,14 +15,14 @@ import com.example.xcpro.map.isError
 import java.util.Locale
 import com.example.xcpro.map.OgnTrafficSnapshot
 
-internal fun OgnConnectionState.toDebugLabel(): String = when (this) {
+fun OgnConnectionState.toDebugLabel(): String = when (this) {
     OgnConnectionState.DISCONNECTED -> "DISCONNECTED"
     OgnConnectionState.CONNECTING -> "CONNECTING"
     OgnConnectionState.CONNECTED -> "CONNECTED"
     OgnConnectionState.ERROR -> "ERROR"
 }
 
-internal fun AdsbConnectionState.toDebugLabel(): String = when {
+fun AdsbConnectionState.toDebugLabel(): String = when {
     isDisabled() -> "DISABLED"
     isActive() -> "ACTIVE"
     isBackingOff() -> "BACKOFF ${backoffRetryAfterSec() ?: 0}s"
@@ -30,13 +30,13 @@ internal fun AdsbConnectionState.toDebugLabel(): String = when {
     else -> "UNKNOWN"
 }
 
-internal fun AdsbAuthMode.toDebugLabel(): String = when (this) {
+fun AdsbAuthMode.toDebugLabel(): String = when (this) {
     AdsbAuthMode.Anonymous -> "ANONYMOUS"
     AdsbAuthMode.Authenticated -> "AUTHENTICATED"
     AdsbAuthMode.AuthFailed -> "AUTH FAILED"
 }
 
-internal fun AdsbTrafficSnapshot.debugReasonLabel(): String? {
+fun AdsbTrafficSnapshot.debugReasonLabel(): String? {
     val networkFailureKind = lastNetworkFailureKind
     if (connectionState.isError() && lastError == ADSB_ERROR_CIRCUIT_BREAKER_OPEN) {
         return "Circuit breaker open"
@@ -78,12 +78,12 @@ private fun AdsbNetworkFailureKind.toDebugLabel(): String = when (this) {
     AdsbNetworkFailureKind.UNKNOWN -> "Unknown network failure"
 }
 
-internal fun formatCoord(value: Double?): String {
+fun formatCoord(value: Double?): String {
     if (value == null || !value.isFinite()) return "--"
     return String.format(Locale.US, "%.4f", value)
 }
 
-internal fun formatAge(ageMs: Long?): String {
+fun formatAge(ageMs: Long?): String {
     if (ageMs == null || ageMs < 0L) return "--"
     val seconds = ageMs / 1000L
     return when {
@@ -93,47 +93,47 @@ internal fun formatAge(ageMs: Long?): String {
     }
 }
 
-internal fun formatBackoff(backoffMs: Long?): String {
+fun formatBackoff(backoffMs: Long?): String {
     if (backoffMs == null || backoffMs <= 0L) return "--"
     return "${backoffMs / 1000L}s"
 }
 
-internal fun formatMonoMs(monoMs: Long?): String {
+fun formatMonoMs(monoMs: Long?): String {
     if (monoMs == null || monoMs < 0L) return "--"
     return "$monoMs"
 }
 
-internal fun formatRatePerHour(rate: Double): String {
+fun formatRatePerHour(rate: Double): String {
     if (!rate.isFinite() || rate < 0.0) return "--"
     return String.format(Locale.US, "%.2f/h", rate)
 }
 
-internal fun formatPercent(rate: Double): String {
+fun formatPercent(rate: Double): String {
     if (!rate.isFinite() || rate < 0.0) return "--"
     return String.format(Locale.US, "%.1f%%", rate * 100.0)
 }
 
-internal fun isOgnReadyForAutoDismiss(snapshot: OgnTrafficSnapshot): Boolean =
+fun isOgnReadyForAutoDismiss(snapshot: OgnTrafficSnapshot): Boolean =
     snapshot.connectionState == OgnConnectionState.CONNECTED
 
-internal fun isAdsbReadyForAutoDismiss(snapshot: AdsbTrafficSnapshot): Boolean =
+fun isAdsbReadyForAutoDismiss(snapshot: AdsbTrafficSnapshot): Boolean =
     snapshot.connectionState.isActive() && snapshot.authMode != AdsbAuthMode.AuthFailed
 
-internal fun shouldFlashAdsbIssue(snapshot: AdsbTrafficSnapshot): Boolean =
+fun shouldFlashAdsbIssue(snapshot: AdsbTrafficSnapshot): Boolean =
     snapshot.connectionState.isError() || snapshot.connectionState.isBackingOff()
 
-internal fun shouldSurfaceOgnDebugPanel(snapshot: OgnTrafficSnapshot): Boolean =
+fun shouldSurfaceOgnDebugPanel(snapshot: OgnTrafficSnapshot): Boolean =
     snapshot.connectionState == OgnConnectionState.ERROR
 
-internal fun shouldSurfaceAdsbDebugPanel(snapshot: AdsbTrafficSnapshot): Boolean =
+fun shouldSurfaceAdsbDebugPanel(snapshot: AdsbTrafficSnapshot): Boolean =
     snapshot.connectionState.isError() || snapshot.connectionState.isBackingOff()
 
-internal fun shouldHideOgnDebugPanelWhileConnecting(snapshot: OgnTrafficSnapshot): Boolean =
+fun shouldHideOgnDebugPanelWhileConnecting(snapshot: OgnTrafficSnapshot): Boolean =
     snapshot.connectionState == OgnConnectionState.CONNECTING || snapshot.connectionState == OgnConnectionState.DISCONNECTED
 
-internal fun shouldHideAdsbDebugPanelWhileConnecting(snapshot: AdsbTrafficSnapshot): Boolean =
+fun shouldHideAdsbDebugPanelWhileConnecting(snapshot: AdsbTrafficSnapshot): Boolean =
     snapshot.connectionState.isDisabled()
 
-internal const val ADSB_ISSUE_FLASH_PERIOD_MS = 260
-internal const val ADSB_ISSUE_FLASH_ALPHA_LOW = 0.35f
-internal const val ADSB_ISSUE_FLASH_ALPHA_HIGH = 1.0f
+const val ADSB_ISSUE_FLASH_PERIOD_MS = 260
+const val ADSB_ISSUE_FLASH_ALPHA_LOW = 0.35f
+const val ADSB_ISSUE_FLASH_ALPHA_HIGH = 1.0f

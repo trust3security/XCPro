@@ -14,7 +14,7 @@ internal object AdsbEmergencyFlashPolicy {
         staleAlpha: Double,
         emergencyFlashEnabled: Boolean = true
     ): Double {
-        if (target.isStale) return staleAlpha
+        if (isStaleForVisual(target)) return staleAlpha
         if (!emergencyFlashEnabled) return liveAlpha
         if (target.proximityTier != AdsbProximityTier.EMERGENCY) return liveAlpha
         return emergencyPulseAlpha(
@@ -22,6 +22,9 @@ internal object AdsbEmergencyFlashPolicy {
             maxAlpha = liveAlpha
         )
     }
+
+    private fun isStaleForVisual(target: AdsbTrafficUiModel): Boolean =
+        target.isPositionStale || target.isStale
 
     internal fun emergencyPulseAlpha(
         nowMonoMs: Long,

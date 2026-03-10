@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui
 
-// Debug panels for map traffic overlays are split by source area:
-// - Ogn debug panel: MapTrafficDebugPanelsOgn.kt
-// - ADS-B debug panel + flash badge: MapTrafficDebugPanelsAdsb.kt
-
+// Backward-compatibility shim: ADS-B/OGN debug panel implementations
+// currently live in feature/traffic to align feature boundaries.
+// This file is intentionally minimal to preserve map module API surface.

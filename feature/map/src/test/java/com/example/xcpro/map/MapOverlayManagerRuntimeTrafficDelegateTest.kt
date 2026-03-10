@@ -226,7 +226,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
     ): Fixture {
         val mapState = MapScreenState()
         val delegate = MapOverlayManagerRuntimeTrafficDelegate(
-            mapState = mapState,
+            runtimeState = MapOverlayTestRuntimeStateAdapter(mapState),
             coroutineScope = scope,
             adsbTrafficOverlayFactory = { _, _ -> overlay },
             interactionActiveProvider = interactionActiveProvider,
@@ -237,6 +237,56 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
             mapState = mapState,
             delegate = delegate
         )
+    }
+
+    private class MapOverlayTestRuntimeStateAdapter(
+        private val state: MapScreenState
+    ) : TrafficOverlayRuntimeState {
+        override val mapLibreMap: MapLibreMap?
+            get() = state.mapLibreMap
+
+        override val blueLocationLayerId: String
+            get() = "aircraft-location-layer"
+
+        override fun bringBlueLocationOverlayToFront() {
+            state.blueLocationOverlay?.bringToFront()
+        }
+
+        override var ognTrafficOverlay: OgnTrafficOverlay?
+            get() = state.ognTrafficOverlay
+            set(value) {
+                state.ognTrafficOverlay = value
+            }
+
+        override var ognTargetRingOverlay: OgnTargetRingOverlay?
+            get() = state.ognTargetRingOverlay
+            set(value) {
+                state.ognTargetRingOverlay = value
+            }
+
+        override var ognTargetLineOverlay: OgnTargetLineOverlay?
+            get() = state.ognTargetLineOverlay
+            set(value) {
+                state.ognTargetLineOverlay = value
+            }
+
+        override var ognThermalOverlay: OgnThermalOverlay?
+            get() = state.ognThermalOverlay
+            set(value) {
+                state.ognThermalOverlay = value
+            }
+
+        override var ognGliderTrailOverlay: OgnGliderTrailOverlay?
+            get() = state.ognGliderTrailOverlay
+            set(value) {
+                state.ognGliderTrailOverlay = value
+            }
+
+        override var adsbTrafficOverlay: AdsbTrafficOverlay?
+            get() = state.adsbTrafficOverlay
+            set(value) {
+                state.adsbTrafficOverlay = value
+            }
     }
 
     private fun target(

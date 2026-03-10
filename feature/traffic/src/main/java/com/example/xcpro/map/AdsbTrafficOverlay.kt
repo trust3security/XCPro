@@ -63,7 +63,7 @@ class AdsbTrafficOverlay(
             )
             if (style.getLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID) == null) {
                 val outlineLayer = createAdsbIconOutlineLayer(currentIconSizePx)
-                val anchorId = BlueLocationOverlay.LAYER_ID
+                val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
                 if (style.getLayer(anchorId) != null) {
                     style.addLayerBelow(outlineLayer, anchorId)
                 } else {
@@ -75,7 +75,7 @@ class AdsbTrafficOverlay(
                 if (style.getLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID) != null) {
                     style.addLayerAbove(iconLayer, ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID)
                 } else {
-                    val anchorId = BlueLocationOverlay.LAYER_ID
+                    val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
                     if (style.getLayer(anchorId) != null) {
                         style.addLayerBelow(iconLayer, anchorId)
                     } else {

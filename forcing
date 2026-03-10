@@ -1,0 +1,1 @@
+[gradle-run-with-lock-recovery] XC_DISABLE_GRADLE_PARALLEL=1 - --no-parallel

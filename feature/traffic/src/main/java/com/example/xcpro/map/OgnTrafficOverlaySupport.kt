@@ -99,7 +99,7 @@ internal fun createOgnBottomLabelLayer(currentIconSizePx: Int): SymbolLayer =
         )
 
 internal fun ensureOgnLayerOrder(style: Style, currentIconSizePx: Int) {
-    val anchorId = BlueLocationOverlay.LAYER_ID
+    val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
     if (style.getLayer(anchorId) == null) return
     if (style.getLayer(ICON_LAYER_ID) == null ||
         style.getLayer(TOP_LABEL_LAYER_ID) == null ||

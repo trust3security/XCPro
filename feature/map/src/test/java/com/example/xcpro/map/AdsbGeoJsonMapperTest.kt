@@ -272,6 +272,33 @@ class AdsbGeoJsonMapperTest {
         )
     }
 
+    @Test
+    fun toFeature_includesFreshnessAliasAndPositionContactAges() {
+        val target = sampleTarget(category = 2, trackDeg = 200.0, usesOwnshipReference = true).copy(
+            positionAgeSec = 7,
+            contactAgeSec = 2,
+            isPositionStale = true,
+            ageSec = 7,
+            isStale = true,
+            positionTimestampEpochSec = 1_710_000_020L,
+            effectivePositionEpochSec = 1_710_000_020L
+        )
+
+        val feature = AdsbGeoJsonMapper.toFeature(
+            target = target,
+            ownshipAltitudeMeters = 900.0,
+            unitsPreferences = UnitsPreferences()
+        )
+
+        assertNotNull(feature)
+        feature ?: return
+        assertEquals(7.0, feature.getNumberProperty(AdsbGeoJsonMapper.PROP_POSITION_AGE_SEC).toDouble(), 1e-6)
+        assertEquals(2.0, feature.getNumberProperty(AdsbGeoJsonMapper.PROP_CONTACT_AGE_SEC).toDouble(), 1e-6)
+        assertEquals(1.0, feature.getNumberProperty(AdsbGeoJsonMapper.PROP_POSITION_IS_STALE).toDouble(), 1e-6)
+        assertEquals("POSITION_TIME", feature.getStringProperty(AdsbGeoJsonMapper.PROP_POSITION_FRESHNESS_SOURCE))
+        assertEquals(7.0, feature.getNumberProperty(AdsbGeoJsonMapper.PROP_AGE_SEC).toDouble(), 1e-6)
+    }
+
     private fun sampleTarget(
         category: Int?,
         trackDeg: Double?,
@@ -316,7 +343,15 @@ class AdsbGeoJsonMapperTest {
             isEmergencyCollisionRisk = isEmergencyCollisionRisk,
             isEmergencyAudioEligible = isEmergencyAudioEligible,
             isCirclingEmergencyRedRule = isCirclingEmergencyRedRule,
-            isClosing = usesOwnshipReference
+            isClosing = usesOwnshipReference,
+            positionAgeSec = 5,
+            contactAgeSec = 1,
+            isPositionStale = false,
+            positionFreshnessSource = if (usesOwnshipReference) {
+                AdsbPositionFreshnessSource.POSITION_TIME
+            } else {
+                AdsbPositionFreshnessSource.RECEIVED_MONO_FALLBACK
+            }
         )
     }
 }

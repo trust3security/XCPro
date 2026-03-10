@@ -3,6 +3,12 @@ package com.example.xcpro.map.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.ui.isAdsbReadyForAutoDismiss
+import com.example.xcpro.map.ui.isOgnReadyForAutoDismiss
+import com.example.xcpro.map.ui.shouldFlashAdsbIssue
+import com.example.xcpro.map.ui.shouldSurfaceAdsbDebugPanel
+import com.example.xcpro.map.ui.shouldSurfaceOgnDebugPanel
+import com.example.xcpro.map.ui.shouldSurfacePersistentAdsbStatus
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastTileSpec
 import com.example.xcpro.forecast.ForecastLegendSpec

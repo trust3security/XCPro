@@ -119,7 +119,7 @@ internal fun hasActiveAdsbVisualAnimation(
         (
             emergencyFlashEnabled &&
                 frameSnapshot.targets.any { target ->
-                    !target.isStale && target.proximityTier == AdsbProximityTier.EMERGENCY
+                    !target.isPositionStale && target.proximityTier == AdsbProximityTier.EMERGENCY
                 }
         )
 

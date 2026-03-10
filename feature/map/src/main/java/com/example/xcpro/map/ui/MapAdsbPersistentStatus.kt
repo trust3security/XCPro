@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.map.ui.debugReasonLabel
 import com.example.xcpro.map.AdsbAuthMode
 import com.example.xcpro.map.AdsbConnectionState
 import com.example.xcpro.map.AdsbTrafficSnapshot

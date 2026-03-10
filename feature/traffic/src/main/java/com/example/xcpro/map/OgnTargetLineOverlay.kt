@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.core.common.logging.AppLogger
-import com.example.xcpro.map.model.MapLocationUiModel
 import kotlin.math.abs
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -34,7 +33,7 @@ class OgnTargetLineOverlay(
         }
     }
 
-    fun render(enabled: Boolean, ownshipLocation: MapLocationUiModel?, target: OgnTrafficTarget?) {
+    fun render(enabled: Boolean, ownshipLocation: OverlayCoordinate?, target: OgnTrafficTarget?) {
         if (!enabled || ownshipLocation == null || target == null) {
             clear()
             return
@@ -89,8 +88,8 @@ class OgnTargetLineOverlay(
         val layer = createLayer()
         when {
             style.getLayer(ICON_LAYER_ID) != null -> style.addLayerBelow(layer, ICON_LAYER_ID)
-            style.getLayer(BlueLocationOverlay.LAYER_ID) != null ->
-                style.addLayerAbove(layer, BlueLocationOverlay.LAYER_ID)
+            style.getLayer(BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK) != null ->
+                style.addLayerAbove(layer, BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK)
 
             else -> style.addLayer(layer)
         }

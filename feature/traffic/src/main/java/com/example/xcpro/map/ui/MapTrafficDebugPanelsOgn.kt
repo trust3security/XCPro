@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import com.example.xcpro.map.OgnTrafficSnapshot
 
 @Composable
-internal fun OgnDebugPanel(
+fun OgnDebugPanel(
     visible: Boolean,
     snapshot: OgnTrafficSnapshot,
     modifier: Modifier = Modifier

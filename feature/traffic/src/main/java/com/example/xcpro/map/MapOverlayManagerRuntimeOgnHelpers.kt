@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-internal data class OgnOverlayStatusSnapshot(
+data class OgnOverlayStatusSnapshot(
     val displayUpdateMode: OgnDisplayUpdateMode,
     val targetsCount: Int,
     val thermalHotspotsCount: Int,

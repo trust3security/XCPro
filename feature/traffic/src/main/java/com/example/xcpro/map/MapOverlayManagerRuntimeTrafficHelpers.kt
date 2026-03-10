@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-internal data class MapOverlayRuntimeTrafficCounters(
+data class MapOverlayRuntimeTrafficCounters(
     val overlayFrontOrderApplyCount: Long,
     val overlayFrontOrderSkippedCount: Long,
     val adsbIconUnknownRenderCount: Long,
@@ -12,7 +12,7 @@ internal data class MapOverlayRuntimeTrafficCounters(
     val adsbDefaultMediumUnknownIconEnabled: Boolean
 )
 
-internal data class OverlayFrontOrderSignature(
+data class OverlayFrontOrderSignature(
     val mapId: Int,
     val styleId: Int,
     val layerCount: Int,

@@ -29,6 +29,15 @@ This folder was reduced to a minimal, current set so future agents have one clea
 11. `docs/ADS-b/CHANGE_PLAN_ADSB_ICON_CORRECTNESS_RELEASE_GRADE_2026-03-09.md`
    - Release-grade plan for eliminating avoidable metadata lookup starvation and
      improving icon correctness.
+12. `docs/ADS-b/CHANGE_PLAN_ADSB_POSITION_FRESHNESS_REWIND_FIX_2026-03-10.md`
+   - Production-grade phased IP for eliminating backward marker jumps caused by
+     stale ADS-B geometry and for hardening provider position-freshness semantics.
+13. `docs/ADS-b/AGENT_AUTOMATION_CONTRACT_ADSB_POSITION_FRESHNESS_PHASED_EXECUTION_2026-03-10.md`
+   - Autonomous execution contract for Phase 0 -> Phase 5 of the ADS-B
+     position-freshness and rewind-fix workstream, using basic build checks only
+     for this run.
+14. `docs/ADS-b/EXECUTION_LOG_ADSB_POSITION_FRESHNESS_PHASED_EXECUTION_2026-03-10.md`
+   - Live execution log for the ADS-B position-freshness automation run.
 
 ## Notes
 
@@ -41,6 +50,13 @@ This folder was reduced to a minimal, current set so future agents have one clea
   default-icon UX and icon-resolution-latency hardening work.
 - Use `CHANGE_PLAN_ADSB_ICON_CORRECTNESS_RELEASE_GRADE_2026-03-09.md` to execute the
   targeted release-grade icon correctness tightening pass.
+- Use `CHANGE_PLAN_ADSB_POSITION_FRESHNESS_REWIND_FIX_2026-03-10.md` for ADS-B
+  provider timing, freshness, stale-geometry, and reverse-jump hardening work.
 - Use `AGENT_CONTRACT_ADSB_DEFAULT_ICON_PHASE_EXECUTION_2026-03-08.md` when
   executing the default-icon phased plan autonomously.
+- Use `AGENT_AUTOMATION_CONTRACT_ADSB_POSITION_FRESHNESS_PHASED_EXECUTION_2026-03-10.md`
+  when executing the ADS-B position-freshness and rewind-fix workstream
+  autonomously.
+- Use `EXECUTION_LOG_ADSB_POSITION_FRESHNESS_PHASED_EXECUTION_2026-03-10.md`
+  as the canonical execution log for that automation run.
 - If ADS-B runtime wiring changes, update `docs/ARCHITECTURE/PIPELINE.md` in the same change.

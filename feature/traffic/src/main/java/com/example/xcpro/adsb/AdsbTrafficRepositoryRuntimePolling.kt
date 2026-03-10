@@ -18,17 +18,18 @@ internal fun AdsbTrafficRepositoryRuntime.handleSuccess(
 
     val mappedTargets = buildList {
         for (state in result.response.states) {
-            val mapped = state.toTarget(nowMonoMs) ?: continue
+            val mapped = state.toTarget(
+                responseTimeEpochSec = result.response.timeSec,
+                receivedMonoMs = nowMonoMs
+            ) ?: continue
             add(mapped)
         }
     }
     store.upsertAll(mappedTargets)
     store.purgeExpired(nowMonoMs = nowMonoMs, expiryAfterSec = EXPIRY_AFTER_SEC)
     val ownshipReference = ownshipReference(centerAtPoll, nowMonoMs = nowMonoMs)
-    val nowWallEpochSec = clock.nowWallMs() / 1_000L
     val selection = store.select(
         nowMonoMs = nowMonoMs,
-        nowWallEpochSec = nowWallEpochSec,
         queryCenterLat = centerAtPoll.latitude,
         queryCenterLon = centerAtPoll.longitude,
         referenceLat = ownshipReference.latitude,
@@ -69,10 +70,8 @@ internal fun AdsbTrafficRepositoryRuntime.publishFromStore(
 ) {
     store.purgeExpired(nowMonoMs = nowMonoMs, expiryAfterSec = EXPIRY_AFTER_SEC)
     val ownshipReference = ownshipReference(centerAtPoll, nowMonoMs = nowMonoMs)
-    val nowWallEpochSec = clock.nowWallMs() / 1_000L
     val selection = store.select(
         nowMonoMs = nowMonoMs,
-        nowWallEpochSec = nowWallEpochSec,
         queryCenterLat = centerAtPoll.latitude,
         queryCenterLon = centerAtPoll.longitude,
         referenceLat = ownshipReference.latitude,

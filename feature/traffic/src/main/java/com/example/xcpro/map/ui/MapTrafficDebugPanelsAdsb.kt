@@ -20,9 +20,10 @@ import androidx.compose.ui.unit.dp
 
 import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.map.AdsbAuthMode
+import com.example.xcpro.map.ADSB_ISSUE_FLASH_BADGE_TAG
 
 @Composable
-internal fun AdsbDebugPanel(
+fun AdsbDebugPanel(
     visible: Boolean,
     snapshot: AdsbTrafficSnapshot,
     modifier: Modifier = Modifier
@@ -126,7 +127,7 @@ internal fun AdsbDebugPanel(
 }
 
 @Composable
-internal fun AdsbIssueFlashBadge(
+fun AdsbIssueFlashBadge(
     visible: Boolean,
     snapshot: AdsbTrafficSnapshot,
     modifier: Modifier = Modifier

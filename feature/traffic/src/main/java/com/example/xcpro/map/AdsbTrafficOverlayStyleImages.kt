@@ -8,12 +8,10 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import androidx.core.content.ContextCompat
 import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
-import com.example.xcpro.traffic.R
 import com.example.xcpro.adsb.ui.AdsbAircraftIcon
-import com.example.xcpro.adsb.ui.emergencyStyleImageId
 import org.maplibre.android.maps.Style
 
-internal fun ensureAdsbTrafficOverlayStyleImages(
+fun ensureAdsbTrafficOverlayStyleImages(
     context: Context,
     style: Style,
     emergencyIconColor: Int
@@ -40,7 +38,7 @@ internal fun ensureAdsbTrafficOverlayStyleImages(
     if (legacyNormal == null || legacyEmergency == null) {
         val baseBitmap = drawableToBitmap(
             context = context,
-            drawableId = R.drawable.ic_adsb_unknown
+            drawableId = com.example.xcpro.traffic.R.drawable.ic_adsb_unknown
         )
         if (baseBitmap != null) {
             if (legacyNormal == null) {
@@ -54,7 +52,7 @@ internal fun ensureAdsbTrafficOverlayStyleImages(
     }
 }
 
-internal fun removeAdsbTrafficOverlayStyleImages(style: Style) {
+fun removeAdsbTrafficOverlayStyleImages(style: Style) {
     AdsbAircraftIcon.values().forEach { icon ->
         style.removeImage(icon.styleImageId)
         style.removeImage(icon.emergencyStyleImageId())
@@ -89,3 +87,4 @@ private fun drawableToBitmap(context: Context, drawableId: Int): Bitmap? {
     drawable.draw(canvas)
     return bitmap
 }
+

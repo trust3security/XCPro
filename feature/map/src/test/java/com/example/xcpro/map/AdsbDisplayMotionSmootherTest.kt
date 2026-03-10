@@ -25,6 +25,36 @@ class AdsbDisplayMotionSmootherTest {
     }
 
     @Test
+    fun freshnessOnlyUpdate_doesNotAnimate() {
+        val smoother = AdsbDisplayMotionSmoother()
+        val base = target(
+            id = "feed00",
+            lat = 1.0,
+            lon = 2.0
+        ).copy(
+            effectivePositionEpochSec = 1_710_000_020L,
+            positionAgeSec = 2,
+            isPositionStale = false
+        )
+        val contactUpdate = base.copy(
+            ageSec = 8,
+            isStale = true,
+            positionAgeSec = 8,
+            isPositionStale = true,
+            contactAgeSec = 2
+        )
+
+        smoother.onTargets(listOf(base), nowMonoMs = 1_000L)
+        smoother.onTargets(listOf(contactUpdate), nowMonoMs = 1_100L)
+
+        val frame = smoother.frame(nowMonoMs = 1_120L).single()
+
+        assertFalse(smoother.hasActiveAnimations(nowMonoMs = 1_120L))
+        assertEquals(base.lat, frame.lat, 1e-6)
+        assertEquals(base.lon, frame.lon, 1e-6)
+    }
+
+    @Test
     fun noAnimationReplacement_refreshesSampleTimeForNextRetarget() {
         val smoother = AdsbDisplayMotionSmoother()
         val base = target(id = "def456", lat = 0.0, lon = 0.0)
