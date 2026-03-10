@@ -16,6 +16,11 @@ enum class IgcPressureAltitudeDatum(val value: String) {
     NIL("NIL")
 }
 
+enum class IgcSecuritySignatureProfile {
+    NONE,
+    XCS
+}
+
 data class IgcProfileMetadata(
     val pilotName: String?,
     val crew2: String?,
@@ -24,11 +29,14 @@ data class IgcProfileMetadata(
 )
 
 data class IgcRecorderMetadata(
+    val manufacturerId: String = "XCP",
+    val recorderType: String = "XCPro,Mobile",
     val firmwareVersion: String?,
     val hardwareVersion: String?,
     val gpsReceiver: String?,
     val pressureSensor: String?,
     val securityStatus: String = "UNSIGNED",
+    val securitySignatureProfile: IgcSecuritySignatureProfile = IgcSecuritySignatureProfile.NONE,
     val gpsAltitudeDatum: IgcGpsAltitudeDatum = IgcGpsAltitudeDatum.GEO,
     val pressureAltitudeDatum: IgcPressureAltitudeDatum = IgcPressureAltitudeDatum.ISA
 )

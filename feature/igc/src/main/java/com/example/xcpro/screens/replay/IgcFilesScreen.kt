@@ -1,6 +1,4 @@
 package com.example.xcpro.screens.replay
-
-import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -76,8 +74,10 @@ fun IgcFilesScreen(
                 is IgcFilesEvent.Share -> {
                     val result = launchIgcShareChooser(context, event.request)
                     if (result.isFailure) {
-                        val message = shareFailureMessage(result.exceptionOrNull())
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        viewModel.onShareLaunchFailed(
+                            displayName = event.displayName,
+                            error = result.exceptionOrNull()
+                        )
                     }
                 }
                 is IgcFilesEvent.LaunchCopyTo -> copyToLauncher.launch(event.suggestedFileName)
@@ -134,6 +134,13 @@ fun IgcFilesScreen(
             if (uiState.errorMessage != null) {
                 Text(
                     text = uiState.errorMessage ?: "",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            uiState.latestDiagnostic?.let { diagnostic ->
+                Text(
+                    text = diagnostic.message,
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -227,12 +234,4 @@ private fun copyMetadataToClipboard(context: Context, text: String) {
     clipboard.setPrimaryClip(
         ClipData.newPlainText("IGC metadata", text)
     )
-}
-
-private fun shareFailureMessage(error: Throwable?): String {
-    return when (error) {
-        is ActivityNotFoundException -> "No app available to share this IGC file"
-        is SecurityException -> "Permission denied while sharing IGC file"
-        else -> "Unable to share IGC file"
-    }
 }

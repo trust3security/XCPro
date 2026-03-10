@@ -1,0 +1,74 @@
+﻿[
+    {
+        "command":  "python scripts/arch_gate.py",
+        "status":  "FAIL",
+        "exit_code":  124,
+        "start":  "\/Date(1773099531277)\/",
+        "end":  {
+                    "value":  "\/Date(1773099531517)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Tuesday, 10 March 2026 10:38:51 AM"
+                },
+        "output":  "\n\n"
+    },
+    {
+        "command":  "./gradlew enforceRules",
+        "status":  "FAIL",
+        "exit_code":  124,
+        "start":  "\/Date(1773099531526)\/",
+        "end":  {
+                    "value":  "\/Date(1773099531567)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Tuesday, 10 March 2026 10:38:51 AM"
+                },
+        "output":  "\n\n"
+    },
+    {
+        "command":  "./gradlew :feature:igc:testDebugUnitTest --tests \"com.example.xcpro.igc.*\" --tests \"com.example.xcpro.replay.Igc*\"",
+        "status":  "FAIL",
+        "exit_code":  124,
+        "start":  "\/Date(1773099531568)\/",
+        "end":  {
+                    "value":  "\/Date(1773099531616)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Tuesday, 10 March 2026 10:38:51 AM"
+                },
+        "output":  "\n\n"
+    },
+    {
+        "command":  "./gradlew :feature:map:testDebugUnitTest --tests \"com.example.xcpro.igc.*\"",
+        "status":  "FAIL",
+        "exit_code":  124,
+        "start":  "\/Date(1773099531616)\/",
+        "end":  {
+                    "value":  "\/Date(1773099531657)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Tuesday, 10 March 2026 10:38:51 AM"
+                },
+        "output":  "\n\n"
+    },
+    {
+        "command":  "./gradlew :feature:igc:assembleDebug",
+        "status":  "FAIL",
+        "exit_code":  124,
+        "start":  "\/Date(1773099531657)\/",
+        "end":  {
+                    "value":  "\/Date(1773099531698)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Tuesday, 10 March 2026 10:38:51 AM"
+                },
+        "output":  "\n\n"
+    },
+    {
+        "command":  "./gradlew :feature:map:assembleDebug",
+        "status":  "FAIL",
+        "exit_code":  124,
+        "start":  "\/Date(1773099531698)\/",
+        "end":  {
+                    "value":  "\/Date(1773099531742)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Tuesday, 10 March 2026 10:38:51 AM"
+                },
+        "output":  "\n\n"
+    }
+]

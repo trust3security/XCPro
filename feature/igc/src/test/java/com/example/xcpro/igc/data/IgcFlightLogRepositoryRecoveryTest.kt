@@ -8,9 +8,13 @@ import android.net.Uri
 import android.provider.MediaStore
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
+import com.example.xcpro.igc.domain.IgcGRecordSigner
 import com.example.xcpro.igc.domain.IgcRecoveryErrorCode
 import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecoveryResult
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
+import com.example.xcpro.igc.domain.StrictIgcLintValidator
+import com.example.xcpro.igc.usecase.IgcLintMessageMapper
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Files
@@ -53,7 +57,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = context,
             downloadsRepository = FakeDownloadsRepository(),
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val metadata = repository.parseStagedRecoveryMetadata(55L)
@@ -82,7 +88,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = context,
             downloadsRepository = FakeDownloadsRepository(),
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val metadata = repository.parseStagedRecoveryMetadata(56L)
@@ -92,6 +100,35 @@ class IgcFlightLogRepositoryRecoveryTest {
         assertEquals("000056", metadata.sessionSerial)
         assertEquals(1_773_014_400_000L, metadata.sessionStartWallTimeMs)
         assertEquals(1_773_057_600_000L, metadata.firstValidFixWallTimeMs)
+    }
+
+    @Test
+    fun parseStagedRecoveryMetadata_detectsXcsSignatureProfileFromManufacturer() {
+        val filesDir = Files.createTempDirectory("igc-recover-xcs-profile").toFile()
+        writeStagedFile(
+            filesDir = filesDir,
+            sessionId = 57L,
+            lines = listOf(
+                "AXCS000057",
+                "HFDTEDATE:090326,01",
+                "B1200003746494N12225164WA0012300145"
+            )
+        )
+        val context = repositoryContext(filesDir)
+        val repository = MediaStoreIgcFlightLogRepository(
+            appContext = context,
+            downloadsRepository = FakeDownloadsRepository(),
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
+        )
+
+        val metadata = repository.parseStagedRecoveryMetadata(57L)
+
+        requireNotNull(metadata)
+        assertEquals("XCS", metadata.manufacturerId)
+        assertEquals(IgcSecuritySignatureProfile.XCS, metadata.signatureProfile)
     }
 
     @Test
@@ -113,7 +150,8 @@ class IgcFlightLogRepositoryRecoveryTest {
                     manufacturerId = "XCP",
                     sessionSerial = "000077",
                     sessionStartWallTimeMs = 1_773_014_400_000L,
-                    firstValidFixWallTimeMs = 1_773_057_600_000L
+                    firstValidFixWallTimeMs = 1_773_057_600_000L,
+                    signatureProfile = IgcSecuritySignatureProfile.NONE
                 )
             )
         }
@@ -126,7 +164,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = repositoryContext(filesDir),
             downloadsRepository = downloads,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val result = repository.recoverSession(sessionId = 77L)
@@ -152,7 +192,8 @@ class IgcFlightLogRepositoryRecoveryTest {
                     manufacturerId = "XCP",
                     sessionSerial = "000088",
                     sessionStartWallTimeMs = 1_773_014_400_000L,
-                    firstValidFixWallTimeMs = null
+                    firstValidFixWallTimeMs = null,
+                    signatureProfile = IgcSecuritySignatureProfile.NONE
                 )
             )
         }
@@ -165,7 +206,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = repositoryContext(filesDir),
             downloadsRepository = downloads,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val result = repository.recoverSession(sessionId = 88L)
@@ -185,7 +228,8 @@ class IgcFlightLogRepositoryRecoveryTest {
                     manufacturerId = "XCP",
                     sessionSerial = "000089",
                     sessionStartWallTimeMs = 1_773_014_400_000L,
-                    firstValidFixWallTimeMs = null
+                    firstValidFixWallTimeMs = null,
+                    signatureProfile = IgcSecuritySignatureProfile.NONE
                 )
             )
         }
@@ -199,7 +243,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = repositoryContext(filesDir),
             downloadsRepository = downloads,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val result = repository.recoverSession(sessionId = 89L)
@@ -243,7 +289,8 @@ class IgcFlightLogRepositoryRecoveryTest {
                     manufacturerId = "XCP",
                     sessionSerial = "000090",
                     sessionStartWallTimeMs = 1_773_014_400_000L,
-                    firstValidFixWallTimeMs = null
+                    firstValidFixWallTimeMs = null,
+                    signatureProfile = IgcSecuritySignatureProfile.NONE
                 )
             )
         }
@@ -251,7 +298,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = context,
             downloadsRepository = FakeDownloadsRepository(),
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val result = repository.recoverSession(sessionId = 90L)
@@ -280,7 +329,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = context,
             downloadsRepository = downloads,
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
         val itemUri = Uri.parse("content://downloads/public_downloads/100")
         whenever(resolver.insert(eq(MediaStore.Downloads.EXTERNAL_CONTENT_URI), any())).thenReturn(itemUri)
@@ -308,7 +359,9 @@ class IgcFlightLogRepositoryRecoveryTest {
             appContext = context,
             downloadsRepository = downloads,
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
         val itemUri = Uri.parse("content://downloads/public_downloads/101")
         whenever(resolver.insert(eq(MediaStore.Downloads.EXTERNAL_CONTENT_URI), any())).thenReturn(itemUri)
@@ -352,6 +405,7 @@ class IgcFlightLogRepositoryRecoveryTest {
             firstValidFixWallTimeMs = null,
             manufacturerId = "XCP",
             sessionSerial = "456",
+            signatureProfile = IgcSecuritySignatureProfile.NONE,
             lines = listOf(
                 "AXCP000456",
                 "HFDTEDATE:090326,01",
@@ -399,5 +453,19 @@ class IgcFlightLogRepositoryRecoveryTest {
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             return Result.success(Unit)
         }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "not used in test"
+            )
+        }
+    }
+
+    private fun newValidationAdapter(): IgcExportValidationAdapter {
+        return IgcExportValidationAdapter(
+            lintValidator = StrictIgcLintValidator(),
+            lintMessageMapper = IgcLintMessageMapper()
+        )
     }
 }

@@ -2,6 +2,16 @@
 
 This document is a practical, implementation-focused guide for generating **professional IGC flight logs** from XCPro so pilots can download and upload their flights to analysis/scoring sites.
 
+Implementation status note (2026-03-10):
+
+- many examples below use the historical `XCP` / no-`G` baseline profile
+- current production app code now writes an `XCS` compatibility profile with
+  `G` records in the real finalize/recovery path
+- canonical production behavior note:
+  - `docs/IGC/PRODUCTION_COMPATIBILITY_PROFILE_XCS_WEGLIDE_2026-03-10.md`
+- treat the examples in this spec as format guidance unless the current code or
+  production compatibility note overrides them
+
 It is based on:
 - FAI/IGC GNSS Flight Recorder Technical Specification (2nd Ed. with AL7, 31 Jan 2022)
 - FAI/CIVL Sporting Code Section 7H - CIVL Flight Recorder Specification (2024 Edition, effective 1 May 2024)

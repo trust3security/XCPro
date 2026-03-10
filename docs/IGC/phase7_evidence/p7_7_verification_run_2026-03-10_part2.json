@@ -1,0 +1,20 @@
+[
+    {
+        "command":  "./gradlew enforceRules",
+        "status":  "PASS",
+        "exit_code":  0,
+        "start":  "2026-03-10T12:05:50.582+11:00",
+        "end":  "2026-03-10T12:06:48.912+11:00",
+        "duration_sec":  58,
+        "output":  "Rule enforcement passed."
+    },
+    {
+        "command":  "./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug",
+        "status":  "PASS",
+        "exit_code":  0,
+        "start":  "2026-03-10T12:06:48.930+11:00",
+        "end":  "2026-03-10T12:06:50.214+11:00",
+        "duration_sec":  1,
+        "output":  "BUILD SUCCESSFUL"
+    }
+]

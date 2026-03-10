@@ -11,6 +11,7 @@ import com.example.xcpro.igc.domain.IgcProfileMetadata
 import com.example.xcpro.igc.domain.IgcProfileMetadataSource
 import com.example.xcpro.igc.domain.IgcRecorderMetadata
 import com.example.xcpro.igc.domain.IgcRecorderMetadataSource
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
 import com.example.xcpro.igc.domain.IgcTaskDeclarationSnapshot
 import com.example.xcpro.igc.domain.IgcTaskDeclarationStartSnapshot
 import com.example.xcpro.igc.domain.IgcTaskDeclarationSource
@@ -96,12 +97,15 @@ class AndroidIgcRecorderMetadataSource @Inject constructor(
     override fun recorderMetadata(): IgcRecorderMetadata {
         val hasPressureSensor = hasPressureSensor()
         return IgcRecorderMetadata(
+            manufacturerId = "XCS",
+            recorderType = "XCPro,SignedMobile",
             firmwareVersion = readVersionName(),
             hardwareVersion = "${Build.MODEL} / Android ${Build.VERSION.RELEASE}",
             gpsReceiver = "NKN",
             pressureSensor = if (hasPressureSensor) "ANDROID_BARO" else "NKN",
-            securityStatus = "UNSIGNED",
-            gpsAltitudeDatum = IgcGpsAltitudeDatum.GEO,
+            securityStatus = "SIGNED",
+            securitySignatureProfile = IgcSecuritySignatureProfile.XCS,
+            gpsAltitudeDatum = IgcGpsAltitudeDatum.ELL,
             pressureAltitudeDatum = if (hasPressureSensor) {
                 IgcPressureAltitudeDatum.ISA
             } else {

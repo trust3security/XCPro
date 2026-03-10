@@ -7,6 +7,10 @@ import android.net.Uri
 import android.provider.MediaStore
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
+import com.example.xcpro.igc.domain.IgcGRecordSigner
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
+import com.example.xcpro.igc.domain.StrictIgcLintValidator
+import com.example.xcpro.igc.usecase.IgcLintMessageMapper
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.time.LocalDate
@@ -41,7 +45,9 @@ class IgcFlightLogRepositoryTest {
             appContext = context,
             downloadsRepository = downloads,
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val result = repository.finalizeSession(
@@ -67,7 +73,9 @@ class IgcFlightLogRepositoryTest {
             appContext = context,
             downloadsRepository = downloads,
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
@@ -102,6 +110,96 @@ class IgcFlightLogRepositoryTest {
         verify(resolver).update(eq(itemUri), any(), isNull(), isNull())
     }
 
+    @Test
+    fun finalizeSession_appendsGRecordsForXcsProfile_beforePublishing() {
+        val filesDir = Files.createTempDirectory("igc-publish-xcs").toFile()
+        val context: Context = mock()
+        val resolver: ContentResolver = mock()
+        whenever(context.contentResolver).thenReturn(resolver)
+        whenever(context.filesDir).thenReturn(filesDir)
+        val downloads = FakeDownloadsRepository()
+        val repository = MediaStoreIgcFlightLogRepository(
+            appContext = context,
+            downloadsRepository = downloads,
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
+        )
+
+        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val itemUri = Uri.parse("content://downloads/public_downloads/43")
+        val output = ByteArrayOutputStream()
+        whenever(resolver.insert(eq(collection), any())).thenReturn(itemUri)
+        whenever(resolver.openOutputStream(eq(itemUri), eq("w"))).thenReturn(output)
+        whenever(resolver.update(eq(itemUri), any(), isNull(), isNull())).thenReturn(1)
+        val modifiedCursor = MatrixCursor(arrayOf(MediaStore.Downloads.DATE_MODIFIED)).apply {
+            addRow(arrayOf(1_773_100_000L))
+        }
+        whenever(resolver.query(eq(itemUri), any(), isNull(), isNull(), isNull())).thenReturn(modifiedCursor)
+
+        val result = repository.finalizeSession(
+            request = IgcFinalizeRequest(
+                sessionId = 43L,
+                sessionStartWallTimeMs = 1_773_014_400_000L,
+                firstValidFixWallTimeMs = 1_773_057_600_000L,
+                manufacturerId = "XCS",
+                sessionSerial = "043043",
+                signatureProfile = IgcSecuritySignatureProfile.XCS,
+                lines = listOf(
+                    "AXCS043043",
+                    "HFDTEDATE:090326,01",
+                    "HFFTYFRTYPE:XCPro,SignedMobile",
+                    "LXCSDECLARATION_OMITTED:NO_TASK_AT_START",
+                    "B1200003746494N12225164WA0012300145"
+                )
+            )
+        )
+
+        assertTrue(result is IgcFinalizeResult.Published)
+        result as IgcFinalizeResult.Published
+        assertEquals("2026-03-09-XCS-043043-01.IGC", result.fileName)
+        val payload = output.toByteArray().decodeToString()
+        assertTrue(payload.contains("AXCS043043\r\n"))
+        assertTrue(payload.contains("\r\nG"))
+        assertEquals(1, downloads.refreshCalls)
+    }
+
+    @Test
+    fun finalizeSession_returnsLintFailure_beforePublishWhenPayloadInvalid() {
+        val filesDir = Files.createTempDirectory("igc-lint-failure").toFile()
+        val context: Context = mock()
+        val resolver: ContentResolver = mock()
+        whenever(context.contentResolver).thenReturn(resolver)
+        whenever(context.filesDir).thenReturn(filesDir)
+        val downloads = FakeDownloadsRepository()
+        val repository = MediaStoreIgcFlightLogRepository(
+            appContext = context,
+            downloadsRepository = downloads,
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
+        )
+
+        val result = repository.finalizeSession(
+            request = baseRequest(
+                sessionId = 8L,
+                lines = listOf(
+                    "HFDTEDATE:090326,01",
+                    "AXCP000008",
+                    "B1200003746494N12225164WA0012300145"
+                )
+            )
+        )
+
+        require(result is IgcFinalizeResult.Failure)
+        assertEquals(IgcFinalizeResult.ErrorCode.LINT_VALIDATION_FAILED, result.code)
+        assertTrue(result.lintIssues.any { it.code.name == "A_RECORD_NOT_FIRST" })
+        verify(resolver, never()).insert(any(), any())
+        assertEquals(0, downloads.refreshCalls)
+    }
+
     private fun baseRequest(
         sessionId: Long,
         lines: List<String>
@@ -112,6 +210,7 @@ class IgcFlightLogRepositoryTest {
             firstValidFixWallTimeMs = null,
             manufacturerId = "XCP",
             sessionSerial = "777",
+            signatureProfile = IgcSecuritySignatureProfile.NONE,
             lines = lines
         )
     }
@@ -130,5 +229,19 @@ class IgcFlightLogRepositoryTest {
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             return Result.success(Unit)
         }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "not used in test"
+            )
+        }
+    }
+
+    private fun newValidationAdapter(): IgcExportValidationAdapter {
+        return IgcExportValidationAdapter(
+            lintValidator = StrictIgcLintValidator(),
+            lintMessageMapper = IgcLintMessageMapper()
+        )
     }
 }

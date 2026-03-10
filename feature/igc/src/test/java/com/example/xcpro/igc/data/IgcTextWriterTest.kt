@@ -93,6 +93,62 @@ class IgcTextWriterTest {
     }
 
     @Test
+    fun writerRoundTrip_preservesCoordinatesAltitudesAndTimeWithinTolerance() {
+        val lines = listOf(
+            formatter.formatH(
+                IgcRecordFormatter.HeaderRecord(
+                    source = 'F',
+                    code = "DTE",
+                    longName = "DATE",
+                    value = "090326,01"
+                )
+            ),
+            formatter.formatI(IgcRecordFormatter.IAS_TAS_EXTENSIONS),
+            formatter.formatB(
+                record = IgcRecordFormatter.BRecord(
+                    timeUtc = LocalTime.of(12, 0, 0),
+                    latitudeDegrees = 37.75205,
+                    longitudeDegrees = -122.50205,
+                    fixValidity = IgcRecordFormatter.FixValidity.A,
+                    pressureAltitudeMeters = 1234,
+                    gnssAltitudeMeters = 1456,
+                    extensionValues = mapOf("IAS" to 123, "TAS" to 145)
+                ),
+                definitions = IgcRecordFormatter.IAS_TAS_EXTENSIONS
+            ),
+            formatter.formatB(
+                record = IgcRecordFormatter.BRecord(
+                    timeUtc = LocalTime.of(12, 0, 5),
+                    latitudeDegrees = 37.75275,
+                    longitudeDegrees = -122.50125,
+                    fixValidity = IgcRecordFormatter.FixValidity.A,
+                    pressureAltitudeMeters = 1240,
+                    gnssAltitudeMeters = 1462,
+                    extensionValues = mapOf("IAS" to 124, "TAS" to 146)
+                ),
+                definitions = IgcRecordFormatter.IAS_TAS_EXTENSIONS
+            )
+        )
+
+        val bytes = writer.toByteArray(lines)
+        val parser = IgcParser(FakeClock(wallMs = 0L))
+        val log = parser.parse(ByteArrayInputStream(bytes))
+
+        assertEquals(2, log.points.size)
+        val first = log.points[0]
+        val second = log.points[1]
+        assertEquals(5_000L, second.timestampMillis - first.timestampMillis)
+        assertEquals(37.75205, first.latitude, 0.0002)
+        assertEquals(-122.50205, first.longitude, 0.0002)
+        assertEquals(1456.0, first.gpsAltitude, 0.001)
+        assertEquals(1234.0, first.pressureAltitude ?: Double.NaN, 0.001)
+        assertEquals(37.75275, second.latitude, 0.0002)
+        assertEquals(-122.50125, second.longitude, 0.0002)
+        assertEquals(1462.0, second.gpsAltitude, 0.001)
+        assertEquals(1240.0, second.pressureAltitude ?: Double.NaN, 0.001)
+    }
+
+    @Test
     fun writeLines_largeFileStress_hasNoBareLineEndings_andParses() {
         val headers = listOf(
             "HFDTEDATE:090326,01"

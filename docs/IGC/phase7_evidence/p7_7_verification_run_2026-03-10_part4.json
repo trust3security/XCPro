@@ -1,0 +1,32 @@
+[
+  {
+    "command": "python scripts/arch_gate.py",
+    "label": "archGate",
+    "status": "PASS",
+    "exit_code": 0,
+    "start": "2026-03-10T12:12:20+11:00",
+    "end": "2026-03-10T12:12:20+11:00",
+    "duration_sec": 0,
+    "output": "ARCH GATE PASSED"
+  },
+  {
+    "command": "./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug --no-configuration-cache",
+    "label": "basicAssembles",
+    "status": "PASS",
+    "exit_code": 0,
+    "start": "2026-03-10T12:12:20+11:00",
+    "end": "2026-03-10T12:12:22+11:00",
+    "duration_sec": 2,
+    "output": "BUILD SUCCESSFUL in 2s"
+  },
+  {
+    "command": "./gradlew :app:assembleDebug --no-configuration-cache",
+    "label": "appAssemble",
+    "status": "PASS",
+    "exit_code": 0,
+    "start": "2026-03-10T12:26:30+11:00",
+    "end": "2026-03-10T12:26:32+11:00",
+    "duration_sec": 2,
+    "output": "BUILD SUCCESSFUL in 2s"
+  }
+]

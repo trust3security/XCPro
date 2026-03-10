@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.igc.IgcRecordingActionSink
 import com.example.xcpro.igc.NoopIgcRecordingActionSink
+import com.example.xcpro.igc.data.IgcFinalizeResult
 import com.example.xcpro.igc.domain.IgcSessionStateMachine
 import com.example.xcpro.igc.usecase.IgcRecordingUseCase
 import com.example.xcpro.flightdata.FlightDataRepository
@@ -191,18 +192,19 @@ open class VarioServiceManager @Inject constructor(
                             TAG,
                             "IGC finalize requested: sessionId=${action.sessionId}, postFlightWindowMs=${action.postFlightGroundWindowMs}"
                         )
-                        val finalizeError = runCatching {
-                            igcRecordingActionSink.onFinalizeRecording(
+                        when (
+                            val finalizeResult = igcRecordingActionSink.onFinalizeRecording(
                                 action.sessionId,
                                 action.postFlightGroundWindowMs
                             )
-                        }.exceptionOrNull()
-                        if (finalizeError == null) {
-                            useCase.onFinalizeSucceeded()
-                        } else {
-                            useCase.onFinalizeFailed(
-                                finalizeError.message ?: "IGC finalization failed"
-                            )
+                        ) {
+                            is IgcFinalizeResult.Published,
+                            is IgcFinalizeResult.AlreadyPublished -> {
+                                useCase.onFinalizeSucceeded()
+                            }
+                            is IgcFinalizeResult.Failure -> {
+                                useCase.onFinalizeFailed(finalizeResult.message)
+                            }
                         }
                     }
                     is IgcSessionStateMachine.Action.MarkCompleted -> {

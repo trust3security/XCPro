@@ -1,13 +1,17 @@
 package com.example.xcpro.di
 
 import com.example.xcpro.igc.IgcRecordingActionSink
+import com.example.xcpro.igc.data.IgcExportDiagnosticsRepository
 import com.example.xcpro.igc.data.IgcDownloadsRepository
+import com.example.xcpro.igc.data.InMemoryIgcExportDiagnosticsRepository
 import com.example.xcpro.igc.data.IgcFlightLogRepository
 import com.example.xcpro.igc.data.IgcRecoveryMetadataStore
 import com.example.xcpro.igc.data.IgcRecordingRuntimeActionSink
 import com.example.xcpro.igc.data.IgcSessionStateSnapshotStore
 import com.example.xcpro.igc.data.MediaStoreIgcDownloadsRepository
 import com.example.xcpro.igc.data.MediaStoreIgcFlightLogRepository
+import com.example.xcpro.igc.domain.IgcLintValidator
+import com.example.xcpro.igc.domain.StrictIgcLintValidator
 import com.example.xcpro.igc.data.SharedPrefsIgcRecoveryMetadataStore
 import com.example.xcpro.igc.data.SharedPrefsIgcSessionStateSnapshotStore
 import com.example.xcpro.igc.usecase.IgcReplayLauncher
@@ -44,6 +48,18 @@ abstract class IgcCoreBindingsModule {
     abstract fun bindIgcDownloadsRepository(
         impl: MediaStoreIgcDownloadsRepository
     ): IgcDownloadsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindIgcExportDiagnosticsRepository(
+        impl: InMemoryIgcExportDiagnosticsRepository
+    ): IgcExportDiagnosticsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindIgcLintValidator(
+        impl: StrictIgcLintValidator
+    ): IgcLintValidator
 
     @Binds
     @Singleton

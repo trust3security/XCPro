@@ -1,6 +1,8 @@
 package com.example.xcpro.igc.usecase
 
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.igc.data.IgcExportDiagnostic
+import com.example.xcpro.igc.data.IgcExportDiagnosticsRepository
 import com.example.xcpro.igc.data.IgcDownloadsRepository
 import com.example.xcpro.igc.data.IgcLogEntry
 import javax.inject.Inject
@@ -30,9 +32,11 @@ data class IgcShareRequest(
 )
 
 class IgcFilesUseCase @Inject constructor(
-    private val downloadsRepository: IgcDownloadsRepository
+    private val downloadsRepository: IgcDownloadsRepository,
+    private val exportDiagnosticsRepository: IgcExportDiagnosticsRepository
 ) {
     val entries: StateFlow<List<IgcLogEntry>> = downloadsRepository.entries
+    val latestDiagnostic: StateFlow<IgcExportDiagnostic?> = exportDiagnosticsRepository.latest
 
     suspend fun refresh() = withContext(Dispatchers.IO) {
         downloadsRepository.refreshEntries()
@@ -83,6 +87,14 @@ class IgcFilesUseCase @Inject constructor(
                 destinationUri = destinationUri
             )
         }
+    }
+
+    fun publishDiagnostic(diagnostic: IgcExportDiagnostic) {
+        exportDiagnosticsRepository.publish(diagnostic)
+    }
+
+    fun clearLatestDiagnostic() {
+        exportDiagnosticsRepository.clear()
     }
 
     fun buildMetadataText(entry: IgcLogEntry): String {

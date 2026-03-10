@@ -9,6 +9,7 @@ import com.example.xcpro.igc.domain.IgcProfileMetadataSource
 import com.example.xcpro.igc.domain.IgcRecordFormatter
 import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecorderMetadataSource
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
 import com.example.xcpro.igc.domain.IgcTaskDeclarationMapper
 import com.example.xcpro.igc.domain.IgcTaskDeclarationStartSnapshot
 import com.example.xcpro.igc.domain.IgcTaskDeclarationSource
@@ -32,17 +33,22 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
     private val recorderMetadataSource: IgcRecorderMetadataSource,
     private val taskDeclarationSource: IgcTaskDeclarationSource,
     private val recoveryMetadataStore: IgcRecoveryMetadataStore,
-    private val flightLogRepository: IgcFlightLogRepository
+    private val flightLogRepository: IgcFlightLogRepository,
+    private val exportDiagnosticsRepository: IgcExportDiagnosticsRepository
 ) : IgcRecordingActionSink {
 
     private data class SessionBuffer(
         val sessionId: Long,
         val sessionStartWallTimeMs: Long,
+        val manufacturerId: String,
         val sessionSerial: String,
+        val signatureProfile: IgcSecuritySignatureProfile,
+        val lRecordSource: String,
         val dteHeaderLineIndex: Int,
         val lines: MutableList<String>,
         var firstValidBWallTimeMs: Long? = null,
         var finalizePublished: Boolean = false,
+        var lastFinalizeResult: IgcFinalizeResult? = null,
         var dteResolvedFromFirstB: Boolean = false,
         var eventState: IgcEventDedupePolicy.State = IgcEventDedupePolicy.State()
     )
@@ -68,7 +74,8 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
         recorderMetadataSource = recorderMetadataSource,
         taskDeclarationSource = taskDeclarationSource,
         recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-        flightLogRepository = NoopIgcFlightLogRepository
+        flightLogRepository = NoopIgcFlightLogRepository,
+        exportDiagnosticsRepository = NoOpIgcExportDiagnosticsRepository
     )
 
     override fun onSessionArmed(monoTimeMs: Long) = Unit
@@ -90,7 +97,7 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
 
             val lines = mutableListOf<String>()
             lines += formatter.formatA(
-                manufacturerId = "XCP",
+                manufacturerId = recorderMetadata.manufacturerId,
                 serialId = serialForSession(sessionId)
             )
             val headers = headerMapper.map(headerContext)
@@ -108,7 +115,10 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
             val session = SessionBuffer(
                 sessionId = sessionId,
                 sessionStartWallTimeMs = wallNow,
+                manufacturerId = recorderMetadata.manufacturerId,
                 sessionSerial = serialForSession(sessionId),
+                signatureProfile = recorderMetadata.securitySignatureProfile,
+                lRecordSource = recorderMetadata.manufacturerId,
                 dteHeaderLineIndex = dteHeaderLineIndex,
                 lines = lines
             )
@@ -127,41 +137,63 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
         }
     }
 
-    override fun onFinalizeRecording(sessionId: Long, postFlightGroundWindowMs: Long) {
+    override fun onFinalizeRecording(
+        sessionId: Long,
+        postFlightGroundWindowMs: Long
+    ): IgcFinalizeResult {
         val publishRequest: IgcFinalizeRequest
         val completionLine: String
         synchronized(lock) {
-            val session = activeSessions[sessionId] ?: return
+            val session = activeSessions[sessionId]
+                ?: return IgcFinalizeResult.Failure(
+                    code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
+                    message = "No active IGC session to finalize"
+                )
             emitEventLocked(
                 session = session,
                 code = "FLT",
                 payload = "FINALIZE"
             )
             if (session.finalizePublished) {
-                return
+                return session.lastFinalizeResult ?: IgcFinalizeResult.Failure(
+                    code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
+                    message = "IGC session already finalized without stored result"
+                )
             }
             completionLine = formatCompletionLine()
             publishRequest = IgcFinalizeRequest(
                 sessionId = session.sessionId,
                 sessionStartWallTimeMs = session.sessionStartWallTimeMs,
                 firstValidFixWallTimeMs = session.firstValidBWallTimeMs,
-                manufacturerId = MANUFACTURER_ID,
+                manufacturerId = session.manufacturerId,
                 sessionSerial = session.sessionSerial,
+                signatureProfile = session.signatureProfile,
                 lines = session.lines.toList() + completionLine
             )
         }
-        when (val publishResult = flightLogRepository.finalizeSession(publishRequest)) {
+        return when (val publishResult = flightLogRepository.finalizeSession(publishRequest)) {
             is IgcFinalizeResult.Published -> synchronized(lock) {
-                val session = activeSessions[sessionId] ?: return@synchronized
-                session.lines += completionLine
-                session.finalizePublished = true
+                activeSessions[sessionId]?.let { session ->
+                    session.lines += completionLine
+                    session.finalizePublished = true
+                    session.lastFinalizeResult = publishResult
+                }
+                exportDiagnosticsRepository.clear()
+                publishResult
             }
             is IgcFinalizeResult.AlreadyPublished -> synchronized(lock) {
-                val session = activeSessions[sessionId] ?: return@synchronized
-                session.finalizePublished = true
+                activeSessions[sessionId]?.let { session ->
+                    session.finalizePublished = true
+                    session.lastFinalizeResult = publishResult
+                }
+                exportDiagnosticsRepository.clear()
+                publishResult
             }
             is IgcFinalizeResult.Failure -> {
-                throw IllegalStateException("IGC finalize failed (${publishResult.code}): ${publishResult.message}")
+                exportDiagnosticsRepository.publish(
+                    publishResult.toExportDiagnostic(sessionId = sessionId)
+                )
+                publishResult
             }
         }
     }
@@ -332,7 +364,7 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
 
     private fun appendTaskDeclarationDiagnosticLocked(session: SessionBuffer, reason: String) {
         session.lines += formatter.formatL(
-            source = "XCP",
+            source = session.lRecordSource,
             text = "DECLARATION_OMITTED:${normalizeDiagnosticReason(reason)}"
         )
     }
@@ -366,16 +398,16 @@ class IgcRecordingRuntimeActionSink @Inject constructor(
 
     private fun SessionBuffer.toRecoveryMetadata(): IgcRecoveryMetadata {
         return IgcRecoveryMetadata(
-            manufacturerId = MANUFACTURER_ID,
+            manufacturerId = manufacturerId,
             sessionSerial = sessionSerial,
             sessionStartWallTimeMs = sessionStartWallTimeMs,
-            firstValidFixWallTimeMs = firstValidBWallTimeMs
+            firstValidFixWallTimeMs = firstValidBWallTimeMs,
+            signatureProfile = signatureProfile
         )
     }
 
     companion object {
         private val DTE_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyy")
-        private const val MANUFACTURER_ID = "XCP"
         private const val FALLBACK_FLIGHT_NUMBER = 1
         private const val MAX_DIAGNOSTIC_REASON_LENGTH = 40
     }

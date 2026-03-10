@@ -22,7 +22,7 @@ class IgcHeaderMapper {
             header("DTM", "GPSDATUM", "WGS84"),
             header("RFW", "FIRMWAREVERSION", valueOrNkn(recorder.firmwareVersion)),
             header("RHW", "HARDWAREVERSION", valueOrNkn(recorder.hardwareVersion)),
-            header("FTY", "FRTYPE", "XCPro,Mobile"),
+            header("FTY", "FRTYPE", valueOrNkn(recorder.recorderType)),
             header("GPS", "RECEIVER", valueOrNkn(recorder.gpsReceiver)),
             header("PRS", "PRESSALTSENSOR", valueOrNkn(recorder.pressureSensor)),
             header("FRS", "SECURITY", valueOrNkn(recorder.securityStatus)),

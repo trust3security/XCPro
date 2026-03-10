@@ -1,5 +1,6 @@
 package com.example.xcpro.igc
 
+import com.example.xcpro.igc.data.IgcFinalizeResult
 import com.example.xcpro.igc.domain.IgcSessionStateMachine
 
 /**
@@ -13,7 +14,7 @@ interface IgcRecordingActionSink {
 
     fun onStartRecording(sessionId: Long, preFlightGroundWindowMs: Long)
 
-    fun onFinalizeRecording(sessionId: Long, postFlightGroundWindowMs: Long)
+    fun onFinalizeRecording(sessionId: Long, postFlightGroundWindowMs: Long): IgcFinalizeResult
 
     fun onMarkCompleted(sessionId: Long)
 
@@ -29,7 +30,12 @@ interface IgcRecordingActionSink {
 object NoopIgcRecordingActionSink : IgcRecordingActionSink {
     override fun onSessionArmed(monoTimeMs: Long) = Unit
     override fun onStartRecording(sessionId: Long, preFlightGroundWindowMs: Long) = Unit
-    override fun onFinalizeRecording(sessionId: Long, postFlightGroundWindowMs: Long) = Unit
+    override fun onFinalizeRecording(sessionId: Long, postFlightGroundWindowMs: Long): IgcFinalizeResult {
+        return IgcFinalizeResult.Failure(
+            code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
+            message = "IGC recording action sink not configured"
+        )
+    }
     override fun onMarkCompleted(sessionId: Long) = Unit
     override fun onMarkFailed(sessionId: Long, reason: String) = Unit
     override fun onBRecord(sessionId: Long, line: String, sampleWallTimeMs: Long) = Unit

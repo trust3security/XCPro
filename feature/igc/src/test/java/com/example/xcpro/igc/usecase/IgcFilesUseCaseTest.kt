@@ -1,7 +1,9 @@
 package com.example.xcpro.igc.usecase
 
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.igc.data.IgcDocumentReadResult
 import com.example.xcpro.igc.data.IgcDownloadsRepository
+import com.example.xcpro.igc.data.InMemoryIgcExportDiagnosticsRepository
 import com.example.xcpro.igc.data.IgcLogEntry
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +18,7 @@ class IgcFilesUseCaseTest {
     @Test
     fun applyFilterAndSort_filtersByNameAndSortsBySize() {
         val repository = FakeDownloadsRepository()
-        val useCase = IgcFilesUseCase(repository)
+        val useCase = IgcFilesUseCase(repository, InMemoryIgcExportDiagnosticsRepository())
         val entries = listOf(
             entry(name = "2025-03-10-XCP-000001-01.IGC", size = 10L, modified = 3L),
             entry(name = "2025-03-09-XCP-000002-01.IGC", size = 40L, modified = 2L),
@@ -35,7 +37,10 @@ class IgcFilesUseCaseTest {
 
     @Test
     fun buildShareRequest_usesExpectedChooserTitleForEmail() {
-        val useCase = IgcFilesUseCase(FakeDownloadsRepository())
+        val useCase = IgcFilesUseCase(
+            FakeDownloadsRepository(),
+            InMemoryIgcExportDiagnosticsRepository()
+        )
         val request = useCase.buildShareRequest(
             entry = entry(name = "flight.IGC", size = 12L, modified = 1L),
             mode = IgcShareMode.EMAIL
@@ -47,7 +52,7 @@ class IgcFilesUseCaseTest {
     @Test
     fun copyToDestination_delegatesToRepository() = runTest {
         val repository = FakeDownloadsRepository()
-        val useCase = IgcFilesUseCase(repository)
+        val useCase = IgcFilesUseCase(repository, InMemoryIgcExportDiagnosticsRepository())
         val entry = entry(name = "flight.IGC", size = 12L, modified = 1L)
 
         val result = useCase.copyToDestination(entry, "content://dest/igc")
@@ -83,6 +88,13 @@ class IgcFilesUseCaseTest {
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             lastDestinationUri = destinationUri
             return Result.success(Unit)
+        }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "not used in test"
+            )
         }
     }
 }

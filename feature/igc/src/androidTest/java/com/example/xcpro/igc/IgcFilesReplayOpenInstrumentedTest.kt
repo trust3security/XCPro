@@ -2,10 +2,12 @@ package com.example.xcpro.igc
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.igc.data.IgcDocumentReadResult
 import com.example.xcpro.igc.data.IgcDownloadsRepository
 import com.example.xcpro.igc.data.IgcLogEntry
 import com.example.xcpro.igc.ui.IgcFilesEvent
 import com.example.xcpro.igc.ui.IgcFilesViewModel
+import com.example.xcpro.igc.data.NoOpIgcExportDiagnosticsRepository
 import com.example.xcpro.igc.usecase.IgcFilesUseCase
 import com.example.xcpro.igc.usecase.IgcReplayLauncher
 import java.time.LocalDate
@@ -27,7 +29,7 @@ class IgcFilesReplayOpenInstrumentedTest {
     fun replayOpen_success_emitsNavigateBackEvent() = runBlocking {
         val replayLauncher = FakeReplayLauncher(failOnLoad = false)
         val viewModel = IgcFilesViewModel(
-            useCase = IgcFilesUseCase(FakeDownloadsRepository()),
+            useCase = IgcFilesUseCase(FakeDownloadsRepository(), NoOpIgcExportDiagnosticsRepository),
             replayLauncher = replayLauncher
         )
         val entry = entry("content://downloads/public_downloads/77")
@@ -45,7 +47,7 @@ class IgcFilesReplayOpenInstrumentedTest {
     fun replayOpen_failure_emitsActionableMessage() = runBlocking {
         val replayLauncher = FakeReplayLauncher(failOnLoad = true)
         val viewModel = IgcFilesViewModel(
-            useCase = IgcFilesUseCase(FakeDownloadsRepository()),
+            useCase = IgcFilesUseCase(FakeDownloadsRepository(), NoOpIgcExportDiagnosticsRepository),
             replayLauncher = replayLauncher
         )
         val entry = entry("content://downloads/public_downloads/78")
@@ -95,6 +97,13 @@ class IgcFilesReplayOpenInstrumentedTest {
         override fun listExistingNamesForUtcDate(utcDate: LocalDate): Set<String> = emptySet()
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             return Result.success(Unit)
+        }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "Not implemented in test fake"
+            )
         }
     }
 }

@@ -2,9 +2,11 @@ package com.example.xcpro.igc
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.igc.data.IgcDocumentReadResult
 import com.example.xcpro.igc.data.IgcDownloadsRepository
 import com.example.xcpro.igc.data.IgcLogEntry
 import com.example.xcpro.igc.usecase.IgcFilesSort
+import com.example.xcpro.igc.data.NoOpIgcExportDiagnosticsRepository
 import com.example.xcpro.igc.usecase.IgcFilesUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +20,7 @@ class IgcFilesListInstrumentedTest {
 
     @Test
     fun applyFilterAndSort_filtersByQuery_andSortsByDateDescending() {
-        val useCase = IgcFilesUseCase(FakeDownloadsRepository())
+        val useCase = IgcFilesUseCase(FakeDownloadsRepository(), NoOpIgcExportDiagnosticsRepository)
         val entries = listOf(
             entry("2025-03-08-XCP-000001-01.IGC", modified = 100L),
             entry("2025-03-09-XCP-000002-01.IGC", modified = 300L),
@@ -53,6 +55,13 @@ class IgcFilesListInstrumentedTest {
         override fun listExistingNamesForUtcDate(utcDate: LocalDate): Set<String> = emptySet()
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             return Result.success(Unit)
+        }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "Not implemented in test fake"
+            )
         }
     }
 }

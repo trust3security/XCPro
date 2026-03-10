@@ -8,6 +8,7 @@ import com.example.xcpro.igc.domain.IgcProfileMetadataSource
 import com.example.xcpro.igc.domain.IgcRecorderMetadata
 import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecorderMetadataSource
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
 import com.example.xcpro.igc.domain.IgcTaskDeclarationSnapshot
 import com.example.xcpro.igc.domain.IgcTaskDeclarationStartSnapshot
 import com.example.xcpro.igc.domain.IgcTaskDeclarationSource
@@ -32,7 +33,7 @@ class IgcRecordingRuntimeActionSinkTest {
         sink.onStartRecording(sessionId = 42L, preFlightGroundWindowMs = 20_000L)
         val lines = sink.snapshotSessionLines(42L)
 
-        assertTrue(lines.first().startsWith("AXCP"))
+        assertTrue(lines.first().startsWith("AXCS"))
         assertTrue(lines.any { it.startsWith("HFDTEDATE:") })
         assertTrue(lines.any { it == "HFDTEDATE:090325,01" })
         assertTrue(lines.any { it.startsWith("HFPLTPILOTINCHARGE:") })
@@ -42,7 +43,7 @@ class IgcRecordingRuntimeActionSinkTest {
         assertTrue(lines.any { it.startsWith("HFDTMGPSDATUM:WGS84") })
         assertTrue(lines.any { it.startsWith("HFRFWFIRMWAREVERSION:") })
         assertTrue(lines.any { it.startsWith("HFRHWHARDWAREVERSION:") })
-        assertTrue(lines.any { it.startsWith("HFFTYFRTYPE:XCPro,Mobile") })
+        assertTrue(lines.any { it.startsWith("HFFTYFRTYPE:XCPro,SignedMobile") })
         assertTrue(lines.any { it.startsWith("HFGPSRECEIVER:") })
         assertTrue(lines.any { it.startsWith("HFPRSPRESSALTSENSOR:") })
         assertTrue(lines.any { it.startsWith("HFFRSSECURITY:") })
@@ -184,7 +185,7 @@ class IgcRecordingRuntimeActionSinkTest {
         val lines = sink.snapshotSessionLines(77L)
 
         assertTrue(lines.none { it.startsWith("C") })
-        assertTrue(lines.contains("LXCPDECLARATION_OMITTED:WAYPOINT_COUNT_LT_2"))
+        assertTrue(lines.contains("LXCSDECLARATION_OMITTED:WAYPOINT_COUNT_LT_2"))
     }
 
     @Test
@@ -200,17 +201,19 @@ class IgcRecordingRuntimeActionSinkTest {
             recorderMetadataSource = FixedRecorderSource(),
             taskDeclarationSource = MutableTaskSource(IgcTaskDeclarationStartSnapshot.Absent),
             recoveryMetadataStore = metadataStore,
-            flightLogRepository = NoopIgcFlightLogRepository
+            flightLogRepository = NoopIgcFlightLogRepository,
+            exportDiagnosticsRepository = NoOpIgcExportDiagnosticsRepository
         )
 
         sink.onStartRecording(sessionId = 14L, preFlightGroundWindowMs = 20_000L)
 
         assertEquals(
             IgcRecoveryMetadata(
-                manufacturerId = "XCP",
+                manufacturerId = "XCS",
                 sessionSerial = "000014",
                 sessionStartWallTimeMs = 1_741_483_200_000L,
-                firstValidFixWallTimeMs = null
+                firstValidFixWallTimeMs = null,
+                signatureProfile = IgcSecuritySignatureProfile.XCS
             ),
             metadataStore.loadMetadata(14L)
         )
@@ -223,10 +226,11 @@ class IgcRecordingRuntimeActionSinkTest {
 
         assertEquals(
             IgcRecoveryMetadata(
-                manufacturerId = "XCP",
+                manufacturerId = "XCS",
                 sessionSerial = "000014",
                 sessionStartWallTimeMs = 1_741_483_200_000L,
-                firstValidFixWallTimeMs = 1_741_483_202_000L
+                firstValidFixWallTimeMs = 1_741_483_202_000L,
+                signatureProfile = IgcSecuritySignatureProfile.XCS
             ),
             metadataStore.loadMetadata(14L)
         )
@@ -247,7 +251,8 @@ class IgcRecordingRuntimeActionSinkTest {
                 IgcTaskDeclarationStartSnapshot.Available(sampleDeclaration("TASK-PUBLISH"))
             ),
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            flightLogRepository = flightLogRepository
+            flightLogRepository = flightLogRepository,
+            exportDiagnosticsRepository = NoOpIgcExportDiagnosticsRepository
         )
 
         sink.onStartRecording(sessionId = 5L, preFlightGroundWindowMs = 20_000L)
@@ -256,18 +261,46 @@ class IgcRecordingRuntimeActionSinkTest {
             line = "B0000023351900S15112540EA0085000900072080",
             sampleWallTimeMs = 1_741_483_202_000L
         )
-        sink.onFinalizeRecording(sessionId = 5L, postFlightGroundWindowMs = 5_000L)
+        val result = sink.onFinalizeRecording(sessionId = 5L, postFlightGroundWindowMs = 5_000L)
         sink.onMarkCompleted(sessionId = 5L)
 
         val request = flightLogRepository.lastRequest
         assertTrue(request != null)
         requireNotNull(request)
+        assertTrue(result is IgcFinalizeResult.Published)
         assertEquals(5L, request.sessionId)
         assertEquals(1_741_483_202_000L, request.firstValidFixWallTimeMs)
+        assertEquals(IgcSecuritySignatureProfile.XCS, request.signatureProfile)
         assertTrue(request.lines.any { it.startsWith("E") && it.contains("FLTCOMPLETED") })
 
         val lines = sink.snapshotSessionLines(5L)
         assertEquals(1, lines.count { it.startsWith("E") && it.contains("FLTCOMPLETED") })
+    }
+
+    @Test
+    fun finalizeRecording_returnsFailureAndPublishesDiagnostic_whenRepositoryFails() {
+        val clock = FakeClock(
+            monoMs = 0L,
+            wallMs = 1_741_483_200_000L
+        )
+        val diagnosticsRepository = InMemoryIgcExportDiagnosticsRepository()
+        val sink = IgcRecordingRuntimeActionSink(
+            clock = clock,
+            profileMetadataSource = FixedProfileSource(),
+            recorderMetadataSource = FixedRecorderSource(),
+            taskDeclarationSource = MutableTaskSource(IgcTaskDeclarationStartSnapshot.Absent),
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
+            flightLogRepository = FailingFlightLogRepository(),
+            exportDiagnosticsRepository = diagnosticsRepository
+        )
+
+        sink.onStartRecording(sessionId = 6L, preFlightGroundWindowMs = 20_000L)
+        val result = sink.onFinalizeRecording(sessionId = 6L, postFlightGroundWindowMs = 5_000L)
+
+        require(result is IgcFinalizeResult.Failure)
+        assertEquals(IgcFinalizeResult.ErrorCode.LINT_VALIDATION_FAILED, result.code)
+        assertEquals(IgcExportDiagnosticCode.LINT_VALIDATION_FAILED, diagnosticsRepository.latest.value?.code)
+        assertEquals("IGC export failed: A record must be first (line 1)", diagnosticsRepository.latest.value?.message)
     }
 
     private fun newSink(
@@ -294,15 +327,24 @@ class IgcRecordingRuntimeActionSinkTest {
                 entry = IgcLogEntry(
                     document = com.example.xcpro.common.documents.DocumentRef(
                         uri = "content://downloads/igc/1",
-                        displayName = "2025-03-09-XCP-000005-01.IGC"
+                        displayName = "2025-03-09-XCS-000005-01.IGC"
                     ),
-                    displayName = "2025-03-09-XCP-000005-01.IGC",
+                    displayName = "2025-03-09-XCS-000005-01.IGC",
                     sizeBytes = 123L,
                     lastModifiedEpochMillis = 0L,
                     utcDate = java.time.LocalDate.of(2025, 3, 9),
                     durationSeconds = 0L
                 ),
-                fileName = "2025-03-09-XCP-000005-01.IGC"
+                fileName = "2025-03-09-XCS-000005-01.IGC"
+            )
+        }
+    }
+
+    private class FailingFlightLogRepository : IgcFlightLogRepository {
+        override fun finalizeSession(request: IgcFinalizeRequest): IgcFinalizeResult {
+            return IgcFinalizeResult.Failure(
+                code = IgcFinalizeResult.ErrorCode.LINT_VALIDATION_FAILED,
+                message = "IGC export failed: A record must be first (line 1)"
             )
         }
     }
@@ -349,12 +391,15 @@ class IgcRecordingRuntimeActionSinkTest {
     private class FixedRecorderSource : IgcRecorderMetadataSource {
         override fun recorderMetadata(): IgcRecorderMetadata {
             return IgcRecorderMetadata(
+                manufacturerId = "XCS",
+                recorderType = "XCPro,SignedMobile",
                 firmwareVersion = "1.0.0",
                 hardwareVersion = "Pixel / Android 16",
                 gpsReceiver = "NKN",
                 pressureSensor = "ANDROID_BARO",
-                securityStatus = "UNSIGNED",
-                gpsAltitudeDatum = IgcGpsAltitudeDatum.GEO,
+                securityStatus = "SIGNED",
+                securitySignatureProfile = IgcSecuritySignatureProfile.XCS,
+                gpsAltitudeDatum = IgcGpsAltitudeDatum.ELL,
                 pressureAltitudeDatum = IgcPressureAltitudeDatum.ISA
             )
         }

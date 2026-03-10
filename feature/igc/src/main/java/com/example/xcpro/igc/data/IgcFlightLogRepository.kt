@@ -12,6 +12,8 @@ import com.example.xcpro.igc.domain.IgcRecoveryErrorCode
 import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecoveryResult
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
+import com.example.xcpro.igc.domain.IgcGRecordSigner
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
@@ -50,7 +52,9 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val downloadsRepository: IgcDownloadsRepository,
     private val recoveryMetadataStore: IgcRecoveryMetadataStore,
-    private val namingPolicy: IgcFileNamingPolicy
+    private val namingPolicy: IgcFileNamingPolicy,
+    private val exportValidationAdapter: IgcExportValidationAdapter,
+    private val gRecordSigner: IgcGRecordSigner
 ) : IgcFlightLogRepository {
 
     private val lock = Any()
@@ -88,7 +92,21 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
                 return@synchronized IgcFinalizeResult.Failure(code = code, message = naming.message)
             }
             naming as IgcFileNamingPolicy.Result.Success
-            val fileBytes = textWriter.toByteArray(request.lines)
+            val payloadLines = gRecordSigner.sign(
+                lines = request.lines,
+                profile = request.signatureProfile
+            )
+            val fileBytes = textWriter.toByteArray(payloadLines)
+            when (val validation = exportValidationAdapter.validate(fileBytes)) {
+                is IgcExportValidationResult.Invalid -> {
+                    return@synchronized IgcFinalizeResult.Failure(
+                        code = IgcFinalizeResult.ErrorCode.LINT_VALIDATION_FAILED,
+                        message = validation.message,
+                        lintIssues = validation.issues
+                    )
+                }
+                IgcExportValidationResult.Valid -> Unit
+            }
             if (writeStagingFile(request.sessionId, fileBytes) == null) {
                 return@synchronized IgcFinalizeResult.Failure(
                     code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
@@ -206,6 +224,7 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
                 firstValidFixWallTimeMs = authoritativeMetadata.firstValidFixWallTimeMs,
                 manufacturerId = authoritativeMetadata.manufacturerId,
                 sessionSerial = authoritativeMetadata.sessionSerial,
+                signatureProfile = authoritativeMetadata.signatureProfile,
                 lines = lines
             )
             return@synchronized when (val publishResult = finalizeSession(request)) {
@@ -244,7 +263,8 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
             manufacturerId = manufacturerId,
             sessionSerial = sessionSerial,
             sessionStartWallTimeMs = startDate?.toEpochMillisAtUtcStartOfDay() ?: 0L,
-            firstValidFixWallTimeMs = firstFixMs
+            firstValidFixWallTimeMs = firstFixMs,
+            signatureProfile = signatureProfileForManufacturer(manufacturerId)
         )
     }
 
@@ -379,6 +399,14 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
         }.getOrDefault(0L)
     }
 
+    private fun signatureProfileForManufacturer(manufacturerId: String): IgcSecuritySignatureProfile {
+        return if (manufacturerId.equals("XCS", ignoreCase = true)) {
+            IgcSecuritySignatureProfile.XCS
+        } else {
+            IgcSecuritySignatureProfile.NONE
+        }
+    }
+
     private fun findExistingFinalizedEntriesForSession(
         sessionId: Long,
         metadata: IgcRecoveryMetadata?
@@ -433,15 +461,19 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
         staged: IgcRecoveryMetadata?
     ): IgcRecoveryMetadata? {
         if (stored == null && staged == null) return null
+        val manufacturerId = stored?.manufacturerId ?: staged?.manufacturerId.orEmpty()
         return IgcRecoveryMetadata(
-            manufacturerId = stored?.manufacturerId ?: staged?.manufacturerId.orEmpty(),
+            manufacturerId = manufacturerId,
             sessionSerial = stored?.sessionSerial ?: staged?.sessionSerial.orEmpty(),
             sessionStartWallTimeMs = stored?.sessionStartWallTimeMs
                 ?.takeIf { it > 0L }
                 ?: staged?.sessionStartWallTimeMs
                 ?: 0L,
             firstValidFixWallTimeMs = stored?.firstValidFixWallTimeMs
-                ?: staged?.firstValidFixWallTimeMs
+                ?: staged?.firstValidFixWallTimeMs,
+            signatureProfile = stored?.signatureProfile
+                ?: staged?.signatureProfile
+                ?: signatureProfileForManufacturer(manufacturerId)
         )
     }
 
@@ -547,6 +579,7 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
             IgcFinalizeResult.ErrorCode.WRITE_FAILED -> IgcRecoveryErrorCode.PENDING_ROW_WRITE_FAILED
             IgcFinalizeResult.ErrorCode.NAME_SPACE_EXHAUSTED -> IgcRecoveryErrorCode.NAME_COLLISION_UNRESOLVED
             IgcFinalizeResult.ErrorCode.EMPTY_PAYLOAD -> IgcRecoveryErrorCode.STAGING_CORRUPT
+            IgcFinalizeResult.ErrorCode.LINT_VALIDATION_FAILED -> IgcRecoveryErrorCode.STAGING_CORRUPT
         }
         return IgcRecoveryResult.Failure(code = recoveryCode, message = message)
     }

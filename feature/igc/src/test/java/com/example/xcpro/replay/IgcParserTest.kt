@@ -42,4 +42,21 @@ class IgcParserTest {
         assertEquals(123.0, point.indicatedAirspeedKmh ?: Double.NaN, 0.001)
         assertEquals(145.0, point.trueAirspeedKmh ?: Double.NaN, 0.001)
     }
+
+    @Test
+    fun parse_rejectsIExtensionsBelowWriterFloor() {
+        val igc = """
+            HFDTE071225
+            I020838IAS3941TAS
+            B1200003745123N12230123EA0123401234123145
+        """.trimIndent()
+
+        val parser = IgcParser(FakeClock(wallMs = 0L))
+        val log = parser.parse(ByteArrayInputStream(igc.toByteArray()))
+
+        assertEquals(1, log.points.size)
+        val point = log.points.first()
+        assertEquals(null, point.indicatedAirspeedKmh)
+        assertEquals(null, point.trueAirspeedKmh)
+    }
 }

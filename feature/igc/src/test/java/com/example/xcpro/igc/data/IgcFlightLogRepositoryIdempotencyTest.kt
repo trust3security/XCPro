@@ -7,6 +7,10 @@ import android.net.Uri
 import android.provider.MediaStore
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
+import com.example.xcpro.igc.domain.IgcGRecordSigner
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
+import com.example.xcpro.igc.domain.StrictIgcLintValidator
+import com.example.xcpro.igc.usecase.IgcLintMessageMapper
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.time.LocalDate
@@ -42,7 +46,12 @@ class IgcFlightLogRepositoryIdempotencyTest {
             appContext = context,
             downloadsRepository = downloads,
             recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = IgcExportValidationAdapter(
+                lintValidator = StrictIgcLintValidator(),
+                lintMessageMapper = IgcLintMessageMapper()
+            ),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
@@ -61,6 +70,7 @@ class IgcFlightLogRepositoryIdempotencyTest {
             firstValidFixWallTimeMs = null,
             manufacturerId = "XCP",
             sessionSerial = "909",
+            signatureProfile = IgcSecuritySignatureProfile.NONE,
             lines = listOf(
                 "AXCP000909",
                 "HFDTEDATE:090326,01",
@@ -91,6 +101,13 @@ class IgcFlightLogRepositoryIdempotencyTest {
 
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             return Result.success(Unit)
+        }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "not used in test"
+            )
         }
     }
 }

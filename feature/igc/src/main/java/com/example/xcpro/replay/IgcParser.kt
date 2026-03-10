@@ -44,7 +44,7 @@ class IgcParser @Inject constructor(
         var extensions: List<IgcExtension> = emptyList()
 
         reader.forEachLine { rawLine ->
-            val line = rawLine.trim()
+            val line = rawLine
             when {
                 line.startsWith("HFDTE") && line.length >= 11 -> {
                     currentDate = parseDate(line.substring(5, 11)) ?: currentDate
@@ -184,6 +184,7 @@ class IgcParser @Inject constructor(
         val count = line.substring(1, 3).toIntOrNull() ?: return null
         var index = 3
         val parsed = mutableListOf<IgcExtension>()
+        var expectedStart = MIN_EXTENSION_START
         repeat(count) {
             if (index + 7 > line.length) return null
             val start = line.substring(index, index + 2).toIntOrNull() ?: return null
@@ -192,10 +193,12 @@ class IgcParser @Inject constructor(
             index += 2
             val code = line.substring(index, index + 3)
             index += 3
-            if (start < MIN_EXTENSION_START || end < start) return null
+            if (start < MIN_EXTENSION_START || end < start || start != expectedStart) return null
             if (!code.all { it.isLetterOrDigit() }) return null
             parsed += IgcExtension(start = start, end = end, code = code)
+            expectedStart = end + 1
         }
+        if (index != line.length) return null
         return parsed
     }
 
@@ -231,7 +234,7 @@ class IgcParser @Inject constructor(
     }
 
     private companion object {
-        private const val MIN_EXTENSION_START = 8
+        private const val MIN_EXTENSION_START = 36
         private const val EXTENSION_VALUE_DIGITS = 3
     }
 }

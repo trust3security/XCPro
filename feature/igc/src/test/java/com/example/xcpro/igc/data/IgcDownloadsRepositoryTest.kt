@@ -100,6 +100,27 @@ class IgcDownloadsRepositoryTest {
     }
 
     @Test
+    fun readDocumentBytes_returnsRawBytesViaRepositoryBoundary() {
+        val context: Context = mock()
+        val resolver: ContentResolver = mock()
+        whenever(context.contentResolver).thenReturn(resolver)
+        val repository = MediaStoreIgcDownloadsRepository(context)
+        val document = DocumentRef(
+            uri = "content://downloads/public_downloads/201",
+            displayName = "flight.igc"
+        )
+        whenever(resolver.openInputStream(eq(Uri.parse(document.uri)))).thenReturn(
+            ByteArrayInputStream("AXCP123\r\n".toByteArray())
+        )
+
+        val result = repository.readDocumentBytes(document)
+
+        require(result is IgcDocumentReadResult.Success)
+        assertEquals(document, result.document)
+        assertEquals("AXCP123\r\n", result.bytes.decodeToString())
+    }
+
+    @Test
     fun listExistingNamesForUtcDate_returnsOnlyMatchingDayPrefix() {
         val context: Context = mock()
         val resolver: ContentResolver = mock()

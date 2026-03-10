@@ -9,13 +9,29 @@ import android.provider.MediaStore
 import com.example.xcpro.common.documents.DocumentRef
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.io.InputStream
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+sealed interface IgcDocumentReadResult {
+    data class Success(
+        val document: DocumentRef,
+        val bytes: ByteArray
+    ) : IgcDocumentReadResult
+
+    data class Failure(
+        val code: ErrorCode,
+        val message: String
+    ) : IgcDocumentReadResult
+
+    enum class ErrorCode {
+        OPEN_FAILED,
+        READ_FAILED
+    }
+}
 
 interface IgcDownloadsRepository {
     val entries: StateFlow<List<IgcLogEntry>>
@@ -25,6 +41,8 @@ interface IgcDownloadsRepository {
     fun listExistingNamesForUtcDate(utcDate: LocalDate): Set<String>
 
     fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit>
+
+    fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult
 }
 
 @Singleton
@@ -60,6 +78,40 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
                 }
             }
         }.map { Unit }
+    }
+
+    override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+        val sourceUri = Uri.parse(document.uri)
+        val input = runCatching {
+            appContext.contentResolver.openInputStream(sourceUri)
+        }.getOrElse { error ->
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.READ_FAILED,
+                message = error.message ?: "Failed to open IGC document"
+            )
+        } ?: return IgcDocumentReadResult.Failure(
+            code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+            message = "Unable to open IGC document"
+        )
+
+        return input.use { stream ->
+            runCatching {
+                stream.readBytes()
+            }.fold(
+                onSuccess = { bytes ->
+                    IgcDocumentReadResult.Success(
+                        document = document,
+                        bytes = bytes
+                    )
+                },
+                onFailure = { error ->
+                    IgcDocumentReadResult.Failure(
+                        code = IgcDocumentReadResult.ErrorCode.READ_FAILED,
+                        message = error.message ?: "Failed to read IGC document"
+                    )
+                }
+            )
+        }
     }
 
     private fun queryEntries(): List<IgcLogEntry> {
@@ -144,8 +196,9 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
     }
 
     private fun parseDurationSeconds(document: DocumentRef): Long? {
-        val input = openInputStream(document) ?: return null
-        input.bufferedReader().useLines { lines ->
+        val readResult = readDocumentBytes(document)
+        if (readResult !is IgcDocumentReadResult.Success) return null
+        readResult.bytes.inputStream().bufferedReader().useLines { lines ->
             var firstSeconds: Long? = null
             var lastAbsoluteSeconds: Long? = null
             var dayOffsetSeconds = 0L
@@ -169,12 +222,6 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
             val last = lastAbsoluteSeconds ?: return null
             return (last - first).coerceAtLeast(0L)
         }
-    }
-
-    private fun openInputStream(document: DocumentRef): InputStream? {
-        return runCatching {
-            appContext.contentResolver.openInputStream(Uri.parse(document.uri))
-        }.getOrNull()
     }
 
     private fun parseUtcDate(displayName: String): LocalDate? {

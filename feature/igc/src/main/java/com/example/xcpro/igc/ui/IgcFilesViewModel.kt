@@ -1,7 +1,11 @@
 package com.example.xcpro.igc.ui
 
+import android.content.ActivityNotFoundException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.xcpro.igc.data.IgcExportDiagnostic
+import com.example.xcpro.igc.data.IgcExportDiagnosticCode
+import com.example.xcpro.igc.data.IgcExportDiagnosticSource
 import com.example.xcpro.igc.data.IgcLogEntry
 import com.example.xcpro.igc.usecase.IgcFilesSort
 import com.example.xcpro.igc.usecase.IgcFilesUseCase
@@ -26,12 +30,13 @@ data class IgcFilesUiState(
     val isLoading: Boolean = true,
     val query: String = "",
     val sort: IgcFilesSort = IgcFilesSort.DATE_DESC,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val latestDiagnostic: IgcExportDiagnostic? = null
 )
 
 sealed interface IgcFilesEvent {
     data class ShowMessage(val message: String) : IgcFilesEvent
-    data class Share(val request: IgcShareRequest) : IgcFilesEvent
+    data class Share(val request: IgcShareRequest, val displayName: String) : IgcFilesEvent
     data class LaunchCopyTo(val suggestedFileName: String) : IgcFilesEvent
     data class CopyMetadata(val text: String) : IgcFilesEvent
     object NavigateBackToMap : IgcFilesEvent
@@ -53,6 +58,7 @@ class IgcFilesViewModel @Inject constructor(
 
     init {
         observeRepository()
+        observeDiagnostics()
         refresh()
     }
 
@@ -95,8 +101,9 @@ class IgcFilesViewModel @Inject constructor(
     }
 
     fun share(entry: IgcLogEntry, mode: IgcShareMode) {
+        useCase.clearLatestDiagnostic()
         val request = useCase.buildShareRequest(entry, mode)
-        _events.tryEmit(IgcFilesEvent.Share(request))
+        _events.tryEmit(IgcFilesEvent.Share(request, entry.displayName))
     }
 
     fun copyMetadata(entry: IgcLogEntry) {
@@ -104,6 +111,7 @@ class IgcFilesViewModel @Inject constructor(
     }
 
     fun copyTo(entry: IgcLogEntry) {
+        useCase.clearLatestDiagnostic()
         pendingCopyEntry = entry
         _events.tryEmit(IgcFilesEvent.LaunchCopyTo(entry.displayName))
     }
@@ -117,32 +125,65 @@ class IgcFilesViewModel @Inject constructor(
         viewModelScope.launch {
             val result = useCase.copyToDestination(entry, destinationUri)
             if (result.isSuccess) {
+                useCase.clearLatestDiagnostic()
                 _events.emit(IgcFilesEvent.ShowMessage("Copied ${entry.displayName}"))
             } else {
-                _events.emit(
-                    IgcFilesEvent.ShowMessage(
-                        "Copy failed: ${result.exceptionOrNull()?.message ?: "unknown error"}"
+                val diagnostic = IgcExportDiagnostic(
+                    source = IgcExportDiagnosticSource.COPY_TO,
+                    code = IgcExportDiagnosticCode.COPY_FAILED,
+                    message = "Copy failed: ${result.exceptionOrNull()?.message ?: "unknown error"}",
+                    fileName = entry.displayName
+                )
+                publishDiagnostic(diagnostic)
+            }
+        }
+    }
+
+    fun replayOpen(entry: IgcLogEntry) {
+        useCase.clearLatestDiagnostic()
+        viewModelScope.launch {
+            runCatching {
+                replayLauncher.loadDocument(entry.document)
+                replayLauncher.play()
+            }.onSuccess {
+                useCase.clearLatestDiagnostic()
+                _events.emit(IgcFilesEvent.NavigateBackToMap)
+            }.onFailure { throwable ->
+                publishDiagnostic(
+                    IgcExportDiagnostic(
+                        source = IgcExportDiagnosticSource.REPLAY_OPEN,
+                        code = IgcExportDiagnosticCode.REPLAY_OPEN_FAILED,
+                        message = throwable.message ?: "Replay open failed",
+                        fileName = entry.displayName
                     )
                 )
             }
         }
     }
 
-    fun replayOpen(entry: IgcLogEntry) {
-        viewModelScope.launch {
-            runCatching {
-                replayLauncher.loadDocument(entry.document)
-                replayLauncher.play()
-            }.onSuccess {
-                _events.emit(IgcFilesEvent.NavigateBackToMap)
-            }.onFailure { throwable ->
-                _events.emit(
-                    IgcFilesEvent.ShowMessage(
-                        throwable.message ?: "Replay open failed"
-                    )
+    fun onShareLaunchFailed(displayName: String, error: Throwable?) {
+        publishDiagnostic(
+            when (error) {
+                is ActivityNotFoundException -> IgcExportDiagnostic(
+                    source = IgcExportDiagnosticSource.SHARE,
+                    code = IgcExportDiagnosticCode.SHARE_FAILED,
+                    message = "No app available to share this IGC file",
+                    fileName = displayName
+                )
+                is SecurityException -> IgcExportDiagnostic(
+                    source = IgcExportDiagnosticSource.SHARE,
+                    code = IgcExportDiagnosticCode.SHARE_FAILED,
+                    message = "Permission denied while sharing IGC file",
+                    fileName = displayName
+                )
+                else -> IgcExportDiagnostic(
+                    source = IgcExportDiagnosticSource.SHARE,
+                    code = IgcExportDiagnosticCode.SHARE_FAILED,
+                    message = "Unable to share IGC file",
+                    fileName = displayName
                 )
             }
-        }
+        )
     }
 
     private fun observeRepository() {
@@ -162,5 +203,20 @@ class IgcFilesViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun observeDiagnostics() {
+        viewModelScope.launch {
+            useCase.latestDiagnostic.collectLatest { diagnostic ->
+                _uiState.update { state ->
+                    state.copy(latestDiagnostic = diagnostic)
+                }
+            }
+        }
+    }
+
+    private fun publishDiagnostic(diagnostic: IgcExportDiagnostic) {
+        useCase.publishDiagnostic(diagnostic)
+        _events.tryEmit(IgcFilesEvent.ShowMessage(diagnostic.message))
     }
 }

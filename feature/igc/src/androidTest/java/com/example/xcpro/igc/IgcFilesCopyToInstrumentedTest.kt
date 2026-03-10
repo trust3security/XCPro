@@ -2,8 +2,10 @@ package com.example.xcpro.igc
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.igc.data.IgcDocumentReadResult
 import com.example.xcpro.igc.data.IgcDownloadsRepository
 import com.example.xcpro.igc.data.IgcLogEntry
+import com.example.xcpro.igc.data.NoOpIgcExportDiagnosticsRepository
 import com.example.xcpro.igc.usecase.IgcFilesUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +22,7 @@ class IgcFilesCopyToInstrumentedTest {
     @Test
     fun copyToDestination_delegatesToDownloadsRepository() = runBlocking {
         val repository = FakeDownloadsRepository()
-        val useCase = IgcFilesUseCase(repository)
+        val useCase = IgcFilesUseCase(repository, NoOpIgcExportDiagnosticsRepository)
         val entry = IgcLogEntry(
             document = DocumentRef(
                 uri = "content://downloads/public_downloads/500",
@@ -54,6 +56,13 @@ class IgcFilesCopyToInstrumentedTest {
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             lastDestinationUri = destinationUri
             return Result.success(Unit)
+        }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "Not implemented in test fake"
+            )
         }
     }
 }

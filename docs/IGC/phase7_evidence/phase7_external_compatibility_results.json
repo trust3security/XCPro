@@ -1,0 +1,157 @@
+[
+  {
+    "fixture_id": "production_real",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\feature\\igc\\src\\test\\resources\\replay\\example-production.igc",
+    "parser": "aerofiles",
+    "status": "WARN",
+    "result": {
+      "status": "WARN",
+      "fix_record_count": 18969,
+      "errors": {
+        "satellite_records": [
+          {
+            "type": "type",
+            "message": "<class 'aerofiles.igc.reader.MissingRecordsError'>"
+          }
+        ]
+      },
+      "logger_id": [
+        [],
+        {
+          "manufacturer": "LXV",
+          "id": "QS4",
+          "id_addition": "FLIGHT:1"
+        }
+      ]
+    }
+  },
+  {
+    "fixture_id": "production_real",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\feature\\igc\\src\\test\\resources\\replay\\example-production.igc",
+    "parser": "igc_parser",
+    "status": "PASS",
+    "result": {
+      "status": "PASS",
+      "position_log_count": 18969,
+      "errors": [],
+      "task": null
+    }
+  },
+  {
+    "fixture_id": "invalid_a_not_first",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\docs\\IGC\\phase7_evidence\\fixtures\\phase7_a_not_first.igc",
+    "parser": "aerofiles",
+    "status": "PASS",
+    "result": {
+      "status": "PASS",
+      "fix_record_count": 3,
+      "errors": {},
+      "logger_id": [
+        [],
+        {
+          "manufacturer": "XCP",
+          "id": "000",
+          "id_addition": "111"
+        }
+      ]
+    }
+  },
+  {
+    "fixture_id": "invalid_a_not_first",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\docs\\IGC\\phase7_evidence\\fixtures\\phase7_a_not_first.igc",
+    "parser": "igc_parser",
+    "status": "PASS",
+    "result": {
+      "status": "PASS",
+      "position_log_count": 3,
+      "errors": [],
+      "task": null
+    }
+  },
+  {
+    "fixture_id": "invalid_malformed_b_short",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\docs\\IGC\\phase7_evidence\\fixtures\\phase7_malformed_b_short.igc",
+    "parser": "aerofiles",
+    "status": "WARN",
+    "result": {
+      "status": "WARN",
+      "fix_record_count": 2,
+      "errors": {
+        "fix_records": [
+          {
+            "type": "type",
+            "message": "<class 'aerofiles.igc.reader.MissingRecordsError'>"
+          }
+        ]
+      },
+      "logger_id": [
+        [],
+        {
+          "manufacturer": "XCP",
+          "id": "000",
+          "id_addition": "111"
+        }
+      ]
+    }
+  },
+  {
+    "fixture_id": "invalid_malformed_b_short",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\docs\\IGC\\phase7_evidence\\fixtures\\phase7_malformed_b_short.igc",
+    "parser": "igc_parser",
+    "status": "FAIL",
+    "result": {
+      "status": "FAIL",
+      "position_log_count": null,
+      "error": "InvalidTrackPointLine: ",
+      "errors": [
+        {
+          "type": "InvalidTrackPointLine",
+          "message": ""
+        }
+      ]
+    }
+  },
+  {
+    "fixture_id": "invalid_bad_time",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\docs\\IGC\\phase7_evidence\\fixtures\\phase7_bad_time.igc",
+    "parser": "aerofiles",
+    "status": "WARN",
+    "result": {
+      "status": "WARN",
+      "fix_record_count": 2,
+      "errors": {
+        "fix_records": [
+          {
+            "type": "type",
+            "message": "<class 'aerofiles.igc.reader.MissingRecordsError'>"
+          }
+        ]
+      },
+      "logger_id": [
+        [],
+        {
+          "manufacturer": "XCP",
+          "id": "000",
+          "id_addition": "111"
+        }
+      ]
+    }
+  },
+  {
+    "fixture_id": "invalid_bad_time",
+    "fixture_path": "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\docs\\IGC\\phase7_evidence\\fixtures\\phase7_bad_time.igc",
+    "parser": "igc_parser",
+    "status": "FAIL",
+    "result": {
+      "status": "FAIL",
+      "position_log_count": null,
+      "error": "InvalidTrackPointLine: ",
+      "errors": [
+        {
+          "type": "InvalidTrackPointLine",
+          "message": ""
+        }
+      ]
+    }
+  }
+]

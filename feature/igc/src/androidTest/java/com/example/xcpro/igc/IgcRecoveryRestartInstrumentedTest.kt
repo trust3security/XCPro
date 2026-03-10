@@ -8,13 +8,18 @@ import android.provider.MediaStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.xcpro.igc.data.IgcFlightLogRepository
+import com.example.xcpro.igc.data.IgcExportValidationAdapter
 import com.example.xcpro.igc.data.IgcRecoveryMetadataStore
 import com.example.xcpro.igc.data.MediaStoreIgcDownloadsRepository
 import com.example.xcpro.igc.data.MediaStoreIgcFlightLogRepository
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
+import com.example.xcpro.igc.domain.IgcGRecordSigner
 import com.example.xcpro.igc.domain.IgcRecoveryErrorCode
 import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecoveryResult
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
+import com.example.xcpro.igc.domain.StrictIgcLintValidator
+import com.example.xcpro.igc.usecase.IgcLintMessageMapper
 import java.io.File
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -40,7 +45,8 @@ class IgcRecoveryRestartInstrumentedTest {
                     manufacturerId = "XCP",
                     sessionSerial = "710001",
                     sessionStartWallTimeMs = 1_773_014_400_000L,
-                    firstValidFixWallTimeMs = 1_773_057_600_000L
+                    firstValidFixWallTimeMs = 1_773_057_600_000L,
+                    signatureProfile = IgcSecuritySignatureProfile.NONE
                 )
             )
         }
@@ -49,7 +55,9 @@ class IgcRecoveryRestartInstrumentedTest {
             appContext = context,
             downloadsRepository = downloadsRepository,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner()
         )
 
         cleanupRows(context, fileName)
@@ -75,7 +83,9 @@ class IgcRecoveryRestartInstrumentedTest {
                 appContext = context,
                 downloadsRepository = MediaStoreIgcDownloadsRepository(context),
                 recoveryMetadataStore = InMemoryRecoveryMetadataStore(),
-                namingPolicy = IgcFileNamingPolicy()
+                namingPolicy = IgcFileNamingPolicy(),
+                exportValidationAdapter = newValidationAdapter(),
+                gRecordSigner = IgcGRecordSigner()
             )
             val rerun = rerunRepository.recoverSession(sessionId = sessionId)
 
@@ -177,5 +187,12 @@ class IgcRecoveryRestartInstrumentedTest {
         override fun clearMetadata(sessionId: Long) {
             metadataBySessionId.remove(sessionId)
         }
+    }
+
+    private fun newValidationAdapter(): IgcExportValidationAdapter {
+        return IgcExportValidationAdapter(
+            lintValidator = StrictIgcLintValidator(),
+            lintMessageMapper = IgcLintMessageMapper()
+        )
     }
 }

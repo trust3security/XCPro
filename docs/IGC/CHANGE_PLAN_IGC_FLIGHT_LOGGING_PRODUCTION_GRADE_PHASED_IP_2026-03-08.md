@@ -21,7 +21,7 @@ This plan is derived from:
 - Title: IGC Flight Logging Production Grade Phased IP
 - Owner: XCPro Team
 - Date: 2026-03-09
-- Status: Proposed (spec-aligned update)
+- Status: Proposed (spec-aligned update) with 2026-03-10 production compatibility addendum
 - Scope: new IGC recording/export pipeline (not replay parser replacement)
 - Dependencies:
   - `docs/ARCHITECTURE/ARCHITECTURE.md`
@@ -30,6 +30,23 @@ This plan is derived from:
   - `docs/IGC/IGC_FILE_FORMAT_RESEARCH_AND_DATA_MAPPING_2026-03-08.md`
   - `docs/IGC/IGC_FILE_STRUCTURE_FIELD_REFERENCE_2026-03-08.md`
   - `docs/IGC/xcpro_igc_file_spec.md`
+
+## 0.1) 2026-03-10 Production Compatibility Addendum
+
+Historical sections of this plan describe `G` signing as Phase 8-only and treat
+`XCP` as the baseline production manufacturer code.
+
+That is no longer the current production implementation.
+
+As of 2026-03-10, the actual app export path now emits a signed `XCS`
+compatibility profile in production code for upload interoperability hardening.
+
+Canonical implementation note:
+
+- `docs/IGC/PRODUCTION_COMPATIBILITY_PROFILE_XCS_WEGLIDE_2026-03-10.md`
+
+Use the addendum plus current code as the source of truth when older plan
+sections disagree.
 
 ## 1) Success Contract (Areas 1-10, each >=95/100)
 
@@ -68,13 +85,17 @@ Out of scope for baseline:
 
 - Replacing `IgcParser` replay flow.
 - Claiming IGC-approved recorder status without approved security/signature chain.
-- Competition-signature parity (`G` record) unless phase 8 is completed.
+- Full approved-recorder trust/distribution program beyond the implemented
+  compatibility export profile.
 
 ### 2.1 Compliance Profiles (Explicit)
 
-- Profile A (baseline release): analysis-grade/professional export (`A/H/B` mandatory; `I/F/C/E/L` optional).
-- Profile B (optional future): validated/signature-backed export (`G` + validator ecosystem).
-- Product copy and headers must explicitly state Profile A when signature validation is unavailable.
+- Profile A (historical baseline): analysis-grade/professional export (`A/H/B`
+  mandatory; `I/F/C/E/L` optional).
+- Profile B (implemented compatibility profile as of 2026-03-10): signed
+  `XCS` export with `G` records in the production finalize/recovery path.
+- Product copy must not equate the compatibility profile with an approved
+  FAI/CIVL recorder program unless a formal trust/distribution path exists.
 
 ## 3) Architecture Contract
 
@@ -1309,13 +1330,17 @@ Each artifact must include:
    - determinism/architecture compliance: `20/20`
    - operational hardening/docs sync: `10/10`
 
-## Phase 8 - Optional Security Signature Path (`G` Record)
+## Phase 8 - Remaining Security/Validator Hardening
 
 Deliverables:
 
-- Define pluggable signer interface and trust model.
-- Implement only if approved security key infrastructure exists.
-- If unavailable, keep explicit non-approved-source mode labeling.
+- Formalize the trust/distribution model for the already-implemented production
+  compatibility signer path.
+- Define validator distribution and operator verification workflow.
+- Decide whether XCPro will remain a compatibility export only, or pursue a
+  formal approved-recorder program.
+- Keep explicit non-approved-source labeling unless and until that program
+  exists.
 
 Gate:
 

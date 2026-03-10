@@ -8,8 +8,12 @@ import android.net.Uri
 import android.provider.MediaStore
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
+import com.example.xcpro.igc.domain.IgcGRecordSigner
 import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecoveryResult
+import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
+import com.example.xcpro.igc.domain.StrictIgcLintValidator
+import com.example.xcpro.igc.usecase.IgcLintMessageMapper
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Files
@@ -18,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -40,8 +45,9 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
         writeValidStagedFile(filesDir, sessionId = 102L)
         val resolver: ContentResolver = mock()
         val publishedUri = Uri.parse("content://downloads/public_downloads/102")
+        val output = ByteArrayOutputStream()
         whenever(resolver.insert(eq(MediaStore.Downloads.EXTERNAL_CONTENT_URI), any())).thenReturn(publishedUri)
-        whenever(resolver.openOutputStream(eq(publishedUri), eq("w"))).thenReturn(ByteArrayOutputStream())
+        whenever(resolver.openOutputStream(eq(publishedUri), eq("w"))).thenReturn(output)
         whenever(resolver.update(eq(publishedUri), any(), isNull(), isNull())).thenReturn(1)
         whenever(resolver.query(eq(publishedUri), any(), isNull(), isNull(), isNull()))
             .thenReturn(MatrixCursor(arrayOf(MediaStore.Downloads.DATE_MODIFIED)).apply { addRow(arrayOf(1_773_100_000L)) })
@@ -52,7 +58,8 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
 
         val result = repository.recoverSession(sessionId = 102L)
 
-        assertEquals(IgcRecoveryResult.Recovered("2026-03-09-XCP-000102-01.IGC"), result)
+        assertEquals(IgcRecoveryResult.Recovered("2026-03-09-XCS-000102-01.IGC"), result)
+        assertContainsSignedPayload(output)
         assertNull(metadataStore.loadMetadata(102L))
         assertEquals(2, downloads.refreshCalls)
     }
@@ -88,7 +95,7 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
         val metadataStore = metadataStoreFor(sessionId = 106L)
         val downloads = FakeDownloadsRepository().apply {
             entriesState.value = listOf(
-                finalizedEntry("2026-03-09-XCP-000106-01.IGC")
+                finalizedEntry("2026-03-09-XCS-000106-01.IGC")
             )
         }
         val repository = newRepository(
@@ -100,7 +107,7 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
 
         val result = repository.recoverSession(sessionId = 106L)
 
-        assertEquals(IgcRecoveryResult.Recovered("2026-03-09-XCP-000106-01.IGC"), result)
+        assertEquals(IgcRecoveryResult.Recovered("2026-03-09-XCS-000106-01.IGC"), result)
         assertNull(metadataStore.loadMetadata(106L))
         assertEquals(1, downloads.refreshCalls)
     }
@@ -133,7 +140,7 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
         val result = repository.recoverSession(sessionId = sessionId)
 
         assertEquals(
-            IgcRecoveryResult.Recovered("2026-03-09-XCP-${sessionId.toString().padStart(6, '0')}-01.IGC"),
+            IgcRecoveryResult.Recovered("2026-03-09-XCS-${sessionId.toString().padStart(6, '0')}-01.IGC"),
             result
         )
         verify(resolver, times(1)).delete(
@@ -150,10 +157,11 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
             saveMetadata(
                 sessionId = sessionId,
                 metadata = IgcRecoveryMetadata(
-                    manufacturerId = "XCP",
+                    manufacturerId = "XCS",
                     sessionSerial = sessionId.toString().padStart(6, '0'),
                     sessionStartWallTimeMs = 1_773_014_400_000L,
-                    firstValidFixWallTimeMs = 1_773_057_600_000L
+                    firstValidFixWallTimeMs = 1_773_057_600_000L,
+                    signatureProfile = IgcSecuritySignatureProfile.XCS
                 )
             )
         }
@@ -172,7 +180,12 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
             appContext = context,
             downloadsRepository = downloads,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy()
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = IgcExportValidationAdapter(
+                lintValidator = StrictIgcLintValidator(),
+                lintMessageMapper = IgcLintMessageMapper()
+            ),
+            gRecordSigner = IgcGRecordSigner()
         )
     }
 
@@ -180,13 +193,25 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
         val sessionSerial = sessionId.toString().padStart(6, '0')
         val stagingDir = File(filesDir, "igc/staging")
         stagingDir.mkdirs()
-        File(stagingDir, "session_${sessionId}.igc.tmp").writeText(
-            listOf(
-                "AXCP$sessionSerial",
+        val signedLines = IgcGRecordSigner().sign(
+            lines = listOf(
+                "AXCS$sessionSerial",
                 "HFDTEDATE:090326,01",
+                "HFFTYFRTYPE:XCPro,SignedMobile",
+                "LXCSDECLARATION_OMITTED:NO_TASK_AT_START",
                 "B1200003746494N12225164WA0012300145"
-            ).joinToString(separator = "\n")
+            ),
+            profile = IgcSecuritySignatureProfile.XCS
         )
+        File(stagingDir, "session_${sessionId}.igc.tmp").writeText(
+            signedLines.joinToString(separator = "\n")
+        )
+    }
+
+    private fun assertContainsSignedPayload(output: ByteArrayOutputStream) {
+        val payload = output.toByteArray().decodeToString()
+        assertEquals(1, payload.lineSequence().count { it.startsWith("AXCS") })
+        assertTrue(payload.lineSequence().any { it.startsWith("G") })
     }
 
     private fun finalizedEntry(displayName: String): IgcLogEntry {
@@ -232,6 +257,13 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
 
         override fun copyToDestination(source: DocumentRef, destinationUri: String): Result<Unit> {
             return Result.success(Unit)
+        }
+
+        override fun readDocumentBytes(document: DocumentRef): IgcDocumentReadResult {
+            return IgcDocumentReadResult.Failure(
+                code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
+                message = "not used in test"
+            )
         }
     }
 }

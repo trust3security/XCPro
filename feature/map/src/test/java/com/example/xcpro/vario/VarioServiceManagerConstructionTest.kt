@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.igc.IgcRecordingActionSink
+import com.example.xcpro.igc.data.IgcFinalizeResult
+import com.example.xcpro.igc.data.IgcLogEntry
 import com.example.xcpro.igc.domain.IgcSessionStateMachine
 import com.example.xcpro.igc.usecase.IgcRecordingUseCase
 import com.example.xcpro.flightdata.FlightDataRepository
@@ -35,7 +37,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -190,6 +191,7 @@ class VarioServiceManagerConstructionTest {
         val recordingUseCase = mock<IgcRecordingUseCase>()
         whenever(recordingUseCase.actions).thenReturn(actionFlow.asSharedFlow())
         val actionSink = mock<IgcRecordingActionSink>()
+        whenever(actionSink.onFinalizeRecording(11L, 5_000L)).thenReturn(successfulFinalizeResult())
 
         val manager = VarioServiceManager(
             audioFocusManager = audioFocusManager,
@@ -275,9 +277,12 @@ class VarioServiceManagerConstructionTest {
         val recordingUseCase = mock<IgcRecordingUseCase>()
         whenever(recordingUseCase.actions).thenReturn(actionFlow.asSharedFlow())
         val actionSink = mock<IgcRecordingActionSink>()
-        doThrow(IllegalStateException("write failed"))
-            .whenever(actionSink)
-            .onFinalizeRecording(org.mockito.kotlin.any(), org.mockito.kotlin.any())
+        whenever(actionSink.onFinalizeRecording(44L, 5_000L)).thenReturn(
+            IgcFinalizeResult.Failure(
+                code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
+                message = "write failed"
+            )
+        )
 
         val manager = VarioServiceManager(
             audioFocusManager = audioFocusManager,
@@ -333,5 +338,22 @@ class VarioServiceManagerConstructionTest {
         override fun stop() {
             stopCalls += 1
         }
+    }
+
+    private fun successfulFinalizeResult(): IgcFinalizeResult {
+        return IgcFinalizeResult.Published(
+            entry = IgcLogEntry(
+                document = com.example.xcpro.common.documents.DocumentRef(
+                    uri = "content://downloads/public_downloads/11",
+                    displayName = "2026-03-09-XCP-000011-01.IGC"
+                ),
+                displayName = "2026-03-09-XCP-000011-01.IGC",
+                sizeBytes = 128L,
+                lastModifiedEpochMillis = 0L,
+                utcDate = java.time.LocalDate.of(2026, 3, 9),
+                durationSeconds = null
+            ),
+            fileName = "2026-03-09-XCP-000011-01.IGC"
+        )
     }
 }

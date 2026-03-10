@@ -23,5 +23,6 @@ data class IgcRecoveryMetadata(
     val manufacturerId: String,
     val sessionSerial: String,
     val sessionStartWallTimeMs: Long,
-    val firstValidFixWallTimeMs: Long?
+    val firstValidFixWallTimeMs: Long?,
+    val signatureProfile: IgcSecuritySignatureProfile = IgcSecuritySignatureProfile.NONE
 )
