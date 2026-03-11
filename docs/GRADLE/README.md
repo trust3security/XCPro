@@ -8,7 +8,10 @@ Use this read order before changing build-performance structure:
 1. `docs/GRADLE/README.md`
 2. `docs/GRADLE/BASELINE_BUILD_MEASUREMENTS_2026-03-10.md`
 3. `docs/GRADLE/CHANGE_PLAN_BUILD_ITERATION_REDUCTION_2026-03-10.md`
-4. `scripts/dev/README.md`
+4. `docs/GRADLE/FEATURE_MAP_BUILD_HOTSPOT_ANALYSIS_2026-03-11.md`
+5. `docs/GRADLE/FEATURE_MAP_TRAFFIC_EXTRACTION_EXECUTION_BRIEF_2026-03-11.md`
+6. `docs/GRADLE/FORECAST_CONTROLS_EXTRACTION_EXECUTION_BRIEF_2026-03-12.md`
+7. `scripts/dev/README.md`
 
 ## Current state
 
@@ -68,6 +71,19 @@ The real pain is edit-sensitive rebuild breadth.
 Conclusion: generic Gradle flags are no longer the highest-value work item.
 The main problem is broad downstream invalidation from `feature:map` and shared
 ABI churn from `core:common`.
+
+New task-level evidence from 2026-03-11 sharpens that conclusion:
+
+- for an implementation-only edit in `feature:map`, the dominant cost is
+  `:feature:map:compileDebugKotlin`
+- `:feature:map:kspDebugKotlin` is a meaningful secondary cost
+- `:app:compileDebugKotlin` can remain `UP-TO-DATE`
+- `:app:kspDebugKotlin` still reruns and adds smaller downstream overhead
+
+Read:
+
+- `docs/GRADLE/FEATURE_MAP_BUILD_HOTSPOT_ANALYSIS_2026-03-11.md`
+- `docs/GRADLE/FEATURE_MAP_TRAFFIC_EXTRACTION_EXECUTION_BRIEF_2026-03-11.md`
 
 ## Fast Lock Recovery
 

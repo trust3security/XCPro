@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -41,12 +40,9 @@ import com.example.xcpro.forecast.clampSkySightSatelliteHistoryFrames
 import com.example.xcpro.forecast.forecastRegionLabel
 import kotlin.math.roundToInt
 
-/**
- * Forecast overlay controls content extracted for global file-size compliance.
- */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-internal fun ForecastOverlayControlsContent(
+fun ForecastOverlayControlsContent(
     uiState: ForecastOverlayUiState,
     onEnabledChanged: (Boolean) -> Unit,
     onPrimaryParameterToggled: (ForecastParameterId) -> Unit,
