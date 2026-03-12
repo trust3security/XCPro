@@ -43,7 +43,6 @@ import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.TrafficMapCoordinate
-import com.example.xcpro.map.WeGlideUploadPromptUiState
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ballast.BallastCommand
@@ -52,10 +51,12 @@ import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
+import com.example.xcpro.convertQnhInputToHpa
 import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.weather.rain.WeatherOverlayViewModel
+import com.example.xcpro.weglide.ui.WeGlideUploadPromptUiState
 import java.util.Locale
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.maps.MapLibreMap
@@ -219,6 +220,57 @@ internal fun MapScreenContent(
         qnhError = null
         showQnhDialog = true
     }
+    val qnhDialogInputs = MapQnhDialogInputs(
+        visible = showQnhDialog,
+        input = qnhInput,
+        error = qnhError,
+        unitsPreferences = unitsPreferences,
+        liveFlightData = liveFlightData,
+        calibrationState = qnhCalibrationState,
+        onInputChange = {
+            qnhInput = it
+            qnhError = null
+        },
+        onConfirm = { parsed ->
+            onSetManualQnh(convertQnhInputToHpa(parsed, unitsPreferences))
+            showQnhDialog = false
+            qnhError = null
+        },
+        onInvalidInput = { error ->
+            qnhError = error
+        },
+        onAutoCalibrate = {
+            onAutoCalibrateQnh()
+            showQnhDialog = false
+            qnhError = null
+        },
+        onDismiss = {
+            showQnhDialog = false
+            qnhError = null
+        }
+    )
+    val auxiliaryPanelsInputs = MapAuxiliaryPanelsInputs(
+        mapState = mapState,
+        density = density,
+        tappedWindArrowCallout = tappedWindArrowCallout,
+        forecastWindUnitLabel = forecastOverlayState.windLegend?.unitLabel
+            ?.takeIf { label -> label.isNotBlank() }
+            ?: DEFAULT_WIND_SPEED_UNIT_LABEL,
+        windTapLabelSize = windTapLabelSize,
+        onWindTapLabelSizeChanged = { windTapLabelSize = it },
+        overlayViewportSize = overlayViewportSize,
+        forecastPointCallout = forecastPointCallout,
+        forecastSelectedRegionCode = forecastOverlayState.selectedRegionCode,
+        onDismissForecastPointCallout = forecastViewModel::clearPointCallout,
+        forecastQueryStatus = forecastQueryStatus,
+        onDismissForecastQueryStatus = forecastViewModel::clearQueryStatus,
+        qnhDialog = qnhDialogInputs,
+        weGlidePrompt = MapWeGlidePromptInputs(
+            prompt = weGlideUploadPrompt,
+            onConfirm = onConfirmWeGlideUploadPrompt,
+            onDismiss = onDismissWeGlideUploadPrompt
+        )
+    )
     LaunchedEffect(currentMapStyleName) {
         if (!currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)) {
             lastNonSatelliteMapStyleName = currentMapStyleName
@@ -407,32 +459,7 @@ internal fun MapScreenContent(
             onTransientMapStyleSelected = onTransientMapStyleSelected
         )
 
-        MapAuxiliaryPanelsAndSheetsSection(
-            mapState = mapState,
-            density = density,
-            tappedWindArrowCallout = tappedWindArrowCallout,
-            forecastOverlayState = forecastOverlayState,
-            windTapLabelSize = windTapLabelSize,
-            setWindTapLabelSize = { windTapLabelSize = it },
-            overlayViewportSize = overlayViewportSize,
-            forecastPointCallout = forecastPointCallout,
-            forecastQueryStatus = forecastQueryStatus,
-            forecastViewModel = forecastViewModel,
-            showQnhDialog = showQnhDialog,
-            qnhInput = qnhInput,
-            qnhError = qnhError,
-            unitsPreferences = unitsPreferences,
-            liveFlightData = liveFlightData,
-            qnhCalibrationState = qnhCalibrationState,
-            weGlideUploadPrompt = weGlideUploadPrompt,
-            setQnhInput = { qnhInput = it },
-            setQnhError = { qnhError = it },
-            setShowQnhDialog = { showQnhDialog = it },
-            onSetManualQnh = onSetManualQnh,
-            onAutoCalibrateQnh = onAutoCalibrateQnh,
-            onConfirmWeGlideUploadPrompt = onConfirmWeGlideUploadPrompt,
-            onDismissWeGlideUploadPrompt = onDismissWeGlideUploadPrompt
-        )
+        MapAuxiliaryPanelsAndSheetsSection(inputs = auxiliaryPanelsInputs)
         MapTrafficRuntimeLayer(
             traffic = trafficBinding,
             runtimeState = trafficRuntimeState,

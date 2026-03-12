@@ -44,7 +44,7 @@ class FlightDisplayMapper {
             varioValid = metrics.varioValid,
             teVario = metrics.teVario?.let { VerticalSpeedMs(it) },
             pressureAltitude = AltitudeM(metrics.pressureAltitude),
-            // navAltitude is QNH/GPS chosen; expose via baroAltitude for UI parity if needed later
+            navAltitude = AltitudeM(metrics.navAltitude),
             baroGpsDelta = metrics.baroGpsDelta?.let { AltitudeM(it) },
             baroConfidence = metrics.baroConfidence,
             qnhCalibrationAgeSeconds = metrics.qnhCalibrationAgeSeconds,

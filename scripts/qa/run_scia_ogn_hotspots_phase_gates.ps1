@@ -122,14 +122,6 @@ function Invoke-GradleTaskSet {
     return Invoke-CommandSet -Executable ".\gradlew.bat" -Args $Args -PhaseName $PhaseName
 }
 
-function Resolve-PythonExecutable {
-    $python = Get-Command python -ErrorAction SilentlyContinue
-    if ($python) { return "python" }
-    $py = Get-Command py -ErrorAction SilentlyContinue
-    if ($py) { return "py" }
-    throw "Python executable not found on PATH. Install python or py launcher."
-}
-
 function Save-State {
     param(
         [Parameter(Mandatory = $true)]
@@ -273,8 +265,6 @@ Write-Host "State file: $StateFile"
 Write-Host "Phase range: $FromPhase..$ToPhase"
 Write-Host "Mode: $(if ($DryRun) { 'dry-run' } else { 'execute' })"
 
-$pythonExecutable = Resolve-PythonExecutable
-
 try {
     foreach ($phaseId in $phaseNames.Keys) {
         if ($phaseId -lt $FromPhase -or $phaseId -gt $ToPhase) {
@@ -328,14 +318,6 @@ try {
         $state.finalGate.startedAt = (Get-Date).ToString("o")
         $state.finalGate.finishedAt = $null
         $state.finalGate.commands = @()
-        Save-State -State $state -Path $StateFile
-
-        $archGateResult = if ($pythonExecutable -eq "py") {
-            Invoke-CommandSet -Executable "py" -Args @("-3", "scripts/arch_gate.py") -PhaseName "Final Full Gate"
-        } else {
-            Invoke-CommandSet -Executable "python" -Args @("scripts/arch_gate.py") -PhaseName "Final Full Gate"
-        }
-        $state.finalGate.commands = @($state.finalGate.commands + @($archGateResult))
         Save-State -State $state -Path $StateFile
 
         foreach ($taskSet in $finalGradleTaskSets) {

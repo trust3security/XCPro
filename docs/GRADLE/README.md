@@ -46,8 +46,8 @@ No helper retry wrapper is used in these fast loops.
 The local speed scripts now default to compile-only loops:
 
 - `preflight.bat`: rules + assemble only
-- `check-quick.bat`: rules + assemble only (tests only when passed as explicit args)
-- `auto-test.bat`: rules + assemble only
+- `check-quick.bat`: `enforceArchitectureFast` + assemble only (tests only when passed as explicit args)
+- `auto-test.bat`: `enforceArchitectureFast` + assemble only
 
 To add tests, pass Gradle args explicitly:
 

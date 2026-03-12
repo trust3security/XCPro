@@ -4,36 +4,32 @@ import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.flightdata.FlightDataRepository
-import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.sensors.CompleteFlightData
+import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
+import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.glide.FinalGlideUseCase
+import com.example.xcpro.glide.GlideTargetRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
-import com.example.xcpro.gestures.TaskGestureCallbacks
-import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.thermalling.ThermallingModeAction
 import com.example.xcpro.thermalling.ThermallingModeCoordinator
 import com.example.xcpro.thermalling.ThermallingModeInput
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import com.example.xcpro.thermalling.ThermallingModeSettings
 import com.example.xcpro.thermalling.ThermallingModeState
-import com.example.xcpro.tasks.core.Task
-import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
-import com.example.xcpro.sensors.GpsStatus
-import com.example.xcpro.sensors.domain.FlyingState
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.MapOrientationManagerFactory
@@ -157,27 +153,6 @@ class MapWaypointsUseCase @Inject constructor(
     suspend fun loadWaypoints(): List<WaypointData> = waypointLoader.load()
 }
 
-class MapSensorsUseCase @Inject constructor(
-    private val varioServiceManager: VarioServiceManager
-) {
-    val gpsStatusFlow: StateFlow<GpsStatus> = varioServiceManager.unifiedSensorManager.gpsStatusFlow
-    val flightStateFlow: StateFlow<FlyingState> = varioServiceManager.flightStateSource.flightState
-
-    fun setFlightMode(mode: com.example.xcpro.common.flight.FlightMode) {
-        varioServiceManager.setFlightMode(mode)
-    }
-
-    suspend fun startSensors(): Boolean = varioServiceManager.start()
-
-    fun stopSensors() {
-        varioServiceManager.stop()
-    }
-
-    fun sensorStatus(): SensorStatus = varioServiceManager.unifiedSensorManager.getSensorStatus()
-
-    fun isGpsEnabled(): Boolean = varioServiceManager.unifiedSensorManager.isGpsEnabled()
-}
-
 class MapVarioPreferencesUseCase @Inject constructor(
     private val repository: LevoVarioPreferencesRepository
 ) {
@@ -193,57 +168,11 @@ class MapOrientationSettingsUseCase @Inject constructor(
     }
 }
 
-data class TaskRenderSnapshot(
-    val task: Task,
-    val taskType: TaskType,
-    val aatEditWaypointIndex: Int?
-)
-
-class MapTasksUseCase @Inject constructor(
-    private val taskManager: TaskManagerCoordinator
-) {
-    val taskTypeFlow: StateFlow<TaskType> = taskManager.taskTypeFlow
-
-    suspend fun loadSavedTasks() {
-        taskManager.loadSavedTasks()
-    }
-
-    fun createGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler {
-        return taskManager.createGestureHandler(callbacks)
-    }
-
-    fun enterAATEditMode(waypointIndex: Int) {
-        taskManager.enterAATEditMode(waypointIndex)
-    }
-
-    fun exitAATEditMode() {
-        taskManager.exitAATEditMode()
-    }
-
-    fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
-        taskManager.updateAATTargetPoint(index, lat, lon)
-    }
-
-    fun clearTask() {
-        taskManager.clearTask()
-    }
-
-    suspend fun saveTask(taskName: String): Boolean = taskManager.saveTask(taskName)
-
-    fun currentTaskSnapshot(): Task = taskManager.currentTask
-
-    fun currentWaypointCount(): Int = taskManager.currentTask.waypoints.size
-
-    fun taskRenderSnapshot(): TaskRenderSnapshot = TaskRenderSnapshot(
-        task = taskManager.currentTask,
-        taskType = taskManager.taskType,
-        aatEditWaypointIndex = taskManager.getAATEditWaypointIndex()
-    )
-}
-
 class MapReplayUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator,
     private val taskNavigationController: TaskNavigationController,
+    private val glideTargetRepository: GlideTargetRepository,
+    private val finalGlideUseCase: FinalGlideUseCase,
     private val controller: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder
 ) {
@@ -263,6 +192,7 @@ class MapReplayUseCase @Inject constructor(
         hawkVarioUiStateFlow: StateFlow<com.example.xcpro.hawk.HawkVarioUiState>,
         flightDataManager: FlightDataManager,
         mapStateStore: MapStateReader,
+        trailSettingsFlow: StateFlow<TrailSettings>,
         liveDataReady: MutableStateFlow<Boolean>,
         containerReady: MutableStateFlow<Boolean>,
         uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -275,10 +205,13 @@ class MapReplayUseCase @Inject constructor(
         hawkVarioUiStateFlow = hawkVarioUiStateFlow,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
+        trailSettingsFlow = trailSettingsFlow,
         liveDataReady = liveDataReady,
         containerReady = containerReady,
         uiEffects = uiEffects,
         igcReplayController = controller,
+        glideTargetFlow = glideTargetRepository.finishTarget,
+        finalGlideUseCase = finalGlideUseCase,
         trailUpdates = trailUpdates
     )
 

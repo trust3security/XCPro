@@ -8,6 +8,7 @@ import com.example.xcpro.common.units.PressureUnit
 import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.HeadingResolverInput
@@ -54,10 +55,11 @@ fun formatBaroGpsDelta(
 }
 
 
-fun convertToRealTimeFlightData(
+internal fun convertToRealTimeFlightData(
     completeData: CompleteFlightData,
     windState: WindState?,
     isFlying: Boolean,
+    glideSolution: GlideSolution? = null,
     hawkVarioUiState: HawkVarioUiState = HawkVarioUiState(),
     flightTime: String = "00:00",
     lastUpdateTimeMillis: Long = completeData.timestamp
@@ -118,6 +120,7 @@ fun convertToRealTimeFlightData(
         audioVario = completeData.audioVario.value,
         agl = completeData.agl.value,
         pressureAltitude = completeData.pressureAltitude.value,
+        navAltitude = completeData.navAltitude.value,
         baroGpsDelta = completeData.baroGpsDelta?.value,
         baroConfidence = completeData.baroConfidence,
         qnhCalibrationAgeSeconds = completeData.qnhCalibrationAgeSeconds,
@@ -192,6 +195,13 @@ fun convertToRealTimeFlightData(
         speedToFlyValid = completeData.speedToFlyValid,
         speedToFlyMcSourceAuto = completeData.speedToFlyMcSourceAuto,
         speedToFlyHasPolar = completeData.speedToFlyHasPolar,
+        requiredGlideRatio = glideSolution?.requiredGlideRatio ?: Double.NaN,
+        arrivalHeightM = glideSolution?.arrivalHeightMeters ?: Double.NaN,
+        requiredAltitudeM = glideSolution?.requiredAltitudeMeters ?: Double.NaN,
+        arrivalHeightMc0M = glideSolution?.arrivalHeightMc0Meters ?: Double.NaN,
+        taskFinishDistanceRemainingM = glideSolution?.distanceRemainingMeters ?: Double.NaN,
+        glideSolutionValid = glideSolution?.valid ?: false,
+        glideInvalidReason = glideSolution?.invalidReason?.name.orEmpty(),
         hawkVarioSmoothedMps = hawkVarioUiState.varioSmoothedMps?.toDouble(),
         hawkVarioRawMps = hawkVarioUiState.varioRawMps?.toDouble(),
         hawkAccelOk = hawkVarioUiState.accelOk,

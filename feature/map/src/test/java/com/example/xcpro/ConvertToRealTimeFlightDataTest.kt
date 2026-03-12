@@ -7,6 +7,7 @@ import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.CompleteFlightData
@@ -63,6 +64,7 @@ class ConvertToRealTimeFlightDataTest {
             varioSource = "TE",
             varioValid = true,
             pressureAltitude = AltitudeM(1100.0),
+            navAltitude = AltitudeM(1190.0),
             baroGpsDelta = AltitudeM(5.0),
             baroConfidence = ConfidenceLevel.HIGH,
             qnhCalibrationAgeSeconds = 12L,
@@ -93,6 +95,14 @@ class ConvertToRealTimeFlightDataTest {
             completeData = complete,
             windState = null,
             isFlying = true,
+            glideSolution = GlideSolution(
+                valid = true,
+                requiredGlideRatio = 28.4,
+                arrivalHeightMeters = 130.0,
+                requiredAltitudeMeters = 1_070.0,
+                arrivalHeightMc0Meters = 170.0,
+                distanceRemainingMeters = 12_345.0
+            ),
             flightTime = "12:34",
             lastUpdateTimeMillis = 9_999L
         )
@@ -102,10 +112,15 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(1200.0, result.baroAltitude, 1e-6)
         assertEquals(1015.0, result.qnh, 1e-6)
         assertEquals(true, result.isQNHCalibrated)
+        assertEquals(1190.0, result.navAltitude, 1e-6)
         assertEquals(2.5f, result.thermalAverage, 1e-6f)
         assertEquals(0.9, result.nettoAverage30s, 1e-6)
         assertEquals(38f, result.polarLdCurrentSpeed, 1e-6f)
         assertEquals(44f, result.polarBestLd, 1e-6f)
+        assertEquals(28.4, result.requiredGlideRatio, 1e-6)
+        assertEquals(130.0, result.arrivalHeightM, 1e-6)
+        assertEquals(1_070.0, result.requiredAltitudeM, 1e-6)
+        assertEquals(170.0, result.arrivalHeightMc0M, 1e-6)
         assertEquals("12:34", result.flightTime)
         assertEquals(12_345L, result.timestamp)
         assertEquals(9_999L, result.lastUpdateTime)

@@ -13,14 +13,6 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Resolve-PythonExecutable {
-    $python = Get-Command python -ErrorAction SilentlyContinue
-    if ($python) { return "python" }
-    $py = Get-Command py -ErrorAction SilentlyContinue
-    if ($py) { return "py" }
-    throw "Python executable not found on PATH. Install python or py launcher."
-}
-
 function Test-ConnectedDevice {
     $adb = Get-Command adb -ErrorAction SilentlyContinue
     if (-not $adb) { return $false }
@@ -249,16 +241,8 @@ if ($RunConnectedAppTests -or $RunConnectedAllModulesAtEnd) {
 }
 
 $commandResults = New-Object System.Collections.Generic.List[object]
-$pythonExecutable = Resolve-PythonExecutable
 
 if (-not $SkipRequiredGates) {
-    if ($pythonExecutable -eq "py") {
-        $archGate = Invoke-CommandWithCapture -Executable "py" -Args @("-3", "scripts/arch_gate.py") -CommandLabel "arch_gate"
-    } else {
-        $archGate = Invoke-CommandWithCapture -Executable "python" -Args @("scripts/arch_gate.py") -CommandLabel "arch_gate"
-    }
-    $commandResults.Add($archGate) | Out-Null
-
     $commandResults.Add((Invoke-Gradle -Args @("enforceRules") -Label "enforceRules")) | Out-Null
 
     $unitResult = Invoke-Gradle -Args @("testDebugUnitTest") -Label "testDebugUnitTest" -NoThrow
@@ -465,7 +449,8 @@ if ($config.Contains("determinism_ids")) {
 }
 
 $archGateText = @"
-command: python scripts/arch_gate.py
+command: ./gradlew enforceRules
+arch_gate_owner: included_in_enforceRules
 result: $(if ($SkipRequiredGates) { "SKIPPED" } else { "PASS" })
 captured_at: $generatedAt
 commit_sha: $sha

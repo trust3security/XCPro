@@ -26,7 +26,7 @@ class BlueLocationOverlay(
     companion object {
         private const val TAG = "SailplaneLocationOverlay"
         private const val SOURCE_ID = "aircraft-location-source"
-        internal const val LAYER_ID = "aircraft-location-layer"
+        internal const val LAYER_ID = MAP_BLUE_LOCATION_LAYER_ID
         private const val ICON_ID = "aircraft-location-icon"
         internal const val ICON_SIZE_PX = 144 // Bitmap size in pixels (3x larger = 300% increase)
     }

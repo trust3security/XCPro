@@ -34,7 +34,11 @@ Sensors
   -> FlightDataRepository (SSOT, Source gating)
   -> FlightDataUseCase
   -> MapScreenViewModel
-     -> FlightDataUiAdapter (MapScreenObservers) -> convertToRealTimeFlightData -> FlightDataManager
+     -> FlightDataUiAdapter (MapScreenObservers)
+        + GlideTargetRepository.finishTarget
+        + FinalGlideUseCase
+        -> convertToRealTimeFlightData
+        -> FlightDataManager
      -> mapLocation (GPS) for map UI
   -> UI overlays + dfcards FlightDataViewModel (cards)
 
@@ -197,6 +201,11 @@ Flight-state detector feed:
 Use case:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
   - `FlightDataUseCase` exposes `FlightDataRepository.flightData`.
+  - `MapReplayUseCase` now also injects:
+    - `GlideTargetRepository`
+    - `FinalGlideUseCase`
+  - It passes `glideTargetRepository.finishTarget` plus `finalGlideUseCase` into
+    `FlightDataUiAdapter`.
 
 ViewModel:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
@@ -214,24 +223,37 @@ ViewModel:
 
 Observers:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` (wrapped by `FlightDataUiAdapter`)
-  - Combines flight data + wind + flying state.
+  - Combines flight data + wind + flying state + racing finish-glide target.
   - Projects replay session state through a semantic selection-presence gate
     (`mapReplaySelectionActive()` -> `distinctUntilChanged`) before joining
     the main observer combine path.
-  - Converts `CompleteFlightData` to `RealTimeFlightData`.
+  - Solves task-finish glide through `FinalGlideUseCase` before mapping.
+  - Converts `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
   - Pushes to `FlightDataManager` and trail processor.
   - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
 
 Mapping for cards:
 - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
   - `convertToRealTimeFlightData(...)` maps SSOT to card-friendly model.
-  - Flight-only polar metrics currently mapped for cards:
+  - Flight-only polar metrics mapped for cards:
     - `currentLD`
     - `polarLdCurrentSpeed`
     - `polarBestLd`
     - `netto`
     - `levoNetto`
     - `speedToFlyIas`
+  - Task-finish glide fields now mapped for cards:
+    - `navAltitude`
+    - `requiredGlideRatio`
+    - `arrivalHeightM`
+    - `requiredAltitudeM`
+    - `arrivalHeightMc0M`
+    - `taskFinishDistanceRemainingM`
+    - `glideSolutionValid`
+    - `glideInvalidReason`
+  - Semantics:
+    - `ld_curr`, `polar_ld`, `best_ld` remain flight-only
+    - `final_gld`, `arr_alt`, `req_alt`, `arr_mc0` are racing-task finish cards
 
 UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
@@ -479,17 +501,17 @@ Forecast overlay (SkySight-backed) path:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
   - Forwards forecast/wind/satellite runtime intent (`enabled`, tile/legend specs, display mode, animation, frame count, selected time)
     to map overlay runtime owner with loading-vs-clear transition policy.
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
   - Runtime owner for forecast raster overlay lifecycle and style-reload reapplication.
   - Hosts forecast runtime overlay instances for one non-wind layer and optional wind layer.
   - Owns SkySight satellite runtime config and style-reload reapply path.
   - Forecast apply/reapply paths are failure-isolated and surfaced via runtime warning channel.
-- `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
   - MapLibre runtime controller for forecast vector layers.
   - Uses namespace-scoped layer/source IDs so multiple forecast overlays can render together.
   - Supports indexed-fill overlays and wind-point overlays with branch-specific layer cleanup.
   - Wind-point rendering supports `ARROW` and `BARB` display modes from forecast preferences SSOT.
-- `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
   - MapLibre runtime controller for SkySight satellite imagery/radar/lightning layers.
   - Uses `satellite.skysight.io` tile templates with `date=YYYY/MM/DD/HHmm` contract and bounded history-frame loop (1-6, 10-minute steps).
 
@@ -527,8 +549,16 @@ Weather rain overlay path:
   - Collects `feature:weather` overlay state and forwards frame-based runtime updates (including transition duration) to overlay manager.
   - RainViewer enable state participates in SkySight non-wind rain arbitration through map runtime composition.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - Owns weather overlay runtime config/status and reapply behavior on map-ready/style change.
-- `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
+  - Thin shell adapter for overlay/runtime ownership.
+  - Owns shell-specific overlay lifecycle/status collaborator construction and attaches those ports to `MapOverlayManagerRuntime`.
+- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+  - Runtime owner for overlay behavior behind the shell adapter.
+  - No longer depends directly on `MapScreenState`; consumes runtime-side shell-port contracts plus leaf-owned runtime state adapters.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeShellPorts.kt`
+  - Runtime-facing contracts for shell-owned overlay lifecycle/status collaborators.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeCounters.kt`
+  - Runtime-side counters model shared between the overlay runtime owner and shell-owned status reporting.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
   - MapLibre raster source/layer runtime with per-frame cache and bounded cross-fade between frames to reduce animation stutter/blink when cycling.
 
 ## 5A) Cards (dfcards-library) sub-pipeline
@@ -538,11 +568,29 @@ Cards do not read sensors directly. They consume `RealTimeFlightData` produced b
 Current wiring:
 - `FlightDataRepository`
   -> `FlightDataUiAdapter` / `MapScreenObservers`
+  -> `FinalGlideUseCase` using `GlideTargetRepository.finishTarget`
   -> `convertToRealTimeFlightData(...)`
   -> `FlightDataManager.cardFlightDataFlow`
   -> `CardIngestionCoordinator`
   -> `dfcards` `FlightDataViewModel.updateCardsWithLiveData(...)`
   -> `CardLibrary` / `CardContainer` / `EnhancedFlightDataCard`
+
+Current finish-glide card scope:
+- live now:
+  - `final_gld`
+  - `arr_alt`
+  - `req_alt`
+  - `arr_mc0`
+- still placeholder-only:
+  - `wpt_dist`
+  - `wpt_brg`
+  - `wpt_eta`
+  - `task_spd`
+  - `task_dist`
+  - `start_alt`
+- current MVP limitation:
+  - finish-glide validity currently requires a racing finish altitude rule
+    (`RacingFinishCustomParams.minAltitudeMeters`)
 
 Card configuration + hydration (current):
 - `MapComposeEffects.prepareCardsForProfile(...)` binds profile/mode + container size (density).
@@ -554,6 +602,20 @@ Card configuration + hydration (current):
 - `MapScreenViewModel.cardHydrationReady = containerReady && liveDataReady`;
   `CardIngestionCoordinator` gates updates and consumes the buffered sample when ready.
 - `CardContainer` injects `CardStrings` / `CardTimeFormatter`; `CardIngestionCoordinator` pushes units prefs.
+- Map runtime-facing state contracts are now carried through dedicated top-level map-state
+  types (`MapPoint`, `MapSize`, `CameraSnapshot`) in `feature/map-runtime`.
+- `MapStateReader` / `MapStateActions` now live in `feature/map-runtime` as the
+  runtime-facing map-state contracts, while `TrailSettings` remains outside that contract;
+  shell/runtime trail wiring is threaded separately from `MapScreenViewModel.trailSettings`.
+- `MapTasksUseCase`, `TaskRenderSyncCoordinator`, `MapFeatureFlags`, and map UI model
+  types now live in `feature/map-runtime` as part of the retained shell/runtime split.
+- `DisplayPoseSnapshot` now lives in `feature/map-runtime` as the runtime-facing
+  display-pose frame contract used by shell effects and trail/runtime consumers.
+- `MapSensorsUseCase` remains in `feature:map` for now because it still depends on the
+  shell-owned `VarioServiceManager`.
+- `MapLifecycleEffects` now lives in its own shell file in `feature:map`, while
+  `MapLifecycleManager` remains the runtime-side lifecycle owner pending later
+  manager extraction work.
 
 Card cadence (current):
 - `FlightDataManager.cardFlightDataFlow`: bucketed, unthrottled (near pass-through).
@@ -612,7 +674,7 @@ Module ownership after compile-speed extraction (2026-03-12):
 - `feature:map` retains the task compatibility and MapLibre shell:
   - app task route wrappers
   - `TaskMapRenderRouter`
-  - `TaskRenderSyncCoordinator`
+  - `TaskRenderSyncCoordinator` from `feature/map-runtime`
   - map task overlays, bottom-sheet/task wrapper shells, and MapLibre render/edit surfaces
   - wrapper hosts such as `TaskTopDropdownPanel`, `SwipeableTaskBottomSheet`, `RacingManageBTTab`, and `AATManageContent`
 - `app` still owns the singleton task graph providers and now depends directly on `feature:tasks`.
@@ -633,7 +695,7 @@ Task map rendering bridge (2026-02-12):
 - `TaskManagerCoordinator` no longer stores a map instance.
 - `TaskManagerCoordinator` AAT edit/target APIs are map-agnostic (no `MapLibreMap` parameters).
 - Single trigger owner for map task redraw:
-  - `feature/map/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt`
+  - `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt`
   - Trigger sources emit coordinator events from:
     - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt` (task state changes)
     - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` (map ready)

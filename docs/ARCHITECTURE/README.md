@@ -46,9 +46,9 @@ Compliance is tracked in `KNOWN_DEVIATIONS.md`.
 This README intentionally does not duplicate deviation status.
 Refactor checklist: `../refactor/Agent-Execution-Contract-LevoCompliance.md`.
 
-CI rule enforcement (local):
+Repository rule script (local debugging only):
 ```
-pwsh scripts/ci/enforce_rules.ps1
+pwsh scripts/ci/enforce_rules.ps1 -RuleSet RepositoryFull
 ```
 
 Gradle task (local):
@@ -56,14 +56,13 @@ Gradle task (local):
 gradlew enforceRules
 ```
 
-Preflight (rules + build + unit tests):
+Preflight (rules + build):
 ```
 preflight.bat
 ```
 
 How to validate locally:
 ```bash
-python scripts/arch_gate.py
 ./gradlew enforceRules
 ./gradlew testDebugUnitTest
 ./gradlew assembleDebug

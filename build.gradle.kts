@@ -13,6 +13,7 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.testretry.TestRetryTaskExtension
 
 val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+val pythonCommand = providers.environmentVariable("PYTHON").orNull ?: "python"
 val configuredMaxParallelForks = providers.gradleProperty("xcpro.test.maxParallelForks")
     .orNull
     ?.toIntOrNull()
@@ -40,6 +41,20 @@ val flakyRobolectricAllowlistProvider = providers.provider {
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() && !it.startsWith("#") }
         ?: emptyList()
+}
+
+fun Exec.configurePowerShellScript(scriptPath: String, vararg scriptArgs: String) {
+    workingDir = rootDir
+    if (isWindows) {
+        commandLine("powershell", "-ExecutionPolicy", "Bypass", "-File", scriptPath, *scriptArgs)
+    } else {
+        commandLine("pwsh", "-File", scriptPath, *scriptArgs)
+    }
+}
+
+fun Exec.configurePythonScript(scriptPath: String, vararg scriptArgs: String) {
+    workingDir = rootDir
+    commandLine(pythonCommand, scriptPath, *scriptArgs)
 }
 
 subprojects {
@@ -71,12 +86,40 @@ subprojects {
     }
 }
 
-tasks.register<Exec>("enforceRules") {
+tasks.register<Exec>("archGate") {
     group = "verification"
-    description = "Enforce architecture/coding rules via scripts/ci/enforce_rules.ps1."
-    if (isWindows) {
-        commandLine("powershell", "-ExecutionPolicy", "Bypass", "-File", "scripts/ci/enforce_rules.ps1")
-    } else {
-        commandLine("pwsh", "-File", "scripts/ci/enforce_rules.ps1")
-    }
+    description = "Enforce architecture invariants via scripts/arch_gate.py."
+    configurePythonScript("scripts/arch_gate.py")
+}
+
+tasks.register<Exec>("enforceArchitectureRepoRules") {
+    group = "verification"
+    description = "Enforce the architecture-focused subset of scripts/ci/enforce_rules.ps1."
+    configurePowerShellScript("scripts/ci/enforce_rules.ps1", "-RuleSet", "ArchitectureFast")
+}
+
+tasks.named("enforceArchitectureRepoRules") {
+    mustRunAfter("archGate")
+}
+
+tasks.register("enforceArchitectureFast") {
+    group = "verification"
+    description = "Run arch_gate.py plus the architecture-focused subset of enforce_rules.ps1."
+    dependsOn("archGate", "enforceArchitectureRepoRules")
+}
+
+tasks.register<Exec>("enforceRepositoryRules") {
+    group = "verification"
+    description = "Enforce the full repository rule set via scripts/ci/enforce_rules.ps1."
+    configurePowerShellScript("scripts/ci/enforce_rules.ps1", "-RuleSet", "RepositoryFull")
+}
+
+tasks.named("enforceRepositoryRules") {
+    mustRunAfter("archGate")
+}
+
+tasks.register("enforceRules") {
+    group = "verification"
+    description = "Run arch_gate.py plus the full repository rule set."
+    dependsOn("archGate", "enforceRepositoryRules")
 }

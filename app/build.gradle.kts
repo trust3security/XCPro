@@ -90,6 +90,7 @@ dependencies {
     implementation(project(":feature:igc"))
     implementation(project(":feature:profile"))
     implementation(project(":feature:map"))
+    implementation(project(":feature:tasks"))
     implementation(project(":feature:traffic"))
     implementation(project(":feature:variometer"))
     implementation(project(":feature:weglide"))

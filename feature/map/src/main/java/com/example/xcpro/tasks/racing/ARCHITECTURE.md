@@ -1,7 +1,13 @@
 # Racing Task Module - Architecture Documentation
 
-**Last Updated:** 2025-10-01
+**Last Updated:** 2026-03-12
 **Module Status:** ... Well-Organized & Production-Ready
+
+## Current Ownership Note
+
+- `:feature:tasks` now owns the shared racing task editor UI and task-core-facing editor atoms.
+- This folder now documents the retained racing map shell in `:feature:map`: map rendering, MapLibre integration, compatibility wrappers, and map-owned task surfaces.
+- Files moved to `:feature:tasks` during Phase 5B include `RacingWaypointList*.kt`, `racing/ui/RacingTaskPointTypeSelector.kt`, `SearchableWaypointField.kt`, and `RulesRacingTaskParameters.kt`.
 
 ---
 
@@ -44,11 +50,11 @@ tasks/racing/
 "   """ FinishLineDisplay.kt           (158 lines) - Finish line rendering
 "   """" SymmetricQuadrantCalculator.kt - Symmetric quadrant calculations
 "
-"""" ui/
-    """ RacingTaskPointTypeSelector.kt (621 lines) - Point type UI
-    """ RacingStartPointButtonSelector.kt (181 lines) - Start type picker
-    """ RacingFinishPointButtonSelector.kt (169 lines) - Finish type picker
-    """" RacingTurnPointButtonSelector.kt (182 lines) - Turn type picker
+"""" retained in :feature:tasks/
+    """ racing/RacingWaypointList.kt      - Shared racing waypoint editor UI
+    """ racing/RacingWaypointListItems.kt - Shared racing waypoint item UI
+    """ racing/ui/RacingTaskPointTypeSelector.kt - Point type UI
+    """" SearchableWaypointField.kt        - Shared waypoint search field
 ```
 
 ---
@@ -568,13 +574,12 @@ turnpoints/
 **Total Lines:** ~7,312 lines
 **Main Files:** 14 files
 **Turnpoint Types:** 10 files (5 calculator + 5 display pairs)
-**UI Components:** 4 files
+**UI Components:** retained map-shell UI plus shared editor UI now owned by `:feature:tasks`
 **Models:** 2 files
 
-**Largest Files:**
+**Largest Files In Retained Map Shell:**
 - `KeyholeDisplay.kt` (763 lines) - Complex composite geometry
 - `RacingTaskDisplay.kt` (636 lines) - Rendering coordinator
-- `RacingTaskPointTypeSelector.kt` (621 lines) - UI component
 - `RacingManageBTTab.kt` (471 lines) - Bottom tab UI
 - `RacingTask.kt` (451 lines) - Data model
 - `FAIQuadrantDisplay.kt` (446 lines) - FAI sector rendering

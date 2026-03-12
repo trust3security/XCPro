@@ -1,10 +1,7 @@
 package com.example.xcpro.map
 
 import android.util.Log
-import androidx.compose.runtime.*
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -139,7 +136,7 @@ class MapLifecycleManager(
             val target = cameraPosition.target ?: return
             stateActions.updateCurrentZoom(cameraPosition.zoom.toFloat())
             stateActions.updateCameraSnapshot(
-                target = MapStateStore.MapPoint(target.latitude, target.longitude),
+                target = MapPoint(target.latitude, target.longitude),
                 zoom = cameraPosition.zoom,
                 bearing = cameraPosition.bearing
             )
@@ -256,47 +253,4 @@ class MapLifecycleManager(
         mapState.scaleBarPlugin = null
         mapState.scaleBarWidget = null
     }
-}
-
-/**
- * Compose lifecycle effects for MapScreen integration
- */
-object MapLifecycleEffects {
-
-    /**
-     * Main lifecycle effect that observes activity lifecycle events
-     */
-    @Composable
-    fun LifecycleObserverEffect(
-        lifecycleManager: MapLifecycleManager
-    ) {
-        val lifecycle = LocalLifecycleOwner.current.lifecycle
-
-        DisposableEffect(lifecycle, lifecycleManager) {
-            val observer = LifecycleEventObserver { _, event ->
-                lifecycleManager.handleLifecycleEvent(event)
-            }
-            lifecycle.addObserver(observer)
-            lifecycleManager.syncCurrentOwnerState(lifecycle.currentState)
-
-            onDispose {
-                lifecycle.removeObserver(observer)
-            }
-        }
-    }
-
-    /**
-     * Location tracking cleanup effect
-     */
-    @Composable
-    fun LocationCleanupEffect(
-        locationManager: LocationManager
-    ) {
-        DisposableEffect(Unit) {
-            onDispose {
-                locationManager.stopLocationTracking()
-            }
-        }
-    }
-
 }

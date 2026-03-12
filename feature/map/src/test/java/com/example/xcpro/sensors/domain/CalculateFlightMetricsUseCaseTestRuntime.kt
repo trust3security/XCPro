@@ -259,6 +259,274 @@ class CalculateFlightMetricsUseCaseTest {
     }
 
     @Test
+    fun reset_clears_primary_display_smoother_state() {
+        val useCase = newUseCase()
+        var time = 1_000L
+        repeat(12) {
+            useCase.execute(
+                FlightMetricsRequest(
+                    gps = gpsSample(time),
+                    currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
+                    deltaTimeSeconds = 0.1,
+                    varioResult = varioSample(4.0, 1_000.0 + it),
+                    varioGpsValue = 4.0,
+                    baroResult = null,
+                    windState = null,
+                    varioValidUntil = time + 1_000L,
+                    isFlying = true,
+                    macCreadySetting = 0.0,
+                    autoMcEnabled = false,
+                    flightMode = FlightMode.CRUISE
+                )
+            )
+            time += 100L
+        }
+
+        val preReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(4.0, 1_100.0),
+                varioGpsValue = 4.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(preReset.displayVario > 0.5)
+
+        useCase.reset()
+        time += 100L
+
+        val postReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.0, 1_100.0),
+                varioGpsValue = 0.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(kotlin.math.abs(postReset.displayVario) < 0.1)
+    }
+
+    @Test
+    fun reset_clears_display_needle_state() {
+        val useCase = newUseCase()
+        var time = 1_000L
+        repeat(12) {
+            useCase.execute(
+                FlightMetricsRequest(
+                    gps = gpsSample(time),
+                    currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
+                    deltaTimeSeconds = 0.1,
+                    varioResult = varioSample(4.0, 1_000.0 + it),
+                    varioGpsValue = 4.0,
+                    baroResult = null,
+                    windState = null,
+                    varioValidUntil = time + 1_000L,
+                    isFlying = true,
+                    macCreadySetting = 0.0,
+                    autoMcEnabled = false,
+                    flightMode = FlightMode.CRUISE
+                )
+            )
+            time += 100L
+        }
+
+        val preReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(4.0, 1_100.0),
+                varioGpsValue = 4.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(preReset.displayNeedleVario > 0.5)
+        assertTrue(preReset.displayNeedleVarioFast > 0.5)
+
+        useCase.reset()
+        time += 100L
+
+        val postReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.0, 1_100.0),
+                varioGpsValue = 0.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(kotlin.math.abs(postReset.displayNeedleVario) < 0.1)
+        assertTrue(kotlin.math.abs(postReset.displayNeedleVarioFast) < 0.1)
+    }
+
+    @Test
+    fun ground_zero_settles_to_zero_when_stationary_on_ground() {
+        val useCase = newUseCase()
+        var time = 1_000L
+        var first = true
+        var result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(timeMs = time, speedMs = 0.0),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 1.0,
+                varioResult = varioSample(0.02, 1_000.0),
+                varioGpsValue = 0.02,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = false,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        if (first) {
+            assertTrue(result.displayVario > 0.0)
+            first = false
+        }
+
+        repeat(3) {
+            time += 1_000L
+            result = useCase.execute(
+                FlightMetricsRequest(
+                    gps = gpsSample(timeMs = time, speedMs = 0.0),
+                    currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
+                    deltaTimeSeconds = 1.0,
+                    varioResult = varioSample(0.02, 1_000.0),
+                    varioGpsValue = 0.02,
+                    baroResult = null,
+                    windState = null,
+                    varioValidUntil = time + 1_000L,
+                    isFlying = false,
+                    macCreadySetting = 0.0,
+                    autoMcEnabled = false,
+                    flightMode = FlightMode.CRUISE
+                )
+            )
+        }
+
+        assertEquals(0.0, result.displayVario, 1e-6)
+    }
+
+    @Test
+    fun reset_clears_display_netto_state() {
+        val nettoValue = doubleArrayOf(3.0)
+        val useCase = newUseCaseWithDynamicNetto(nettoProvider = { nettoValue[0] })
+        var time = 1_000L
+
+        repeat(12) {
+            useCase.execute(
+                FlightMetricsRequest(
+                    gps = gpsSample(time),
+                    currentTimeMillis = time,
+                    wallTimeMillis = time,
+                    gpsTimestampMillis = time,
+                    deltaTimeSeconds = 0.1,
+                    varioResult = varioSample(0.0, 1_000.0),
+                    varioGpsValue = 0.0,
+                    baroResult = null,
+                    windState = null,
+                    varioValidUntil = time + 1_000L,
+                    isFlying = true,
+                    macCreadySetting = 0.0,
+                    autoMcEnabled = false,
+                    flightMode = FlightMode.CRUISE
+                )
+            )
+            time += 100L
+        }
+
+        val preReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.0, 1_000.0),
+                varioGpsValue = 0.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(preReset.displayNetto > 0.5)
+
+        useCase.reset()
+        nettoValue[0] = 0.0
+        time += 100L
+
+        val postReset = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(time),
+                currentTimeMillis = time,
+                wallTimeMillis = time,
+                gpsTimestampMillis = time,
+                deltaTimeSeconds = 0.1,
+                varioResult = varioSample(0.0, 1_000.0),
+                varioGpsValue = 0.0,
+                baroResult = null,
+                windState = null,
+                varioValidUntil = time + 1_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+        assertTrue(kotlin.math.abs(postReset.displayNetto) < 0.1)
+    }
+
+    @Test
     fun tc30s_ignores_single_spike() {
         val useCase = newUseCase()
         var time = 0L
@@ -616,6 +884,41 @@ private fun newUseCaseWithDynamicThermal(
     return CalculateFlightMetricsUseCase(
         flightHelpers = helpers,
         sinkProvider = sinkProvider,
+        windEstimator = WindEstimator()
+    )
+}
+
+private fun newUseCaseWithDynamicNetto(
+    nettoProvider: () -> Double,
+    nettoValidProvider: () -> Boolean = { true }
+): CalculateFlightMetricsUseCase {
+    val sink = mock<StillAirSinkProvider> {
+        on { sinkAtSpeed(any()) }.thenReturn(0.0)
+        on { iasBoundsMs() }.thenReturn(null)
+        on { ldAtSpeed(any()) }.thenReturn(null)
+        on { bestLd() }.thenReturn(null)
+    }
+    val helpers = mock<FlightCalculationHelpers>()
+    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenAnswer {
+        FlightCalculationHelpers.NettoComputation(nettoProvider(), nettoValidProvider())
+    }
+    whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer { invocation ->
+        invocation.getArgument<Double>(0)
+    }
+    whenever(helpers.calculateCurrentLD(any(), any(), any())).thenReturn(0f)
+    whenever(helpers.updateThermalState(any(), any(), any(), any(), any())).thenAnswer { }
+    whenever(helpers.updateAGL(any(), any(), any())).thenAnswer { }
+    whenever(helpers.recordLocationSample(any(), any())).thenAnswer { }
+    whenever(helpers.thermalAverageCurrent).thenReturn(0f)
+    whenever(helpers.thermalAverageTotal).thenReturn(0f)
+    whenever(helpers.thermalGainCurrent).thenReturn(0.0)
+    whenever(helpers.thermalGainValid).thenReturn(false)
+    whenever(helpers.currentThermalLiftRate).thenReturn(0.0)
+    whenever(helpers.currentThermalValid).thenReturn(false)
+
+    return CalculateFlightMetricsUseCase(
+        flightHelpers = helpers,
+        sinkProvider = sink,
         windEstimator = WindEstimator()
     )
 }

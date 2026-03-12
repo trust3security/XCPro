@@ -147,7 +147,7 @@ class MapInitializer(
         // Keep Compose overlays (distance circles) in sync from the first frame.
         stateActions.updateCurrentZoom(zoomToUse.toFloat())
         stateActions.updateCameraSnapshot(
-            target = MapStateStore.MapPoint(targetLatLng.latitude, targetLatLng.longitude),
+            target = MapPoint(targetLatLng.latitude, targetLatLng.longitude),
             zoom = zoomToUse,
             bearing = bearingToUse
         )
@@ -243,7 +243,7 @@ class MapInitializer(
                 val target = cameraPosition.target
                 if (target != null) {
                     stateActions.updateCameraSnapshot(
-                        target = MapStateStore.MapPoint(target.latitude, target.longitude),
+                        target = MapPoint(target.latitude, target.longitude),
                         zoom = currentZoom,
                         bearing = cameraPosition.bearing
                     )

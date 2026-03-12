@@ -37,7 +37,7 @@ class FlightTemplatesDefaultsTest {
 
     @Test
     fun builtInTemplates_do_not_ship_placeholder_only_glide_or_task_cards() {
-        val placeholderOnly = setOf("final_gld", "wpt_dist", "wpt_brg", "wpt_eta", "task_spd", "task_dist", "start_alt")
+        val placeholderOnly = setOf("wpt_dist", "wpt_brg", "wpt_eta", "task_spd", "task_dist", "start_alt")
         val allDefaultCardIds = FlightTemplates.getDefaultTemplates().flatMap { it.cardIds }.toSet()
 
         assertEquals(emptySet<String>(), allDefaultCardIds.intersect(placeholderOnly))

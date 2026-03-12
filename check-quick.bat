@@ -13,10 +13,10 @@ pushd "%REPO_ROOT%" >nul
 echo Running quick checks...
 echo.
 
-echo [1/3] Enforcing architecture/coding rules...
-call "%GRADLE%" enforceRules
+echo [1/3] Running fast architecture gate...
+call "%GRADLE%" enforceArchitectureFast
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Rule enforcement failed.
+    echo ERROR: Fast architecture gate failed.
     popd >nul
     exit /b 1
 )
@@ -30,7 +30,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 if "%~1"=="" (
-    echo [3/3] Skipping unit tests (compile-only mode).
+    echo [3/3] Skipping unit tests ^(compile-only mode^).
     echo To run tests, pass gradle args explicitly, e.g.
     echo   check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
     popd >nul
@@ -40,7 +40,7 @@ if "%~1"=="" (
 echo [3/3] Running requested task(s) explicitly...
 call "%GRADLE%" %*
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Requested task(s) failed.
+    echo ERROR: Requested task^(s^) failed.
     popd >nul
     exit /b 1
 )
@@ -58,7 +58,7 @@ echo   check-quick.bat [gradle test args]
 echo   Add gradle args to run tests/retry tasks explicitly.
 echo.
 echo Default behavior:
-echo   - enforceRules
+echo   - enforceArchitectureFast
 echo   - :feature:map:assembleDebug :dfcards-library:assembleDebug
 echo   - no tests unless explicit gradle args are provided
 echo.

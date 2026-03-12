@@ -2,6 +2,16 @@
 
 Date: 2026-03-12
 
+Status note:
+
+- This is the broader release plan for polar and glide-computer work.
+- Since this plan was written, XCPro has already completed the first racing-task finish-glide MVP slice:
+  - live `final_gld`
+  - live `arr_alt`
+  - live `req_alt`
+  - live `arr_mc0`
+- That executed slice and the exact current state are tracked in `06_XCPRO_TASK_AWARE_GLIDE_CARD_PLAN_2026-03-12.md`.
+
 ## 0) Metadata
 
 - Title: Polar, L/D, Final-Glide, and Card Wiring Release Plan

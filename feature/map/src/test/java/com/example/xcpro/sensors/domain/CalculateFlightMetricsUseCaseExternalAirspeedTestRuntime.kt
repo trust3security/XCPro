@@ -86,4 +86,117 @@ class CalculateFlightMetricsUseCaseExternalAirspeedTest {
 
         assertEquals("WIND", result.airspeedSourceLabel)
     }
+
+    @Test
+    fun timestamp_freshness_fallback_accepts_external_sample_when_clock_is_missing() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(10_000L),
+                currentTimeMillis = 10_000L,
+                wallTimeMillis = 10_000L,
+                gpsTimestampMillis = 10_000L,
+                deltaTimeSeconds = 0.2,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                externalAirspeedSample = airspeedSample(
+                    trueMs = 27.0,
+                    indicatedMs = 25.0,
+                    clockMillis = 0L,
+                    timestampMillis = 9_800L
+                ),
+                varioValidUntil = 12_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertEquals(25.0, result.indicatedAirspeedMs, 1e-6)
+        assertEquals(27.0, result.trueAirspeedMs, 1e-6)
+    }
+
+    @Test
+    fun invalid_external_sample_is_ignored() {
+        val useCase = newUseCase()
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 1.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(10_000L),
+                currentTimeMillis = 10_000L,
+                wallTimeMillis = 10_000L,
+                gpsTimestampMillis = 10_000L,
+                deltaTimeSeconds = 0.2,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = wind,
+                externalAirspeedSample = airspeedSample(
+                    trueMs = 26.0,
+                    indicatedMs = 24.0,
+                    clockMillis = 9_800L,
+                    valid = false
+                ),
+                varioValidUntil = 12_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("WIND", result.airspeedSourceLabel)
+    }
+
+    @Test
+    fun invalid_indicated_airspeed_falls_back_to_true_airspeed() {
+        val useCase = newUseCase()
+
+        val result = useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(10_000L),
+                currentTimeMillis = 10_000L,
+                wallTimeMillis = 10_000L,
+                gpsTimestampMillis = 10_000L,
+                deltaTimeSeconds = 0.2,
+                varioResult = varioSample(0.4, 600.0),
+                varioGpsValue = 0.4,
+                baroResult = null,
+                windState = null,
+                externalAirspeedSample = airspeedSample(
+                    trueMs = 26.0,
+                    indicatedMs = Double.NaN,
+                    clockMillis = 9_800L
+                ),
+                varioValidUntil = 12_000L,
+                isFlying = true,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                flightMode = FlightMode.CRUISE
+            )
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertEquals(26.0, result.indicatedAirspeedMs, 1e-6)
+        assertEquals(26.0, result.trueAirspeedMs, 1e-6)
+    }
 }

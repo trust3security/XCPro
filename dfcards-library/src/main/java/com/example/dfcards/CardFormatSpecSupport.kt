@@ -26,6 +26,9 @@ internal fun placeholderFor(
         KnownCardId.GPS_ALT,
         KnownCardId.BARO_ALT,
         KnownCardId.AGL,
+        KnownCardId.ARR_ALT,
+        KnownCardId.REQ_ALT,
+        KnownCardId.ARR_MC0,
         KnownCardId.START_ALT ->
             "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
         KnownCardId.FINAL_GLD,
@@ -153,6 +156,26 @@ internal fun formatAltitudeValue(value: Double, units: UnitsPreferences): String
         decimals = ALT_DECIMALS
     )
     return formatted.text
+}
+
+internal fun formatSignedAltitudeValue(value: Double, units: UnitsPreferences): String {
+    val formatted = formatAltitudeValue(value, units)
+    return if (value > 0.0) "+$formatted" else formatted
+}
+
+internal fun glideInvalidLabel(reason: String, strings: CardStrings): String {
+    return when (reason) {
+        "PRESTART" -> strings.prestart
+        "NO_FINISH_ALTITUDE",
+        "NO_ALTITUDE" -> strings.noAlt
+        "NO_POLAR" -> strings.noPolar
+        "NO_POSITION" -> strings.noData
+        "INVALID_ROUTE",
+        "INVALID_SPEED",
+        "FINISHED",
+        "INVALID" -> strings.invalid
+        else -> strings.noTask
+    }
 }
 
 internal fun RealTimeFlightData.primaryVarioValue(): Double {

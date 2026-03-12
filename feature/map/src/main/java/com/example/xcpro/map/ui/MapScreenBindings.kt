@@ -4,9 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.map.MapPoint
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapStateReader
-import com.example.xcpro.map.MapStateStore
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.replay.SessionState
@@ -30,7 +30,7 @@ internal data class MapScreenBindings(
     val traffic: MapTrafficUiBinding,
     val isAATEditMode: Boolean,
     val taskType: TaskType,
-    val savedLocation: MapStateStore.MapPoint?,
+    val savedLocation: MapPoint?,
     val savedZoom: Double?,
     val savedBearing: Double?,
     val hasInitiallyCentered: Boolean,
@@ -52,7 +52,7 @@ internal fun rememberMapScreenBindings(
     val suppressLiveGps by mapViewModel.suppressLiveGps.collectAsStateWithLifecycle()
     val allowSensorStart by mapViewModel.allowSensorStart.collectAsStateWithLifecycle()
     val locationForUi by mapViewModel.mapLocation.collectAsStateWithLifecycle()
-    val trailSettings by mapStateReader.trailSettings.collectAsStateWithLifecycle()
+    val trailSettings by mapViewModel.trailSettings.collectAsStateWithLifecycle()
     val trailUpdateResult by mapViewModel.trailUpdates.collectAsStateWithLifecycle()
     val ognTargets by mapViewModel.ognTargets.collectAsStateWithLifecycle()
     val ognSnapshot by mapViewModel.ognSnapshot.collectAsStateWithLifecycle()

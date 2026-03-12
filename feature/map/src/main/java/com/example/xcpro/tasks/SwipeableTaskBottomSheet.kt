@@ -9,9 +9,9 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -26,13 +26,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.maplibre.android.maps.MapLibreMap
 import com.example.xcpro.common.waypoint.WaypointData
-import com.example.xcpro.tasks.TaskCategory
-import com.example.xcpro.tasks.RulesBTTab
-import com.example.xcpro.tasks.ManageBTTabRouter
 import com.example.xcpro.tasks.core.TaskType
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import kotlinx.coroutines.launch
 
 // Calculate waypoint item height (approximate)
 private val WAYPOINT_ITEM_HEIGHT = 72.dp // Estimated height of ReorderableWaypointItem
@@ -98,7 +92,6 @@ fun SwipeableTaskBottomSheet(
         mutableStateOf(height)
     }
     var isDragging by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf(TaskCategory.MANAGE) }
 
     var swipeDownDistance by remember { mutableStateOf(0f) }
     var swipeUpDistance by remember { mutableStateOf(0f) }
@@ -212,8 +205,6 @@ fun SwipeableTaskBottomSheet(
                         uiState = uiState,
                         task = task,
                         taskViewModel = resolvedTaskViewModel,
-                        selectedCategory = selectedCategory,
-                        onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
                         allWaypoints = allWaypoints,
                         onClearTask = onClearTask,
@@ -228,8 +219,6 @@ fun SwipeableTaskBottomSheet(
                         uiState = uiState,
                         task = task,
                         taskViewModel = resolvedTaskViewModel,
-                        selectedCategory = selectedCategory,
-                        onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
                         allWaypoints = allWaypoints,
                         onClearTask = onClearTask,
@@ -248,8 +237,6 @@ private fun ExpandedContent(
     uiState: TaskUiState,
     task: Task,
     taskViewModel: TaskSheetViewModel,
-    selectedCategory: TaskCategory,
-    onCategorySelect: (TaskCategory) -> Unit,
     currentQNH: String?,
     allWaypoints: List<WaypointData>,
     onClearTask: () -> Unit,
@@ -257,44 +244,10 @@ private fun ExpandedContent(
     onDismiss: () -> Unit,
     mapLibreMap: MapLibreMap?
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Category selector
-        PrimaryScrollableTabRow(
-            selectedTabIndex = TaskCategory.values().indexOf(selectedCategory),
-            modifier = Modifier.fillMaxWidth(),
-            edgePadding = 0.dp
-        ) {
-            TaskCategory.values().forEach { category ->
-                Tab(
-                    selected = selectedCategory == category,
-                    onClick = { onCategorySelect(category) },
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = when (category) {
-                                    TaskCategory.MANAGE -> Icons.Default.Settings
-                                    TaskCategory.RULES -> Icons.Default.Policy
-                                    TaskCategory.FILES -> Icons.Default.Folder
-                                    TaskCategory.FOUR -> Icons.Default.Star
-                                    TaskCategory.FIVE -> Icons.Default.Favorite
-                                },
-                                contentDescription = null
-                            )
-                            Text(category.label)
-                        }
-                    }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Category content
-        when (selectedCategory) {
-            TaskCategory.MANAGE -> {
+    TaskPanelCategoryHost(
+        uiState = uiState,
+        taskViewModel = taskViewModel,
+        manageContent = {
                 ManageBTTabRouter(
                     uiState = uiState,
                     task = task,
@@ -307,37 +260,8 @@ private fun ExpandedContent(
                     currentQNH = currentQNH,
                     taskType = uiState.taskType
                 )
-            }
-            TaskCategory.RULES -> {
-                RulesBTTab(
-                    uiState = uiState,
-                    onSelect = taskViewModel::onSetTaskType,
-                    onUpdateAATParameters = taskViewModel::onUpdateAATParameters,
-                    onUpdateRacingStartRules = taskViewModel::onUpdateRacingStartRules,
-                    onUpdateRacingFinishRules = taskViewModel::onUpdateRacingFinishRules,
-                    onUpdateRacingValidationRules = taskViewModel::onUpdateRacingValidationRules
-                )
-            }
-            TaskCategory.FILES -> {
-                FilesBTTab(
-                    taskViewModel = taskViewModel
-                )
-            }
-            else -> {
-                // Placeholder for other categories
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${selectedCategory.label} - Coming Soon",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
-            }
         }
-    }
+    )
 }
 
 

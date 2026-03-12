@@ -229,7 +229,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     fun setTarget_updatesStore() {
         val viewModel = createViewModel()
 
-        val target = MapStateStore.MapPoint(1.23, 4.56)
+        val target = MapPoint(1.23, 4.56)
 
         viewModel.mapStateActions.setTarget(target, 12.0f)
 
@@ -241,7 +241,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     fun saveLocation_updatesStore() {
         val viewModel = createViewModel()
 
-        val location = MapStateStore.MapPoint(10.0, -20.0)
+        val location = MapPoint(10.0, -20.0)
 
         viewModel.mapStateActions.saveLocation(location, 9.0, 180.0)
 
@@ -385,13 +385,13 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
 
         viewModel.setActiveProfileId("pilot-a")
         drainMain()
-        assertEquals(TrailLength.SHORT, viewModel.mapState.trailSettings.value.length)
-        assertEquals(TrailType.ALTITUDE, viewModel.mapState.trailSettings.value.type)
+        assertEquals(TrailLength.SHORT, viewModel.trailSettings.value.length)
+        assertEquals(TrailType.ALTITUDE, viewModel.trailSettings.value.type)
 
         viewModel.setActiveProfileId("pilot-b")
         drainMain()
-        assertEquals(TrailLength.FULL, viewModel.mapState.trailSettings.value.length)
-        assertEquals(TrailType.VARIO_2, viewModel.mapState.trailSettings.value.type)
+        assertEquals(TrailLength.FULL, viewModel.trailSettings.value.length)
+        assertEquals(TrailType.VARIO_2, viewModel.trailSettings.value.type)
     }
 
     @Test

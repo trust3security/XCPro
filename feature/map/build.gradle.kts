@@ -30,8 +30,6 @@ fun readSecretProperty(name: String): String {
 
 val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
 val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
-val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
-
 android {
     namespace = "com.example.xcpro.map"
     compileSdk = 35
@@ -49,7 +47,6 @@ android {
                 "OPENSKY_CLIENT_SECRET",
                 openSkyClientSecret.asBuildConfigString()
             )
-            buildConfigField("String", "SKYSIGHT_API_KEY", skySightApiKey.asBuildConfigString())
         }
         release {
             buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
@@ -58,7 +55,6 @@ android {
                 "OPENSKY_CLIENT_SECRET",
                 openSkyClientSecret.asBuildConfigString()
             )
-            buildConfigField("String", "SKYSIGHT_API_KEY", "\"\"")
         }
     }
 
@@ -87,10 +83,14 @@ dependencies {
     implementation(project(":core:geometry"))
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
+    implementation(project(":feature:forecast"))
     implementation(project(":feature:igc"))
     implementation(project(":feature:profile"))
+    implementation(project(":feature:tasks"))
+    implementation(project(":feature:map-runtime"))
     implementation(project(":feature:traffic"))
     implementation(project(":feature:variometer"))
+    implementation(project(":feature:weather"))
     implementation(project(":feature:weglide"))
 
     implementation(libs.androidx.core.ktx)
@@ -109,26 +109,15 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.maplibre.android)
     implementation(libs.maplibre.scalebar)
 
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    implementation("com.google.zxing:core:3.5.3")
-    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     ksp(libs.androidx.hilt.compiler)
-    ksp(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)
     testImplementation(project(":dfcards-library"))

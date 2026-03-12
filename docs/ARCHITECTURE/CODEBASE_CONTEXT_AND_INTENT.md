@@ -115,8 +115,8 @@ Cross-layer leakage is not allowed.
 These invariants are policy and are also expected to be machine-enforced:
 
 1) Forbidden direct time APIs in production code are blocked by:
-- `scripts/arch_gate.py` (local)
-- `.github/workflows/quality-gates.yml` (CI)
+- `scripts/arch_gate.py` via `./gradlew enforceRules` or `./gradlew enforceArchitectureFast` (local)
+- `.github/workflows/quality-gates.yml` via `./gradlew enforceRules` (CI)
 
 2) Time abstraction references must use real in-repo anchors:
 - `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`

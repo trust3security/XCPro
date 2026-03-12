@@ -16,7 +16,7 @@ import kotlin.math.sign
  * Handles camera positioning, zoom animations, orientation updates, and smooth movements
  */
 class MapCameraManager(
-    internal val mapState: MapScreenState,
+    private val mapState: MapScreenState,
     private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions
 ) {
@@ -42,7 +42,7 @@ class MapCameraManager(
     val showReturnButton: Boolean
         get() = mapStateReader.showReturnButton.value
 
-    val targetLatLng: StateFlow<MapStateStore.MapPoint?>
+    val targetLatLng: StateFlow<MapPoint?>
         get() = mapStateReader.targetLatLng
 
     val targetZoom: StateFlow<Float?>
@@ -158,6 +158,8 @@ class MapCameraManager(
         return mapState.mapLibreMap?.cameraPosition
     }
 
+    internal fun mapLibreMapOrNull(): MapLibreMap? = mapState.mapLibreMap
+
     /**
      * Get current zoom level
      */
@@ -191,7 +193,7 @@ class MapCameraManager(
         val initialLatLng = LatLng(INITIAL_LATITUDE, INITIAL_LONGITUDE)
         moveTo(initialLatLng, INITIAL_ZOOM)
         stateActions.setTarget(
-            location = MapStateStore.MapPoint(initialLatLng.latitude, initialLatLng.longitude),
+            location = MapPoint(initialLatLng.latitude, initialLatLng.longitude),
             zoom = INITIAL_ZOOM.toFloat()
         )
     }
@@ -291,7 +293,7 @@ class MapCameraManager(
                 val turnpointLatLng = LatLng(turnpointLat, turnpointLon)
 
                 stateActions.setTarget(
-                    location = MapStateStore.MapPoint(turnpointLatLng.latitude, turnpointLatLng.longitude),
+                    location = MapPoint(turnpointLatLng.latitude, turnpointLatLng.longitude),
                     zoom = editZoom.toFloat()
                 )
                 AppLogger.d(TAG, "AAT: Zooming to turnpoint - radius=${turnpointDisplayKm}km, diameter=${String.format("%.1f", diameterKm)}km, screen=${minScreenDimension}px, calculated zoom=${String.format("%.2f", editZoom)}, at: $turnpointLatLng")
@@ -314,7 +316,7 @@ class MapCameraManager(
                     if (target != null) {
                         val clampedZoom = clampZoom(saved.zoom, target.latitude)
                         stateActions.setTarget(
-                            location = MapStateStore.MapPoint(target.latitude, target.longitude),
+                            location = MapPoint(target.latitude, target.longitude),
                             zoom = clampedZoom.toFloat()
                         )
 
@@ -334,12 +336,12 @@ class MapCameraManager(
         }
     }
 
-    private fun toLatLng(point: MapStateStore.MapPoint?): LatLng? {
+    private fun toLatLng(point: MapPoint?): LatLng? {
         return point?.let { LatLng(it.latitude, it.longitude) }
     }
 
-    private fun toMapPoint(latLng: LatLng?): MapStateStore.MapPoint? {
-        return latLng?.let { MapStateStore.MapPoint(it.latitude, it.longitude) }
+    private fun toMapPoint(latLng: LatLng?): MapPoint? {
+        return latLng?.let { MapPoint(it.latitude, it.longitude) }
     }
 }
 

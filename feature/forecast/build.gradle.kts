@@ -1,0 +1,96 @@
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.dagger.hilt)
+}
+
+fun String.asBuildConfigString(): String {
+    val escaped = this.replace("\\", "\\\\").replace("\"", "\\\"")
+    return "\"$escaped\""
+}
+
+val localProperties: Properties by lazy {
+    Properties().apply {
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { load(it) }
+        }
+    }
+}
+
+fun readSecretProperty(name: String): String {
+    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
+    if (gradleValue.isNotEmpty()) return gradleValue
+    return localProperties.getProperty(name)?.trim().orEmpty()
+}
+
+val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
+
+android {
+    namespace = "com.example.xcpro.forecast"
+    compileSdk = 35
+
+    defaultConfig {
+        minSdk = 30
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField("String", "SKYSIGHT_API_KEY", skySightApiKey.asBuildConfigString())
+        }
+        release {
+            buildConfigField("String", "SKYSIGHT_API_KEY", "\"\"")
+        }
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+dependencies {
+    implementation(project(":core:common"))
+    implementation(project(":core:time"))
+
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(project(":core:time"))
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation("org.mockito:mockito-core:5.2.0")
+    testImplementation("org.mockito:mockito-inline:5.2.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.0")
+}

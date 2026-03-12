@@ -54,7 +54,7 @@ class MapUserInteractionController(
 
     fun saveLocation(location: LatLng, zoom: Double, bearing: Double) {
         stateActions.saveLocation(
-            location = MapStateStore.MapPoint(location.latitude, location.longitude),
+            location = MapPoint(location.latitude, location.longitude),
             zoom = zoom,
             bearing = bearing
         )

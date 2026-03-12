@@ -62,8 +62,8 @@ For true compile-only speed loops, use the default script behavior and add tests
 only when explicitly requested:
 
 - `preflight.bat`: now runs `enforceRules` + `assembleDebug` only.
-- `check-quick.bat`: runs rules + assemblies by default; pass extra Gradle args to run any tests explicitly.
-- `auto-test.bat`: runs rules + `assembleDebug` only.
+- `check-quick.bat`: runs `enforceArchitectureFast` + targeted assemblies by default; pass extra Gradle args to run any tests explicitly.
+- `auto-test.bat`: runs `enforceArchitectureFast` + `assembleDebug` only.
 
 If you need tests, pass them directly:
 

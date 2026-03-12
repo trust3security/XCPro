@@ -85,20 +85,21 @@ Acceptable:
 ### 1A.3 Automated Enforcement Entry Points
 
 Enforcement artifacts:
-- Local static gate: `scripts/arch_gate.py`
+- Aggregate Gradle gate: `./gradlew enforceRules` (includes `archGate`)
+- Fast architecture gate: `./gradlew enforceArchitectureFast`
+- Underlying local static gate: `scripts/arch_gate.py`
 - CI workflow: `.github/workflows/quality-gates.yml`
 - Canonical time abstraction for production code: `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
 - DI binding anchor: `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
 
 Local validation minimum:
-- `python scripts/arch_gate.py`
 - `./gradlew enforceRules`
 - `./gradlew testDebugUnitTest`
 - `./gradlew assembleDebug`
 
 When adding or tightening a gate rule:
 - Document the rationale in this file first.
-- Add the corresponding static check in `scripts/arch_gate.py` or `enforceRules`.
+- Add the corresponding static check in `scripts/arch_gate.py` or `scripts/ci/enforce_rules.ps1`.
 - Update affected architecture docs in the same change set.
 - If immediate compliance is not possible, add a time-boxed entry in `KNOWN_DEVIATIONS.md`.
 

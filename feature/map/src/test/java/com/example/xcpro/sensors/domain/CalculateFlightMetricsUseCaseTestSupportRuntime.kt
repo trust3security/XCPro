@@ -34,11 +34,12 @@ internal fun airspeedSample(
     trueMs: Double,
     indicatedMs: Double,
     clockMillis: Long,
+    timestampMillis: Long = clockMillis,
     valid: Boolean = true
 ) = AirspeedSample(
     trueMs = trueMs,
     indicatedMs = indicatedMs,
-    timestampMillis = clockMillis,
+    timestampMillis = timestampMillis,
     clockMillis = clockMillis,
     valid = valid
 )

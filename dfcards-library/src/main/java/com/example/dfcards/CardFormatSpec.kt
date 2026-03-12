@@ -164,7 +164,59 @@ internal object CardFormatSpecs {
 
             KnownCardId.WPT_DIST -> Pair(placeholderFor(cardId, units, strings), strings.noWpt)
             KnownCardId.WPT_BRG -> Pair("---|", strings.noWpt)
-            KnownCardId.FINAL_GLD -> Pair("--:1", strings.noWpt)
+            KnownCardId.FINAL_GLD -> {
+                when {
+                    !liveData.glideSolutionValid -> Pair("--:1", glideInvalidLabel(liveData.glideInvalidReason, strings))
+                    liveData.requiredGlideRatio.isInfinite() -> Pair("IMP", strings.noAlt)
+                    liveData.requiredGlideRatio.isFinite() && liveData.requiredGlideRatio > 1.0 -> {
+                        Pair("${liveData.requiredGlideRatio.roundToInt()}:1", strings.calc)
+                    }
+                    else -> Pair("--:1", strings.invalid)
+                }
+            }
+            KnownCardId.ARR_ALT -> {
+                when {
+                    !liveData.glideSolutionValid -> Pair(
+                        placeholderFor(cardId, units, strings),
+                        glideInvalidLabel(liveData.glideInvalidReason, strings)
+                    )
+                    liveData.arrivalHeightM.isFinite() -> {
+                        Pair(
+                            formatSignedAltitudeValue(liveData.arrivalHeightM, units),
+                            "MC ${liveData.macCready.roundToInt()}"
+                        )
+                    }
+                    else -> Pair(placeholderFor(cardId, units, strings), strings.invalid)
+                }
+            }
+            KnownCardId.REQ_ALT -> {
+                when {
+                    !liveData.glideSolutionValid -> Pair(
+                        placeholderFor(cardId, units, strings),
+                        glideInvalidLabel(liveData.glideInvalidReason, strings)
+                    )
+                    liveData.requiredAltitudeM.isFinite() -> {
+                        val margin = liveData.navAltitude - liveData.requiredAltitudeM
+                        Pair(
+                            formatAltitudeValue(liveData.requiredAltitudeM, units),
+                            formatSignedAltitudeValue(margin, units)
+                        )
+                    }
+                    else -> Pair(placeholderFor(cardId, units, strings), strings.invalid)
+                }
+            }
+            KnownCardId.ARR_MC0 -> {
+                when {
+                    !liveData.glideSolutionValid -> Pair(
+                        placeholderFor(cardId, units, strings),
+                        glideInvalidLabel(liveData.glideInvalidReason, strings)
+                    )
+                    liveData.arrivalHeightMc0M.isFinite() -> {
+                        Pair(formatSignedAltitudeValue(liveData.arrivalHeightMc0M, units), "MC0")
+                    }
+                    else -> Pair(placeholderFor(cardId, units, strings), strings.invalid)
+                }
+            }
             KnownCardId.WPT_ETA -> Pair("--:--", strings.noWpt)
 
             KnownCardId.LD_CURR -> {

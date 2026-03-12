@@ -39,6 +39,9 @@ internal value class CardId(val raw: String) {
         const val WPT_DIST = "wpt_dist"
         const val WPT_BRG = "wpt_brg"
         const val FINAL_GLD = "final_gld"
+        const val ARR_ALT = "arr_alt"
+        const val REQ_ALT = "req_alt"
+        const val ARR_MC0 = "arr_mc0"
         const val WPT_ETA = "wpt_eta"
 
         const val THERMAL_AVG = "thermal_avg"
@@ -89,6 +92,9 @@ internal value class CardId(val raw: String) {
             WPT_DIST,
             WPT_BRG,
             FINAL_GLD,
+            ARR_ALT,
+            REQ_ALT,
+            ARR_MC0,
             WPT_ETA,
             THERMAL_AVG,
             THERMAL_TC_AVG,

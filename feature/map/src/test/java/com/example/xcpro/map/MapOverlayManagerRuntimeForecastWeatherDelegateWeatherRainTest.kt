@@ -133,9 +133,9 @@ class MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest {
             stale = false
         )
 
-        fixture.mapState.mapLibreMap = null
+        fixture.runtimeState.mapLibreMap = null
         fixture.delegate.setMapInteractionActive(false)
-        fixture.mapState.mapLibreMap = fixture.map
+        fixture.runtimeState.mapLibreMap = fixture.map
         fixture.delegate.setMapInteractionActive(true)
         fixture.delegate.setMapInteractionActive(false)
 
@@ -156,31 +156,38 @@ class MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest {
     }
 
     private fun createFixture(): Fixture {
-        val mapState = MapScreenState()
+        val runtimeState = FakeForecastWeatherOverlayRuntimeState()
         val map: MapLibreMap = mock()
         val weatherOverlay: WeatherRainOverlay = mock()
         val fixture = Fixture(
-            mapState = mapState,
+            runtimeState = runtimeState,
             map = map,
             weatherOverlay = weatherOverlay
         )
-        mapState.mapLibreMap = map
-        mapState.weatherRainOverlay = weatherOverlay
+        runtimeState.mapLibreMap = map
+        runtimeState.weatherRainOverlay = weatherOverlay
         return fixture
     }
 
     private data class Fixture(
-        val mapState: MapScreenState,
+        val runtimeState: FakeForecastWeatherOverlayRuntimeState,
         val map: MapLibreMap,
         val weatherOverlay: WeatherRainOverlay
     ) {
         var nowMonoMs: Long = 10_000L
         val delegate = MapOverlayManagerRuntimeForecastWeatherDelegate(
-            mapState = mapState,
+            runtimeState = runtimeState,
             bringTrafficOverlaysToFront = {},
             onSatelliteContrastIconsChanged = {},
             nowMonoMs = { nowMonoMs }
         )
     }
-}
 
+    private class FakeForecastWeatherOverlayRuntimeState : ForecastWeatherOverlayRuntimeState {
+        override var mapLibreMap: MapLibreMap? = null
+        override var forecastOverlay: ForecastRasterOverlay? = null
+        override var forecastWindOverlay: ForecastRasterOverlay? = null
+        override var skySightSatelliteOverlay: SkySightSatelliteOverlay? = null
+        override var weatherRainOverlay: WeatherRainOverlay? = null
+    }
+}

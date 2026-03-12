@@ -1,4 +1,4 @@
-﻿package com.example.xcpro.map
+package com.example.xcpro.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.MapOrientationManager
@@ -21,6 +21,7 @@ import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.replay.ReplayDisplayPose
@@ -32,6 +33,8 @@ import com.example.xcpro.weglide.domain.EnqueueWeGlideUploadForFinalizedFlightUs
 import com.example.xcpro.weglide.domain.EnqueueWeGlideUploadResult
 import com.example.xcpro.weglide.domain.WeGlidePostFlightPromptCoordinator
 import com.example.xcpro.weglide.notifications.WeGlidePostFlightPromptNotificationController
+import com.example.xcpro.weglide.ui.WeGlideUploadPromptUiState
+import com.example.xcpro.weglide.ui.toUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -156,6 +159,8 @@ class MapScreenViewModel @Inject constructor(
     val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
+    private val _weGlideUploadPrompt = MutableStateFlow<WeGlideUploadPromptUiState?>(null)
+    val weGlideUploadPrompt: StateFlow<WeGlideUploadPromptUiState?> = _weGlideUploadPrompt.asStateFlow()
     private val _trailUpdates = MutableStateFlow<TrailUpdateResult?>(null)
     internal val trailUpdates: StateFlow<TrailUpdateResult?> = _trailUpdates.asStateFlow()
     private val _uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 1)
@@ -188,6 +193,7 @@ class MapScreenViewModel @Inject constructor(
         hawkVarioUiStateFlow = hawkVarioUiState,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
+        trailSettingsFlow = mapStateStore.trailSettings,
         liveDataReady = _liveDataReady,
         containerReady = _containerReady,
         uiEffects = _uiEffects,
@@ -248,6 +254,7 @@ class MapScreenViewModel @Inject constructor(
     val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
     private val unitsState = unitsUseCase.unitsFlow.inVm(scope = viewModelScope, initial = UnitsPreferences())
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
+    val trailSettings: StateFlow<TrailSettings> = mapStateStore.trailSettings
     val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
     val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, cardPreferences = cardPreferences) }
     init {
@@ -270,18 +277,7 @@ class MapScreenViewModel @Inject constructor(
         weGlidePostFlightPromptCoordinator?.let { coordinator ->
             viewModelScope.launch {
                 coordinator.pendingPrompt.collect { prompt ->
-                    _uiState.update { state ->
-                        state.copy(
-                            weGlideUploadPrompt = prompt?.let {
-                                WeGlideUploadPromptUiState(
-                                    localFlightId = it.request.localFlightId,
-                                    fileName = it.fileName,
-                                    profileName = it.profileName,
-                                    aircraftName = it.aircraftName
-                                )
-                            }
-                        )
-                    }
+                    _weGlideUploadPrompt.value = prompt?.toUiState()
                 }
             }
         }
@@ -295,7 +291,7 @@ class MapScreenViewModel @Inject constructor(
     fun onVarioDemoReplaySim() = replayCoordinator.onVarioDemoReplaySim()
     fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
     fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
-    fun updateSafeContainerSize(size: MapStateStore.MapSize) = mapStateStore.updateSafeContainerSize(size)
+    fun updateSafeContainerSize(size: MapSize) = mapStateStore.updateSafeContainerSize(size)
     fun setMapStyle(styleName: String) { if (mapStateStore.updateMapStyleName(styleName)) emitMapCommand(MapCommand.SetStyle(styleName)) }
     fun persistMapStyle(styleName: String) = viewModelScope.launch { mapStyleUseCase.saveStyle(styleName) }
     fun setFlightMode(newMode: FlightMode) { mapStateStore.setCurrentMode(newMode); mapStateStore.setCurrentFlightMode(newMode.toCardFlightModeSelection()); flightDataManager.updateFlightModeFromEnum(newMode); sensorsUseCase.setFlightMode(newMode) }

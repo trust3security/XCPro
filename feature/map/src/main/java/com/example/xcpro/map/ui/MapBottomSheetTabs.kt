@@ -39,7 +39,6 @@ import androidx.compose.ui.zIndex
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastParameterId
 import com.example.xcpro.map.R
-import com.example.xcpro.weather.ui.WeatherSettingsContentHost
 
 internal enum class MapBottomTab(
     @StringRes val labelResId: Int,
@@ -105,7 +104,9 @@ internal fun MapBottomTabsLayer(
     skySightSatViewEnabled: Boolean,
     onSkySightSatViewEnabledChanged: (Boolean) -> Unit,
     rainTabContent: @Composable () -> Unit = {
-        RainViewerTabContent()
+        MapWeatherRainTabContent(
+            title = stringResource(R.string.map_bottom_tab_rainviewer)
+        )
     }
 ) {
     if (!isSheetVisible && !isTaskPanelVisible) {
@@ -158,7 +159,8 @@ internal fun MapBottomTabsLayer(
                         MapBottomTab.RAIN -> rainTabContent()
 
                         MapBottomTab.SKYSIGHT -> {
-                            ForecastOverlayControlsContent(
+                            MapForecastSkySightTabContent(
+                                title = stringResource(R.string.map_bottom_tab_skysight),
                                 uiState = skySightUiState,
                                 onEnabledChanged = onSkySightEnabledChanged,
                                 onPrimaryParameterToggled = onSkySightPrimaryParameterToggled,
@@ -176,7 +178,6 @@ internal fun MapBottomTabsLayer(
                                 onSkySightSatelliteHistoryFramesChanged = onSkySightSatelliteHistoryFramesChanged,
                                 satViewEnabled = skySightSatViewEnabled,
                                 onSatViewEnabledChanged = onSkySightSatViewEnabledChanged,
-                                title = stringResource(R.string.map_bottom_tab_skysight),
                                 warningMessage = skySightWarningMessage,
                                 errorMessage = skySightErrorMessage
                             )
@@ -229,24 +230,6 @@ internal fun MapBottomTabsLayer(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun RainViewerTabContent() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.map_bottom_tab_rainviewer),
-            style = MaterialTheme.typography.titleLarge
-        )
-        WeatherSettingsContentHost(
-            enableScroll = false,
-            flatSectionStyle = true,
-            showSectionHeader = false
-        )
     }
 }
 

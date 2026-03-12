@@ -12,16 +12,10 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.example.dfcards.RealTimeFlightData
-import com.example.xcpro.convertQnhInputToHpa
-import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import com.example.xcpro.forecast.ForecastOverlayViewModel
-import com.example.xcpro.forecast.ForecastPointCallout
 import com.example.xcpro.map.MapOverlayManager
-import com.example.xcpro.map.MapScreenState
-import com.example.xcpro.map.WeGlideUploadPromptUiState
-import com.example.xcpro.qnh.QnhCalibrationState
+import com.example.xcpro.weglide.ui.WeGlideUploadPromptDialogHost
 import kotlin.math.roundToInt
 
 @Composable
@@ -137,52 +131,29 @@ internal fun MapBottomTabsSection(
 
 @Composable
 internal fun BoxScope.MapAuxiliaryPanelsAndSheetsSection(
-    mapState: MapScreenState,
-    density: Density,
-    tappedWindArrowCallout: WindArrowTapCallout?,
-    forecastOverlayState: ForecastOverlayUiState,
-    windTapLabelSize: IntSize,
-    setWindTapLabelSize: (IntSize) -> Unit,
-    overlayViewportSize: IntSize,
-    forecastPointCallout: ForecastPointCallout?,
-    forecastQueryStatus: String?,
-    forecastViewModel: ForecastOverlayViewModel,
-    showQnhDialog: Boolean,
-    qnhInput: String,
-    qnhError: String?,
-    unitsPreferences: UnitsPreferences,
-    liveFlightData: RealTimeFlightData?,
-    qnhCalibrationState: QnhCalibrationState,
-    weGlideUploadPrompt: WeGlideUploadPromptUiState?,
-    setQnhInput: (String) -> Unit,
-    setQnhError: (String?) -> Unit,
-    setShowQnhDialog: (Boolean) -> Unit,
-    onSetManualQnh: (Double) -> Unit,
-    onAutoCalibrateQnh: () -> Unit,
-    onConfirmWeGlideUploadPrompt: () -> Unit,
-    onDismissWeGlideUploadPrompt: () -> Unit
+    inputs: MapAuxiliaryPanelsInputs
 ) {
-    tappedWindArrowCallout?.let { callout ->
-        val map = mapState.mapLibreMap
+    inputs.tappedWindArrowCallout?.let { callout ->
+        val map = inputs.mapState.mapLibreMap
         val screenPoint = map?.projection?.toScreenLocation(callout.tapLatLng)
         if (screenPoint != null) {
-            val edgePaddingPx = with(density) { WIND_TAP_LABEL_EDGE_PADDING_DP.dp.toPx() }
-            val anchorGapPx = with(density) { WIND_TAP_LABEL_ANCHOR_GAP_DP.dp.toPx() }
-            val estimatedWidthPx = with(density) { WIND_TAP_LABEL_ESTIMATED_WIDTH_DP.dp.toPx() }
-            val estimatedHeightPx = with(density) { WIND_TAP_LABEL_ESTIMATED_HEIGHT_DP.dp.toPx() }
-            val labelWidthPx = if (windTapLabelSize.width > 0) {
-                windTapLabelSize.width.toFloat()
+            val edgePaddingPx = with(inputs.density) { WIND_TAP_LABEL_EDGE_PADDING_DP.dp.toPx() }
+            val anchorGapPx = with(inputs.density) { WIND_TAP_LABEL_ANCHOR_GAP_DP.dp.toPx() }
+            val estimatedWidthPx = with(inputs.density) { WIND_TAP_LABEL_ESTIMATED_WIDTH_DP.dp.toPx() }
+            val estimatedHeightPx = with(inputs.density) { WIND_TAP_LABEL_ESTIMATED_HEIGHT_DP.dp.toPx() }
+            val labelWidthPx = if (inputs.windTapLabelSize.width > 0) {
+                inputs.windTapLabelSize.width.toFloat()
             } else {
                 estimatedWidthPx
             }
-            val labelHeightPx = if (windTapLabelSize.height > 0) {
-                windTapLabelSize.height.toFloat()
+            val labelHeightPx = if (inputs.windTapLabelSize.height > 0) {
+                inputs.windTapLabelSize.height.toFloat()
             } else {
                 estimatedHeightPx
             }
-            val maxX = (overlayViewportSize.width.toFloat() - labelWidthPx - edgePaddingPx)
+            val maxX = (inputs.overlayViewportSize.width.toFloat() - labelWidthPx - edgePaddingPx)
                 .coerceAtLeast(edgePaddingPx)
-            val maxY = (overlayViewportSize.height.toFloat() - labelHeightPx - edgePaddingPx)
+            val maxY = (inputs.overlayViewportSize.height.toFloat() - labelHeightPx - edgePaddingPx)
                 .coerceAtLeast(edgePaddingPx)
             val targetX = (screenPoint.x - (labelWidthPx / 2f))
                 .coerceIn(edgePaddingPx, maxX)
@@ -191,9 +162,7 @@ internal fun BoxScope.MapAuxiliaryPanelsAndSheetsSection(
 
             WindArrowSpeedTapLabel(
                 speedKt = callout.speedKt,
-                unitLabel = forecastOverlayState.windLegend?.unitLabel
-                    ?.takeIf { label -> label.isNotBlank() }
-                    ?: DEFAULT_WIND_SPEED_UNIT_LABEL,
+                unitLabel = inputs.forecastWindUnitLabel,
                 modifier = Modifier
                     .offset {
                         IntOffset(
@@ -202,27 +171,27 @@ internal fun BoxScope.MapAuxiliaryPanelsAndSheetsSection(
                         )
                     }
                     .onSizeChanged { size ->
-                        setWindTapLabelSize(size)
+                        inputs.onWindTapLabelSizeChanged(size)
                     }
             )
         }
     }
 
-    forecastPointCallout?.let { callout ->
+    inputs.forecastPointCallout?.let { callout ->
         ForecastPointCalloutCard(
             callout = callout,
-            regionCode = forecastOverlayState.selectedRegionCode,
-            onDismiss = forecastViewModel::clearPointCallout,
+            regionCode = inputs.forecastSelectedRegionCode,
+            onDismiss = inputs.onDismissForecastPointCallout,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 72.dp, start = 16.dp, end = 16.dp)
         )
     }
 
-    forecastQueryStatus?.let { status ->
+    inputs.forecastQueryStatus?.let { status ->
         ForecastQueryStatusChip(
             message = status,
-            onDismiss = forecastViewModel::clearQueryStatus,
+            onDismiss = inputs.onDismissForecastQueryStatus,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 28.dp, start = 16.dp, end = 16.dp)
@@ -230,39 +199,22 @@ internal fun BoxScope.MapAuxiliaryPanelsAndSheetsSection(
     }
 
     QnhDialogHost(
-        visible = showQnhDialog,
-        qnhInput = qnhInput,
-        qnhError = qnhError,
-        unitsPreferences = unitsPreferences,
-        liveData = liveFlightData,
-        calibrationState = qnhCalibrationState,
-        onQnhInputChange = {
-            setQnhInput(it)
-            setQnhError(null)
-        },
-        onConfirm = { parsed ->
-            val qnhHpa = convertQnhInputToHpa(parsed, unitsPreferences)
-            onSetManualQnh(qnhHpa)
-            setShowQnhDialog(false)
-            setQnhError(null)
-        },
-        onInvalidInput = { error ->
-            setQnhError(error)
-        },
-        onAutoCalibrate = {
-            onAutoCalibrateQnh()
-            setShowQnhDialog(false)
-            setQnhError(null)
-        },
-        onDismiss = {
-            setShowQnhDialog(false)
-            setQnhError(null)
-        }
+        visible = inputs.qnhDialog.visible,
+        qnhInput = inputs.qnhDialog.input,
+        qnhError = inputs.qnhDialog.error,
+        unitsPreferences = inputs.qnhDialog.unitsPreferences,
+        liveData = inputs.qnhDialog.liveFlightData,
+        calibrationState = inputs.qnhDialog.calibrationState,
+        onQnhInputChange = inputs.qnhDialog.onInputChange,
+        onConfirm = inputs.qnhDialog.onConfirm,
+        onInvalidInput = inputs.qnhDialog.onInvalidInput,
+        onAutoCalibrate = inputs.qnhDialog.onAutoCalibrate,
+        onDismiss = inputs.qnhDialog.onDismiss
     )
 
     WeGlideUploadPromptDialogHost(
-        prompt = weGlideUploadPrompt,
-        onConfirm = onConfirmWeGlideUploadPrompt,
-        onDismiss = onDismissWeGlideUploadPrompt
+        prompt = inputs.weGlidePrompt.prompt,
+        onConfirm = inputs.weGlidePrompt.onConfirm,
+        onDismiss = inputs.weGlidePrompt.onDismiss
     )
 }

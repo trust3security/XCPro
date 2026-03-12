@@ -137,6 +137,7 @@ data class CompleteFlightData(
     val varioSource: String = "UNKNOWN",
     val varioValid: Boolean = false,
     val pressureAltitude: AltitudeM, // meters (QNH 1013.25 reference)
+    val navAltitude: AltitudeM = AltitudeM(0.0), // meters (QNH-calibrated baro when available, GPS fallback)
     val baroGpsDelta: AltitudeM?,  // meters difference between baro altitude and GPS altitude
     val baroConfidence: ConfidenceLevel, // Confidence supplied by baro calculator
     val qnhCalibrationAgeSeconds: Long,  // Seconds since last calibration (-1 if unknown)

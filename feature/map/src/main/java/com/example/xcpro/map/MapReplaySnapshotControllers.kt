@@ -175,7 +175,7 @@ private data class ReplayUiSnapshot(
     val showReturnButton: Boolean,
     val showRecenterButton: Boolean,
     val hasInitiallyCentered: Boolean,
-    val savedLocation: MapStateStore.MapPoint?,
+    val savedLocation: MapPoint?,
     val savedZoom: Double?,
     val savedBearing: Double?
 )

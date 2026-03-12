@@ -23,9 +23,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Architecture timebase gate
-        run: python scripts/arch_gate.py
-
       - name: Enforce repository architecture rules
         run: ./gradlew enforceRules
 

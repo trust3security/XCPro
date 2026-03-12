@@ -3,26 +3,30 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertToRealTimeFlightData
+import com.example.xcpro.glide.FinalGlideUseCase
+import com.example.xcpro.glide.GlideTargetSnapshot
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.trail.TrailLength
-import com.example.xcpro.weather.wind.model.WindState
-import com.example.xcpro.replay.IgcReplayController
-import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateInput
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
+import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.sensors.CompleteFlightData
-import com.example.xcpro.sensors.domain.LiveWindValidityPolicy
 import com.example.xcpro.sensors.domain.FlyingState
+import com.example.xcpro.sensors.domain.LiveWindValidityPolicy
+import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.combine
 
 /**
  * Binds long-lived map observers to their data sources and pushes results into state flows.
@@ -35,10 +39,13 @@ internal class MapScreenObservers(
     private val hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
+    private val trailSettingsFlow: StateFlow<TrailSettings>,
     private val liveDataReady: MutableStateFlow<Boolean>,
     private val containerReady: MutableStateFlow<Boolean>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
     private val igcReplayController: IgcReplayController,
+    private val glideTargetFlow: Flow<GlideTargetSnapshot>,
+    private val finalGlideUseCase: FinalGlideUseCase,
     private val trailProcessor: TrailProcessor,
     private val trailUpdates: MutableStateFlow<TrailUpdateResult?>
 ) {
@@ -64,17 +71,27 @@ internal class MapScreenObservers(
             igcReplayController.session.mapReplaySelectionActive()
         ) { data, wind, flightState, hawkState, isReplay ->
             Quintuple(data, wind, flightState, hawkState, isReplay)
-        }.combine(mapStateStore.trailSettings.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->
+        }.combine(glideTargetFlow) { tuple, glideTarget ->
             Sextuple(
                 tuple.first,
                 tuple.second,
                 tuple.third,
                 tuple.fourth,
                 tuple.fifth,
+                glideTarget
+            )
+        }.combine(trailSettingsFlow.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->
+            Septuple(
+                tuple.first,
+                tuple.second,
+                tuple.third,
+                tuple.fourth,
+                tuple.fifth,
+                tuple.sixth,
                 trailEnabled
             )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay, trailEnabled) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, glideTarget, trailEnabled) ->
                 if (data != null) {
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -91,10 +108,16 @@ internal class MapScreenObservers(
                     val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 
                     val hawkUiState = if (isReplay) HawkVarioUiState() else hawkState
+                    val glideSolution = finalGlideUseCase.solve(
+                        completeData = data,
+                        windState = wind,
+                        target = glideTarget
+                    )
                     val liveData = convertToRealTimeFlightData(
                         completeData = data,
                         windState = wind,
                         isFlying = flightState.isFlying,
+                        glideSolution = glideSolution,
                         hawkVarioUiState = hawkUiState,
                         flightTime = formattedFlightTime,
                         lastUpdateTimeMillis = sampleClockMillis
@@ -229,4 +252,14 @@ private data class Sextuple<A, B, C, D, E, F>(
     val fourth: D,
     val fifth: E,
     val sixth: F
+)
+
+private data class Septuple<A, B, C, D, E, F, G>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+    val sixth: F,
+    val seventh: G
 )

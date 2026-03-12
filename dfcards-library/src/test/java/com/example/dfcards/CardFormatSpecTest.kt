@@ -97,6 +97,62 @@ class CardFormatSpecTest {
         assertEquals(strings.calc, secondary)
     }
 
+    @Test
+    fun finalGld_formats_required_glide_ratio() {
+        val liveData = RealTimeFlightData(
+            glideSolutionValid = true,
+            requiredGlideRatio = 34.7
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.FINAL_GLD]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("35:1", primary)
+        assertEquals(strings.calc, secondary)
+    }
+
+    @Test
+    fun arrivalCards_format_signed_altitude_outputs() {
+        val liveData = RealTimeFlightData(
+            glideSolutionValid = true,
+            navAltitude = 1_200.0,
+            arrivalHeightM = 120.0,
+            requiredAltitudeM = 1_050.0,
+            arrivalHeightMc0M = 165.0,
+            macCready = 2.0
+        )
+        val formatter = StubTimeFormatter()
+
+        val arrAlt = CardFormatSpecs.specs[KnownCardId.ARR_ALT]!!
+        val reqAlt = CardFormatSpecs.specs[KnownCardId.REQ_ALT]!!
+        val arrMc0 = CardFormatSpecs.specs[KnownCardId.ARR_MC0]!!
+
+        assertEquals("+120 m", arrAlt.format(liveData, units, strings, formatter).first)
+        assertEquals("1050 m", reqAlt.format(liveData, units, strings, formatter).first)
+        assertEquals("+150 m", reqAlt.format(liveData, units, strings, formatter).second)
+        assertEquals("+165 m", arrMc0.format(liveData, units, strings, formatter).first)
+    }
+
+    @Test
+    fun finalGld_uses_invalid_reason_secondary_when_solution_is_invalid() {
+        val liveData = RealTimeFlightData(
+            glideSolutionValid = false,
+            glideInvalidReason = "PRESTART"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.FINAL_GLD]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("--:1", primary)
+        assertEquals(strings.prestart, secondary)
+    }
+
     private class StubTimeFormatter : CardTimeFormatter {
         var lastEpoch: Long? = null
 

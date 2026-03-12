@@ -2,6 +2,16 @@
 
 Date: 2026-03-12
 
+Status note:
+
+- This recommendation note started from the pre-task-aware-glide state.
+- Since then, XCPro has implemented the first racing-task finish-glide MVP:
+  - `GlideTargetRepository`
+  - `FinalGlideUseCase`
+  - live `final_gld`, `arr_alt`, `req_alt`, and `arr_mc0`
+- The remaining recommendations here still apply for later phases such as current-leg cards, selected-target generalization, task-performance cards, safety policy, and broader glide-computer coverage.
+- For the current implemented task-aware glide status, use `06_XCPRO_TASK_AWARE_GLIDE_CARD_PLAN_2026-03-12.md`.
+
 ## Executive Summary
 
 Authoritative delivery sequencing now lives in:

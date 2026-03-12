@@ -1,8 +1,14 @@
 # AAT Task Module - Architecture Documentation
 
-**Last Updated:** 2025-01-02
+**Last Updated:** 2026-03-12
 **Refactoring Status:** ... Complete (Stages 1-6) + Code Cleanup (Jan 2025)
 **Module Health:** cent Production Ready - Zero Dead Code
+
+## Current Ownership Note
+
+- `:feature:tasks` now owns the shared AAT task editor UI and task-core-facing editor atoms.
+- This folder now documents the retained AAT map shell in `:feature:map`: map rendering, MapLibre edit/render surfaces, compatibility wrappers, and map-owned task screens.
+- Files moved to `:feature:tasks` during Phase 5B include `AATManageList*.kt`, `aat/ui/AATTaskPointTypeSelector.kt`, and related shared point selector/editor components.
 
 ---
 
@@ -25,13 +31,14 @@
 - **Code Quality:** Production-ready, zero debug/example code
 
 ### Known Issues Remaining
-6 files still exceed 500-line limit (see Phase 2 priorities below):
+5 retained map-shell files here still exceed 500-line limit (see Phase 2 priorities below):
 1. `AATTaskRenderer.kt` (782 lines) - **CRITICAL**
 2. `AATTaskManager.kt` (714 lines) - **CRITICAL**
 3. `AATDistanceCalculator.kt` (607 lines) - HIGH
-4. `AATTaskPointTypeSelector.kt` (565 lines) - HIGH
-5. `ComprehensiveAATValidator.kt` (543 lines) - MEDIUM
-6. `AATManageBTTab.kt` (530 lines) - MEDIUM
+4. `ComprehensiveAATValidator.kt` (543 lines) - MEDIUM
+5. `AATManageBTTab.kt` (530 lines) - MEDIUM
+
+Shared selector/editor files such as `AATTaskPointTypeSelector.kt` now live in `:feature:tasks` and are tracked there.
 
 ---
 
@@ -70,7 +77,10 @@ tasks/aat/
 """ calculations/                * Distance/speed calculators
 """ areas/                       * Area geometry calculators
 """ map/                         * Map interaction handlers
-"""" ui/                          * UI components
+"""" retained in :feature:tasks/   * Shared AAT editor UI components
+"   """" AATManageList.kt           - Shared AAT waypoint editor UI
+"   """" AATManageListItems.kt      - Shared AAT waypoint item UI
+"   """" ui/AATTaskPointTypeSelector.kt - Point type UI
 
 ```
 

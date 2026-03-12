@@ -15,15 +15,15 @@ internal class MapOverlayRuntimeMapLifecycleDelegate(
     private val forecastOnInitialize: (MapLibreMap?) -> Unit,
     private val bringTrafficOverlaysToFront: () -> Unit,
     private val snailTrailManager: SnailTrailManager
-) {
-    fun toggleDistanceCircles() = baseOpsDelegate.toggleDistanceCircles()
-    fun refreshAirspace(map: MapLibreMap?) = baseOpsDelegate.refreshAirspace(map)
-    fun refreshWaypoints(map: MapLibreMap?) = baseOpsDelegate.refreshWaypoints(map)
-    fun plotSavedTask(map: MapLibreMap?) = baseOpsDelegate.plotSavedTask(map)
-    fun clearTaskOverlays(map: MapLibreMap?) = baseOpsDelegate.clearTaskOverlays(map)
-    fun onZoomChanged(map: MapLibreMap?) = baseOpsDelegate.onZoomChanged(map)
+) : MapOverlayRuntimeLifecyclePort {
+    override fun toggleDistanceCircles() = baseOpsDelegate.toggleDistanceCircles()
+    override fun refreshAirspace(map: MapLibreMap?) = baseOpsDelegate.refreshAirspace(map)
+    override fun refreshWaypoints(map: MapLibreMap?) = baseOpsDelegate.refreshWaypoints(map)
+    override fun plotSavedTask(map: MapLibreMap?) = baseOpsDelegate.plotSavedTask(map)
+    override fun clearTaskOverlays(map: MapLibreMap?) = baseOpsDelegate.clearTaskOverlays(map)
+    override fun onZoomChanged(map: MapLibreMap?) = baseOpsDelegate.onZoomChanged(map)
 
-    fun onMapStyleChanged(map: MapLibreMap?) {
+    override fun onMapStyleChanged(map: MapLibreMap?) {
         try {
             if (BuildConfig.DEBUG) {
                 Log.d("MapOverlayManager", "Map style changed, reloading overlays")
@@ -54,7 +54,7 @@ internal class MapOverlayRuntimeMapLifecycleDelegate(
         }
     }
 
-    fun initializeOverlays(map: MapLibreMap?) {
+    override fun initializeOverlays(map: MapLibreMap?) {
         try {
             if (BuildConfig.DEBUG) {
                 Log.d("MapOverlayManager", "Initializing map overlays")
@@ -74,7 +74,11 @@ internal class MapOverlayRuntimeMapLifecycleDelegate(
         }
     }
 
-    fun initializeTrafficOverlays(map: MapLibreMap?) {
+    override fun initializeTrafficOverlays(map: MapLibreMap?) {
         initializeTrafficOverlaysFn(map)
+    }
+
+    override fun onMapDetached() {
+        baseOpsDelegate.onMapDetached()
     }
 }

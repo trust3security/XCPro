@@ -98,14 +98,12 @@ Use this checklist for any task/map refactor before opening a PR.
 
 Fast loop (before push):
 ```bash
-python scripts/arch_gate.py
-./gradlew enforceRules
+./gradlew enforceArchitectureFast
 ./gradlew :feature:map:compileDebugKotlin
 ```
 
 PR loop (matches CI quality gates):
 ```bash
-python scripts/arch_gate.py
 ./gradlew enforceRules
 ./gradlew testDebugUnitTest
 ./gradlew assembleDebug
@@ -114,6 +112,7 @@ python scripts/arch_gate.py
 Release loop:
 ```bash
 preflight.bat
+./gradlew testDebugUnitTest
 ./gradlew connectedDebugAndroidTest --no-parallel
 ```
 

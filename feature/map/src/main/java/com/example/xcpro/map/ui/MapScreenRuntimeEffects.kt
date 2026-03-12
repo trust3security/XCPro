@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.map.DisplayPoseSnapshot
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.config.MapFeatureFlags
@@ -105,7 +106,7 @@ internal fun MapScreenRuntimeEffects(
         if (!suppressLiveGps || !featureFlags.useRenderFrameSync) {
             onDispose { locationManager.setDisplayPoseFrameListener(null) }
         } else {
-            val listener: (LocationManager.DisplayPoseSnapshot) -> Unit = { snapshot ->
+            val listener: (DisplayPoseSnapshot) -> Unit = { snapshot ->
                 snailTrailManager.updateDisplayPose(
                     displayLocation = snapshot.location,
                     displayTimeMillis = snapshot.timestampMs,

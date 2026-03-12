@@ -24,7 +24,7 @@ object MapCameraEffects {
     fun AnimatedZoomEffect(
         cameraManager: MapCameraManager,
         targetZoom: Float?,
-        targetLatLng: MapStateStore.MapPoint?
+        targetLatLng: MapPoint?
     ) {
         val animatedZoom by animateFloatAsState(
             targetValue = targetZoom ?: MapCameraManager.INITIAL_ZOOM.toFloat(),
@@ -33,7 +33,7 @@ object MapCameraEffects {
         )
 
         DisposableEffect(animatedZoom, targetLatLng) {
-            cameraManager.mapState.mapLibreMap?.let { map ->
+            cameraManager.mapLibreMapOrNull()?.let { map ->
                 try {
                     val latLng = targetLatLng?.let { LatLng(it.latitude, it.longitude) }
                         ?: LatLng(MapCameraManager.INITIAL_LATITUDE, MapCameraManager.INITIAL_LONGITUDE)

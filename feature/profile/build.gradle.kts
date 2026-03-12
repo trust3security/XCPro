@@ -37,8 +37,10 @@ dependencies {
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
     implementation(project(":dfcards-library"))
+    implementation(project(":feature:forecast"))
     implementation(project(":feature:traffic"))
     implementation(project(":feature:variometer"))
+    implementation(project(":feature:weather"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -4,10 +4,10 @@ set "REPO_ROOT=%~dp0"
 set "GRADLE=%REPO_ROOT%gradlew.bat"
 echo.
 
-echo [1/2] Running rule enforcement...
-call "%GRADLE%" enforceRules
+echo [1/2] Running fast architecture gate...
+call "%GRADLE%" enforceArchitectureFast
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Rule enforcement failed
+    echo ERROR: Fast architecture gate failed
     exit /b 1
 )
 

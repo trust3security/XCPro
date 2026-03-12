@@ -13,6 +13,7 @@ interface CardStrings {
     val noWpt: String
     val noTask: String
     val noStart: String
+    val noAlt: String
     val noAccel: String
     val noFlarm: String
     val noSats: String
@@ -21,6 +22,8 @@ interface CardStrings {
     val noIgc: String
     val unknown: String
     val stale: String
+    val invalid: String
+    val prestart: String
     val live: String
     val gps: String
     val est: String
@@ -52,6 +55,7 @@ internal class DefaultCardStrings : CardStrings {
     override val noWpt: String = "NO WPT"
     override val noTask: String = "NO TASK"
     override val noStart: String = "NO START"
+    override val noAlt: String = "NO ALT"
     override val noAccel: String = "NO ACCEL"
     override val noFlarm: String = "NO FLARM"
     override val noSats: String = "NO SATS"
@@ -60,6 +64,8 @@ internal class DefaultCardStrings : CardStrings {
     override val noIgc: String = "NO IGC"
     override val unknown: String = "UNKNOWN"
     override val stale: String = "STALE"
+    override val invalid: String = "INVALID"
+    override val prestart: String = "PRESTART"
     override val live: String = "LIVE"
     override val gps: String = "GPS"
     override val est: String = "EST"

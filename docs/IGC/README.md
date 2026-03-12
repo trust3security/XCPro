@@ -84,10 +84,11 @@ All IGC planning and contract docs should be discoverable from this file.
 - [x] Keep canonical spec location in `docs/IGC` and remove duplicate non-canonical copy.
 - [x] Normalize `xcpro_igc_file_spec.md` punctuation/encoding artifacts.
 - [x] Run and record required gates:
-  - `python scripts/arch_gate.py`
   - `./gradlew enforceRules`
 
 ## Phase 0 Gate Evidence (2026-03-09)
+
+Historical note: this evidence predates the aggregated `enforceRules` gate and therefore records `arch_gate.py` separately.
 
 - `python scripts/arch_gate.py`
   - Result: `ARCH GATE PASSED`

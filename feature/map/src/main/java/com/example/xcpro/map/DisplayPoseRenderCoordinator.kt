@@ -21,7 +21,7 @@ internal class DisplayPoseRenderCoordinator(
     @Volatile private var lastDisplayPoseLocation: LatLng? = null
     @Volatile private var lastDisplayPoseTimestampMs: Long = 0L
     @Volatile private var lastDisplayPoseFrameId: Long = 0L
-    @Volatile private var displayPoseFrameListener: ((LocationManager.DisplayPoseSnapshot) -> Unit)? = null
+    @Volatile private var displayPoseFrameListener: ((DisplayPoseSnapshot) -> Unit)? = null
     private var displayFrameCounter: Long = 0L
 
     fun updateOrientation(orientation: OrientationData) {
@@ -33,16 +33,16 @@ internal class DisplayPoseRenderCoordinator(
     fun getDisplayPoseTimestampMs(): Long? =
         lastDisplayPoseTimestampMs.takeIf { it > 0L }
 
-    fun getDisplayPoseSnapshot(): LocationManager.DisplayPoseSnapshot? {
+    fun getDisplayPoseSnapshot(): DisplayPoseSnapshot? {
         val location = lastDisplayPoseLocation ?: return null
         val timestamp = lastDisplayPoseTimestampMs
         if (timestamp <= 0L) return null
         val frameId = lastDisplayPoseFrameId
         if (frameId <= 0L) return null
-        return LocationManager.DisplayPoseSnapshot(location, timestamp, frameId)
+        return DisplayPoseSnapshot(location, timestamp, frameId)
     }
 
-    fun setDisplayPoseFrameListener(listener: ((LocationManager.DisplayPoseSnapshot) -> Unit)?) {
+    fun setDisplayPoseFrameListener(listener: ((DisplayPoseSnapshot) -> Unit)?) {
         displayPoseFrameListener = listener
     }
 
@@ -102,7 +102,7 @@ internal class DisplayPoseRenderCoordinator(
         }
         if (featureFlags.useRenderFrameSync) {
             displayPoseFrameListener?.invoke(
-                LocationManager.DisplayPoseSnapshot(
+                DisplayPoseSnapshot(
                     location = poseLocation,
                     timestampMs = poseTimestampMs,
                     frameId = lastDisplayPoseFrameId

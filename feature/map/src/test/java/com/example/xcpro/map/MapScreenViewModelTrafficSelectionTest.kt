@@ -141,7 +141,7 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
         awaitCondition { viewModel.adsbOverlayEnabled.value.not() }
 
         viewModel.mapStateActions.updateCameraSnapshot(
-            target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
+            target = MapPoint(latitude = -35.1234, longitude = 149.1234),
             zoom = 11.0,
             bearing = 0.0
         )
@@ -310,7 +310,7 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
         val viewModel = createViewModel(ognRepositoryOverride = ognRepository)
 
         viewModel.mapStateActions.updateCameraSnapshot(
-            target = MapStateStore.MapPoint(latitude = -35.1234, longitude = 149.1234),
+            target = MapPoint(latitude = -35.1234, longitude = 149.1234),
             zoom = 11.0,
             bearing = 0.0
         )

@@ -159,7 +159,7 @@ class LocationManager(
         get() = mapStateReader.currentUserLocation.value?.let { LatLng(it.latitude, it.longitude) }
         set(value) {
             stateActions.setCurrentUserLocation(
-                value?.let { MapStateStore.MapPoint(it.latitude, it.longitude) }
+                value?.let { MapPoint(it.latitude, it.longitude) }
             )
         }
 
@@ -231,12 +231,6 @@ class LocationManager(
         }
         renderDisplayFrame()
     }
-
-    data class DisplayPoseSnapshot(
-        val location: LatLng,
-        val timestampMs: Long,
-        val frameId: Long
-    )
 
     fun getDisplayPoseLocation(): LatLng? = displayPoseRenderer.getDisplayPoseLocation()
 

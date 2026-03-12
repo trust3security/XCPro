@@ -17,11 +17,11 @@ internal class MapStateActionsDelegate(
         mapStateStore.updateCurrentZoom(zoom)
     }
 
-    override fun setTarget(location: MapStateStore.MapPoint?, zoom: Float?) {
+    override fun setTarget(location: MapPoint?, zoom: Float?) {
         mapStateStore.setTarget(location, zoom)
     }
 
-    override fun setCurrentUserLocation(location: MapStateStore.MapPoint?) {
+    override fun setCurrentUserLocation(location: MapPoint?) {
         mapStateStore.setCurrentUserLocation(location)
     }
 
@@ -45,11 +45,11 @@ internal class MapStateActionsDelegate(
         mapStateStore.updateLastUserPanTime(timestampMillis)
     }
 
-    override fun saveLocation(location: MapStateStore.MapPoint?, zoom: Double?, bearing: Double?) {
+    override fun saveLocation(location: MapPoint?, zoom: Double?, bearing: Double?) {
         mapStateStore.saveLocation(location, zoom, bearing)
     }
 
-    override fun updateCameraSnapshot(target: MapStateStore.MapPoint?, zoom: Double?, bearing: Double?) {
+    override fun updateCameraSnapshot(target: MapPoint?, zoom: Double?, bearing: Double?) {
         mapStateStore.updateCameraSnapshot(target, zoom, bearing)
     }
 

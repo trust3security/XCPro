@@ -17,10 +17,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
+import com.example.xcpro.map.MapSize
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEvent
-import com.example.xcpro.map.MapStateStore
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.replay.SessionStatus
 
@@ -42,10 +42,9 @@ internal fun MapScreenRoot(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
+    val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle(); val weGlideUploadPrompt by mapViewModel.weGlideUploadPrompt.collectAsStateWithLifecycle()
     val runtimeDependencies = mapViewModel.runtimeDependencies
-    val flightDataManager = runtimeDependencies.flightDataManager
-    val orientationManager = runtimeDependencies.orientationManager
+    val flightDataManager = runtimeDependencies.flightDataManager; val orientationManager = runtimeDependencies.orientationManager
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
         drawerState = drawerState,
@@ -54,11 +53,9 @@ internal fun MapScreenRoot(
             mapViewModel.onEvent(MapUiEvent.SetDrawerOpen(isOpen))
         }
     )
-
     // Runtime map state owned by the UI layer.
     val mapState = remember { MapScreenState() }
     val mapStateReader = mapViewModel.mapState
-
     val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
     val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
     val showWindSpeedOnVario by mapViewModel.showWindSpeedOnVario.collectAsStateWithLifecycle()
@@ -72,7 +69,7 @@ internal fun MapScreenRoot(
     var safeContainerSize by safeContainerSizeState
     trackSafeContainerSize(safeContainerSize) { size ->
         mapViewModel.updateSafeContainerSize(
-            MapStateStore.MapSize(
+            MapSize(
                 widthPx = size.width,
                 heightPx = size.height
             )
@@ -217,9 +214,7 @@ internal fun MapScreenRoot(
         density = density
     )
 
-    MapVisibilityLifecycleEffect(mapViewModel)
-
-    val scaffoldInputs = rememberMapScreenScaffoldInputs(
+    MapVisibilityLifecycleEffect(mapViewModel); val scaffoldInputs = rememberMapScreenScaffoldInputs(
         coroutineScope = coroutineScope,
         navController = navController,
         drawerState = drawerState,
@@ -260,5 +255,11 @@ internal fun MapScreenRoot(
         cardStyle = profileLookAndFeelBinding.cardStyle,
         hiddenCardIds = hiddenCardIds
     )
-    MapScreenScaffold(scaffoldInputs)
+    MapScreenScaffold(inputs = scaffoldInputs) {
+        MapScreenScaffoldContentHost(
+            inputs = scaffoldInputs, weGlideUploadPrompt = weGlideUploadPrompt,
+            onConfirmWeGlideUploadPrompt = mapViewModel::onConfirmWeGlideUploadPrompt,
+            onDismissWeGlideUploadPrompt = mapViewModel::onDismissWeGlideUploadPrompt
+        )
+    }
 }

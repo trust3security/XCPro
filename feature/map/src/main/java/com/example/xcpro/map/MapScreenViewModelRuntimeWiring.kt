@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.sensors.CompleteFlightData
@@ -21,6 +22,7 @@ internal fun createFlightDataUiAdapterForViewModel(
     hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateStore,
+    trailSettingsFlow: StateFlow<TrailSettings>,
     liveDataReady: MutableStateFlow<Boolean>,
     containerReady: MutableStateFlow<Boolean>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -33,6 +35,7 @@ internal fun createFlightDataUiAdapterForViewModel(
     hawkVarioUiStateFlow = hawkVarioUiStateFlow,
     flightDataManager = flightDataManager,
     mapStateStore = mapStateStore,
+    trailSettingsFlow = trailSettingsFlow,
     liveDataReady = liveDataReady,
     containerReady = containerReady,
     uiEffects = uiEffects,

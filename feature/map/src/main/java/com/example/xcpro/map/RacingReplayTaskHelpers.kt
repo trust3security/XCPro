@@ -43,9 +43,10 @@ internal fun buildRacingEventMessage(
             }
         }
         RacingNavigationEventType.FINISH -> {
-            val outcomeSuffix = when (event.finishOutcome) {
+            val finishOutcome = event.finishOutcome
+            val outcomeSuffix = when (finishOutcome) {
                 null -> ""
-                else -> " (${event.finishOutcome.name})"
+                else -> " (${finishOutcome.name})"
             }
             if (waypointName != null) "Finish reached: $waypointName$outcomeSuffix"
             else "Finish reached$outcomeSuffix"

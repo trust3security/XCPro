@@ -24,4 +24,16 @@ class NeedleVarioDynamicsTest {
         val decayed = filter.update(target = 2.0, deltaTimeSeconds = 0.1, isValid = false)
         assertTrue(decayed < value)
     }
+
+    @Test
+    fun reset_clears_state() {
+        val filter = NeedleVarioDynamics(t95Seconds = 0.6, clamp = 7.0)
+        val warmed = filter.update(target = 3.0, deltaTimeSeconds = 0.2, isValid = true)
+        assertTrue(warmed > 0.5)
+
+        filter.reset()
+
+        val afterReset = filter.update(target = 0.0, deltaTimeSeconds = 0.1, isValid = true)
+        assertTrue(kotlin.math.abs(afterReset) < 1e-6)
+    }
 }

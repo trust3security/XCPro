@@ -68,14 +68,6 @@ function ConvertTo-Hashtable {
     return $InputObject
 }
 
-function Resolve-PythonExecutable {
-    $python = Get-Command python -ErrorAction SilentlyContinue
-    if ($python) { return "python" }
-    $py = Get-Command py -ErrorAction SilentlyContinue
-    if ($py) { return "py" }
-    throw "Python executable not found on PATH. Install python or py launcher."
-}
-
 function Test-ConnectedDevice {
     $adb = Get-Command adb -ErrorAction SilentlyContinue
     if (-not $adb) { return $false }
@@ -347,8 +339,6 @@ if ($RequireConnectedDevice -and -not (Test-ConnectedDevice)) {
     throw "No connected device/emulator detected, but RequireConnectedDevice was set."
 }
 
-$pythonExecutable = Resolve-PythonExecutable
-
 Write-Host "Mapscreen completion contract runner"
 Write-Host "Repo: $repoRoot"
 Write-Host "Contract: $contractPath"
@@ -510,13 +500,6 @@ try {
                 }
             }
             7 {
-                if ($pythonExecutable -eq "py") {
-                    $arch = Invoke-CommandSet -Executable "py" -CommandArgs @("-3", "scripts/arch_gate.py") -PhaseName $phaseName
-                } else {
-                    $arch = Invoke-CommandSet -Executable "python" -CommandArgs @("scripts/arch_gate.py") -PhaseName $phaseName
-                }
-                Add-PhaseCommand -PhaseRecord $currentPhaseRecord -CommandRecord $arch
-
                 foreach ($taskSet in @(@("enforceRules"), @("testDebugUnitTest"), @("assembleDebug"))) {
                     $result = Invoke-GradleTaskSet -GradleArgs $taskSet -PhaseName $phaseName
                     Add-PhaseCommand -PhaseRecord $currentPhaseRecord -CommandRecord $result

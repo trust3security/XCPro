@@ -5,30 +5,17 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Policy
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -81,7 +68,6 @@ fun TaskTopDropdownPanel(
     val resolvedTaskViewModel = taskViewModel ?: hiltViewModel()
     val uiState by resolvedTaskViewModel.uiState.collectAsStateWithLifecycle()
     val task by remember { androidx.compose.runtime.derivedStateOf { uiState.task } }
-    var selectedCategory by remember { mutableStateOf(TaskCategory.MANAGE) }
 
     var currentHeightPx by remember { mutableStateOf(halfExpandedPx) }
     var swipeDownDistance by remember { mutableStateOf(0f) }
@@ -198,8 +184,6 @@ fun TaskTopDropdownPanel(
                         uiState = uiState,
                         task = task,
                         taskViewModel = resolvedTaskViewModel,
-                        selectedCategory = selectedCategory,
-                        onCategorySelect = { selectedCategory = it },
                         currentQNH = currentQNH,
                         allWaypoints = allWaypoints,
                         unitsPreferences = unitsPreferences,
@@ -219,8 +203,6 @@ private fun TaskTopExpandedContent(
     uiState: TaskUiState,
     task: Task,
     taskViewModel: TaskSheetViewModel,
-    selectedCategory: TaskCategory,
-    onCategorySelect: (TaskCategory) -> Unit,
     currentQNH: String?,
     allWaypoints: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
@@ -229,42 +211,10 @@ private fun TaskTopExpandedContent(
     onDismiss: () -> Unit,
     mapLibreMap: MapLibreMap?
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        PrimaryScrollableTabRow(
-            selectedTabIndex = TaskCategory.values().indexOf(selectedCategory),
-            modifier = Modifier.fillMaxWidth(),
-            edgePadding = 0.dp
-        ) {
-            TaskCategory.values().forEach { category ->
-                Tab(
-                    selected = selectedCategory == category,
-                    onClick = { onCategorySelect(category) },
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = when (category) {
-                                    TaskCategory.MANAGE -> Icons.Default.Settings
-                                    TaskCategory.RULES -> Icons.Default.Policy
-                                    TaskCategory.FILES -> Icons.Default.Folder
-                                    TaskCategory.FOUR -> Icons.Default.Star
-                                    TaskCategory.FIVE -> Icons.Default.Favorite
-                                },
-                                contentDescription = null
-                            )
-                            Text(category.label)
-                        }
-                    }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        when (selectedCategory) {
-            TaskCategory.MANAGE -> {
+    TaskPanelCategoryHost(
+        uiState = uiState,
+        taskViewModel = taskViewModel,
+        manageContent = {
                 ManageBTTabRouter(
                     uiState = uiState,
                     task = task,
@@ -278,35 +228,6 @@ private fun TaskTopExpandedContent(
                     currentQNH = currentQNH,
                     taskType = uiState.taskType
                 )
-            }
-
-            TaskCategory.RULES -> {
-                RulesBTTab(
-                    uiState = uiState,
-                    onSelect = taskViewModel::onSetTaskType,
-                    onUpdateAATParameters = taskViewModel::onUpdateAATParameters,
-                    onUpdateRacingStartRules = taskViewModel::onUpdateRacingStartRules,
-                    onUpdateRacingFinishRules = taskViewModel::onUpdateRacingFinishRules,
-                    onUpdateRacingValidationRules = taskViewModel::onUpdateRacingValidationRules
-                )
-            }
-
-            TaskCategory.FILES -> {
-                FilesBTTab(taskViewModel = taskViewModel)
-            }
-
-            else -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${selectedCategory.label} - Coming Soon",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
-            }
         }
-    }
+    )
 }

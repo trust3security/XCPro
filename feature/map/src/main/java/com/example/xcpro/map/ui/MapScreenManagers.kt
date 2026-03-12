@@ -24,6 +24,7 @@ import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.tasks.TaskMapRenderRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
@@ -63,7 +64,10 @@ internal fun rememberMapScreenManagers(
     val taskRenderSyncCoordinator = remember(tasksUseCase, mapState) {
         TaskRenderSyncCoordinator(
             snapshotProvider = tasksUseCase::taskRenderSnapshot,
-            mapProvider = { mapState.mapLibreMap }
+            mapProvider = { mapState.mapLibreMap },
+            renderSync = TaskMapRenderRouter::syncTaskVisuals,
+            renderClear = TaskMapRenderRouter::clearAllTaskVisuals,
+            renderAatPreview = TaskMapRenderRouter::previewAatTargetPoint
         )
     }
 

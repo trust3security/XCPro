@@ -36,7 +36,7 @@ class MapUserInteractionControllerTest {
     fun handleUserInteraction_saves_zoom_and_bearing_before_first_pan() {
         val store = MapStateStore(initialStyleName = "Topo")
         val actions = MapStateActionsDelegate(store)
-        actions.saveLocation(MapStateStore.MapPoint(1.0, 2.0), 11.0, 22.0)
+        actions.saveLocation(MapPoint(1.0, 2.0), 11.0, 22.0)
         val controller = MapUserInteractionController(
             mapStateReader = store,
             stateActions = actions,
@@ -64,7 +64,7 @@ class MapUserInteractionControllerTest {
     fun handleUserInteraction_does_not_overwrite_when_return_visible() {
         val store = MapStateStore(initialStyleName = "Topo")
         val actions = MapStateActionsDelegate(store)
-        actions.saveLocation(MapStateStore.MapPoint(1.0, 2.0), 11.0, 22.0)
+        actions.saveLocation(MapPoint(1.0, 2.0), 11.0, 22.0)
         actions.setShowReturnButton(true)
         val controller = MapUserInteractionController(
             mapStateReader = store,
@@ -93,7 +93,7 @@ class MapUserInteractionControllerTest {
     fun returnToSavedLocation_pausesTracking_untilAnimationFinishes() {
         val store = MapStateStore(initialStyleName = "Topo")
         val actions = MapStateActionsDelegate(store)
-        actions.saveLocation(MapStateStore.MapPoint(10.0, 20.0), 11.0, 22.0)
+        actions.saveLocation(MapPoint(10.0, 20.0), 11.0, 22.0)
         actions.setShowReturnButton(true)
         actions.setShowRecenterButton(true)
         val fakeCamera = FakeCameraController(
@@ -135,7 +135,7 @@ class MapUserInteractionControllerTest {
     fun returnToSavedLocation_restoresTracking_onCancel() {
         val store = MapStateStore(initialStyleName = "Topo")
         val actions = MapStateActionsDelegate(store)
-        actions.saveLocation(MapStateStore.MapPoint(10.0, 20.0), 11.0, 22.0)
+        actions.saveLocation(MapPoint(10.0, 20.0), 11.0, 22.0)
         val fakeCamera = FakeCameraController(
             initial = MapCameraPositionSnapshot(
                 target = LatLng(0.0, 0.0),
@@ -164,7 +164,7 @@ class MapUserInteractionControllerTest {
     fun recenterOnCurrentLocation_animates_and_hides_recenter() {
         val store = MapStateStore(initialStyleName = "Topo")
         val actions = MapStateActionsDelegate(store)
-        actions.setCurrentUserLocation(MapStateStore.MapPoint(3.0, 4.0))
+        actions.setCurrentUserLocation(MapPoint(3.0, 4.0))
         actions.setShowRecenterButton(true)
         val fakeCamera = FakeCameraController(
             initial = MapCameraPositionSnapshot(

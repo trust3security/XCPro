@@ -63,6 +63,7 @@ class FlightDisplayMapperTest {
         assertEquals(metrics.displayNetto, mapped.displayNetto.value, 1e-6)
         assertEquals(metrics.nettoValid, mapped.nettoValid)
         assertEquals(metrics.displayBaselineVario, mapped.baselineDisplayVario.value, 1e-6)
+        assertEquals(metrics.navAltitude, mapped.navAltitude.value, 1e-6)
         assertEquals(metrics.levoNettoMs, mapped.levoNetto.value, 1e-6)
         assertEquals(metrics.autoMcMs, mapped.autoMacCready, 1e-6)
         assertEquals(metrics.autoMcValid, mapped.autoMacCreadyValid)

@@ -2,6 +2,7 @@ package com.example.xcpro.map.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,7 +28,10 @@ import kotlinx.coroutines.launch
  * Drawer + content scaffold for the map screen, with GPS status and loading overlay.
  */
 @Composable
-internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
+internal fun MapScreenScaffold(
+    inputs: MapScreenScaffoldInputs,
+    content: @Composable BoxScope.() -> Unit
+) {
     val coroutineScope = rememberCoroutineScope()
     val showGeneralSettings by inputs.modalManager.showGeneralSettings.collectAsStateWithLifecycle()
     NavigationDrawer(
@@ -49,88 +53,7 @@ internal fun MapScreenScaffold(inputs: MapScreenScaffoldInputs) {
                         .align(Alignment.TopCenter)
                         .padding(top = 8.dp, start = 12.dp, end = 12.dp)
                 )
-                MapScreenContent(
-                    density = inputs.density,
-                    mapState = inputs.mapState,
-                    mapInitializer = inputs.mapInitializer,
-                    onMapReady = inputs.onMapReady,
-                    onMapViewBound = inputs.onMapViewBound,
-                    locationManager = inputs.locationManager,
-                    flightDataManager = inputs.flightDataManager,
-                    flightViewModel = inputs.flightViewModel,
-                    taskType = inputs.taskType,
-                    createTaskGestureHandler = inputs.createTaskGestureHandler,
-                    windArrowState = inputs.windArrowState,
-                    showWindSpeedOnVario = inputs.showWindSpeedOnVario,
-                    cameraManager = inputs.cameraManager,
-                    currentMode = inputs.currentMode,
-                    currentZoom = inputs.currentZoom,
-                    onModeChange = inputs.onModeChange,
-                    currentMapStyleName = inputs.currentMapStyleName,
-                    onTransientMapStyleSelected = inputs.onTransientMapStyleSelected,
-                    currentLocation = inputs.currentLocation,
-                    showRecenterButton = inputs.showRecenterButton,
-                    showReturnButton = inputs.showReturnButton,
-                    showDistanceCircles = inputs.showDistanceCircles,
-                    trafficBinding = inputs.traffic,
-                    isUiEditMode = inputs.isUiEditMode,
-                    onEditModeChange = inputs.onEditModeChange,
-                    isAATEditMode = inputs.isAATEditMode,
-                    onEnterAATEditMode = inputs.onEnterAATEditMode,
-                    onUpdateAATTargetPoint = inputs.onUpdateAATTargetPoint,
-                    onExitAATEditMode = inputs.onExitAATEditMode,
-                    safeContainerSize = inputs.safeContainerSize,
-                    overlayManager = inputs.overlayManager,
-                    modalManager = inputs.modalManager,
-                    widgetManager = inputs.widgetManager,
-                    screenWidthPx = inputs.screenWidthPx,
-                    screenHeightPx = inputs.screenHeightPx,
-                    variometerUiState = inputs.variometerUiState,
-                    minVariometerSizePx = inputs.minVariometerSizePx,
-                    maxVariometerSizePx = inputs.maxVariometerSizePx,
-                    onVariometerOffsetChange = inputs.onVariometerOffsetChange,
-                    onVariometerSizeChange = inputs.onVariometerSizeChange,
-                    onVariometerLongPress = inputs.onVariometerLongPress,
-                    onVariometerEditFinished = inputs.onVariometerEditFinished,
-                    hamburgerOffset = inputs.hamburgerOffset,
-                    flightModeOffset = inputs.flightModeOffset,
-                    settingsOffset = inputs.settingsOffset,
-                    ballastOffset = inputs.ballastOffset,
-                    hamburgerSizePx = inputs.hamburgerSizePx,
-                    settingsSizePx = inputs.settingsSizePx,
-                    onHamburgerOffsetChange = inputs.onHamburgerOffsetChange,
-                    onFlightModeOffsetChange = inputs.onFlightModeOffsetChange,
-                    onSettingsOffsetChange = inputs.onSettingsOffsetChange,
-                    onBallastOffsetChange = inputs.onBallastOffsetChange,
-                    onHamburgerSizeChange = inputs.onHamburgerSizeChange,
-                    onSettingsSizeChange = inputs.onSettingsSizeChange,
-                    taskScreenManager = inputs.taskScreenManager,
-                    waypointData = inputs.waypointData,
-                    unitsPreferences = inputs.unitsPreferences,
-                    qnhCalibrationState = inputs.qnhCalibrationState,
-                    weGlideUploadPrompt = inputs.weGlideUploadPrompt,
-                    onAutoCalibrateQnh = inputs.onAutoCalibrateQnh,
-                    onSetManualQnh = inputs.onSetManualQnh,
-                    onConfirmWeGlideUploadPrompt = inputs.onConfirmWeGlideUploadPrompt,
-                    onDismissWeGlideUploadPrompt = inputs.onDismissWeGlideUploadPrompt,
-                    trafficActions = inputs.trafficActions,
-                    ballastUiState = inputs.ballastUiState,
-                    isBallastPillHidden = inputs.isBallastPillHidden,
-                    onBallastCommand = inputs.onBallastCommand,
-                    onHamburgerTap = inputs.onHamburgerTap,
-                    onHamburgerLongPress = inputs.onHamburgerLongPress,
-                    onSettingsTap = inputs.onSettingsTap,
-                    cardStyle = inputs.cardStyle,
-                    hiddenCardIds = inputs.hiddenCardIds,
-                    replayState = inputs.replayState,
-                    showVarioDemoFab = inputs.showVarioDemoFab,
-                    onVarioDemoReferenceClick = inputs.onVarioDemoReferenceClick,
-                    onVarioDemoSimClick = inputs.onVarioDemoSimClick,
-                    onVarioDemoSim2Click = inputs.onVarioDemoSim2Click,
-                    onVarioDemoSim3Click = inputs.onVarioDemoSim3Click,
-                    showRacingReplayFab = inputs.showRacingReplayFab,
-                    onRacingReplayClick = inputs.onRacingReplayClick
-                )
+                content()
                 if (inputs.isLoadingWaypoints) {
                     Box(
                         modifier = Modifier

@@ -20,7 +20,6 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.map.WeGlideUploadPromptUiState
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -104,11 +103,8 @@ internal data class MapScreenScaffoldInputs(
     val waypointData: List<WaypointData>,
     val unitsPreferences: UnitsPreferences,
     val qnhCalibrationState: QnhCalibrationState,
-    val weGlideUploadPrompt: WeGlideUploadPromptUiState?,
     val onAutoCalibrateQnh: () -> Unit,
     val onSetManualQnh: (Double) -> Unit,
-    val onConfirmWeGlideUploadPrompt: () -> Unit,
-    val onDismissWeGlideUploadPrompt: () -> Unit,
     val trafficActions: MapTrafficUiActions,
     val ballastUiState: StateFlow<BallastUiState>,
     val isBallastPillHidden: Boolean,

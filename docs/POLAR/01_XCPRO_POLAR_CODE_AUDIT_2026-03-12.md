@@ -2,6 +2,16 @@
 
 Date: 2026-03-12
 
+Status note:
+
+- This document records the pre-task-aware-glide audit baseline.
+- Since this audit, XCPro has added a racing-task finish-glide MVP:
+  - `final_gld`
+  - `arr_alt`
+  - `req_alt`
+  - `arr_mc0`
+- For current task-aware glide status, use `06_XCPRO_TASK_AWARE_GLIDE_CARD_PLAN_2026-03-12.md`.
+
 ## Scope
 
 This note answers two questions:

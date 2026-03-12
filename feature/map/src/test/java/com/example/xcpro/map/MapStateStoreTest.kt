@@ -14,9 +14,9 @@ class MapStateStoreTest {
     fun updateSafeContainerSize_ignoresZero() {
         val store = MapStateStore(initialStyleName = "Topo")
 
-        store.updateSafeContainerSize(MapStateStore.MapSize.Zero)
+        store.updateSafeContainerSize(MapSize.Zero)
 
-        assertEquals(MapStateStore.MapSize.Zero, store.safeContainerSize.value)
+        assertEquals(MapSize.Zero, store.safeContainerSize.value)
     }
 
     @Test
