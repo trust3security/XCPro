@@ -296,9 +296,29 @@ private val performanceCards = listOf(
     CardDefinition(
         id = "ld_curr",
         title = "L/D CURR",
-        description = "Current lift to drag ratio",
+        description = "Measured glide ratio over the recent flight path",
         category = CardCategory.PERFORMANCE,
         icon = Icons.Filled.Timeline,
+        unit = ":1",
+        primaryFontSize = 13,
+        unitFontSize = 8
+    ),
+    CardDefinition(
+        id = "polar_ld",
+        title = "POLAR L/D",
+        description = "Theoretical still-air glide ratio at the current indicated airspeed",
+        category = CardCategory.PERFORMANCE,
+        icon = Icons.Filled.Timeline,
+        unit = ":1",
+        primaryFontSize = 13,
+        unitFontSize = 8
+    ),
+    CardDefinition(
+        id = "best_ld",
+        title = "BEST L/D",
+        description = "Best theoretical still-air glide ratio from the active polar",
+        category = CardCategory.PERFORMANCE,
+        icon = Icons.Filled.Star,
         unit = ":1",
         primaryFontSize = 13,
         unitFontSize = 8

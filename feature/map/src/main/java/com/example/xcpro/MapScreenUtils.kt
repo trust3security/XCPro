@@ -133,6 +133,8 @@ fun convertToRealTimeFlightData(
         currentThermalLiftRate = completeData.currentThermalLiftRate.value,
         currentThermalValid = completeData.currentThermalValid,
         currentLD = completeData.currentLD,
+        polarLdCurrentSpeed = completeData.polarLdCurrentSpeed,
+        polarBestLd = completeData.polarBestLd,
         netto = completeData.netto.value.toFloat(),
         displayNetto = completeData.displayNetto.value,
         nettoValid = completeData.nettoValid,

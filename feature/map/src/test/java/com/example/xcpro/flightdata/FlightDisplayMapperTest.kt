@@ -82,6 +82,8 @@ class FlightDisplayMapperTest {
         assertEquals(9_876L, mapped.aglTimestampMonoMs)
         assertEquals(1.5, mapped.macCready, 1e-6)
         assertEquals(0.25, mapped.macCreadyRisk, 1e-6)
+        assertEquals(metrics.polarLdCurrentSpeed, mapped.polarLdCurrentSpeed, 1e-6f)
+        assertEquals(metrics.polarBestLd, mapped.polarBestLd, 1e-6f)
         assertEquals(12_345L, mapped.timestamp)
         assertEquals("TEST", mapped.dataQuality)
     }

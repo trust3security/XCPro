@@ -185,6 +185,14 @@ internal class CalculateFlightMetricsRuntime(
         }
         flightHelpers.recordLocationSample(gps, sampleTimeMillis)
         val calculatedLD = flightHelpers.calculateCurrentLD(gps, baroAltitude, sampleTimeMillis)
+        val polarLdCurrentSpeed = sinkProvider.ldAtSpeed(indicatedAirspeedMs)
+            ?.toFloat()
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?: 0f
+        val polarBestLd = sinkProvider.bestLd()
+            ?.toFloat()
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?: 0f
 
         val nettoResult = flightHelpers.calculateNetto(
             currentVerticalSpeed = bruttoVario,
@@ -355,6 +363,8 @@ internal class CalculateFlightMetricsRuntime(
             currentThermalLiftRate = currentThermalLift,
             currentThermalValid = currentThermalValid,
             calculatedLD = calculatedLD,
+            polarLdCurrentSpeed = polarLdCurrentSpeed,
+            polarBestLd = polarBestLd,
             teAltitude = teAltitude,
             isCircling = isCircling,
             thermalAverage30sValid = thermalAvg30sValid,

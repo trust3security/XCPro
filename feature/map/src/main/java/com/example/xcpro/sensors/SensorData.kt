@@ -156,6 +156,8 @@ data class CompleteFlightData(
 
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)
+    val polarLdCurrentSpeed: Float = 0f,
+    val polarBestLd: Float = 0f,
 
     // Calculated netto variometer
     val netto: VerticalSpeedMs,           // m/s (variometer + sink rate compensation)

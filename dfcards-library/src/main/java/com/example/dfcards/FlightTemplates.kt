@@ -48,23 +48,24 @@ object FlightTemplates {
             ),
             FlightTemplate(
                 id = "id03",
-                name = "Final Glide",
-                description = "Three cards for final glide mode",
-                cardIds = listOf("gps_alt", "final_gld", "ground_speed"),
+                name = "Glide",
+                description = "Core glide performance cards with live polar metrics",
+                cardIds = listOf("gps_alt", "polar_ld", "best_ld", "mc_speed"),
                 icon = Icons.Filled.Terrain,
                 isPreset = true
             ),
             FlightTemplate(
                 id = "id04",
                 name = "Cross Country",
-                description = "Navigation and performance",
+                description = "Live cruise and glide-performance metrics",
                 cardIds = listOf(
                     "gps_alt",
                     "track",
-                    "wpt_dist",
-                    "wpt_brg",
-                    "final_gld",
                     "ground_speed",
+                    "wind_arrow",
+                    "polar_ld",
+                    "best_ld",
+                    "mc_speed",
                     "thermal_t_avg",
                     "thermal_tc_avg",
                     "ld_curr"
@@ -74,9 +75,9 @@ object FlightTemplates {
             ),
             FlightTemplate(
                 id = "id05", 
-                name = "Competition",
-                description = "Racing and task management",
-                cardIds = listOf("task_spd", "task_dist", "start_alt", "wpt_eta", "final_gld", "ld_curr", "mc_speed", "flight_time"),
+                name = "Performance",
+                description = "Live energy, glide, and speed-to-fly metrics",
+                cardIds = listOf("ld_curr", "polar_ld", "best_ld", "netto", "netto_avg30", "levo_netto", "mc_speed", "flight_time"),
                 icon = Icons.Filled.EmojiEvents,
                 isPreset = true
             )

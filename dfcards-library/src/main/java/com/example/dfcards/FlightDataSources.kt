@@ -70,6 +70,8 @@ data class RealTimeFlightData(
     val currentThermalLiftRate: Double = Double.NaN,
     val currentThermalValid: Boolean = false,
     val currentLD: Float = 0f,
+    val polarLdCurrentSpeed: Float = 0f,
+    val polarBestLd: Float = 0f,
     val netto: Float = 0f,
     val displayNetto: Double = 0.0,
     val nettoValid: Boolean = false,

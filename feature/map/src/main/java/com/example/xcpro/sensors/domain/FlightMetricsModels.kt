@@ -66,6 +66,8 @@ data class FlightMetricsResult(
     val currentThermalLiftRate: Double,
     val currentThermalValid: Boolean,
     val calculatedLD: Float,
+    val polarLdCurrentSpeed: Float,
+    val polarBestLd: Float,
     val teAltitude: Double,
     val isCircling: Boolean,
     val thermalAverage30sValid: Boolean,

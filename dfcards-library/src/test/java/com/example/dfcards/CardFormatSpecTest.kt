@@ -65,6 +65,38 @@ class CardFormatSpecTest {
         assertEquals("56", secondary)
     }
 
+    @Test
+    fun polarLd_formats_live_value() {
+        val liveData = RealTimeFlightData(
+            polarLdCurrentSpeed = 37f
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.POLAR_LD]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("37:1", primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun bestLd_formats_calculated_value() {
+        val liveData = RealTimeFlightData(
+            polarBestLd = 44f
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.BEST_LD]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("44:1", primary)
+        assertEquals(strings.calc, secondary)
+    }
+
     private class StubTimeFormatter : CardTimeFormatter {
         var lastEpoch: Long? = null
 

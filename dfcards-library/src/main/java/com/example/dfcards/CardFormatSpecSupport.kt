@@ -28,6 +28,11 @@ internal fun placeholderFor(
         KnownCardId.AGL,
         KnownCardId.START_ALT ->
             "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
+        KnownCardId.FINAL_GLD,
+        KnownCardId.LD_CURR,
+        KnownCardId.POLAR_LD,
+        KnownCardId.BEST_LD ->
+            "--:1"
         KnownCardId.VARIO,
         KnownCardId.VARIO_OPTIMIZED,
         KnownCardId.VARIO_LEGACY,

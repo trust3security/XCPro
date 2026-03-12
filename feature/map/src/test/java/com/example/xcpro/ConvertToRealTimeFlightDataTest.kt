@@ -75,6 +75,8 @@ class ConvertToRealTimeFlightDataTest {
             currentThermalLiftRate = VerticalSpeedMs(1.3),
             currentThermalValid = true,
             currentLD = 35f,
+            polarLdCurrentSpeed = 38f,
+            polarBestLd = 44f,
             netto = VerticalSpeedMs(-0.5),
             displayNetto = VerticalSpeedMs(-0.4),
             nettoValid = true,
@@ -102,6 +104,8 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(true, result.isQNHCalibrated)
         assertEquals(2.5f, result.thermalAverage, 1e-6f)
         assertEquals(0.9, result.nettoAverage30s, 1e-6)
+        assertEquals(38f, result.polarLdCurrentSpeed, 1e-6f)
+        assertEquals(44f, result.polarBestLd, 1e-6f)
         assertEquals("12:34", result.flightTime)
         assertEquals(12_345L, result.timestamp)
         assertEquals(9_999L, result.lastUpdateTime)

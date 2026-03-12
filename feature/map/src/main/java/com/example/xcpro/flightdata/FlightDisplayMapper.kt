@@ -58,6 +58,8 @@ class FlightDisplayMapper {
             currentThermalLiftRate = VerticalSpeedMs(metrics.currentThermalLiftRate),
             currentThermalValid = metrics.currentThermalValid,
             currentLD = metrics.calculatedLD,
+            polarLdCurrentSpeed = metrics.polarLdCurrentSpeed,
+            polarBestLd = metrics.polarBestLd,
             netto = VerticalSpeedMs(metrics.netto.toDouble()),
             displayNetto = VerticalSpeedMs(metrics.displayNetto),
             nettoValid = metrics.nettoValid,

@@ -175,6 +175,22 @@ internal object CardFormatSpecs {
                 }
             }
 
+            KnownCardId.POLAR_LD -> {
+                if (liveData.polarLdCurrentSpeed > 1f) {
+                    Pair("${liveData.polarLdCurrentSpeed.roundToInt()}:1", strings.live)
+                } else {
+                    Pair("--:1", strings.noPolar)
+                }
+            }
+
+            KnownCardId.BEST_LD -> {
+                if (liveData.polarBestLd > 1f) {
+                    Pair("${liveData.polarBestLd.roundToInt()}:1", strings.calc)
+                } else {
+                    Pair("--:1", strings.noPolar)
+                }
+            }
+
             KnownCardId.THERMAL_AVG -> {
                 // Match 30 s TC: primary shows the 30 s average, secondary shows current vario
                 val avgValue: Double = liveData.thermalAverage.toDouble()

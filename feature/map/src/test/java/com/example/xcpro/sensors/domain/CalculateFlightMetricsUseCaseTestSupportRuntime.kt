@@ -53,6 +53,8 @@ internal fun newUseCaseWithHelpers(
     val sink = mock<StillAirSinkProvider> {
         on { sinkAtSpeed(any()) }.thenReturn(0.0)
         on { iasBoundsMs() }.thenReturn(null)
+        on { ldAtSpeed(any()) }.thenReturn(null)
+        on { bestLd() }.thenReturn(null)
     }
     val helpers = mock<FlightCalculationHelpers>()
     whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(

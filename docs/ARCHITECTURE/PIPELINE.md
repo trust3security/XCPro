@@ -9,9 +9,10 @@ Diagram: `PIPELINE.svg`.
 ## Automated Quality Gates
 
 These artifacts block architecture/timebase regressions:
+- Aggregate Gradle gate: `./gradlew enforceRules` (includes `archGate`)
+- Fast architecture gate: `./gradlew enforceArchitectureFast`
 - Local gate script: `scripts/arch_gate.py`
 - CI workflow: `.github/workflows/quality-gates.yml`
-- Gradle rule gate: `./gradlew enforceRules`
 - Map visual SLO contract:
   - `docs/MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`
   - `docs/MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`
@@ -97,6 +98,10 @@ Filters and vario:
 Metrics use case:
 - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
   - TE/netto, display smoothing, circling detection, LD, thermal metrics.
+  - Flight-only polar-derived metrics now include:
+    - measured glide ratio (`currentLD`)
+    - theoretical still-air glide ratio at current IAS (`polarLdCurrentSpeed`)
+    - best still-air glide ratio from the active polar (`polarBestLd`)
   - airspeed selection priority is now:
     `EXTERNAL/REPLAY (fresh+valid) -> stabilized WIND/GPS decision -> GPS_GROUND fallback`.
   - Live WIND vs GPS choice is stabilized by domain policy/controller:
@@ -202,6 +207,8 @@ ViewModel:
     `flightData.isCircling` + thermalling settings repository flow +
     thermal-mode visibility -> `ThermallingModeCoordinator` ->
     existing `setFlightMode(...)` and map zoom target actions.
+  - Exposes a separate `feature:weglide`-owned WeGlide prompt flow for UI rendering,
+    instead of threading the prompt through `MapUiState`.
 
 ## 5) ViewModel -> UI (Map + Cards)
 
@@ -218,6 +225,13 @@ Observers:
 Mapping for cards:
 - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
   - `convertToRealTimeFlightData(...)` maps SSOT to card-friendly model.
+  - Flight-only polar metrics currently mapped for cards:
+    - `currentLD`
+    - `polarLdCurrentSpeed`
+    - `polarBestLd`
+    - `netto`
+    - `levoNetto`
+    - `speedToFlyIas`
 
 UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
@@ -244,6 +258,20 @@ Map bindings:
 - `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
   - Map drawer `Settings -> General` uses the same map-owned General modal callback
     when provided by `NavigationDrawer`; route navigation remains as compatibility fallback.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
+  - Retains map-owned auxiliary panel orchestration and renders the WeGlide prompt through
+    `feature/weglide/src/main/java/com/example/xcpro/weglide/ui/WeGlideUploadPromptDialogHost.kt`.
+  - Consumes the dedicated `MapAuxiliaryPanelsInputs` seam from the retained map shell
+    rather than a long per-field prompt/QNH argument list.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
+  - Retained drawer/loading shell only; no longer imports the owner-side WeGlide prompt type.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
+  - Small map-owned render seam that binds scaffold inputs plus owner-side prompt callbacks
+    into `MapScreenContent` without spreading prompt ABI through the scaffold shell.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenAuxiliaryPanelsInputs.kt`
+  - Dedicated map-shell auxiliary input holder for WeGlide prompt and QNH dialog state/callbacks.
+  - Keeps auxiliary-only signature churn localized near `MapScreenContentRuntime` and
+    `MapScreenContentRuntimeSections`.
 
 OGN settings path:
 - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
@@ -414,18 +442,18 @@ ADS-b lifecycle/visibility semantics:
   - ADS-b overlay renders `emptyList()` when overlay preference is disabled.
 
 Forecast overlay (SkySight-backed) path:
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
+- `feature/forecast/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
   - SSOT for forecast overlay preferences (`enabled`, `opacity`, `autoTimeEnabled`, `selectedPrimaryParameterId`, `selectedTimeUtcMs`, `selectedRegion`).
   - Wind-overlay prefs are separate (`windOverlayEnabled`, `selectedWindParameterId`, `windOverlayScale`, `windDisplayMode`).
   - SkySight satellite prefs are SSOT-managed (`skySightSatelliteOverlayEnabled`, imagery/radar/lightning toggles, animation, history-frame count).
-- `feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt`
+- `feature/forecast/src/main/java/com/example/xcpro/di/ForecastModule.kt`
   - Binds forecast ports to `SkySightForecastProviderAdapter` in production runtime.
-- `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+- `feature/forecast/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
   - Adapter for SkySight catalog/tile/legend/value contracts.
   - Resolves region-aware time slots, per-parameter tile URL formats, source-layer candidates, and point fields.
-- `feature/map/src/main/java/com/example/xcpro/forecast/FakeForecastProviderAdapter.kt`
+- `feature/forecast/src/main/java/com/example/xcpro/forecast/FakeForecastProviderAdapter.kt`
   - Test utility adapter for unit tests and local contract validation only.
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
+- `feature/forecast/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
   - Composes prefs + provider ports into overlay-ready state and point-query results.
   - Emits one active non-wind layer state plus optional wind-layer state.
   - Satellite-only time-reference contract:
@@ -435,11 +463,17 @@ Forecast overlay (SkySight-backed) path:
     - satellite renderer applies two-sided freshness clamp (near-live upper bound and history-window lower bound).
   - Maintains last-good tile/legend with fatal-vs-warning error separation
     (non-wind and wind tile hard-failures are fatal when no renderable tile is available).
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
+- `feature/forecast/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
   - ViewModel-intent boundary for enable/time/opacity and long-press point query.
   - SkySight-tab non-wind parameter selection is single-select (primary only).
+- `feature/forecast/src/main/java/com/example/xcpro/map/ui/MapForecastBottomTabContents.kt`
+  - Shared SkySight bottom-tab content host consumed by the retained `feature:map` bottom-sheet shell.
+  - Keeps forecast-owned controls composition out of `feature:map` while preserving the same tab host/routing.
+- `feature/forecast/src/main/java/com/example/xcpro/map/ui/ForecastAuxiliaryHosts.kt`
+  - Owns the forecast point-callout card, query-status chip, and wind-speed tap label hosts used by the retained map shell.
+  - Keeps forecast-owned auxiliary presentation and formatting out of `feature:map` while the map shell still owns projection, placement, and dismissal orchestration.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - Collects forecast and weather state, composes SkySight warning/error channels, and renders point-query callout/status.
+  - Collects forecast and weather state, composes SkySight warning/error channels, and routes point-query/tap UI into the shared forecast-owned auxiliary hosts.
   - Applies RainViewer-vs-SkySight dual-rain arbitration: when RainViewer is enabled and SkySight non-wind parameter is `accrain`,
     SkySight primary rain rendering is suppressed while wind overlay remains independent.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
@@ -460,21 +494,37 @@ Forecast overlay (SkySight-backed) path:
   - Uses `satellite.skysight.io` tile templates with `date=YYYY/MM/DD/HHmm` contract and bounded history-frame loop (1-6, 10-minute steps).
 
 Weather rain overlay path:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayPreferencesRepository.kt`
+- `feature/weather/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayPreferencesRepository.kt`
   - SSOT for weather rain overlay preferences (`enabled`, `opacity`, animation toggle, animation window, animation speed, transition quality, frame mode, render options).
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/weather/src/main/java/com/example/xcpro/di/WeatherMetadataNetworkModule.kt`
+  - Owns the RainViewer metadata `OkHttpClient` binding and weather-specific DI qualifiers.
+- `feature/weather/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
   - RainViewer metadata fetch + parse (`weather-maps.json`) with runtime status/fallback handling.
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+- `feature/weather/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
   - Combines preferences + metadata into frame-based runtime state (`selectedFrame`, status, effective transition duration).
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayViewModel.kt`
-  - Map-side weather overlay state for runtime binding.
+- `feature/weather/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayViewModel.kt`
+  - Weather-owned overlay state holder used by the retained map shell bindings.
+- `feature/weather/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`
+  - Owns weather settings state and actions for both the drawer route and in-map bottom-sheet host.
+- `feature/weather/src/main/java/com/example/xcpro/weather/ui/WeatherSettingsContent.kt`
+  - Shared weather controls content rendered by the retained map-shell entrypoints.
+- `feature/weather/src/main/java/com/example/xcpro/map/ui/MapWeatherBottomTabContents.kt`
+  - Shared RainViewer bottom-tab content host consumed by the retained `feature:map` bottom-sheet shell.
+  - Keeps RainViewer tab-body composition in `feature:weather` while the map host continues to own tab selection and sheet visibility.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
   - Map bottom tab host includes `RainViewer` as an in-map tab in the same `ModalBottomSheet` host used by SkySight/Scia/Map4.
-  - Rain tab content reuses the shared weather settings content path; map remains visible behind the sheet.
+  - Retains tab selection, sheet visibility, and the map-specific OGN/Map4 tabs.
+  - Delegates RainViewer and SkySight tab-body content to shared hosts in `feature:weather` and `feature:forecast`; map remains visible behind the sheet.
 - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt`
-  - Drawer weather route remains available and hosts the same shared weather controls content for compatibility entry.
+  - Drawer weather route remains available as a compatibility shell and hosts the same shared `feature:weather` controls content.
+- `feature/forecast/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsContent.kt`
+  - Shared SkySight settings content body owned by `feature:forecast`.
+  - Keeps forecast settings UI edits and presentation changes inside the forecast leaf module.
+- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+  - Drawer/local-subsheet SkySight settings route remains available as a compatibility shell.
+  - Retains top-bar and navigation fallback behavior while delegating the owner-side settings content body to `feature:forecast`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
-  - Collects weather overlay state and forwards frame-based runtime updates (including transition duration) to overlay manager.
+  - Collects `feature:weather` overlay state and forwards frame-based runtime updates (including transition duration) to overlay manager.
   - RainViewer enable state participates in SkySight non-wind rain arbitration through map runtime composition.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Owns weather overlay runtime config/status and reapply behavior on map-ready/style change.
@@ -544,6 +594,28 @@ Authoritative ownership:
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).
 - Map drawing side effects: runtime controllers invoked by use-case/viewmodel orchestration, not direct Composable manager calls.
+
+Module ownership after compile-speed extraction (2026-03-12):
+- `feature:tasks` now owns the task SSOT/core/runtime slice plus the task editor UI atoms:
+  - `TaskSheetViewModel`
+  - `TaskSheetCoordinatorUseCase`
+  - `TaskManagerCoordinator`
+  - `TaskNavigationController`
+  - `RacingTaskManager` / `AATTaskManager`
+  - task domain, persistence, navigation, and non-render racing/AAT engines
+  - task rules editors and task-type switching UI
+  - reusable waypoint search field
+  - racing/AAT waypoint list editors
+  - racing/AAT point-type selector UI
+  - shared task panel helper UI (`TaskCategory`, files tab, minimized rows, QR dialog, preview helpers)
+  - shared task panel category host for retained map wrappers
+- `feature:map` retains the task compatibility and MapLibre shell:
+  - app task route wrappers
+  - `TaskMapRenderRouter`
+  - `TaskRenderSyncCoordinator`
+  - map task overlays, bottom-sheet/task wrapper shells, and MapLibre render/edit surfaces
+  - wrapper hosts such as `TaskTopDropdownPanel`, `SwipeableTaskBottomSheet`, `RacingManageBTTab`, and `AATManageContent`
+- `app` still owns the singleton task graph providers and now depends directly on `feature:tasks`.
 
 Current persistence startup bridge (2026-02-11):
 - `MapScreenViewModel` startup

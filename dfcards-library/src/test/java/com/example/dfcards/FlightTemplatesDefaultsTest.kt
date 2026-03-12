@@ -23,4 +23,23 @@ class FlightTemplatesDefaultsTest {
             thermal?.cardIds
         )
     }
+
+    @Test
+    fun glideDefaultTemplate_uses_live_polar_cards() {
+        val glide = FlightTemplates.getDefaultTemplates().find { it.id == "id03" }
+
+        assertNotNull(glide)
+        assertEquals(
+            listOf("gps_alt", "polar_ld", "best_ld", "mc_speed"),
+            glide?.cardIds
+        )
+    }
+
+    @Test
+    fun builtInTemplates_do_not_ship_placeholder_only_glide_or_task_cards() {
+        val placeholderOnly = setOf("final_gld", "wpt_dist", "wpt_brg", "wpt_eta", "task_spd", "task_dist", "start_alt")
+        val allDefaultCardIds = FlightTemplates.getDefaultTemplates().flatMap { it.cardIds }.toSet()
+
+        assertEquals(emptySet<String>(), allDefaultCardIds.intersect(placeholderOnly))
+    }
 }
