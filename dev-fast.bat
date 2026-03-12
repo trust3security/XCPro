@@ -60,7 +60,7 @@ exit /b 0
 if /I "%MODE%"=="reinstall" (
     call adb shell am force-stop %DEBUG_PACKAGE% >nul 2>nul
     call adb uninstall %DEBUG_PACKAGE% >nul 2>nul
-    call "%GRADLE%" :app:clean :feature:map:clean :feature:variometer:clean %TASK% --no-build-cache --no-configuration-cache --rerun-tasks --console=plain
+    call "%GRADLE%" :app:clean :feature:map:clean :feature:variometer:clean %TASK% --no-build-cache --no-configuration-cache --console=plain
     exit /b %ERRORLEVEL%
 )
 call "%GRADLE%" %TASK% --parallel --build-cache --configuration-cache --console=plain

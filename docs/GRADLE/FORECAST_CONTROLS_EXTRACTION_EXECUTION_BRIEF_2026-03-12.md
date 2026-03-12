@@ -175,10 +175,11 @@ Important:
 Minimum post-change check:
 
 ```powershell
-powershell -NoProfile -Command "& { .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:compileDebugKotlin' -ScenarioNames 'map-impl' -Iterations 3 6>&1 }"
+./gradlew.bat :app:compileDebugKotlin --profile --console=plain
 ```
 
-If `map-impl` is neutral or slightly worse but the moved controls now compile
+If the profiled compile path is neutral or slightly worse relative to the
+retained historical `map-impl` baseline, but the moved controls now compile
 through `feature:profile`, that is acceptable for this pilot. Do not continue
 blindly into larger forecast work without reviewing the result.
 

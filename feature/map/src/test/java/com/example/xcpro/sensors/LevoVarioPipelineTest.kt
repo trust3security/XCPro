@@ -73,7 +73,7 @@ private fun newUseCase(): CalculateFlightMetricsUseCase {
 class LevoVarioPipelineTest {
 
     @Test
-    fun constant_one_knot_climb_reaches_ui_and_audio() {
+    fun constant_one_knot_climb_reaches_ui_and_standalone_audio_mapper() {
         // 1 kt climb rate (vertical speed) expressed in m/s for the pipeline.
         val climbMs = UnitsConverter.knotsToMs(1.0)
         val useCase = newUseCase()
@@ -130,6 +130,8 @@ class LevoVarioPipelineTest {
             aglMeters = 0.0,
             varioResults = emptyMap(),
             replayIgcVario = null,
+            // Audio propagation is not under test here; keep this explicit so the test scope
+            // matches what it actually covers.
             audioVario = 0.0,
             dataQuality = "TEST",
             timestamp = time,

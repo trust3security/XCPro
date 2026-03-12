@@ -5,6 +5,9 @@ import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.dfcards.filters.ModernVarioResult
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.glider.SpeedBoundsMs
+import com.example.xcpro.glider.StillAirSinkProvider
+import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weather.wind.model.WindVector
@@ -12,6 +15,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -417,4 +422,293 @@ class CalculateFlightMetricsUseCaseTest {
         )
         assertTrue(res3.bruttoAverage30s > res2.bruttoAverage30s + 0.1)
     }
+
+    @Test
+    fun reset_matches_fresh_use_case_for_levo_netto() {
+        val sinkProvider = object : StillAirSinkProvider {
+            override fun sinkAtSpeed(airspeedMs: Double): Double? = 1.0
+            override fun iasBoundsMs(): SpeedBoundsMs? = SpeedBoundsMs(minMs = 20.0, maxMs = 50.0)
+        }
+        val useCase = newUseCaseWithGlideSupport(sinkProvider)
+        val wind = WindState(
+            vector = WindVector(east = 2.0, north = 0.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        glideRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            altitude = 1_000.0,
+            varioMs = 2.0,
+            macCreadySetting = 0.0,
+            windState = wind
+        )
+        glideRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            altitude = 1_002.0,
+            varioMs = 2.0,
+            macCreadySetting = 0.0,
+            windState = wind
+        )
+
+        useCase.reset()
+
+        val afterReset = glideRequest(
+            useCase = useCase,
+            currentTimeMillis = 3_000L,
+            altitude = 1_004.0,
+            varioMs = 2.0,
+            macCreadySetting = 0.0,
+            windState = wind
+        )
+
+        assertTrue(afterReset.levoNettoValid)
+        val freshUseCase = newUseCaseWithGlideSupport(sinkProvider)
+        val fresh = glideRequest(
+            useCase = freshUseCase,
+            currentTimeMillis = 3_000L,
+            altitude = 1_004.0,
+            varioMs = 2.0,
+            macCreadySetting = 0.0,
+            windState = wind
+        )
+
+        assertTrue(fresh.levoNettoValid)
+        assertEquals(fresh.levoNettoMs, afterReset.levoNettoMs, 1e-3)
+    }
+
+    @Test
+    fun reset_matches_fresh_use_case_for_speed_to_fly() {
+        val sinkProvider = object : StillAirSinkProvider {
+            override fun sinkAtSpeed(airspeedMs: Double): Double? = 0.5 + 0.02 * airspeedMs
+            override fun iasBoundsMs(): SpeedBoundsMs? = SpeedBoundsMs(minMs = 20.0, maxMs = 50.0)
+        }
+        val useCase = newUseCaseWithGlideSupport(sinkProvider)
+
+        glideRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            altitude = 1_000.0,
+            varioMs = 1.0,
+            macCreadySetting = 0.0,
+            windState = null
+        )
+        glideRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            altitude = 1_001.0,
+            varioMs = 1.0,
+            macCreadySetting = 4.0,
+            windState = null
+        )
+
+        useCase.reset()
+
+        val afterReset = glideRequest(
+            useCase = useCase,
+            currentTimeMillis = 3_000L,
+            altitude = 1_002.0,
+            varioMs = 1.0,
+            macCreadySetting = 4.0,
+            windState = null
+        )
+
+        assertTrue(afterReset.speedToFlyValid)
+        val freshUseCase = newUseCaseWithGlideSupport(sinkProvider)
+        val fresh = glideRequest(
+            useCase = freshUseCase,
+            currentTimeMillis = 3_000L,
+            altitude = 1_002.0,
+            varioMs = 1.0,
+            macCreadySetting = 4.0,
+            windState = null
+        )
+
+        assertTrue(fresh.speedToFlyValid)
+        assertEquals(fresh.speedToFlyIasMs, afterReset.speedToFlyIasMs, 1e-3)
+    }
+
+    @Test
+    fun reset_clears_auto_mc_history_at_use_case_boundary() {
+        val sinkProvider = object : StillAirSinkProvider {
+            override fun sinkAtSpeed(airspeedMs: Double): Double? = 0.5
+            override fun iasBoundsMs(): SpeedBoundsMs? = SpeedBoundsMs(minMs = 20.0, maxMs = 50.0)
+        }
+        val thermalLift = doubleArrayOf(2.0)
+        val thermalValid = booleanArrayOf(true)
+        val useCase = newUseCaseWithDynamicThermal(
+            sinkProvider = sinkProvider,
+            thermalLiftProvider = { thermalLift[0] },
+            thermalValidProvider = { thermalValid[0] }
+        )
+
+        val firstExit = runCirclingEpisode(
+            useCase = useCase,
+            startTimeMillis = 1_000L,
+            liftRate = 2.0
+        )
+        assertTrue(firstExit.autoMcValid)
+        assertEquals(2.0, firstExit.autoMcMs, 0.05)
+
+        useCase.reset()
+        thermalLift[0] = 3.0
+
+        val afterReset = runCirclingEpisode(
+            useCase = useCase,
+            startTimeMillis = 60_000L,
+            liftRate = 3.0
+        )
+        assertTrue(afterReset.autoMcValid)
+
+        val freshUseCase = newUseCaseWithDynamicThermal(
+            sinkProvider = sinkProvider,
+            thermalLiftProvider = { 3.0 },
+            thermalValidProvider = { true }
+        )
+        val fresh = runCirclingEpisode(
+            useCase = freshUseCase,
+            startTimeMillis = 60_000L,
+            liftRate = 3.0
+        )
+
+        assertTrue(fresh.autoMcValid)
+        assertEquals(fresh.autoMcMs, afterReset.autoMcMs, 0.05)
+    }
 }
+
+private fun newUseCaseWithGlideSupport(
+    sinkProvider: StillAirSinkProvider
+): CalculateFlightMetricsUseCase {
+    return newUseCaseWithDynamicThermal(
+        sinkProvider = sinkProvider,
+        thermalLiftProvider = { 0.0 },
+        thermalValidProvider = { false }
+    )
+}
+
+private fun newUseCaseWithDynamicThermal(
+    sinkProvider: StillAirSinkProvider,
+    thermalLiftProvider: () -> Double,
+    thermalValidProvider: () -> Boolean
+): CalculateFlightMetricsUseCase {
+    val helpers = mock<FlightCalculationHelpers>()
+    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
+        FlightCalculationHelpers.NettoComputation(0.0, true)
+    )
+    whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer { invocation ->
+        invocation.getArgument<Double>(0)
+    }
+    whenever(helpers.calculateCurrentLD(any(), any(), any())).thenReturn(0f)
+    whenever(helpers.updateThermalState(any(), any(), any(), any(), any())).thenAnswer { }
+    whenever(helpers.updateAGL(any(), any(), any())).thenAnswer { }
+    whenever(helpers.recordLocationSample(any(), any())).thenAnswer { }
+    whenever(helpers.thermalAverageCurrent).thenReturn(0f)
+    whenever(helpers.thermalAverageTotal).thenReturn(0f)
+    whenever(helpers.thermalGainCurrent).thenReturn(0.0)
+    whenever(helpers.thermalGainValid).thenReturn(false)
+    whenever(helpers.currentThermalLiftRate).thenAnswer { thermalLiftProvider() }
+    whenever(helpers.currentThermalValid).thenAnswer { thermalValidProvider() }
+
+    return CalculateFlightMetricsUseCase(
+        flightHelpers = helpers,
+        sinkProvider = sinkProvider,
+        windEstimator = WindEstimator()
+    )
+}
+
+private fun glideRequest(
+    useCase: CalculateFlightMetricsUseCase,
+    currentTimeMillis: Long,
+    altitude: Double,
+    varioMs: Double,
+    macCreadySetting: Double,
+    windState: WindState?
+) = useCase.execute(
+    FlightMetricsRequest(
+        gps = gpsSample(timeMs = currentTimeMillis, speedMs = 30.0),
+        currentTimeMillis = currentTimeMillis,
+        wallTimeMillis = currentTimeMillis,
+        gpsTimestampMillis = currentTimeMillis,
+        deltaTimeSeconds = 1.0,
+        varioResult = varioSample(varioMs, altitude),
+        varioGpsValue = varioMs,
+        baroResult = null,
+        windState = windState,
+        varioValidUntil = currentTimeMillis + 1_000L,
+        isFlying = true,
+        macCreadySetting = macCreadySetting,
+        autoMcEnabled = false,
+        flightMode = FlightMode.CRUISE
+    )
+)
+
+private fun runCirclingEpisode(
+    useCase: CalculateFlightMetricsUseCase,
+    startTimeMillis: Long,
+    liftRate: Double
+): FlightMetricsResult {
+    var time = startTimeMillis
+    var bearing = 0.0
+    var result = glideRequestWithBearing(
+        useCase = useCase,
+        currentTimeMillis = time,
+        altitude = 1_000.0,
+        varioMs = liftRate,
+        bearing = bearing
+    )
+
+    repeat(18) {
+        time += 1_000L
+        bearing = (bearing + 12.0) % 360.0
+        result = glideRequestWithBearing(
+            useCase = useCase,
+            currentTimeMillis = time,
+            altitude = 1_000.0 + (it + 1) * liftRate,
+            varioMs = liftRate,
+            bearing = bearing
+        )
+    }
+
+    repeat(16) {
+        time += 1_000L
+        result = glideRequestWithBearing(
+            useCase = useCase,
+            currentTimeMillis = time,
+            altitude = 1_100.0 + (it + 1) * liftRate,
+            varioMs = liftRate,
+            bearing = bearing
+        )
+    }
+
+    return result
+}
+
+private fun glideRequestWithBearing(
+    useCase: CalculateFlightMetricsUseCase,
+    currentTimeMillis: Long,
+    altitude: Double,
+    varioMs: Double,
+    bearing: Double
+): FlightMetricsResult =
+    useCase.execute(
+        FlightMetricsRequest(
+            gps = gpsSample(timeMs = currentTimeMillis, speedMs = 30.0).copy(bearing = bearing),
+            currentTimeMillis = currentTimeMillis,
+            wallTimeMillis = currentTimeMillis,
+            gpsTimestampMillis = currentTimeMillis,
+            deltaTimeSeconds = 1.0,
+            varioResult = varioSample(varioMs, altitude),
+            varioGpsValue = varioMs,
+            baroResult = null,
+            windState = null,
+            varioValidUntil = currentTimeMillis + 1_000L,
+            isFlying = true,
+            macCreadySetting = 0.0,
+            autoMcEnabled = true,
+            flightMode = FlightMode.CRUISE
+        )
+    )

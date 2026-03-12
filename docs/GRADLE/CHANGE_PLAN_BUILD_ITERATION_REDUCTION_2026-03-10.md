@@ -215,7 +215,7 @@ Additional local build-speed evidence:
 
 ```bash
 powershell -NoProfile -File .\scripts\dev\measure_map_build.ps1 -Tasks ':app:compileDebugKotlin'
-powershell -NoProfile -File .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:compileDebugKotlin'
+./gradlew.bat :app:compileDebugKotlin --profile --console=plain
 ```
 
 ## 6) Risks and Mitigations
@@ -234,8 +234,8 @@ powershell -NoProfile -File .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:c
 - Time base handling remains explicit and unchanged
 - Replay behavior remains deterministic
 - `KNOWN_DEVIATIONS.md` updated only if explicitly approved
-- New benchmark evidence shows lower edit-sensitive rebuild cost for the
-  targeted slice
+- New build-surface evidence shows lower rebuild cost relative to the retained
+  historical edit-sensitive baseline for the targeted slice
 
 ## 8) Rollback Plan
 

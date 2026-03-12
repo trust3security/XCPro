@@ -15,23 +15,6 @@ internal fun GeneralSettingsSubSheetContent(
 ) {
     when (activeSubSheet) {
         GeneralSubSheet.NONE -> Unit
-        GeneralSubSheet.PROXIMITY -> {
-            ProximitySettingsSheet(
-                onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
-                onNavigateToDrawer = onNavigateToDrawer,
-                onNavigateToMap = onNavigateToMap,
-                onOpenOgn = { onSubSheetChange(GeneralSubSheet.OGN) },
-                onOpenHotspots = { onSubSheetChange(GeneralSubSheet.HOTSPOTS) },
-                onOpenLookAndFeel = {
-                    onSubSheetChange(GeneralSubSheet.NONE)
-                    navController.navigate("look_and_feel")
-                },
-                onOpenColors = {
-                    onSubSheetChange(GeneralSubSheet.NONE)
-                    navController.navigate("colors")
-                }
-            )
-        }
         GeneralSubSheet.WEATHER -> {
             WeatherSettingsSubSheet(
                 onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
@@ -126,10 +109,15 @@ internal fun GeneralSettingsSubSheetContent(
                 onNavigateToMap = onNavigateToMap
             )
         }
+        GeneralSubSheet.WEGLIDE -> {
+            WeGlideSettingsSubSheet(
+                onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
+                onNavigateToDrawer = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+        }
         GeneralSubSheet.ADSB -> {
             AdsbSettingsSubSheet(
-                navController = navController,
-                drawerState = drawerState,
                 onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
                 onNavigateToDrawer = onNavigateToDrawer,
                 onNavigateToMap = onNavigateToMap

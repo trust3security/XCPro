@@ -189,7 +189,7 @@ private fun ProfileEmptyState(
                 onClick = onImportProfiles,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Import Aircraft Profile")
+                Text("Load Profile File")
             }
             if (!storageNamespaceLabel.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -246,7 +246,7 @@ private fun BootstrapRecoveryCard(
                     enabled = !isLoading,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Import Aircraft Profile")
+                    Text("Load Profile File")
                 }
             }
         }

@@ -2,7 +2,6 @@ package com.example.ui1.screens
 
 internal enum class GeneralSubSheet {
     NONE,
-    PROXIMITY,
     WEATHER,
     FILES,
     PROFILES,
@@ -14,6 +13,7 @@ internal enum class GeneralSubSheet {
     LAYOUTS,
     SKYSIGHT,
     OGN,
+    WEGLIDE,
     ADSB,
     HOTSPOTS,
     NAVBOXES,

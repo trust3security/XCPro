@@ -209,6 +209,20 @@ open class MapOverlayManagerRuntime(
         forceImmediate = forceImmediate
     )
 
+    fun updateOgnTargetVisuals(
+        enabled: Boolean,
+        resolvedTarget: OgnTrafficTarget?,
+        ownshipCoordinate: TrafficMapCoordinate?,
+        forceImmediate: Boolean = false
+    ) = ognDelegate.updateTargetVisuals(
+        enabled = enabled,
+        resolvedTarget = resolvedTarget,
+        ownshipLocation = ownshipCoordinate?.run {
+            OverlayCoordinate(latitude = latitude, longitude = longitude)
+        },
+        forceImmediate = forceImmediate
+    )
+
     fun updateAdsbTrafficTargets(
         targets: List<AdsbTrafficUiModel>,
         ownshipAltitudeMeters: Double?,

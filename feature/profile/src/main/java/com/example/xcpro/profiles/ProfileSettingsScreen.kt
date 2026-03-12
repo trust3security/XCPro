@@ -2,8 +2,6 @@ package com.example.xcpro.profiles
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -44,11 +42,6 @@ fun ProfileSettingsScreen(
     var pendingMutation by remember { mutableStateOf<PendingProfileMutation?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uiState.importResult) {
-        val result = uiState.importResult ?: return@LaunchedEffect
-        exportMessage = formatProfileImportFeedback(result)
-        viewModel.clearImportResult()
-    }
     LaunchedEffect(uiState.error) {
         val message = uiState.error ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(message)
@@ -124,8 +117,6 @@ fun ProfileSettingsScreen(
                 )
             }
 
-            item { ProfileRuntimeSettingsNotice() }
-            
             item {
                 ProfileActionButtons(
                     onExport = { showExportDialog = true },
@@ -157,13 +148,14 @@ fun ProfileSettingsScreen(
     
     if (showImportDialog) {
         ProfileImportDialog(
+            canKeepCurrentActive = uiState.activeProfile != null,
             onDismiss = { showImportDialog = false },
-            onImportJson = { json, keepCurrentActive, settingsImportScope, strictSettingsRestore ->
+            onRequestPreview = viewModel::previewBundle,
+            onImportJson = { json, keepCurrentActive, nameCollisionPolicy ->
                 viewModel.importBundle(
                     json = json,
                     keepCurrentActive = keepCurrentActive,
-                    settingsImportScope = settingsImportScope,
-                    strictSettingsRestore = strictSettingsRestore
+                    nameCollisionPolicy = nameCollisionPolicy
                 )
                 showImportDialog = false
             },
@@ -171,6 +163,14 @@ fun ProfileSettingsScreen(
                 exportMessage = error
                 showImportDialog = false
             }
+        )
+    }
+
+    uiState.bundleImportResult?.let { result ->
+        ProfileImportResultDialog(
+            result = result,
+            profiles = uiState.profiles,
+            onDismiss = viewModel::clearBundleImportResult
         )
     }
 }
@@ -237,33 +237,6 @@ fun ProfileBasicSettings(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ProfileRuntimeSettingsNotice() {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "Runtime Settings",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "Profile metadata only: name, aircraft, and description are edited here.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Units, glider polar/config, cards, map widget positions, look and feel, and traffic/weather settings are managed in their own settings screens and restored via aircraft profile import/export.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

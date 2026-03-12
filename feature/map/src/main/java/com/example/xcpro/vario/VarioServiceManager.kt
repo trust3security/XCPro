@@ -15,6 +15,10 @@ import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.SensorStatus
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.sensors.UnifiedSensorManager
+import com.example.xcpro.weglide.domain.EvaluateWeGlidePostFlightPromptUseCase
+import com.example.xcpro.weglide.domain.WeGlideFinalizedFlightUploadRequest
+import com.example.xcpro.weglide.domain.WeGlidePostFlightPromptCoordinator
+import com.example.xcpro.weglide.notifications.WeGlidePostFlightPromptNotificationController
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -43,7 +47,10 @@ open class VarioServiceManager @Inject constructor(
     private val hawkVarioRepository: HawkVarioRepository,
     val flightStateSource: FlightStateSource,
     private val igcRecordingUseCase: IgcRecordingUseCase? = null,
-    private val igcRecordingActionSink: IgcRecordingActionSink = NoopIgcRecordingActionSink
+    private val igcRecordingActionSink: IgcRecordingActionSink = NoopIgcRecordingActionSink,
+    private val evaluateWeGlidePostFlightPromptUseCase: EvaluateWeGlidePostFlightPromptUseCase? = null,
+    private val weGlidePostFlightPromptCoordinator: WeGlidePostFlightPromptCoordinator? = null,
+    private val weGlidePostFlightPromptNotificationController: WeGlidePostFlightPromptNotificationController? = null
 ) {
 
     companion object {
@@ -200,6 +207,10 @@ open class VarioServiceManager @Inject constructor(
                         ) {
                             is IgcFinalizeResult.Published,
                             is IgcFinalizeResult.AlreadyPublished -> {
+                                publishWeGlideUploadPromptIfEligible(
+                                    sessionId = action.sessionId,
+                                    finalizeResult = finalizeResult
+                                )
                                 useCase.onFinalizeSucceeded()
                             }
                             is IgcFinalizeResult.Failure -> {
@@ -285,6 +296,31 @@ open class VarioServiceManager @Inject constructor(
         val gpsReady = status.gpsStarted
         val baroReady = !status.baroAvailable || status.baroStarted
         return gpsReady && baroReady
+    }
+
+    private suspend fun publishWeGlideUploadPromptIfEligible(
+        sessionId: Long,
+        finalizeResult: IgcFinalizeResult
+    ) {
+        val promptUseCase = evaluateWeGlidePostFlightPromptUseCase ?: return
+        val promptCoordinator = weGlidePostFlightPromptCoordinator ?: return
+        val entry = when (finalizeResult) {
+            is IgcFinalizeResult.Published -> finalizeResult.entry
+            is IgcFinalizeResult.AlreadyPublished -> finalizeResult.entry
+            is IgcFinalizeResult.Failure -> return
+        }
+        val prompt = promptUseCase(
+            WeGlideFinalizedFlightUploadRequest(
+                localFlightId = sessionId.toString(),
+                document = entry.document,
+                scoringDate = entry.utcDate?.toString()
+            )
+        )
+        if (prompt != null) {
+            promptCoordinator.show(prompt)
+            weGlidePostFlightPromptNotificationController?.onPromptPublished(prompt)
+            Log.d(TAG, "WeGlide prompt published for sessionId=$sessionId")
+        }
     }
 }
 

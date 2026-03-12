@@ -32,13 +32,11 @@ powershell -NoProfile -Command "& { .\scripts\dev\measure_map_build.ps1 -Tasks '
 powershell -NoProfile -Command "& { .\scripts\dev\measure_map_build.ps1 -Tasks ':app:assembleDebug' -NoBuildCache 6>&1 }"
 ```
 
-Edit-sensitive timings:
+Historical edit-sensitive timings:
 
-```powershell
-powershell -NoProfile -Command "& { .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:compileDebugKotlin' 6>&1 }"
-powershell -NoProfile -Command "& { .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:compileDebugKotlin' -ScenarioNames 'map-abi' -RepairOnFailure 6>&1 }"
-powershell -NoProfile -Command "& { .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:compileDebugKotlin' -ScenarioNames 'core-impl','core-abi' -RepairOnFailure 6>&1 }"
-```
+Collected before the dedicated edit-impact benchmark helper was retired from the
+repo. The original command lines are intentionally omitted from current
+guidance.
 
 ## Warm no-edit baseline
 
@@ -59,7 +57,7 @@ powershell -NoProfile -Command "& { .\scripts\dev\measure_edit_impact.ps1 -Tasks
 Observation: build cache is not the dominant limiter for warm steady-state
 local tasks.
 
-## Edit-sensitive benchmark
+## Historical edit-sensitive benchmark
 
 Reference steady-state no-edit baseline for `:app:compileDebugKotlin`:
 

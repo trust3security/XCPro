@@ -11,7 +11,6 @@ import com.example.xcpro.common.waypoint.HomeWaypointRepository
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.igc.AppIgcRecoveryDiagnosticsReporter
 import com.example.xcpro.igc.domain.IgcRecoveryDiagnosticsReporter
-import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.domain.engine.AATTaskEngine
@@ -24,13 +23,7 @@ import com.example.xcpro.profiles.ProfileBackupSink
 import com.example.xcpro.profiles.ProfileDiagnosticsReporter
 import com.example.xcpro.profiles.ProfileStorage
 import com.example.xcpro.profiles.DataStoreProfileStorage
-import com.example.xcpro.profiles.AppProfileSettingsRestoreApplier
-import com.example.xcpro.profiles.AppProfileSettingsSnapshotProvider
-import com.example.xcpro.profiles.ProfileSettingsRestoreApplier
-import com.example.xcpro.profiles.ProfileSettingsSnapshotProvider
-import com.example.xcpro.profiles.ProfileScopedDataCleaner
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
-import com.example.xcpro.profiles.AppProfileScopedDataCleaner
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -85,12 +78,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideQnhPreferencesRepository(
-        @ApplicationContext context: Context
-    ): QnhPreferencesRepository = QnhPreferencesRepository(context)
-
-    @Provides
-    @Singleton
     fun provideLevoVarioPreferencesRepository(
         @ApplicationContext context: Context
     ): LevoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
@@ -118,24 +105,6 @@ object AppModule {
     fun provideProfileBackupSink(
         @ApplicationContext context: Context
     ): ProfileBackupSink = DownloadsProfileBackupSink(context)
-
-    @Provides
-    @Singleton
-    fun provideProfileSettingsSnapshotProvider(
-        provider: AppProfileSettingsSnapshotProvider
-    ): ProfileSettingsSnapshotProvider = provider
-
-    @Provides
-    @Singleton
-    fun provideProfileSettingsRestoreApplier(
-        applier: AppProfileSettingsRestoreApplier
-    ): ProfileSettingsRestoreApplier = applier
-
-    @Provides
-    @Singleton
-    fun provideProfileScopedDataCleaner(
-        cleaner: AppProfileScopedDataCleaner
-    ): ProfileScopedDataCleaner = cleaner
 
     @Provides
     @Singleton

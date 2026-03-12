@@ -48,7 +48,10 @@ data class ParsedProfileBundle(
     val profiles: List<UserProfile>,
     val activeProfileId: String?,
     val settingsSnapshot: ProfileSettingsSnapshot,
-    val sourceFormat: ProfileBundleSourceFormat
+    val sourceFormat: ProfileBundleSourceFormat,
+    val schemaVersion: String,
+    val exportedAtWallMs: Long? = null,
+    val exportedAtLabel: String? = null
 )
 
 data class ManagedProfileIndexPointer(
@@ -121,7 +124,9 @@ object ProfileBundleCodec {
             profiles = listOf(document.profile),
             activeProfileId = if (document.isActive) document.profile.id else null,
             settingsSnapshot = ProfileSettingsSnapshot.empty(),
-            sourceFormat = ProfileBundleSourceFormat.BACKUP_PROFILE_DOCUMENT_V1
+            sourceFormat = ProfileBundleSourceFormat.BACKUP_PROFILE_DOCUMENT_V1,
+            schemaVersion = root.getStringOrNull("version") ?: "1.0",
+            exportedAtWallMs = document.generatedAtWallMs.takeIf { it > 0L }
         )
     }
 
@@ -160,7 +165,9 @@ object ProfileBundleCodec {
                 profiles = profiles,
                 activeProfileId = activeProfileId,
                 settingsSnapshot = settings,
-                sourceFormat = ProfileBundleSourceFormat.BUNDLE_V2
+                sourceFormat = ProfileBundleSourceFormat.BUNDLE_V2,
+                schemaVersion = root.getStringOrNull("version") ?: BUNDLE_VERSION,
+                exportedAtWallMs = root.getLongOrNull("exportedAtWallMs")
             )
         } else {
             val legacyVersion = parseVersionOrDefault(
@@ -180,7 +187,9 @@ object ProfileBundleCodec {
                 profiles = legacy.profiles,
                 activeProfileId = null,
                 settingsSnapshot = ProfileSettingsSnapshot.empty(),
-                sourceFormat = ProfileBundleSourceFormat.LEGACY_PROFILE_EXPORT_V1
+                sourceFormat = ProfileBundleSourceFormat.LEGACY_PROFILE_EXPORT_V1,
+                schemaVersion = root.getStringOrNull("version") ?: "1.0",
+                exportedAtLabel = legacy.exportDate?.trim()?.takeIf { it.isNotEmpty() }
             )
         }
     }
@@ -227,6 +236,13 @@ object ProfileBundleCodec {
         if (value == null || value.isJsonNull) return null
         val text = runCatching { value.asString }.getOrNull()?.trim()
         return text?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun JsonObject.getLongOrNull(key: String): Long? {
+        if (!has(key)) return null
+        val value = get(key)
+        if (value == null || value.isJsonNull) return null
+        return runCatching { value.asLong }.getOrNull()
     }
 
     private fun parseVersionOrDefault(

@@ -15,13 +15,16 @@ class ProfileRepositoryBundleTest {
 
     private class RecordingSnapshotProvider : ProfileSettingsSnapshotProvider {
         val requestedProfileIds = mutableListOf<Set<String>>()
+        val requestedSectionIds = mutableListOf<Set<String>>()
 
-        override suspend fun buildSnapshot(profileIds: Set<String>): ProfileSettingsSnapshot {
+        override suspend fun buildSnapshot(
+            profileIds: Set<String>,
+            sectionIds: Set<String>
+        ): ProfileSettingsSnapshot {
             requestedProfileIds += profileIds
+            requestedSectionIds += sectionIds
             return ProfileSettingsSnapshot(
-                sections = mapOf(
-                    ProfileSettingsSectionIds.CARD_PREFERENCES to JsonPrimitive("snapshot")
-                )
+                sections = sectionIds.associateWith { sectionId -> JsonPrimitive(sectionId) }
             )
         }
     }
@@ -119,11 +122,98 @@ class ProfileRepositoryBundleTest {
         assertEquals(1, parsed.profiles.size)
         assertEquals(created.id, parsed.profiles.first().id)
         assertEquals(created.id, parsed.activeProfileId)
-        assertTrue(
-            parsed.settingsSnapshot.sections.containsKey(ProfileSettingsSectionIds.CARD_PREFERENCES)
+        assertEquals(
+            ProfileSettingsSectionSets.AIRCRAFT_PROFILE_SECTION_IDS,
+            parsed.settingsSnapshot.sections.keys
         )
+        assertTrue(parsed.settingsSnapshot.sections.containsKey(ProfileSettingsSectionIds.CARD_PREFERENCES))
+        assertTrue(!parsed.settingsSnapshot.sections.containsKey(ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES))
         assertTrue(harness.snapshotProvider.requestedProfileIds.last().contains(created.id))
+        assertEquals(
+            ProfileSettingsSectionSets.AIRCRAFT_PROFILE_SECTION_IDS,
+            harness.snapshotProvider.requestedSectionIds.last()
+        )
         assertTrue(harness.diagnosticsEvents.any { it.first == "profile_bundle_export_success" })
+    }
+
+    @Test
+    fun previewBundle_reportsMetadataCollisionHintsAndIgnoredGlobalSections() = runTest {
+        val harness = Harness(backgroundScope)
+        advanceUntilIdle()
+        harness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Preview Match",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+        advanceUntilIdle()
+
+        val bundleJson = ProfileBundleCodec.serialize(
+            ProfileBundleDocument(
+                exportedAtWallMs = 123_456L,
+                activeProfileId = "preview-1",
+                profiles = listOf(
+                    UserProfile(
+                        id = "preview-1",
+                        name = "Preview Match",
+                        aircraftType = AircraftType.GLIDER,
+                        aircraftModel = "LS8"
+                    )
+                ),
+                settings = ProfileSettingsSnapshot(
+                    sections = mapOf(
+                        ProfileSettingsSectionIds.UNITS_PREFERENCES to JsonPrimitive("units"),
+                        ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES to JsonPrimitive("weather")
+                    )
+                )
+            )
+        )
+
+        val preview = harness.repository.previewBundle(bundleJson).getOrThrow()
+
+        assertEquals(ProfileBundleSourceFormat.BUNDLE_V2, preview.sourceFormat)
+        assertEquals("2.0", preview.schemaVersion)
+        assertEquals(123_456L, preview.exportedAtWallMs)
+        assertEquals("Preview Match (LS8)", preview.preferredActiveProfileName)
+        assertEquals(1, preview.profiles.size)
+        assertTrue(preview.profiles.single().matchesExistingProfileName)
+        assertTrue(preview.aircraftProfileSectionIds.contains(ProfileSettingsSectionIds.UNITS_PREFERENCES))
+        assertTrue(
+            preview.ignoredGlobalSectionIds.contains(
+                ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES
+            )
+        )
+    }
+
+    @Test
+    fun importBundle_fullBundleScope_forExportedAircraftProfileDoesNotExposeGlobalSections() = runTest {
+        val exportingHarness = Harness(backgroundScope)
+        advanceUntilIdle()
+        val created = exportingHarness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Export Source",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+        advanceUntilIdle()
+
+        val exportedJson = exportingHarness.repository.exportBundle(setOf(created.id)).getOrThrow()
+
+        val importingHarness = Harness(backgroundScope)
+        advanceUntilIdle()
+        importingHarness.repository.importBundle(
+            ProfileBundleImportRequest(
+                json = exportedJson,
+                keepCurrentActive = false,
+                settingsImportScope = ProfileSettingsImportScope.FULL_BUNDLE
+            )
+        ).getOrThrow()
+
+        assertEquals(1, importingHarness.restoreApplier.calls.size)
+        val restoredSections = importingHarness.restoreApplier.calls.first().settingsSnapshot.sections.keys
+        assertEquals(ProfileSettingsSectionSets.AIRCRAFT_PROFILE_SECTION_IDS, restoredSections)
+        assertTrue(!restoredSections.contains(ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES))
+        assertTrue(!restoredSections.contains(ProfileSettingsSectionIds.OGN_TRAFFIC_PREFERENCES))
     }
 
     @Test
@@ -302,7 +392,10 @@ class ProfileRepositoryBundleTest {
                 settings = ProfileSettingsSnapshot(
                     sections = mapOf(
                         ProfileSettingsSectionIds.UNITS_PREFERENCES to JsonPrimitive("units"),
+                        ProfileSettingsSectionIds.MAP_STYLE_PREFERENCES to JsonPrimitive("map-style"),
+                        ProfileSettingsSectionIds.SNAIL_TRAIL_PREFERENCES to JsonPrimitive("trail"),
                         ProfileSettingsSectionIds.ORIENTATION_PREFERENCES to JsonPrimitive("orientation"),
+                        ProfileSettingsSectionIds.QNH_PREFERENCES to JsonPrimitive("qnh"),
                         ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES to JsonPrimitive("weather")
                     )
                 )
@@ -320,7 +413,10 @@ class ProfileRepositoryBundleTest {
         assertEquals(1, harness.restoreApplier.calls.size)
         val restoredSections = harness.restoreApplier.calls.first().settingsSnapshot.sections.keys
         assertTrue(restoredSections.contains(ProfileSettingsSectionIds.UNITS_PREFERENCES))
+        assertTrue(restoredSections.contains(ProfileSettingsSectionIds.MAP_STYLE_PREFERENCES))
+        assertTrue(restoredSections.contains(ProfileSettingsSectionIds.SNAIL_TRAIL_PREFERENCES))
         assertTrue(restoredSections.contains(ProfileSettingsSectionIds.ORIENTATION_PREFERENCES))
+        assertTrue(restoredSections.contains(ProfileSettingsSectionIds.QNH_PREFERENCES))
         assertTrue(!restoredSections.contains(ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES))
     }
 

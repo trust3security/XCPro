@@ -2,32 +2,16 @@ package com.example.xcpro.map.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import com.example.xcpro.map.AdsbTrafficSnapshot
-import com.example.xcpro.map.ui.isAdsbReadyForAutoDismiss
-import com.example.xcpro.map.ui.isOgnReadyForAutoDismiss
-import com.example.xcpro.map.ui.shouldFlashAdsbIssue
-import com.example.xcpro.map.ui.shouldSurfaceAdsbDebugPanel
-import com.example.xcpro.map.ui.shouldSurfaceOgnDebugPanel
-import com.example.xcpro.map.ui.shouldSurfacePersistentAdsbStatus
 import com.example.xcpro.forecast.ForecastOverlayUiState
-import com.example.xcpro.forecast.ForecastTileSpec
 import com.example.xcpro.forecast.ForecastLegendSpec
+import com.example.xcpro.forecast.ForecastTileSpec
 import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.forecast.forecastRegionLabel
 import com.example.xcpro.forecast.forecastRegionLikelyContainsCoordinate
-import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.map.OgnTrafficSnapshot
 import kotlinx.coroutines.delay
 import org.maplibre.android.maps.MapLibreMap
-
-internal data class TrafficDebugPanelVisibility(
-    val showOgnDebugPanel: Boolean,
-    val showAdsbDebugPanel: Boolean,
-    val showAdsbIssueFlash: Boolean,
-    val showAdsbPersistentStatus: Boolean
-)
 
 internal data class ForecastOverlayRuntimeDispatch(
     val shouldClear: Boolean,
@@ -222,46 +206,4 @@ internal fun WindArrowTapRuntimeEffects(
             onClearTapCallout()
         }
     }
-}
-
-@Composable
-internal fun rememberTrafficDebugPanelVisibility(
-    adsbOverlayEnabled: Boolean,
-    adsbSnapshot: AdsbTrafficSnapshot,
-    ognOverlayEnabled: Boolean,
-    ognSnapshot: OgnTrafficSnapshot
-): TrafficDebugPanelVisibility {
-    val showOgnDebugPanel = rememberTimedVisibility(
-        enabled = BuildConfig.DEBUG &&
-            ognOverlayEnabled &&
-            shouldSurfaceOgnDebugPanel(ognSnapshot),
-        readyForAutoDismiss = isOgnReadyForAutoDismiss(ognSnapshot),
-        autoDismissDelayMs = TRAFFIC_DEBUG_PANEL_AUTO_DISMISS_MS
-    )
-    val showAdsbDebugPanel = rememberTimedVisibility(
-        enabled = BuildConfig.DEBUG &&
-            adsbOverlayEnabled &&
-            shouldSurfaceAdsbDebugPanel(adsbSnapshot),
-        readyForAutoDismiss = isAdsbReadyForAutoDismiss(adsbSnapshot) ||
-            shouldFlashAdsbIssue(adsbSnapshot),
-        autoDismissDelayMs = ADSB_ISSUE_FLASH_AUTO_DISMISS_MS
-    )
-    val showAdsbIssueFlash = rememberTimedVisibility(
-        enabled = adsbOverlayEnabled &&
-            shouldFlashAdsbIssue(adsbSnapshot),
-        readyForAutoDismiss = true,
-        autoDismissDelayMs = ADSB_ISSUE_FLASH_AUTO_DISMISS_MS
-    )
-    val showAdsbPersistentStatus = rememberPersistentIssueVisibility(
-        enabled = adsbOverlayEnabled,
-        issueActive = shouldSurfacePersistentAdsbStatus(adsbSnapshot),
-        healthy = isAdsbReadyForAutoDismiss(adsbSnapshot),
-        recoveryDwellMs = ADSB_PERSISTENT_STATUS_RECOVERY_DISMISS_MS
-    )
-    return TrafficDebugPanelVisibility(
-        showOgnDebugPanel = showOgnDebugPanel,
-        showAdsbDebugPanel = showAdsbDebugPanel,
-        showAdsbIssueFlash = showAdsbIssueFlash,
-        showAdsbPersistentStatus = showAdsbPersistentStatus
-    )
 }

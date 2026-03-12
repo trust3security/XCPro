@@ -9,6 +9,76 @@ import org.junit.Test
 class FlightDataManagerSupportTest {
 
     @Test
+    fun resolveDisplayVario_nullSample_returnsZero() {
+        assertEquals(0f, resolveDisplayVarioForTest(null), 1e-6f)
+    }
+
+    @Test
+    fun resolveDisplayVario_validFiniteDisplay_wins() {
+        val resolved = resolveDisplayVarioForTest(
+            RealTimeFlightData(
+                displayVario = 1.24,
+                verticalSpeed = 3.0,
+                varioValid = true
+            )
+        )
+
+        assertEquals(1.2f, resolved, 1e-6f)
+    }
+
+    @Test
+    fun resolveDisplayVario_invalidFiniteDisplayAboveNoiseFloor_stillWins() {
+        val resolved = resolveDisplayVarioForTest(
+            RealTimeFlightData(
+                displayVario = 0.21,
+                verticalSpeed = 3.0,
+                varioValid = false
+            )
+        )
+
+        assertEquals(0.2f, resolved, 1e-6f)
+    }
+
+    @Test
+    fun resolveDisplayVario_invalidFiniteDisplayBelowNoiseFloor_fallsBackToVerticalSpeed() {
+        val resolved = resolveDisplayVarioForTest(
+            RealTimeFlightData(
+                displayVario = 0.0005,
+                verticalSpeed = 0.37,
+                varioValid = false
+            )
+        )
+
+        assertEquals(0.4f, resolved, 1e-6f)
+    }
+
+    @Test
+    fun resolveDisplayVario_nonFiniteDisplay_fallsBackToVerticalSpeed() {
+        val resolved = resolveDisplayVarioForTest(
+            RealTimeFlightData(
+                displayVario = Double.NaN,
+                verticalSpeed = 0.26,
+                varioValid = false
+            )
+        )
+
+        assertEquals(0.3f, resolved, 1e-6f)
+    }
+
+    @Test
+    fun resolveDisplayVario_bucketsToTenthMeterPerSecond() {
+        val resolved = resolveDisplayVarioForTest(
+            RealTimeFlightData(
+                displayVario = 1.04,
+                verticalSpeed = 0.0,
+                varioValid = true
+            )
+        )
+
+        assertEquals(1.0f, resolved, 1e-6f)
+    }
+
+    @Test
     fun deriveWindIndicatorState_usesWindValidFlag() {
         val state = deriveWindIndicatorState(
             previous = WindIndicatorState(directionFromDeg = 30f, isValid = false, quality = 0, ageSeconds = -1),
@@ -44,4 +114,10 @@ class FlightDataManagerSupportTest {
         assertEquals(0, state.quality)
         assertEquals(9L, state.ageSeconds)
     }
+
+    private fun resolveDisplayVarioForTest(data: RealTimeFlightData?): Float =
+        data.resolveDisplayVario(
+            varioBucketMs = 0.1f,
+            varioNoiseFloor = 1e-3
+        )
 }

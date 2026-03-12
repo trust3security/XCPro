@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -15,11 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
-import com.example.xcpro.adsb.ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS
-import kotlin.math.roundToInt
-
-private const val EMERGENCY_COOLDOWN_STEP_SECONDS = 5f
 
 @Composable
 internal fun AdsbEmergencyAudioSection(
@@ -31,9 +25,6 @@ internal fun AdsbEmergencyAudioSection(
     onEmergencyFlashEnabledChanged: (Boolean) -> Unit,
     emergencyAudioEnabled: Boolean,
     onEmergencyAudioEnabledChanged: (Boolean) -> Unit,
-    emergencyCooldownSliderSeconds: Float,
-    onEmergencyCooldownSliderSecondsChanged: (Float) -> Unit,
-    onEmergencyCooldownValueChangeFinished: () -> Unit,
     emergencyAudioRollbackLatched: Boolean,
     emergencyAudioRollbackReason: String?,
     onClearEmergencyAudioRollback: () -> Unit
@@ -77,25 +68,6 @@ internal fun AdsbEmergencyAudioSection(
         subtitle = "Pulse EMERGENCY markers on the map.",
         checked = emergencyFlashEnabled,
         onCheckedChanged = onEmergencyFlashEnabledChanged
-    )
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    Text(
-        text = "Emergency cooldown: ${emergencyCooldownSliderSeconds.roundToInt()} s",
-        style = MaterialTheme.typography.bodyMedium
-    )
-    Slider(
-        value = emergencyCooldownSliderSeconds,
-        onValueChange = onEmergencyCooldownSliderSecondsChanged,
-        onValueChangeFinished = onEmergencyCooldownValueChangeFinished,
-        valueRange = emergencyCooldownSliderRange(),
-        steps = emergencyCooldownSliderSteps()
-    )
-    Text(
-        text = "Set how long re-alerts are suppressed after an emergency clears.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
     Spacer(modifier = Modifier.height(12.dp))
@@ -154,31 +126,3 @@ private fun RolloutToggleRow(
         )
     }
 }
-
-internal fun emergencyCooldownSliderRange(): ClosedFloatingPointRange<Float> =
-    (ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS / 1_000f)..
-        (ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS / 1_000f)
-
-internal fun emergencyCooldownSliderSteps(): Int {
-    val range = emergencyCooldownSliderRange()
-    return (((range.endInclusive - range.start) / EMERGENCY_COOLDOWN_STEP_SECONDS).roundToInt() - 1)
-        .coerceAtLeast(0)
-}
-
-internal fun snapEmergencyCooldownSeconds(value: Float): Float {
-    val range = emergencyCooldownSliderRange()
-    val snapped = (value / EMERGENCY_COOLDOWN_STEP_SECONDS).roundToInt() * EMERGENCY_COOLDOWN_STEP_SECONDS
-    return snapped.coerceIn(range.start, range.endInclusive)
-}
-
-internal fun emergencyCooldownMillisFromSeconds(seconds: Float): Long =
-    (snapEmergencyCooldownSeconds(seconds).roundToInt() * 1_000L).coerceIn(
-        ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
-        ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
-    )
-
-internal fun emergencyCooldownSeconds(cooldownMs: Long): Float =
-    (cooldownMs.coerceIn(
-        ADSB_EMERGENCY_AUDIO_MIN_COOLDOWN_MS,
-        ADSB_EMERGENCY_AUDIO_MAX_COOLDOWN_MS
-    ) / 1_000L).toFloat()

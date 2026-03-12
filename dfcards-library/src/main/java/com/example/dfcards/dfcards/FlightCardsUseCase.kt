@@ -44,6 +44,10 @@ class FlightCardsUseCase(
         repository.updateFlightMode(mode)
     }
 
+    fun setActiveProfile(profileId: ProfileId?) {
+        repository.updateActiveProfile(profileId)
+    }
+
     fun initializeCards(containerSize: IntSizePx, density: DensityScale) {
         repository.initializeCards(containerSize, density)
     }

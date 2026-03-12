@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="com.example.xcpro.weglide.auth.WeGlideRedirectActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="xcpro"
+                    android:host="weglide-auth"
+                    android:path="/callback" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

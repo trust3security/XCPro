@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -17,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
-import com.example.xcpro.screens.navdrawer.AdsbSettingsScreen
+import com.example.xcpro.screens.navdrawer.AdsbSettingsContent
+import com.example.xcpro.screens.navdrawer.AdsbSettingsViewModel
 import com.example.xcpro.screens.navdrawer.HotspotsSettingsContent
 import com.example.xcpro.screens.navdrawer.HotspotsSettingsViewModel
 import com.example.xcpro.screens.navdrawer.OgnSettingsContent
@@ -27,37 +25,55 @@ import com.example.xcpro.screens.navdrawer.TrafficSettingsTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TrafficRouteSubSheetContainer(
-    onDismiss: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = null,
-        containerColor = MaterialTheme.colorScheme.surface
-    ) {
-        content()
-    }
-}
-
-@Composable
 fun AdsbSettingsSubSheet(
-    navController: NavHostController,
-    drawerState: DrawerState,
     onDismiss: () -> Unit,
     onNavigateToDrawer: () -> Unit,
     onNavigateToMap: () -> Unit
 ) {
-    TrafficRouteSubSheetContainer(onDismiss = onDismiss) {
-        AdsbSettingsScreen(
-            navController = navController,
-            drawerState = drawerState,
-            onNavigateUp = onDismiss,
-            onSecondaryNavigate = onNavigateToDrawer,
-            onNavigateToMap = onNavigateToMap
-        )
+    val viewModel: AdsbSettingsViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+        ) {
+            TrafficSettingsTopAppBar(
+                title = "ADS-b",
+                onNavigateUp = onDismiss,
+                onSecondaryNavigate = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                AdsbSettingsContent(
+                    uiState = uiState,
+                    loadOpenSkyCredentials = viewModel::loadOpenSkyCredentials,
+                    saveOpenSkyCredentials = viewModel::saveOpenSkyCredentials,
+                    clearOpenSkyCredentials = viewModel::clearOpenSkyCredentials,
+                    onSetMaxDistanceKm = viewModel::setMaxDistanceKm,
+                    onSetVerticalAboveMeters = viewModel::setVerticalAboveMeters,
+                    onSetVerticalBelowMeters = viewModel::setVerticalBelowMeters,
+                    onSetIconSizePx = viewModel::setIconSizePx,
+                    onSetEmergencyAudioMasterEnabled = viewModel::setEmergencyAudioMasterEnabled,
+                    onSetEmergencyAudioShadowMode = viewModel::setEmergencyAudioShadowMode,
+                    onSetEmergencyFlashEnabled = viewModel::setEmergencyFlashEnabled,
+                    onSetEmergencyAudioEnabled = viewModel::setEmergencyAudioEnabled,
+                    onClearEmergencyAudioRollback = viewModel::clearEmergencyAudioRollback
+                )
+            }
+        }
     }
 }
 

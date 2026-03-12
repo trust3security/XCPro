@@ -5,14 +5,16 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,6 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.core.time.TimeBridge
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,13 +58,19 @@ fun ProfileExportDialog(
                 }
                 onExport(
                     if (profile != null) {
-                        "Aircraft profile exported successfully."
+                        "Profile file saved successfully."
                     } else {
-                        "Aircraft profiles backup exported successfully."
+                        "All profiles backup saved successfully."
                     }
                 )
             } catch (error: Exception) {
-                onExport("Failed to save file: ${error.message}")
+                onExport(
+                    if (profile != null) {
+                        "Failed to save profile file: ${error.message}"
+                    } else {
+                        "Failed to save all profiles backup: ${error.message}"
+                    }
+                )
             }
         }
     }
@@ -67,15 +78,15 @@ fun ProfileExportDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (profile != null) "Export Aircraft Profile" else "Backup Aircraft Profiles")
+            Text(if (profile != null) "Save Profile File" else "Save All Profiles")
         },
         text = {
             if (isExporting) {
                 Text(
                     if (profile != null) {
-                        "Preparing aircraft profile file..."
+                        "Preparing profile file..."
                     } else {
-                        "Preparing aircraft profiles backup..."
+                        "Preparing all profiles backup..."
                     }
                 )
             } else {
@@ -108,7 +119,7 @@ fun ProfileExportDialog(
                 },
                 enabled = !isExporting
             ) {
-                Text(if (profile != null) "Save File" else "Save All Profiles")
+                Text(if (profile != null) "Save Profile File" else "Save All Profiles")
             }
         },
         dismissButton = {
@@ -121,7 +132,13 @@ fun ProfileExportDialog(
     exportResult?.let { result ->
         if (result.isFailure) {
             LaunchedEffect(result) {
-                onExport("Export failed: ${result.exceptionOrNull()?.message}")
+                onExport(
+                    if (profile != null) {
+                        "Failed to save profile file: ${result.exceptionOrNull()?.message}"
+                    } else {
+                        "Failed to save all profiles backup: ${result.exceptionOrNull()?.message}"
+                    }
+                )
                 exportResult = null
             }
         }
@@ -130,18 +147,22 @@ fun ProfileExportDialog(
 
 @Composable
 fun ProfileImportDialog(
+    canKeepCurrentActive: Boolean,
     onDismiss: () -> Unit,
-    onImportJson: (String, Boolean, ProfileSettingsImportScope, Boolean) -> Unit,
+    onRequestPreview: suspend (String) -> Result<ProfileBundlePreview>,
+    onImportJson: (String, Boolean, ProfileNameCollisionPolicy) -> Unit,
     onError: (String) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var isImporting by remember { mutableStateOf(false) }
-    var keepCurrentActive by remember { mutableStateOf(true) }
-    var settingsImportScope by remember {
-        mutableStateOf(ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS)
+    var keepCurrentActive by remember(canKeepCurrentActive) {
+        mutableStateOf(false)
     }
-    var strictSettingsRestore by remember { mutableStateOf(false) }
+    var nameCollisionPolicy by remember {
+        mutableStateOf(ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX)
+    }
+    var selectedImportFile by remember { mutableStateOf<SelectedImportFile?>(null) }
 
     val documentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -150,87 +171,71 @@ fun ProfileImportDialog(
             isImporting = true
             coroutineScope.launch {
                 val json = readJsonFromUri(context, uri = uri)
-                isImporting = false
                 json.onSuccess { content ->
-                    onImportJson(
-                        content,
-                        keepCurrentActive,
-                        settingsImportScope,
-                        strictSettingsRestore
-                    )
+                    onRequestPreview(content)
+                        .onSuccess { preview ->
+                            selectedImportFile = SelectedImportFile(
+                                json = content,
+                                preview = preview
+                            )
+                            nameCollisionPolicy = ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX
+                            keepCurrentActive = false
+                        }
+                        .onFailure { error ->
+                            onError("Failed to preview profile file: ${error.message}")
+                        }
                 }.onFailure { error ->
-                    onError("Failed to read file: ${error.message}")
+                    onError("Failed to load profile file: ${error.message}")
                 }
+                isImporting = false
             }
         }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Load Aircraft Profile File") },
+        title = { Text("Load Profile File") },
         text = {
-            Column {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 if (isImporting) {
-                    Text("Importing aircraft profile...")
-                } else {
+                    Text("Loading profile preview...")
+                } else if (selectedImportFile == null) {
+                    Text("Choose a profile JSON file to preview before import.")
                     Text(
-                        "Select an aircraft profile export, a managed *_bundle_latest.json " +
-                            "snapshot, or another compatible profile JSON file."
+                        "Compatible backup JSON files can also be opened here, but only aircraft profile settings are restored in this flow."
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = keepCurrentActive,
-                            onCheckedChange = { keepCurrentActive = it },
-                            enabled = !isImporting
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Keep current active profile")
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Import settings scope")
-                    ImportScopeOptionRow(
-                        label = "Profile only",
-                        selected = settingsImportScope == ProfileSettingsImportScope.PROFILES_ONLY,
-                        onSelect = { settingsImportScope = ProfileSettingsImportScope.PROFILES_ONLY }
+                } else {
+                    ProfileImportPreviewContent(
+                        preview = selectedImportFile!!.preview,
+                        canKeepCurrentActive = canKeepCurrentActive,
+                        keepCurrentActive = keepCurrentActive,
+                        onKeepCurrentActiveChange = { keepCurrentActive = it },
+                        nameCollisionPolicy = nameCollisionPolicy,
+                        onNameCollisionPolicyChange = { nameCollisionPolicy = it },
+                        onChooseDifferentFile = { documentLauncher.launch(arrayOf("application/json")) }
                     )
-                    ImportScopeOptionRow(
-                        label = "Profile + aircraft settings",
-                        selected = settingsImportScope == ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS,
-                        onSelect = {
-                            settingsImportScope = ProfileSettingsImportScope.PROFILE_SCOPED_SETTINGS
-                        }
-                    )
-                    ImportScopeOptionRow(
-                        label = "All included settings",
-                        selected = settingsImportScope == ProfileSettingsImportScope.FULL_BUNDLE,
-                        onSelect = { settingsImportScope = ProfileSettingsImportScope.FULL_BUNDLE }
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = strictSettingsRestore,
-                            onCheckedChange = { strictSettingsRestore = it },
-                            enabled = !isImporting
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Strict restore (fail on section errors)")
-                    }
                 }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { documentLauncher.launch(arrayOf("application/json")) },
+                onClick = {
+                    val previewedFile = selectedImportFile
+                    if (previewedFile == null) {
+                        documentLauncher.launch(arrayOf("application/json"))
+                    } else {
+                        onImportJson(
+                            previewedFile.json,
+                            keepCurrentActive,
+                            nameCollisionPolicy
+                        )
+                    }
+                },
                 enabled = !isImporting
             ) {
-                Text("Choose File")
+                Text(if (selectedImportFile == null) "Choose File" else "Import")
             }
         },
         dismissButton = {
@@ -242,8 +247,99 @@ fun ProfileImportDialog(
 }
 
 @Composable
-private fun ImportScopeOptionRow(
+private fun ProfileImportPreviewContent(
+    preview: ProfileBundlePreview,
+    canKeepCurrentActive: Boolean,
+    keepCurrentActive: Boolean,
+    onKeepCurrentActiveChange: (Boolean) -> Unit,
+    nameCollisionPolicy: ProfileNameCollisionPolicy,
+    onNameCollisionPolicyChange: (ProfileNameCollisionPolicy) -> Unit,
+    onChooseDifferentFile: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Review this file before importing.")
+        Text(
+            "Profiles in file: ${preview.profiles.size}",
+        )
+        preview.profiles.take(3).forEach { profile ->
+            val matchSuffix = if (profile.matchesExistingProfileName) {
+                " (matches an existing profile name)"
+            } else {
+                ""
+            }
+            Text(
+                "${profile.name} - ${profile.aircraftType.displayName}" +
+                    (profile.aircraftModel?.let { " ($it)" } ?: "") +
+                    matchSuffix
+            )
+        }
+        if (preview.profiles.size > 3) {
+            Text("+${preview.profiles.size - 3} more profile(s)")
+        }
+        PreviewField("Source", preview.sourceFormat.displayLabel())
+        PreviewField("Schema version", preview.schemaVersion)
+        preview.displayExportedAt()?.let { PreviewField("Exported", it) }
+        PreviewField("Settings", preview.settingsSummary())
+        preview.preferredActiveProfileName?.let { activeName ->
+            PreviewField("Active in file", activeName)
+        }
+        if (preview.ignoredGlobalSectionIds.isNotEmpty()) {
+            Text(
+                "Backup-only settings in this file will be ignored here: " +
+                    preview.ignoredGlobalSectionIds.size
+            )
+        }
+        if (preview.unknownSectionIds.isNotEmpty()) {
+            Text(
+                "Unknown settings sections will be ignored: ${preview.unknownSectionIds.size}"
+            )
+        }
+        TextButton(onClick = onChooseDifferentFile) {
+            Text("Choose Different File")
+        }
+        Text("If the file name already exists in XCPro")
+        ImportOptionRow(
+            label = "Import as new",
+            supportingText = "Keep the existing profile and import this one with a safe suffix.",
+            selected = nameCollisionPolicy == ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX,
+            onSelect = { onNameCollisionPolicyChange(ProfileNameCollisionPolicy.KEEP_BOTH_SUFFIX) }
+        )
+        ImportOptionRow(
+            label = "Replace matching profile",
+            supportingText = "Reuse the existing profile entry when the name matches.",
+            selected = nameCollisionPolicy == ProfileNameCollisionPolicy.REPLACE_EXISTING,
+            onSelect = { onNameCollisionPolicyChange(ProfileNameCollisionPolicy.REPLACE_EXISTING) }
+        )
+        if (canKeepCurrentActive) {
+            Text("After import")
+            ImportOptionRow(
+                label = "Activate imported profile",
+                supportingText = "Switch to the imported profile immediately after import.",
+                selected = !keepCurrentActive,
+                onSelect = { onKeepCurrentActiveChange(false) }
+            )
+            ImportOptionRow(
+                label = "Keep current active profile",
+                supportingText = "Import the file without switching away from the current profile.",
+                selected = keepCurrentActive,
+                onSelect = { onKeepCurrentActiveChange(true) }
+            )
+        } else {
+            Text("No active profile is selected, so the imported profile will become active.")
+        }
+    }
+}
+
+@Composable
+private fun ImportOptionRow(
     label: String,
+    supportingText: String,
     selected: Boolean,
     onSelect: () -> Unit
 ) {
@@ -253,8 +349,95 @@ private fun ImportScopeOptionRow(
     ) {
         RadioButton(selected = selected, onClick = onSelect)
         Spacer(modifier = Modifier.width(8.dp))
-        Text(label)
+        Column {
+            Text(label)
+            Text(supportingText)
+        }
     }
+}
+
+@Composable
+private fun PreviewField(
+    label: String,
+    value: String
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(label)
+        Text(value)
+    }
+}
+
+@Composable
+fun ProfileImportResultDialog(
+    result: ProfileBundleImportResult,
+    profiles: List<UserProfile>,
+    onDismiss: () -> Unit
+) {
+    val importResult = result.profileImportResult
+    val appliedSectionCount = result.settingsRestoreResult.appliedSections.size
+    val failedSectionLabels = result.settingsRestoreResult.failedSections.keys
+        .sorted()
+        .map(::profileSettingsSectionLabel)
+    val activeProfileName = profiles
+        .firstOrNull { it.id == importResult.activeProfileAfter }
+        ?.getDisplayName()
+    val hasWarnings = importResult.failures.isNotEmpty() || failedSectionLabels.isNotEmpty()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(if (hasWarnings) "Import Completed with Warnings" else "Import Complete")
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(formatProfileImportFeedback(importResult))
+                PreviewField("Source", result.sourceFormat.displayLabel())
+                val settingsSummary = when {
+                    appliedSectionCount > 0 && failedSectionLabels.isEmpty() ->
+                        "Restored $appliedSectionCount aircraft settings section(s)."
+                    appliedSectionCount > 0 ->
+                        "Restored $appliedSectionCount aircraft settings section(s) with warnings."
+                    failedSectionLabels.isNotEmpty() ->
+                        "No aircraft settings were restored successfully."
+                    else -> "No aircraft settings were restored."
+                }
+                PreviewField("Settings", settingsSummary)
+                activeProfileName?.let { name ->
+                    val activeSummary = if (
+                        importResult.activeProfileAfter != null &&
+                        importResult.activeProfileAfter != importResult.activeProfileBefore
+                    ) {
+                        "Active after import: $name"
+                    } else {
+                        "Current active profile: $name"
+                    }
+                    PreviewField("Activation", activeSummary)
+                }
+                if (failedSectionLabels.isNotEmpty()) {
+                    Text(
+                        "Failed settings sections: " + failedSectionLabels.joinToString(", ")
+                    )
+                }
+                if (importResult.failures.isNotEmpty()) {
+                    val failurePreview = importResult.failures
+                        .take(2)
+                        .joinToString("; ") { it.detail }
+                    Text("Skipped profiles: $failurePreview")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("OK")
+            }
+        },
+        dismissButton = {}
+    )
 }
 
 private suspend fun readJsonFromUri(context: Context, uri: Uri): Result<String> {
@@ -271,5 +454,53 @@ private suspend fun readJsonFromUri(context: Context, uri: Uri): Result<String> 
             }
             selectedJson
         }
+    }
+}
+
+private data class SelectedImportFile(
+    val json: String,
+    val preview: ProfileBundlePreview
+)
+
+private fun ProfileBundlePreview.displayExportedAt(): String? {
+    if (!exportedAtLabel.isNullOrBlank()) return exportedAtLabel
+    val wallMs = exportedAtWallMs ?: return null
+    return runCatching {
+        Instant.ofEpochMilli(wallMs)
+            .atZone(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+    }.getOrNull()
+}
+
+private fun ProfileBundlePreview.settingsSummary(): String {
+    return when {
+        hasRestorableAircraftSettings -> "Aircraft profile settings"
+        else -> "Profile metadata only"
+    }
+}
+
+private fun ProfileBundleSourceFormat.displayLabel(): String {
+    return when (this) {
+        ProfileBundleSourceFormat.BUNDLE_V2 -> "Aircraft profile / bundle JSON"
+        ProfileBundleSourceFormat.LEGACY_PROFILE_EXPORT_V1 -> "Legacy profile export"
+        ProfileBundleSourceFormat.BACKUP_PROFILE_DOCUMENT_V1 -> "Managed backup profile document"
+    }
+}
+
+private fun profileSettingsSectionLabel(sectionId: String): String {
+    return when (sectionId) {
+        ProfileSettingsSectionIds.CARD_PREFERENCES -> "Flight data cards"
+        ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES -> "Flight mode settings"
+        ProfileSettingsSectionIds.LOOK_AND_FEEL_PREFERENCES -> "Look and feel"
+        ProfileSettingsSectionIds.THEME_PREFERENCES -> "Theme"
+        ProfileSettingsSectionIds.MAP_WIDGET_LAYOUT -> "Map widget layout"
+        ProfileSettingsSectionIds.VARIOMETER_WIDGET_LAYOUT -> "Variometer widget layout"
+        ProfileSettingsSectionIds.GLIDER_CONFIG -> "Glider configuration"
+        ProfileSettingsSectionIds.UNITS_PREFERENCES -> "Units"
+        ProfileSettingsSectionIds.MAP_STYLE_PREFERENCES -> "Map style"
+        ProfileSettingsSectionIds.SNAIL_TRAIL_PREFERENCES -> "Snail trail"
+        ProfileSettingsSectionIds.ORIENTATION_PREFERENCES -> "Orientation"
+        ProfileSettingsSectionIds.QNH_PREFERENCES -> "QNH"
+        else -> sectionId
     }
 }

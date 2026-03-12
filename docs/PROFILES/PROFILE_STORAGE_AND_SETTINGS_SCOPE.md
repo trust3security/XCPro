@@ -30,27 +30,33 @@ Reference:
 
 ## SSOT Ownership Matrix (Authoritative)
 
-This matrix is the contract for profile-related state ownership.
+This matrix is the contract for runtime ownership and portability scope.
 
-| Data | Authoritative Owner | Scoped By Profile ID | Bundle Section |
-|---|---|---|---|
-| Profile list, profile identity metadata, active profile id | `ProfileStorage` + `ProfileRepository` | n/a (list + active id) | Bundle document root (`profiles`, `activeProfileId`) |
-| Card templates/cards/positions/mode visibility | `CardPreferences` | Yes | `tier_a.card_preferences` |
-| Flight mgmt last mode | `FlightMgmtPreferencesRepository` | Yes | `tier_a.flight_mgmt_preferences` |
-| Look and feel + status bar/card style | `LookAndFeelPreferences` | Yes | `tier_a.look_and_feel_preferences` |
-| Theme id + custom colors | `ThemePreferencesRepository` | Yes | `tier_a.theme_preferences` |
-| Map widget offsets/sizes | `MapWidgetLayoutRepository` | Yes | `tier_a.map_widget_layout` |
-| Variometer offset/size | `VariometerWidgetRepository` | Yes | `tier_a.variometer_widget_layout` |
-| Glider model/config/polar inputs | `GliderRepository` | Yes | `tier_a.glider_config` |
-| Units | `UnitsRepository` | Yes | `tier_a.units_preferences` |
-| Levo vario preferences | `LevoVarioPreferencesRepository` | No (global) | `tier_a.levo_vario_preferences` |
-| Thermalling mode prefs | `ThermallingModePreferencesRepository` | No (global) | `tier_a.thermalling_mode_preferences` |
-| OGN traffic prefs | `OgnTrafficPreferencesRepository` | No (global) | `tier_a.ogn_traffic_preferences` |
-| OGN trail selection | `OgnTrailSelectionPreferencesRepository` | No (global) | `tier_a.ogn_trail_selection_preferences` |
-| ADS-B prefs | `AdsbTrafficPreferencesRepository` | No (global) | `tier_a.adsb_traffic_preferences` |
-| Weather overlay prefs | `WeatherOverlayPreferencesRepository` | No (global) | `tier_a.weather_overlay_preferences` |
-| Forecast prefs | `ForecastPreferencesRepository` | No (global) | `tier_a.forecast_preferences` |
-| Manual wind override | `WindOverrideRepository` | No (global) | `tier_a.wind_override_preferences` |
+| Data | Authoritative Owner | Scoped By Profile ID | Aircraft Profile File | Full Backup |
+|---|---|---|---|---|
+| Profile list, profile identity metadata, active profile id | `ProfileStorage` + `ProfileRepository` | n/a (list + active id) | Yes | Yes |
+| Card templates/cards/positions/mode visibility | `CardPreferences` | Yes | Yes (`tier_a.card_preferences`) | Yes |
+| Flight mgmt last mode | `FlightMgmtPreferencesRepository` | Yes | Yes (`tier_a.flight_mgmt_preferences`) | Yes |
+| Look and feel + status bar/card style | `LookAndFeelPreferences` | Yes | Yes (`tier_a.look_and_feel_preferences`) | Yes |
+| Theme id + custom colors | `ThemePreferencesRepository` | Yes | Yes (`tier_a.theme_preferences`) | Yes |
+| Map widget offsets/sizes | `MapWidgetLayoutRepository` | Yes | Yes (`tier_a.map_widget_layout`) | Yes |
+| Variometer offset/size | `VariometerWidgetRepository` | Yes | Yes (`tier_a.variometer_widget_layout`) | Yes |
+| Glider model/config/polar inputs | `GliderRepository` | Yes | Yes (`tier_a.glider_config`) | Yes |
+| Units | `UnitsRepository` | Yes | Yes (`tier_a.units_preferences`) | Yes |
+| Map style | `MapStyleRepository` | Yes | Yes (`tier_a.map_style_preferences`) | Yes |
+| Snail trail | `MapTrailPreferences` | Yes | Yes (`tier_a.snail_trail_preferences`) | Yes |
+| Orientation | `MapOrientationSettingsRepository` | Yes | Yes (`tier_a.orientation_preferences`) | Yes |
+| QNH | `QnhPreferencesRepository` | Yes | Yes (`tier_a.qnh_preferences`) | Yes |
+| Levo vario preferences | `LevoVarioPreferencesRepository` | No (global) | No | Yes (`tier_a.levo_vario_preferences`) |
+| Thermalling mode prefs | `ThermallingModePreferencesRepository` | No (global) | No | Yes (`tier_a.thermalling_mode_preferences`) |
+| OGN traffic prefs | `OgnTrafficPreferencesRepository` | No (global) | No | Yes (`tier_a.ogn_traffic_preferences`) |
+| OGN trail selection | `OgnTrailSelectionPreferencesRepository` | No (global) | No | Yes (`tier_a.ogn_trail_selection_preferences`) |
+| ADS-B prefs | `AdsbTrafficPreferencesRepository` | No (global) | No | Yes (`tier_a.adsb_traffic_preferences`) |
+| Weather overlay prefs | `WeatherOverlayPreferencesRepository` | No (global) | No | Yes (`tier_a.weather_overlay_preferences`) |
+| Forecast prefs | `ForecastPreferencesRepository` | No (global) | No | Yes (`tier_a.forecast_preferences`) |
+| Manual wind override | `WindOverrideRepository` | No (global) | No | Yes (`tier_a.wind_override_preferences`) |
+| Home waypoint selection | `HomeWaypointRepository` | Depends on external waypoint content | No | Not in current bundle contract |
+| Waypoint/airspace file selections and raw files | `WaypointFilesRepository` + `AirspaceRepository` | External file-backed | No | Later packaged/full-backup decision only |
 
 ## UserProfile Field Classification
 
@@ -114,7 +120,9 @@ Recommended product policy:
 - single-profile export/import is the primary user flow
 - multi-profile export/import is a secondary migration flow
 - both should use the same versioned JSON schema
-- a single-profile export is just a versioned bundle containing one profile
+- an aircraft-profile export is a versioned bundle containing one profile and
+  only approved aircraft-profile sections
+- a full-backup export may contain profile-scoped plus global sections
 
 This keeps one portable file per aircraft setup while avoiding a separate
 runtime-vs-export schema split.
@@ -124,8 +132,17 @@ runtime-vs-export schema split.
 Bundle import supports explicit scope:
 
 - `PROFILES_ONLY`: import profile identities only, skip settings restore.
-- `PROFILE_SCOPED_SETTINGS`: import profiles plus profile-scoped settings sections only.
-- `FULL_BUNDLE`: import profiles plus all bundle sections.
+- `PROFILE_SCOPED_SETTINGS`: import profiles plus approved aircraft-profile
+  settings sections only.
+- `FULL_BUNDLE`: import profiles plus all serialized sections. This is intended
+  for full-backup/migration artifacts, not the normal aircraft-profile flow.
+
+Production policy:
+
+- normal `Aircraft Profile` export should serialize only approved
+  aircraft-profile sections
+- after that contract is enforced, `PROFILE_SCOPED_SETTINGS` and `FULL_BUNDLE`
+  should behave the same for a normal aircraft-profile file
 
 Strict mode:
 

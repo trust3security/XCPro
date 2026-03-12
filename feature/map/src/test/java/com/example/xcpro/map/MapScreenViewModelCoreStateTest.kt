@@ -66,6 +66,9 @@ import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.map.trail.TrailLength
+import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.map.trail.TrailType
 import com.example.xcpro.tasks.TaskFeatureFlags
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.aat.AATTaskManager
@@ -333,6 +336,75 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
         viewModel.setActiveProfileId("pilot-b")
         drainMain()
         assertEquals(AltitudeUnit.METERS, viewModel.unitsPreferencesFlow.value.altitude)
+    }
+
+    @Test
+    fun setActiveProfileId_routesMapStylePerProfileAndAppliesProfileStyle() = runBlocking {
+        val viewModel = createViewModel()
+
+        viewModel.setActiveProfileId("pilot-a")
+        viewModel.persistMapStyle("Satellite")
+        drainMain()
+
+        viewModel.setActiveProfileId("pilot-b")
+        viewModel.persistMapStyle("Map4")
+        drainMain()
+
+        viewModel.setActiveProfileId("pilot-a")
+        drainMain()
+        assertEquals("Satellite", mapStyleRepository.readProfileStyle("pilot-a"))
+        assertEquals("Satellite", viewModel.mapState.mapStyleName.value)
+
+        viewModel.setActiveProfileId("pilot-b")
+        drainMain()
+        assertEquals("Map4", mapStyleRepository.readProfileStyle("pilot-b"))
+        assertEquals("Map4", viewModel.mapState.mapStyleName.value)
+    }
+
+    @Test
+    fun setActiveProfileId_updatesTrailSettingsForProfileScope() = runBlocking {
+        val viewModel = createViewModel()
+        trailSettingsUseCase.writeProfileSettings(
+            "pilot-a",
+            TrailSettings(
+                length = TrailLength.SHORT,
+                type = TrailType.ALTITUDE,
+                windDriftEnabled = false,
+                scalingEnabled = false
+            )
+        )
+        trailSettingsUseCase.writeProfileSettings(
+            "pilot-b",
+            TrailSettings(
+                length = TrailLength.FULL,
+                type = TrailType.VARIO_2,
+                windDriftEnabled = true,
+                scalingEnabled = true
+            )
+        )
+
+        viewModel.setActiveProfileId("pilot-a")
+        drainMain()
+        assertEquals(TrailLength.SHORT, viewModel.mapState.trailSettings.value.length)
+        assertEquals(TrailType.ALTITUDE, viewModel.mapState.trailSettings.value.type)
+
+        viewModel.setActiveProfileId("pilot-b")
+        drainMain()
+        assertEquals(TrailLength.FULL, viewModel.mapState.trailSettings.value.length)
+        assertEquals(TrailType.VARIO_2, viewModel.mapState.trailSettings.value.type)
+    }
+
+    @Test
+    fun setActiveProfileId_routesQnhProfileScope() = runBlocking {
+        val viewModel = createViewModel()
+
+        viewModel.setActiveProfileId("pilot-a")
+        drainMain()
+        viewModel.setActiveProfileId("pilot-b")
+        drainMain()
+
+        assertEquals(listOf("pilot-a", "pilot-b"), qnhRepository.activeProfileIds)
+        assertEquals("pilot-b", qnhRepository.activeProfileId)
     }
 
     @Test

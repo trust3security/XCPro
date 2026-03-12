@@ -38,6 +38,8 @@ class ProfileExportImportTest {
         assertEquals(ProfileBundleSourceFormat.BUNDLE_V2, parsed.sourceFormat)
         assertEquals(pilot.id, parsed.activeProfileId)
         assertEquals(2, parsed.profiles.size)
+        assertEquals("2.0", parsed.schemaVersion)
+        assertTrue(parsed.exportedAtWallMs != null)
         assertTrue(
             parsed.settingsSnapshot.sections.containsKey(ProfileSettingsSectionIds.CARD_PREFERENCES)
         )
@@ -95,6 +97,8 @@ class ProfileExportImportTest {
         assertEquals(ProfileBundleSourceFormat.LEGACY_PROFILE_EXPORT_V1, parsed.sourceFormat)
         assertEquals(1, parsed.profiles.size)
         assertEquals("legacy-1", parsed.profiles.first().id)
+        assertEquals("1.0", parsed.schemaVersion)
+        assertEquals("2026-03-07", parsed.exportedAtLabel)
         assertTrue(parsed.settingsSnapshot.sections.isEmpty())
         assertEquals(null, parsed.activeProfileId)
     }

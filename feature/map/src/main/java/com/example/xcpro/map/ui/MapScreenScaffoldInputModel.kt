@@ -12,10 +12,7 @@ import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
-import com.example.xcpro.map.AdsbSelectedTargetDetails
-import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.map.Icao24
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapInitializer
@@ -23,9 +20,7 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.map.OgnThermalHotspot
-import com.example.xcpro.map.OgnTrafficSnapshot
-import com.example.xcpro.map.OgnTrafficTarget
+import com.example.xcpro.map.WeGlideUploadPromptUiState
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -73,18 +68,7 @@ internal data class MapScreenScaffoldInputs(
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,
-    val ognSnapshot: OgnTrafficSnapshot,
-    val ognOverlayEnabled: Boolean,
-    val ognTargetEnabled: Boolean,
-    val ognTargetAircraftKey: String?,
-    val ognThermalHotspots: List<OgnThermalHotspot>,
-    val showOgnSciaEnabled: Boolean,
-    val showOgnThermalsEnabled: Boolean,
-    val adsbSnapshot: AdsbTrafficSnapshot,
-    val adsbOverlayEnabled: Boolean,
-    val selectedOgnTarget: OgnTrafficTarget?,
-    val selectedOgnThermal: OgnThermalHotspot?,
-    val selectedAdsbTarget: AdsbSelectedTargetDetails?,
+    val traffic: MapTrafficUiBinding,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
     val isAATEditMode: Boolean,
@@ -120,19 +104,12 @@ internal data class MapScreenScaffoldInputs(
     val waypointData: List<WaypointData>,
     val unitsPreferences: UnitsPreferences,
     val qnhCalibrationState: QnhCalibrationState,
+    val weGlideUploadPrompt: WeGlideUploadPromptUiState?,
     val onAutoCalibrateQnh: () -> Unit,
     val onSetManualQnh: (Double) -> Unit,
-    val onToggleOgnTraffic: () -> Unit,
-    val onToggleOgnScia: () -> Unit,
-    val onToggleOgnThermals: () -> Unit,
-    val onSetOgnTarget: (String, Boolean) -> Unit,
-    val onToggleAdsbTraffic: () -> Unit,
-    val onOgnTargetSelected: (String) -> Unit,
-    val onOgnThermalSelected: (String) -> Unit,
-    val onAdsbTargetSelected: (Icao24) -> Unit,
-    val onDismissOgnTargetDetails: () -> Unit,
-    val onDismissOgnThermalDetails: () -> Unit,
-    val onDismissAdsbTargetDetails: () -> Unit,
+    val onConfirmWeGlideUploadPrompt: () -> Unit,
+    val onDismissWeGlideUploadPrompt: () -> Unit,
+    val trafficActions: MapTrafficUiActions,
     val ballastUiState: StateFlow<BallastUiState>,
     val isBallastPillHidden: Boolean,
     val onBallastCommand: (BallastCommand) -> Unit,

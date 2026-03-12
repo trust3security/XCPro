@@ -24,11 +24,6 @@ import com.example.xcpro.map.MapLifecycleEffects
 import com.example.xcpro.map.MapLifecycleManager
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
-import com.example.xcpro.map.AdsbTrafficUiModel
-import com.example.xcpro.map.OgnDisplayUpdateMode
-import com.example.xcpro.map.OgnGliderTrailSegment
-import com.example.xcpro.map.OgnThermalHotspot
-import com.example.xcpro.map.OgnTrafficTarget
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapTaskScreenManager
@@ -61,89 +56,13 @@ internal fun MapScreenBackHandler(
 }
 
 @Composable
-internal fun MapScreenOverlayEffects(
+internal fun MapAirspaceOverlayEffect(
     mapState: MapScreenState,
     airspaceState: AirspaceUiState,
-    overlayManager: MapOverlayManager,
-    ognTargets: List<OgnTrafficTarget>,
-    ognOverlayEnabled: Boolean,
-    ognThermalHotspots: List<OgnThermalHotspot>,
-    showOgnSciaEnabled: Boolean,
-    ognTargetEnabled: Boolean,
-    ognResolvedTarget: OgnTrafficTarget?,
-    ownshipLocation: MapLocationUiModel?,
-    showOgnThermalsEnabled: Boolean,
-    ognDisplayUpdateMode: OgnDisplayUpdateMode,
-    ognGliderTrailSegments: List<OgnGliderTrailSegment>,
-    ownshipAltitudeMeters: Double?,
-    ognAltitudeUnit: AltitudeUnit,
-    unitsPreferences: UnitsPreferences,
-    ognIconSizePx: Int,
-    adsbTargets: List<AdsbTrafficUiModel>,
-    adsbOverlayEnabled: Boolean,
-    adsbIconSizePx: Int,
-    adsbEmergencyFlashEnabled: Boolean,
-    adsbDefaultMediumUnknownIconEnabled: Boolean
+    overlayManager: MapOverlayManager
 ) {
-    val overlayOwnshipAltitudeMeters = remember(ownshipAltitudeMeters) {
-        quantizeOverlayOwnshipAltitudeMeters(ownshipAltitudeMeters)
-    }
-    val renderedOgnTargets = if (ognOverlayEnabled) ognTargets else emptyList()
-    val renderedOgnThermals = if (ognOverlayEnabled && showOgnThermalsEnabled) {
-        ognThermalHotspots
-    } else emptyList()
-    val renderedOgnTrails = if (ognOverlayEnabled && showOgnSciaEnabled) {
-        ognGliderTrailSegments
-    } else emptyList()
-    val renderOgnTargetEnabled = ognOverlayEnabled && ognTargetEnabled
-    val renderedOgnTarget = if (renderOgnTargetEnabled) ognResolvedTarget else null
-    val renderedAdsbTargets = if (adsbOverlayEnabled) adsbTargets else emptyList()
-
     LaunchedEffect(mapState.mapLibreMap, airspaceState.enabledFiles, airspaceState.classStates) {
         overlayManager.refreshAirspace(mapState.mapLibreMap)
-    }
-    LaunchedEffect(ognDisplayUpdateMode) {
-        overlayManager.setOgnDisplayUpdateMode(ognDisplayUpdateMode)
-    }
-    LaunchedEffect(renderedOgnTargets, overlayOwnshipAltitudeMeters, ognAltitudeUnit, unitsPreferences) {
-        overlayManager.updateOgnTrafficTargets(
-            targets = renderedOgnTargets,
-            ownshipAltitudeMeters = overlayOwnshipAltitudeMeters,
-            altitudeUnit = ognAltitudeUnit,
-            unitsPreferences = unitsPreferences
-        )
-    }
-    LaunchedEffect(renderedOgnThermals) {
-        overlayManager.updateOgnThermalHotspots(renderedOgnThermals)
-    }
-    LaunchedEffect(renderedOgnTrails) {
-        overlayManager.updateOgnGliderTrailSegments(renderedOgnTrails)
-    }
-    LaunchedEffect(renderOgnTargetEnabled, renderedOgnTarget, ownshipLocation) {
-        overlayManager.updateOgnTargetVisuals(
-            enabled = renderOgnTargetEnabled,
-            resolvedTarget = renderedOgnTarget,
-            ownshipLocation = ownshipLocation
-        )
-    }
-    LaunchedEffect(ognIconSizePx) {
-        overlayManager.setOgnIconSizePx(ognIconSizePx)
-    }
-    LaunchedEffect(renderedAdsbTargets, overlayOwnshipAltitudeMeters, unitsPreferences) {
-        overlayManager.updateAdsbTrafficTargets(
-            targets = renderedAdsbTargets,
-            ownshipAltitudeMeters = overlayOwnshipAltitudeMeters,
-            unitsPreferences = unitsPreferences
-        )
-    }
-    LaunchedEffect(adsbIconSizePx) {
-        overlayManager.setAdsbIconSizePx(adsbIconSizePx)
-    }
-    LaunchedEffect(adsbEmergencyFlashEnabled) {
-        overlayManager.setAdsbEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
-    }
-    LaunchedEffect(adsbDefaultMediumUnknownIconEnabled) {
-        overlayManager.setAdsbDefaultMediumUnknownIconEnabled(adsbDefaultMediumUnknownIconEnabled)
     }
 }
 

@@ -63,12 +63,6 @@ internal enum class MapBottomTab(
     )
 }
 
-internal data class OgnTrailAircraftRowUi(
-    val key: String,
-    val label: String,
-    val trailsEnabled: Boolean
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MapBottomTabsLayer(
@@ -189,7 +183,7 @@ internal fun MapBottomTabsLayer(
                         }
 
                         MapBottomTab.OGN -> {
-                            OgnTabContent(
+                            MapTrafficOgnTabContent(
                                 ognEnabled = ognEnabled,
                                 showSciaEnabled = showSciaEnabled,
                                 onShowSciaEnabledChanged = onShowSciaEnabledChanged,
@@ -199,13 +193,15 @@ internal fun MapBottomTabsLayer(
                         }
 
                         MapBottomTab.MAP4 -> {
-                            Map4ControlsContent(
+                            MapTrafficMap4ControlsContent(
                                 adsbTrafficEnabled = adsbTrafficEnabled,
                                 showOgnThermalsEnabled = showOgnThermalsEnabled,
+                                onAdsbTrafficEnabledChanged = onAdsbTrafficEnabledChanged,
+                                onShowOgnThermalsEnabledChanged = onShowOgnThermalsEnabledChanged
+                            )
+                            Map4MapControlsContent(
                                 showDistanceCircles = showDistanceCircles,
                                 currentQnhLabel = currentQnhLabel,
-                                onAdsbTrafficEnabledChanged = onAdsbTrafficEnabledChanged,
-                                onShowOgnThermalsEnabledChanged = onShowOgnThermalsEnabledChanged,
                                 onShowDistanceCirclesChanged = onShowDistanceCirclesChanged,
                                 onOpenQnhDialog = onOpenQnhDialogFromTab
                             )

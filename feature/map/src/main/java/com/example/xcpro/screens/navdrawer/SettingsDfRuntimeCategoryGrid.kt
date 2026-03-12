@@ -146,9 +146,9 @@ internal fun GeneralSettingsCategoryGrid(
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
-                            title = "Proximity",
-                            icon = Icons.Default.AirplanemodeActive,
-                            onClick = { onSubSheetSelected(GeneralSubSheet.PROXIMITY) },
+                            title = "WeGlide",
+                            icon = Icons.Default.Map,
+                            onClick = { onSubSheetSelected(GeneralSubSheet.WEGLIDE) },
                             modifier = Modifier.weight(1f)
                         )
                     }

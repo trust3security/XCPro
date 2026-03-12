@@ -87,31 +87,36 @@ internal fun createTrafficCoordinatorForViewModel(
     uiEffects: MutableSharedFlow<MapUiEffect>
 ): MapScreenTrafficCoordinator = MapScreenTrafficCoordinator(
     scope = scope,
-    allowSensorStart = allowSensorStart,
-    isMapVisible = isMapVisible,
+    streamingGate = createTrafficStreamingGatePort(
+        allowSensorStart = allowSensorStart,
+        isMapVisible = isMapVisible
+    ),
     ognOverlayEnabled = ognOverlayEnabled,
     adsbOverlayEnabled = adsbOverlayEnabled,
-    mapState = mapState,
-    mapLocation = mapLocation,
-    isFlying = isFlying,
-    ownshipAltitudeMeters = ownshipAltitudeMeters,
-    ownshipIsCircling = ownshipIsCircling,
-    circlingFeatureEnabled = circlingFeatureEnabled,
-    adsbMaxDistanceKm = adsbFilterStates.maxDistanceKm,
-    adsbVerticalAboveMeters = adsbFilterStates.verticalAboveMeters,
-    adsbVerticalBelowMeters = adsbFilterStates.verticalBelowMeters,
+    viewportPort = createTrafficViewportPort(mapState),
+    ownshipPort = createTrafficOwnshipPort(
+        scope = scope,
+        mapLocation = mapLocation,
+        isFlying = isFlying,
+        ownshipAltitudeMeters = ownshipAltitudeMeters,
+        ownshipIsCircling = ownshipIsCircling,
+        circlingFeatureEnabled = circlingFeatureEnabled
+    ),
+    adsbFilterPort = createAdsbTrafficFilterPort(adsbFilterStates),
     rawOgnTargets = rawOgnTargets,
-    selectedOgnId = selectedOgnId,
+    selectionPort = createTrafficSelectionPort(
+        selectedOgnId = selectedOgnId,
+        selectedThermalId = selectedThermalId,
+        selectedAdsbId = selectedAdsbId
+    ),
     ognTargetEnabled = ognTargetEnabled,
     ognTargetAircraftKey = ognTargetAircraftKey,
     ognSuppressedTargetIds = ognSuppressedTargetIds,
     showSciaEnabled = showSciaEnabled,
     showThermalsEnabled = showThermalsEnabled,
     thermalHotspots = thermalHotspots,
-    selectedThermalId = selectedThermalId,
     rawAdsbTargets = rawAdsbTargets,
-    selectedAdsbId = selectedAdsbId,
     ognTrafficFacade = ognTrafficFacade,
     adsbTrafficFacade = adsbTrafficFacade,
-    emitUiEffect = { effect -> uiEffects.emit(effect) }
+    userMessagePort = createTrafficUserMessagePort(uiEffects)
 )

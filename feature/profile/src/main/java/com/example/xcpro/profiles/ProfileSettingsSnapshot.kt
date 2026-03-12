@@ -45,12 +45,48 @@ object ProfileSettingsSectionIds {
     const val WIND_OVERRIDE_PREFERENCES = "tier_a.wind_override_preferences"
 }
 
+object ProfileSettingsSectionSets {
+    val AIRCRAFT_PROFILE_SECTION_IDS = setOf(
+        ProfileSettingsSectionIds.CARD_PREFERENCES,
+        ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES,
+        ProfileSettingsSectionIds.LOOK_AND_FEEL_PREFERENCES,
+        ProfileSettingsSectionIds.THEME_PREFERENCES,
+        ProfileSettingsSectionIds.MAP_WIDGET_LAYOUT,
+        ProfileSettingsSectionIds.VARIOMETER_WIDGET_LAYOUT,
+        ProfileSettingsSectionIds.GLIDER_CONFIG,
+        ProfileSettingsSectionIds.UNITS_PREFERENCES,
+        ProfileSettingsSectionIds.MAP_STYLE_PREFERENCES,
+        ProfileSettingsSectionIds.SNAIL_TRAIL_PREFERENCES,
+        ProfileSettingsSectionIds.ORIENTATION_PREFERENCES,
+        ProfileSettingsSectionIds.QNH_PREFERENCES
+    )
+
+    val GLOBAL_APP_SECTION_IDS = setOf(
+        ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES,
+        ProfileSettingsSectionIds.THERMALLING_MODE_PREFERENCES,
+        ProfileSettingsSectionIds.OGN_TRAFFIC_PREFERENCES,
+        ProfileSettingsSectionIds.OGN_TRAIL_SELECTION_PREFERENCES,
+        ProfileSettingsSectionIds.ADSB_TRAFFIC_PREFERENCES,
+        ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES,
+        ProfileSettingsSectionIds.FORECAST_PREFERENCES,
+        ProfileSettingsSectionIds.WIND_OVERRIDE_PREFERENCES
+    )
+
+    val CAPTURED_SECTION_IDS = AIRCRAFT_PROFILE_SECTION_IDS + GLOBAL_APP_SECTION_IDS
+}
+
 interface ProfileSettingsSnapshotProvider {
-    suspend fun buildSnapshot(profileIds: Set<String>): ProfileSettingsSnapshot
+    suspend fun buildSnapshot(
+        profileIds: Set<String>,
+        sectionIds: Set<String> = ProfileSettingsSectionSets.CAPTURED_SECTION_IDS
+    ): ProfileSettingsSnapshot
 }
 
 class NoOpProfileSettingsSnapshotProvider : ProfileSettingsSnapshotProvider {
-    override suspend fun buildSnapshot(profileIds: Set<String>): ProfileSettingsSnapshot =
+    override suspend fun buildSnapshot(
+        profileIds: Set<String>,
+        sectionIds: Set<String>
+    ): ProfileSettingsSnapshot =
         ProfileSettingsSnapshot.empty()
 }
 

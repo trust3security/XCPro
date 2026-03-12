@@ -42,8 +42,8 @@ class ProfileActionButtonsTest {
             )
         }
 
-        composeRule.onNodeWithText("Save Profile File").assertIsDisplayed().assertIsNotEnabled()
-        composeRule.onNodeWithText("Load Profile File").assertIsDisplayed().assertIsNotEnabled()
+        composeRule.onNodeWithText("Save Profile").assertIsDisplayed().assertIsNotEnabled()
+        composeRule.onNodeWithText("Load Profile").assertIsDisplayed().assertIsNotEnabled()
         composeRule.onNodeWithText("Delete Profile").assertIsDisplayed().assertIsNotEnabled()
     }
 
@@ -63,8 +63,8 @@ class ProfileActionButtonsTest {
             )
         }
 
-        composeRule.onNodeWithText("Save Profile File").performClick()
-        composeRule.onNodeWithText("Load Profile File").performClick()
+        composeRule.onNodeWithText("Save Profile").performClick()
+        composeRule.onNodeWithText("Load Profile").performClick()
         composeRule.onNodeWithText("Delete Profile").performClick()
 
         assertEquals(1, exportCalls)

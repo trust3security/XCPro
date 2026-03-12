@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 /**
  * Bridge between the map-layer UI and the flight-card SSOT ViewModel. It keeps UI-facing,
  * short-lived state (live vario data, smoothing, visibility) while delegating template/card
@@ -47,19 +46,10 @@ class FlightDataManager(
     val displayVarioFlow: StateFlow<Float> =
         liveFlightDataFlow
             .map { data ->
-                if (data == null) {
-                    0f
-                } else {
-                    val display = data.displayVario
-                    val fallback = data.verticalSpeed
-                    val selected = when {
-                        data.varioValid && display.isFinite() -> display
-                        display.isFinite() && abs(display) > VARIO_NOISE_FLOOR -> display
-                        fallback.isFinite() -> fallback
-                        else -> 0.0
-                    }
-                    selected.toFloat().bucket(VARIO_BUCKET_MS)
-                }
+                data.resolveDisplayVario(
+                    varioBucketMs = VARIO_BUCKET_MS,
+                    varioNoiseFloor = VARIO_NOISE_FLOOR
+                )
             }
             .distinctUntilChanged()
             .throttleFrame(UI_NUMERIC_FRAME_MS)

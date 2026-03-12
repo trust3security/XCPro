@@ -22,13 +22,6 @@ fun ProfileSelectionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showImportDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.importResult) {
-        val result = uiState.importResult ?: return@LaunchedEffect
-        val message = formatProfileImportFeedback(result)
-        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-        viewModel.clearImportResult()
-    }
-
     ProfileSelectionContent(
         state = uiState,
         onSelectProfile = { viewModel.selectProfile(it) },
@@ -46,13 +39,14 @@ fun ProfileSelectionScreen(
 
     if (showImportDialog) {
         ProfileImportDialog(
+            canKeepCurrentActive = uiState.activeProfile != null,
             onDismiss = { showImportDialog = false },
-            onImportJson = { json, keepCurrentActive, settingsImportScope, strictSettingsRestore ->
+            onRequestPreview = viewModel::previewBundle,
+            onImportJson = { json, keepCurrentActive, nameCollisionPolicy ->
                 viewModel.importBundle(
                     json = json,
                     keepCurrentActive = keepCurrentActive,
-                    settingsImportScope = settingsImportScope,
-                    strictSettingsRestore = strictSettingsRestore
+                    nameCollisionPolicy = nameCollisionPolicy
                 )
                 showImportDialog = false
             },
@@ -60,6 +54,14 @@ fun ProfileSelectionScreen(
                 showImportDialog = false
                 Toast.makeText(context, error, Toast.LENGTH_LONG).show()
             }
+        )
+    }
+
+    uiState.bundleImportResult?.let { result ->
+        ProfileImportResultDialog(
+            result = result,
+            profiles = uiState.profiles,
+            onDismiss = viewModel::clearBundleImportResult
         )
     }
 }

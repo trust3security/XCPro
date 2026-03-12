@@ -33,10 +33,8 @@ import com.example.xcpro.forecast.ForecastTileFormat
 import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
-import com.example.xcpro.map.AdsbSelectedTargetDetails
-import com.example.xcpro.map.AdsbTrafficSnapshot
+import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.map.Icao24
 import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapInitializer
@@ -44,13 +42,9 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.map.OgnThermalHotspot
-import com.example.xcpro.map.OgnTrafficSnapshot
-import com.example.xcpro.map.OgnTrafficTarget
-import com.example.xcpro.map.OgnTrailSelectionViewModel
+import com.example.xcpro.map.TrafficMapCoordinate
+import com.example.xcpro.map.WeGlideUploadPromptUiState
 import com.example.xcpro.map.WindArrowUiState
-import com.example.xcpro.map.buildOgnSelectionLookup
-import com.example.xcpro.map.selectionLookupContainsOgnKey
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -90,18 +84,7 @@ internal fun MapScreenContent(
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
-    ognSnapshot: OgnTrafficSnapshot,
-    ognOverlayEnabled: Boolean,
-    ognTargetEnabled: Boolean,
-    ognTargetAircraftKey: String?,
-    ognThermalHotspots: List<OgnThermalHotspot>,
-    showOgnSciaEnabled: Boolean,
-    showOgnThermalsEnabled: Boolean,
-    adsbSnapshot: AdsbTrafficSnapshot,
-    adsbOverlayEnabled: Boolean,
-    selectedOgnTarget: OgnTrafficTarget?,
-    selectedOgnThermal: OgnThermalHotspot?,
-    selectedAdsbTarget: AdsbSelectedTargetDetails?,
+    trafficBinding: MapTrafficUiBinding,
     isUiEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     isAATEditMode: Boolean,
@@ -137,19 +120,12 @@ internal fun MapScreenContent(
     waypointData: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
     qnhCalibrationState: QnhCalibrationState,
+    weGlideUploadPrompt: WeGlideUploadPromptUiState?,
     onAutoCalibrateQnh: () -> Unit,
     onSetManualQnh: (Double) -> Unit,
-    onToggleOgnTraffic: () -> Unit,
-    onToggleOgnScia: () -> Unit,
-    onToggleOgnThermals: () -> Unit,
-    onSetOgnTarget: (String, Boolean) -> Unit,
-    onToggleAdsbTraffic: () -> Unit,
-    onOgnTargetSelected: (String) -> Unit,
-    onOgnThermalSelected: (String) -> Unit,
-    onAdsbTargetSelected: (Icao24) -> Unit,
-    onDismissOgnTargetDetails: () -> Unit,
-    onDismissOgnThermalDetails: () -> Unit,
-    onDismissAdsbTargetDetails: () -> Unit,
+    onConfirmWeGlideUploadPrompt: () -> Unit,
+    onDismissWeGlideUploadPrompt: () -> Unit,
+    trafficActions: MapTrafficUiActions,
     ballastUiState: StateFlow<BallastUiState>,
     isBallastPillHidden: Boolean,
     onBallastCommand: (BallastCommand) -> Unit,
@@ -167,6 +143,30 @@ internal fun MapScreenContent(
     showRacingReplayFab: Boolean,
     onRacingReplayClick: () -> Unit
 ) {
+    val ognSnapshot = trafficBinding.ognSnapshot
+    val ognOverlayEnabled = trafficBinding.ognOverlayEnabled
+    val ognTargetEnabled = trafficBinding.ognTargetEnabled
+    val ognTargetAircraftKey = trafficBinding.ognTargetAircraftKey
+    val ognThermalHotspots = trafficBinding.ognThermalHotspots
+    val showOgnSciaEnabled = trafficBinding.showOgnSciaEnabled
+    val showOgnThermalsEnabled = trafficBinding.showOgnThermalsEnabled
+    val adsbSnapshot = trafficBinding.adsbSnapshot
+    val adsbOverlayEnabled = trafficBinding.adsbOverlayEnabled
+    val selectedOgnTarget = trafficBinding.selectedOgnTarget
+    val selectedOgnThermal = trafficBinding.selectedOgnThermal
+    val selectedAdsbTarget = trafficBinding.selectedAdsbTarget
+    val onToggleOgnTraffic = trafficActions.onToggleOgnTraffic
+    val onToggleOgnScia = trafficActions.onToggleOgnScia
+    val onToggleOgnThermals = trafficActions.onToggleOgnThermals
+    val onSetOgnTarget = trafficActions.onSetOgnTarget
+    val onToggleAdsbTraffic = trafficActions.onToggleAdsbTraffic
+    val onOgnTargetSelected = trafficActions.onOgnTargetSelected
+    val onOgnThermalSelected = trafficActions.onOgnThermalSelected
+    val onAdsbTargetSelected = trafficActions.onAdsbTargetSelected
+    val onDismissOgnTargetDetails = trafficActions.onDismissOgnTargetDetails
+    val onDismissOgnThermalDetails = trafficActions.onDismissOgnThermalDetails
+    val onDismissAdsbTargetDetails = trafficActions.onDismissAdsbTargetDetails
+
     val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
     val forecastViewModel: ForecastOverlayViewModel = hiltViewModel()
     val forecastOverlayState by forecastViewModel.overlayState.collectAsStateWithLifecycle()
@@ -174,13 +174,13 @@ internal fun MapScreenContent(
     val forecastQueryStatus by forecastViewModel.queryStatus.collectAsStateWithLifecycle()
     val weatherOverlayViewModel: WeatherOverlayViewModel = hiltViewModel()
     val weatherOverlayState by weatherOverlayViewModel.overlayState.collectAsStateWithLifecycle()
-    val ognTrailSelectionViewModel: OgnTrailSelectionViewModel = hiltViewModel()
     val forecastRuntimeWarning by overlayManager.forecastRuntimeWarningMessage.collectAsStateWithLifecycle()
     val skySightSatelliteRuntimeError by overlayManager.skySightSatelliteRuntimeErrorMessage.collectAsStateWithLifecycle()
-    val selectedOgnTrailAircraftKeys by ognTrailSelectionViewModel.selectedTrailAircraftKeys
-        .collectAsStateWithLifecycle()
-    val trailSelectionLookup = remember(selectedOgnTrailAircraftKeys) { buildOgnSelectionLookup(selectedOgnTrailAircraftKeys) }
-    val ognTrailAircraftRows = remember(ognSnapshot.targets, trailSelectionLookup) { buildOgnTrailAircraftRows(ognSnapshot.targets, trailSelectionLookup) }
+    val trafficRuntimeState = rememberMapTrafficRuntimeState(
+        traffic = trafficBinding,
+        debugPanelsEnabled = BuildConfig.DEBUG
+    )
+    val trafficContentUiState = trafficRuntimeState.contentUiState
     val currentQnhLabel = remember(liveFlightData?.qnh) {
         val qnh = liveFlightData?.qnh ?: 1013.25
         String.format(Locale.US, "%.1f hPa", qnh)
@@ -236,51 +236,11 @@ internal fun MapScreenContent(
         onClearTapCallout = { tappedWindArrowCallout = null },
         onResetWindTapLabelSize = { windTapLabelSize = IntSize.Zero }
     )
-    val hasTrafficDetailsOpen = selectedOgnTarget != null ||
-        selectedOgnThermal != null ||
-        selectedAdsbTarget != null
-    val selectedOgnTargetSciaEnabled = remember(selectedOgnTarget, trailSelectionLookup) {
-        selectedOgnTarget?.let { target ->
-            selectionLookupContainsOgnKey(
-                lookup = trailSelectionLookup,
-                candidateKey = target.canonicalKey
-            )
-        } ?: false
-    }
-    val targetSelectionLookup = remember(ognTargetAircraftKey) {
-        val selectedKeys = ognTargetAircraftKey?.let(::setOf) ?: emptySet()
-        buildOgnSelectionLookup(selectedKeys)
-    }
-    val selectedOgnTargetTargetEnabled = remember(
-        selectedOgnTarget,
-        ognTargetEnabled,
-        targetSelectionLookup
-    ) {
-        if (!ognTargetEnabled) return@remember false
-        val target = selectedOgnTarget ?: return@remember false
-        selectionLookupContainsOgnKey(
-            lookup = targetSelectionLookup,
-            candidateKey = target.canonicalKey
-        )
-    }
-    val selectedOgnTargetIsGliderClass = remember(selectedOgnTarget) {
-        isTargetableOgnAircraftTypeCode(selectedOgnTarget?.identity?.aircraftTypeCode)
-    }
-    LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen) {
-        if (isTaskPanelVisible || hasTrafficDetailsOpen) {
+    LaunchedEffect(isTaskPanelVisible, trafficContentUiState.hasTrafficDetailsOpen) {
+        if (isTaskPanelVisible || trafficContentUiState.hasTrafficDetailsOpen) {
             isBottomTabsSheetVisible = false
         }
     }
-    val trafficPanelVisibility = rememberTrafficDebugPanelVisibility(
-        adsbOverlayEnabled = adsbOverlayEnabled,
-        adsbSnapshot = adsbSnapshot,
-        ognOverlayEnabled = ognOverlayEnabled,
-        ognSnapshot = ognSnapshot
-    )
-    val showOgnDebugPanel = trafficPanelVisibility.showOgnDebugPanel
-    val showAdsbDebugPanel = trafficPanelVisibility.showAdsbDebugPanel
-    val showAdsbIssueFlash = trafficPanelVisibility.showAdsbIssueFlash
-    val showAdsbPersistentStatus = trafficPanelVisibility.showAdsbPersistentStatus
 
     Box(
         Modifier
@@ -416,7 +376,7 @@ internal fun MapScreenContent(
             selectedBottomTab = selectedBottomTab,
             isBottomTabsSheetVisible = isBottomTabsSheetVisible,
             isTaskPanelVisible = isTaskPanelVisible,
-            hasTrafficDetailsOpen = hasTrafficDetailsOpen,
+            hasTrafficDetailsOpen = trafficContentUiState.hasTrafficDetailsOpen,
             setSelectedBottomTabName = { selectedBottomTabName = it },
             setBottomTabsSheetVisible = { isBottomTabsSheetVisible = it },
             onDismissOgnTargetDetails = onDismissOgnTargetDetails,
@@ -434,8 +394,8 @@ internal fun MapScreenContent(
             onToggleOgnThermals = onToggleOgnThermals,
             overlayManager = overlayManager,
             openQnhDialog = openQnhDialog,
-            ognTrailAircraftRows = ognTrailAircraftRows,
-            ognTrailSelectionViewModel = ognTrailSelectionViewModel,
+            ognTrailAircraftRows = trafficContentUiState.ognTrailAircraftRows,
+            onOgnTrailAircraftToggled = trafficRuntimeState.onTrailAircraftSelectionChanged,
             forecastOverlayState = forecastOverlayState,
             forecastViewModel = forecastViewModel,
             skySightWarningMessage = skySightWarningMessage,
@@ -447,13 +407,7 @@ internal fun MapScreenContent(
             onTransientMapStyleSelected = onTransientMapStyleSelected
         )
 
-        MapOverlayPanelsAndSheetsSection(
-            adsbSnapshot = adsbSnapshot,
-            ognSnapshot = ognSnapshot,
-            showAdsbPersistentStatus = showAdsbPersistentStatus,
-            showAdsbIssueFlash = showAdsbIssueFlash,
-            showAdsbDebugPanel = showAdsbDebugPanel,
-            showOgnDebugPanel = showOgnDebugPanel,
+        MapAuxiliaryPanelsAndSheetsSection(
             mapState = mapState,
             density = density,
             tappedWindArrowCallout = tappedWindArrowCallout,
@@ -470,27 +424,26 @@ internal fun MapScreenContent(
             unitsPreferences = unitsPreferences,
             liveFlightData = liveFlightData,
             qnhCalibrationState = qnhCalibrationState,
+            weGlideUploadPrompt = weGlideUploadPrompt,
             setQnhInput = { qnhInput = it },
             setQnhError = { qnhError = it },
             setShowQnhDialog = { showQnhDialog = it },
             onSetManualQnh = onSetManualQnh,
             onAutoCalibrateQnh = onAutoCalibrateQnh,
-            selectedOgnTarget = selectedOgnTarget,
-            selectedOgnTargetSciaEnabled = selectedOgnTargetSciaEnabled,
-            selectedOgnTargetTargetEnabled = selectedOgnTargetTargetEnabled,
-            selectedOgnTargetTargetToggleEnabled = selectedOgnTargetIsGliderClass,
-            ognTrailSelectionViewModel = ognTrailSelectionViewModel,
-            showOgnSciaEnabled = showOgnSciaEnabled,
-            ognOverlayEnabled = ognOverlayEnabled,
-            onToggleOgnScia = onToggleOgnScia,
-            onToggleOgnTraffic = onToggleOgnTraffic,
-            onSetOgnTarget = onSetOgnTarget,
-            onDismissOgnTargetDetails = onDismissOgnTargetDetails,
-            selectedOgnThermal = selectedOgnThermal,
-            currentLocation = currentLocation,
-            onDismissOgnThermalDetails = onDismissOgnThermalDetails,
-            selectedAdsbTarget = selectedAdsbTarget,
-            onDismissAdsbTargetDetails = onDismissAdsbTargetDetails
+            onConfirmWeGlideUploadPrompt = onConfirmWeGlideUploadPrompt,
+            onDismissWeGlideUploadPrompt = onDismissWeGlideUploadPrompt
+        )
+        MapTrafficRuntimeLayer(
+            traffic = trafficBinding,
+            runtimeState = trafficRuntimeState,
+            ownshipCoordinate = currentLocation?.let { location ->
+                TrafficMapCoordinate(
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                )
+            },
+            unitsPreferences = unitsPreferences,
+            trafficActions = trafficActions
         )
     }
     ReplayDiagnosticsLogger(

@@ -12,6 +12,7 @@ import com.example.xcpro.adsb.OpenSkyClientCredentials
 import com.example.xcpro.common.units.UnitsPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -93,6 +94,38 @@ class AdsbSettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = UnitsPreferences()
         )
+
+    val uiState: StateFlow<AdsbSettingsUiState> = combine(
+        iconSizePx,
+        maxDistanceKm,
+        verticalAboveMeters,
+        verticalBelowMeters,
+        emergencyFlashEnabled,
+        emergencyAudioEnabled,
+        emergencyAudioMasterEnabled,
+        emergencyAudioShadowMode,
+        emergencyAudioRollbackLatched,
+        emergencyAudioRollbackReason,
+        units
+    ) { values ->
+        AdsbSettingsUiState(
+            iconSizePx = values[0] as Int,
+            maxDistanceKm = values[1] as Int,
+            verticalAboveMeters = values[2] as Double,
+            verticalBelowMeters = values[3] as Double,
+            emergencyFlashEnabled = values[4] as Boolean,
+            emergencyAudioEnabled = values[5] as Boolean,
+            emergencyAudioMasterEnabled = values[6] as Boolean,
+            emergencyAudioShadowMode = values[7] as Boolean,
+            emergencyAudioRollbackLatched = values[8] as Boolean,
+            emergencyAudioRollbackReason = values[9] as String?,
+            units = values[10] as UnitsPreferences
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AdsbSettingsUiState()
+    )
 
     fun setIconSizePx(iconSizePx: Int) {
         viewModelScope.launch {

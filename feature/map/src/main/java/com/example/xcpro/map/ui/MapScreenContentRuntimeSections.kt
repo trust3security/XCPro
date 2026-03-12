@@ -2,10 +2,8 @@ package com.example.xcpro.map.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,26 +14,14 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertQnhInputToHpa
-import com.example.xcpro.map.AdsbMarkerDetailsSheet
-import com.example.xcpro.map.AdsbSelectedTargetDetails
-import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.forecast.ForecastOverlayUiState
-import com.example.xcpro.forecast.ForecastPointCallout
 import com.example.xcpro.forecast.ForecastOverlayViewModel
+import com.example.xcpro.forecast.ForecastPointCallout
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
-import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.xcpro.map.OgnMarkerDetailsSheet
-import com.example.xcpro.map.OgnThermalDetailsSheet
-import com.example.xcpro.map.OgnThermalHotspot
-import com.example.xcpro.map.OgnTrafficSnapshot
-import com.example.xcpro.map.OgnTrafficTarget
-import com.example.xcpro.map.OgnTrailSelectionViewModel
+import com.example.xcpro.map.WeGlideUploadPromptUiState
 import com.example.xcpro.qnh.QnhCalibrationState
-import com.example.xcpro.map.ui.AdsbDebugPanel
-import com.example.xcpro.map.ui.AdsbIssueFlashBadge
-import com.example.xcpro.map.ui.OgnDebugPanel
 import kotlin.math.roundToInt
 
 @Composable
@@ -62,7 +48,7 @@ internal fun MapBottomTabsSection(
     overlayManager: MapOverlayManager,
     openQnhDialog: () -> Unit,
     ognTrailAircraftRows: List<OgnTrailAircraftRowUi>,
-    ognTrailSelectionViewModel: OgnTrailSelectionViewModel,
+    onOgnTrailAircraftToggled: (String, Boolean) -> Unit,
     forecastOverlayState: ForecastOverlayUiState,
     forecastViewModel: ForecastOverlayViewModel,
     skySightWarningMessage: String?,
@@ -112,9 +98,7 @@ internal fun MapBottomTabsSection(
         },
         onOpenQnhDialogFromTab = openQnhDialog,
         ognTrailAircraftRows = ognTrailAircraftRows,
-        onOgnTrailAircraftToggled = { aircraftKey, enabled ->
-            ognTrailSelectionViewModel.setTrailAircraftSelected(aircraftKey, enabled)
-        },
+        onOgnTrailAircraftToggled = onOgnTrailAircraftToggled,
         skySightUiState = forecastOverlayState,
         onSkySightEnabledChanged = forecastViewModel::setEnabled,
         onSkySightPrimaryParameterToggled = forecastViewModel::selectSkySightPrimaryParameter,
@@ -152,13 +136,7 @@ internal fun MapBottomTabsSection(
 }
 
 @Composable
-internal fun BoxScope.MapOverlayPanelsAndSheetsSection(
-    adsbSnapshot: AdsbTrafficSnapshot,
-    ognSnapshot: OgnTrafficSnapshot,
-    showAdsbPersistentStatus: Boolean,
-    showAdsbIssueFlash: Boolean,
-    showAdsbDebugPanel: Boolean,
-    showOgnDebugPanel: Boolean,
+internal fun BoxScope.MapAuxiliaryPanelsAndSheetsSection(
     mapState: MapScreenState,
     density: Density,
     tappedWindArrowCallout: WindArrowTapCallout?,
@@ -175,55 +153,15 @@ internal fun BoxScope.MapOverlayPanelsAndSheetsSection(
     unitsPreferences: UnitsPreferences,
     liveFlightData: RealTimeFlightData?,
     qnhCalibrationState: QnhCalibrationState,
+    weGlideUploadPrompt: WeGlideUploadPromptUiState?,
     setQnhInput: (String) -> Unit,
     setQnhError: (String?) -> Unit,
     setShowQnhDialog: (Boolean) -> Unit,
     onSetManualQnh: (Double) -> Unit,
     onAutoCalibrateQnh: () -> Unit,
-    selectedOgnTarget: OgnTrafficTarget?,
-    selectedOgnTargetSciaEnabled: Boolean,
-    selectedOgnTargetTargetEnabled: Boolean,
-    selectedOgnTargetTargetToggleEnabled: Boolean,
-    ognTrailSelectionViewModel: OgnTrailSelectionViewModel,
-    showOgnSciaEnabled: Boolean,
-    ognOverlayEnabled: Boolean,
-    onToggleOgnScia: () -> Unit,
-    onToggleOgnTraffic: () -> Unit,
-    onSetOgnTarget: (String, Boolean) -> Unit,
-    onDismissOgnTargetDetails: () -> Unit,
-    selectedOgnThermal: OgnThermalHotspot?,
-    currentLocation: MapLocationUiModel?,
-    onDismissOgnThermalDetails: () -> Unit,
-    selectedAdsbTarget: AdsbSelectedTargetDetails?,
-    onDismissAdsbTargetDetails: () -> Unit
+    onConfirmWeGlideUploadPrompt: () -> Unit,
+    onDismissWeGlideUploadPrompt: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .align(Alignment.BottomStart)
-            .padding(start = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        AdsbPersistentStatusBadge(
-            visible = showAdsbPersistentStatus,
-            snapshot = adsbSnapshot
-        )
-
-        AdsbIssueFlashBadge(
-            visible = showAdsbIssueFlash,
-            snapshot = adsbSnapshot
-        )
-
-        OgnDebugPanel(
-            visible = showOgnDebugPanel,
-            snapshot = ognSnapshot
-        )
-
-        AdsbDebugPanel(
-            visible = showAdsbDebugPanel,
-            snapshot = adsbSnapshot
-        )
-    }
-
     tappedWindArrowCallout?.let { callout ->
         val map = mapState.mapLibreMap
         val screenPoint = map?.projection?.toScreenLocation(callout.tapLatLng)
@@ -322,52 +260,9 @@ internal fun BoxScope.MapOverlayPanelsAndSheetsSection(
         }
     )
 
-    when {
-        selectedOgnTarget != null -> {
-            OgnMarkerDetailsSheet(
-                target = selectedOgnTarget,
-                sciaEnabledForAircraft = selectedOgnTargetSciaEnabled,
-                onSciaEnabledForAircraftChanged = { enabled ->
-                    ognTrailSelectionViewModel.setTrailAircraftSelected(
-                        aircraftKey = selectedOgnTarget.canonicalKey,
-                        selected = enabled
-                    )
-                    if (enabled) {
-                        if (!showOgnSciaEnabled) {
-                            onToggleOgnScia()
-                        } else if (!ognOverlayEnabled) {
-                            onToggleOgnTraffic()
-                        }
-                    }
-                },
-                targetEnabledForAircraft = selectedOgnTargetTargetEnabled,
-                onTargetEnabledForAircraftChanged = { enabled ->
-                    onSetOgnTarget(selectedOgnTarget.canonicalKey, enabled)
-                },
-                targetToggleEnabled = selectedOgnTargetTargetToggleEnabled,
-                unitsPreferences = unitsPreferences,
-                onDismiss = onDismissOgnTargetDetails
-            )
-        }
-
-        selectedOgnThermal != null -> {
-            OgnThermalDetailsSheet(
-                hotspot = selectedOgnThermal,
-                distanceMeters = computeOwnshipDistanceToHotspotMeters(
-                    currentLocation = currentLocation,
-                    hotspot = selectedOgnThermal
-                ),
-                unitsPreferences = unitsPreferences,
-                onDismiss = onDismissOgnThermalDetails
-            )
-        }
-
-        selectedAdsbTarget != null -> {
-            AdsbMarkerDetailsSheet(
-                target = selectedAdsbTarget,
-                unitsPreferences = unitsPreferences,
-                onDismiss = onDismissAdsbTargetDetails
-            )
-        }
-    }
+    WeGlideUploadPromptDialogHost(
+        prompt = weGlideUploadPrompt,
+        onConfirm = onConfirmWeGlideUploadPrompt,
+        onDismiss = onDismissWeGlideUploadPrompt
+    )
 }

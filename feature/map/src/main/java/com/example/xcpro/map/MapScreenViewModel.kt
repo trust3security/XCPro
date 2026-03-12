@@ -27,6 +27,11 @@ import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
+import com.example.xcpro.weglide.domain.EnqueueSkipReason
+import com.example.xcpro.weglide.domain.EnqueueWeGlideUploadForFinalizedFlightUseCase
+import com.example.xcpro.weglide.domain.EnqueueWeGlideUploadResult
+import com.example.xcpro.weglide.domain.WeGlidePostFlightPromptCoordinator
+import com.example.xcpro.weglide.notifications.WeGlidePostFlightPromptNotificationController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,8 +40,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
     private val mapStyleUseCase: MapStyleUseCase, private val unitsUseCase: UnitsPreferencesUseCase,
@@ -53,9 +61,13 @@ class MapScreenViewModel @Inject constructor(
     private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase, private val hawkVarioUseCase: HawkVarioUseCase,
     private val ognTrafficFacade: OgnTrafficFacade, private val adsbTrafficFacade: AdsbTrafficFacade,
     private val adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase,
-    private val thermallingModeUseCase: ThermallingModeRuntimeUseCase
+    private val thermallingModeUseCase: ThermallingModeRuntimeUseCase,
+    private val weGlidePostFlightPromptCoordinator: WeGlidePostFlightPromptCoordinator? = null,
+    private val enqueueWeGlideUploadForFinalizedFlightUseCase: EnqueueWeGlideUploadForFinalizedFlightUseCase? = null,
+    private val weGlidePostFlightPromptNotificationController: WeGlidePostFlightPromptNotificationController? = null
 ) : ViewModel() {
     private var activeProfileId: String = DEFAULT_PROFILE_ID
+    private var qnhProfileSwitchJob: Job? = null
     private val initialStyleName = mapStyleUseCase.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore
@@ -255,6 +267,24 @@ class MapScreenViewModel @Inject constructor(
         bindThermallingRuntimeWiring(viewModelScope, thermallingModeUseCase, thermallingModeUseCase.settingsFlow, flightDataUseCase.flightData, flightDataManager.visibleModesFlow, mapStateStore, mapStateActions, ::setFlightMode)
         flightDataUiAdapter.start()
         replayCoordinator.start()
+        weGlidePostFlightPromptCoordinator?.let { coordinator ->
+            viewModelScope.launch {
+                coordinator.pendingPrompt.collect { prompt ->
+                    _uiState.update { state ->
+                        state.copy(
+                            weGlideUploadPrompt = prompt?.let {
+                                WeGlideUploadPromptUiState(
+                                    localFlightId = it.request.localFlightId,
+                                    fileName = it.fileName,
+                                    profileName = it.profileName,
+                                    aircraftName = it.aircraftName
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        }
         viewModelScope.launch { adsbTrafficFacade.bootstrapMetadataSync() }
         if (featureFlags.loadSavedTasksOnInit) viewModelScope.launch { mapTasksUseCase.loadSavedTasks() }
         onEvent(MapUiEvent.RefreshWaypoints)
@@ -270,7 +300,10 @@ class MapScreenViewModel @Inject constructor(
     fun persistMapStyle(styleName: String) = viewModelScope.launch { mapStyleUseCase.saveStyle(styleName) }
     fun setFlightMode(newMode: FlightMode) { mapStateStore.setCurrentMode(newMode); mapStateStore.setCurrentFlightMode(newMode.toCardFlightModeSelection()); flightDataManager.updateFlightModeFromEnum(newMode); sensorsUseCase.setFlightMode(newMode) }
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
-    fun setMapVisible(isVisible: Boolean) = trafficCoordinator.setMapVisible(isVisible)
+    fun setMapVisible(isVisible: Boolean) {
+        trafficCoordinator.setMapVisible(isVisible)
+        weGlidePostFlightPromptNotificationController?.onMapVisibilityChanged(isVisible)
+    }
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
     fun onToggleOgnScia() = trafficCoordinator.onToggleOgnScia()
     fun onToggleOgnThermals() = trafficCoordinator.onToggleOgnThermals()
@@ -288,10 +321,21 @@ class MapScreenViewModel @Inject constructor(
         val resolved = profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
         if (activeProfileId == resolved) return
         activeProfileId = resolved
+        mapStyleUseCase.setActiveProfileId(resolved)
+        val profileStyle = mapStyleUseCase.readProfileStyle(resolved)
+        if (mapStateStore.updateMapStyleName(profileStyle)) {
+            emitMapCommand(MapCommand.SetStyle(profileStyle))
+        }
         unitsUseCase.setActiveProfileId(resolved)
         orientationSettingsUseCase.setActiveProfileId(resolved)
         gliderConfigUseCase.setActiveProfileId(resolved)
         variometerLayoutUseCase.setActiveProfileId(resolved)
+        trailSettingsUseCase.setActiveProfileId(resolved)
+        mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
+        qnhProfileSwitchJob?.cancel()
+        qnhProfileSwitchJob = viewModelScope.launch {
+            qnhUseCase.setActiveProfileId(resolved)
+        }
     }
     fun ensureVariometerLayout(profileId: String, screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) {
         val resolved = profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
@@ -318,6 +362,36 @@ class MapScreenViewModel @Inject constructor(
     fun submitBallastCommand(command: BallastCommand) = ballastController.submit(command)
     fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
+    fun onConfirmWeGlideUploadPrompt() {
+        viewModelScope.launch {
+            val coordinator = weGlidePostFlightPromptCoordinator ?: return@launch
+            val enqueueUseCase = enqueueWeGlideUploadForFinalizedFlightUseCase ?: return@launch
+            val prompt = coordinator.pendingPrompt.value ?: return@launch
+            val message = when (
+                val result = enqueueUseCase(prompt.request)
+            ) {
+                is EnqueueWeGlideUploadResult.Enqueued -> "Queued for WeGlide upload"
+                is EnqueueWeGlideUploadResult.AlreadyQueued -> "WeGlide upload already queued"
+                is EnqueueWeGlideUploadResult.Skipped -> result.reason.toPromptUserMessage()
+            }
+            coordinator.dismiss(prompt.request.localFlightId)
+            weGlidePostFlightPromptNotificationController?.onPromptResolved(prompt.request.localFlightId)
+            _uiEffects.emit(MapUiEffect.ShowToast(message))
+        }
+    }
+    fun onDismissWeGlideUploadPrompt() {
+        val localFlightId = weGlidePostFlightPromptCoordinator?.pendingPrompt?.value?.request?.localFlightId
+        weGlidePostFlightPromptCoordinator?.dismiss()
+        weGlidePostFlightPromptNotificationController?.onPromptResolved(localFlightId)
+    }
     override fun onCleared() { ognTrafficFacade.stop(); adsbTrafficFacade.stop(); thermallingModeUseCase.reset(); ballastController.dispose(); super.onCleared() }
     private companion object { private const val DEFAULT_PROFILE_ID = "default-profile" }
+}
+
+private fun EnqueueSkipReason.toPromptUserMessage(): String = when (this) {
+    EnqueueSkipReason.ACCOUNT_DISCONNECTED -> "WeGlide account disconnected"
+    EnqueueSkipReason.AUTO_UPLOAD_DISABLED -> "WeGlide post-flight upload disabled"
+    EnqueueSkipReason.MAPPING_MISSING -> "No WeGlide aircraft selected for this profile"
+    EnqueueSkipReason.DOCUMENT_UNREADABLE -> "Unable to read finalized IGC file"
+    EnqueueSkipReason.DUPLICATE_FLIGHT -> "WeGlide upload skipped: duplicate flight"
 }

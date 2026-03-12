@@ -13,7 +13,15 @@ data class MapUiState(
     val isUiEditMode: Boolean = false,
     val isDrawerOpen: Boolean = false,
     val hideBallastPill: Boolean = false,
-    val qnhCalibrationState: QnhCalibrationState = QnhCalibrationState.Idle
+    val qnhCalibrationState: QnhCalibrationState = QnhCalibrationState.Idle,
+    val weGlideUploadPrompt: WeGlideUploadPromptUiState? = null
+)
+
+data class WeGlideUploadPromptUiState(
+    val localFlightId: String,
+    val fileName: String,
+    val profileName: String?,
+    val aircraftName: String
 )
 
 sealed interface MapUiEvent {

@@ -3,6 +3,7 @@ package com.example.xcpro.profiles
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -94,6 +95,18 @@ class ProfileViewModel @Inject constructor(
                     )
                 }
         }
+    }
+
+    fun duplicateProfile(profile: UserProfile) {
+        createProfile(
+            ProfileCreationRequest(
+                name = buildDuplicateProfileName(profile.name),
+                aircraftType = profile.aircraftType,
+                aircraftModel = profile.aircraftModel,
+                description = profile.description,
+                copyFromProfile = profile
+            )
+        )
     }
 
     fun importProfiles(
@@ -194,7 +207,10 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun clearBundleImportResult() {
-        _uiState.value = _uiState.value.copy(bundleImportResult = null)
+        _uiState.value = _uiState.value.copy(
+            importResult = null,
+            bundleImportResult = null
+        )
     }
 
     fun importBundle(
@@ -221,19 +237,11 @@ class ProfileViewModel @Inject constructor(
                     strictSettingsRestore = strictSettingsRestore
                 )
             ).onSuccess { bundleResult ->
-                val restoreError = if (bundleResult.settingsRestoreResult.failedSections.isEmpty()) {
-                    null
-                } else {
-                    val failedSections = bundleResult.settingsRestoreResult.failedSections.keys
-                        .sorted()
-                        .joinToString(", ")
-                    "Imported profiles but failed to apply some settings sections: $failedSections"
-                }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     importResult = bundleResult.profileImportResult,
                     bundleImportResult = bundleResult,
-                    error = restoreError
+                    error = null
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -242,6 +250,10 @@ class ProfileViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    suspend fun previewBundle(json: String): Result<ProfileBundlePreview> {
+        return useCase.previewBundle(json)
     }
 
     suspend fun exportBundle(profileIds: Set<String>? = null): Result<String> {
@@ -259,5 +271,25 @@ class ProfileViewModel @Inject constructor(
         val bootstrapComplete: Boolean,
         val bootstrapError: String?
     )
+
+    private fun buildDuplicateProfileName(baseName: String): String {
+        val existingNames = _uiState.value.profiles
+            .map { it.name.trim().lowercase(Locale.ROOT) }
+            .filter { it.isNotBlank() }
+            .toSet()
+        val normalizedBase = baseName.trim().ifBlank { "Profile" }
+        var suffix = 1
+        while (true) {
+            val candidate = if (suffix == 1) {
+                "$normalizedBase Copy"
+            } else {
+                "$normalizedBase Copy $suffix"
+            }
+            if (!existingNames.contains(candidate.lowercase(Locale.ROOT))) {
+                return candidate
+            }
+            suffix++
+        }
+    }
 }
 

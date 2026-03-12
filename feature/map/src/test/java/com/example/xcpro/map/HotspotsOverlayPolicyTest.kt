@@ -11,6 +11,7 @@ import com.example.xcpro.map.OgnTrafficTarget
 import com.example.xcpro.weather.rain.WeatherRadarRenderOptions
 import com.example.xcpro.weather.rain.WeatherRainFrameSelection
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -39,47 +40,65 @@ class HotspotsOverlayPolicyTest {
 
     @Test
     fun thermalToggle_autoEnablesOgnOverlayWhenTurningOn() = runTest {
-        val ognTrafficFacade: OgnTrafficFacade = mock()
-        val adsbTrafficFacade: AdsbTrafficFacade = mock()
-        whenever(ognTrafficFacade.setOverlayEnabled(true)).thenReturn(Unit)
-        whenever(ognTrafficFacade.setShowThermalsEnabled(true)).thenReturn(Unit)
+        try {
+            val ognTrafficFacade: OgnTrafficFacade = mock()
+            val adsbTrafficFacade: AdsbTrafficFacade = mock()
+            whenever(ognTrafficFacade.setOverlayEnabled(true)).thenReturn(Unit)
+            whenever(ognTrafficFacade.setShowThermalsEnabled(true)).thenReturn(Unit)
 
-        val coordinator = MapScreenTrafficCoordinator(
-            scope = this,
-            allowSensorStart = MutableStateFlow(true),
-            isMapVisible = MutableStateFlow(true),
-            ognOverlayEnabled = MutableStateFlow(false),
-            adsbOverlayEnabled = MutableStateFlow(false),
-            mapState = MapStateStore(initialStyleName = "Terrain"),
-            mapLocation = MutableStateFlow<MapLocationUiModel?>(null),
-            isFlying = MutableStateFlow(false),
-            ownshipAltitudeMeters = MutableStateFlow<Double?>(null),
-            ownshipIsCircling = MutableStateFlow(false),
-            circlingFeatureEnabled = MutableStateFlow(false),
-            adsbMaxDistanceKm = MutableStateFlow(10),
-            adsbVerticalAboveMeters = MutableStateFlow(500.0),
-            adsbVerticalBelowMeters = MutableStateFlow(500.0),
-            rawOgnTargets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList()),
-            selectedOgnId = MutableStateFlow<String?>(null),
-            ognTargetEnabled = MutableStateFlow(false),
-            ognTargetAircraftKey = MutableStateFlow<String?>(null),
-            ognSuppressedTargetIds = MutableStateFlow(emptySet()),
-            showSciaEnabled = MutableStateFlow(false),
-            showThermalsEnabled = MutableStateFlow(false),
-            thermalHotspots = MutableStateFlow<List<OgnThermalHotspot>>(emptyList()),
-            selectedThermalId = MutableStateFlow<String?>(null),
-            rawAdsbTargets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList()),
-            selectedAdsbId = MutableStateFlow<Icao24?>(null),
-            ognTrafficFacade = ognTrafficFacade,
-            adsbTrafficFacade = adsbTrafficFacade,
-            emitUiEffect = {}
-        )
+            val mapLocation = MutableStateFlow<MapLocationUiModel?>(null)
+            val coordinator = MapScreenTrafficCoordinator(
+                scope = this,
+                streamingGate = createTrafficStreamingGatePort(
+                    allowSensorStart = MutableStateFlow(true),
+                    isMapVisible = MutableStateFlow(true)
+                ),
+                ognOverlayEnabled = MutableStateFlow(false),
+                adsbOverlayEnabled = MutableStateFlow(false),
+                viewportPort = createTrafficViewportPort(MapStateStore(initialStyleName = "Terrain")),
+                ownshipPort = createTrafficOwnshipPort(
+                    scope = this,
+                    mapLocation = mapLocation,
+                    isFlying = MutableStateFlow(false),
+                    ownshipAltitudeMeters = MutableStateFlow<Double?>(null),
+                    ownshipIsCircling = MutableStateFlow(false),
+                    circlingFeatureEnabled = MutableStateFlow(false)
+                ),
+                adsbFilterPort = createAdsbTrafficFilterPort(
+                    AdsbFilterStateFlows(
+                        maxDistanceKm = MutableStateFlow(10),
+                        verticalAboveMeters = MutableStateFlow(500.0),
+                        verticalBelowMeters = MutableStateFlow(500.0)
+                    )
+                ),
+                rawOgnTargets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList()),
+                selectionPort = createTrafficSelectionPort(
+                    selectedOgnId = MutableStateFlow<String?>(null),
+                    selectedThermalId = MutableStateFlow<String?>(null),
+                    selectedAdsbId = MutableStateFlow<Icao24?>(null)
+                ),
+                ognTargetEnabled = MutableStateFlow(false),
+                ognTargetAircraftKey = MutableStateFlow<String?>(null),
+                ognSuppressedTargetIds = MutableStateFlow(emptySet()),
+                showSciaEnabled = MutableStateFlow(false),
+                showThermalsEnabled = MutableStateFlow(false),
+                thermalHotspots = MutableStateFlow<List<OgnThermalHotspot>>(emptyList()),
+                rawAdsbTargets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList()),
+                ognTrafficFacade = ognTrafficFacade,
+                adsbTrafficFacade = adsbTrafficFacade,
+                userMessagePort = object : TrafficUserMessagePort {
+                    override suspend fun showToast(message: String) = Unit
+                }
+            )
 
-        coordinator.onToggleOgnThermals()
-        advanceUntilIdle()
+            coordinator.onToggleOgnThermals()
+            advanceUntilIdle()
 
-        verify(ognTrafficFacade).setOverlayEnabled(true)
-        verify(ognTrafficFacade).setShowThermalsEnabled(true)
+            verify(ognTrafficFacade).setOverlayEnabled(true)
+            verify(ognTrafficFacade).setShowThermalsEnabled(true)
+        } finally {
+            coroutineContext.cancelChildren()
+        }
     }
 
     @Test

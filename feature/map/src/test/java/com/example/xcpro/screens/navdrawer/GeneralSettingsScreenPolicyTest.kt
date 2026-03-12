@@ -82,7 +82,6 @@ class GeneralSettingsScreenPolicyTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Proximity").assertIsDisplayed()
         composeTestRule.onAllNodesWithText("ADS-b Traffic").assertCountEquals(0)
     }
 

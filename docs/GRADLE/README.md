@@ -11,7 +11,9 @@ Use this read order before changing build-performance structure:
 4. `docs/GRADLE/FEATURE_MAP_BUILD_HOTSPOT_ANALYSIS_2026-03-11.md`
 5. `docs/GRADLE/FEATURE_MAP_TRAFFIC_EXTRACTION_EXECUTION_BRIEF_2026-03-11.md`
 6. `docs/GRADLE/FORECAST_CONTROLS_EXTRACTION_EXECUTION_BRIEF_2026-03-12.md`
-7. `scripts/dev/README.md`
+7. `docs/GRADLE/FORECAST_RUNTIME_EXTRACTION_EXECUTION_BRIEF_2026-03-12.md`
+8. `docs/GRADLE/MAPSCREEN_CONTENT_RUNTIME_EXECUTION_BRIEF_2026-03-12.md`
+9. `scripts/dev/README.md`
 
 ## Current state
 
@@ -100,9 +102,10 @@ Run this, then rerun your build command.
 
 - `scripts/dev/measure_map_build.ps1`
   - measures repeated no-edit task timing
-- `scripts/dev/measure_edit_impact.ps1`
-  - measures rebuild cost after controlled source edits in `app`,
-    `feature:map`, and `core:common`
+- historical edit-sensitive rebuild measurements are retained in
+  `docs/GRADLE/BASELINE_BUILD_MEASUREMENTS_2026-03-10.md`
+- use Gradle `--profile` output for current compile-surface comparisons after
+  structural edits
 
 ## First implementation step
 

@@ -24,45 +24,53 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
 
     @Test
     fun onSetOgnTarget_enable_autoEnablesOverlay_andPersistsNormalizedKey() = runTest {
-        val fixture = createFixture(
-            scope = this,
-            ognOverlayEnabled = MutableStateFlow(false)
-        )
-        whenever(fixture.ognTrafficFacade.setOverlayEnabled(true)).thenReturn(Unit)
-        whenever(
-            fixture.ognTrafficFacade.setTargetSelection(
-                enabled = true,
-                aircraftKey = "FLARM:AB12CD"
+        try {
+            val fixture = createFixture(
+                scope = this,
+                ognOverlayEnabled = MutableStateFlow(false)
             )
-        ).thenReturn(Unit)
+            whenever(fixture.ognTrafficFacade.setOverlayEnabled(true)).thenReturn(Unit)
+            whenever(
+                fixture.ognTrafficFacade.setTargetSelection(
+                    enabled = true,
+                    aircraftKey = "FLARM:AB12CD"
+                )
+            ).thenReturn(Unit)
 
-        fixture.coordinator.onSetOgnTarget(" flarm:ab12cd ", enabled = true)
-        advanceUntilIdle()
+            fixture.coordinator.onSetOgnTarget(" flarm:ab12cd ", enabled = true)
+            advanceUntilIdle()
 
-        verify(fixture.ognTrafficFacade).setOverlayEnabled(true)
-        verify(fixture.ognTrafficFacade).setTargetSelection(
-            enabled = eq(true),
-            aircraftKey = eq("FLARM:AB12CD")
-        )
-        verify(fixture.ognTrafficFacade, never()).clearTargetSelection()
+            verify(fixture.ognTrafficFacade).setOverlayEnabled(true)
+            verify(fixture.ognTrafficFacade).setTargetSelection(
+                enabled = eq(true),
+                aircraftKey = eq("FLARM:AB12CD")
+            )
+            verify(fixture.ognTrafficFacade, never()).clearTargetSelection()
+        } finally {
+            coroutineContext.cancelChildren()
+        }
     }
 
     @Test
     fun onSetOgnTarget_disable_clearsSelection() = runTest {
-        val fixture = createFixture(
-            scope = this,
-            ognOverlayEnabled = MutableStateFlow(true)
-        )
-        whenever(fixture.ognTrafficFacade.clearTargetSelection()).thenReturn(Unit)
+        try {
+            val fixture = createFixture(
+                scope = this,
+                ognOverlayEnabled = MutableStateFlow(true)
+            )
+            whenever(fixture.ognTrafficFacade.clearTargetSelection()).thenReturn(Unit)
 
-        fixture.coordinator.onSetOgnTarget("FLARM:AB12CD", enabled = false)
-        advanceUntilIdle()
+            fixture.coordinator.onSetOgnTarget("FLARM:AB12CD", enabled = false)
+            advanceUntilIdle()
 
-        verify(fixture.ognTrafficFacade).clearTargetSelection()
-        verify(fixture.ognTrafficFacade, never()).setTargetSelection(
-            enabled = eq(true),
-            aircraftKey = eq("FLARM:AB12CD")
-        )
+            verify(fixture.ognTrafficFacade).clearTargetSelection()
+            verify(fixture.ognTrafficFacade, never()).setTargetSelection(
+                enabled = eq(true),
+                aircraftKey = eq("FLARM:AB12CD")
+            )
+        } finally {
+            coroutineContext.cancelChildren()
+        }
     }
 
     @Test
@@ -114,35 +122,49 @@ class MapScreenTrafficCoordinatorOgnTargetTest {
         val ognTrafficFacade: OgnTrafficFacade = mock()
         val adsbTrafficFacade: AdsbTrafficFacade = mock()
         whenever(adsbTrafficFacade.isStreamingEnabled).thenReturn(MutableStateFlow(false))
+        val mapLocation = MutableStateFlow<MapLocationUiModel?>(null)
         val coordinator = MapScreenTrafficCoordinator(
             scope = scope,
-            allowSensorStart = MutableStateFlow(true),
-            isMapVisible = MutableStateFlow(true),
+            streamingGate = createTrafficStreamingGatePort(
+                allowSensorStart = MutableStateFlow(true),
+                isMapVisible = MutableStateFlow(true)
+            ),
             ognOverlayEnabled = ognOverlayEnabled,
             adsbOverlayEnabled = MutableStateFlow(false),
-            mapState = MapStateStore(initialStyleName = "Terrain"),
-            mapLocation = MutableStateFlow<MapLocationUiModel?>(null),
-            isFlying = MutableStateFlow(false),
-            ownshipAltitudeMeters = MutableStateFlow<Double?>(null),
-            ownshipIsCircling = MutableStateFlow(false),
-            circlingFeatureEnabled = MutableStateFlow(false),
-            adsbMaxDistanceKm = MutableStateFlow(10),
-            adsbVerticalAboveMeters = MutableStateFlow(500.0),
-            adsbVerticalBelowMeters = MutableStateFlow(500.0),
+            viewportPort = createTrafficViewportPort(MapStateStore(initialStyleName = "Terrain")),
+            ownshipPort = createTrafficOwnshipPort(
+                scope = scope,
+                mapLocation = mapLocation,
+                isFlying = MutableStateFlow(false),
+                ownshipAltitudeMeters = MutableStateFlow<Double?>(null),
+                ownshipIsCircling = MutableStateFlow(false),
+                circlingFeatureEnabled = MutableStateFlow(false)
+            ),
+            adsbFilterPort = createAdsbTrafficFilterPort(
+                AdsbFilterStateFlows(
+                    maxDistanceKm = MutableStateFlow(10),
+                    verticalAboveMeters = MutableStateFlow(500.0),
+                    verticalBelowMeters = MutableStateFlow(500.0)
+                )
+            ),
             rawOgnTargets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList()),
-            selectedOgnId = MutableStateFlow<String?>(null),
+            selectionPort = createTrafficSelectionPort(
+                selectedOgnId = MutableStateFlow<String?>(null),
+                selectedThermalId = MutableStateFlow<String?>(null),
+                selectedAdsbId = MutableStateFlow<Icao24?>(null)
+            ),
             ognTargetEnabled = ognTargetEnabled,
             ognTargetAircraftKey = ognTargetAircraftKey,
             ognSuppressedTargetIds = ognSuppressedTargetIds,
             showSciaEnabled = MutableStateFlow(false),
             showThermalsEnabled = MutableStateFlow(false),
             thermalHotspots = MutableStateFlow<List<OgnThermalHotspot>>(emptyList()),
-            selectedThermalId = MutableStateFlow<String?>(null),
             rawAdsbTargets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList()),
-            selectedAdsbId = MutableStateFlow<Icao24?>(null),
             ognTrafficFacade = ognTrafficFacade,
             adsbTrafficFacade = adsbTrafficFacade,
-            emitUiEffect = {}
+            userMessagePort = object : TrafficUserMessagePort {
+                override suspend fun showToast(message: String) = Unit
+            }
         )
 
         return OgnTargetCoordinatorFixture(

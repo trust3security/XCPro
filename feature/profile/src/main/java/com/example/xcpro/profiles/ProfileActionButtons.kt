@@ -55,7 +55,7 @@ fun ProfileActionButtons(
                 ) {
                     Icon(Icons.Default.FileUpload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Profile File")
+                    Text("Save Profile")
                 }
 
                 OutlinedButton(
@@ -65,7 +65,7 @@ fun ProfileActionButtons(
                 ) {
                     Icon(Icons.Default.FileDownload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Load Profile File")
+                    Text("Load Profile")
                 }
             }
 

@@ -340,11 +340,16 @@ class FakeQnhRepository : QnhRepository {
     )
     private val qnhFlow = MutableStateFlow(initialValue)
     private val calibrationFlow = MutableStateFlow<QnhCalibrationState>(QnhCalibrationState.Idle)
+    val activeProfileIds = mutableListOf<String>()
+    var activeProfileId: String = "default-profile"
+        private set
     override val qnhState = qnhFlow
     override val calibrationState = calibrationFlow
 
     override suspend fun setActiveProfileId(profileId: String) {
-        // no-op in this fake
+        val resolved = profileId.trim().ifBlank { "default-profile" }
+        activeProfileId = resolved
+        activeProfileIds += resolved
     }
 
     override suspend fun setManualQnh(hpa: Double) {

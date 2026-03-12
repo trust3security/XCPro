@@ -194,14 +194,15 @@ class FlightDataViewModel @Inject constructor(
     fun setActiveProfile(profileId: ProfileId?) {
         if (_activeProfileId.value == profileId) return
         logDebug("setActiveProfile: $profileId")
+        cardsUseCase.setActiveProfile(profileId)
         _activeProfileId.value = profileId
         profileStore.ensureVisibilityEntry(FlightVisibility.normalizeProfileId(profileId))
         syncSelectedIdsWithRepository()
     }
     fun setFlightMode(mode: FlightModeSelection) {
+        cardsUseCase.updateFlightMode(mode)
         if (_currentFlightMode.value == mode) return
         _currentFlightMode.value = mode
-        cardsUseCase.updateFlightMode(mode)
         syncSelectedIdsWithRepository()
     }
     fun setProfileCards(

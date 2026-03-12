@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.flight.FlightMode
+import kotlin.math.abs
 
 internal fun FlightMode.toFlightModeSelection(): FlightModeSelection =
     when (this) {
@@ -37,6 +38,23 @@ internal fun RealTimeFlightData.toDisplayBucket(
         windDirection = windDirection.takeIf { it.isFinite() }?.bucket(windDirBucketDeg) ?: 0f,
         currentLD = currentLD.takeIf { it.isFinite() }?.bucket(ldBucket) ?: 0f
     )
+
+internal fun RealTimeFlightData?.resolveDisplayVario(
+    varioBucketMs: Float,
+    varioNoiseFloor: Double
+): Float {
+    if (this == null) return 0f
+
+    val display = displayVario
+    val fallback = verticalSpeed
+    val selected = when {
+        varioValid && display.isFinite() -> display
+        display.isFinite() && abs(display) > varioNoiseFloor -> display
+        fallback.isFinite() -> fallback
+        else -> 0.0
+    }
+    return selected.toFloat().bucket(varioBucketMs)
+}
 
 internal fun deriveWindIndicatorState(
     previous: WindIndicatorState,

@@ -168,37 +168,49 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
                     timeSec = 1_710_000_000L,
                     latitude = -33.8688,
                     longitude = 151.2200,
-                    trueTrackDeg = 270.0
+                    trueTrackDeg = 270.0,
+                    timePositionSec = 1_710_000_000L,
+                    lastContactSec = 1_710_000_000L
                 ),
                 successState(
                     timeSec = 1_710_000_010L,
                     latitude = -33.8688,
                     longitude = 151.2140,
-                    trueTrackDeg = 270.0
+                    trueTrackDeg = 270.0,
+                    timePositionSec = 1_710_000_010L,
+                    lastContactSec = 1_710_000_010L
                 ),
                 successState(
                     timeSec = 1_710_000_020L,
                     latitude = -33.8688,
                     longitude = 151.2145,
-                    trueTrackDeg = null
+                    trueTrackDeg = null,
+                    timePositionSec = 1_710_000_020L,
+                    lastContactSec = 1_710_000_020L
                 ),
                 successState(
                     timeSec = 1_710_000_030L,
                     latitude = -33.8688,
                     longitude = 151.2135,
-                    trueTrackDeg = 270.0
+                    trueTrackDeg = 270.0,
+                    timePositionSec = 1_710_000_030L,
+                    lastContactSec = 1_710_000_030L
                 ),
                 successState(
                     timeSec = 1_710_000_040L,
                     latitude = -33.8688,
                     longitude = 151.2134,
-                    trueTrackDeg = 270.0
+                    trueTrackDeg = 270.0,
+                    timePositionSec = 1_710_000_040L,
+                    lastContactSec = 1_710_000_040L
                 ),
                 successState(
                     timeSec = 1_710_000_050L,
                     latitude = -33.8688,
                     longitude = 151.2133,
-                    trueTrackDeg = 270.0
+                    trueTrackDeg = 270.0,
+                    timePositionSec = 1_710_000_050L,
+                    lastContactSec = 1_710_000_050L
                 )
             )
         )

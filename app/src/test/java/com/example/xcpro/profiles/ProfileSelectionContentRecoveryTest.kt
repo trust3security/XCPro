@@ -57,7 +57,7 @@ class ProfileSelectionContentRecoveryTest {
         }
 
         composeRule.onNodeWithText("Recover Default").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("Import Aircraft Profile").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Load Profile File").assertIsDisplayed().performClick()
 
         assertEquals(1, recoverCalls)
         assertEquals(1, importCalls)
@@ -84,7 +84,7 @@ class ProfileSelectionContentRecoveryTest {
         }
 
         composeRule.onAllNodesWithText("Recover Default").assertCountEquals(0)
-        composeRule.onAllNodesWithText("Import Aircraft Profile").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Load Profile File").assertCountEquals(0)
     }
 
     @Test
@@ -108,7 +108,7 @@ class ProfileSelectionContentRecoveryTest {
         }
 
         composeRule.onNodeWithText("Recover Default").assertIsNotEnabled()
-        composeRule.onNodeWithText("Import Aircraft Profile").assertIsNotEnabled()
+        composeRule.onNodeWithText("Load Profile File").assertIsNotEnabled()
     }
 
     @Test
@@ -143,6 +143,36 @@ class ProfileSelectionContentRecoveryTest {
         composeRule.onNodeWithContentDescription("Edit Profile").performClick()
 
         assertEquals("test-profile", editedProfileId)
+    }
+
+    @Test
+    fun profileList_hidesTapToSelectHint() {
+        val profile = UserProfile(
+            id = "test-profile",
+            name = "Test Profile",
+            aircraftType = AircraftType.PARAGLIDER
+        )
+
+        composeRule.setContent {
+            ProfileSelectionContent(
+                state = ProfileUiState(
+                    profiles = listOf(profile),
+                    activeProfile = null,
+                    isHydrated = true
+                ),
+                onSelectProfile = {},
+                onDeleteProfile = {},
+                onCreateProfile = {},
+                onShowImportDialog = {},
+                onShowCreateDialog = {},
+                onHideCreateDialog = {},
+                onRecoverWithDefaultProfile = {},
+                onClearError = {},
+                onContinue = {}
+            )
+        }
+
+        composeRule.onAllNodesWithText("TAP TO SELECT").assertCountEquals(0)
     }
 
     private fun baseState(

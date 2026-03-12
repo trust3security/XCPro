@@ -75,6 +75,7 @@ internal class CardStateRepository(
     internal var cardsAcrossPortrait: Int = CardPreferences.DEFAULT_CARDS_ACROSS_PORTRAIT
     internal var lastContainerSize: IntSizePx? = null
     internal var lastDensity: DensityScale? = null
+    internal var activeProfileId: ProfileId = FlightVisibility.normalizeProfileId(null)
     private var cardsAcrossJob: Job? = null
     internal var cardsAnchorPortrait: CardAnchor = CardPreferences.DEFAULT_ANCHOR_PORTRAIT
     private var cardsAnchorJob: Job? = null
@@ -107,7 +108,20 @@ internal class CardStateRepository(
     }
 
     fun updateFlightMode(mode: FlightModeSelection) {
+        if (currentFlightMode != mode) {
+            manuallyPositionedCards.clear()
+            isManuallyPositioning = false
+        }
         currentFlightMode = mode
+    }
+
+    fun updateActiveProfile(profileId: ProfileId?) {
+        val normalized = FlightVisibility.normalizeProfileId(profileId)
+        if (activeProfileId != normalized) {
+            manuallyPositionedCards.clear()
+            isManuallyPositioning = false
+        }
+        activeProfileId = normalized
     }
 
     fun clearAllCards() {

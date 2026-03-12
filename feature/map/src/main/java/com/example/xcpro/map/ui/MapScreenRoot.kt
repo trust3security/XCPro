@@ -130,30 +130,23 @@ internal fun MapScreenRoot(
         mapViewModel = mapViewModel,
         mapStateReader = mapStateReader
     )
+    val trafficOverlayPort = remember(managers.overlayManager) {
+        createTrafficOverlayRenderPort(managers.overlayManager)
+    }
+    val trafficOverlayRenderState = rememberTrafficOverlayRenderState(
+        traffic = bindings.traffic,
+        locationForUi = bindings.locationForUi,
+        unitsPreferences = mapUiState.unitsPreferences
+    )
 
-    MapScreenOverlayEffects(
+    MapAirspaceOverlayEffect(
         mapState = mapState,
         airspaceState = airspaceState,
-        overlayManager = managers.overlayManager,
-        ognTargets = bindings.ognTargets,
-        ognOverlayEnabled = bindings.ognOverlayEnabled,
-        ognThermalHotspots = bindings.ognThermalHotspots,
-        showOgnSciaEnabled = bindings.showOgnSciaEnabled,
-        ognTargetEnabled = bindings.ognTargetEnabled,
-        ognResolvedTarget = bindings.ognResolvedTarget,
-        ownshipLocation = bindings.locationForUi,
-        showOgnThermalsEnabled = bindings.showOgnThermalsEnabled,
-        ognDisplayUpdateMode = bindings.ognDisplayUpdateMode,
-        ognGliderTrailSegments = bindings.ognGliderTrailSegments,
-        ownshipAltitudeMeters = bindings.ownshipAltitudeMetersForOgn,
-        ognAltitudeUnit = bindings.ognAltitudeUnit,
-        unitsPreferences = mapUiState.unitsPreferences,
-        ognIconSizePx = bindings.ognIconSizePx,
-        adsbTargets = bindings.adsbTargets,
-        adsbOverlayEnabled = bindings.adsbOverlayEnabled,
-        adsbIconSizePx = bindings.adsbIconSizePx,
-        adsbEmergencyFlashEnabled = bindings.adsbEmergencyFlashEnabled,
-        adsbDefaultMediumUnknownIconEnabled = bindings.adsbDefaultMediumUnknownIconEnabled
+        overlayManager = managers.overlayManager
+    )
+    MapTrafficOverlayEffects(
+        port = trafficOverlayPort,
+        renderState = trafficOverlayRenderState
     )
     MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
 

@@ -111,8 +111,15 @@ internal class AdsbTrafficStore(
                 }
 
                 val positionAgeSec = positionAgeSec(target, nowMonoMs)
-                val contactAgeSec = contactAgeSec(target, nowMonoMs)
-                val ageSec = positionAgeSec
+                val contactAgeSec = effectiveContactAgeSec(
+                    target = target,
+                    nowMonoMs = nowMonoMs,
+                    nowWallEpochSec = nowWallEpochSec
+                )
+                val ageSec = effectiveAgeSec(
+                    positionAgeSec = positionAgeSec,
+                    contactAgeSec = contactAgeSec
+                )
                 val distanceMeters = AdsbGeoMath.haversineMeters(
                     lat1 = referenceLat,
                     lon1 = referenceLon,
@@ -279,12 +286,30 @@ internal class AdsbTrafficStore(
             ageAtReceiptSec = target.positionAgeAtReceiptSec
         )
 
-    private fun contactAgeSec(target: AdsbTarget, nowMonoMs: Long): Int? =
-        advancedNullableAgeSec(
+    private fun effectiveContactAgeSec(
+        target: AdsbTarget,
+        nowMonoMs: Long,
+        nowWallEpochSec: Long?
+    ): Int? {
+        val advancedContactAgeSec = advancedNullableAgeSec(
             nowMonoMs = nowMonoMs,
             sampleReceivedMonoMs = normalizedContactReceivedMonoMs(target),
             ageAtReceiptSec = target.contactAgeAtReceiptSec
         )
+        val providerContactAgeSec = contactAgeSec(
+            nowWallEpochSec = nowWallEpochSec,
+            lastContactEpochSec = target.lastContactEpochSec
+        )
+        return when {
+            advancedContactAgeSec != null && providerContactAgeSec != null ->
+                maxOf(advancedContactAgeSec, providerContactAgeSec)
+            advancedContactAgeSec != null -> advancedContactAgeSec
+            else -> providerContactAgeSec
+        }
+    }
+
+    private fun effectiveAgeSec(positionAgeSec: Int, contactAgeSec: Int?): Int =
+        maxOf(positionAgeSec, contactAgeSec ?: positionAgeSec)
 
     private fun mergeTarget(existing: AdsbTarget, incoming: AdsbTarget): AdsbTarget {
         val positionCompare = comparePositionAuthority(

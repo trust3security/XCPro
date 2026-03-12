@@ -68,15 +68,6 @@ internal fun createMergedAdsbTargetsState(
         }
     }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = emptyList())
 
-internal fun createSelectedAdsbTargetState(
-    scope: CoroutineScope,
-    adsbMetadataEnrichmentUseCase: AdsbMetadataEnrichmentUseCase,
-    selectedAdsbId: StateFlow<Icao24?>,
-    rawAdsbTargets: StateFlow<List<AdsbTrafficUiModel>>
-): StateFlow<AdsbSelectedTargetDetails?> = adsbMetadataEnrichmentUseCase
-    .selectedTargetDetails(selectedIcao24 = selectedAdsbId, adsbTargets = rawAdsbTargets)
-    .eagerState(scope = scope, initial = null)
-
 internal data class MapReplaySensorGateStates(
     val suppressLiveGps: StateFlow<Boolean>,
     val allowSensorStart: StateFlow<Boolean>
@@ -176,33 +167,6 @@ internal fun createCardHydrationReadyState(
 ): StateFlow<Boolean> =
     combine(containerReady, liveDataReady) { container, data -> container && data }
         .eagerState(scope = scope, initial = false)
-
-internal fun createSelectedOgnTargetState(
-    scope: CoroutineScope,
-    selectedOgnId: StateFlow<String?>,
-    ognTargets: StateFlow<List<OgnTrafficTarget>>
-): StateFlow<OgnTrafficTarget?> =
-    combine(selectedOgnId, ognTargets) { selectedId, targets ->
-        selectedId?.let { key ->
-            val normalizedKey = normalizeOgnAircraftKey(key)
-            val selectedLookup = buildOgnSelectionLookup(setOf(normalizedKey))
-            targets.firstOrNull { target ->
-                selectionLookupContainsOgnKey(
-                    lookup = selectedLookup,
-                    candidateKey = target.canonicalKey
-                ) || normalizeOgnAircraftKey(target.id) == normalizedKey
-            }
-        }
-    }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = null)
-
-internal fun createSelectedOgnThermalState(
-    scope: CoroutineScope,
-    selectedThermalId: StateFlow<String?>,
-    thermalHotspots: StateFlow<List<OgnThermalHotspot>>
-): StateFlow<OgnThermalHotspot?> =
-    combine(selectedThermalId, thermalHotspots) { selectedId, hotspots ->
-        selectedId?.let { id -> hotspots.firstOrNull { it.id == id } }
-    }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = null)
 
 internal fun FlightMode.toCardFlightModeSelection(): com.example.dfcards.FlightModeSelection =
     when (this) {

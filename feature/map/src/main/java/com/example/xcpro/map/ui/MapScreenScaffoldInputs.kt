@@ -68,6 +68,7 @@ internal fun rememberMapScreenScaffoldInputs(
     hiddenCardIds: Set<String>
 ): MapScreenScaffoldInputs {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val trafficActions = rememberMapTrafficUiActions(mapViewModel)
     val onDrawerItemSelected: (String) -> Unit = { item ->
         Log.d(MapScreenScaffoldInputsTag, "Navigation drawer item selected: $item")
         coroutineScope.launch {
@@ -86,12 +87,9 @@ internal fun rememberMapScreenScaffoldInputs(
     }
     val onMapReady: (MapLibreMap) -> Unit = { map ->
         mapRuntimeController.onMapReady(map)
-        managers.overlayManager.setOgnDisplayUpdateMode(bindings.ognDisplayUpdateMode)
-        managers.overlayManager.setOgnIconSizePx(bindings.ognIconSizePx)
-        managers.overlayManager.setAdsbIconSizePx(bindings.adsbIconSizePx)
-        managers.overlayManager.setAdsbEmergencyFlashEnabled(bindings.adsbEmergencyFlashEnabled)
-        managers.overlayManager.setAdsbDefaultMediumUnknownIconEnabled(
-            bindings.adsbDefaultMediumUnknownIconEnabled
+        applyMapReadyTrafficOverlayConfig(
+            port = createTrafficOverlayRenderPort(managers.overlayManager),
+            config = createMapReadyTrafficOverlayConfig(bindings.traffic)
         )
     }
     val onMapViewBound: () -> Unit = {
@@ -145,18 +143,7 @@ internal fun rememberMapScreenScaffoldInputs(
         showRecenterButton = bindings.showRecenterButton,
         showReturnButton = bindings.showReturnButton,
         showDistanceCircles = bindings.showDistanceCircles,
-        ognSnapshot = bindings.ognSnapshot,
-        ognOverlayEnabled = bindings.ognOverlayEnabled,
-        ognTargetEnabled = bindings.ognTargetEnabled,
-        ognTargetAircraftKey = bindings.ognTargetAircraftKey,
-        ognThermalHotspots = bindings.ognThermalHotspots,
-        showOgnSciaEnabled = bindings.showOgnSciaEnabled,
-        showOgnThermalsEnabled = bindings.showOgnThermalsEnabled,
-        adsbSnapshot = bindings.adsbSnapshot,
-        adsbOverlayEnabled = bindings.adsbOverlayEnabled,
-        selectedOgnTarget = bindings.selectedOgnTarget,
-        selectedOgnThermal = bindings.selectedOgnThermal,
-        selectedAdsbTarget = bindings.selectedAdsbTarget,
+        traffic = bindings.traffic,
         isUiEditMode = mapUiState.isUiEditMode,
         onEditModeChange = { enabled ->
             mapViewModel.onEvent(MapUiEvent.SetUiEditMode(enabled))
@@ -208,19 +195,12 @@ internal fun rememberMapScreenScaffoldInputs(
         waypointData = mapUiState.waypoints,
         unitsPreferences = mapUiState.unitsPreferences,
         qnhCalibrationState = mapUiState.qnhCalibrationState,
+        weGlideUploadPrompt = mapUiState.weGlideUploadPrompt,
         onAutoCalibrateQnh = mapViewModel::onAutoCalibrateQnh,
         onSetManualQnh = mapViewModel::onSetManualQnh,
-        onToggleOgnTraffic = mapViewModel::onToggleOgnTraffic,
-        onToggleOgnScia = mapViewModel::onToggleOgnScia,
-        onToggleOgnThermals = mapViewModel::onToggleOgnThermals,
-        onSetOgnTarget = mapViewModel::onSetOgnTarget,
-        onToggleAdsbTraffic = mapViewModel::onToggleAdsbTraffic,
-        onOgnTargetSelected = mapViewModel::onOgnTargetSelected,
-        onOgnThermalSelected = mapViewModel::onOgnThermalSelected,
-        onAdsbTargetSelected = mapViewModel::onAdsbTargetSelected,
-        onDismissOgnTargetDetails = mapViewModel::dismissSelectedOgnTarget,
-        onDismissOgnThermalDetails = mapViewModel::dismissSelectedOgnThermal,
-        onDismissAdsbTargetDetails = mapViewModel::dismissSelectedAdsbTarget,
+        onConfirmWeGlideUploadPrompt = mapViewModel::onConfirmWeGlideUploadPrompt,
+        onDismissWeGlideUploadPrompt = mapViewModel::onDismissWeGlideUploadPrompt,
+        trafficActions = trafficActions,
         ballastUiState = mapViewModel.ballastUiState,
         isBallastPillHidden = mapUiState.hideBallastPill,
         onBallastCommand = mapViewModel::submitBallastCommand,

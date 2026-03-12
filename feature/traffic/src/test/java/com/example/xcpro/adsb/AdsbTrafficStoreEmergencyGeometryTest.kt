@@ -231,9 +231,10 @@ class AdsbTrafficStoreEmergencyGeometryTest {
             lon = 151.2140,
             receivedMonoMs = now + 2_000L
         )
-        val inboundStaleClose = inboundFar.copy(
+        val inboundStaleClose = inboundFreshClose.copy(
             lon = 151.2130,
-            receivedMonoMs = now - 30_000L
+            receivedMonoMs = now + 3_000L,
+            contactAgeAtReceiptSec = 30
         )
 
         store.upsertAll(listOf(inboundFar))

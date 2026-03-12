@@ -71,29 +71,11 @@ If you need tests, pass them directly:
 check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
 ```
 
-## 2) measure_edit_impact.ps1
+## Retired
 
-Run edit-sensitive compile measurements against isolated benchmark files in:
+The dedicated edit-impact benchmark helper and its synthetic benchmark sources
+were removed from the repo.
 
-- `core:common`
-- `feature:map`
-- `app`
+Historical edit-sensitive measurements are retained in:
 
-Default command:
-
-```powershell
-powershell -NoProfile -File .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:compileDebugKotlin'
-```
-
-Useful options:
-
-- `-ScenarioNames 'app-impl','map-impl','map-abi','core-impl','core-abi'`
-- `-RepairOnFailure` to clear stale KSP/generated state and retry once
-- `-NoBuildCache`
-- `-NoDaemon`
-
-Example:
-
-```powershell
-powershell -NoProfile -File .\scripts\dev\measure_edit_impact.ps1 -Tasks ':app:compileDebugKotlin' -ScenarioNames 'map-impl','core-abi' -RepairOnFailure
-```
+- `docs/GRADLE/BASELINE_BUILD_MEASUREMENTS_2026-03-10.md`

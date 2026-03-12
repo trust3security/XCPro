@@ -14,6 +14,7 @@ import com.example.xcpro.core.common.geometry.IntSizePx
 import com.example.xcpro.core.common.geometry.dpToPx
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -36,9 +37,74 @@ private data class CardLayoutSpec(
     val anchor: CardAnchor
 )
 
+private data class CardLayoutPersistenceScope(
+    val profileId: ProfileId,
+    val flightMode: FlightModeSelection?
+)
+
 private fun CardStateRepository.rememberLayoutContext(containerSize: IntSizePx, density: DensityScale) {
     lastContainerSize = containerSize
     lastDensity = density
+}
+
+private fun CardStateRepository.captureLayoutScope(): CardLayoutPersistenceScope =
+    CardLayoutPersistenceScope(
+        profileId = activeProfileId,
+        flightMode = currentFlightMode
+    )
+
+private fun CardStateRepository.snapshotScopedCardStates(): List<CardState> {
+    val selectedIds = selectedCardIds.value
+    return if (selectedIds.isEmpty()) {
+        getAllCardStates()
+    } else {
+        selectedIds.mapNotNull { cardStateFlowsMap[it]?.value }.sortedBy { it.y * 10_000 + it.x }
+    }
+}
+
+private suspend fun CardStateRepository.loadSavedPositions(
+    preferences: CardPreferences,
+    scopeState: CardLayoutPersistenceScope,
+    cardIds: Set<String>
+): Map<String, CardPreferences.CardPosition> {
+    if (cardIds.isEmpty()) return emptyMap()
+
+    val flightMode = scopeState.flightMode
+    if (flightMode != null) {
+        val scopedPositions = preferences.getProfileCardPositions(scopeState.profileId, flightMode.name)
+            .first()
+            .filterKeys { it in cardIds }
+        if (scopedPositions.isNotEmpty()) {
+            return scopedPositions
+        }
+    }
+
+    if (scopeState.profileId != FlightVisibility.normalizeProfileId(null)) {
+        return emptyMap()
+    }
+
+    return buildMap {
+        cardIds.forEach { cardId ->
+            val legacyPosition = preferences.getCardPosition(cardId).firstOrNull() ?: return@forEach
+            put(cardId, legacyPosition)
+        }
+    }
+}
+
+private suspend fun CardStateRepository.persistScopedLayout(
+    preferences: CardPreferences,
+    scopeState: CardLayoutPersistenceScope,
+    cardStates: List<CardState>
+) {
+    if (cardStates.isEmpty()) return
+
+    val flightMode = scopeState.flightMode
+    if (flightMode != null) {
+        preferences.saveProfileCardPositions(scopeState.profileId, flightMode.name, cardStates)
+        return
+    }
+
+    cardStates.forEach { preferences.saveCardPosition(it) }
 }
 
 private fun CardStateRepository.layoutSpec(containerSize: IntSizePx, density: DensityScale): CardLayoutSpec {
@@ -83,10 +149,10 @@ internal fun CardStateRepository.maybeRelayoutExistingCards() {
     val container = lastContainerSize ?: return
     val density = lastDensity ?: return
     if (cardStateFlowsMap.isEmpty()) return
+    val layoutScope = captureLayoutScope()
 
     val layout = layoutSpec(container, density)
     val orderedCards = getAllCardStates()
-    val updatedCards = mutableListOf<CardState>()
     val totalRows = ceil(orderedCards.size / layout.cols.toFloat()).toInt().coerceAtLeast(1)
 
     orderedCards.forEachIndexed { index, card ->
@@ -101,14 +167,18 @@ internal fun CardStateRepository.maybeRelayoutExistingCards() {
             height = layout.cardHeight
         )
         cardStateFlowsMap[card.id]?.value = updated
-        updatedCards.add(updated)
     }
 
     markLegacyStateDirty()
+    val persistedStates = snapshotScopedCardStates()
 
     scope.launch {
         cardPreferences?.let { prefs ->
-            updatedCards.forEach { prefs.saveCardPosition(it) }
+            persistScopedLayout(
+                preferences = prefs,
+                scopeState = layoutScope,
+                cardStates = persistedStates
+            )
         }
     }
 }
@@ -190,17 +260,27 @@ internal fun CardStateRepository.updateCardState(cardState: CardState) {
     isManuallyPositioning = true
     manualPositioningTimeout?.cancel()
     manuallyPositionedCards.add(cardState.id)
+    val layoutScope = captureLayoutScope()
 
-    val oldPosition = cardStateFlowsMap[cardState.id]?.value
     cardStateFlowsMap[cardState.id]?.value = cardState
+    val persistedStates = snapshotScopedCardStates()
 
     scope.launch {
-        cardPreferences?.saveCardPosition(cardState)
+        cardPreferences?.let { prefs ->
+            // AI-NOTE: Persist the profile/mode snapshot captured at drag time so a fast
+            // profile switch cannot write the moved card into the wrong profile scope.
+            persistScopedLayout(
+                preferences = prefs,
+                scopeState = layoutScope,
+                cardStates = persistedStates
+            )
+        }
     }
 
     manualPositioningTimeout = scope.launch {
         delay(2000)
         isManuallyPositioning = false
+        manuallyPositionedCards.clear()
     }
 }
 
@@ -292,9 +372,15 @@ internal fun CardStateRepository.restorePersistedPositions(cardIds: Set<String>?
     val preferences = cardPreferences ?: return
     val targetIds = cardIds ?: cardStateFlowsMap.keys.toSet()
     if (targetIds.isEmpty()) return
+    val layoutScope = captureLayoutScope()
     scope.launch {
+        val savedPositions = loadSavedPositions(
+            preferences = preferences,
+            scopeState = layoutScope,
+            cardIds = targetIds
+        )
         targetIds.forEach { cardId ->
-            val saved = preferences.getCardPosition(cardId).firstOrNull() ?: return@forEach
+            val saved = savedPositions[cardId] ?: return@forEach
             cardStateFlowsMap[cardId]?.let { stateFlow ->
                 stateFlow.value = stateFlow.value.copy(
                     x = saved.x,
@@ -322,15 +408,18 @@ private suspend fun CardStateRepository.applyTemplateInternal(
     isAutoLoad: Boolean
 ) {
     rememberLayoutContext(containerSize, density)
-    val currentCardIds = cardStateFlowsMap.keys.toSet()
-    val templateCardIds = template.cardIds.toSet()
+    val templateCards = createCardsFromTemplate(template, containerSize, density)
 
-    val cardsToCreate = templateCardIds - currentCardIds
-
-    if (cardsToCreate.isNotEmpty()) {
-        val newCards = createCardsFromTemplate(template, containerSize, density)
-
-        newCards.filter { it.id in cardsToCreate }.forEach { cardState ->
+    templateCards.forEach { cardState ->
+        val existing = cardStateFlowsMap[cardState.id]
+        if (existing != null) {
+            existing.value = existing.value.copy(
+                x = cardState.x,
+                y = cardState.y,
+                width = cardState.width,
+                height = cardState.height
+            )
+        } else {
             cardStateFlowsMap[cardState.id] = MutableStateFlow(cardState)
         }
     }
@@ -384,16 +473,23 @@ private suspend fun CardStateRepository.createCardsFromTemplate(
 }
 
 private suspend fun CardStateRepository.loadSavedCardPosition(cardState: CardState): CardState {
-    if (manuallyPositionedCards.contains(cardState.id)) {
-        return cardState
+    if (isManuallyPositioning && manuallyPositionedCards.contains(cardState.id)) {
+        return cardStateFlowsMap[cardState.id]?.value ?: cardState
     }
 
-    return cardPreferences?.getCardPosition(cardState.id)?.firstOrNull()?.let { savedPosition ->
+    val preferences = cardPreferences ?: return cardState
+    val savedPosition = loadSavedPositions(
+        preferences = preferences,
+        scopeState = captureLayoutScope(),
+        cardIds = setOf(cardState.id)
+    )[cardState.id]
+
+    return savedPosition?.let {
         cardState.copy(
-            x = savedPosition.x,
-            y = savedPosition.y,
-            width = savedPosition.width,
-            height = savedPosition.height
+            x = it.x,
+            y = it.y,
+            width = it.width,
+            height = it.height
         )
     } ?: cardState
 }

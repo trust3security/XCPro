@@ -92,6 +92,7 @@ dependencies {
     implementation(project(":feature:map"))
     implementation(project(":feature:traffic"))
     implementation(project(":feature:variometer"))
+    implementation(project(":feature:weglide"))
 
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)

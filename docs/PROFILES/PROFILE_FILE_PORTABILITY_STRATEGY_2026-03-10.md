@@ -82,6 +82,55 @@ Example:
 The app may also offer a multi-profile export for full migration, but that
 should be secondary to the single-aircraft-profile export/import flow.
 
+### 5. Aircraft Profile Contract (Normative)
+
+An `Aircraft Profile` file is a portable aircraft/setup artifact, not a
+whole-app snapshot.
+
+Include in the aircraft-profile file:
+
+- profile identity metadata
+- aircraft type/model metadata
+- card templates, profile template mappings, selected template per flight mode,
+  card positions, and per-mode visibility
+- flight-management state that is already profile-scoped
+- look and feel and theme
+- map widget layout
+- variometer widget layout
+- glider/polar/config data
+- units
+- map style
+- snail trail
+- orientation
+- QNH
+
+Exclude from the aircraft-profile file:
+
+- `Levo`, `Thermalling`, `OGN`, `OGN trail`, `ADS-B`, `Weather`,
+  `Forecast`, and `Manual wind override`
+- `home waypoint`
+- waypoint and airspace file selections
+- raw waypoint and airspace files
+- managed backup metadata
+- replay/session/history data
+- secrets, credentials, URI permissions, cache/checkpoint state
+
+Those excluded domains belong either to runtime-only state or to a separate
+`Full Backup` flow.
+
+### 6. What "full backup" means
+
+`Full Backup` is a separate artifact for device migration or disaster recovery.
+
+It may include:
+
+- all aircraft profiles
+- global settings sections
+- managed backup metadata
+- later, optional packaged file-backed assets if XCPro introduces that feature
+
+It should not be presented as the same promise as an `Aircraft Profile` file.
+
 ## Storage Model
 
 ### Runtime storage
@@ -210,12 +259,14 @@ Rule:
 
 ### General -> Files
 
-Target status: `Partial / pending classification`
+Target status: `Exclude from aircraft profile`
 
-Candidate include:
+Exclude:
 
 - home waypoint selection
-- waypoint file enabled/disabled registry if XCPro can make that data portable
+- waypoint file enabled/disabled registry
+- airspace file enabled/disabled registry
+- selected waypoint/airspace file references
 
 Explicit exclude:
 
@@ -225,10 +276,10 @@ Explicit exclude:
 
 Notes:
 
-- Current `Files` UX is mostly a container/entrypoint, not yet a clear portable
-  settings section.
-- If waypoint-file portability is required, treat it as a separate file-package
-  problem, not just a JSON preference toggle.
+- Current `Files` UX is mostly a container/entrypoint, not a portable
+  aircraft-profile settings section.
+- If waypoint/airspace portability is required, treat it as a separate full
+  backup or packaged-asset problem, not a normal aircraft-profile JSON toggle.
 
 ### General -> Profiles
 
@@ -310,41 +361,22 @@ Include:
 
 ### General -> Levo Vario
 
-Target status: `Include`
+Target status: `Global app setting, not aircraft profile`
 
-Include:
+Notes:
 
-- MacCready
-- MacCready risk
-- auto MacCready enabled
-- TE compensation enabled
-- show wind speed on vario
-- audio enabled
-- audio volume
-- audio lift threshold
-- audio sink silence threshold
-- audio duty cycle
-- audio deadband min
-- audio deadband max
+- These settings are not aircraft identity/setup.
+- If XCPro needs cross-device migration for them, include them in `Full Backup`,
+  not in the normal aircraft-profile file.
 
 ### General -> Hawk Vario
 
-Target status: `Include`
-
-Include:
-
-- show Hawk card
-- enable Hawk UI
-- Hawk needle omega min
-- Hawk needle omega max
-- Hawk needle target tau
-- Hawk needle drift tau min
-- Hawk needle drift tau max
+Target status: `Global app setting, not aircraft profile`
 
 Notes:
 
 - Hawk controls are currently persisted inside the Levo vario preferences
-  storage path, so no separate storage section is required yet.
+  storage path and follow the same global-only policy.
 
 ### General -> Layouts
 
@@ -377,108 +409,48 @@ No standalone persistence section is needed if this remains a launcher for:
 
 ### General -> SkySight
 
-Target status: `Include`
+Target status: `Global app setting, not aircraft profile`
 
-Include:
+Notes:
 
-- forecast overlay enabled
-- overlay opacity
-- wind overlay scale
-- wind overlay enabled
-- wind display mode
-- SkySight satellite overlay enabled
-- SkySight imagery enabled
-- SkySight radar enabled
-- SkySight lightning enabled
-- SkySight animation enabled
-- satellite history frames
-- selected primary forecast parameter
-- selected wind parameter
-- selected forecast time
-- selected region
-- follow-time offset
-- auto-time enabled
-
-Explicit exclude:
-
-- forecast provider credentials
+- Forecast and SkySight overlay behavior should remain global.
+- Provider credentials remain excluded from both aircraft profile and normal
+  portable JSON.
 
 ### General -> Hotspots
 
-Target status: `Include`
-
-Include:
-
-- thermal retention hours
-- hotspots display percent
-- thermal hotspot visibility controls that are persisted through OGN settings
+Target status: `Global app setting, not aircraft profile`
 
 Notes:
 
 - Hotspots are currently persisted through OGN-related preference ownership, so
-  they should stay grouped with OGN in the portable file model.
+  they should stay grouped with OGN in the global/full-backup model.
 
 ### General -> Weather
 
-Target status: `Include`
+Target status: `Global app setting, not aircraft profile`
 
-Include:
+Notes:
 
-- weather overlay enabled
-- opacity
-- animate past window
-- animation window
-- animation speed
-- transition quality
-- frame mode
-- manual frame index
-- smooth rendering
-- snow rendering
+- Weather overlay behavior is intentionally global.
 
 ### General -> OGN
 
-Target status: `Include`
+Target status: `Global app setting, not aircraft profile`
 
-Include:
+Notes:
 
-- OGN enabled
-- icon size
-- receive radius
-- auto receive radius enabled
-- display update mode
-- show SCIA enabled
-- show thermals enabled
-- target enabled
-- target aircraft key
-- own FLARM hex
-- own ICAO hex
-- client callsign
-- trail aircraft selections
-- hotspot-related controls
+- OGN traffic and trail selection are intentionally global.
+- Hotspot-related controls stay with that global ownership.
 
 ### General -> ADS-b
 
-Target status: `Include`
+Target status: `Global app setting, not aircraft profile`
 
-Include:
+Notes:
 
-- ADS-B enabled
-- icon size
-- max distance
-- vertical alert thresholds above/below
-- emergency flash enabled
-- emergency audio enabled
-- emergency audio cooldown
-- emergency audio master enabled
-- emergency audio shadow mode
-- emergency audio cohort percent
-- emergency audio cohort bucket
-- emergency audio rollback latched
-- emergency audio rollback reason
-
-Explicit exclude:
-
-- provider/account credentials if introduced through a separate secret store
+- ADS-B behavior is intentionally global.
+- Provider/account credentials remain excluded from normal portable JSON.
 
 ### General -> Navboxes
 
@@ -512,49 +484,38 @@ Reason:
 
 ### General -> Orientation
 
-Target status: `Add next`
+Target status: `Include`
 
-Add to aircraft profile file:
+Include:
 
 - cruise orientation mode
 - circling orientation mode
 - glider screen percent
 - map shift bias mode
 - map shift bias strength
-
-Explicitly classify before declaring full coverage:
-
 - auto reset enabled
 - auto reset timeout
 - minimum speed threshold
 - bearing smoothing enabled
+- bearing smoothing alpha
 
 Notes:
 
-- Orientation is one of the clearest remaining gaps if XCPro wants a true
-  aircraft-specific full profile file.
+- Orientation is approved aircraft-profile content and should remain in the
+  portable file.
 
 ### General -> Thermalling
 
-Target status: `Include`
+Target status: `Global app setting, not aircraft profile`
 
-Include:
+Notes:
 
-- thermalling feature enabled
-- switch to thermal mode
-- zoom-only fallback when thermal hidden
-- enter delay seconds
-- exit delay seconds
-- apply zoom on enter
-- thermal zoom level
-- remember manual thermal zoom in session
-- restore previous mode on exit
-- restore previous zoom on exit
+- Thermalling behavior is intentionally global.
 
-## Outside General But Still Needed For A Full App Profile
+## Outside General But Still Part Of Aircraft Profile
 
-If the product goal expands from "all `General` settings" to "full app profile",
-these domains should be added after the General-first pass:
+These domains are outside the `General` taxonomy but are approved aircraft
+profile content:
 
 - map style selection
 - QNH manual value
@@ -564,12 +525,9 @@ these domains should be added after the General-first pass:
   - wind drift enabled
   - scaling enabled
 
-Candidate include after policy decision:
-
-- home waypoint
-
 Likely exclude from aircraft profile:
 
+- home waypoint
 - nav drawer expansion state
 - recent waypoint history
 - task working state
@@ -581,12 +539,12 @@ Likely exclude from aircraft profile:
 To move toward a true full aircraft profile file without destabilizing runtime
 ownership, priority should be:
 
-1. keep the current covered sections as the canonical portable file base
-2. add `General -> Orientation`
-3. make an explicit `General -> Files` policy decision
-4. add non-General map-specific settings (`map style`, `QNH`, `snail trail`)
-5. leave secrets, caches, replay working state, and raw external file handles
-   out of the aircraft profile file
+1. codify the approved aircraft-profile whitelist in code and tests
+2. separate aircraft-profile export from full-backup snapshot generation
+3. align UI text and docs with the aircraft-profile vs full-backup split
+4. keep file-backed state, secrets, caches, and replay/session data out of the
+   aircraft-profile file
+5. add `Full Backup` as a separate migration flow when needed
 
 ## Explicit Recommendation
 
@@ -594,8 +552,9 @@ For XCPro, the correct implementation direction is:
 
 1. keep internal repositories as runtime SSOT
 2. treat the portable JSON as the user-owned aircraft profile file
-3. make import/export the supported move/backup workflow
-4. avoid a design where normal profile switching depends on external file reads
+3. make aircraft-profile import/export the supported aircraft move workflow
+4. treat full backup as a separate whole-app migration flow
+5. avoid a design where normal profile switching depends on external file reads
 
 This gives users the profile file they expect while preserving deterministic
 runtime behavior and current architecture boundaries.

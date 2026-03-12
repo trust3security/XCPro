@@ -104,7 +104,7 @@ private fun ProfileListItem(
     Card(
         onClick = onSelect,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isActive) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -116,7 +116,7 @@ private fun ProfileListItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -133,7 +133,7 @@ private fun ProfileListItem(
                             MaterialTheme.colorScheme.primary
                         }
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
                             text = profile.name,
@@ -183,18 +183,6 @@ private fun ProfileListItem(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            val label = if (isActive) "Active profile" else "Tap to select"
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isActive) {
-                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                }
-            )
         }
     }
 }
