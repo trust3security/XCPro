@@ -17,6 +17,7 @@ Tracked remediation plans:
 - `docs/refactor/Runtime_Ownership_Boundary_Standardization_Phased_IP_2026-03-14.md`
 - `docs/refactor/Profile_Identity_Time_Ownership_Standardization_Phased_IP_2026-03-14.md`
 - `docs/refactor/Logging_Architecture_Standardization_Phased_IP_2026-03-14.md`
+- `docs/refactor/ProfileRepository_Test_Suite_Split_Phased_IP_2026-03-15.md`
 
 README consistency rule:
 - `docs/ARCHITECTURE/README.md` must never duplicate or summarize deviation status.
@@ -104,15 +105,15 @@ Compliance note (2026-02-20):
 - Approved by: XCPro Team (backfilled 2026-03-14)
 - Owner: XCPro Team
 - Next review: 2026-04-15
-- Expiry: 2026-04-30
-- Execution plan:
-  - `docs/refactor/Kotlin_Line_Budget_Compliance_Phased_IP_2026-03-06.md`
-- Scope:
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
-  - `dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt`
+  - Expiry: 2026-04-30
+  - Execution plan:
+    - `docs/refactor/Kotlin_Line_Budget_Compliance_Phased_IP_2026-03-06.md`
+    - `docs/refactor/ProfileRepository_Test_Suite_Split_Phased_IP_2026-03-15.md` (`ProfileRepositoryTest.kt` focused split lane)
+  - Scope:
+    - `dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt`
+    - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
+    - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+    - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt`
 - Risk:
   - Oversized files increase review blind spots and make state-machine and regression gaps harder to spot.
   - Without explicit exceptions, the documented global `<= 500` budget would block current work before these files are split.
