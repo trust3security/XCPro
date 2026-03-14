@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

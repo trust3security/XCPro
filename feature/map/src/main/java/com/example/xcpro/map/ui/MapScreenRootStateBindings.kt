@@ -10,14 +10,19 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
+import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
 import com.example.xcpro.airspace.AirspaceUiState
 import com.example.xcpro.airspace.AirspaceViewModel
+import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.MapUiState
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.profiles.ProfileViewModel
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelViewModel
+import com.example.xcpro.weglide.ui.WeGlideUploadPromptUiState
 
 internal data class MapScreenFlightCardsBinding(
     val flightViewModel: FlightDataViewModel,
@@ -30,6 +35,15 @@ internal data class MapScreenProfileLookAndFeelBinding(
     val profileUiState: ProfileUiState,
     val activeProfileId: String,
     val cardStyle: CardStyle
+)
+
+internal data class MapScreenRootUiBinding(
+    val mapUiState: MapUiState,
+    val weGlideUploadPrompt: WeGlideUploadPromptUiState?,
+    val windArrowState: WindArrowUiState,
+    val showWindSpeedOnVario: Boolean,
+    val hiddenCardIds: Set<String>,
+    val currentFlightModeSelection: FlightModeSelection
 )
 
 @Composable
@@ -79,4 +93,29 @@ internal fun rememberMapScreenAirspaceState(): AirspaceUiState {
     val airspaceViewModel: AirspaceViewModel = hiltViewModel()
     val airspaceState by airspaceViewModel.uiState.collectAsStateWithLifecycle()
     return airspaceState
+}
+
+@Composable
+internal fun rememberMapScreenRootUiBinding(
+    mapViewModel: MapScreenViewModel,
+    flightDataManager: FlightDataManager
+): MapScreenRootUiBinding {
+    val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle()
+    val weGlideUploadPrompt by mapViewModel.weGlideUploadPrompt.collectAsStateWithLifecycle()
+    val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
+    val showWindSpeedOnVario by mapViewModel.showWindSpeedOnVario.collectAsStateWithLifecycle()
+    val showHawkCard by mapViewModel.showHawkCard.collectAsStateWithLifecycle()
+    val currentFlightModeSelection by flightDataManager.currentFlightModeFlow.collectAsStateWithLifecycle()
+    val hiddenCardIds = remember(showHawkCard) {
+        if (showHawkCard) emptySet() else setOf(HAWK_VARIO_CARD_ID)
+    }
+
+    return MapScreenRootUiBinding(
+        mapUiState = mapUiState,
+        weGlideUploadPrompt = weGlideUploadPrompt,
+        windArrowState = windArrowState,
+        showWindSpeedOnVario = showWindSpeedOnVario,
+        hiddenCardIds = hiddenCardIds,
+        currentFlightModeSelection = currentFlightModeSelection
+    )
 }

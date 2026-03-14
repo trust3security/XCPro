@@ -1,6 +1,5 @@
 package com.example.xcpro.common.orientation
 
-import com.example.dfcards.RealTimeFlightData
 import kotlinx.coroutines.flow.StateFlow
 
 enum class MapOrientationMode {
@@ -47,6 +46,17 @@ data class OrientationSensorData(
     val timestamp: Long = 0L
 )
 
+data class OrientationFlightDataSnapshot(
+    val track: Double = 0.0,
+    val groundSpeed: Double = 0.0,
+    val windDirectionFrom: Double = 0.0,
+    val windSpeed: Double = 0.0,
+    val windValid: Boolean = false,
+    val accuracy: Double = 0.0,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0
+)
+
 interface OrientationController {
     val orientationFlow: StateFlow<OrientationData>
 
@@ -58,5 +68,5 @@ interface OrientationController {
     fun isOrientationValid(): Boolean
     fun start()
     fun stop()
-    fun updateFromFlightData(flightData: RealTimeFlightData)
+    fun updateFromFlightData(flightData: OrientationFlightDataSnapshot)
 }

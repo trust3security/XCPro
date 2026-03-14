@@ -23,7 +23,16 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.ui1.screens.*
+import com.example.ui1.screens.DFNavboxes
+import com.example.ui1.screens.FilesScreen
+import com.example.ui1.screens.FlightMgmt
+import com.example.ui1.screens.Hangglider
+import com.example.ui1.screens.Paragliders
+import com.example.ui1.screens.ProfilesScreen
+import com.example.ui1.screens.Sailplanes
+import com.example.ui1.screens.Task
+import com.example.xcpro.appshell.navdrawer.MyAbout
+import com.example.xcpro.appshell.navdrawer.MySupport
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
 import com.example.xcpro.screens.navdrawer.LayoutScreen
 import com.example.xcpro.map.MapScreenViewModel
@@ -47,6 +56,7 @@ import com.example.xcpro.screens.replay.IgcReplayScreen
 import com.example.xcpro.navigation.MapNavigationSignals
 import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.navigation.TrafficSettingsRoutes
+import com.example.xcpro.profiles.ManageAccount
 
 @Composable
 fun AppNavGraph(

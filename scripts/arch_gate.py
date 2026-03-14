@@ -10,6 +10,7 @@ MAX_REPORT_LINES = 200
 APP_BUILD_GRADLE = ROOT / "app" / "build.gradle.kts"
 EXPECTED_APPLICATION_ID = "com.example.openxcpro"
 EXPECTED_DEBUG_APPLICATION_ID_SUFFIX = ".debug"
+RAW_LOG_ALLOWLIST = ROOT / "config" / "quality" / "raw_log_allowlist.txt"
 
 FORBIDDEN_PATTERNS = [
     r"\bSystem\.currentTimeMillis\(\)",
@@ -40,6 +41,8 @@ ALLOW_PRODUCTION_FILES = {
 }
 
 KOTLIN_FILE_EXTS = {".kt", ".kts"}
+PRODUCTION_KOTLIN_FILE_EXTS = {".kt"}
+RAW_LOG_PATTERN = re.compile(r"\bLog\.(d|i|w|e|v)\b")
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,13 @@ class Violation:
     line_number: int
     pattern: str
     line_text: str
+
+
+@dataclass(frozen=True)
+class RawLogDrift:
+    path: str
+    actual_count: int
+    allowed_count: int | None
 
 
 def as_repo_relative(path: Path) -> str:
@@ -76,6 +86,73 @@ def find_violations(path: Path) -> list[Violation]:
                     )
                 )
     return violations
+
+
+def load_raw_log_allowlist() -> dict[str, int]:
+    if not RAW_LOG_ALLOWLIST.exists():
+        raise FileNotFoundError(f"Missing allowlist: {as_repo_relative(RAW_LOG_ALLOWLIST)}")
+
+    allowances: dict[str, int] = {}
+    for line_number, raw_line in enumerate(
+        RAW_LOG_ALLOWLIST.read_text(encoding="utf-8", errors="replace").splitlines(),
+        start=1,
+    ):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        if len(parts) < 2:
+            raise ValueError(
+                f"{as_repo_relative(RAW_LOG_ALLOWLIST)}:{line_number} invalid entry '{raw_line}'"
+            )
+        rel_path = parts[0]
+        try:
+            allowed_count = int(parts[1])
+        except ValueError as exc:
+            raise ValueError(
+                f"{as_repo_relative(RAW_LOG_ALLOWLIST)}:{line_number} invalid count '{parts[1]}'"
+            ) from exc
+        allowances[rel_path] = allowed_count
+    return allowances
+
+
+def is_production_kotlin_file(path: Path) -> bool:
+    if not path.is_file() or path.suffix not in PRODUCTION_KOTLIN_FILE_EXTS:
+        return False
+    rel = as_repo_relative(path)
+    return "/src/main/" in rel and "/build/" not in rel
+
+
+def count_raw_log_lines(path: Path) -> int:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    return sum(1 for line in text.splitlines() if RAW_LOG_PATTERN.search(line))
+
+
+def find_raw_log_drift() -> list[RawLogDrift]:
+    allowances = load_raw_log_allowlist()
+    actual_counts: dict[str, int] = {}
+    for path in ROOT.rglob("*"):
+        if not is_production_kotlin_file(path):
+            continue
+        rel = as_repo_relative(path)
+        count = count_raw_log_lines(path)
+        if count > 0:
+            actual_counts[rel] = count
+
+    drift: list[RawLogDrift] = []
+    for rel, actual_count in sorted(actual_counts.items()):
+        allowed_count = allowances.get(rel)
+        if allowed_count is None:
+            drift.append(
+                RawLogDrift(path=rel, actual_count=actual_count, allowed_count=None)
+            )
+        elif actual_count > allowed_count:
+            drift.append(
+                RawLogDrift(
+                    path=rel, actual_count=actual_count, allowed_count=allowed_count
+                )
+            )
+    return drift
 
 
 def main() -> int:
@@ -110,6 +187,33 @@ def main() -> int:
             print(f"- {error}")
         print(
             "\nFix: keep application identity stable, or document and execute a profile migration plan in-repo."
+        )
+        return 1
+
+    try:
+        raw_log_drift = find_raw_log_drift()
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"\nARCH GATE FAILED: {exc}\n")
+        return 1
+
+    if raw_log_drift:
+        print("\nARCH GATE FAILED: raw Log.* production logging drift detected\n")
+        for drift in raw_log_drift[:MAX_REPORT_LINES]:
+            if drift.allowed_count is None:
+                print(
+                    f"- {drift.path}: raw Log.* count {drift.actual_count} is not allowlisted"
+                )
+            else:
+                print(
+                    f"- {drift.path}: raw Log.* count {drift.actual_count} exceeds allowlisted baseline {drift.allowed_count}"
+                )
+        if len(raw_log_drift) > MAX_REPORT_LINES:
+            remaining = len(raw_log_drift) - MAX_REPORT_LINES
+            print(f"... and {remaining} more")
+        print(f"\nTotal violations: {len(raw_log_drift)}")
+        print(
+            "Fix: delete low-value logs, migrate retained logs to AppLogger, or update "
+            f"{as_repo_relative(RAW_LOG_ALLOWLIST)} as part of an approved logging-plan change."
         )
         return 1
 

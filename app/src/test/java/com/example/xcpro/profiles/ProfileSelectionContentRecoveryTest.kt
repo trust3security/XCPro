@@ -116,7 +116,9 @@ class ProfileSelectionContentRecoveryTest {
         val profile = UserProfile(
             id = "test-profile",
             name = "Test Profile",
-            aircraftType = AircraftType.PARAGLIDER
+            aircraftType = AircraftType.PARAGLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
         var editedProfileId: String? = null
 
@@ -150,7 +152,9 @@ class ProfileSelectionContentRecoveryTest {
         val profile = UserProfile(
             id = "test-profile",
             name = "Test Profile",
-            aircraftType = AircraftType.PARAGLIDER
+            aircraftType = AircraftType.PARAGLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
 
         composeRule.setContent {
@@ -183,7 +187,9 @@ class ProfileSelectionContentRecoveryTest {
         val defaultProfile = UserProfile(
             id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
             name = "Default",
-            aircraftType = AircraftType.PARAGLIDER
+            aircraftType = AircraftType.PARAGLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
         return ProfileUiState(
             profiles = listOf(defaultProfile),

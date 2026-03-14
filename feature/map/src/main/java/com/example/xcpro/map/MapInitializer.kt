@@ -1,10 +1,10 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.util.Log
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.trail.SnailTrailManager
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.TimeBridge
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -31,7 +31,7 @@ class MapInitializer(
     private val waypointFilesUseCase: WaypointFilesUseCase
 ) {
     companion object {
-        private const val TAG = "MapInitializer"
+        private const val LOG_TAG = "MapInitializer"
         private const val INITIAL_LATITUDE = 46.52
         private const val INITIAL_LONGITUDE = 6.63
         private const val INITIAL_ZOOM = 8.0
@@ -54,7 +54,7 @@ class MapInitializer(
 
     suspend fun initializeMap(map: MapLibreMap): MapLibreMap {
         return try {
-            Log.d(TAG, "Starting map initialization")
+            AppLogger.d(LOG_TAG, "Starting map initialization")
             SkySightMapLibreNetworkConfigurator.ensureConfigured()
             mapState.mapLibreMap = map
             setupMapStyle(map)
@@ -62,10 +62,10 @@ class MapInitializer(
             setupGestures(map)
             setupListeners(map)
             taskRenderSyncCoordinator.onMapReady(map)
-            Log.d(TAG, "Map initialization completed successfully")
+            AppLogger.d(LOG_TAG, "Map initialization completed successfully")
             map
         } catch (e: Exception) {
-            Log.e(TAG, "Fatal error in map initialization: ${e.message}", e)
+            AppLogger.e(LOG_TAG, "Fatal error in map initialization: ${e.message}", e)
             map
         }
     }
@@ -81,9 +81,6 @@ class MapInitializer(
                 return styleSetupApplied
             }
             if (mapState.mapLibreMap !== map) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Skipping stale style callback for detached map instance")
-                }
                 return false
             }
             val hasLoadedStyle = map.style != null
@@ -102,7 +99,6 @@ class MapInitializer(
                     if (requestToken != styleLoadToken) {
                         return@setStyle
                     }
-                    Log.d(TAG, "Map style loaded: $styleName")
                     val setupApplied = applyStyleSetupIfNeeded()
                     if (continuation.isActive) {
                         continuation.resume(setupApplied)
@@ -112,9 +108,9 @@ class MapInitializer(
         } ?: false
 
         if (!loadedInTime && requestToken == styleLoadToken) {
-            Log.w(TAG, "Map style load timeout for $styleName; checking fallback init")
+            AppLogger.w(LOG_TAG, "Map style load timeout for $styleName; checking fallback init")
             if (!applyStyleSetupIfNeeded()) {
-                Log.w(TAG, "Style unavailable at timeout; waiting for async style callback")
+                AppLogger.w(LOG_TAG, "Style unavailable at timeout; waiting for async style callback")
             }
         }
     }
@@ -151,7 +147,6 @@ class MapInitializer(
             zoom = zoomToUse,
             bearing = bearingToUse
         )
-        Log.d(TAG, "Initial map position set (restored=${cameraSnapshot != null}, zoom=$zoomToUse)")
     }
 
     private fun setupOverlays(map: MapLibreMap) {
@@ -166,7 +161,6 @@ class MapInitializer(
             overlayManager.reapplyWeatherRainOverlay()
             snailTrailManager.initialize(map)
             scaleBarController.setupScaleBar(map)
-            Log.d(TAG, " Blue location overlay initialized")
 
             // DISABLED: Map-based distance circles replaced with DistanceCirclesCanvas
             // The circles are now drawn as a fixed screen overlay in MapScreen.kt
@@ -174,10 +168,9 @@ class MapInitializer(
             // mapState.distanceCirclesOverlay = DistanceCirclesOverlay(context, map)
             // mapState.distanceCirclesOverlay?.initialize()
             // mapState.distanceCirclesOverlay?.setVisible(mapState.showDistanceCircles)
-            Log.d(TAG, " Distance circles using Canvas overlay (map-based circles disabled)")
 
         } catch (e: Exception) {
-            Log.e(TAG, " Error setting up overlays: ${e.message}", e)
+            AppLogger.e(LOG_TAG, "Error setting up overlays: ${e.message}", e)
         }
     }
     private fun setupGestures(map: MapLibreMap) {
@@ -189,26 +182,20 @@ class MapInitializer(
         map.uiSettings.isTiltGesturesEnabled = false
         map.uiSettings.isScrollGesturesEnabled = false
         map.uiSettings.isQuickZoomGesturesEnabled = false
-        Log.d(TAG, " MapLibre standard gestures disabled for custom system")
     }
 
     private fun setupListeners(map: MapLibreMap) {
         // Move listener for pan detection
         map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
             override fun onMoveBegin(detector: MoveGestureDetector) {
-                Log.d(TAG, " Map movement detected - fingers: ${detector.pointersCount}")
                 onUserMapInteractionBegan()
                 handleMapMovement(map)
             }
 
             override fun onMove(detector: MoveGestureDetector) {
-                if (detector.pointersCount >= 2) {
-                    Log.d(TAG, "Two-finger pan in progress")
-                }
             }
 
             override fun onMoveEnd(detector: MoveGestureDetector) {
-                Log.d(TAG, "Pan ended")
                 onUserMapInteractionEnded()
                 dataLoader.refreshWaypoints(map)
             }
@@ -217,7 +204,6 @@ class MapInitializer(
         // Rotation listener for orientation override
         map.addOnRotateListener(object : MapLibreMap.OnRotateListener {
             override fun onRotateBegin(detector: org.maplibre.android.gestures.RotateGestureDetector) {
-                Log.d(TAG, " Map rotation started")
                 onUserMapInteractionBegan()
                 orientationManager.onUserInteraction()
             }
@@ -227,7 +213,6 @@ class MapInitializer(
             }
 
             override fun onRotateEnd(detector: org.maplibre.android.gestures.RotateGestureDetector) {
-                Log.d(TAG, " Map rotation ended")
                 onUserMapInteractionEnded()
             }
         })
@@ -250,9 +235,8 @@ class MapInitializer(
                 }
                 scaleBarController.onCameraIdle(map)
                 // Canvas overlay listens to MapStateStore.currentZoom for zoom-adaptive effects.
-                Log.d(TAG, "Camera idle, zoom: $currentZoom")
             } catch (e: Exception) {
-                Log.e(TAG, "Error updating distance circles zoom: ${e.message}", e)
+                AppLogger.e(LOG_TAG, "Error updating distance circles zoom: ${e.message}", e)
             }
         }
     }
@@ -270,7 +254,6 @@ class MapInitializer(
                     zoom = map.cameraPosition.zoom,
                     bearing = map.cameraPosition.bearing
                 )
-                Log.d(TAG, "Saved position for return")
             }
         }
 
@@ -278,7 +261,6 @@ class MapInitializer(
         stateActions.setShowRecenterButton(false)
         stateActions.setShowReturnButton(true)
         stateActions.updateLastUserPanTime(TimeBridge.nowWallMs())
-        Log.d(TAG, "User interaction detected - return button shown")
     }
 
     private fun onUserMapInteractionBegan() {

@@ -1,7 +1,7 @@
 package com.example.xcpro.vario
 
-import android.util.Log
 import com.example.xcpro.audio.AudioFocusManager
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.igc.IgcRecordingActionSink
 import com.example.xcpro.igc.NoopIgcRecordingActionSink
 import com.example.xcpro.igc.data.IgcFinalizeResult
@@ -56,6 +56,7 @@ open class VarioServiceManager @Inject constructor(
     companion object {
         private const val TAG = "VarioServiceManager"
         private const val SENSOR_RETRY_DELAY_MS = 5_000L
+        private const val SENSOR_RETRY_WARNING_INTERVAL_MS = 30_000L
         private const val GPS_UPDATE_INTERVAL_SLOW_MS = 1_000L
         private const val GPS_UPDATE_INTERVAL_FAST_MS = 200L
     }
@@ -75,13 +76,11 @@ open class VarioServiceManager @Inject constructor(
         flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
 
         if (running && isPipelineReady(unifiedSensorManager.getSensorStatus())) {
-            Log.d(TAG, "Sensors already running")
             return true
         }
 
         if (!running) {
             running = true
-            Log.d(TAG, "Starting sensors + flight data collection")
             observeLevoPreferences()
             startCollection()
             observeIgcSessionActions()
@@ -95,7 +94,7 @@ open class VarioServiceManager @Inject constructor(
         val startupStatus = unifiedSensorManager.getSensorStatus()
         val pipelineReady = isPipelineReady(startupStatus)
         if (!pipelineReady) {
-            Log.w(
+            AppLogger.w(
                 TAG,
                 "Sensors not fully ready (gpsStarted=${startupStatus.gpsStarted}, " +
                     "baroAvailable=${startupStatus.baroAvailable}, baroStarted=${startupStatus.baroStarted}); " +
@@ -109,7 +108,6 @@ open class VarioServiceManager @Inject constructor(
     open fun stop() {
         if (!running) return
         running = false
-        Log.d(TAG, "Stopping sensors + flight data collection")
         cancelSensorRetry()
         unifiedSensorManager.stopAllSensors()
         sensorFusionRepository.stop()
@@ -178,27 +176,15 @@ open class VarioServiceManager @Inject constructor(
             useCase.actions.collectLatest { action ->
                 when (action) {
                     is IgcSessionStateMachine.Action.EnterArmed -> {
-                        Log.d(
-                            TAG,
-                            "IGC session armed at mono=${action.monoTimeMs}"
-                        )
                         igcRecordingActionSink.onSessionArmed(action.monoTimeMs)
                     }
                     is IgcSessionStateMachine.Action.StartRecording -> {
-                        Log.d(
-                            TAG,
-                            "IGC recording started: sessionId=${action.sessionId}, preFlightWindowMs=${action.preFlightGroundWindowMs}"
-                        )
                         igcRecordingActionSink.onStartRecording(
                             action.sessionId,
                             action.preFlightGroundWindowMs
                         )
                     }
                     is IgcSessionStateMachine.Action.FinalizeRecording -> {
-                        Log.d(
-                            TAG,
-                            "IGC finalize requested: sessionId=${action.sessionId}, postFlightWindowMs=${action.postFlightGroundWindowMs}"
-                        )
                         when (
                             val finalizeResult = igcRecordingActionSink.onFinalizeRecording(
                                 action.sessionId,
@@ -219,17 +205,9 @@ open class VarioServiceManager @Inject constructor(
                         }
                     }
                     is IgcSessionStateMachine.Action.MarkCompleted -> {
-                        Log.d(
-                            TAG,
-                            "IGC session completed: sessionId=${action.sessionId}"
-                        )
                         igcRecordingActionSink.onMarkCompleted(action.sessionId)
                     }
                     is IgcSessionStateMachine.Action.MarkFailed -> {
-                        Log.d(
-                            TAG,
-                            "IGC session failed: sessionId=${action.sessionId}, reason=${action.reason}"
-                        )
                         igcRecordingActionSink.onMarkFailed(action.sessionId, action.reason)
                     }
                 }
@@ -242,10 +220,8 @@ open class VarioServiceManager @Inject constructor(
             startSensorsOnMainThread()
             val status = unifiedSensorManager.getSensorStatus()
             val ready = isPipelineReady(status)
-            if (ready) {
-                Log.d(TAG, "Sensor retry succeeded")
-            } else {
-                Log.w(
+            if (!ready && AppLogger.rateLimit(TAG, "sensor_retry_not_ready", SENSOR_RETRY_WARNING_INTERVAL_MS)) {
+                AppLogger.w(
                     TAG,
                     "Retry sensors not ready yet (gpsStarted=${status.gpsStarted}, " +
                         "baroAvailable=${status.baroAvailable}, baroStarted=${status.baroStarted})"
@@ -268,7 +244,7 @@ open class VarioServiceManager @Inject constructor(
             if (error is CancellationException) {
                 throw error
             }
-            Log.e(TAG, "Failed to start sensors on main thread", error)
+            AppLogger.e(TAG, "Failed to start sensors on main thread", error)
             false
         }
     }
@@ -283,13 +259,12 @@ open class VarioServiceManager @Inject constructor(
             if (error is CancellationException) {
                 throw error
             }
-            Log.e(TAG, "Failed to set GPS update interval to ${intervalMs}ms", error)
+            AppLogger.e(TAG, "Failed to set GPS update interval to ${intervalMs}ms", error)
         }.isSuccess
         if (!applied) {
             return
         }
         lastGpsIntervalMs = intervalMs
-        Log.d(TAG, "GPS update interval set to ${intervalMs}ms")
     }
 
     private fun isPipelineReady(status: SensorStatus): Boolean {
@@ -319,7 +294,7 @@ open class VarioServiceManager @Inject constructor(
         if (prompt != null) {
             promptCoordinator.show(prompt)
             weGlidePostFlightPromptNotificationController?.onPromptPublished(prompt)
-            Log.d(TAG, "WeGlide prompt published for sessionId=$sessionId")
+            AppLogger.d(TAG, "WeGlide prompt published")
         }
     }
 }

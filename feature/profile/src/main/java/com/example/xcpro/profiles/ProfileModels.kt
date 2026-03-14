@@ -1,8 +1,6 @@
 package com.example.xcpro.profiles
 
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.core.time.TimeBridge
-import java.util.UUID
 
 enum class AircraftType(
     val displayName: String,
@@ -60,15 +58,15 @@ enum class UnitSystem(val displayName: String) {
 }
 
 data class UserProfile(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String,
     val name: String,
     val aircraftType: AircraftType,
     val aircraftModel: String? = null,
     val description: String? = null,
     val preferences: ProfilePreferences = ProfilePreferences(),
     val isActive: Boolean = false,
-    val createdAt: Long = TimeBridge.nowWallMs(),
-    val lastUsed: Long = TimeBridge.nowWallMs(),
+    val createdAt: Long,
+    val lastUsed: Long,
     val polar: ProfilePolarSettings = ProfilePolarSettings()
 ) {
     fun getDisplayName(): String {

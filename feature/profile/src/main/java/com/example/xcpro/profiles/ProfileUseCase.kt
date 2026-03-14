@@ -20,7 +20,7 @@ class ProfileUseCase @Inject constructor(
     suspend fun importProfiles(request: ProfileImportRequest): Result<ProfileImportResult> =
         repository.importProfiles(request)
 
-    suspend fun exportBundle(profileIds: Set<String>? = null): Result<String> =
+    suspend fun exportBundle(profileIds: Set<String>? = null): Result<ProfileBundleExportArtifact> =
         repository.exportBundle(profileIds)
 
     suspend fun previewBundle(json: String): Result<ProfileBundlePreview> =

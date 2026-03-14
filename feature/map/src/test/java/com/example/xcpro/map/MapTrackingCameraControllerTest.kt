@@ -20,7 +20,6 @@ class MapTrackingCameraControllerTest {
             featureFlags.useRenderFrameSync = false
             featureFlags.useRuntimeReplayHeading = false
 
-            val mapState = MapScreenState()
             val store = MapStateStore(initialStyleName = "Topo")
             val actions = MapStateActionsDelegate(store)
             val cameraController = FakeCameraController(
@@ -31,7 +30,7 @@ class MapTrackingCameraControllerTest {
                     tilt = 0.0
                 )
             )
-            val deps = buildDeps(mapState, store, actions, cameraController, featureFlags)
+            val deps = buildDeps(store, actions, cameraController, featureFlags)
 
             val result = deps.controller.updateCamera(
                 MapTrackingCameraController.FrameInput(
@@ -63,7 +62,6 @@ class MapTrackingCameraControllerTest {
             featureFlags.useRenderFrameSync = false
             featureFlags.useRuntimeReplayHeading = false
 
-            val mapState = MapScreenState()
             val store = MapStateStore(initialStyleName = "Topo")
             val actions = MapStateActionsDelegate(store)
             actions.setHasInitiallyCentered(true)
@@ -75,7 +73,7 @@ class MapTrackingCameraControllerTest {
                     tilt = 0.0
                 )
             )
-            val deps = buildDeps(mapState, store, actions, cameraController, featureFlags)
+            val deps = buildDeps(store, actions, cameraController, featureFlags)
             deps.gate.acceptEnabled = false
 
             deps.controller.updateCamera(
@@ -109,7 +107,8 @@ class MapTrackingCameraControllerTest {
                 )
             )
 
-            assertEquals(1, cameraController.animateCount)
+            assertEquals(1, cameraController.moveCount)
+            assertEquals(0, cameraController.animateCount)
             assertEquals(15.0, cameraController.cameraPosition.bearing, 0.0)
         } finally {
             restoreFlags(featureFlags, snapshot)
@@ -124,7 +123,6 @@ class MapTrackingCameraControllerTest {
             featureFlags.useRenderFrameSync = false
             featureFlags.useRuntimeReplayHeading = false
 
-            val mapState = MapScreenState()
             val store = MapStateStore(initialStyleName = "Topo")
             val actions = MapStateActionsDelegate(store)
             actions.setHasInitiallyCentered(true)
@@ -138,7 +136,6 @@ class MapTrackingCameraControllerTest {
             )
             var dynamicPadding = intArrayOf(0, 20, 0, 40)
             val deps = buildDeps(
-                mapState = mapState,
                 store = store,
                 actions = actions,
                 cameraController = cameraController,
@@ -185,6 +182,47 @@ class MapTrackingCameraControllerTest {
         }
     }
 
+    @Test
+    fun updateCamera_usesDirectMove_forReplayFollowWhenFrameSyncIsEnabled() {
+        val featureFlags = MapFeatureFlags()
+        val snapshot = snapshotFlags(featureFlags)
+        try {
+            featureFlags.useRenderFrameSync = true
+            featureFlags.useRuntimeReplayHeading = true
+
+            val store = MapStateStore(initialStyleName = "Topo")
+            val actions = MapStateActionsDelegate(store)
+            actions.setHasInitiallyCentered(true)
+            val cameraController = FakeCameraController(
+                initial = MapCameraPositionSnapshot(
+                    target = LatLng(0.0, 0.0),
+                    zoom = 12.0,
+                    bearing = 0.0,
+                    tilt = 0.0
+                )
+            )
+            val deps = buildDeps(store, actions, cameraController, featureFlags)
+
+            deps.controller.updateCamera(
+                MapTrackingCameraController.FrameInput(
+                    location = LatLng(7.0, 8.0),
+                    trackDeg = 120.0,
+                    cameraTargetBearing = 30.0,
+                    speedMs = 25.0,
+                    orientationMode = MapOrientationMode.NORTH_UP,
+                    timeBase = DisplayClock.TimeBase.REPLAY,
+                    nowMs = 1_000L
+                )
+            )
+
+            assertEquals(1, cameraController.moveCount)
+            assertEquals(0, cameraController.animateCount)
+            assertEquals(30.0, cameraController.cameraPosition.bearing, 0.0)
+        } finally {
+            restoreFlags(featureFlags, snapshot)
+        }
+    }
+
     private data class ControllerDeps(
         val controller: MapTrackingCameraController,
         val gate: ResettableGate,
@@ -192,7 +230,6 @@ class MapTrackingCameraControllerTest {
     )
 
     private fun buildDeps(
-        mapState: MapScreenState,
         store: MapStateStore,
         actions: MapStateActions,
         cameraController: FakeCameraController,
@@ -200,7 +237,7 @@ class MapTrackingCameraControllerTest {
         paddingProvider: () -> IntArray = { PADDING.copyOf() }
     ): ControllerDeps {
         val biasCalculator = MapShiftBiasCalculator()
-        val positionController = MapPositionController(mapState = mapState)
+        val positionController = MapPositionController(locationOverlayPort = NoOpLocationOverlayPort)
         val cameraPolicy = MapCameraPolicy(
             offsetAverager = object : MapCameraPolicy.OffsetAverager {
                 override fun remember(topPx: Float, bottomPx: Float) {
@@ -225,14 +262,14 @@ class MapTrackingCameraControllerTest {
             paddingProvider = paddingProvider,
             positionController = positionController,
             cameraPolicy = cameraPolicy,
+            followCameraMotionPolicy = MapFollowCameraMotionPolicy(),
             cameraUpdateGate = gate,
             biasResetter = biasResetter,
             cameraControllerProvider = { cameraController },
             featureFlags = featureFlags,
             initialZoomLevel = 10.0,
             minUpdateIntervalMs = 80L,
-            bearingEpsDeg = 2.0,
-            defaultAnimationMs = 250
+            bearingEpsDeg = 2.0
         )
         return ControllerDeps(controller, gate, biasResetter)
     }
@@ -287,6 +324,18 @@ class MapTrackingCameraControllerTest {
 
     private class FixedMapSizeProvider : MapViewSizeProvider {
         override fun size(): MapViewSize = MapViewSize(widthPx = 0, heightPx = 0)
+    }
+
+    private object NoOpLocationOverlayPort : MapLocationOverlayPort {
+        override fun updateBlueLocation(
+            location: LatLng,
+            trackBearing: Double,
+            iconHeading: Double,
+            mapBearing: Double,
+            orientationMode: MapOrientationMode
+        ) = Unit
+
+        override fun setBlueLocationVisible(visible: Boolean) = Unit
     }
 
     private class FakeCameraController(

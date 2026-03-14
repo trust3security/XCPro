@@ -2,7 +2,7 @@
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.common.orientation.OrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationSensorData
 import com.example.xcpro.orientation.OrientationClock
@@ -158,7 +158,7 @@ class MapOrientationManagerTest {
 
         override fun getCurrentData(): OrientationSensorData = _flow.value
 
-        override fun updateFromFlightData(flightData: RealTimeFlightData) {
+        override fun updateFromFlightData(flightData: OrientationFlightDataSnapshot) {
             // No-op for tests
         }
 

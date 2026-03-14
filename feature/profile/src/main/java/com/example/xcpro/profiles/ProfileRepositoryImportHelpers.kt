@@ -1,15 +1,18 @@
 package com.example.xcpro.profiles
 
 import java.util.Locale
-import java.util.UUID
 
-internal fun generateUniqueId(knownIds: MutableSet<String>, preferredId: String): String {
+internal fun generateUniqueId(
+    knownIds: MutableSet<String>,
+    preferredId: String,
+    profileIdGenerator: ProfileIdGenerator
+): String {
     if (preferredId.isNotBlank() && knownIds.add(preferredId)) {
         return preferredId
     }
     var generatedId: String
     do {
-        generatedId = UUID.randomUUID().toString()
+        generatedId = profileIdGenerator.newId()
     } while (!knownIds.add(generatedId))
     return generatedId
 }

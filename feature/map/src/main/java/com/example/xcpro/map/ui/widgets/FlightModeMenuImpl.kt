@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui.widgets
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -59,7 +58,6 @@ internal fun FlightModeMenuImpl(
     widthDp: Float = 96f,
     heightDp: Float = 36f
 ) {
-    val tag = "FlightModeMenu"
     val density = LocalDensity.current
     val widthPx = with(density) { widthDp.dp.toPx() }
     val heightPx = with(density) { heightDp.dp.toPx() }
@@ -103,7 +101,6 @@ internal fun FlightModeMenuImpl(
                     Modifier.combinedClickable(
                         onClick = {
                             isExpanded = true
-                            Log.d(tag, "Surface clicked; opening dropdown")
                         }
                     )
                 }
@@ -112,7 +109,6 @@ internal fun FlightModeMenuImpl(
                 enabled = isEditMode,
                 key1 = screenWidthPx,
                 key2 = screenHeightPx,
-                onDragStart = { Log.d(tag, "Drag started from ${displayOffset.value}") },
                 onDrag = { dragAmount ->
                     displayOffset.value = MapWidgetMath.boundedOffset(
                         displayOffset.value,
@@ -122,7 +118,6 @@ internal fun FlightModeMenuImpl(
                     )
                 },
                 onDragEnd = {
-                    Log.d(tag, "Drag ended at ${displayOffset.value}")
                     onOffsetChange(displayOffset.value)
                 }
             )
@@ -158,7 +153,6 @@ internal fun FlightModeMenuImpl(
             expanded = isExpanded,
             onDismissRequest = {
                 isExpanded = false
-                Log.d(tag, "Dropdown dismissed")
             },
             shape = RoundedCornerShape(20.dp)
         ) {
@@ -167,7 +161,6 @@ internal fun FlightModeMenuImpl(
                     onClick = {
                         onModeChange(mode)
                         isExpanded = false
-                        Log.d(tag, "Mode selected ${mode.displayName}")
                     },
                     text = {
                         Row(

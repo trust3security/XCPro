@@ -21,6 +21,11 @@ If code violates this file, it is wrong -- even if it "works".
 - Predictable beats concise
 - Architecture beats convenience
 
+Rule application:
+- `ARCHITECTURE.md` defines `Invariant` rules.
+- This document defines `Default` rules unless a section explicitly says `Invariant` or `Guideline`.
+- If a default is not followed, document the rationale in the change plan or ADR and prove equivalent safety.
+
 ---
 
 ## 1A. Enforcement (CI)
@@ -49,11 +54,18 @@ The following checks must fail the build when violated:
 - App identity stability: `app/build.gradle.kts` must keep the approved
   `applicationId` and debug `applicationIdSuffix` unless an explicit migration
   plan is documented and approved.
+- Profile settings boundary: once a settings section is contributor-owned,
+  `feature:profile` must not reintroduce direct owner-module imports in
+  `AppProfileSettingsSnapshotProvider` / `AppProfileSettingsRestoreApplier`, and
+  `feature/profile/build.gradle.kts` must not reintroduce production deps on
+  migrated owner modules.
 - File size budget: Kotlin source files must be `<= 500` lines by default, with stricter hotspot caps enforced in `scripts/ci/enforce_rules.ps1`.
 - Map visual SLO gate: map/overlay/replay/task-gesture runtime changes must pass
   impacted SLOs from `docs/MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`
   with evidence defined in
   `docs/MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`.
+- Logging drift: new production raw `Log.*` usage is blocked unless the file
+  and count are explicitly allowlisted in `config/quality/raw_log_allowlist.txt`.
 
 ---
 
@@ -91,6 +103,7 @@ Enforcement artifacts:
 - CI workflow: `.github/workflows/quality-gates.yml`
 - Canonical time abstraction for production code: `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
 - DI binding anchor: `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+- Raw-log freeze baseline: `config/quality/raw_log_allowlist.txt`
 
 Local validation minimum:
 - `./gradlew enforceRules`
@@ -130,15 +143,38 @@ Merge rule:
 - Exception only via time-boxed `KNOWN_DEVIATIONS.md` entry
   (issue ID, owner, expiry, mitigation, rollback plan).
 
+### 1A.6 Static Analysis Expectations (Profile Settings Boundary)
+
+CI should include static checks that fail if a contributor-owned profile section
+drifts back into `feature:profile` implementation:
+
+- `AppProfileSettingsSnapshotProvider.kt` or
+  `AppProfileSettingsRestoreApplier.kt` import owner-module packages for
+  already-migrated settings sections (for example forecast, weather, traffic, or
+  variometer profile settings).
+- `feature/profile/build.gradle.kts` reintroduces production `implementation` or
+  `api` dependencies on migrated owner modules.
+
+Acceptable:
+- Owner modules contributing profile settings via DI multibindings.
+- `testImplementation` dependencies used only by `feature:profile` regression
+  tests and test fixtures.
+
 ## 1B. Exception Process
 
 Exceptions require:
 - An issue ID
+- An introduced date
+- An approving owner/reviewer
 - A named owner
+- A next review date
 - An expiry date
 - A brief rationale
+- Mitigation and removal steps
+- Exit criteria
 
 Exceptions must be listed in `KNOWN_DEVIATIONS.md` and reviewed before expiry.
+Expired exceptions block merge until removed or explicitly renewed.
 
 ---
 
@@ -175,6 +211,59 @@ ui/
 - Domain/use-case packages define boundary contracts (interfaces) for external I/O used by business logic.
 - Data packages implement those contracts with adapters and bind them through DI.
 - UseCases/engines depend on contracts, not concrete data adapters.
+
+---
+
+## 2A. Feature Ownership and Decomposition Rules
+
+New feature code must make ownership obvious from file names, class names, and
+layer placement.
+
+- UI owns rendering, user input forwarding, and display-only formatting.
+- ViewModels own UI state, intent handling, and orchestration.
+- UseCases/domain classes own business rules, calculations, and policy.
+- Repositories own authoritative data coordination and persistence-facing state.
+- Data sources/adapters own API, database, device, and file I/O boundaries.
+- Mappers own transformations between data, domain, and UI models.
+- Do not mix multiple ownership roles into one file when they can be split
+  cleanly.
+- Prefer adding a small focused file over extending a large mixed-purpose file.
+- Target `<= 450` lines per file when practical; the enforced default Kotlin
+  budget remains `<= 500` unless a documented exception exists.
+
+Review test:
+- If a class both decides business policy and renders UI, the ownership is
+  wrong.
+- If a file grows because it contains multiple responsibilities, split by
+  responsibility first, not by arbitrary method count.
+
+---
+
+## 2B. Module and API Surface Rules
+
+- Keep visibility as narrow as possible: prefer `private`, then `internal`, then wider visibility only for known consumers.
+- New public or cross-module APIs require an explicit owner, named consumers, and a stability expectation in the change plan or ADR.
+- Do not add direct cross-feature imports to bypass owner-module contracts or use-case ports.
+- Compatibility wrappers introduced during refactors must state whether they are temporary or long-lived, and temporary wrappers need a removal plan.
+- New modules or dependency-graph changes require a documented reason and an ADR.
+
+---
+
+## 2C. Compatibility Shim Rules
+
+- Temporary compatibility code must be tagged in code comments as a compatibility shim with reason and removal trigger.
+- Prefer the exact comment prefix `Compatibility shim:` so the repo can grep and clean these paths consistently.
+- Every shim/bridge/wrapper must name its owner in the change plan.
+- Shims must have regression coverage for the current migration behavior.
+- If a shim remains after the refactor phase it was introduced for, either remove it or track it via ADR/deviation with explicit expiry or exit criteria.
+
+---
+
+## 2D. Stateless Object Rules
+
+- Kotlin `object` is acceptable for pure helpers, constants, stable policy/math utilities, DI modules, sealed singleton values, and explicit `NoOp` implementations.
+- Do not use `object` as a hidden service locator, hidden mutable cache, lifecycle owner, or authoritative state holder.
+- If an `object` keeps mutable infrastructure state, document why it is non-authoritative, how it stays thread-safe, and why DI-scoped instance ownership is not needed.
 
 ---
 
@@ -215,6 +304,28 @@ If state exists in two places, one is wrong.
 
 ---
 
+## 4A. State Contract Rules
+
+- Every new or changed authoritative/derived state item must document:
+  owner, mutator(s), read path, upstream source, persistence owner,
+  reset conditions, time base if applicable, and required tests.
+- Loading, empty, error, degraded, stale, and unavailable states must be explicit whenever behavior differs.
+- Derived ViewModel/UI state must be recomputable from lower-layer authorities; otherwise ownership is wrong.
+- Hidden bidirectional synchronization between two state owners is forbidden.
+
+---
+
+## 4B. Identity and Model Creation Rules
+
+- Do not hide significant identity/time generation inside default model property values when creation semantics matter.
+- Avoid `UUID.randomUUID()`, `TimeBridge.nowWallMs()`, or equivalent generators in persistent/entity data-class defaults.
+- Prefer explicit factories, repository/use-case creation methods, or creation commands for IDs and timestamps.
+- `UUID.randomUUID()` and wall-time-backed creation are allowed only at explicit ownership boundaries where non-determinism is acceptable.
+- Deterministic/replay-sensitive paths must use injected or derived deterministic identity generation.
+- Imported/migrated entities must preserve or explicitly translate identity; silent regeneration is forbidden unless documented.
+
+---
+
 ## 5. Flow & Coroutine Rules
 
 ### Flow
@@ -222,17 +333,39 @@ If state exists in two places, one is wrong.
 - Prefer cold `Flow` for data streams
 - No shared mutable state outside Flow
 - Use `SharedFlow` for one-off events; do not model events as `StateFlow`
+- Hot flows must define replay behavior intentionally.
+- `stateIn` / `shareIn` require an explicit owner scope and `SharingStarted` policy.
+- Buffering, conflation, debounce, sample, or throttle operators must be justified when they can drop intermediate values.
 
 ### Coroutines
 - Use structured concurrency only
 - Every coroutine must have an owner
 - Jobs must be cancellable
+- Inject dispatchers into domain/repository hot paths when execution policy affects determinism, tests, or performance.
+- Long-lived collectors must use a named owner scope (`viewModelScope`, service/runtime owner scope, or equivalent).
+- Stateful domain windows and policy machines must serialize mutation through one owner/coroutine or explicit synchronization.
+- New `CoroutineScope(...)` in production code requires an explicit owner, dispatcher rationale, and cancellation path.
+- Prefer caller-provided or injected scopes over constructor-created fallback scopes.
+- Constructors that create fallback scopes for convenience/testing must be `internal`, clearly documented, or marked as testing-oriented.
 
 ### Forbidden
 - `GlobalScope`
 - `runBlocking`
 - Manual thread management
 - Blocking calls inside flows
+- Ad-hoc `CoroutineScope(...)` creation without a documented owner/lifetime
+- Unbounded buffers in production hot paths
+- Choosing `stateIn` / `shareIn` defaults without considering replay/start semantics
+- Collector side effects that depend on incidental ordering across multiple unsynchronized launches
+
+---
+
+## 5A. Scope Ownership Rules
+
+- ViewModels use `viewModelScope`; Android services/components use component-owned scopes.
+- Repository/runtime-owner scopes are acceptable only when they continuously collect, coordinate, or serialize authoritative/runtime state.
+- Pure helpers, utility objects, value models, and mappers must not create long-lived scopes.
+- Internal child scopes must not outlive their parent owner.
 
 ---
 
@@ -363,6 +496,11 @@ Forbidden:
 - No silent failures
 - No swallowed exceptions
 - Errors flow through the same pipeline as data
+- Model `degraded`, `unavailable`, and `failure` explicitly when downstream behavior differs.
+- Domain/use-case code decides retry/fallback/error semantics; UI renders them.
+- Prefer typed error/degraded models over nullable strings plus ad-hoc booleans.
+- `null`, zero, or empty collections are not substitutes for invalid/unavailable states unless explicitly documented.
+- If staleness, confidence, or source quality affect behavior, they belong in the model rather than scattered side flags.
 
 ---
 
@@ -371,6 +509,11 @@ Forbidden:
 - No logs in tight loops
 - Do not log location data in release builds
 - Logs must not be required for correctness
+- Prefer `AppLogger` for production Kotlin logging so debug gating, redaction, sampling, and rate limiting stay consistent.
+- Direct `Log.*` is allowed only in narrow Android/platform/bootstrap edges or temporary debug work with explicit rationale.
+- New or expanded production raw `Log.*` usage must update the tracked allowlist only as part of an approved logging-plan change; otherwise `archGate` must fail.
+- Temporary debug logs that bypass `AppLogger` should include an inline removal note or be removed before merge.
+- Sensor/replay/traffic/location-adjacent logs must use sampling/rate limiting or equivalent gating.
 
 ---
 
@@ -412,6 +555,29 @@ Review red flags (reject changes):
 
 ---
 
+## 15B. Required Test Matrix by Change Type
+
+- Business rule / policy / math change: unit tests for nominal, edge, and regression cases.
+- Time-base / replay / cadence change: fake clock plus deterministic repeat-run tests.
+- Persistence / settings / restore change: round-trip, restore, and migration/compat tests.
+- Ownership move / bypass removal / API boundary change: tests that lock the new path and prevent the old bypass from reappearing.
+- UI interaction / lifecycle collection change: UI or instrumentation tests when runtime sequencing matters.
+- Performance-sensitive hot-path change: measured evidence, benchmark, or SLO artifact.
+
+Missing proof must be justified in the change plan or tracked as an approved deviation.
+
+---
+
+## 15C. Canonical Formula and No-Op Rules
+
+- Shared formulas/constants/policy thresholds must have one canonical owner; new duplicate math is forbidden unless documented as temporary boundary/perf duplication.
+- When touching canonical math/policy, update dependent callsites or document why they intentionally diverge.
+- Temporary duplicated formulas/constants must name the canonical owner in the plan, code comment, or deviation entry.
+- `NoOp` implementations are allowed only for optional capabilities, explicit degraded modes, or tests.
+- Production classes exposing convenience constructors/default `NoOp` collaborators must keep those paths narrow (`internal`, testing-oriented, or clearly documented) and must not let mandatory production wiring silently degrade.
+
+---
+
 ## 16. AI / Codex Rules
 
 Assume:
@@ -423,6 +589,8 @@ Therefore:
 - Code must be explicit
 - Intent must be readable from files
 - Architecture must enforce correctness
+- Non-trivial ownership, boundary, or API decisions must be recorded in change plans and ADRs rather than left in prompt history.
+- When touching runtime-heavy code, inspect existing use of `CoroutineScope(`, direct `Log.*`, `UUID.randomUUID()`, `NoOp`, and compatibility shims before introducing new variants.
 
 ---
 

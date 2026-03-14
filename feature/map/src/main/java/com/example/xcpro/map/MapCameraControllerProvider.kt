@@ -1,9 +1,5 @@
 package com.example.xcpro.map
 
-interface MapCameraControllerProvider {
-    fun controllerOrNull(): MapCameraController?
-}
-
 class MapLibreCameraControllerProvider(
     private val mapState: MapScreenState
 ) : MapCameraControllerProvider {

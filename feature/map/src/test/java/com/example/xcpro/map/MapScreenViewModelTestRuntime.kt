@@ -22,7 +22,11 @@ import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.units.UnitsRepository
+import com.example.xcpro.glider.SpeedBoundsMs
+import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.glide.FinalGlideUseCase
+import com.example.xcpro.glide.GlideTargetRepository
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.qnh.QnhRepository
@@ -66,7 +70,10 @@ import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.tasks.TaskFeatureFlags
 import com.example.xcpro.tasks.TaskNavigationController
+import com.example.xcpro.tasks.TaskRepository
 import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
+import com.example.xcpro.tasks.domain.logic.TaskValidator
 import com.example.xcpro.tasks.racing.RacingTaskManager
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
@@ -321,10 +328,17 @@ abstract class MapScreenViewModelTestBase {
             engine = RacingNavigationEngine(),
             featureFlags = localTaskFeatureFlags
         )
+        val taskRepository = TaskRepository(
+            validator = TaskValidator(),
+            proximityEvaluator = TaskProximityEvaluator()
+        )
         val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
         val mapAirspaceUseCase = Mockito.mock(AirspaceUseCase::class.java)
         val mapWaypointFilesUseCase = Mockito.mock(WaypointFilesUseCase::class.java)
         val mapSensorsUseCase = MapSensorsUseCase(varioServiceManager)
+        val orientationSettingsUseCase = MapOrientationSettingsUseCase(
+            orientationSettingsRepository
+        )
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
             orientationManagerFactory = orientationManagerFactory,
@@ -333,6 +347,21 @@ abstract class MapScreenViewModelTestBase {
         val mapReplayUseCase = MapReplayUseCase(
             taskManager = localTaskManager,
             taskNavigationController = localTaskNavigationController,
+            glideTargetRepository = GlideTargetRepository(
+                taskRepository = taskRepository,
+                taskNavigationController = localTaskNavigationController
+            ),
+            finalGlideUseCase = FinalGlideUseCase(
+                sinkProvider = object : StillAirSinkProvider {
+                    override fun sinkAtSpeed(airspeedMs: Double): Double {
+                        val centered = airspeedMs - 17.0
+                        return 0.55 + (centered * centered * 0.01)
+                    }
+
+                    override fun iasBoundsMs(): SpeedBoundsMs =
+                        SpeedBoundsMs(minMs = 12.0, maxMs = 25.0)
+                }
+            ),
             controller = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder()
         )
@@ -453,17 +482,21 @@ abstract class MapScreenViewModelTestBase {
             metadataSyncRepository = metadataSyncRepository,
             ioDispatcher = mainDispatcherRule.dispatcher
         )
-
-        return MapScreenViewModel(
+        val profileSessionDependencies = MapScreenProfileSessionDependencies(
             mapStyleUseCase = mapStyleUseCase,
             unitsUseCase = unitsUseCase,
-            orientationSettingsUseCase = MapOrientationSettingsUseCase(
-                orientationSettingsRepository
-            ),
+            orientationSettingsUseCase = orientationSettingsUseCase,
+            gliderConfigUseCase = gliderConfigUseCase,
+            variometerLayoutUseCase = variometerLayoutUseCase,
+            trailSettingsUseCase = trailSettingsUseCase,
+            qnhUseCase = qnhUseCase
+        )
+
+        return MapScreenViewModel(
+            profileSessionDependencies = profileSessionDependencies,
             mapWaypointsUseCase = mapWaypointsUseCase,
             mapAirspaceUseCase = mapAirspaceUseCase,
             mapWaypointFilesUseCase = mapWaypointFilesUseCase,
-            gliderConfigUseCase = gliderConfigUseCase,
             sensorsUseCase = mapSensorsUseCase,
             flightDataUseCase = flightDataUseCase,
             mapUiControllersUseCase = mapUiControllersUseCase,
@@ -472,16 +505,18 @@ abstract class MapScreenViewModelTestBase {
             mapTasksUseCase = mapTasksUseCase,
             mapFeatureFlagsUseCase = mapFeatureFlagsUseCase,
             mapCardPreferencesUseCase = mapCardPreferencesUseCase,
-            qnhUseCase = qnhUseCase,
-            trailSettingsUseCase = trailSettingsUseCase,
             calibrateQnhUseCase = calibrateQnhUseCase,
-            variometerLayoutUseCase = variometerLayoutUseCase,
             mapVarioPreferencesUseCase = mapVarioPreferencesUseCase,
             hawkVarioUseCase = hawkVarioUseCase,
             ognTrafficFacade = ognTrafficFacade,
             adsbTrafficFacade = adsbTrafficFacade,
             adsbMetadataEnrichmentUseCase = adsbMetadataEnrichmentUseCase,
-            thermallingModeUseCase = thermallingModeUseCase
+            thermallingModeUseCase = thermallingModeUseCase,
+            weGlidePromptBridge = MapScreenWeGlidePromptBridge(
+                promptCoordinator = null,
+                enqueueUseCase = null,
+                notificationController = null
+            )
         )
     }
 

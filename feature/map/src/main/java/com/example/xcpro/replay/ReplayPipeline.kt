@@ -17,6 +17,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+internal class ReplayPipelineRuntime(
+    val scope: CoroutineScope,
+    var replayFusionRepository: SensorFusionRepository? = null,
+    var forwardJob: Job? = null,
+    var audioSettingsJob: Job? = null,
+    var lastForwardLogTime: Long = 0L,
+    var latestAudioSettings: VarioAudioSettings = VarioAudioSettings(),
+    var latestTeCompensationEnabled: Boolean = true
+)
+
 class ReplayPipeline(
     private val flightDataRepository: FlightDataRepository,
     private val varioServiceManager: VarioServiceManager,
@@ -29,40 +39,42 @@ class ReplayPipeline(
     private val sessionState: StateFlow<SessionState>,
     private val tag: String
 ) {
-
-    var scope: CoroutineScope = createScope()
-        private set
-    var replayFusionRepository: SensorFusionRepository? = null
-        private set
-
-    private var forwardJob: Job? = null
-    private var audioSettingsJob: Job? = null
-    private var lastForwardLogTime = 0L
     private var sensorsSuspended = false
-    private var latestAudioSettings: VarioAudioSettings = VarioAudioSettings()
-    private var latestTeCompensationEnabled: Boolean = true
 
-    fun ensureScope(onScopeReset: () -> Unit) {
-        if (scope.isActive) return
+    internal fun createRuntime(): ReplayPipelineRuntime = createRuntime(
+        latestAudioSettings = VarioAudioSettings(),
+        latestTeCompensationEnabled = true
+    )
+
+    internal fun ensureScope(
+        runtime: ReplayPipelineRuntime,
+        onScopeReset: () -> Unit
+    ): ReplayPipelineRuntime {
+        if (runtime.scope.isActive) return runtime
         AppLogger.w(tag, "REPLY_SCOPE inactive; rebuilding replay scope")
-        scope = createScope()
-        forwardJob = null
-        replayFusionRepository = null
-        audioSettingsJob = null
         onScopeReset()
+        return createRuntime(
+            latestAudioSettings = runtime.latestAudioSettings,
+            latestTeCompensationEnabled = runtime.latestTeCompensationEnabled
+        )
     }
 
-    fun ensureActive(onScopeReset: () -> Unit) {
-        ensureScope(onScopeReset)
-        if (replayFusionRepository == null) {
-            replayFusionRepository = createFusionRepository()
-            replayFusionRepository?.updateAudioSettings(latestAudioSettings)
-            replayFusionRepository?.setTotalEnergyCompensationEnabled(latestTeCompensationEnabled)
+    internal fun ensureActive(
+        runtime: ReplayPipelineRuntime,
+        onScopeReset: () -> Unit
+    ): ReplayPipelineRuntime {
+        val activeRuntime = ensureScope(runtime, onScopeReset)
+        if (activeRuntime.replayFusionRepository == null) {
+            activeRuntime.replayFusionRepository = createFusionRepository(activeRuntime.scope)
+            activeRuntime.replayFusionRepository?.updateAudioSettings(activeRuntime.latestAudioSettings)
+            activeRuntime.replayFusionRepository
+                ?.setTotalEnergyCompensationEnabled(activeRuntime.latestTeCompensationEnabled)
         }
-        ensureAudioSettingsObserver()
-        if (forwardJob?.isActive != true) {
-            startForwardingFlightData()
+        ensureAudioSettingsObserver(activeRuntime)
+        if (activeRuntime.forwardJob?.isActive != true) {
+            startForwardingFlightData(activeRuntime)
         }
+        return activeRuntime
     }
 
     fun suspendSensors() {
@@ -79,14 +91,24 @@ class ReplayPipeline(
         }
     }
 
-    fun resetReplayFusion() {
-        replayFusionRepository = null
+    internal fun resetReplayFusion(runtime: ReplayPipelineRuntime) {
+        runtime.replayFusionRepository = null
     }
 
     private fun createScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + dispatcher)
 
-    private fun createFusionRepository(): SensorFusionRepository =
+    private fun createRuntime(
+        latestAudioSettings: VarioAudioSettings,
+        latestTeCompensationEnabled: Boolean
+    ): ReplayPipelineRuntime =
+        ReplayPipelineRuntime(
+            scope = createScope(),
+            latestAudioSettings = latestAudioSettings,
+            latestTeCompensationEnabled = latestTeCompensationEnabled
+        )
+
+    private fun createFusionRepository(scope: CoroutineScope): SensorFusionRepository =
         sensorFusionRepositoryFactory.create(
             sensorDataSource = replaySensorSource,
             scope = scope,
@@ -94,27 +116,27 @@ class ReplayPipeline(
             isReplayMode = true
         )
 
-    private fun ensureAudioSettingsObserver() {
-        if (audioSettingsJob?.isActive == true) return
-        audioSettingsJob = scope.launch {
+    private fun ensureAudioSettingsObserver(runtime: ReplayPipelineRuntime) {
+        if (runtime.audioSettingsJob?.isActive == true) return
+        runtime.audioSettingsJob = runtime.scope.launch {
             levoVarioPreferencesRepository.config.collect { config ->
-                latestAudioSettings = config.audioSettings
-                latestTeCompensationEnabled = config.teCompensationEnabled
-                replayFusionRepository?.updateAudioSettings(config.audioSettings)
-                replayFusionRepository?.setTotalEnergyCompensationEnabled(config.teCompensationEnabled)
+                runtime.latestAudioSettings = config.audioSettings
+                runtime.latestTeCompensationEnabled = config.teCompensationEnabled
+                runtime.replayFusionRepository?.updateAudioSettings(config.audioSettings)
+                runtime.replayFusionRepository?.setTotalEnergyCompensationEnabled(config.teCompensationEnabled)
             }
         }
     }
 
-    private fun startForwardingFlightData() {
-        val repo = replayFusionRepository ?: return
-        forwardJob?.cancel()
-        forwardJob = scope.launch {
+    private fun startForwardingFlightData(runtime: ReplayPipelineRuntime) {
+        val repo = runtime.replayFusionRepository ?: return
+        runtime.forwardJob?.cancel()
+        runtime.forwardJob = runtime.scope.launch {
             repo.flightDataFlow.collect { data ->
                 if (sessionState.value.status == SessionStatus.PLAYING) {
                     val now = clock.nowMonoMs()
-                    if (now - lastForwardLogTime >= 1_000L) {
-                        lastForwardLogTime = now
+                    if (now - runtime.lastForwardLogTime >= 1_000L) {
+                        runtime.lastForwardLogTime = now
                         val windState = windRepository.windState.value
                         val windSpeed = windState.vector?.speed
                         val windQuality = windState.quality

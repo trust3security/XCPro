@@ -2,6 +2,8 @@ package com.example.xcpro.profiles
 
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
+import com.example.dfcards.profiles.CardProfileSettingsContributor
+import com.example.xcpro.adsb.AdsbTrafficProfileSettingsContributor
 import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.units.AltitudeUnit
@@ -9,6 +11,7 @@ import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.flightdata.FlightMgmtPreferencesRepository
+import com.example.xcpro.forecast.ForecastProfileSettingsContributor
 import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.MapOrientationSettings
@@ -22,17 +25,23 @@ import com.example.xcpro.map.trail.TrailType
 import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutRepository
 import com.example.xcpro.map.domain.MapShiftBiasMode
+import com.example.xcpro.ogn.OgnTrailSelectionProfileSettingsContributor
 import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
+import com.example.xcpro.ogn.OgnTrafficProfileSettingsContributor
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import com.example.xcpro.ui.theme.ThemePreferencesRepository
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
+import com.example.xcpro.variometer.layout.VariometerWidgetProfileSettingsContributor
 import com.example.xcpro.variometer.layout.VariometerWidgetRepository
+import com.example.xcpro.weather.rain.WeatherOverlayProfileSettingsContributor
 import com.example.xcpro.weather.rain.WeatherOverlayPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindOverrideRepository
 import com.google.gson.Gson
+import dagger.Lazy
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.eq
@@ -56,7 +65,10 @@ class AppProfileSettingsRestoreApplierTest {
         val mapStyleRepository: MapStyleRepository,
         val mapTrailPreferences: MapTrailPreferences,
         val qnhPreferencesRepository: QnhPreferencesRepository,
-        val orientationSettingsRepository: MapOrientationSettingsRepository
+        val orientationSettingsRepository: MapOrientationSettingsRepository,
+        val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
+        val thermallingModePreferencesRepository: ThermallingModePreferencesRepository,
+        val windOverrideRepository: WindOverrideRepository
     )
 
     private val gson = Gson()
@@ -82,30 +94,107 @@ class AppProfileSettingsRestoreApplierTest {
         val weatherOverlayPreferencesRepository = mock<WeatherOverlayPreferencesRepository>()
         val forecastPreferencesRepository = mock<ForecastPreferencesRepository>()
         val windOverrideRepository = mock<WindOverrideRepository>()
+        lateinit var contributorRegistry: ProfileSettingsContributorRegistry
+        val contributorRegistryLazy = object : Lazy<ProfileSettingsContributorRegistry> {
+            override fun get(): ProfileSettingsContributorRegistry = contributorRegistry
+        }
+
+        val applier = AppProfileSettingsRestoreApplier(
+            contributorRegistry = contributorRegistryLazy
+        )
+        val cardContributor = CardProfileSettingsContributor(cardPreferences)
+        val flightMgmtContributor = FlightMgmtProfileSettingsContributor(
+            flightMgmtPreferencesRepository
+        )
+        val lookAndFeelContributor = LookAndFeelProfileSettingsContributor(
+            lookAndFeelPreferences
+        )
+        val themeContributor = ThemeProfileSettingsContributor(themePreferencesRepository)
+        val qnhContributor = QnhProfileSettingsContributor(qnhPreferencesRepository)
+        val mapStyleContributor = MapStyleProfileSettingsContributor(mapStyleRepository)
+        val snailTrailContributor = SnailTrailProfileSettingsContributor(mapTrailPreferences)
+        val mapWidgetLayoutContributor = MapWidgetLayoutProfileSettingsContributor(
+            mapWidgetLayoutRepository
+        )
+        val variometerWidgetContributor = VariometerWidgetProfileSettingsContributor(
+            variometerWidgetRepository
+        )
+        val ognTrafficContributor = OgnTrafficProfileSettingsContributor(
+            ognTrafficPreferencesRepository
+        )
+        val ognTrailSelectionContributor = OgnTrailSelectionProfileSettingsContributor(
+            ognTrailSelectionPreferencesRepository
+        )
+        val adsbTrafficContributor = AdsbTrafficProfileSettingsContributor(
+            adsbTrafficPreferencesRepository
+        )
+        val weatherOverlayContributor = WeatherOverlayProfileSettingsContributor(
+            weatherOverlayPreferencesRepository
+        )
+        val forecastContributor = ForecastProfileSettingsContributor(
+            forecastPreferencesRepository
+        )
+        val unitsContributor = UnitsProfileSettingsContributor(unitsRepository)
+        val orientationContributor = OrientationProfileSettingsContributor(
+            orientationSettingsRepository
+        )
+        val gliderContributor = GliderConfigProfileSettingsContributor(gliderRepository)
+        val levoVarioContributor = LevoVarioProfileSettingsContributor(
+            levoVarioPreferencesRepository
+        )
+        val thermallingContributor = ThermallingModeProfileSettingsContributor(
+            thermallingModePreferencesRepository
+        )
+        val windOverrideContributor = WindOverrideProfileSettingsContributor(windOverrideRepository)
+        contributorRegistry = ProfileSettingsContributorRegistry(
+            captureContributors = setOf(
+                cardContributor,
+                flightMgmtContributor,
+                lookAndFeelContributor,
+                themeContributor,
+                qnhContributor,
+                mapStyleContributor,
+                snailTrailContributor,
+                mapWidgetLayoutContributor,
+                variometerWidgetContributor,
+                ognTrafficContributor,
+                ognTrailSelectionContributor,
+                adsbTrafficContributor,
+                weatherOverlayContributor,
+                forecastContributor,
+                unitsContributor,
+                orientationContributor,
+                gliderContributor,
+                levoVarioContributor,
+                thermallingContributor,
+                windOverrideContributor
+            ),
+            applyContributors = setOf(
+                cardContributor,
+                flightMgmtContributor,
+                lookAndFeelContributor,
+                themeContributor,
+                qnhContributor,
+                mapStyleContributor,
+                snailTrailContributor,
+                mapWidgetLayoutContributor,
+                variometerWidgetContributor,
+                ognTrafficContributor,
+                ognTrailSelectionContributor,
+                adsbTrafficContributor,
+                weatherOverlayContributor,
+                forecastContributor,
+                unitsContributor,
+                orientationContributor,
+                gliderContributor,
+                levoVarioContributor,
+                thermallingContributor,
+                windOverrideContributor
+            )
+        )
 
         return Harness(
-            applier = AppProfileSettingsRestoreApplier(
-                cardPreferences = cardPreferences,
-                flightMgmtPreferencesRepository = flightMgmtPreferencesRepository,
-                lookAndFeelPreferences = lookAndFeelPreferences,
-                themePreferencesRepository = themePreferencesRepository,
-                mapWidgetLayoutRepository = mapWidgetLayoutRepository,
-                variometerWidgetRepository = variometerWidgetRepository,
-                gliderRepository = gliderRepository,
-                unitsRepository = unitsRepository,
-                mapStyleRepository = mapStyleRepository,
-                mapTrailPreferences = mapTrailPreferences,
-                qnhPreferencesRepository = qnhPreferencesRepository,
-                orientationSettingsRepository = orientationSettingsRepository,
-                levoVarioPreferencesRepository = levoVarioPreferencesRepository,
-                thermallingModePreferencesRepository = thermallingModePreferencesRepository,
-                ognTrafficPreferencesRepository = ognTrafficPreferencesRepository,
-                ognTrailSelectionPreferencesRepository = ognTrailSelectionPreferencesRepository,
-                adsbTrafficPreferencesRepository = adsbTrafficPreferencesRepository,
-                weatherOverlayPreferencesRepository = weatherOverlayPreferencesRepository,
-                forecastPreferencesRepository = forecastPreferencesRepository,
-                windOverrideRepository = windOverrideRepository
-            ),
+            applier = applier,
             flightMgmtPreferencesRepository = flightMgmtPreferencesRepository,
             themePreferencesRepository = themePreferencesRepository,
             mapWidgetLayoutRepository = mapWidgetLayoutRepository,
@@ -115,7 +204,10 @@ class AppProfileSettingsRestoreApplierTest {
             mapStyleRepository = mapStyleRepository,
             mapTrailPreferences = mapTrailPreferences,
             qnhPreferencesRepository = qnhPreferencesRepository,
-            orientationSettingsRepository = orientationSettingsRepository
+            orientationSettingsRepository = orientationSettingsRepository,
+            levoVarioPreferencesRepository = levoVarioPreferencesRepository,
+            thermallingModePreferencesRepository = thermallingModePreferencesRepository,
+            windOverrideRepository = windOverrideRepository
         )
     }
 
@@ -179,6 +271,14 @@ class AppProfileSettingsRestoreApplierTest {
             importedProfileIdMap = mapOf("source-a" to "target-a")
         )
 
+        assertEquals(
+            listOf(ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES),
+            result.appliedSections.toList()
+        )
+        assertEquals(
+            listOf(ProfileSettingsSectionIds.THEME_PREFERENCES),
+            result.failedSections.keys.toList()
+        )
         assertTrue(result.appliedSections.contains(ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES))
         assertTrue(result.failedSections.containsKey(ProfileSettingsSectionIds.THEME_PREFERENCES))
         verify(harness.flightMgmtPreferencesRepository).setLastActiveTab("instruments")
@@ -207,13 +307,13 @@ class AppProfileSettingsRestoreApplierTest {
                     )
                 ),
                 ProfileSettingsSectionIds.VARIOMETER_WIDGET_LAYOUT to gson.toJsonTree(
-                    VariometerWidgetLayoutSectionSnapshot(
-                        layoutsByProfile = mapOf(
-                            "source-a" to VariometerLayoutProfileSnapshot(
-                                offset = OffsetSnapshot(40f, 50f),
-                                sizePx = 160f,
-                                hasPersistedOffset = true,
-                                hasPersistedSize = true
+                    mapOf(
+                        "layoutsByProfile" to mapOf(
+                            "source-a" to mapOf(
+                                "offset" to mapOf("x" to 40f, "y" to 50f),
+                                "sizePx" to 160f,
+                                "hasPersistedOffset" to true,
+                                "hasPersistedSize" to true
                             )
                         )
                     )
@@ -441,6 +541,60 @@ class AppProfileSettingsRestoreApplierTest {
     }
 
     @Test
+    fun apply_usesCanonicalSectionOrder_notSnapshotMapOrder() = runTest {
+        val harness = createHarness()
+        val snapshot = ProfileSettingsSnapshot(
+            sections = linkedMapOf(
+                ProfileSettingsSectionIds.QNH_PREFERENCES to gson.toJsonTree(
+                    QnhSectionSnapshot(
+                        valuesByProfile = mapOf(
+                            "source-qnh" to QnhProfileSectionSnapshot(
+                                manualQnhHpa = 1007.1,
+                                capturedAtWallMs = 1_000L,
+                                source = "MANUAL"
+                            )
+                        )
+                    )
+                ),
+                ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES to gson.toJsonTree(
+                    FlightMgmtSectionSnapshot(
+                        lastActiveTab = "screens",
+                        profileLastFlightModes = mapOf("source-fmg" to "CRUISE")
+                    )
+                )
+            )
+        )
+
+        val result = harness.applier.apply(
+            settingsSnapshot = snapshot,
+            importedProfileIdMap = mapOf(
+                "source-fmg" to "target-fmg",
+                "source-qnh" to "target-qnh"
+            )
+        )
+
+        assertTrue(result.failedSections.isEmpty())
+        assertEquals(
+            listOf(
+                ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES,
+                ProfileSettingsSectionIds.QNH_PREFERENCES
+            ),
+            result.appliedSections.toList()
+        )
+        verify(harness.flightMgmtPreferencesRepository).setLastActiveTab("screens")
+        verify(harness.flightMgmtPreferencesRepository).setLastFlightMode(
+            "target-fmg",
+            FlightModeSelection.CRUISE
+        )
+        verify(harness.qnhPreferencesRepository).writeProfileManualQnh(
+            profileId = "target-qnh",
+            qnhHpa = 1007.1,
+            capturedAtWallMs = 1_000L,
+            source = "MANUAL"
+        )
+    }
+
+    @Test
     fun apply_mapStyleTrailAndQnhSections_applyMappedProfiles() = runTest {
         val harness = createHarness()
         val snapshot = ProfileSettingsSnapshot(
@@ -510,5 +664,123 @@ class AppProfileSettingsRestoreApplierTest {
             source = "MANUAL"
         )
         verify(harness.qnhPreferencesRepository).clearProfile("target-clear")
+    }
+
+    @Test
+    fun apply_localGlobalSections_applyViaExtractedContributors() = runTest {
+        val harness = createHarness()
+        val levoSnapshot = LevoVarioSectionSnapshot(
+            macCready = 1.6,
+            macCreadyRisk = 1.2,
+            autoMcEnabled = false,
+            teCompensationEnabled = true,
+            showWindSpeedOnVario = false,
+            showHawkCard = true,
+            enableHawkUi = true,
+            audioEnabled = false,
+            audioVolume = 0.33f,
+            audioLiftThreshold = 0.8,
+            audioSinkSilenceThreshold = -1.5,
+            audioDutyCycle = 0.55,
+            audioDeadbandMin = -0.1,
+            audioDeadbandMax = 0.2,
+            hawkNeedleOmegaMinHz = 1.1,
+            hawkNeedleOmegaMaxHz = 2.4,
+            hawkNeedleTargetTauSec = 0.9,
+            hawkNeedleDriftTauMinSec = 4.0,
+            hawkNeedleDriftTauMaxSec = 9.0
+        )
+        val thermallingSnapshot = ThermallingModeSectionSnapshot(
+            enabled = false,
+            switchToThermalMode = true,
+            zoomOnlyFallbackWhenThermalHidden = true,
+            enterDelaySeconds = 9,
+            exitDelaySeconds = 14,
+            applyZoomOnEnter = false,
+            thermalZoomLevel = 12.5f,
+            rememberManualThermalZoomInSession = false,
+            restorePreviousModeOnExit = true,
+            restorePreviousZoomOnExit = false
+        )
+        val windSnapshot = WindOverrideSectionSnapshot(
+            manualOverride = ManualWindOverrideSnapshot(
+                speedMs = 8.5,
+                directionFromDeg = 210.0,
+                timestampMillis = 55_000L,
+                source = "MANUAL"
+            )
+        )
+        val snapshot = ProfileSettingsSnapshot(
+            sections = mapOf(
+                ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES to gson.toJsonTree(levoSnapshot),
+                ProfileSettingsSectionIds.THERMALLING_MODE_PREFERENCES to
+                    gson.toJsonTree(thermallingSnapshot),
+                ProfileSettingsSectionIds.WIND_OVERRIDE_PREFERENCES to gson.toJsonTree(windSnapshot)
+            )
+        )
+
+        val result = harness.applier.apply(
+            settingsSnapshot = snapshot,
+            importedProfileIdMap = emptyMap()
+        )
+
+        assertTrue(result.failedSections.isEmpty())
+        assertEquals(
+            listOf(
+                ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES,
+                ProfileSettingsSectionIds.THERMALLING_MODE_PREFERENCES,
+                ProfileSettingsSectionIds.WIND_OVERRIDE_PREFERENCES
+            ),
+            result.appliedSections.toList()
+        )
+        verify(harness.levoVarioPreferencesRepository).setMacCready(levoSnapshot.macCready)
+        verify(harness.levoVarioPreferencesRepository).setMacCreadyRisk(levoSnapshot.macCreadyRisk)
+        verify(harness.levoVarioPreferencesRepository).setAutoMcEnabled(levoSnapshot.autoMcEnabled)
+        verify(harness.levoVarioPreferencesRepository)
+            .setTeCompensationEnabled(levoSnapshot.teCompensationEnabled)
+        verify(harness.levoVarioPreferencesRepository)
+            .setShowWindSpeedOnVario(levoSnapshot.showWindSpeedOnVario)
+        verify(harness.levoVarioPreferencesRepository).setShowHawkCard(levoSnapshot.showHawkCard)
+        verify(harness.levoVarioPreferencesRepository).setEnableHawkUi(levoSnapshot.enableHawkUi)
+        verify(harness.levoVarioPreferencesRepository)
+            .setHawkNeedleOmegaMinHz(levoSnapshot.hawkNeedleOmegaMinHz)
+        verify(harness.levoVarioPreferencesRepository)
+            .setHawkNeedleOmegaMaxHz(levoSnapshot.hawkNeedleOmegaMaxHz)
+        verify(harness.levoVarioPreferencesRepository)
+            .setHawkNeedleTargetTauSec(levoSnapshot.hawkNeedleTargetTauSec)
+        verify(harness.levoVarioPreferencesRepository)
+            .setHawkNeedleDriftTauMinSec(levoSnapshot.hawkNeedleDriftTauMinSec)
+        verify(harness.levoVarioPreferencesRepository)
+            .setHawkNeedleDriftTauMaxSec(levoSnapshot.hawkNeedleDriftTauMaxSec)
+        verify(harness.levoVarioPreferencesRepository).updateAudioSettings(any())
+
+        verify(harness.thermallingModePreferencesRepository).setEnabled(thermallingSnapshot.enabled)
+        verify(harness.thermallingModePreferencesRepository)
+            .setSwitchToThermalMode(thermallingSnapshot.switchToThermalMode)
+        verify(harness.thermallingModePreferencesRepository).setZoomOnlyFallbackWhenThermalHidden(
+            thermallingSnapshot.zoomOnlyFallbackWhenThermalHidden
+        )
+        verify(harness.thermallingModePreferencesRepository)
+            .setEnterDelaySeconds(thermallingSnapshot.enterDelaySeconds)
+        verify(harness.thermallingModePreferencesRepository)
+            .setExitDelaySeconds(thermallingSnapshot.exitDelaySeconds)
+        verify(harness.thermallingModePreferencesRepository)
+            .setApplyZoomOnEnter(thermallingSnapshot.applyZoomOnEnter)
+        verify(harness.thermallingModePreferencesRepository)
+            .setThermalZoomLevel(thermallingSnapshot.thermalZoomLevel)
+        verify(harness.thermallingModePreferencesRepository)
+            .setRememberManualThermalZoomInSession(
+                thermallingSnapshot.rememberManualThermalZoomInSession
+            )
+        verify(harness.thermallingModePreferencesRepository)
+            .setRestorePreviousModeOnExit(thermallingSnapshot.restorePreviousModeOnExit)
+        verify(harness.thermallingModePreferencesRepository)
+            .setRestorePreviousZoomOnExit(thermallingSnapshot.restorePreviousZoomOnExit)
+
+        verify(harness.windOverrideRepository).setManualWind(
+            speedMs = windSnapshot.manualOverride!!.speedMs,
+            directionFromDeg = windSnapshot.manualOverride.directionFromDeg,
+            timestampMillis = windSnapshot.manualOverride.timestampMillis
+        )
     }
 }

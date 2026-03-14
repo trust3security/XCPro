@@ -12,7 +12,9 @@ class AircraftProfileFileNamesTest {
             id = "hang-1",
             name = "Weekend Wing",
             aircraftType = AircraftType.HANG_GLIDER,
-            aircraftModel = "Moyes Litespeed RS"
+            aircraftModel = "Moyes Litespeed RS",
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
 
         val fileName = AircraftProfileFileNames.buildExportFileName(

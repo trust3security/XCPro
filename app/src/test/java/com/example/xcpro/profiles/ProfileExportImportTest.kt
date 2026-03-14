@@ -14,15 +14,20 @@ class ProfileExportImportTest {
         val pilot = UserProfile(
             id = "pilot-1",
             name = "Pilot 1",
-            aircraftType = AircraftType.SAILPLANE
+            aircraftType = AircraftType.SAILPLANE,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
         val defaultProfile = UserProfile(
             id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
             name = "Default",
-            aircraftType = AircraftType.PARAGLIDER
+            aircraftType = AircraftType.PARAGLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
         val json = ProfileBundleCodec.serialize(
             ProfileBundleDocument(
+                exportedAtWallMs = 123_456L,
                 activeProfileId = pilot.id,
                 profiles = listOf(defaultProfile, pilot),
                 settings = ProfileSettingsSnapshot(
@@ -39,7 +44,7 @@ class ProfileExportImportTest {
         assertEquals(pilot.id, parsed.activeProfileId)
         assertEquals(2, parsed.profiles.size)
         assertEquals("2.0", parsed.schemaVersion)
-        assertTrue(parsed.exportedAtWallMs != null)
+        assertEquals(123_456L, parsed.exportedAtWallMs)
         assertTrue(
             parsed.settingsSnapshot.sections.containsKey(ProfileSettingsSectionIds.CARD_PREFERENCES)
         )
@@ -50,6 +55,7 @@ class ProfileExportImportTest {
         val bundleJson = """
             {
               "version": "2.0",
+              "exportedAtWallMs": 123456,
               "activeProfileId": "pilot-1",
               "profiles": [
                 {
@@ -73,6 +79,7 @@ class ProfileExportImportTest {
         assertEquals("pilot-1", parsed.activeProfileId)
         assertEquals(1, parsed.profiles.size)
         assertEquals("pilot-1", parsed.profiles.first().id)
+        assertEquals(123_456L, parsed.exportedAtWallMs)
         assertNotNull(parsed.settingsSnapshot.sections[ProfileSettingsSectionIds.CARD_PREFERENCES])
     }
 
@@ -229,6 +236,7 @@ class ProfileExportImportTest {
         val json = """
             {
               "version": "1.5",
+              "exportedAtWallMs": 123456,
               "activeProfileId": "pilot-legacy",
               "profiles": [
                 {

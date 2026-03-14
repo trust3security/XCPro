@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import androidx.lifecycle.Lifecycle
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.replay.Selection
 import com.example.xcpro.replay.SessionState
@@ -17,7 +16,7 @@ class MapLifecycleManagerResumeSyncTest {
 
     @Test
     fun onResume_restartsSensors_andForcesImmediateDisplayFrameSync() {
-        val locationManager: LocationManager = mock()
+        val locationManager: MapLocationRuntimePort = mock()
         val manager = createLifecycleManager(
             locationManager = locationManager,
             replayState = SessionState()
@@ -31,7 +30,7 @@ class MapLifecycleManagerResumeSyncTest {
 
     @Test
     fun syncCurrentOwnerState_resumed_restartsSensors_withoutDisplayFrameSideEffect() {
-        val locationManager: LocationManager = mock()
+        val locationManager: MapLocationRuntimePort = mock()
         val manager = createLifecycleManager(
             locationManager = locationManager,
             replayState = SessionState()
@@ -45,7 +44,7 @@ class MapLifecycleManagerResumeSyncTest {
 
     @Test
     fun syncCurrentOwnerState_sameState_isIdempotent() {
-        val locationManager: LocationManager = mock()
+        val locationManager: MapLocationRuntimePort = mock()
         val manager = createLifecycleManager(
             locationManager = locationManager,
             replayState = SessionState()
@@ -60,7 +59,7 @@ class MapLifecycleManagerResumeSyncTest {
 
     @Test
     fun onResume_withActiveReplay_skipsSensorRestart_butStillForcesDisplayFrameSync() {
-        val locationManager: LocationManager = mock()
+        val locationManager: MapLocationRuntimePort = mock()
         val replayState = SessionState(
             selection = Selection(
                 document = DocumentRef(uri = "content://replay/test.igc")
@@ -79,15 +78,15 @@ class MapLifecycleManagerResumeSyncTest {
     }
 
     private fun createLifecycleManager(
-        locationManager: LocationManager,
+        locationManager: MapLocationRuntimePort,
         replayState: SessionState
     ): MapLifecycleManager {
         return MapLifecycleManager(
-            mapState = MapScreenState(),
-            orientationManager = mock<MapOrientationManager>(),
+            lifecycleSurface = mock<MapLifecycleSurfacePort>(),
+            orientationManager = mock<MapOrientationRuntimePort>(),
             locationManager = locationManager,
-            replaySessionState = MutableStateFlow(replayState),
-            stateActions = mock<MapStateActions>()
+            locationRenderFrameCleanup = mock<MapRenderFrameCleanupPort>(),
+            replaySessionState = MutableStateFlow(replayState)
         )
     }
 }

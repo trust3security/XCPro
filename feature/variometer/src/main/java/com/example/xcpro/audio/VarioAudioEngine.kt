@@ -1,8 +1,9 @@
 package com.example.xcpro.audio
 
 import android.content.Context
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.TimeBridge
+import java.util.Locale
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,7 +71,6 @@ class VarioAudioEngine(
 
     // Statistics
     private var audioUpdatesCount = 0L
-    private var lastLogTime = 0L
 
     /**
      * Initialize the audio engine
@@ -78,13 +78,15 @@ class VarioAudioEngine(
      */
     fun initialize(): Boolean {
         if (isInitialized && toneGenerator.isReady()) {
-            Log.w(TAG, "Already initialized")
+            AppLogger.d(TAG, "Initialize ignored; engine already ready")
             return true
         }
 
         try {
             if (isInitialized && !toneGenerator.isReady()) {
-                Log.w(TAG, "Tone generator lost readiness; reinitializing")
+                if (AppLogger.rateLimit(TAG, "tone_generator_reinit", 5_000L)) {
+                    AppLogger.w(TAG, "Tone generator lost readiness; reinitializing audio engine")
+                }
                 cleanupForReinit()
             } else if (!isInitialized && this::beepController.isInitialized) {
                 // A previous init attempt partially succeeded; clean it up before retrying.
@@ -92,7 +94,7 @@ class VarioAudioEngine(
             }
             // Initialize tone generator
             if (!toneGenerator.initialize()) {
-                Log.e(TAG, "Failed to initialize tone generator")
+                AppLogger.e(TAG, "Failed to initialize tone generator")
                 return false
             }
 
@@ -106,11 +108,11 @@ class VarioAudioEngine(
             toneGenerator.setVolume(_settings.value.volume)
 
             isInitialized = true
-            Log.i(TAG, "Audio engine initialized")
+            AppLogger.i(TAG, "Audio engine initialized")
             return true
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize audio engine", e)
+            AppLogger.e(TAG, "Failed to initialize audio engine", e)
             return false
         }
     }
@@ -121,35 +123,39 @@ class VarioAudioEngine(
      */
     fun start() {
         if (isStarted) {
-            Log.w(TAG, "Already started")
+            AppLogger.d(TAG, "Start ignored; audio engine already started")
             return
         }
 
         if (!_isEnabled.value) {
-            Log.i(TAG, "Audio engine disabled, not starting")
+            AppLogger.d(TAG, "Start skipped; audio engine disabled")
             return
         }
 
         try {
             if (!isInitialized && !initialize()) {
-                Log.w(TAG, "Start requested but initialization failed")
+                AppLogger.w(TAG, "Start requested but initialization failed")
                 return
             }
             val focusGranted = audioFocusManager.requestFocus()
             if (!focusGranted) {
-                Log.w(TAG, "Audio focus not granted; will retry on updates")
+                if (AppLogger.rateLimit(TAG, "focus_not_granted", 5_000L)) {
+                    AppLogger.w(TAG, "Audio focus not granted; will retry on updates")
+                }
                 return
             }
             val started = beepController.start()
             isStarted = started
             if (started) {
-                Log.i(TAG, "Audio engine started")
+                AppLogger.i(TAG, "Audio engine started")
             } else {
-                Log.w(TAG, "Audio engine start failed; will retry on updates")
+                if (AppLogger.rateLimit(TAG, "start_failed", 5_000L)) {
+                    AppLogger.w(TAG, "Audio engine start failed; will retry on updates")
+                }
                 audioFocusManager.abandonFocus()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start audio engine", e)
+            AppLogger.e(TAG, "Failed to start audio engine", e)
             audioFocusManager.abandonFocus()
             isStarted = false
         }
@@ -170,9 +176,9 @@ class VarioAudioEngine(
             }
             isStarted = false
             audioFocusManager.abandonFocus()
-            Log.i(TAG, "Audio engine stopped")
+            AppLogger.i(TAG, "Audio engine stopped")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to stop audio engine", e)
+            AppLogger.e(TAG, "Failed to stop audio engine", e)
         }
     }
 
@@ -205,14 +211,18 @@ class VarioAudioEngine(
             return false
         }
         if (isInitialized && !toneGenerator.isReady()) {
-            Log.w(TAG, "Tone generator not ready; resetting audio engine")
+            if (AppLogger.rateLimit(TAG, "tone_generator_not_ready", 5_000L)) {
+                AppLogger.w(TAG, "Tone generator not ready; resetting audio engine")
+            }
             cleanupForReinit()
         }
         if (isInitialized && isStarted && audioFocusManager.hasFocus()) {
             return true
         }
         if (isInitialized && isStarted && !audioFocusManager.hasFocus()) {
-            Log.w(TAG, "Audio focus lost; stopping beep controller")
+            if (AppLogger.rateLimit(TAG, "focus_lost", 5_000L)) {
+                AppLogger.w(TAG, "Audio focus lost; stopping beep controller")
+            }
             if (this::beepController.isInitialized) {
                 beepController.stop()
             }
@@ -226,7 +236,9 @@ class VarioAudioEngine(
         if (ready) {
             ensureAttemptCount = 0
         } else {
-            Log.w(TAG, "Audio ensure attempt $ensureAttemptCount failed")
+            if (AppLogger.rateLimit(TAG, "ensure_failed", 5_000L)) {
+                AppLogger.w(TAG, "Audio ensure attempt $ensureAttemptCount failed")
+            }
         }
         return ready
     }
@@ -253,7 +265,9 @@ class VarioAudioEngine(
             audioUpdatesCount++
             logStatistics(verticalSpeedMs, audioParams)
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating vertical speed", e)
+            if (AppLogger.rateLimit(TAG, "update_vertical_speed_error", 2_000L)) {
+                AppLogger.e(TAG, "Error updating vertical speed", e)
+            }
         }
     }
 
@@ -275,7 +289,9 @@ class VarioAudioEngine(
             _currentMode.value = AudioMode.SILENCE
             _currentFrequency.value = 0.0
         } catch (e: Exception) {
-            Log.e(TAG, "Error setting silence", e)
+            if (AppLogger.rateLimit(TAG, "set_silence_error", 2_000L)) {
+                AppLogger.e(TAG, "Error setting silence", e)
+            }
         }
     }
 
@@ -304,7 +320,7 @@ class VarioAudioEngine(
             stop()
         }
 
-        Log.i(TAG, "Settings updated (enabled: ${newSettings.enabled})")
+        AppLogger.d(TAG, "Settings updated (enabled=${newSettings.enabled})")
     }
 
     /**
@@ -365,9 +381,9 @@ class VarioAudioEngine(
             lastEnsureAttemptElapsedMs = 0L
             _currentMode.value = AudioMode.SILENCE
             _currentFrequency.value = 0.0
-            Log.i(TAG, "Audio engine released (total updates: $audioUpdatesCount)")
+            AppLogger.i(TAG, "Audio engine released (total updates=$audioUpdatesCount)")
         } catch (e: Exception) {
-            Log.e(TAG, "Error releasing audio engine", e)
+            AppLogger.e(TAG, "Error releasing audio engine", e)
         }
     }
 
@@ -375,14 +391,11 @@ class VarioAudioEngine(
      * Log statistics periodically (every 10 seconds)
      */
     private fun logStatistics(vs: Double, params: AudioParams) {
-        val currentTime = TimeBridge.nowWallMs()
-
-        if (currentTime - lastLogTime > 10000) {
-            Log.d(TAG, "Audio stats: V/S=${String.format("%.2f", vs)}m/s, " +
-                    "Freq=${String.format("%.0f", params.frequencyHz)}Hz, " +
-                    "Mode=${params.mode}, " +
-                    "Updates=$audioUpdatesCount")
-            lastLogTime = currentTime
+        AppLogger.dRateLimited(TAG, "audio_stats", 10_000L) {
+            "Audio stats: V/S=${String.format(Locale.US, "%.2f", vs)}m/s, " +
+                "Freq=${String.format(Locale.US, "%.0f", params.frequencyHz)}Hz, " +
+                "Mode=${params.mode}, " +
+                "Updates=$audioUpdatesCount"
         }
     }
 }

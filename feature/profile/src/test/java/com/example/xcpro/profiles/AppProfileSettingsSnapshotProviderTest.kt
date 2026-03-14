@@ -3,6 +3,8 @@ package com.example.xcpro.profiles
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
+import com.example.dfcards.profiles.CardProfileSettingsContributor
+import com.example.xcpro.adsb.AdsbTrafficProfileSettingsContributor
 import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.units.AltitudeUnit
@@ -10,6 +12,7 @@ import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.flightdata.FlightMgmtPreferencesRepository
+import com.example.xcpro.forecast.ForecastProfileSettingsContributor
 import com.example.xcpro.forecast.ForecastPreferences
 import com.example.xcpro.forecast.ForecastPreferencesRepository
 import com.example.xcpro.glider.GliderProfileSnapshot
@@ -26,7 +29,9 @@ import com.example.xcpro.map.trail.TrailType
 import com.example.xcpro.map.widgets.MapWidgetLayoutRepository
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
+import com.example.xcpro.ogn.OgnTrailSelectionProfileSettingsContributor
 import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
+import com.example.xcpro.ogn.OgnTrafficProfileSettingsContributor
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
@@ -35,11 +40,14 @@ import com.example.xcpro.ui.theme.ThemePreferencesRepository
 import com.example.xcpro.vario.LevoVarioConfig
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.variometer.layout.VariometerLayout
+import com.example.xcpro.variometer.layout.VariometerWidgetProfileSettingsContributor
 import com.example.xcpro.variometer.layout.VariometerWidgetRepository
+import com.example.xcpro.weather.rain.WeatherOverlayProfileSettingsContributor
 import com.example.xcpro.weather.rain.WeatherOverlayPreferences
 import com.example.xcpro.weather.rain.WeatherOverlayPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindOverrideRepository
 import com.google.gson.Gson
+import dagger.Lazy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -269,27 +277,85 @@ class AppProfileSettingsSnapshotProviderTest {
         val windOverride = mock<WindOverrideRepository>()
         whenever(windOverride.manualWind).thenReturn(MutableStateFlow(null))
 
+        lateinit var contributorRegistry: ProfileSettingsContributorRegistry
+        val contributorRegistryLazy = object : Lazy<ProfileSettingsContributorRegistry> {
+            override fun get(): ProfileSettingsContributorRegistry = contributorRegistry
+        }
+
         val provider = AppProfileSettingsSnapshotProvider(
-            cardPreferences = cardPreferences,
-            flightMgmtPreferencesRepository = flightMgmtPreferences,
-            lookAndFeelPreferences = lookAndFeelPreferences,
-            themePreferencesRepository = themePreferences,
-            mapWidgetLayoutRepository = mapWidgetLayout,
-            variometerWidgetRepository = variometerWidget,
-            gliderRepository = gliderRepository,
-            unitsRepository = unitsRepository,
-            mapStyleRepository = mapStyleRepository,
-            mapTrailPreferences = mapTrailPreferences,
-            qnhPreferencesRepository = qnhPreferencesRepository,
-            orientationSettingsRepository = orientationSettingsRepository,
-            levoVarioPreferencesRepository = levoVario,
-            thermallingModePreferencesRepository = thermalling,
-            ognTrafficPreferencesRepository = ognTraffic,
-            ognTrailSelectionPreferencesRepository = ognTrailSelection,
-            adsbTrafficPreferencesRepository = adsbTraffic,
-            weatherOverlayPreferencesRepository = weatherOverlay,
-            forecastPreferencesRepository = forecast,
-            windOverrideRepository = windOverride
+            contributorRegistry = contributorRegistryLazy
+        )
+        val cardContributor = CardProfileSettingsContributor(cardPreferences)
+        val flightMgmtContributor = FlightMgmtProfileSettingsContributor(flightMgmtPreferences)
+        val lookAndFeelContributor = LookAndFeelProfileSettingsContributor(lookAndFeelPreferences)
+        val themeContributor = ThemeProfileSettingsContributor(themePreferences)
+        val qnhContributor = QnhProfileSettingsContributor(qnhPreferencesRepository)
+        val mapStyleContributor = MapStyleProfileSettingsContributor(mapStyleRepository)
+        val snailTrailContributor = SnailTrailProfileSettingsContributor(mapTrailPreferences)
+        val mapWidgetLayoutContributor = MapWidgetLayoutProfileSettingsContributor(mapWidgetLayout)
+        val variometerWidgetContributor = VariometerWidgetProfileSettingsContributor(
+            variometerWidget
+        )
+        val ognTrafficContributor = OgnTrafficProfileSettingsContributor(ognTraffic)
+        val ognTrailSelectionContributor = OgnTrailSelectionProfileSettingsContributor(
+            ognTrailSelection
+        )
+        val adsbTrafficContributor = AdsbTrafficProfileSettingsContributor(adsbTraffic)
+        val weatherOverlayContributor = WeatherOverlayProfileSettingsContributor(weatherOverlay)
+        val forecastContributor = ForecastProfileSettingsContributor(forecast)
+        val unitsContributor = UnitsProfileSettingsContributor(unitsRepository)
+        val orientationContributor = OrientationProfileSettingsContributor(
+            orientationSettingsRepository
+        )
+        val gliderContributor = GliderConfigProfileSettingsContributor(gliderRepository)
+        val levoVarioContributor = LevoVarioProfileSettingsContributor(levoVario)
+        val thermallingContributor = ThermallingModeProfileSettingsContributor(thermalling)
+        val windOverrideContributor = WindOverrideProfileSettingsContributor(windOverride)
+        contributorRegistry = ProfileSettingsContributorRegistry(
+            captureContributors = setOf(
+                cardContributor,
+                flightMgmtContributor,
+                lookAndFeelContributor,
+                themeContributor,
+                qnhContributor,
+                mapStyleContributor,
+                snailTrailContributor,
+                mapWidgetLayoutContributor,
+                variometerWidgetContributor,
+                ognTrafficContributor,
+                ognTrailSelectionContributor,
+                adsbTrafficContributor,
+                weatherOverlayContributor,
+                forecastContributor,
+                unitsContributor,
+                orientationContributor,
+                gliderContributor,
+                levoVarioContributor,
+                thermallingContributor,
+                windOverrideContributor
+            ),
+            applyContributors = setOf(
+                cardContributor,
+                flightMgmtContributor,
+                lookAndFeelContributor,
+                themeContributor,
+                qnhContributor,
+                mapStyleContributor,
+                snailTrailContributor,
+                mapWidgetLayoutContributor,
+                variometerWidgetContributor,
+                ognTrafficContributor,
+                ognTrailSelectionContributor,
+                adsbTrafficContributor,
+                weatherOverlayContributor,
+                forecastContributor,
+                unitsContributor,
+                orientationContributor,
+                gliderContributor,
+                levoVarioContributor,
+                thermallingContributor,
+                windOverrideContributor
+            )
         )
 
         val snapshot = provider.buildSnapshot(
@@ -297,6 +363,10 @@ class AppProfileSettingsSnapshotProviderTest {
             sectionIds = ProfileSettingsSectionSets.AIRCRAFT_PROFILE_SECTION_IDS
         )
 
+        assertEquals(
+            ProfileSettingsSectionSets.AIRCRAFT_PROFILE_SECTION_ORDER,
+            snapshot.sections.keys.toList()
+        )
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.CARD_PREFERENCES))
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES))
         assertTrue(snapshot.sections.keys.contains(ProfileSettingsSectionIds.LOOK_AND_FEEL_PREFERENCES))

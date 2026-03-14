@@ -2,7 +2,6 @@
 
 package com.example.xcpro.map.ui.widgets
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -103,9 +102,6 @@ internal fun SideHamburgerMenuContent(
             .pointerInput(isEditMode, screenWidthPx, screenHeightPx) {
                 if (isEditMode) {
                     detectDragGestures(
-                        onDragStart = {
-                            Log.d("MapUIWidgetManager", "Hamburger drag started from ${displayOffset.value}")
-                        },
                         onDrag = { change, dragAmount ->
                             displayOffset.value = Offset(
                                 x = (displayOffset.value.x + dragAmount.x).coerceIn(
@@ -119,10 +115,7 @@ internal fun SideHamburgerMenuContent(
                             )
                             change.consumePositionChange()
                         },
-                        onDragEnd = {
-                            Log.d("MapUIWidgetManager", "Hamburger drag ended at ${displayOffset.value}")
-                            onOffsetChange(displayOffset.value)
-                        }
+                        onDragEnd = { onOffsetChange(displayOffset.value) }
                     )
                 }
             },

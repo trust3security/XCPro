@@ -317,6 +317,23 @@ if ($runArchitectureRules) {
         "--glob", "!feature/map/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt"
     )
     Assert-NoMatches -Name "Direct task render-router calls outside sync coordinator owner" -RgArgs $taskRenderRouterBypassArgs
+
+    # 15A) Profile settings boundary: migrated owner-module packages must not leak back into the profile switchboards.
+    $profileSettingsSwitchboardOwnerImportArgs = @(
+        "-n",
+        "com\.example\.xcpro\.(forecast\.|weather\.|ogn\.|adsb\.|variometer\.layout\.)",
+        "--glob", "feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt",
+        "--glob", "feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt"
+    )
+    Assert-NoMatches -Name "Profile settings switchboards importing migrated owner-module packages" -RgArgs $profileSettingsSwitchboardOwnerImportArgs
+
+    # 15B) Profile settings boundary: migrated owner modules must not return as production dependencies of feature:profile.
+    $profileBuildDependencyArgs = @(
+        "-n",
+        '(implementation|api)\s*\(\s*project\(":feature:(forecast|traffic|weather)"\)\s*\)',
+        "--glob", "feature/profile/build.gradle.kts"
+    )
+    Assert-NoMatches -Name "feature:profile production dependencies on migrated owner modules" -RgArgs $profileBuildDependencyArgs
 }
 
 if ($runHygieneRules) {
@@ -349,7 +366,7 @@ if ($runArchitectureRules) {
         "-n",
         "(mutableStateOf\(|derivedStateOf\()",
         "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapModalManager.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt",
+        "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt",
         "--glob", "feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt",
         "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt",
         "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATEditModeState.kt",
@@ -513,7 +530,7 @@ $aatGestureRadiusKmContractArgs = @(
     "--glob", "feature/tasks/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt",
     "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt",
     "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt"
+    "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt"
 )
 Assert-NoMatches -Name "#18 guard: km-based AAT gesture/camera radius contracts reintroduced" -RgArgs $aatGestureRadiusKmContractArgs
 
@@ -711,10 +728,50 @@ Assert-NoMatches -Name "Phase-6 guard: BORDER transition blanket-drop reintroduc
 if ($runLineBudgetRules) {
     # Line-budget rules.
 
-    # 33) Maintainability size budget for map/task hotspots.
+    # 33) Global default Kotlin line budget.
+    $globalDefaultLineBudgetExceptionPaths = @(
+        # Keep synchronized with active time-boxed exceptions in
+        # docs/ARCHITECTURE/KNOWN_DEVIATIONS.md.
+        "app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt",
+        "dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt",
+        "feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt",
+        "feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt",
+        "feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt",
+        "feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt"
+    )
+    $globalDefaultLineBudgetExceptionSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($exceptionPath in $globalDefaultLineBudgetExceptionPaths) {
+        [void]$globalDefaultLineBudgetExceptionSet.Add($exceptionPath.Replace('\', '/'))
+    }
+    $globalKotlinFileArgs = @(
+        "--files",
+        "--glob", "*.kt",
+        "--glob", "!**/build/**",
+        "--glob", "!**/.gradle/**"
+    )
+    $globalKotlinFiles = Invoke-Rg -RgArgs $globalKotlinFileArgs
+    if ($globalKotlinFiles.Code -gt 1) {
+        $details = ($globalKotlinFiles.ErrorOutput -join "; ")
+        throw "rg failed while collecting Kotlin files for the global line budget (exit $($globalKotlinFiles.Code)). $details"
+    }
+    foreach ($filePath in @($globalKotlinFiles.Output | Sort-Object -Unique)) {
+        if (-not $filePath) {
+            continue
+        }
+        $normalizedPath = $filePath.Replace('\', '/')
+        if ($globalDefaultLineBudgetExceptionSet.Contains($normalizedPath)) {
+            continue
+        }
+        Assert-MaxLines `
+            -Name "Global default Kotlin line budget: $normalizedPath" `
+            -FilePath $normalizedPath `
+            -MaxLines 500
+    }
+
+    # 34) Maintainability size budget for map/task hotspots.
     Assert-MaxLines `
     -Name "MapCameraManager line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "MapScreenReplayCoordinator line budget" `
@@ -758,7 +815,7 @@ Assert-MaxLines `
     -MaxLines 120
 Assert-MaxLines `
     -Name "LocationManager line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/LocationManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "FlightDataManager line budget" `
@@ -1001,7 +1058,7 @@ Assert-MaxLines `
     -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/turnpoints/KeyholeShapeSupport.kt" `
     -MaxLines 350
 
-    # 34) Top-20 hotspot line budgets (RULES-20260302-LINEBUDGET500).
+    # 35) Top-20 hotspot line budgets (RULES-20260302-LINEBUDGET500).
     Assert-MaxLines `
     -Name "Top20: AdsbTrafficRepositoryTest line budget" `
     -FilePath "feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt" `

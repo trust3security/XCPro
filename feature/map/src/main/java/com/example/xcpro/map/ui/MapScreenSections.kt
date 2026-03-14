@@ -19,7 +19,7 @@ import com.example.xcpro.tasks.TaskMapOverlay
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.map.LocationManager
+import com.example.xcpro.map.MapLocationRenderFrameBinder
 import com.example.xcpro.map.MapOverlayManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
@@ -36,7 +36,7 @@ fun MapMainLayers(
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     onMapViewBound: () -> Unit,
-    locationManager: LocationManager,
+    locationRenderFrameBinder: MapLocationRenderFrameBinder,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     overlayManager: MapOverlayManager,
@@ -55,7 +55,7 @@ fun MapMainLayers(
             mapInitializer = mapInitializer,
             onMapReady = onMapReady,
             onMapViewBound = onMapViewBound,
-            locationManager = locationManager
+            locationRenderFrameBinder = locationRenderFrameBinder
         )
 
         CardGridLayer(
@@ -199,7 +199,7 @@ private fun MapViewHost(
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     onMapViewBound: () -> Unit,
-    locationManager: LocationManager,
+    locationRenderFrameBinder: MapLocationRenderFrameBinder,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -209,7 +209,7 @@ private fun MapViewHost(
         factory = { ctx ->
             MapView(ctx).apply {
                 mapState.mapView = this
-                locationManager.bindRenderFrameListener(this)
+                locationRenderFrameBinder.bindRenderFrameListener(this)
                 onMapViewBound()
                 getMapAsync { map: MapLibreMap ->
                     if (!scope.isActive) {
@@ -241,7 +241,7 @@ private fun MapViewHost(
         update = { view ->
             val mapViewChanged = mapState.mapView !== view
             mapState.mapView = view
-            locationManager.bindRenderFrameListener(view)
+            locationRenderFrameBinder.bindRenderFrameListener(view)
             if (mapViewChanged) {
                 onMapViewBound()
             }

@@ -23,7 +23,9 @@ Read these in order before making changes:
   - `../MAPSCREEN/01_MAPSCREEN_PRODUCTION_GRADE_PHASED_IP_2026-03-05.md`
   - `../MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`
   - `../MAPSCREEN/04_TEST_VALIDATION_AND_ROLLBACK_2026-03-05.md`
-- If touching Levo vario or replay, also read `../LevoVario/levo.md`
+- If touching Levo vario or replay, also read:
+  - `../LEVO/levo.md`
+  - `../LEVO/levo-replay.md`
 - `CONTRIBUTING.md` - workflow, branching, PR rules, testing expectations, and AI usage
 AI/agents: read the first three files in order before edits; include Levo docs when applicable.
 
@@ -47,10 +49,19 @@ A change is ready when:
 - [ ] `./gradlew enforceRules` passes (architecture/coding rule enforcement).
 - [ ] Quality rescore included in PR description (see `docs/ARCHITECTURE/AGENT.md` -> Quality Rescore).
 - [ ] **Rationale comments** are present for non-obvious decisions (`// AI-NOTE:` markers encouraged).
-- [ ] Levo pipeline changes are documented in `../LevoVario/levo.md` and any
+- [ ] ADR added or updated for non-trivial ownership, module-boundary, API-surface, or concurrency-policy decisions.
+- [ ] New or changed authoritative/derived state has an explicit contract (owner, mutator, reset, persistence/time-base impact) in the plan or ADR.
+- [ ] New long-lived `CoroutineScope(...)` owners have explicit lifetime/cancellation rationale in the plan.
+- [ ] New compatibility shims/bridges declare owner, reason, removal trigger, and test coverage.
+- [ ] New shared formulas/constants/policies name a canonical owner instead of creating undocumented duplicates.
+- [ ] New Kotlin `object` or singleton-like holders are stateless or explicitly documented as non-authoritative infrastructure state.
+- [ ] New IDs/timestamps are created at explicit owner boundaries, not hidden in model defaults without rationale.
+- [ ] New `NoOp` or convenience-constructor paths are narrow, documented, and safe for production behavior.
+- [ ] Levo pipeline changes are documented in `../LEVO/levo.md` and any
       related architecture/time-base rules are updated.
 - [ ] Unit tests cover use cases; UI/instrumentation tests for gesture/event flow.
-- [ ] **Lint/detekt** pass; **Compose previews** compile.
+- [ ] Active quality gates pass; do not claim `detekt` / `ktlintCheck` unless they are actually configured in this repo.
+- [ ] **Compose previews** compile.
 - [ ] No deprecated APIs; no global mutable state.
 - [ ] Performance budget respected in hot paths (TE->audio <= 50 ms typical).
 - [ ] For map/overlay/replay interaction changes, impacted MapScreen SLOs
@@ -69,6 +80,11 @@ Use this checklist for any task/map refactor before opening a PR.
 - [ ] ViewModels contain no business geospatial policy (distance/radius/zone-entry/auto-advance math).
 - [ ] Non-UI managers/domain classes do not use Compose runtime state (`mutableStateOf`, `derivedStateOf`, `remember`).
 - [ ] Core collaborators are injected; no manager/persistence construction inside coordinators.
+- [ ] New direct `Log.*` calls are justified; prefer `AppLogger` for production Kotlin logging.
+- [ ] New `CoroutineScope(...)` creation has explicit owner and teardown.
+- [ ] Temporary compatibility shims/bridges are tagged with removal conditions.
+- [ ] New `object` usage is not acting as a hidden state owner or service locator.
+- [ ] Duplicate formulas/constants name a canonical owner or a documented temporary divergence reason.
 - [ ] If pipeline wiring changed, `PIPELINE.md` is updated in the same PR.
 - [ ] If map interaction/overlay behavior changed, SLO evidence from
       `docs/MAPSCREEN/02...` + `docs/MAPSCREEN/04...` is attached.
@@ -81,8 +97,11 @@ Use this checklist for any task/map refactor before opening a PR.
 # sync dependencies
 ./gradlew help
 
-# static analysis
-./gradlew detekt ktlintCheck
+# architecture/static analysis
+./gradlew enforceRules
+
+# optional future static-analysis tasks if configured in this branch/repo
+# ./gradlew detekt ktlintCheck
 
 # unit + fast local instrumentation (app module only, keep debug app installed)
 ./gradlew testDebugUnitTest :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
@@ -136,7 +155,7 @@ For Windows test file-lock resilience (`output.bin`/`.lck`), use
 `gradlew` directly:
 ```bat
 gradlew testDebugUnitTest
-gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest"
+gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase*"
 ```
 
 For lock resilience on a failing local test pass, run manual recovery:
@@ -189,6 +208,9 @@ Unit-test hang protection policy:
 - Add/update **KDoc** for public APIs.
 - Add top-of-file header describing role and invariants.
 - Use `// AI-NOTE:` before intent-critical rationale so future AI tools preserve design.
+- Do not duplicate architecture rules in multiple docs with different wording; `ARCHITECTURE.md` owns invariants and `CODING_RULES.md` owns implementation defaults.
+- Use `CHANGE_PLAN_TEMPLATE.md` for non-trivial work and `ADR_TEMPLATE.md` for non-trivial architecture decisions.
+- Keep global docs durable; task-specific "active plan" pointers belong in the change plan, not the global contract docs.
 
 Example:
 ```kotlin
@@ -202,6 +224,8 @@ Example:
 - AI commits must include: a short "why" paragraph in the PR description and inline `AI-NOTE` comments where intent matters.
 - AI must not choose the fastest shortcut if it violates **CODING_RULES.md** or **ARCHITECTURE.md**.
   Prefer correct layering and SSOT compliance over minimal plumbing.
+- AI must not introduce undocumented ownership moves, public APIs, or long-lived compatibility shims; those belong in the plan and ADR.
+- AI must not introduce new hidden scope owners, hidden ID/time generation, or silent `NoOp` production fallbacks without documenting them in the plan.
 - No committing secret keys or personal data. Redact GPS traces unless explicitly enabled in debug config.
 
 ---
@@ -234,7 +258,7 @@ Example:
 1. Fork/clone, create branch `feat/<scope>-<short>`.
 2. Implement per **ARCHITECTURE.md** + **CODING_RULES.md**.
 3. Add tests + `AI-NOTE` comments.
-4. Run `detekt`, `ktlintCheck`, `testDebugUnitTest`, and `:app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`.
+4. Run the configured quality gates plus `testDebugUnitTest`, and run `:app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"` when relevant.
 5. Run full `connectedDebugAndroidTest --no-parallel` before release/merge.
 6. Open PR with a crisp description + screenshots/notes.
 7. Address review feedback and merge once green.

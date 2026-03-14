@@ -8,8 +8,10 @@ import com.example.xcpro.igc.data.IgcFlightLogRepository
 import com.example.xcpro.igc.data.IgcRecoveryMetadataStore
 import com.example.xcpro.igc.data.IgcRecordingRuntimeActionSink
 import com.example.xcpro.igc.data.IgcSessionStateSnapshotStore
+import com.example.xcpro.igc.data.IgcRecoveryDownloadsLookup
 import com.example.xcpro.igc.data.MediaStoreIgcDownloadsRepository
 import com.example.xcpro.igc.data.MediaStoreIgcFlightLogRepository
+import com.example.xcpro.igc.data.MediaStoreIgcRecoveryDownloadsLookup
 import com.example.xcpro.igc.domain.IgcLintValidator
 import com.example.xcpro.igc.domain.StrictIgcLintValidator
 import com.example.xcpro.igc.data.SharedPrefsIgcRecoveryMetadataStore
@@ -48,6 +50,12 @@ abstract class IgcCoreBindingsModule {
     abstract fun bindIgcDownloadsRepository(
         impl: MediaStoreIgcDownloadsRepository
     ): IgcDownloadsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindIgcRecoveryDownloadsLookup(
+        impl: MediaStoreIgcRecoveryDownloadsLookup
+    ): IgcRecoveryDownloadsLookup
 
     @Binds
     @Singleton

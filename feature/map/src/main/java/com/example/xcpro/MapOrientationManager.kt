@@ -2,12 +2,13 @@ package com.example.xcpro
 
 import android.util.Log
 import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.common.orientation.OrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationController
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.orientation.OrientationSensorData
 import com.example.xcpro.map.BuildConfig
+import com.example.xcpro.map.MapOrientationRuntimePort
 import com.example.xcpro.orientation.HeadingJitterLogger
 import com.example.xcpro.orientation.OrientationClock
 import com.example.xcpro.orientation.OrientationEngine
@@ -35,7 +36,7 @@ class MapOrientationManager(
     private val settingsRepository: MapOrientationSettingsRepository,
     private val clock: OrientationClock = SystemOrientationClock(),
     orientationDataSourceOverride: OrientationSensorSource? = null
-) : OrientationController {
+) : OrientationController, MapOrientationRuntimePort {
     private val orientationDataSource =
         orientationDataSourceOverride ?: orientationDataSourceFactory.create(scope)
     private val orientationEngine = OrientationEngine()
@@ -269,7 +270,7 @@ class MapOrientationManager(
         debugLog { "MapOrientationManager stopped" }
     }
 
-    override fun updateFromFlightData(flightData: RealTimeFlightData) {
+    override fun updateFromFlightData(flightData: OrientationFlightDataSnapshot) {
         orientationDataSource.updateFromFlightData(flightData)
     }
 

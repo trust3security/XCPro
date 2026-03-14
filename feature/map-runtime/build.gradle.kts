@@ -37,8 +37,11 @@ dependencies {
     implementation(project(":core:time"))
     implementation(project(":feature:tasks"))
     implementation(project(":feature:forecast"))
+    implementation(project(":feature:igc"))
+    implementation(project(":feature:profile"))
     implementation(project(":feature:weather"))
     implementation(project(":feature:traffic"))
+    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.maplibre.android)
     implementation(libs.hilt.android)
@@ -48,4 +51,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.mockito:mockito-core:5.2.0")
+    testImplementation("org.mockito:mockito-inline:5.2.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.0")
 }

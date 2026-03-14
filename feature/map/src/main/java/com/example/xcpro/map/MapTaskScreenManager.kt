@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.tasks.BottomSheetState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -21,7 +21,7 @@ class MapTaskScreenManager(
     private val coroutineScope: CoroutineScope
 ) {
     companion object {
-        private const val TAG = "MapTaskScreenManager"
+        private const val LOG_TAG = "MapTaskScreenManager"
     }
 
     enum class TaskPanelState {
@@ -53,14 +53,12 @@ class MapTaskScreenManager(
                 handleAddTaskToggle()
             }
         }
-        Log.d(TAG, "Navigation task selection handled: $item")
     }
 
     /**
      * Handle minimized indicator click
      */
     fun handleMinimizedIndicatorClick() {
-        Log.d("TASK_UX", "Setting task panel to EXPANDED_FULL for minimized indicator click")
         showTaskPanel(TaskPanelState.EXPANDED_FULL)
     }
 
@@ -70,7 +68,6 @@ class MapTaskScreenManager(
     fun handleTaskClear() {
         tasksUseCase.clearTask()
         hideTaskPanel()
-        Log.d(TAG, "Task cleared")
     }
 
     /**
@@ -79,7 +76,6 @@ class MapTaskScreenManager(
     fun handleTaskSave() {
         val task = tasksUseCase.currentTaskSnapshot()
         if (task.waypoints.isEmpty()) {
-            Log.d(TAG, "Skip save: task is empty")
             return
         }
 
@@ -90,10 +86,8 @@ class MapTaskScreenManager(
 
         coroutineScope.launch {
             val saved = tasksUseCase.saveTask(saveName)
-            if (saved) {
-                Log.d(TAG, "Task saved as $saveName")
-            } else {
-                Log.e(TAG, "Failed to save task as $saveName")
+            if (!saved) {
+                AppLogger.e(LOG_TAG, "Failed to save task as $saveName")
             }
         }
     }
@@ -113,12 +107,10 @@ class MapTaskScreenManager(
 
     fun showTaskPanel(initialState: TaskPanelState = TaskPanelState.EXPANDED_PARTIAL) {
         _taskPanelState.value = normalizeState(initialState)
-        Log.d(TAG, "Task panel opened at ${_taskPanelState.value}")
     }
 
     fun hideTaskPanel() {
         _taskPanelState.value = TaskPanelState.HIDDEN
-        Log.d(TAG, "Task panel closed")
     }
 
     fun collapseTaskPanel() {
@@ -127,12 +119,10 @@ class MapTaskScreenManager(
         } else {
             TaskPanelState.HIDDEN
         }
-        Log.d(TAG, "Task panel collapsed to ${_taskPanelState.value}")
     }
 
     fun setPanelState(state: TaskPanelState) {
         _taskPanelState.value = normalizeState(state)
-        Log.d(TAG, "Task panel state updated to ${_taskPanelState.value}")
     }
 
     /**
@@ -162,7 +152,6 @@ class MapTaskScreenManager(
             TaskPanelState.EXPANDED_FULL -> TaskPanelState.HIDDEN
         }
         _taskPanelState.value = normalizeState(next)
-        Log.d(TAG, "Add Task toggled panel to ${_taskPanelState.value}")
     }
 
     private fun normalizeState(state: TaskPanelState): TaskPanelState {

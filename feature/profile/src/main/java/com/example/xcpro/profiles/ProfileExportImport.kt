@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.xcpro.core.time.TimeBridge
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -41,12 +40,12 @@ fun ProfileExportDialog(
     profile: UserProfile?,
     onDismiss: () -> Unit,
     onExport: (String) -> Unit,
-    onRequestExportJson: suspend () -> Result<String>
+    onRequestExportBundle: suspend () -> Result<ProfileBundleExportArtifact>
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var isExporting by remember { mutableStateOf(false) }
-    var exportResult by remember { mutableStateOf<Result<String>?>(null) }
+    var exportResult by remember { mutableStateOf<Result<ProfileBundleExportArtifact>?>(null) }
 
     val documentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -54,7 +53,7 @@ fun ProfileExportDialog(
         if (uri != null && exportResult?.isSuccess == true) {
             try {
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(exportResult!!.getOrNull()!!.toByteArray())
+                    outputStream.write(exportResult!!.getOrNull()!!.bundleJson.toByteArray())
                 }
                 onExport(
                     if (profile != null) {
@@ -104,16 +103,12 @@ fun ProfileExportDialog(
                 onClick = {
                     isExporting = true
                     coroutineScope.launch {
-                        val result = onRequestExportJson()
+                        val result = onRequestExportBundle()
                         exportResult = result
                         isExporting = false
-                        if (result.isSuccess) {
-                            documentLauncher.launch(
-                                AircraftProfileFileNames.buildExportFileName(
-                                    profile = profile,
-                                    nowWallMs = TimeBridge.nowWallMs()
-                                )
-                            )
+                        val exportArtifact = result.getOrNull()
+                        if (exportArtifact != null) {
+                            documentLauncher.launch(exportArtifact.suggestedFileName)
                         }
                     }
                 },

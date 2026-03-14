@@ -130,7 +130,11 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
         val selection = "(" +
             "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? OR ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?" +
             ") AND ${MediaStore.Downloads.RELATIVE_PATH} LIKE ?"
-        val selectionArgs = arrayOf("%.IGC", "%.igc", "$DOWNLOAD_RELATIVE_PATH%")
+        val selectionArgs = arrayOf(
+            "%.IGC",
+            "%.igc",
+            "${IgcDownloadsStoragePaths.DOWNLOAD_RELATIVE_PATH}%"
+        )
         val sortOrder = "${MediaStore.Downloads.DATE_MODIFIED} DESC"
 
         val entries = mutableListOf<IgcLogEntry>()
@@ -161,7 +165,7 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
     private fun queryEntriesLegacy(): List<IgcLogEntry> {
         val directory = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            LEGACY_SUBDIR
+            IgcDownloadsStoragePaths.LEGACY_SUBDIR
         )
         if (!directory.exists() || !directory.isDirectory) return emptyList()
         return directory.listFiles()
@@ -231,8 +235,4 @@ class MediaStoreIgcDownloadsRepository @Inject constructor(
         }.getOrNull()
     }
 
-    companion object {
-        const val DOWNLOAD_RELATIVE_PATH = "Download/XCPro/IGC"
-        private const val LEGACY_SUBDIR = "XCPro/IGC"
-    }
 }

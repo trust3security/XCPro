@@ -29,6 +29,8 @@ class BlueLocationOverlay(
         internal const val LAYER_ID = MAP_BLUE_LOCATION_LAYER_ID
         private const val ICON_ID = "aircraft-location-icon"
         internal const val ICON_SIZE_PX = 144 // Bitmap size in pixels (3x larger = 300% increase)
+        private const val LOCATION_EPSILON = 1e-7
+        private const val ROTATION_EPSILON_DEG = 0.05f
     }
 
     private var currentLocation: LatLng? = null
@@ -37,18 +39,24 @@ class BlueLocationOverlay(
     private var currentMapBearing: Double = 0.0
     private var currentOrientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     private var isLayerAdded = false
+    private var boundStyle: Style? = null
+    private var lastRenderedLocation: LatLng? = null
+    private var lastRenderedIconRotation: Float? = null
+    private var lastRenderedVisible: Boolean? = null
     private val verboseLogging = com.example.xcpro.map.BuildConfig.DEBUG
 
     fun initialize() {
         try {
             val style = map.style ?: run {
-                isLayerAdded = false
+                clearRuntimeCache()
                 return
             }
             AppLogger.d(TAG, "Initializing aircraft location overlay")
 
             ensureRuntimeObjects(style)
             isLayerAdded = hasRuntimeObjects(style)
+            boundStyle = if (isLayerAdded) style else null
+            lastRenderedVisible = if (isLayerAdded) true else null
             if (isLayerAdded) {
                 AppLogger.d(TAG, "Sailplane location overlay initialized successfully")
             } else {
@@ -56,7 +64,7 @@ class BlueLocationOverlay(
             }
 
         } catch (e: Exception) {
-            isLayerAdded = false
+            clearRuntimeCache()
             AppLogger.e(TAG, "Error initializing blue location overlay: ${e.message}", e)
         }
     }
@@ -86,34 +94,57 @@ class BlueLocationOverlay(
                 AppLogger.w(TAG, "Invalid coordinates - update skipped")
                 return
             }
-            if (!ensureOverlayReadyForUpdate()) {
-                AppLogger.w(TAG, "Overlay runtime missing, cannot update location")
+
+            val style = map.style ?: run {
+                clearRuntimeCache()
                 return
             }
+            val styleChanged = boundStyle !== style
+            val iconRotation = normalizeAngle(headingDeg - mapBearing).toFloat()
 
-            val previousLocation = currentLocation
-            val deltaMeters = previousLocation?.let { distanceMeters(it, location) }
             currentLocation = location
             currentTrack = gpsTrack
             currentHeadingDeg = headingDeg
             currentMapBearing = mapBearing
             currentOrientationMode = orientationMode
 
-            val style = map.style ?: return
-            val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID)
-            val layer = style.getLayerAs<SymbolLayer>(LAYER_ID)
-            if (source == null || layer == null) {
-                isLayerAdded = false
-                AppLogger.w(TAG, "Overlay source/layer missing after readiness check")
+            if (isSteadyStateNoOp(location, iconRotation, styleChanged)) {
+                return
+            }
+            if (!ensureOverlayReadyForUpdate(style, styleChanged)) {
+                AppLogger.w(TAG, "Overlay runtime missing, cannot update location")
                 return
             }
 
-            val point = Point.fromLngLat(location.longitude, location.latitude)
-            val feature = Feature.fromGeometry(point)
-            source.setGeoJson(feature)
+            val previousLocation = lastRenderedLocation
+            val deltaMeters = previousLocation?.let { distanceMeters(it, location) }
 
-            val iconRotation = normalizeAngle(headingDeg - mapBearing).toFloat()
-            layer.setProperties(iconRotate(iconRotation))
+            var source = style.getSourceAs<GeoJsonSource>(SOURCE_ID)
+            var layer = style.getLayerAs<SymbolLayer>(LAYER_ID)
+            if (source == null || layer == null) {
+                ensureRuntimeObjects(style)
+                source = style.getSourceAs(SOURCE_ID)
+                layer = style.getLayerAs(LAYER_ID)
+            }
+            if (source == null || layer == null) {
+                clearRuntimeCache()
+                AppLogger.w(TAG, "Overlay source/layer missing after recovery attempt")
+                return
+            }
+
+            if (styleChanged || lastRenderedLocation == null || !sameLocation(lastRenderedLocation, location)) {
+                val point = Point.fromLngLat(location.longitude, location.latitude)
+                val feature = Feature.fromGeometry(point)
+                source.setGeoJson(feature)
+                lastRenderedLocation = location
+            }
+            if (styleChanged || !sameRotation(lastRenderedIconRotation, iconRotation)) {
+                layer.setProperties(iconRotate(iconRotation))
+                lastRenderedIconRotation = iconRotation
+            }
+            applyVisibility(layer, visible = true, force = styleChanged)
+            isLayerAdded = true
+            boundStyle = style
 
             if (verboseLogging && AppLogger.rateLimit(TAG, "location_verbose", 1_000L)) {
                 val moveLabel = if (deltaMeters == null) "delta=--" else "delta=${"%.1f".format(deltaMeters)}m"
@@ -175,17 +206,22 @@ class BlueLocationOverlay(
     }
 
     fun setVisible(visible: Boolean) {
-        if (!isLayerAdded) return
-
         try {
-            val style = map.style ?: return
-            val layer = style.getLayerAs<SymbolLayer>(LAYER_ID) ?: return
-
-            layer.setProperties(
-                visibility(if (visible) "visible" else "none")
-            )
-
-            AppLogger.d(TAG, "Location overlay visibility: $visible")
+            val style = map.style ?: run {
+                clearRuntimeCache()
+                return
+            }
+            val styleChanged = boundStyle !== style
+            if (!ensureOverlayReadyForUpdate(style, styleChanged)) {
+                return
+            }
+            val layer = style.getLayerAs<SymbolLayer>(LAYER_ID) ?: run {
+                clearRuntimeCache()
+                return
+            }
+            applyVisibility(layer, visible = visible, force = styleChanged)
+            isLayerAdded = true
+            boundStyle = style
 
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error setting location visibility: ${e.message}", e)
@@ -201,22 +237,27 @@ class BlueLocationOverlay(
                 style.removeImage(ICON_ID)
                 AppLogger.d(TAG, "Location overlay cleaned up")
             }
-            isLayerAdded = false
+            clearRuntimeCache()
         } catch (e: Exception) {
-            isLayerAdded = false
+            clearRuntimeCache()
             AppLogger.e(TAG, "Error cleaning up location overlay: ${e.message}", e)
         }
     }
 
     fun bringToFront() {
-        if (!ensureOverlayReadyForUpdate()) return
+        val style = map.style ?: run {
+            clearRuntimeCache()
+            return
+        }
+        if (!ensureOverlayReadyForUpdate(style, boundStyle !== style)) return
         try {
-            val style = map.style ?: return
             val topId = style.layers.lastOrNull()?.id
             if (topId == LAYER_ID) return
             style.removeLayer(LAYER_ID)
             val layer = createLocationLayer()
             style.addLayer(layer)
+            isLayerAdded = true
+            boundStyle = style
             AppLogger.d(TAG, "Re-added aircraft overlay to keep it on top")
             currentLocation?.let {
                 updateLocation(it, currentTrack, currentHeadingDeg, currentMapBearing, currentOrientationMode)
@@ -230,19 +271,60 @@ class BlueLocationOverlay(
         return SailplaneIconBitmapFactory.create(ICON_SIZE_PX)
     }
 
-    private fun ensureOverlayReadyForUpdate(): Boolean {
-        val style = map.style ?: run {
-            isLayerAdded = false
-            return false
-        }
-        if (!hasRuntimeObjects(style)) {
+    private fun ensureOverlayReadyForUpdate(style: Style, styleChanged: Boolean): Boolean {
+        if (styleChanged || !isLayerAdded) {
             if (AppLogger.rateLimit(TAG, "overlay_recovery", 2_000L)) {
                 AppLogger.w(TAG, "Overlay runtime missing, attempting self-heal")
             }
             ensureRuntimeObjects(style)
+            boundStyle = style
         }
         isLayerAdded = hasRuntimeObjects(style)
         return isLayerAdded
+    }
+
+    private fun isSteadyStateNoOp(
+        location: LatLng,
+        iconRotation: Float,
+        styleChanged: Boolean
+    ): Boolean {
+        if (styleChanged || !isLayerAdded) {
+            return false
+        }
+        val renderedLocation = lastRenderedLocation ?: return false
+        val renderedRotation = lastRenderedIconRotation ?: return false
+        val renderedVisible = lastRenderedVisible ?: return false
+        return renderedVisible &&
+            sameLocation(renderedLocation, location) &&
+            sameRotation(renderedRotation, iconRotation)
+    }
+
+    private fun sameLocation(first: LatLng?, second: LatLng): Boolean {
+        val location = first ?: return false
+        return abs(location.latitude - second.latitude) < LOCATION_EPSILON &&
+            abs(location.longitude - second.longitude) < LOCATION_EPSILON
+    }
+
+    private fun sameRotation(first: Float?, second: Float): Boolean {
+        val rotation = first ?: return false
+        return abs(rotation - second) < ROTATION_EPSILON_DEG
+    }
+
+    private fun applyVisibility(layer: SymbolLayer, visible: Boolean, force: Boolean) {
+        if (!force && lastRenderedVisible == visible) {
+            return
+        }
+        layer.setProperties(visibility(if (visible) "visible" else "none"))
+        lastRenderedVisible = visible
+        AppLogger.d(TAG, "Location overlay visibility: $visible")
+    }
+
+    private fun clearRuntimeCache() {
+        isLayerAdded = false
+        boundStyle = null
+        lastRenderedLocation = null
+        lastRenderedIconRotation = null
+        lastRenderedVisible = null
     }
 
     private fun ensureRuntimeObjects(style: Style) {

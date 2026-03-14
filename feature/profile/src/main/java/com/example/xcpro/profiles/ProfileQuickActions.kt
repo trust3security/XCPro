@@ -10,9 +10,8 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.flow.first
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -195,48 +194,25 @@ fun FlightModeIndicator(
     currentMode: com.example.xcpro.common.flight.FlightMode,
     onModeChange: (com.example.xcpro.common.flight.FlightMode) -> Unit,
     modifier: Modifier = Modifier,
-    availableModes: List<com.example.xcpro.common.flight.FlightMode>? = null,
+    availableModes: List<com.example.xcpro.common.flight.FlightMode> =
+        com.example.xcpro.common.flight.FlightMode.values().toList(),
     expandedOverride: Boolean? = null,
     onExpandedChange: ((Boolean) -> Unit)? = null
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val profileViewModel: ProfileViewModel = hiltViewModel()
-    val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
-    val activeProfile = uiState.activeProfile
-
-    var visibleModes by remember { mutableStateOf(availableModes ?: com.example.xcpro.common.flight.FlightMode.values().toList()) }
     var internalExpanded by remember { mutableStateOf(false) }
     val expanded = expandedOverride ?: internalExpanded
     val setExpanded: (Boolean) -> Unit = onExpandedChange ?: { internalExpanded = it }
+    val visibleModes = remember(availableModes) {
+        if (availableModes.isEmpty()) {
+            com.example.xcpro.common.flight.FlightMode.values().toList()
+        } else {
+            availableModes
+        }
+    }
 
-    LaunchedEffect(activeProfile?.id, availableModes) {
-        when {
-            availableModes != null -> {
-                visibleModes = availableModes
-            }
-            activeProfile != null -> {
-                try {
-                    val cardPreferences = com.example.dfcards.CardPreferences(context)
-                    val visibilities = cardPreferences.getProfileAllFlightModeVisibilities(activeProfile.id).first()
-
-                    val filteredModes = mutableListOf<com.example.xcpro.common.flight.FlightMode>().apply {
-                        add(com.example.xcpro.common.flight.FlightMode.CRUISE)
-                        if (visibilities["THERMAL"] != false) add(com.example.xcpro.common.flight.FlightMode.THERMAL)
-                        if (visibilities["FINAL_GLIDE"] != false) add(com.example.xcpro.common.flight.FlightMode.FINAL_GLIDE)
-                    }
-
-                    visibleModes = filteredModes
-
-                    if (currentMode !in filteredModes) {
-                        onModeChange(com.example.xcpro.common.flight.FlightMode.CRUISE)
-                    }
-                } catch (_: Exception) {
-                    visibleModes = com.example.xcpro.common.flight.FlightMode.values().toList()
-                }
-            }
-            else -> {
-                visibleModes = com.example.xcpro.common.flight.FlightMode.values().toList()
-            }
+    LaunchedEffect(currentMode, visibleModes) {
+        if (currentMode !in visibleModes) {
+            onModeChange(com.example.xcpro.common.flight.FlightMode.CRUISE)
         }
     }
 

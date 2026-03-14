@@ -39,7 +39,7 @@ object MapTaskIntegration {
     fun AATEditModeFAB(
         isAATEditMode: Boolean,
         taskType: TaskType,
-        cameraManager: MapCameraManager,
+        cameraManager: MapCameraRuntimePort,
         onExitEditMode: () -> Unit,
         onSyncTaskVisuals: () -> Unit,
         modifier: Modifier = Modifier

@@ -29,7 +29,7 @@ internal class AdsbTrafficRepositoryRuntime(
     internal val emergencyAudioRolloutPort: AdsbEmergencyAudioRolloutPort? = null,
     internal val emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort =
         NoOpAdsbEmergencyAudioOutputPort,
-    internal val emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags =
+    emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags =
         AdsbEmergencyAudioFeatureFlags()
 ) : AdsbTrafficRepository {
 
@@ -171,9 +171,9 @@ internal class AdsbTrafficRepositoryRuntime(
     @Volatile
     internal var emergencyAudioSettings = AdsbEmergencyAudioSettings()
     @Volatile
-    internal var emergencyAudioMasterEnabled: Boolean = emergencyAudioFeatureFlags.emergencyAudioEnabled
+    internal var emergencyAudioMasterConfigured: Boolean = emergencyAudioFeatureFlags.emergencyAudioEnabled
     @Volatile
-    internal var emergencyAudioShadowMode: Boolean = emergencyAudioFeatureFlags.emergencyAudioShadowMode
+    internal var emergencyAudioShadowModeConfigured: Boolean = emergencyAudioFeatureFlags.emergencyAudioShadowMode
     @Volatile
     internal var emergencyAudioRollbackLatched: Boolean = false
     @Volatile

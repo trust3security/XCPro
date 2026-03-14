@@ -10,34 +10,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
-import com.example.xcpro.forecast.ForecastOverlayViewModel
-import com.example.xcpro.forecast.ForecastTileFormat
-import com.example.xcpro.forecast.ForecastWindDisplayMode
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.BuildConfig
 import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.map.LocationManager
-import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapInitializer
+import com.example.xcpro.map.MapCameraRuntimePort
+import com.example.xcpro.map.MapLocationRenderFrameBinder
+import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
@@ -51,115 +43,112 @@ import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
-import com.example.xcpro.convertQnhInputToHpa
-import com.example.xcpro.seedQnhInputValue
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.weather.rain.WeatherOverlayViewModel
 import com.example.xcpro.weglide.ui.WeGlideUploadPromptUiState
-import java.util.Locale
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.maps.MapLibreMap
 
 @Composable
 internal fun MapScreenContent(
-    density: Density,
-    mapState: MapScreenState,
-    mapInitializer: MapInitializer,
-    onMapReady: (MapLibreMap) -> Unit,
-    onMapViewBound: () -> Unit,
-    locationManager: LocationManager,
-    flightDataManager: FlightDataManager,
-    flightViewModel: FlightDataViewModel,
-    taskType: TaskType,
-    createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
-    windArrowState: WindArrowUiState,
-    showWindSpeedOnVario: Boolean,
-    cameraManager: MapCameraManager,
-    currentMode: FlightMode,
-    currentZoom: Float,
-    onModeChange: (FlightMode) -> Unit,
-    currentMapStyleName: String,
-    onTransientMapStyleSelected: (String) -> Unit,
-    currentLocation: MapLocationUiModel?,
-    showRecenterButton: Boolean,
-    showReturnButton: Boolean,
-    showDistanceCircles: Boolean,
-    trafficBinding: MapTrafficUiBinding,
-    isUiEditMode: Boolean,
-    onEditModeChange: (Boolean) -> Unit,
-    isAATEditMode: Boolean,
-    onEnterAATEditMode: (Int) -> Unit,
-    onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
-    onExitAATEditMode: () -> Unit,
-    safeContainerSize: MutableState<IntSize>,
-    overlayManager: MapOverlayManager,
-    modalManager: MapModalManager,
-    widgetManager: MapUIWidgetManager,
-    screenWidthPx: Float,
-    screenHeightPx: Float,
-    variometerUiState: VariometerUiState,
-    minVariometerSizePx: Float,
-    maxVariometerSizePx: Float,
-    onVariometerOffsetChange: (Offset) -> Unit,
-    onVariometerSizeChange: (Float) -> Unit,
-    onVariometerLongPress: () -> Unit,
-    onVariometerEditFinished: () -> Unit,
-    hamburgerOffset: MutableState<Offset>,
-    flightModeOffset: MutableState<Offset>,
-    settingsOffset: MutableState<Offset>,
-    ballastOffset: MutableState<Offset>,
-    hamburgerSizePx: MutableState<Float>,
-    settingsSizePx: MutableState<Float>,
-    onHamburgerOffsetChange: (Offset) -> Unit,
-    onFlightModeOffsetChange: (Offset) -> Unit,
-    onSettingsOffsetChange: (Offset) -> Unit,
-    onBallastOffsetChange: (Offset) -> Unit,
-    onHamburgerSizeChange: (Float) -> Unit,
-    onSettingsSizeChange: (Float) -> Unit,
-    taskScreenManager: MapTaskScreenManager,
-    waypointData: List<WaypointData>,
-    unitsPreferences: UnitsPreferences,
-    qnhCalibrationState: QnhCalibrationState,
+    inputs: MapScreenContentInputs,
     weGlideUploadPrompt: WeGlideUploadPromptUiState?,
-    onAutoCalibrateQnh: () -> Unit,
-    onSetManualQnh: (Double) -> Unit,
     onConfirmWeGlideUploadPrompt: () -> Unit,
-    onDismissWeGlideUploadPrompt: () -> Unit,
-    trafficActions: MapTrafficUiActions,
-    ballastUiState: StateFlow<BallastUiState>,
-    isBallastPillHidden: Boolean,
-    onBallastCommand: (BallastCommand) -> Unit,
-    onHamburgerTap: () -> Unit,
-    onHamburgerLongPress: () -> Unit,
-    onSettingsTap: () -> Unit,
-    cardStyle: CardStyle,
-    hiddenCardIds: Set<String>,
-    replayState: StateFlow<SessionState>,
-    showVarioDemoFab: Boolean,
-    onVarioDemoReferenceClick: () -> Unit,
-    onVarioDemoSimClick: () -> Unit,
-    onVarioDemoSim2Click: () -> Unit,
-    onVarioDemoSim3Click: () -> Unit,
-    showRacingReplayFab: Boolean,
-    onRacingReplayClick: () -> Unit
+    onDismissWeGlideUploadPrompt: () -> Unit
 ) {
-    val ognSnapshot = trafficBinding.ognSnapshot
+    val mapInputs = inputs.map
+    val overlayInputs = inputs.overlays
+    val widgetInputs = inputs.widgets
+    val replayInputs = inputs.replay
+
+    val density = mapInputs.density
+    val mapState = mapInputs.mapState
+    val mapInitializer = mapInputs.mapInitializer
+    val onMapReady = mapInputs.onMapReady
+    val onMapViewBound = mapInputs.onMapViewBound
+    val locationManager = mapInputs.locationManager
+    val locationRenderFrameBinder = mapInputs.locationRenderFrameBinder
+    val flightDataManager = mapInputs.flightDataManager
+    val flightViewModel = mapInputs.flightViewModel
+    val taskType = mapInputs.taskType
+    val createTaskGestureHandler = mapInputs.createTaskGestureHandler
+    val windArrowState = mapInputs.windArrowState
+    val showWindSpeedOnVario = mapInputs.showWindSpeedOnVario
+    val cameraManager = mapInputs.cameraManager
+    val currentMode = mapInputs.currentMode
+    val onModeChange = mapInputs.onModeChange
+    val currentMapStyleName = mapInputs.currentMapStyleName
+    val onTransientMapStyleSelected = mapInputs.onTransientMapStyleSelected
+    val currentZoom by mapInputs.currentZoom.collectAsStateWithLifecycle()
+    val currentLocation by mapInputs.currentLocation.collectAsStateWithLifecycle()
+
+    val showRecenterButton = overlayInputs.showRecenterButton
+    val showReturnButton = overlayInputs.showReturnButton
+    val showDistanceCircles = overlayInputs.showDistanceCircles
+    val trafficBinding = overlayInputs.traffic
+    val isUiEditMode = overlayInputs.isUiEditMode
+    val onEditModeChange = overlayInputs.onEditModeChange
+    val isAATEditMode = overlayInputs.isAATEditMode
+    val onEnterAATEditMode = overlayInputs.onEnterAATEditMode
+    val onUpdateAATTargetPoint = overlayInputs.onUpdateAATTargetPoint
+    val onExitAATEditMode = overlayInputs.onExitAATEditMode
+    val safeContainerSize = overlayInputs.safeContainerSize
+    val overlayManager = overlayInputs.overlayManager
+    val modalManager = overlayInputs.modalManager
+    val taskScreenManager = overlayInputs.taskScreenManager
+    val waypointData = overlayInputs.waypointData
+    val unitsPreferences = overlayInputs.unitsPreferences
+    val qnhCalibrationState = overlayInputs.qnhCalibrationState
+    val onAutoCalibrateQnh = overlayInputs.onAutoCalibrateQnh
+    val onSetManualQnh = overlayInputs.onSetManualQnh
+    val trafficActions = overlayInputs.trafficActions
+    val ballastUiState = overlayInputs.ballastUiState
+    val isBallastPillHidden = overlayInputs.isBallastPillHidden
+    val onBallastCommand = overlayInputs.onBallastCommand
+    val onHamburgerTap = overlayInputs.onHamburgerTap
+    val onHamburgerLongPress = overlayInputs.onHamburgerLongPress
+    val onSettingsTap = overlayInputs.onSettingsTap
+
+    val widgetManager = widgetInputs.widgetManager
+    val screenWidthPx = widgetInputs.screenWidthPx
+    val screenHeightPx = widgetInputs.screenHeightPx
+    val variometerUiState = widgetInputs.variometerUiState
+    val minVariometerSizePx = widgetInputs.minVariometerSizePx
+    val maxVariometerSizePx = widgetInputs.maxVariometerSizePx
+    val onVariometerOffsetChange = widgetInputs.onVariometerOffsetChange
+    val onVariometerSizeChange = widgetInputs.onVariometerSizeChange
+    val onVariometerLongPress = widgetInputs.onVariometerLongPress
+    val onVariometerEditFinished = widgetInputs.onVariometerEditFinished
+    val hamburgerOffset = widgetInputs.hamburgerOffset
+    val flightModeOffset = widgetInputs.flightModeOffset
+    val settingsOffset = widgetInputs.settingsOffset
+    val ballastOffset = widgetInputs.ballastOffset
+    val hamburgerSizePx = widgetInputs.hamburgerSizePx
+    val settingsSizePx = widgetInputs.settingsSizePx
+    val onHamburgerOffsetChange = widgetInputs.onHamburgerOffsetChange
+    val onFlightModeOffsetChange = widgetInputs.onFlightModeOffsetChange
+    val onSettingsOffsetChange = widgetInputs.onSettingsOffsetChange
+    val onBallastOffsetChange = widgetInputs.onBallastOffsetChange
+    val onHamburgerSizeChange = widgetInputs.onHamburgerSizeChange
+    val onSettingsSizeChange = widgetInputs.onSettingsSizeChange
+    val cardStyle = widgetInputs.cardStyle
+    val hiddenCardIds = widgetInputs.hiddenCardIds
+
+    val replayState = replayInputs.replayState
+    val showVarioDemoFab = replayInputs.showVarioDemoFab
+    val onVarioDemoReferenceClick = replayInputs.onVarioDemoReferenceClick
+    val onVarioDemoSimClick = replayInputs.onVarioDemoSimClick
+    val onVarioDemoSim2Click = replayInputs.onVarioDemoSim2Click
+    val onVarioDemoSim3Click = replayInputs.onVarioDemoSim3Click
+    val showRacingReplayFab = replayInputs.showRacingReplayFab
+    val onRacingReplayClick = replayInputs.onRacingReplayClick
+
     val ognOverlayEnabled = trafficBinding.ognOverlayEnabled
-    val ognTargetEnabled = trafficBinding.ognTargetEnabled
-    val ognTargetAircraftKey = trafficBinding.ognTargetAircraftKey
-    val ognThermalHotspots = trafficBinding.ognThermalHotspots
     val showOgnSciaEnabled = trafficBinding.showOgnSciaEnabled
     val showOgnThermalsEnabled = trafficBinding.showOgnThermalsEnabled
-    val adsbSnapshot = trafficBinding.adsbSnapshot
     val adsbOverlayEnabled = trafficBinding.adsbOverlayEnabled
-    val selectedOgnTarget = trafficBinding.selectedOgnTarget
-    val selectedOgnThermal = trafficBinding.selectedOgnThermal
-    val selectedAdsbTarget = trafficBinding.selectedAdsbTarget
-    val onToggleOgnTraffic = trafficActions.onToggleOgnTraffic
     val onToggleOgnScia = trafficActions.onToggleOgnScia
     val onToggleOgnThermals = trafficActions.onToggleOgnThermals
-    val onSetOgnTarget = trafficActions.onSetOgnTarget
     val onToggleAdsbTraffic = trafficActions.onToggleAdsbTraffic
     val onOgnTargetSelected = trafficActions.onOgnTargetSelected
     val onOgnThermalSelected = trafficActions.onOgnThermalSelected
@@ -168,137 +157,67 @@ internal fun MapScreenContent(
     val onDismissOgnThermalDetails = trafficActions.onDismissOgnThermalDetails
     val onDismissAdsbTargetDetails = trafficActions.onDismissAdsbTargetDetails
 
-    val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
-    val forecastViewModel: ForecastOverlayViewModel = hiltViewModel()
-    val forecastOverlayState by forecastViewModel.overlayState.collectAsStateWithLifecycle()
-    val forecastPointCallout by forecastViewModel.pointCallout.collectAsStateWithLifecycle()
-    val forecastQueryStatus by forecastViewModel.queryStatus.collectAsStateWithLifecycle()
-    val weatherOverlayViewModel: WeatherOverlayViewModel = hiltViewModel()
-    val weatherOverlayState by weatherOverlayViewModel.overlayState.collectAsStateWithLifecycle()
-    val forecastRuntimeWarning by overlayManager.forecastRuntimeWarningMessage.collectAsStateWithLifecycle()
-    val skySightSatelliteRuntimeError by overlayManager.skySightSatelliteRuntimeErrorMessage.collectAsStateWithLifecycle()
+    val qnhUiState = rememberMapScreenQnhUiState(
+        flightDataManager = flightDataManager,
+        unitsPreferences = unitsPreferences,
+        qnhCalibrationState = qnhCalibrationState,
+        onAutoCalibrateQnh = onAutoCalibrateQnh,
+        onSetManualQnh = onSetManualQnh
+    )
+    val forecastWeatherState = rememberMapScreenForecastWeatherState(
+        mapLibreMap = mapState.mapLibreMap,
+        currentLocation = currentLocation,
+        overlayManager = overlayManager
+    )
     val trafficRuntimeState = rememberMapTrafficRuntimeState(
         traffic = trafficBinding,
         debugPanelsEnabled = BuildConfig.DEBUG
     )
     val trafficContentUiState = trafficRuntimeState.contentUiState
-    val currentQnhLabel = remember(liveFlightData?.qnh) {
-        val qnh = liveFlightData?.qnh ?: 1013.25
-        String.format(Locale.US, "%.1f hPa", qnh)
-    }
-
-    var showQnhDialog by remember { mutableStateOf(false) }
-    var qnhInput by remember { mutableStateOf("") }
-    var qnhError by remember { mutableStateOf<String?>(null) }
-    var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.SKYSIGHT.name) }
-    var isBottomTabsSheetVisible by rememberSaveable { mutableStateOf(false) }
-    var lastNonSatelliteMapStyleName by rememberSaveable { mutableStateOf<String?>(null) }
-    var tappedWindArrowCallout by remember { mutableStateOf<WindArrowTapCallout?>(null) }
-    var windTapLabelSize by remember { mutableStateOf(IntSize.Zero) }
-    var overlayViewportSize by remember { mutableStateOf(IntSize.Zero) }
-    val selectedBottomTab = remember(selectedBottomTabName) { runCatching { MapBottomTab.valueOf(selectedBottomTabName) }.getOrDefault(MapBottomTab.SKYSIGHT) }
-    val taskPanelState by taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
-    val isTaskPanelVisible = taskPanelState != MapTaskScreenManager.TaskPanelState.HIDDEN
-    val skySightRegionCoverageWarning = computeSkySightRegionCoverageWarning(mapState.mapLibreMap, currentLocation, forecastOverlayState.selectedRegionCode)
-    val skySightRainArbitrationWarning = computeSkySightRainSuppressionWarning(forecastOverlayState, weatherOverlayState.enabled)
-    val skySightUiMessages = resolveSkySightUiMessages(
-        repositoryWarningMessage = forecastOverlayState.warningMessage, regionCoverageWarningMessage = skySightRegionCoverageWarning,
-        runtimeWarningMessage = forecastRuntimeWarning, runtimeArbitrationWarningMessage = skySightRainArbitrationWarning,
-        repositoryErrorMessage = forecastOverlayState.errorMessage, runtimeErrorMessage = skySightSatelliteRuntimeError
+    val bottomTabsUiState = rememberMapScreenBottomTabsUiState(
+        taskScreenManager = taskScreenManager,
+        hasTrafficDetailsOpen = trafficContentUiState.hasTrafficDetailsOpen,
+        currentMapStyleName = currentMapStyleName
     )
-    val skySightWarningMessage = skySightUiMessages.warningMessage
-    val skySightErrorMessage = skySightUiMessages.errorMessage
+    val windTapUiState = rememberMapScreenWindTapUiState(
+        isForecastWindArrowOverlayActive = forecastWeatherState.isForecastWindArrowOverlayActive
+    )
     // Temporarily suppress replay/debug FABs on MapScreen (REF/SIM/SIM2/SIM3/TASK).
     val hideReplayDebugFabs = true
-    val isForecastWindArrowOverlayActive = forecastOverlayState.windOverlayEnabled &&
-        forecastOverlayState.windDisplayMode == ForecastWindDisplayMode.ARROW &&
-        forecastOverlayState.windTileSpec?.format == ForecastTileFormat.VECTOR_WIND_POINTS
-    val skySightSatViewEnabled = currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)
-    val openQnhDialog: () -> Unit = {
-        val currentQnh = liveFlightData?.qnh ?: 1013.25
-        qnhInput = seedQnhInputValue(currentQnh, unitsPreferences)
-        qnhError = null
-        showQnhDialog = true
-    }
-    val qnhDialogInputs = MapQnhDialogInputs(
-        visible = showQnhDialog,
-        input = qnhInput,
-        error = qnhError,
-        unitsPreferences = unitsPreferences,
-        liveFlightData = liveFlightData,
-        calibrationState = qnhCalibrationState,
-        onInputChange = {
-            qnhInput = it
-            qnhError = null
-        },
-        onConfirm = { parsed ->
-            onSetManualQnh(convertQnhInputToHpa(parsed, unitsPreferences))
-            showQnhDialog = false
-            qnhError = null
-        },
-        onInvalidInput = { error ->
-            qnhError = error
-        },
-        onAutoCalibrate = {
-            onAutoCalibrateQnh()
-            showQnhDialog = false
-            qnhError = null
-        },
-        onDismiss = {
-            showQnhDialog = false
-            qnhError = null
-        }
-    )
     val auxiliaryPanelsInputs = MapAuxiliaryPanelsInputs(
         mapState = mapState,
         density = density,
-        tappedWindArrowCallout = tappedWindArrowCallout,
-        forecastWindUnitLabel = forecastOverlayState.windLegend?.unitLabel
+        tappedWindArrowCallout = windTapUiState.tappedWindArrowCallout,
+        forecastWindUnitLabel = forecastWeatherState.forecastOverlayState.windLegend?.unitLabel
             ?.takeIf { label -> label.isNotBlank() }
             ?: DEFAULT_WIND_SPEED_UNIT_LABEL,
-        windTapLabelSize = windTapLabelSize,
-        onWindTapLabelSizeChanged = { windTapLabelSize = it },
-        overlayViewportSize = overlayViewportSize,
-        forecastPointCallout = forecastPointCallout,
-        forecastSelectedRegionCode = forecastOverlayState.selectedRegionCode,
-        onDismissForecastPointCallout = forecastViewModel::clearPointCallout,
-        forecastQueryStatus = forecastQueryStatus,
-        onDismissForecastQueryStatus = forecastViewModel::clearQueryStatus,
-        qnhDialog = qnhDialogInputs,
+        windTapLabelSize = windTapUiState.windTapLabelSize,
+        onWindTapLabelSizeChanged = windTapUiState.onWindTapLabelSizeChanged,
+        overlayViewportSize = windTapUiState.overlayViewportSize,
+        forecastPointCallout = forecastWeatherState.forecastPointCallout,
+        forecastSelectedRegionCode = forecastWeatherState.forecastOverlayState.selectedRegionCode,
+        onDismissForecastPointCallout = forecastWeatherState.forecastViewModel::clearPointCallout,
+        forecastQueryStatus = forecastWeatherState.forecastQueryStatus,
+        onDismissForecastQueryStatus = forecastWeatherState.forecastViewModel::clearQueryStatus,
+        qnhDialog = qnhUiState.dialogInputs,
         weGlidePrompt = MapWeGlidePromptInputs(
             prompt = weGlideUploadPrompt,
             onConfirm = onConfirmWeGlideUploadPrompt,
             onDismiss = onDismissWeGlideUploadPrompt
         )
     )
-    LaunchedEffect(currentMapStyleName) {
-        if (!currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)) {
-            lastNonSatelliteMapStyleName = currentMapStyleName
-        }
-    }
     ForecastOverlayRuntimeEffects(
         mapLibreMap = mapState.mapLibreMap,
-        forecastOverlayState = forecastOverlayState,
-        rainViewerEnabled = weatherOverlayState.enabled,
+        forecastOverlayState = forecastWeatherState.forecastOverlayState,
+        rainViewerEnabled = forecastWeatherState.weatherOverlayState.enabled,
         overlayManager = overlayManager
     )
-    WindArrowTapRuntimeEffects(
-        isForecastWindArrowOverlayActive = isForecastWindArrowOverlayActive,
-        tappedWindArrowCallout = tappedWindArrowCallout,
-        onClearTapCallout = { tappedWindArrowCallout = null },
-        onResetWindTapLabelSize = { windTapLabelSize = IntSize.Zero }
-    )
-    LaunchedEffect(isTaskPanelVisible, trafficContentUiState.hasTrafficDetailsOpen) {
-        if (isTaskPanelVisible || trafficContentUiState.hasTrafficDetailsOpen) {
-            isBottomTabsSheetVisible = false
-        }
-    }
 
     Box(
         Modifier
             .fillMaxSize()
             .onSizeChanged { size ->
-                overlayViewportSize = size
+                windTapUiState.onOverlayViewportSizeChanged(size)
             }
     ) {
         Scaffold(modifier = Modifier) { padding ->
@@ -321,6 +240,7 @@ internal fun MapScreenContent(
                         onMapReady = onMapReady,
                         onMapViewBound = onMapViewBound,
                         locationManager = locationManager,
+                        locationRenderFrameBinder = locationRenderFrameBinder,
                         flightDataManager = flightDataManager,
                         flightViewModel = flightViewModel,
                         taskType = taskType,
@@ -341,17 +261,10 @@ internal fun MapScreenContent(
                         onOgnTargetSelected = onOgnTargetSelected,
                         onOgnThermalSelected = onOgnThermalSelected,
                         onAdsbTargetSelected = onAdsbTargetSelected,
-                        onForecastWindArrowSpeedTap = { tapLatLng, speedKt ->
-                            if (isForecastWindArrowOverlayActive) {
-                                tappedWindArrowCallout = WindArrowTapCallout(
-                                    tapLatLng = tapLatLng,
-                                    speedKt = speedKt
-                                )
-                            }
-                        },
+                        onForecastWindArrowSpeedTap = windTapUiState.onForecastWindArrowSpeedTap,
                         onMapLongPress = { point ->
-                            if (!isAATEditMode && forecastOverlayState.enabled) {
-                                forecastViewModel.queryPointValue(
+                            if (!isAATEditMode && forecastWeatherState.forecastOverlayState.enabled) {
+                                forecastWeatherState.forecastViewModel.queryPointValue(
                                     latitude = point.latitude,
                                     longitude = point.longitude
                                 )
@@ -405,7 +318,7 @@ internal fun MapScreenContent(
             waypointData = waypointData,
             unitsPreferences = unitsPreferences,
             currentLocation = currentLocation,
-            currentQnh = currentQnhLabel
+            currentQnh = qnhUiState.currentQnhLabel
         )
 
         MapActionButtonsLayer(
@@ -425,37 +338,37 @@ internal fun MapScreenContent(
         )
 
         MapBottomTabsSection(
-            selectedBottomTab = selectedBottomTab,
-            isBottomTabsSheetVisible = isBottomTabsSheetVisible,
-            isTaskPanelVisible = isTaskPanelVisible,
+            selectedBottomTab = bottomTabsUiState.selectedBottomTab,
+            isBottomTabsSheetVisible = bottomTabsUiState.isBottomTabsSheetVisible,
+            isTaskPanelVisible = bottomTabsUiState.isTaskPanelVisible,
             hasTrafficDetailsOpen = trafficContentUiState.hasTrafficDetailsOpen,
-            setSelectedBottomTabName = { selectedBottomTabName = it },
-            setBottomTabsSheetVisible = { isBottomTabsSheetVisible = it },
+            setSelectedBottomTabName = bottomTabsUiState.setSelectedBottomTabName,
+            setBottomTabsSheetVisible = bottomTabsUiState.setBottomTabsSheetVisible,
             onDismissOgnTargetDetails = onDismissOgnTargetDetails,
             onDismissOgnThermalDetails = onDismissOgnThermalDetails,
             onDismissAdsbTargetDetails = onDismissAdsbTargetDetails,
-            weatherEnabled = weatherOverlayState.enabled,
+            weatherEnabled = forecastWeatherState.weatherOverlayState.enabled,
             ognOverlayEnabled = ognOverlayEnabled,
             showOgnSciaEnabled = showOgnSciaEnabled,
             onToggleOgnScia = onToggleOgnScia,
             adsbOverlayEnabled = adsbOverlayEnabled,
             showOgnThermalsEnabled = showOgnThermalsEnabled,
             showDistanceCircles = showDistanceCircles,
-            currentQnhLabel = currentQnhLabel,
+            currentQnhLabel = qnhUiState.currentQnhLabel,
             onToggleAdsbTraffic = onToggleAdsbTraffic,
             onToggleOgnThermals = onToggleOgnThermals,
             overlayManager = overlayManager,
-            openQnhDialog = openQnhDialog,
+            openQnhDialog = qnhUiState.openDialog,
             ognTrailAircraftRows = trafficContentUiState.ognTrailAircraftRows,
             onOgnTrailAircraftToggled = trafficRuntimeState.onTrailAircraftSelectionChanged,
-            forecastOverlayState = forecastOverlayState,
-            forecastViewModel = forecastViewModel,
-            skySightWarningMessage = skySightWarningMessage,
-            skySightErrorMessage = skySightErrorMessage,
-            skySightSatViewEnabled = skySightSatViewEnabled,
+            forecastOverlayState = forecastWeatherState.forecastOverlayState,
+            forecastViewModel = forecastWeatherState.forecastViewModel,
+            skySightWarningMessage = forecastWeatherState.skySightWarningMessage,
+            skySightErrorMessage = forecastWeatherState.skySightErrorMessage,
+            skySightSatViewEnabled = bottomTabsUiState.skySightSatViewEnabled,
             currentMapStyleName = currentMapStyleName,
-            lastNonSatelliteMapStyleName = lastNonSatelliteMapStyleName,
-            setLastNonSatelliteMapStyleName = { lastNonSatelliteMapStyleName = it },
+            lastNonSatelliteMapStyleName = bottomTabsUiState.lastNonSatelliteMapStyleName,
+            setLastNonSatelliteMapStyleName = bottomTabsUiState.setLastNonSatelliteMapStyleName,
             onTransientMapStyleSelected = onTransientMapStyleSelected
         )
 

@@ -32,29 +32,30 @@ internal fun MapScreenScaffold(
     inputs: MapScreenScaffoldInputs,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val scaffold = inputs.scaffold
     val coroutineScope = rememberCoroutineScope()
-    val showGeneralSettings by inputs.modalManager.showGeneralSettings.collectAsStateWithLifecycle()
+    val showGeneralSettings by scaffold.modalManager.showGeneralSettings.collectAsStateWithLifecycle()
     NavigationDrawer(
-        drawerState = inputs.drawerState,
-        navController = inputs.navController,
-        profileExpanded = inputs.profileExpanded,
-        mapStyleExpanded = inputs.mapStyleExpanded,
-        settingsExpanded = inputs.settingsExpanded,
-        initialMapStyle = inputs.initialMapStyle,
-        onItemSelected = inputs.onDrawerItemSelected,
-        onMapStyleSelected = inputs.onMapStyleSelected,
-        onOpenGeneralSettings = inputs.onOpenGeneralSettingsFromDrawer,
+        drawerState = scaffold.drawerState,
+        navController = scaffold.navController,
+        profileExpanded = scaffold.profileExpanded,
+        mapStyleExpanded = scaffold.mapStyleExpanded,
+        settingsExpanded = scaffold.settingsExpanded,
+        initialMapStyle = scaffold.initialMapStyle,
+        onItemSelected = scaffold.onDrawerItemSelected,
+        onMapStyleSelected = scaffold.onMapStyleSelected,
+        onOpenGeneralSettings = scaffold.onOpenGeneralSettingsFromDrawer,
         content = {
             Box(modifier = Modifier.fillMaxSize()) {
                 GpsStatusBanner(
-                    status = inputs.gpsStatus,
+                    status = scaffold.gpsStatus,
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopCenter)
                         .padding(top = 8.dp, start = 12.dp, end = 12.dp)
                 )
                 content()
-                if (inputs.isLoadingWaypoints) {
+                if (scaffold.isLoadingWaypoints) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -70,24 +71,24 @@ internal fun MapScreenScaffold(
     )
     if (showGeneralSettings) {
         GeneralSettingsSheetHost(
-            navController = inputs.navController,
-            drawerState = inputs.drawerState,
+            navController = scaffold.navController,
+            drawerState = scaffold.drawerState,
             onDismissRequest = {
-                inputs.modalManager.hideGeneralSettingsModal()
+                scaffold.modalManager.hideGeneralSettingsModal()
             },
             onNavigateUp = {
                 coroutineScope.launch {
-                    inputs.modalManager.hideGeneralSettingsModal()
-                    if (!inputs.drawerState.isOpen) {
-                        inputs.drawerState.open()
+                    scaffold.modalManager.hideGeneralSettingsModal()
+                    if (!scaffold.drawerState.isOpen) {
+                        scaffold.drawerState.open()
                     }
                 }
             },
             onNavigateToMap = {
                 coroutineScope.launch {
-                    inputs.modalManager.hideGeneralSettingsModal()
-                    if (inputs.drawerState.isOpen) {
-                        inputs.drawerState.close()
+                    scaffold.modalManager.hideGeneralSettingsModal()
+                    if (scaffold.drawerState.isOpen) {
+                        scaffold.drawerState.close()
                     }
                 }
             }

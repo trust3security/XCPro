@@ -1,9 +1,11 @@
 package com.example.xcpro.profiles
 
-import com.example.xcpro.core.time.TimeBridge
+import com.example.xcpro.core.time.Clock
 
 internal class ProfileRepositoryMutationCoordinator(
-    private val profileScopedDataCleaner: ProfileScopedDataCleaner
+    private val profileScopedDataCleaner: ProfileScopedDataCleaner,
+    private val clock: Clock,
+    private val profileIdGenerator: ProfileIdGenerator
 ) {
     suspend fun createProfile(
         request: ProfileCreationRequest,
@@ -18,12 +20,16 @@ internal class ProfileRepositoryMutationCoordinator(
             currentProfiles.find { it.id == source.id } ?: error("Source profile for copy not found")
         }
 
+        val createdAt = clock.nowWallMs()
         val newProfile = UserProfile(
+            id = profileIdGenerator.newId(),
             name = normalizedName,
             aircraftType = request.aircraftType,
             aircraftModel = request.aircraftModel ?: sourceProfile?.aircraftModel,
             description = request.description ?: sourceProfile?.description,
             preferences = sourceProfile?.preferences ?: ProfilePreferences(),
+            createdAt = createdAt,
+            lastUsed = createdAt,
             polar = sourceProfile?.polar ?: ProfilePolarSettings()
         )
 
@@ -124,15 +130,15 @@ internal class ProfileRepositoryMutationCoordinator(
         persistState: suspend (List<UserProfile>, String?) -> Unit,
         commitState: (List<UserProfile>, UserProfile?) -> Unit
     ) {
-        val recoveredProfiles = ensureBootstrapProfile(currentProfiles).profiles
+        val recoveredProfiles = ensureBootstrapProfile(currentProfiles, clock).profiles
         val defaultProfile = recoveredProfiles.firstOrNull {
             ProfileIdResolver.isCanonicalDefault(it.id)
         } ?: UserProfile(
             id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
             name = "Default",
             aircraftType = AircraftType.PARAGLIDER,
-            createdAt = TimeBridge.nowWallMs(),
-            lastUsed = TimeBridge.nowWallMs()
+            createdAt = clock.nowWallMs(),
+            lastUsed = clock.nowWallMs()
         )
         val normalizedProfiles = dedupeProfilesById(
             listOf(defaultProfile) + recoveredProfiles.filterNot {

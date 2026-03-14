@@ -137,21 +137,13 @@ internal fun AdsbTrafficRepositoryRuntime.isEmergencyAudioMasterOutputEnabled():
     currentEmergencyAudioMasterEnabled()
 
 internal fun AdsbTrafficRepositoryRuntime.currentEmergencyAudioMasterConfigured(): Boolean =
-    if (emergencyAudioRolloutPort == null) {
-        emergencyAudioFeatureFlags.emergencyAudioEnabled
-    } else {
-        emergencyAudioMasterEnabled
-    }
+    emergencyAudioMasterConfigured
 
 internal fun AdsbTrafficRepositoryRuntime.currentEmergencyAudioMasterEnabled(): Boolean =
     currentEmergencyAudioMasterConfigured() && !emergencyAudioRollbackLatched
 
 internal fun AdsbTrafficRepositoryRuntime.currentEmergencyAudioShadowModeEnabled(): Boolean =
-    if (emergencyAudioRolloutPort == null) {
-        emergencyAudioFeatureFlags.emergencyAudioShadowMode
-    } else {
-        emergencyAudioShadowMode
-    }
+    emergencyAudioShadowModeConfigured
 
 internal fun AdsbTrafficRepositoryRuntime.maybePlayEmergencyAudioOutput(
     nowMonoMs: Long,

@@ -1,6 +1,5 @@
 package com.example.xcpro.profiles
 
-import com.example.xcpro.core.time.TimeBridge
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
@@ -38,7 +37,7 @@ enum class ProfileBundleSourceFormat {
 
 data class ProfileBundleDocument(
     val version: String = BUNDLE_VERSION,
-    val exportedAtWallMs: Long = TimeBridge.nowWallMs(),
+    val exportedAtWallMs: Long,
     val activeProfileId: String?,
     val profiles: List<UserProfile>,
     val settings: ProfileSettingsSnapshot = ProfileSettingsSnapshot.empty()

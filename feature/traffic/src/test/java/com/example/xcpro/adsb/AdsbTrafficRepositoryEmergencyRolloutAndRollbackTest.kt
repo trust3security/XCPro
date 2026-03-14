@@ -49,9 +49,9 @@ class AdsbTrafficRepositoryEmergencyRolloutAndRollbackTest : AdsbTrafficReposito
             shadowModeEnabled = false
         )
         val outputPort = FakeEmergencyAudioOutputPort()
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),
@@ -142,9 +142,9 @@ class AdsbTrafficRepositoryEmergencyRolloutAndRollbackTest : AdsbTrafficReposito
             shadowModeEnabled = false
         )
         val outputPort = FakeEmergencyAudioOutputPort()
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),
@@ -193,6 +193,49 @@ class AdsbTrafficRepositoryEmergencyRolloutAndRollbackTest : AdsbTrafficReposito
             advanceTimeBy(10_000L)
             runCurrent()
             assertEquals(1, outputPort.events.size)
+        } finally {
+            repository.stop()
+            runCurrent()
+        }
+    }
+
+    @Test
+    fun emergencyAudio_rolloutPort_overridesBootstrapConfig_without_mutating_seed() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
+            emergencyAudioEnabled = true,
+            emergencyAudioShadowMode = true
+        )
+        val rolloutPort = FakeEmergencyAudioRolloutPort(
+            masterEnabled = false,
+            shadowModeEnabled = false
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = SequenceProvider(emptyList()),
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher,
+            networkAvailabilityPort = FakeNetworkAvailabilityPort(),
+            emergencyAudioRolloutPort = rolloutPort,
+            emergencyAudioFeatureFlags = featureFlags
+        )
+
+        try {
+            runCurrent()
+
+            assertFalse(repository.snapshot.value.emergencyAudioMasterRolloutEnabled)
+            assertFalse(repository.snapshot.value.emergencyAudioShadowModeEnabled)
+            assertTrue(featureFlags.emergencyAudioEnabled)
+            assertTrue(featureFlags.emergencyAudioShadowMode)
+
+            rolloutPort.setMasterEnabled(true)
+            rolloutPort.setShadowModeEnabled(true)
+            runCurrent()
+
+            assertTrue(repository.snapshot.value.emergencyAudioMasterRolloutEnabled)
+            assertTrue(repository.snapshot.value.emergencyAudioShadowModeEnabled)
+            assertTrue(featureFlags.emergencyAudioEnabled)
+            assertTrue(featureFlags.emergencyAudioShadowMode)
         } finally {
             repository.stop()
             runCurrent()

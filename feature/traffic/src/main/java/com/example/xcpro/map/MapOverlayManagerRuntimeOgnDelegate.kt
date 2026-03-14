@@ -239,6 +239,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     }
 
     fun onMapDetached() {
+        mapInteractionActive = false
         cancelPendingRenders()
     }
 

@@ -25,16 +25,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 
 //  NEW: Flight Mode enum to match your existing FlightMode
 enum class FlightModeSelection(
@@ -54,11 +51,13 @@ fun CardLibraryModal(
     selectedCardIds: Set<String>,
     suggestedCards: List<CardDefinition>,
     allTemplates: List<FlightTemplate>,
+    savedTemplateIdsByFlightMode: Map<FlightModeSelection, String?> = emptyMap(),
     liveFlightData: RealTimeFlightData? = null,
     currentFlightMode: FlightModeSelection,
     onCardToggle: (CardDefinition) -> Unit,
     onTemplateApply: (FlightTemplate) -> Unit,
     onFlightModeChanged: (FlightModeSelection) -> Unit,
+    onPersistFlightModeTemplateSelection: (FlightModeSelection, String) -> Unit,
     onEditTemplate: (FlightTemplate, String, List<String>) -> Unit,
     onCreateNewTemplate: (String, List<String>) -> Unit,
     onDeleteTemplate: (FlightTemplate) -> Unit,
@@ -66,10 +65,6 @@ fun CardLibraryModal(
     modifier: Modifier = Modifier,
     hiddenCardIds: Set<String> = emptySet()
 ) {
-    val context = LocalContext.current
-    val cardPreferences = remember { CardPreferences(context) }
-    val coroutineScope = rememberCoroutineScope()
-
     var selectedCategory by remember { mutableStateOf(CardCategory.ESSENTIAL) }
     var showTemplateCreator by remember { mutableStateOf(false) }
     var editingTemplate by remember { mutableStateOf<FlightTemplate?>(null) }
@@ -77,29 +72,14 @@ fun CardLibraryModal(
     var selectedFlightMode by remember(currentFlightMode) { mutableStateOf(currentFlightMode) }
     var selectedTemplate by remember { mutableStateOf<FlightTemplate?>(null) }
 
-    //  Load saved template when modal opens or flight mode changes
-    LaunchedEffect(selectedFlightMode, allTemplates) {
+    //  Keep selection derived from the owner-provided saved template mapping.
+    LaunchedEffect(selectedFlightMode, allTemplates, savedTemplateIdsByFlightMode) {
         if (allTemplates.isNotEmpty()) {
-            cardPreferences.getFlightModeTemplate(selectedFlightMode.name).collect { savedTemplateId ->
-                val template = if (savedTemplateId != null) {
-                    allTemplates.find { it.id == savedTemplateId }
-                } else {
-                    allTemplates.find { it.name == "Essential" }
-                }
-
-                selectedTemplate = template
-            }
-        }
-    }
-
-    //  NEW: Auto-save when template selection changes
-    LaunchedEffect(selectedTemplate, selectedFlightMode) {
-        selectedTemplate?.let { template ->
-            coroutineScope.launch {
-                cardPreferences.saveFlightModeTemplate(
-                    flightMode = selectedFlightMode.name,
-                    templateId = template.id
-                )
+            val savedTemplateId = savedTemplateIdsByFlightMode[selectedFlightMode]
+            selectedTemplate = if (savedTemplateId != null) {
+                allTemplates.find { it.id == savedTemplateId }
+            } else {
+                allTemplates.find { it.name == "Essential" }
             }
         }
     }
@@ -165,8 +145,8 @@ fun CardLibraryModal(
                         selectedTemplate = selectedTemplate,
                         selectedFlightMode = selectedFlightMode,
                         onTemplateSelected = { template ->
-                            //  CHANGED: Auto-save happens via LaunchedEffect
                             selectedTemplate = template
+                            onPersistFlightModeTemplateSelection(selectedFlightMode, template.id)
                         },
                         onEditTemplate = { template ->
                             editingTemplate = template

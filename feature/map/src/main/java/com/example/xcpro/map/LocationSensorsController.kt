@@ -2,8 +2,7 @@ package com.example.xcpro.map
 
 import android.Manifest
 import android.content.Context
-import android.util.Log
-import androidx.activity.result.ActivityResultLauncher
+import com.example.xcpro.core.common.logging.AppLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -14,7 +13,7 @@ internal class LocationSensorsController(
     private val context: Context,
     private val scope: CoroutineScope,
     private val sensorsUseCase: MapSensorsUseCase
-) {
+) : MapLocationSensorsPort {
     companion object {
         private const val TAG = "LocationManager"
     }
@@ -22,57 +21,68 @@ internal class LocationSensorsController(
     private var sensorsStarted = false
     private var restartJob: Job? = null
 
-    fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
+    override fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
         if (fineLocationGranted) {
-            Log.d(TAG, "Location permissions granted, starting background sensors")
+            debugRateLimited(
+                key = "permissions_granted",
+                message = "Location permissions granted; ensuring background sensors are running"
+            )
             scope.launch {
                 runCatching { ensureSensorsRunning() }
                     .onFailure { error ->
                         if (error is CancellationException) {
                             throw error
                         }
-                        Log.e(TAG, "Failed to ensure sensors running after permission grant", error)
+                        errorRateLimited(
+                            key = "ensure_after_permission_failure",
+                            message = "Failed to ensure sensors running after permission grant",
+                            error = error
+                        )
                     }
             }
         } else {
-            Log.e(TAG, "Location permissions denied")
-        }
-    }
-
-    fun checkAndRequestLocationPermissions(
-        locationPermissionLauncher: ActivityResultLauncher<Array<String>>
-    ) {
-        Log.d(TAG, "Checking location permissions...")
-
-        val fineLocationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (fineLocationGranted) {
-            Log.d(TAG, "Location permissions already granted, starting background sensors")
-            scope.launch {
-                runCatching { ensureSensorsRunning() }
-                    .onFailure { error ->
-                        if (error is CancellationException) {
-                            throw error
-                        }
-                        Log.e(TAG, "Failed to ensure sensors running while checking permissions", error)
-                    }
-            }
-        } else {
-            Log.d(TAG, "Requesting location permissions...")
-            locationPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                )
+            warnRateLimited(
+                key = "permissions_denied",
+                message = "Location permissions denied"
             )
         }
     }
 
-    fun stopLocationTracking(force: Boolean = false) {
+    override fun requestLocationPermissions(permissionRequester: MapLocationPermissionRequester) {
+        val fineLocationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (fineLocationGranted) {
+            debugRateLimited(
+                key = "permissions_already_granted",
+                message = "Location permissions already granted; ensuring background sensors are running"
+            )
+            scope.launch {
+                runCatching { ensureSensorsRunning() }
+                    .onFailure { error ->
+                        if (error is CancellationException) {
+                            throw error
+                        }
+                        errorRateLimited(
+                            key = "ensure_while_checking_failure",
+                            message = "Failed to ensure sensors running while checking permissions",
+                            error = error
+                        )
+                    }
+            }
+        } else {
+            debugRateLimited(
+                key = "request_permissions",
+                message = "Requesting location permissions"
+            )
+            permissionRequester.requestLocationPermissions()
+        }
+    }
+
+    override fun stopLocationTracking(force: Boolean) {
         if (!force) {
-            Log.d(TAG, "Background service keeps sensors alive (force=false)")
             return
         }
-        Log.d(TAG, "Force stopping background sensors")
+        AppLogger.d(TAG, "Force stopping background sensors")
         stopSensors()
     }
 
@@ -80,11 +90,10 @@ internal class LocationSensorsController(
      * Restart sensors after returning from sleep mode
      * This ensures GPS and other sensors resume properly when screen turns back on
      */
-    fun restartSensorsIfNeeded() {
+    override fun restartSensorsIfNeeded() {
         restartJob?.cancel()
         restartJob = scope.launch {
             runCatching {
-                Log.d(TAG, "Checking if sensors need restart after sleep mode...")
                 val sensorStatus = sensorsUseCase.sensorStatus()
 
                 // Restart if any critical sensor is not running (common after doze/background)
@@ -94,9 +103,9 @@ internal class LocationSensorsController(
                         (!sensorStatus.accelStarted && sensorStatus.accelAvailable)
                     )
                 if (needsRestart) {
-                    Log.d(
-                        TAG,
-                        "One or more sensors stopped (gpsStarted=${sensorStatus.gpsStarted}, baroStarted=${sensorStatus.baroStarted}, accelStarted=${sensorStatus.accelStarted}) - restarting all sensors"
+                    warnRateLimited(
+                        key = "restart_required",
+                        message = "One or more sensors stopped (gpsStarted=${sensorStatus.gpsStarted}, baroStarted=${sensorStatus.baroStarted}, accelStarted=${sensorStatus.accelStarted}); restarting all sensors"
                     )
 
                     // Stop everything first to clean up any stale listeners
@@ -109,13 +118,20 @@ internal class LocationSensorsController(
                     ensureSensorsRunning()
 
                     // Flight data fusion starts automatically with sensor data flow (no explicit start)
-                    Log.d(TAG, "Sensors restarted successfully after sleep/doze")
+                    debugRateLimited(
+                        key = "restart_success",
+                        intervalMs = 5_000L,
+                        message = "Sensors restarted successfully after sleep/doze"
+                    )
                     return@runCatching
                 }
 
                 // If GPS was started but is no longer receiving updates, restart all sensors
                 if (!sensorStatus.gpsStarted && sensorStatus.hasLocationPermissions) {
-                    Log.d(TAG, "Sensors appear to be stopped (likely due to sleep mode), restarting...")
+                    warnRateLimited(
+                        key = "restart_stopped_after_resume",
+                        message = "Sensors appear stopped after resume; restarting"
+                    )
 
                     // Stop everything first to clean up any stale listeners
                     stopSensors()
@@ -129,20 +145,32 @@ internal class LocationSensorsController(
                     // Flight data fusion starts automatically with sensor data flow
                     // No explicit start() method needed
 
-                    Log.d(TAG, "Sensors restarted successfully after sleep mode")
-                } else if (sensorStatus.gpsStarted) {
-                    Log.d(TAG, "Sensors already running, no restart needed")
-                } else {
-                    Log.d(TAG, "No location permissions, cannot restart sensors")
+                    debugRateLimited(
+                        key = "restart_success_after_resume",
+                        intervalMs = 5_000L,
+                        message = "Sensors restarted successfully after sleep mode"
+                    )
+                } else if (!sensorStatus.gpsStarted) {
+                    debugRateLimited(
+                        key = "restart_skipped_no_permission",
+                        intervalMs = 5_000L,
+                        message = "No location permissions; sensor restart skipped"
+                    )
                 }
             }.onFailure { error ->
                 if (error is CancellationException) {
                     throw error
                 }
-                Log.e(TAG, "Sensor restart check failed", error)
+                errorRateLimited(
+                    key = "restart_check_failure",
+                    message = "Sensor restart check failed",
+                    error = error
+                )
             }
         }
     }
+
+    override fun isGpsEnabled(): Boolean = sensorsUseCase.isGpsEnabled()
 
     private suspend fun safeStartSensors(): Boolean {
         return runCatching { sensorsUseCase.startSensors() }
@@ -150,7 +178,11 @@ internal class LocationSensorsController(
                 if (error is CancellationException) {
                     throw error
                 }
-                Log.e(TAG, "Failed to start sensors through use case", error)
+                errorRateLimited(
+                    key = "start_sensors_failure",
+                    message = "Failed to start sensors through use case",
+                    error = error
+                )
             }
             .getOrDefault(false)
     }
@@ -176,7 +208,41 @@ internal class LocationSensorsController(
         val statusAfterStart = sensorsUseCase.sensorStatus()
         sensorsStarted = started || statusAfterStart.gpsStarted
         if (!sensorsStarted) {
-            Log.w(TAG, "Sensor start deferred (likely waiting on location permission)")
+            warnRateLimited(
+                key = "start_deferred",
+                message = "Sensor start deferred (likely waiting on location permission)"
+            )
+        }
+    }
+
+    private fun debugRateLimited(
+        key: String,
+        message: String,
+        intervalMs: Long = 2_000L
+    ) {
+        if (AppLogger.rateLimit(TAG, key, intervalMs)) {
+            AppLogger.d(TAG, message)
+        }
+    }
+
+    private fun warnRateLimited(
+        key: String,
+        message: String,
+        intervalMs: Long = 5_000L
+    ) {
+        if (AppLogger.rateLimit(TAG, key, intervalMs)) {
+            AppLogger.w(TAG, message)
+        }
+    }
+
+    private fun errorRateLimited(
+        key: String,
+        message: String,
+        error: Throwable,
+        intervalMs: Long = 5_000L
+    ) {
+        if (AppLogger.rateLimit(TAG, key, intervalMs)) {
+            AppLogger.e(TAG, message, error)
         }
     }
 

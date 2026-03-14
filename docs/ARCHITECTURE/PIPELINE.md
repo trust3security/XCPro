@@ -177,10 +177,20 @@ Flight-state detector feed:
   - Appends forwarded B lines and emits deduped `E` records (`FLT`/`TSK`/`SYS`) using monotonic dedupe/rate policy.
   - On `FinalizeRecording`, publishes a finalized `.IGC` file through `IgcFlightLogRepository`; publish success/failure is fed back into session transition completion.
 - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-  - Writes finalized sessions to app-private staging (`files/igc/staging/`) and atomically publishes to MediaStore Downloads (`Download/XCPro/IGC`).
+  - Coordinates finalize and terminal recovery transactions for published `.IGC` files and keeps the explicit per-session idempotency cache.
+  - Delegates staging artifact lifecycle to `IgcRecoveryStagingStore` and MediaStore/legacy final publish side effects to `IgcFlightLogPublishTransport`.
+  - Keeps metadata merge, recovery branch ordering, and metadata-gated existing-finalized-file checks in the coordinator.
   - Uses `IgcRecoveryMetadataStore` as primary recovery identity authority; staged `.igc.tmp` header parsing is fallback/validation only for terminal recovery publish.
-  - Startup recovery now deletes orphan pending rows from structured metadata keys and classifies multiple finalized matches for one session as `DUPLICATE_SESSION_GUARD`.
+  - Classifies multiple finalized matches for one session as `DUPLICATE_SESSION_GUARD`.
   - Uses `IgcFileNamingPolicy` to enforce deterministic naming and per-day collision resolution.
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryStagingStore.kt`
+  - Owns app-private staging file writes, reads, existence checks, and delete semantics under `files/igc/staging/`.
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogPublishTransport.kt`
+  - Owns MediaStore Downloads and legacy filesystem publish branches and returns the finalized `IgcLogEntry` metadata back to the repository coordinator.
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryDownloadsLookup.kt`
+  - Owns minimal persisted finalized-entry lookup for recovery and deliberately avoids the UI/file-list scan path.
+- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryFinalizedEntryResolver.kt`
+  - Owns metadata-based existing-finalized-entry matching and pending-row cleanup for recovery sessions.
 - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
   - Owns finalized IGC files index (`StateFlow<List<IgcLogEntry>>`) and list/query/copy-out file operations for UI.
 - `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcFilesUseCase.kt`
@@ -502,10 +512,17 @@ Forecast overlay (SkySight-backed) path:
   - Forwards forecast/wind/satellite runtime intent (`enabled`, tile/legend specs, display mode, animation, frame count, selected time)
     to map overlay runtime owner with loading-vs-clear transition policy.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
-  - Runtime owner for forecast raster overlay lifecycle and style-reload reapplication.
+  - Thin forecast/weather runtime coordinator behind `MapOverlayManagerRuntime`.
+  - Forwards shell intents into dedicated rain, SkySight satellite, and forecast-raster runtime delegates.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastRasterDelegate.kt`
+  - Runtime owner for forecast raster overlay lifecycle, style-reload reapplication, warning aggregation, and wind-arrow lookup.
   - Hosts forecast runtime overlay instances for one non-wind layer and optional wind layer.
-  - Owns SkySight satellite runtime config and style-reload reapply path.
-  - Forecast apply/reapply paths are failure-isolated and surfaced via runtime warning channel.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeSkySightSatelliteDelegate.kt`
+  - Runtime owner for SkySight satellite config, style-reload reapply, runtime error flow, and contrast-icon side effects.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeWeatherRainDelegate.kt`
+  - Runtime owner for RainViewer apply state, deferred interaction cadence, and detach-safe deferred-config cleanup.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapWeatherRainInteractionCadencePolicy.kt`
+  - Weather-owned interaction cadence policy for rain apply throttling and transition overrides during map interaction.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
   - MapLibre runtime controller for forecast vector layers.
   - Uses namespace-scoped layer/source IDs so multiple forecast overlays can render together.
@@ -551,9 +568,14 @@ Weather rain overlay path:
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Thin shell adapter for overlay/runtime ownership.
   - Owns shell-specific overlay lifecycle/status collaborator construction and attaches those ports to `MapOverlayManagerRuntime`.
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
   - Runtime owner for overlay behavior behind the shell adapter.
   - No longer depends directly on `MapScreenState`; consumes runtime-side shell-port contracts plus leaf-owned runtime state adapters.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeInteractionDelegate.kt`
+  - Runtime-owned interaction grace/deactivation helper used by the overlay runtime owner.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
+  - Runtime-owned overlay base-ops delegate for distance-circle toggles, airspace/waypoint refresh, and task-overlay refresh/clear behavior.
+  - Consumes shell-supplied refresh closures from `MapOverlayManager.kt` so `:feature:map-runtime` does not depend back on shell-owned airspace/waypoint helpers.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeShellPorts.kt`
   - Runtime-facing contracts for shell-owned overlay lifecycle/status collaborators.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeCounters.kt`
@@ -611,11 +633,49 @@ Card configuration + hydration (current):
   types now live in `feature/map-runtime` as part of the retained shell/runtime split.
 - `DisplayPoseSnapshot` now lives in `feature/map-runtime` as the runtime-facing
   display-pose frame contract used by shell effects and trail/runtime consumers.
+- Camera/location/lifecycle Phase A now exposes explicit shell-facing runtime ports
+  from `feature/map-runtime`:
+  - `MapCameraRuntimePort`
+  - `MapLocationRuntimePort`
+  - `MapLifecycleRuntimePort`
+  - `MapLocationPermissionRequester`
+  Concrete owners still remain in `feature:map` until later owner-move phases.
+- Camera/location/lifecycle Phase B now narrows the retained shell fan-out:
+  `MapScreenManagers`, scaffold inputs/content, `MapOverlayStack`, and `MapViewHost`
+  use the runtime ports plus the shell-local `MapLocationRenderFrameBinder` instead of
+  passing concrete `MapCameraManager` / `LocationManager` through the live content path.
+- Camera/location/lifecycle Phase C now moves the camera runtime owner:
+  `MapCameraManager` and the shared `MapZoomConstraints` helper now live in
+  `:feature:map-runtime`, while `feature:map` retains the shell-local
+  `MapCameraSurfaceAdapter` and the `MapScreenManagers` construction site.
+- Camera/location/lifecycle Phase D now moves the location/display-pose runtime owner:
+  `LocationManager` and the runtime-owned display-pose/location helper cluster now
+  live in `:feature:map-runtime`, while `feature:map` retains the shell-local
+  `MapLocationOverlayAdapter`, `MapDisplayPoseSurfaceAdapter`,
+  `MapLibreCameraControllerProvider`, `MapScreenSizeProvider`, and
+  `MapCameraUpdateGateAdapter` bridges used by `MapScreenManagers`.
 - `MapSensorsUseCase` remains in `feature:map` for now because it still depends on the
   shell-owned `VarioServiceManager`.
-- `MapLifecycleEffects` now lives in its own shell file in `feature:map`, while
-  `MapLifecycleManager` remains the runtime-side lifecycle owner pending later
-  manager extraction work.
+- Camera/location/lifecycle Phase E now moves the lifecycle runtime owner:
+  `MapLifecycleManager` lives in `:feature:map-runtime`, while `feature:map`
+  retains the shell-local `MapLifecycleSurfaceAdapter`,
+  `MapLocationRenderFrameBinderAdapter`, and `MapLifecycleEffects.kt` bridge.
+- Map smoothness Phase 1 now keeps continuous follow motion policy inside
+  `:feature:map-runtime` through `MapFollowCameraMotionPolicy`; the hot follow
+  path in `MapTrackingCameraController` uses direct camera moves while discrete
+  transitions remain outside that policy.
+- Map smoothness Phase 2 now keeps hot orientation/location/zoom collection out
+  of `MapScreenRoot`; `MapScreenHotPathBindings` and `MapScreenHotPathEffects`
+  own the high-frequency collectors near the runtime boundary while
+  `MapScreenRoot` stays a low-frequency assembler.
+- Map smoothness Phase 3 now makes `BlueLocationOverlay` the sole owner of
+  steady-state overlay no-op decisions; `MapPositionController` no longer
+  forces `setBlueLocationVisible(true)` on every accepted frame.
+- Map smoothness Phase 4 now makes render-frame sync event-driven: when
+  `useRenderFrameSync` is enabled, `MapComposeEffects` stops owning the
+  display-pose frame loop, `LocationManager` requests repaints from raw-fix /
+  orientation updates and resume sync, and `RenderFrameSync` remains the single
+  render callback owner that dispatches `onRenderFrame()`.
 
 Card cadence (current):
 - `FlightDataManager.cardFlightDataFlow`: bucketed, unthrottled (near pass-through).
@@ -631,9 +691,13 @@ Key files:
 - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenHotPathBindings.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenHotPathEffects.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapFollowCameraMotionPolicy.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/CardIngestionCoordinator.kt`
 - `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataMgmt.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightDataViewModel.kt`
@@ -730,7 +794,7 @@ Task map rendering bridge (2026-02-12):
   instead of reading coordinator state directly in Composables.
 - Runtime UI/composable dependency lookup no longer uses entrypoint accessors:
   - `TaskManagerCoordinator` is provided via `TaskManagerCoordinatorHostViewModel`.
-  - Task navdrawer airspace use-case access is provided via `TaskScreenUseCasesViewModel`.
+  - Task navdrawer airspace use-case access is provided via `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/TaskScreenUseCasesViewModel.kt`.
 
 Task navigation/replay bridge (2026-02-11):
 - `TaskNavigationController` and `MapScreenReplayCoordinator` consume

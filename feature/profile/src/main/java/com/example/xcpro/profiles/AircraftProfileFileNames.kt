@@ -1,13 +1,12 @@
 package com.example.xcpro.profiles
 
-import com.example.xcpro.core.time.TimeBridge
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 object AircraftProfileFileNames {
     fun buildExportFileName(
         profile: UserProfile?,
-        nowWallMs: Long = TimeBridge.nowWallMs()
+        nowWallMs: Long
     ): String {
         val exportDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(nowWallMs)
         return if (profile == null) {

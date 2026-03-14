@@ -41,6 +41,33 @@
     - `MapOverlayRuntimeInteractionDelegateTest.kt` must move with the delegate because the helper is `internal`; keeping the test in `feature:map` would require widening visibility and add churn
     - `MapOverlayManagerRuntime.kt` still carries stale shell imports (`AirspaceUseCase`, `WaypointFilesUseCase`, `SnailTrailManager`) that must be removed in the move slice because `:feature:map-runtime` does not depend on those owners
     - no direct tests instantiate `MapOverlayManagerRuntime`, so the remaining overlay-manager behavior tests can stay shell-owned in `feature:map`
+  - 2026-03-12: Phase C2 implemented:
+    - moved `MapOverlayManagerRuntime.kt` into `:feature:map-runtime`
+    - moved `MapOverlayRuntimeInteractionDelegate.kt` plus `MapOverlayRuntimeInteractionDelegateTest.kt` into `:feature:map-runtime`
+    - kept `MapOverlayManager.kt` and the shell-owned `MapOverlayManager*` behavior tests in `feature:map`
+    - removed stale shell imports from the moved runtime owner
+  - 2026-03-12: Verification for Phase C2:
+    - `./gradlew :feature:map-runtime:compileDebugKotlin` passed
+    - `./gradlew :feature:map:compileDebugKotlin` passed
+    - `./gradlew :feature:map-runtime:testDebugUnitTest` passed
+    - `./gradlew assembleDebug` passed
+    - `./gradlew enforceRules` still fails only on the existing `MapScreenViewModel.kt` line-budget gate
+    - `./gradlew testDebugUnitTest` still fails on the existing unrelated test compile blockers in `GlideTargetRepositoryTest.kt` and `MapScreenViewModelTestRuntime.kt`
+  - 2026-03-12: Exact Phase C3 seam pass completed:
+    - `MapOverlayManagerRuntimeBaseOpsDelegate.kt` is the next clean runtime-owner payload; it remains part of the same overlay/runtime cluster already being moved
+    - the current delegate still carries an unused `SnailTrailManager` constructor dependency and import; remove that in C3 instead of dragging trail ownership into the slice
+    - there is no dedicated `MapOverlayManagerRuntimeBaseOpsDelegateTest`; behavior coverage continues to come through the shell-owned `MapOverlayManager*` tests in `feature:map`
+    - moving the delegate into `:feature:map-runtime` requires making its debug logging explicit because the module namespace is `com.example.xcpro.map.runtime`; do not rely on the shell module's implicit `BuildConfig`
+    - `MapOverlayRuntimeMapLifecycleDelegate.kt`, `MapOverlayRuntimeStatusCoordinator.kt`, and `MapOverlayManagerRuntimeStatus.kt` stay shell-owned for C3
+  - 2026-03-12: Phase C3 implemented:
+    - moved `MapOverlayManagerRuntimeBaseOpsDelegate.kt` into `:feature:map-runtime`
+    - replaced direct `feature:map` use-case/helper dependencies with shell-supplied refresh closures from `MapOverlayManager.kt`
+    - removed the unused `SnailTrailManager` constructor dependency from the delegate
+    - made the delegate's debug logging explicitly runtime-module-owned
+    - kept lifecycle/status/reporting adapters shell-owned in `feature:map`
+  - 2026-03-12: Verification for Phase C3:
+    - `./gradlew :feature:map-runtime:compileDebugKotlin` passed
+    - `./gradlew :feature:map:compileDebugKotlin` passed
 
 ## 1) Scope
 
@@ -267,6 +294,8 @@ feature:map shell
 - Goal:
   - move `MapOverlayManagerRuntime.kt` into `:feature:map-runtime` behind the narrowed Phase C1 boundary
   - keep `MapOverlayManager.kt` in `feature:map` as the thin shell adapter
+- Status:
+  - Implemented 2026-03-12
 - Files to change:
   - `MapOverlayManagerRuntime.kt`
   - `MapOverlayRuntimeInteractionDelegate.kt`
@@ -280,6 +309,35 @@ feature:map shell
   - `MapOverlayManagerRuntime.kt` compiles and tests in `:feature:map-runtime`
   - no shell/runtime back-edge is introduced
   - no stale shell-only imports remain in the moved runtime owner
+
+### Phase C3 - Base Ops Delegate Owner Move
+
+- Goal:
+  - move `MapOverlayManagerRuntimeBaseOpsDelegate.kt` into `:feature:map-runtime` as the next real overlay/runtime owner move
+  - keep `MapOverlayManager.kt` as the shell adapter and keep lifecycle/status/reporting delegates shell-owned
+- Status:
+  - Implemented 2026-03-12
+- Exact dependency findings:
+  - remove the unused `SnailTrailManager` constructor dependency/import from `MapOverlayManagerRuntimeBaseOpsDelegate.kt`
+  - keep shell-owned for this slice:
+    - `MapOverlayRuntimeMapLifecycleDelegate.kt`
+    - `MapOverlayRuntimeStatusCoordinator.kt`
+    - `MapOverlayManagerRuntimeStatus.kt`
+    - `MapOverlayRuntimeStateAdapter.kt`
+  - existing behavior coverage remains through shell-owned `MapOverlayManager*` tests; no dedicated delegate test currently exists
+  - when moved, the delegate must use an explicit runtime-module debug source rather than implicitly relying on the shell module's `BuildConfig`
+- Files to change:
+  - `MapOverlayManagerRuntimeBaseOpsDelegate.kt`
+  - `MapOverlayManager.kt`
+  - module imports/wiring as needed for the moved delegate
+- Tests to add/update:
+  - keep existing `MapOverlayManager*` behavior tests in `feature:map`
+  - only add direct delegate coverage if the move introduces new runtime-only logic not already covered through the shell adapter
+- Exit criteria:
+  - `MapOverlayManagerRuntimeBaseOpsDelegate.kt` compiles from `:feature:map-runtime`
+  - `MapOverlayManager.kt` still owns shell construction and public behavior
+  - no trail/runtime back-edge is introduced
+  - no implicit shell `BuildConfig` dependency remains in the moved delegate
 
 ### Phase D - Remaining Runtime/Trail Cleanup
 

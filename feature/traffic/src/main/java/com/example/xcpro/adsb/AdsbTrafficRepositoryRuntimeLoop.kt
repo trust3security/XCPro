@@ -98,12 +98,10 @@ internal fun AdsbTrafficRepositoryRuntime.observeEmergencyAudioRollout() {
                 rollbackReason = rollbackState.reason
             )
         }.collect { rollout ->
-            emergencyAudioMasterEnabled = rollout.masterEnabled
-            emergencyAudioShadowMode = rollout.shadowModeEnabled
+            emergencyAudioMasterConfigured = rollout.masterEnabled
+            emergencyAudioShadowModeConfigured = rollout.shadowModeEnabled
             emergencyAudioRollbackLatched = rollout.rollbackLatched
             emergencyAudioRollbackReason = rollout.rollbackReason
-            emergencyAudioFeatureFlags.emergencyAudioEnabled = rollout.masterEnabled
-            emergencyAudioFeatureFlags.emergencyAudioShadowMode = rollout.shadowModeEnabled
             publishSnapshot()
         }
     }

@@ -1,8 +1,7 @@
 package com.example.xcpro.audio
 
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import kotlinx.coroutines.*
-import kotlin.math.abs
 
 /**
  * Controls variometer beep patterns using coroutines
@@ -49,18 +48,18 @@ class VarioBeepController(
      */
     fun start(): Boolean {
         if (isRunning) {
-            Log.w(TAG, "Already running")
+            AppLogger.d(TAG, "Start ignored; beep controller already running")
             return true
         }
 
         if (!toneGenerator.isReady()) {
-            Log.w(TAG, "ToneGenerator not ready")
+            AppLogger.w(TAG, "Beep controller start blocked; tone generator not ready")
             return false
         }
 
         isRunning = true
         startBeepLoop()
-        Log.i(TAG, "Beep controller started")
+        AppLogger.i(TAG, "Beep controller started")
         return true
     }
 
@@ -69,7 +68,7 @@ class VarioBeepController(
      */
     fun stop() {
         stopInternal(awaitLoopQuiescence = true)
-        Log.i(TAG, "Beep controller stopped")
+        AppLogger.i(TAG, "Beep controller stopped")
     }
 
     private fun stopInternal(awaitLoopQuiescence: Boolean) {
@@ -156,7 +155,9 @@ class VarioBeepController(
                     // Coroutine cancelled, exit gracefully
                     break
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in beep loop", e)
+                    if (AppLogger.rateLimit(TAG, "beep_loop_error", 5_000L)) {
+                        AppLogger.e(TAG, "Error in beep loop", e)
+                    }
                     delay(100)  // Brief pause before retry
                 }
             }

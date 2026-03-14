@@ -3,14 +3,21 @@ package com.example.xcpro.core.common.logging
 import android.util.Log
 import com.example.xcpro.core.common.BuildConfig
 import com.example.xcpro.core.time.TimeBridge
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
 /**
- * Debug-gated logger with rate limiting for hot paths.
+ * Canonical production logging seam for Kotlin callsites.
+ *
+ * This object is an allowed infrastructure singleton: it owns only bounded,
+ * non-authoritative helper state for rate limiting and sampling. It must not
+ * become an application state owner or a side-channel source of truth.
  */
 object AppLogger {
     private val lastLogMs = ConcurrentHashMap<String, Long>()
+    private val localJvmFallbackMonoMs = AtomicLong()
     private val rng = Random.Default
     private val isDebug = BuildConfig.DEBUG
 
@@ -72,7 +79,7 @@ object AppLogger {
      * Returns true when the log should be emitted for the given key.
      */
     fun rateLimit(tag: String, key: String, intervalMs: Long): Boolean {
-        val now = TimeBridge.nowMonoMs()
+        val now = safeNowMonoMs()
         val token = "$tag:$key"
         val last = lastLogMs[token]
         if (last != null && now - last < intervalMs) return false
@@ -95,7 +102,29 @@ object AppLogger {
         return rateLimit(tag, key, 0L)
     }
 
-    private fun formatCoord(value: Double): String = String.format("%.5f", value)
+    fun dRateLimited(tag: String, key: String, intervalMs: Long, message: () -> String) {
+        if (!isDebug) return
+        if (!rateLimit(tag, key, intervalMs)) return
+        d(tag, message())
+    }
+
+    fun dSampled(tag: String, key: String, probability: Double, message: () -> String) {
+        if (!isDebug) return
+        if (!sample(tag, key, probability)) return
+        d(tag, message())
+    }
+
+    private fun formatCoord(value: Double): String = String.format(Locale.US, "%.5f", value)
+
+    private fun safeNowMonoMs(): Long {
+        return try {
+            TimeBridge.nowMonoMs()
+        } catch (_: RuntimeException) {
+            localJvmFallbackMonoMs.incrementAndGet()
+        } catch (_: LinkageError) {
+            localJvmFallbackMonoMs.incrementAndGet()
+        }
+    }
 
     // Local JVM tests use android.jar stubs; logging must stay non-fatal there.
     private inline fun emitSafely(block: () -> Unit) {

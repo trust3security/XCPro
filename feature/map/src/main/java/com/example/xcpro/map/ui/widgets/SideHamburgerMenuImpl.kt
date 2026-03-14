@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui.widgets
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -133,9 +132,6 @@ internal fun SideHamburgerMenuImpl(
                         .fillMaxSize()
                         .pointerInput(screenWidthPx, screenHeightPx, displaySizePx.value) {
                             detectDragGestures(
-                                onDragStart = {
-                                    Log.d("MapUIWidgetManager", "Hamburger drag started from ${displayOffset.value}")
-                                },
                                 onDrag = { change, dragAmount ->
                                     val currentSize = displaySizePx.value
                                     displayOffset.value = MapWidgetMath.boundedOffset(
@@ -146,10 +142,7 @@ internal fun SideHamburgerMenuImpl(
                                     )
                                     change.consumePositionChange()
                                 },
-                                onDragEnd = {
-                                    Log.d("MapUIWidgetManager", "Hamburger drag ended at ${displayOffset.value}")
-                                    onOffsetChange(displayOffset.value)
-                                }
+                                onDragEnd = { onOffsetChange(displayOffset.value) }
                             )
                         }
                 )

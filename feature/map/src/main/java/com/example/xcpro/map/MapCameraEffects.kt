@@ -9,8 +9,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.core.common.logging.AppLogger
-import org.maplibre.android.camera.CameraUpdateFactory
-import org.maplibre.android.geometry.LatLng
 
 /**
  * Compose camera effects for MapScreen integration.
@@ -22,30 +20,19 @@ object MapCameraEffects {
      */
     @Composable
     fun AnimatedZoomEffect(
-        cameraManager: MapCameraManager,
+        cameraManager: MapCameraRuntimePort,
         targetZoom: Float?,
         targetLatLng: MapPoint?
     ) {
         val animatedZoom by animateFloatAsState(
-            targetValue = targetZoom ?: MapCameraManager.INITIAL_ZOOM.toFloat(),
+            targetValue = targetZoom ?: 8.0f,
             animationSpec = tween(durationMillis = 300),
             label = "zoom_animation"
         )
 
         DisposableEffect(animatedZoom, targetLatLng) {
-            cameraManager.mapLibreMapOrNull()?.let { map ->
-                try {
-                    val latLng = targetLatLng?.let { LatLng(it.latitude, it.longitude) }
-                        ?: LatLng(MapCameraManager.INITIAL_LATITUDE, MapCameraManager.INITIAL_LONGITUDE)
-                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, animatedZoom.toDouble()))
-                    AppLogger.d(
-                        "MapCameraEffects",
-                        "Camera moved to lat=${latLng.latitude}, lon=${latLng.longitude}, zoom=$animatedZoom"
-                    )
-                } catch (e: Exception) {
-                    AppLogger.e("MapCameraEffects", "Error moving camera: ${e.message}")
-                }
-            }
+            cameraManager.applyAnimatedZoom(animatedZoom, targetLatLng)
+            AppLogger.d("MapCameraEffects", "Animated zoom dispatched at zoom=$animatedZoom")
             onDispose { }
         }
     }
@@ -55,7 +42,7 @@ object MapCameraEffects {
      */
     @Composable
     fun OrientationBearingEffect(
-        cameraManager: MapCameraManager,
+        cameraManager: MapCameraRuntimePort,
         bearing: Double,
         orientationMode: MapOrientationMode,
         bearingSource: BearingSource,
@@ -80,7 +67,7 @@ object MapCameraEffects {
      */
     @Composable
     fun AllCameraEffects(
-        cameraManager: MapCameraManager,
+        cameraManager: MapCameraRuntimePort,
         bearing: Double,
         orientationMode: MapOrientationMode,
         bearingSource: BearingSource,

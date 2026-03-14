@@ -7,8 +7,10 @@ import com.example.xcpro.weather.rain.WeatherRainFrameSelection
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.maplibre.android.maps.MapLibreMap
+import org.mockito.Mockito.mockConstruction
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -144,6 +146,40 @@ class MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest {
             opacity = any(),
             transitionDurationMs = any()
         )
+    }
+
+    @Test
+    fun onMapStyleChanged_reappliesLatestWeatherRainConfigToReplacementOverlay() {
+        val fixture = createFixture()
+        val frame = frameSelection(6_000L)
+
+        fixture.delegate.setWeatherRainOverlay(
+            enabled = true,
+            frameSelection = frame,
+            opacity = 0.57f,
+            transitionDurationMs = 210L,
+            statusCode = WeatherRadarStatusCode.OK,
+            stale = false
+        )
+
+        val forecastOverlayConstruction = mockConstruction(ForecastRasterOverlay::class.java)
+        val skySightOverlayConstruction = mockConstruction(SkySightSatelliteOverlay::class.java)
+        val weatherOverlayConstruction = mockConstruction(WeatherRainOverlay::class.java)
+        try {
+            fixture.delegate.onMapStyleChanged(fixture.map)
+
+            val replacementOverlay = weatherOverlayConstruction.constructed().single()
+            verify(fixture.weatherOverlay, times(1)).cleanup()
+            verify(replacementOverlay, times(1)).render(
+                frameSelection = eq(frame),
+                opacity = eq(0.57f),
+                transitionDurationMs = eq(210L)
+            )
+        } finally {
+            weatherOverlayConstruction.close()
+            skySightOverlayConstruction.close()
+            forecastOverlayConstruction.close()
+        }
     }
 
     private fun frameSelection(epochSec: Long): WeatherRainFrameSelection {

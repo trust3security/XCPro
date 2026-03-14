@@ -120,9 +120,9 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             enabled = true,
             cooldownMs = 30_000L
         )
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
@@ -218,9 +218,9 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             enabled = true,
             cooldownMs = 30_000L
         )
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             // Use authenticated mode so test cadence follows the 10s hot poll interval.
@@ -313,9 +313,9 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
             enabled = false,
             cooldownMs = 30_000L
         )
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),

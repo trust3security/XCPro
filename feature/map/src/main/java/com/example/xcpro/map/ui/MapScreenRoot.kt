@@ -16,13 +16,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.example.xcpro.hawk.HAWK_VARIO_CARD_ID
 import com.example.xcpro.map.MapSize
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.replay.SessionStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,9 +40,13 @@ internal fun MapScreenRoot(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val mapUiState by mapViewModel.uiState.collectAsStateWithLifecycle(); val weGlideUploadPrompt by mapViewModel.weGlideUploadPrompt.collectAsStateWithLifecycle()
     val runtimeDependencies = mapViewModel.runtimeDependencies
-    val flightDataManager = runtimeDependencies.flightDataManager; val orientationManager = runtimeDependencies.orientationManager
+    val flightDataManager = runtimeDependencies.flightDataManager
+    val orientationManager = runtimeDependencies.orientationManager
+    val rootUiBinding = rememberMapScreenRootUiBinding(
+        mapViewModel = mapViewModel,
+        flightDataManager = flightDataManager
+    )
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
         drawerState = drawerState,
@@ -56,13 +58,10 @@ internal fun MapScreenRoot(
     // Runtime map state owned by the UI layer.
     val mapState = remember { MapScreenState() }
     val mapStateReader = mapViewModel.mapState
-    val orientationData by orientationManager.orientationFlow.collectAsStateWithLifecycle()
-    val windArrowState by mapViewModel.windArrowState.collectAsStateWithLifecycle()
-    val showWindSpeedOnVario by mapViewModel.showWindSpeedOnVario.collectAsStateWithLifecycle()
-    val showHawkCard by mapViewModel.showHawkCard.collectAsStateWithLifecycle()
-    val hiddenCardIds = remember(showHawkCard) {
-        if (showHawkCard) emptySet() else setOf(HAWK_VARIO_CARD_ID)
-    }
+    val hotPathBindings = rememberMapScreenHotPathBindings(
+        mapViewModel = mapViewModel,
+        orientationManager = orientationManager
+    )
 
     // Simplified permission state: always enabled, but keep size hydration for card readiness.
     val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
@@ -127,73 +126,71 @@ internal fun MapScreenRoot(
         mapViewModel = mapViewModel,
         mapStateReader = mapStateReader
     )
-    val trafficOverlayPort = remember(managers.overlayManager) {
-        createTrafficOverlayRenderPort(managers.overlayManager)
-    }
-    val trafficOverlayRenderState = rememberTrafficOverlayRenderState(
-        traffic = bindings.traffic,
-        locationForUi = bindings.locationForUi,
-        unitsPreferences = mapUiState.unitsPreferences
-    )
+    val mapBindings = bindings.map
+    val sessionBindings = bindings.session
+    val taskBindings = bindings.task
 
     MapAirspaceOverlayEffect(
         mapState = mapState,
         airspaceState = airspaceState,
         overlayManager = managers.overlayManager
     )
-    MapTrafficOverlayEffects(
-        port = trafficOverlayPort,
-        renderState = trafficOverlayRenderState
+    MapTrafficOverlayRuntimeEffects(
+        overlayManager = managers.overlayManager,
+        traffic = bindings.traffic,
+        currentLocation = hotPathBindings.currentLocation,
+        unitsPreferences = rootUiBinding.mapUiState.unitsPreferences
     )
     MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
 
-    val currentFlightModeSelection by flightDataManager.currentFlightModeFlow.collectAsStateWithLifecycle()
-
     MapScreenRuntimeEffects(
-        taskType = bindings.taskType,
+        taskType = taskBindings.taskType,
         drawerState = drawerState,
-        isAATEditMode = bindings.isAATEditMode,
+        isAATEditMode = taskBindings.isAATEditMode,
         onExitAATEditMode = mapViewModel::exitAATEditMode,
         snailTrailManager = managers.snailTrailManager,
         locationManager = managers.locationManager,
         featureFlags = runtimeDependencies.featureFlags,
-        trailUpdateResult = bindings.trailUpdateResult,
-        trailSettings = bindings.trailSettings,
-        currentZoom = bindings.currentZoom,
-        suppressLiveGps = bindings.suppressLiveGps,
-        currentFlightModeSelection = currentFlightModeSelection,
+        trailUpdateResult = sessionBindings.trailUpdateResult,
+        trailSettings = sessionBindings.trailSettings,
+        currentZoomFlow = hotPathBindings.currentZoom,
+        suppressLiveGps = sessionBindings.suppressLiveGps,
+        currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
         orientationManager = orientationManager
     )
 
     val mapRuntimeController = rememberMapRuntimeController(
         overlayManager = managers.overlayManager,
-        mapViewModel = mapViewModel,
+        mapViewModel = mapViewModel
+    )
+    MapScreenCameraRuntimeEffects(
         cameraManager = managers.cameraManager,
-        orientationData = orientationData,
-        isReplayPlaying = bindings.replaySession.status == SessionStatus.PLAYING
+        hotPathBindings = hotPathBindings,
+        replaySession = sessionBindings.replaySession
     )
 
-    val locationPermissionLauncher = rememberLocationPermissionLauncher(managers.locationManager)
+    val locationPermissionRequester = rememberLocationPermissionRequester(managers.locationManager)
     MapScreenComposeAndLifecycleEffects(
         lifecycleManager = managers.lifecycleManager,
         runtimeController = mapRuntimeController,
         locationManager = managers.locationManager,
-        locationPermissionLauncher = locationPermissionLauncher,
-        currentLocation = bindings.locationForUi,
-        orientationData = orientationData,
+        locationPermissionRequester = locationPermissionRequester,
+        currentLocationFlow = hotPathBindings.currentLocation,
+        orientationFlow = hotPathBindings.orientationFlow,
         orientationManager = orientationManager,
         profileUiState = profileLookAndFeelBinding.profileUiState,
         flightDataManager = flightDataManager,
-        currentMode = bindings.currentMode,
+        currentMode = mapBindings.currentMode,
         onModeChange = mapViewModel::setFlightMode,
-        currentFlightModeSelection = currentFlightModeSelection,
+        currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
         safeContainerSize = safeContainerSize,
         flightCardsBinding = flightCardsBinding,
         initialMapStyle = initialMapStyle,
         onMapStyleResolved = mapViewModel::setMapStyle,
-        replaySessionState = bindings.replaySession,
-        suppressLiveGps = bindings.suppressLiveGps,
-        allowSensorStart = bindings.allowSensorStart
+        replaySessionState = sessionBindings.replaySession,
+        useRenderFrameSync = runtimeDependencies.featureFlags.useRenderFrameSync,
+        suppressLiveGps = sessionBindings.suppressLiveGps,
+        allowSensorStart = sessionBindings.allowSensorStart
     )
 
     val widgetLayout = rememberMapScreenWidgetLayoutBinding(
@@ -214,7 +211,8 @@ internal fun MapScreenRoot(
         density = density
     )
 
-    MapVisibilityLifecycleEffect(mapViewModel); val scaffoldInputs = rememberMapScreenScaffoldInputs(
+    MapVisibilityLifecycleEffect(mapViewModel)
+    val scaffoldInputs = rememberMapScreenScaffoldInputs(
         coroutineScope = coroutineScope,
         navController = navController,
         drawerState = drawerState,
@@ -224,40 +222,24 @@ internal fun MapScreenRoot(
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
         mapViewModel = mapViewModel,
-        mapUiState = mapUiState,
+        hotPathBindings = hotPathBindings,
+        rootUiBinding = rootUiBinding,
         bindings = bindings,
+        profileLookAndFeelBinding = profileLookAndFeelBinding,
+        flightCardsBinding = flightCardsBinding,
+        widgetLayout = widgetLayout,
+        variometerLayout = variometerLayout,
+        flightDataManager = flightDataManager,
         managers = managers,
         mapState = mapState,
         mapRuntimeController = mapRuntimeController,
         density = density,
-        screenWidthPx = widgetLayout.screenWidthPx,
-        screenHeightPx = widgetLayout.screenHeightPx,
-        variometerUiState = variometerLayout.uiState,
-        minVariometerSizePx = variometerLayout.minSizePx,
-        maxVariometerSizePx = variometerLayout.maxSizePx,
-        safeContainerSizeState = safeContainerSizeState,
-        hamburgerOffsetState = widgetLayout.hamburgerOffsetState,
-        flightModeOffsetState = widgetLayout.flightModeOffsetState,
-        settingsOffsetState = widgetLayout.settingsOffsetState,
-        ballastOffsetState = widgetLayout.ballastOffsetState,
-        hamburgerSizePxState = widgetLayout.hamburgerSizePxState,
-        settingsSizePxState = widgetLayout.settingsSizePxState,
-        onHamburgerOffsetChange = widgetLayout.onHamburgerOffsetChange,
-        onFlightModeOffsetChange = widgetLayout.onFlightModeOffsetChange,
-        onSettingsOffsetChange = widgetLayout.onSettingsOffsetChange,
-        onBallastOffsetChange = widgetLayout.onBallastOffsetChange,
-        onHamburgerSizeChange = widgetLayout.onHamburgerSizeChange,
-        onSettingsSizeChange = widgetLayout.onSettingsSizeChange,
-        flightViewModel = flightCardsBinding.flightViewModel,
-        flightDataManager = flightDataManager,
-        windArrowState = windArrowState,
-        showWindSpeedOnVario = showWindSpeedOnVario,
-        cardStyle = profileLookAndFeelBinding.cardStyle,
-        hiddenCardIds = hiddenCardIds
+        safeContainerSizeState = safeContainerSizeState
     )
     MapScreenScaffold(inputs = scaffoldInputs) {
         MapScreenScaffoldContentHost(
-            inputs = scaffoldInputs, weGlideUploadPrompt = weGlideUploadPrompt,
+            inputs = scaffoldInputs,
+            weGlideUploadPrompt = rootUiBinding.weGlideUploadPrompt,
             onConfirmWeGlideUploadPrompt = mapViewModel::onConfirmWeGlideUploadPrompt,
             onDismissWeGlideUploadPrompt = mapViewModel::onDismissWeGlideUploadPrompt
         )

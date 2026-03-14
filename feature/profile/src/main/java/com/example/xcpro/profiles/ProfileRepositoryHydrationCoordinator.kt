@@ -1,5 +1,6 @@
 package com.example.xcpro.profiles
 
+import com.example.xcpro.core.time.Clock
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 
@@ -12,6 +13,7 @@ internal data class ProfileHydrationOutcome(
 )
 
 internal class ProfileRepositoryHydrationCoordinator(
+    private val clock: Clock,
     private val gson: Gson,
     private val onError: (String, Throwable) -> Unit,
     private val reportDiagnostic: (String, Map<String, String>) -> Unit,
@@ -30,7 +32,7 @@ internal class ProfileRepositoryHydrationCoordinator(
             gson = gson,
             onParseError = onError
         )
-        val defaultProvisioning = ensureBootstrapProfile(parseResult.profiles)
+        val defaultProvisioning = ensureBootstrapProfile(parseResult.profiles, clock)
         val loadedProfiles = defaultProvisioning.profiles
 
         val activeIdForResolution = if (parseResult.parseFailed) {

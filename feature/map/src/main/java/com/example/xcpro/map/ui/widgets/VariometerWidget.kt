@@ -2,7 +2,6 @@
 
 package com.example.xcpro.map.ui.widgets
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -69,10 +68,8 @@ internal fun VariometerWidgetContent(
     modifier: Modifier = Modifier
 ) {
     if (!variometerState.isInitialized) {
-        Log.d("VARIO_GESTURE", "render skipped; state not initialized")
         return
     }
-    Log.d("VARIO_GESTURE", "render editMode=$isEditMode offset=${variometerState.offset}")
 
     DisposableEffect(Unit) {
         onDispose { widgetManager.clearGestureRegion(MapOverlayGestureTarget.VARIOMETER) }
@@ -87,10 +84,6 @@ internal fun VariometerWidgetContent(
         if (!isUserInteracting) {
             displayOffset.value = variometerState.offset.toComposeOffset()
             displaySize.value = variometerState.sizePx
-            Log.d(
-                "VARIO_GESTURE",
-                "sync from state offset=${variometerState.offset} size=${variometerState.sizePx}"
-            )
         }
     }
 
@@ -104,7 +97,6 @@ internal fun VariometerWidgetContent(
         )
         if (newOffset != displayOffset.value) {
             displayOffset.value = newOffset
-            Log.d("VARIO_GESTURE", "dragging -> $newOffset (bounds=[0,$maxX]x[0,$maxY])")
         }
     }
 
@@ -126,7 +118,6 @@ internal fun VariometerWidgetContent(
             val down = awaitFirstDown(requireUnconsumed = false)
             val longPress = awaitLongPressOrCancellation(down.id)
             if (longPress != null) {
-                Log.d("VARIO_GESTURE", "longPress detected -> toggling edit mode")
                 onLongPress()
             }
         }
@@ -135,27 +126,17 @@ internal fun VariometerWidgetContent(
     val dragModifier = Modifier.pointerInput(screenWidthPx, screenHeightPx, isEditMode) {
         if (isEditMode) {
             detectDragGestures(
-                onDragStart = {
-                    isUserInteracting = true
-                    Log.d(
-                        "VARIO_GESTURE",
-                        "dragStart size=${displaySize.value} offset=${displayOffset.value}"
-                    )
-                },
+                onDragStart = { isUserInteracting = true },
                 onDrag = { change, dragAmount ->
                     applyDragDelta(dragAmount)
                     change.consumePositionChange()
                 },
                 onDragEnd = {
                     isUserInteracting = false
-                    Log.d("VARIO_GESTURE", "dragEnd offset=${displayOffset.value}")
                     onOffsetChange(displayOffset.value)
                     onEditFinished()
                 },
-                onDragCancel = {
-                    isUserInteracting = false
-                    Log.d("VARIO_GESTURE", "dragCancel offset=${displayOffset.value}")
-                }
+                onDragCancel = { isUserInteracting = false }
             )
         }
     }
@@ -184,12 +165,10 @@ internal fun VariometerWidgetContent(
                         .coerceIn(minSizePx, maxSizePx)
                     if (newSize != displaySize.value) {
                         displaySize.value = newSize
-                        Log.d("VARIO_GESTURE", "resize -> size=$newSize")
                     }
                 },
                 onResizeEnd = {
                     isUserInteracting = false
-                    Log.d("VARIO_GESTURE", "resizeEnd size=${displaySize.value}")
                     onSizeChange(displaySize.value)
                     onEditFinished()
                 }
@@ -215,22 +194,13 @@ private fun VariometerResizeHandle(
                 .background(Color(0xB3FF1744), RoundedCornerShape(12.dp))
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragStart = {
-                            Log.d("VARIO_GESTURE", "resize start")
-                            onResizeStart()
-                        },
+                        onDragStart = { onResizeStart() },
                         onDrag = { change, dragAmount ->
                             onResize(dragAmount)
                             change.consumePositionChange()
                         },
-                        onDragEnd = {
-                            Log.d("VARIO_GESTURE", "resize end")
-                            onResizeEnd()
-                        },
-                        onDragCancel = {
-                            Log.d("VARIO_GESTURE", "resize cancel")
-                            onResizeEnd()
-                        }
+                        onDragEnd = { onResizeEnd() },
+                        onDragCancel = { onResizeEnd() }
                     )
                 }
         )

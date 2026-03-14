@@ -2,7 +2,7 @@ package com.example.xcpro
 
 import android.hardware.SensorManager
 import android.util.Log
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.common.orientation.OrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.OrientationSensorData
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.orientation.HeadingResolver
@@ -31,7 +31,7 @@ class OrientationDataSource(
     private val _orientationFlow = MutableStateFlow(OrientationSensorData())
     override val orientationFlow: StateFlow<OrientationSensorData> = _orientationFlow.asStateFlow()
 
-    private var currentFlightData = RealTimeFlightData()
+    private var currentFlightData = OrientationFlightDataSnapshot()
 
     private var sensorJob: Job? = null
     private var isStarted = false
@@ -79,7 +79,7 @@ class OrientationDataSource(
         Log.d(TAG, " Sensor availability: ${getSensorInfo()}")
     }
 
-    override fun updateFromFlightData(flightData: RealTimeFlightData) {
+    override fun updateFromFlightData(flightData: OrientationFlightDataSnapshot) {
         currentFlightData = flightData
         updateOrientationData()
     }
@@ -242,9 +242,9 @@ class OrientationDataSource(
                 gpsTrackDeg = currentFlightData.track.takeIf { it.isFinite() },
                 groundSpeedMs = currentFlightData.groundSpeed,
                 hasGpsFix = hasGpsFix(),
-                windFromDeg = currentFlightData.windDirection.toDouble()
+                windFromDeg = currentFlightData.windDirectionFrom
                     .takeIf { currentFlightData.windValid },
-                windSpeedMs = if (currentFlightData.windValid) currentFlightData.windSpeed.toDouble() else 0.0,
+                windSpeedMs = if (currentFlightData.windValid) currentFlightData.windSpeed else 0.0,
                 minTrackSpeedMs = minSpeedThresholdMs,
                 isFlying = isFlying
             )
@@ -257,8 +257,8 @@ class OrientationDataSource(
             isGPSValid = hasGpsFix(),
             hasValidHeading = headingSolution.isValid,
             compassReliable = primaryReliable,
-            windDirectionFrom = if (currentFlightData.windValid) currentFlightData.windDirection.toDouble() else 0.0,
-            windSpeed = if (currentFlightData.windValid) currentFlightData.windSpeed.toDouble() else 0.0,
+            windDirectionFrom = if (currentFlightData.windValid) currentFlightData.windDirectionFrom else 0.0,
+            windSpeed = if (currentFlightData.windValid) currentFlightData.windSpeed else 0.0,
             headingSolution = headingSolution,
             timestamp = nowWall
         )

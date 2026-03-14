@@ -54,14 +54,19 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
 
         val metadataStore = metadataStoreFor(sessionId = 102L)
         val downloads = FakeDownloadsRepository()
-        val repository = newRepository(filesDir, resolver, downloads, metadataStore)
+        val repository = newRepository(
+            filesDir = filesDir,
+            resolver = resolver,
+            downloads = downloads,
+            metadataStore = metadataStore,
+            recoveryDownloadsLookup = ForwardingRecoveryDownloadsLookup(downloads)
+        )
 
         val result = repository.recoverSession(sessionId = 102L)
 
         assertEquals(IgcRecoveryResult.Recovered("2026-03-09-XCS-000102-01.IGC"), result)
         assertContainsSignedPayload(output)
         assertNull(metadataStore.loadMetadata(102L))
-        assertEquals(2, downloads.refreshCalls)
     }
 
     @Test
@@ -102,14 +107,14 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
             filesDir = filesDir,
             resolver = mock(),
             downloads = downloads,
-            metadataStore = metadataStore
+            metadataStore = metadataStore,
+            recoveryDownloadsLookup = ForwardingRecoveryDownloadsLookup(downloads)
         )
 
         val result = repository.recoverSession(sessionId = 106L)
 
         assertEquals(IgcRecoveryResult.Recovered("2026-03-09-XCS-000106-01.IGC"), result)
         assertNull(metadataStore.loadMetadata(106L))
-        assertEquals(1, downloads.refreshCalls)
     }
 
     private fun assertPendingRowRecovery(sessionId: Long, pendingRowId: Long) {
@@ -135,7 +140,13 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
 
         val metadataStore = metadataStoreFor(sessionId)
         val downloads = FakeDownloadsRepository()
-        val repository = newRepository(filesDir, resolver, downloads, metadataStore)
+        val repository = newRepository(
+            filesDir = filesDir,
+            resolver = resolver,
+            downloads = downloads,
+            metadataStore = metadataStore,
+            recoveryDownloadsLookup = ForwardingRecoveryDownloadsLookup(downloads)
+        )
 
         val result = repository.recoverSession(sessionId = sessionId)
 
@@ -149,7 +160,6 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
             isNull()
         )
         assertNull(metadataStore.loadMetadata(sessionId))
-        assertEquals(2, downloads.refreshCalls)
     }
 
     private fun metadataStoreFor(sessionId: Long): InMemoryRecoveryMetadataStore {
@@ -171,13 +181,13 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
         filesDir: File,
         resolver: ContentResolver,
         downloads: FakeDownloadsRepository,
-        metadataStore: InMemoryRecoveryMetadataStore
+        metadataStore: InMemoryRecoveryMetadataStore,
+        recoveryDownloadsLookup: IgcRecoveryDownloadsLookup = ForwardingRecoveryDownloadsLookup(downloads)
     ): MediaStoreIgcFlightLogRepository {
         val context: Context = mock()
         whenever(context.filesDir).thenReturn(filesDir)
         whenever(context.contentResolver).thenReturn(resolver)
         return MediaStoreIgcFlightLogRepository(
-            appContext = context,
             downloadsRepository = downloads,
             recoveryMetadataStore = metadataStore,
             namingPolicy = IgcFileNamingPolicy(),
@@ -185,7 +195,13 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
                 lintValidator = StrictIgcLintValidator(),
                 lintMessageMapper = IgcLintMessageMapper()
             ),
-            gRecordSigner = IgcGRecordSigner()
+            gRecordSigner = IgcGRecordSigner(),
+            stagingStore = IgcRecoveryStagingStore(context),
+            publishTransport = IgcFlightLogPublishTransport(context),
+            recoveryFinalizedEntryResolver = IgcRecoveryFinalizedEntryResolver(
+                context,
+                recoveryDownloadsLookup
+            )
         )
     }
 
@@ -264,6 +280,22 @@ class IgcFlightLogRepositoryRecoveryKillPointTest {
                 code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
                 message = "not used in test"
             )
+        }
+    }
+
+    private class ForwardingRecoveryDownloadsLookup(
+        private val downloadsRepository: IgcDownloadsRepository
+    ) : IgcRecoveryDownloadsLookup {
+        override fun findFinalizedEntriesByPrefix(
+            expectedPrefix: String,
+            utcDate: LocalDate
+        ): List<IgcLogEntry> {
+            return downloadsRepository.entries.value
+                .filter { entry ->
+                    entry.displayName.startsWith(expectedPrefix) &&
+                        entry.displayName.endsWith(".IGC", ignoreCase = true)
+                }
+                .sortedBy { it.displayName }
         }
     }
 }

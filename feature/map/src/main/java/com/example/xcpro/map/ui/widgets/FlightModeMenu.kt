@@ -2,7 +2,6 @@
 
 package com.example.xcpro.map.ui.widgets
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -67,7 +66,6 @@ internal fun FlightModeMenuContent(
     widthDp: Float = 96f,
     heightDp: Float = 36f
 ) {
-    val tag = "FlightModeMenu"
     val density = LocalDensity.current
     val widthPx = with(density) { widthDp.dp.toPx() }
     val heightPx = with(density) { heightDp.dp.toPx() }
@@ -111,7 +109,6 @@ internal fun FlightModeMenuContent(
                     Modifier.combinedClickable(
                         onClick = {
                             isExpanded = true
-                            Log.d(tag, "Surface clicked; opening dropdown")
                         }
                     )
                 }
@@ -119,9 +116,6 @@ internal fun FlightModeMenuContent(
             .pointerInput(isEditMode, screenWidthPx, screenHeightPx) {
                 if (isEditMode) {
                     detectDragGestures(
-                        onDragStart = {
-                            Log.d(tag, "Drag started from ${displayOffset.value}")
-                        },
                         onDrag = { change, dragAmount ->
                             displayOffset.value = Offset(
                                 x = (displayOffset.value.x + dragAmount.x).coerceIn(
@@ -136,7 +130,6 @@ internal fun FlightModeMenuContent(
                             change.consumePositionChange()
                         },
                         onDragEnd = {
-                            Log.d(tag, "Drag ended at ${displayOffset.value}")
                             onOffsetChange(displayOffset.value)
                         }
                     )
@@ -174,7 +167,6 @@ internal fun FlightModeMenuContent(
             expanded = isExpanded,
             onDismissRequest = {
                 isExpanded = false
-                Log.d(tag, "Dropdown dismissed")
             },
             shape = RoundedCornerShape(20.dp)
         ) {
@@ -183,7 +175,6 @@ internal fun FlightModeMenuContent(
                     onClick = {
                         onModeChange(mode)
                         isExpanded = false
-                        Log.d(tag, "Mode selected ${mode.displayName}")
                     },
                     text = {
                         Row(

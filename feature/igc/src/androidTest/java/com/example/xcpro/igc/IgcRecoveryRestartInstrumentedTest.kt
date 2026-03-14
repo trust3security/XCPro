@@ -7,9 +7,14 @@ import android.os.Build
 import android.provider.MediaStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.xcpro.igc.data.IgcDownloadsStoragePaths
 import com.example.xcpro.igc.data.IgcFlightLogRepository
 import com.example.xcpro.igc.data.IgcExportValidationAdapter
+import com.example.xcpro.igc.data.IgcFlightLogPublishTransport
+import com.example.xcpro.igc.data.IgcRecoveryFinalizedEntryResolver
+import com.example.xcpro.igc.data.IgcRecoveryStagingStore
 import com.example.xcpro.igc.data.IgcRecoveryMetadataStore
+import com.example.xcpro.igc.data.MediaStoreIgcRecoveryDownloadsLookup
 import com.example.xcpro.igc.data.MediaStoreIgcDownloadsRepository
 import com.example.xcpro.igc.data.MediaStoreIgcFlightLogRepository
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
@@ -51,13 +56,19 @@ class IgcRecoveryRestartInstrumentedTest {
             )
         }
         val downloadsRepository = MediaStoreIgcDownloadsRepository(context)
+        val recoveryDownloadsLookup = MediaStoreIgcRecoveryDownloadsLookup(context)
         val repository: IgcFlightLogRepository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
             downloadsRepository = downloadsRepository,
             recoveryMetadataStore = metadataStore,
             namingPolicy = IgcFileNamingPolicy(),
             exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
+            gRecordSigner = IgcGRecordSigner(),
+            stagingStore = IgcRecoveryStagingStore(context),
+            publishTransport = IgcFlightLogPublishTransport(context),
+            recoveryFinalizedEntryResolver = IgcRecoveryFinalizedEntryResolver(
+                context,
+                recoveryDownloadsLookup
+            )
         )
 
         cleanupRows(context, fileName)
@@ -80,12 +91,17 @@ class IgcRecoveryRestartInstrumentedTest {
             assertTrue(!stageFile.exists())
 
             val rerunRepository: IgcFlightLogRepository = MediaStoreIgcFlightLogRepository(
-                appContext = context,
                 downloadsRepository = MediaStoreIgcDownloadsRepository(context),
                 recoveryMetadataStore = InMemoryRecoveryMetadataStore(),
                 namingPolicy = IgcFileNamingPolicy(),
                 exportValidationAdapter = newValidationAdapter(),
-                gRecordSigner = IgcGRecordSigner()
+                gRecordSigner = IgcGRecordSigner(),
+                stagingStore = IgcRecoveryStagingStore(context),
+                publishTransport = IgcFlightLogPublishTransport(context),
+                recoveryFinalizedEntryResolver = IgcRecoveryFinalizedEntryResolver(
+                    context,
+                    MediaStoreIgcRecoveryDownloadsLookup(context)
+                )
             )
             val rerun = rerunRepository.recoverSession(sessionId = sessionId)
 
@@ -115,7 +131,7 @@ class IgcRecoveryRestartInstrumentedTest {
                     put(MediaStore.Downloads.MIME_TYPE, "application/vnd.fai.igc")
                     put(
                         MediaStore.Downloads.RELATIVE_PATH,
-                        "${MediaStoreIgcDownloadsRepository.DOWNLOAD_RELATIVE_PATH}/"
+                        "${IgcDownloadsStoragePaths.DOWNLOAD_RELATIVE_PATH}/"
                     )
                     put(MediaStore.Downloads.IS_PENDING, 1)
                 }
@@ -148,7 +164,7 @@ class IgcRecoveryRestartInstrumentedTest {
         }
         val selectionArgs = arrayOf(
             fileName,
-            "${MediaStoreIgcDownloadsRepository.DOWNLOAD_RELATIVE_PATH}%",
+            "${IgcDownloadsStoragePaths.DOWNLOAD_RELATIVE_PATH}%",
             pendingValue.toString()
         )
         val ids = mutableListOf<Long>()

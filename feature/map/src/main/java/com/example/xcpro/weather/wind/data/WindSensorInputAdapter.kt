@@ -1,7 +1,6 @@
 package com.example.xcpro.weather.wind.data
 
 import android.hardware.SensorManager
-import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.sensors.SensorDataSource
 import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.weather.wind.model.GLoadSample
@@ -9,25 +8,16 @@ import com.example.xcpro.weather.wind.model.GpsSample
 import com.example.xcpro.weather.wind.model.HeadingSample
 import com.example.xcpro.weather.wind.model.PressureSample
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
-import kotlinx.coroutines.flow.stateIn
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-class WindSensorInputAdapter @Inject constructor(
-    @DefaultDispatcher dispatcher: CoroutineDispatcher
-) {
-    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
-
+class WindSensorInputAdapter @Inject constructor() {
     fun adapt(source: SensorDataSource, airspeedSource: AirspeedDataSource): WindSensorInputs {
-        val gpsFlow: StateFlow<GpsSample?> = source.gpsFlow
+        val gpsFlow: Flow<GpsSample?> = source.gpsFlow
             .map { gps ->
                 gps?.let {
                     val clockMillis = it.timeForCalculationsMillis
@@ -42,9 +32,8 @@ class WindSensorInputAdapter @Inject constructor(
                     )
                 }
             }
-            .stateIn(scope, SharingStarted.Eagerly, null)
 
-        val pressureFlow: StateFlow<PressureSample?> = source.baroFlow
+        val pressureFlow: Flow<PressureSample?> = source.baroFlow
             .map { baro ->
                 baro?.let {
                     val altitude = pressureToAltitudeMeters(it.pressureHPa.value)
@@ -57,9 +46,8 @@ class WindSensorInputAdapter @Inject constructor(
                     )
                 }
             }
-            .stateIn(scope, SharingStarted.Eagerly, null)
 
-        val headingFlow: StateFlow<HeadingSample?> = combine(
+        val headingFlow: Flow<HeadingSample?> = combine(
             source.compassFlow,
             source.attitudeFlow
         ) { compass, attitude ->
@@ -82,15 +70,14 @@ class WindSensorInputAdapter @Inject constructor(
                 }
                 else -> null
             }
-        }.stateIn(scope, SharingStarted.Eagerly, null)
+        }
 
-        val gLoadFlow: StateFlow<GLoadSample?> = source.rawAccelFlow
+        val gLoadFlow: Flow<GLoadSample?> = source.rawAccelFlow
             .map { raw -> raw?.let { toGLoadSample(it) } }
             .scan(null as GLoadSample?) { previous, current -> smoothGLoad(previous, current) }
-            .stateIn(scope, SharingStarted.Eagerly, null)
 
         // Airspeed is optional; provide a real source when available (e.g., external vario).
-        val airspeedFlow: StateFlow<AirspeedSample?> = airspeedSource.airspeedFlow
+        val airspeedFlow: Flow<AirspeedSample?> = airspeedSource.airspeedFlow
 
         return WindSensorInputs(
             gps = gpsFlow,

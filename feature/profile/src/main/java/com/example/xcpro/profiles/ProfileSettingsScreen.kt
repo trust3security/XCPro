@@ -136,7 +136,7 @@ fun ProfileSettingsScreen(
         ProfileExportDialog(
             profile = profile,
             onDismiss = { showExportDialog = false },
-            onRequestExportJson = {
+            onRequestExportBundle = {
                 viewModel.exportBundle(profileIds = setOf(profile.id))
             },
             onExport = { message ->

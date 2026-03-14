@@ -236,9 +236,9 @@ abstract class AdsbTrafficRepositoryTestBase {
             cooldownMs = 30_000L
         )
         val outputPort = FakeEmergencyAudioOutputPort()
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),

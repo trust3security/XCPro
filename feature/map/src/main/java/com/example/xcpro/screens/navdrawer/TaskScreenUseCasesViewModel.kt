@@ -1,4 +1,4 @@
-package com.example.ui1.screens
+package com.example.xcpro.screens.navdrawer
 
 import androidx.lifecycle.ViewModel
 import com.example.xcpro.airspace.AirspaceUseCase

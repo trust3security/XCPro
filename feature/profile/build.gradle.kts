@@ -37,10 +37,7 @@ dependencies {
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
     implementation(project(":dfcards-library"))
-    implementation(project(":feature:forecast"))
-    implementation(project(":feature:traffic"))
     implementation(project(":feature:variometer"))
-    implementation(project(":feature:weather"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -65,6 +62,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(project(":feature:forecast"))
+    testImplementation(project(":feature:traffic"))
+    testImplementation(project(":feature:weather"))
     testImplementation("org.mockito:mockito-core:5.2.0")
     testImplementation("org.mockito:mockito-inline:5.2.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.0")

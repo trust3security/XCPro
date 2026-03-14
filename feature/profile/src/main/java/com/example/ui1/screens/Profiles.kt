@@ -427,7 +427,7 @@ fun ProfilesScreen(
                 showExportDialog = false
                 exportProfile = null
             },
-            onRequestExportJson = {
+            onRequestExportBundle = {
                 val profileIds = exportProfile?.id?.let(::setOf)
                 profileViewModel.exportBundle(profileIds)
             },

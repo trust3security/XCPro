@@ -5,17 +5,35 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
-data class MapTrafficSelectionState(
-    val selectedAdsbId: MutableStateFlow<Icao24?>,
+class MapTrafficSelectionState(
+    private val mutableSelectedAdsbId: MutableStateFlow<Icao24?>,
     val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?>,
-    val selectedOgnId: MutableStateFlow<String?>,
+    private val mutableSelectedOgnId: MutableStateFlow<String?>,
     val selectedOgnTarget: StateFlow<OgnTrafficTarget?>,
-    val selectedOgnThermalId: MutableStateFlow<String?>,
+    private val mutableSelectedOgnThermalId: MutableStateFlow<String?>,
     val selectedOgnThermal: StateFlow<OgnThermalHotspot?>
-)
+) : TrafficSelectionPort {
+    override val selectedAdsbId: StateFlow<Icao24?> = mutableSelectedAdsbId.asStateFlow()
+    override val selectedOgnId: StateFlow<String?> = mutableSelectedOgnId.asStateFlow()
+    val selectedOgnThermalId: StateFlow<String?> = mutableSelectedOgnThermalId.asStateFlow()
+    override val selectedThermalId: StateFlow<String?> = selectedOgnThermalId
+
+    override fun setSelectedOgnId(id: String?) {
+        mutableSelectedOgnId.value = id
+    }
+
+    override fun setSelectedThermalId(id: String?) {
+        mutableSelectedOgnThermalId.value = id
+    }
+
+    override fun setSelectedAdsbId(id: Icao24?) {
+        mutableSelectedAdsbId.value = id
+    }
+}
 
 fun createTrafficSelectionState(
     scope: CoroutineScope,
@@ -28,20 +46,20 @@ fun createTrafficSelectionState(
     val selectedOgnId = MutableStateFlow<String?>(null)
     val selectedOgnThermalId = MutableStateFlow<String?>(null)
     return MapTrafficSelectionState(
-        selectedAdsbId = selectedAdsbId,
+        mutableSelectedAdsbId = selectedAdsbId,
         selectedAdsbTarget = createSelectedAdsbTargetState(
             scope = scope,
             adsbMetadataEnrichmentUseCase = adsbMetadataEnrichmentUseCase,
             selectedAdsbId = selectedAdsbId,
             rawAdsbTargets = rawAdsbTargets
         ),
-        selectedOgnId = selectedOgnId,
+        mutableSelectedOgnId = selectedOgnId,
         selectedOgnTarget = createSelectedOgnTargetState(
             scope = scope,
             selectedOgnId = selectedOgnId,
             ognTargets = ognTargets
         ),
-        selectedOgnThermalId = selectedOgnThermalId,
+        mutableSelectedOgnThermalId = selectedOgnThermalId,
         selectedOgnThermal = createSelectedOgnThermalState(
             scope = scope,
             selectedThermalId = selectedOgnThermalId,

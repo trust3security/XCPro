@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui.effects
 
-import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalDensity
@@ -9,11 +8,13 @@ import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.dfcards.dfcards.toDensityScale
 import com.example.dfcards.dfcards.toIntSizePx
+import com.example.xcpro.toOrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.MapLocationPermissionRequester
+import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
@@ -37,12 +38,15 @@ internal fun shouldDispatchDisplayPoseFrame(
     return frameNanos - lastDispatchNanos >= minIntervalNanos
 }
 
+internal fun shouldRunComposeDisplayPoseLoop(useRenderFrameSync: Boolean): Boolean =
+    !useRenderFrameSync
+
 object MapComposeEffects {
 
     @Composable
     fun LocationAndPermissionEffects(
-        locationManager: LocationManager,
-        locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
+        locationManager: MapLocationRuntimePort,
+        locationPermissionRequester: MapLocationPermissionRequester,
         currentLocation: MapLocationUiModel?,
         orientationData: OrientationData,
         suppressLiveGps: Boolean = false,
@@ -50,7 +54,7 @@ object MapComposeEffects {
     ) {
         LaunchedEffect(allowSensorStart) {
             if (allowSensorStart) {
-                locationManager.checkAndRequestLocationPermissions(locationPermissionLauncher)
+                locationManager.requestLocationPermissions(locationPermissionRequester)
             }
         }
 
@@ -123,7 +127,7 @@ object MapComposeEffects {
     @Composable
     fun FlightDataAndCardEffects(
         flightDataManager: FlightDataManager,
-        locationManager: LocationManager,
+        locationManager: MapLocationRuntimePort,
         orientationData: OrientationData,
         orientationManager: MapOrientationManager,
         suppressLiveGps: Boolean
@@ -134,7 +138,9 @@ object MapComposeEffects {
         LaunchedEffect(Unit) {
             flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
                 if (liveData != null) {
-                    orientationManager.updateFromFlightData(liveData)
+                    orientationManager.updateFromFlightData(
+                        liveData.toOrientationFlightDataSnapshot()
+                    )
                     // AI-NOTE: Avoid stale captures in a long-lived collector; replay map updates
                     // must see the latest orientation and replay/live toggle values.
                     if (suppressLiveGpsState.value) {
@@ -151,15 +157,23 @@ object MapComposeEffects {
 
     @Composable
     fun DisplayPoseEffects(
-        locationManager: LocationManager,
+        locationManager: MapLocationRuntimePort,
         orientationData: OrientationData,
-        replaySessionState: SessionState
+        replaySessionState: SessionState,
+        useRenderFrameSync: Boolean
     ) {
-        val orientationState = rememberUpdatedState(orientationData)
         val replayState = rememberUpdatedState(replaySessionState)
 
         LaunchedEffect(replaySessionState.speedMultiplier) {
             locationManager.setReplaySpeedMultiplier(replaySessionState.speedMultiplier)
+        }
+
+        LaunchedEffect(orientationData) {
+            locationManager.updateOrientation(orientationData)
+        }
+
+        if (!shouldRunComposeDisplayPoseLoop(useRenderFrameSync)) {
+            return
         }
 
         LaunchedEffect(locationManager) {
@@ -180,7 +194,6 @@ object MapComposeEffects {
                     continue
                 }
                 lastDispatchNanos = frameNanos
-                locationManager.updateOrientation(orientationState.value)
                 locationManager.onDisplayFrame()
             }
         }
@@ -205,8 +218,8 @@ object MapComposeEffects {
 
     @Composable
     fun AllMapEffects(
-        locationManager: LocationManager,
-        locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
+        locationManager: MapLocationRuntimePort,
+        locationPermissionRequester: MapLocationPermissionRequester,
         currentLocation: MapLocationUiModel?,
         orientationData: OrientationData,
         orientationManager: MapOrientationManager,
@@ -223,6 +236,7 @@ object MapComposeEffects {
         initialMapStyle: String,
         onMapStyleResolved: (String) -> Unit,
         replaySessionState: SessionState,
+        useRenderFrameSync: Boolean,
         suppressLiveGps: Boolean = false,
         allowSensorStart: Boolean = true
     ) {
@@ -230,7 +244,7 @@ object MapComposeEffects {
 
         LocationAndPermissionEffects(
             locationManager = locationManager,
-            locationPermissionLauncher = locationPermissionLauncher,
+            locationPermissionRequester = locationPermissionRequester,
             currentLocation = currentLocation,
             orientationData = orientationData,
             suppressLiveGps = suppressLiveGps,
@@ -262,7 +276,8 @@ object MapComposeEffects {
         DisplayPoseEffects(
             locationManager = locationManager,
             orientationData = orientationData,
-            replaySessionState = replaySessionState
+            replaySessionState = replaySessionState,
+            useRenderFrameSync = useRenderFrameSync
         )
 
         MapStyleAndConfigurationEffects(

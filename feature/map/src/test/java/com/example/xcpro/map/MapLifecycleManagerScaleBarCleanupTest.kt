@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import androidx.lifecycle.Lifecycle
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.replay.SessionState
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertNull
@@ -40,12 +39,11 @@ class MapLifecycleManagerScaleBarCleanupTest {
 
     private fun createLifecycleManager(mapState: MapScreenState): MapLifecycleManager {
         return MapLifecycleManager(
-            mapState = mapState,
-            orientationManager = mock<MapOrientationManager>(),
-            locationManager = mock<LocationManager>(),
-            replaySessionState = MutableStateFlow(SessionState()),
-            stateActions = mock<MapStateActions>()
+            lifecycleSurface = MapLifecycleSurfaceAdapter(mapState, mock<MapStateActions>()),
+            orientationManager = mock<MapOrientationRuntimePort>(),
+            locationManager = mock<MapLocationRuntimePort>(),
+            locationRenderFrameCleanup = mock<MapRenderFrameCleanupPort>(),
+            replaySessionState = MutableStateFlow(SessionState())
         )
     }
 }
-

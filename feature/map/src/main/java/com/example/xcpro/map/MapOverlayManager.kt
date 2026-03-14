@@ -50,15 +50,18 @@ class MapOverlayManager(
     nowMonoMs = monoTimeMs
 ) {
     private val baseOpsDelegate = MapOverlayManagerRuntimeBaseOpsDelegate(
-        context = context,
         mapStateReader = mapStateReader,
         taskRenderSyncCoordinator = taskRenderSyncCoordinator,
         taskWaypointCountProvider = taskWaypointCountProvider,
         stateActions = stateActions,
-        snailTrailManager = snailTrailManager,
         coroutineScope = coroutineScope,
-        airspaceUseCase = airspaceUseCase,
-        waypointFilesUseCase = waypointFilesUseCase
+        refreshAirspaceFn = { map ->
+            loadAndApplyAirspace(map, airspaceUseCase)
+        },
+        refreshWaypointsFn = { map ->
+            val (files, checks) = waypointFilesUseCase.loadWaypointFiles()
+            loadAndApplyWaypoints(context, map, files, checks)
+        }
     )
 
     private val lifecyclePort = MapOverlayRuntimeMapLifecycleDelegate(

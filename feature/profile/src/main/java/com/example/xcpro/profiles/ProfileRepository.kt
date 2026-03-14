@@ -1,6 +1,8 @@
 package com.example.xcpro.profiles
 
 import android.util.Log
+import com.example.xcpro.core.time.Clock
+import com.example.xcpro.core.time.DefaultClockProvider
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +27,8 @@ class ProfileRepository(
     private val profileSettingsRestoreApplier: ProfileSettingsRestoreApplier,
     private val profileScopedDataCleaner: ProfileScopedDataCleaner = NoOpProfileScopedDataCleaner(),
     private val profileDiagnosticsReporter: ProfileDiagnosticsReporter = LogcatProfileDiagnosticsReporter(),
+    private val clock: Clock = DefaultClockProvider(),
+    private val profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator(),
     private val internalScope: CoroutineScope
 ) {
     @Inject
@@ -34,7 +38,9 @@ class ProfileRepository(
         profileSettingsSnapshotProvider: ProfileSettingsSnapshotProvider,
         profileSettingsRestoreApplier: ProfileSettingsRestoreApplier,
         profileScopedDataCleaner: ProfileScopedDataCleaner,
-        profileDiagnosticsReporter: ProfileDiagnosticsReporter
+        profileDiagnosticsReporter: ProfileDiagnosticsReporter,
+        clock: Clock,
+        profileIdGenerator: ProfileIdGenerator
     ) : this(
         storage,
         profileBackupSink,
@@ -42,24 +48,40 @@ class ProfileRepository(
         profileSettingsRestoreApplier,
         profileScopedDataCleaner,
         profileDiagnosticsReporter,
+        clock,
+        profileIdGenerator,
         CoroutineScope(SupervisorJob() + Dispatchers.IO)
     )
-    constructor(storage: ProfileStorage) : this(
+    constructor(
+        storage: ProfileStorage,
+        clock: Clock = DefaultClockProvider(),
+        profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator()
+    ) : this(
         storage,
         NoOpProfileBackupSink(),
         NoOpProfileSettingsSnapshotProvider(),
         NoOpProfileSettingsRestoreApplier(),
         NoOpProfileScopedDataCleaner(),
         NoOpProfileDiagnosticsReporter(),
+        clock,
+        profileIdGenerator,
         CoroutineScope(SupervisorJob() + Dispatchers.IO)
     )
-    constructor(storage: ProfileStorage, internalScope: CoroutineScope, profileDiagnosticsReporter: ProfileDiagnosticsReporter = NoOpProfileDiagnosticsReporter()) : this(
+    constructor(
+        storage: ProfileStorage,
+        internalScope: CoroutineScope,
+        profileDiagnosticsReporter: ProfileDiagnosticsReporter = NoOpProfileDiagnosticsReporter(),
+        clock: Clock = DefaultClockProvider(),
+        profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator()
+    ) : this(
         storage,
         NoOpProfileBackupSink(),
         NoOpProfileSettingsSnapshotProvider(),
         NoOpProfileSettingsRestoreApplier(),
         NoOpProfileScopedDataCleaner(),
         profileDiagnosticsReporter,
+        clock,
+        profileIdGenerator,
         internalScope
     )
     private val gson = GsonBuilder().create()
@@ -75,6 +97,7 @@ class ProfileRepository(
     private var lastKnownGoodActiveProfileId: String? = null
     private var suppressNextHydrationBackupSync = false
     private val hydrationCoordinator = ProfileRepositoryHydrationCoordinator(
+        clock = clock,
         gson = gson,
         onError = ::logError,
         reportDiagnostic = ::reportDiagnostic,
@@ -88,11 +111,17 @@ class ProfileRepository(
         onError = ::logError,
         reportDiagnostic = ::reportDiagnostic
     )
-    private val importCoordinator = ProfileRepositoryImportCoordinator()
+    private val importCoordinator = ProfileRepositoryImportCoordinator(
+        clock = clock,
+        profileIdGenerator = profileIdGenerator
+    )
     private val mutationCoordinator = ProfileRepositoryMutationCoordinator(
-        profileScopedDataCleaner = profileScopedDataCleaner
+        profileScopedDataCleaner = profileScopedDataCleaner,
+        clock = clock,
+        profileIdGenerator = profileIdGenerator
     )
     private val bundleCoordinator = ProfileRepositoryBundleCoordinator(
+        clock = clock,
         aircraftProfileSectionIds = ProfileSettingsSectionSets.AIRCRAFT_PROFILE_SECTION_IDS,
         profileSettingsRestoreApplier = profileSettingsRestoreApplier,
         captureSettingsSnapshot = backupSyncCoordinator::captureSettingsSnapshot,
@@ -187,7 +216,7 @@ class ProfileRepository(
     private suspend fun awaitBootstrapCompletion() {
         if (!_bootstrapComplete.value) bootstrapComplete.first { it }
     }
-    suspend fun exportBundle(profileIds: Set<String>? = null): Result<String> {
+    suspend fun exportBundle(profileIds: Set<String>? = null): Result<ProfileBundleExportArtifact> {
         awaitBootstrapCompletion()
         val exportResult = mutationMutex.withLock {
             bundleCoordinator.exportBundle(
@@ -197,10 +226,10 @@ class ProfileRepository(
             )
         }
         exportResult
-            .onSuccess { bundleJson ->
+            .onSuccess { exportArtifact ->
                 reportDiagnostic(
                     event = "profile_bundle_export_success",
-                    attributes = mapOf("bytes" to bundleJson.length.toString())
+                    attributes = mapOf("bytes" to exportArtifact.bundleJson.length.toString())
                 )
             }
             .onFailure { error ->

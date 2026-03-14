@@ -36,6 +36,64 @@ and expiry date before code is merged.
 
 ---
 
+## Rule Classification
+
+This repo uses three rule classes:
+
+| Class | Meaning | Merge Expectation |
+|---|---|---|
+| Invariant | Non-negotiable architecture, determinism, safety, or boundary rule | Must hold, be enforced, or have an approved time-boxed deviation |
+| Default | Expected baseline for new work | May vary only with explicit rationale and equivalent safety/test coverage |
+| Guideline | Strong recommendation that improves consistency and reviewability | May vary with local rationale |
+
+Rules:
+- Everything in `ARCHITECTURE.md` is an `Invariant` unless a section explicitly says `Default`.
+- `CODING_RULES.md` may define `Invariant`, `Default`, or `Guideline` rules, but CI-backed rules must be identified there.
+- Workflow docs (`CONTRIBUTING.md`, plan docs, PR notes) do not override architecture invariants.
+
+---
+
+## Documentation Source of Truth
+
+Each architecture document has a single job.
+
+| Document | Owns | Must Not Become |
+|---|---|---|
+| `AGENTS.md` | repository entry contract for agents | a duplicate architecture rulebook |
+| `ARCHITECTURE.md` | non-negotiable system invariants and governance model | task-specific execution log |
+| `CODING_RULES.md` | day-to-day implementation rules and enforceable coding defaults | a second pipeline map |
+| `PIPELINE.md` | current end-to-end wiring and runtime ownership flow | a backlog or design debate log |
+| `CODEBASE_CONTEXT_AND_INTENT.md` | durable product/behavior intent that must survive refactors | a pointer to one temporary active plan |
+| `CONTRIBUTING.md` | contributor workflow, review, and verification expectations | a second source of architectural truth |
+| `CHANGE_PLAN_TEMPLATE.md` | required planning structure for non-trivial work | a permanent architecture policy doc |
+| `KNOWN_DEVIATIONS.md` | the only authoritative ledger of approved temporary rule exceptions | a general risk register |
+| `ADR_TEMPLATE.md` | template for durable architecture decisions and tradeoff capture | a task checklist |
+
+Rules:
+- Global docs must stay durable. Temporary status, active-plan pointers, and one-off task instructions belong in change plans or ADRs, not here.
+- If the same rule appears in multiple docs, one file must be named authoritative and the others should link to it rather than restate it differently.
+
+---
+
+## Architecture Decision Records (ADR)
+
+Non-trivial architecture decisions must be captured in a durable decision record.
+
+An ADR is required when work changes any of the following:
+- ownership or dependency boundaries across layers/modules
+- public or cross-module API surface
+- concurrency, buffering, cadence, or determinism policy
+- exception classes that are expected to recur
+- performance/SLO budgets that will influence future design tradeoffs
+
+Rules:
+- Use `ADR_TEMPLATE.md` for new ADRs.
+- ADRs record context, decision, alternatives, consequences, validation, and rollback.
+- Change plans describe execution; ADRs describe durable decisions. Do not use one as a substitute for the other.
+- Superseded ADRs remain in-repo with an explicit replacement reference.
+
+---
+
 ## Timebase and Clocks
 
 All domain and fusion logic must use injected clocks.
@@ -62,6 +120,137 @@ Rules:
 - Data layer implements those ports via adapters.
 - Engines/use-cases depend on ports, not concrete Android/data implementations.
 - Core pipeline components are provided by DI, never constructed inside managers.
+
+---
+
+## Module and API Surface Governance
+
+Rules:
+- New modules require a documented reason in the change plan and, for durable boundary moves, an ADR. Valid reasons include boundary enforcement, ownership isolation, compile-speed improvements, or testability.
+- Visibility must be as narrow as possible. Default to `private`, then `internal`, and use wider visibility only for named consumers.
+- New public or cross-module contracts must declare an owner, expected consumers, and stability expectations.
+- Compatibility shims/adapters introduced during refactors must have a removal condition or expiry path; permanent hidden compatibility layers are forbidden.
+- Convenience imports that bypass owner-module contracts are forbidden.
+
+---
+
+## Scope Ownership and Lifetime
+
+Long-lived coroutine scopes are architecture-significant. They are allowed only
+when ownership and teardown are explicit.
+
+Rules:
+- Every long-lived scope must have a named owner and a documented cancellation path.
+- Preferred owners are lifecycle/runtime hosts (`viewModelScope`, foreground service scope, injected runtime owner scope, repository/runtime owner scope when continuous collection is required).
+- Pure helpers, mappers, value models, and policy objects must not create their own long-lived scopes.
+- Constructor-created scopes are allowed only in explicit lifecycle/runtime owners or repositories that continuously coordinate authoritative/runtime state.
+- Nested/internal scopes are allowed only when they are clearly subordinate to one parent owner and their teardown relationship is explicit.
+- New scope creation must be justified in the change plan with owner, dispatcher, and cancellation trigger.
+
+---
+
+## Logging Architecture
+
+Logging is infrastructure and must not become an ungoverned side channel.
+
+Rules:
+- `AppLogger` is the canonical logging path for production Kotlin logging where redaction, debug gating, sampling, or rate limiting may matter.
+- Direct `android.util.Log` calls are allowed only in narrow platform/bootstrap edges, low-level wrappers, or short-lived debug investigations with explicit rationale.
+- Hot-path, replay, sensor, traffic, and location-adjacent logs must use rate limiting/sampling and redaction where applicable.
+- Logs must not be the only place where correctness-critical events are observable; user-visible or domain-relevant failures must still flow through models/state.
+- Temporary debug logging that bypasses the canonical path must be removed before merge or tracked as an explicit approved exception.
+
+---
+
+## Responsibility Ownership Matrix
+
+This matrix defines the default owner for new feature responsibilities.
+
+| Layer | Owns | Must Not Own |
+|---|---|---|
+| UI | rendering, event forwarding, display-only formatting, visual-only smoothing | business rules, persistence, repository access, authoritative state |
+| ViewModel | screen state, user-intent handling, orchestration, UI-model mapping | business calculations, direct I/O, Android UI types, persistence |
+| UseCase / Domain | business rules, policy, calculations, state decisions | rendering, platform I/O, Android/UI types |
+| Repository | authoritative data coordination, persistence-facing state, SSOT exposure | rendering, UI logic, business decisions that belong in domain |
+| Data Source / Adapter | API, database, file, sensor, and device access | business policy, UI state, rendering |
+| Mapper | conversion between data, domain, and UI models | business decisions, persistence, I/O |
+
+Rules:
+- New feature work must keep ownership aligned with this matrix.
+- Do not bypass layers for convenience.
+- If one file mixes multiple owners, split it by responsibility.
+
+---
+
+## Authoritative State Contract
+
+Ownership is required but not sufficient. Every authoritative or derived state item must also have a documented contract.
+
+Required contract fields for new or changed state:
+- authoritative owner
+- allowed mutator(s) or mutation entrypoint(s)
+- exposed/read path
+- upstream source or derived-from dependency
+- persistence owner, if persisted
+- reset or clear conditions
+- time base, if time-dependent
+- required test coverage
+
+Rules:
+- Authoritative state has exactly one write authority.
+- Derived state must be recomputable from lower-layer authorities; if it cannot be recomputed, ownership is wrong or incomplete.
+- `null`, zero, or default objects are not acceptable substitutes for undocumented loading, error, degraded, or unavailable states.
+- If lifecycle, source switching, or replay/live mode changes reset the state, that reset behavior must be documented explicitly.
+
+---
+
+## Stateless Objects and No-Op Boundaries
+
+Rules:
+- Kotlin `object` is allowed for stateless helpers, constants, pure policy/math utilities, DI modules, sealed singleton values, and explicit `NoOp` boundary implementations.
+- Use `object` when shared behavior is genuinely stateless; do not introduce allocation-only wrapper classes solely to avoid `object`.
+- Kotlin `object` must not become an application state owner, lifecycle host, hidden service locator, or authoritative business-state container.
+- If an `object` has mutable internal state, that state must be bounded, thread-safe, non-authoritative, and documented.
+- `NoOp` implementations are allowed only for tests, optional capabilities, safe degraded modes, or explicit disabled-feature boundaries.
+- Mandatory production behavior must not silently fall back to `NoOp` without documented degraded behavior and review visibility.
+- Public convenience wiring that hides `NoOp`, time/random generation, or ad-hoc scope creation is forbidden unless the boundary is explicitly optional and documented.
+
+---
+
+## Compatibility Shim Lifecycle
+
+Temporary compatibility code is a migration tool, not a resting state.
+
+Rules:
+- Every compatibility shim/bridge/wrapper must declare: owner, reason, target replacement, and removal trigger.
+- Shim code comments should use the prefix `Compatibility shim:` so reviewers and cleanup passes can find them reliably.
+- Every shim must have a test that locks current expected behavior during the migration window.
+- If a shim is expected to outlive one refactor phase, record the decision in the change plan and, when durable, in an ADR.
+- Permanent compatibility layers must be promoted into explicit supported API/contracts; untracked legacy shims are forbidden.
+
+---
+
+## Canonical Formula and Policy Owners
+
+Shared formulas, thresholds, and policy constants must have one clear owner.
+
+Rules:
+- Physical formulas, atmospheric/QNH math, normalization rules, and policy constants reused across slices must have one canonical owner file/module.
+- Copy-pasted math or duplicated policy constants are forbidden unless required by a boundary adapter, performance constraint, or approved temporary migration path.
+- If duplication is temporarily required, the canonical owner and re-sync/removal plan must be documented in the change plan or deviation.
+- Naming and units must stay aligned with the canonical owner.
+- Tests, adapters, and docs that restate a shared formula or threshold must point back to the canonical owner when practical.
+
+---
+
+## Identity and Model Creation Policy
+
+Rules:
+- IDs, timestamps, and other generated identity values must be created at explicit ownership boundaries (factory, repository, use case, creation command, or adapter).
+- Domain/data models must not hide important creation side effects behind default property values when identity/time semantics matter.
+- Deterministic/replay-sensitive paths must use deterministic IDs or injected generators.
+- Random or wall-time-backed IDs are allowed only at explicit creation boundaries where non-determinism is acceptable and documented.
+- Persistent entities should prefer required constructor parameters or explicit factory methods over default-generated IDs/timestamps.
 
 ---
 
@@ -440,6 +629,13 @@ Global mutable singletons may not.
 - No swallowed exceptions
 - Errors flow upward via domain models
 
+### Required Modeling
+- Non-happy-path behavior must be classified as one of: recoverable error, degraded-but-usable, unavailable/not-enough-data, terminal failure, or user-action-required.
+- Domain/use-case layers own retry, fallback, staleness, and confidence semantics.
+- UI renders state, labels, and actions only; it must not invent error semantics.
+- Invalid or unavailable values must not be silently mapped to valid-looking defaults.
+- Degraded states that affect user trust must be stable under noise (dwell/hysteresis/hold where needed).
+
 ### UI
 - Renders error state
 - Never decides error semantics
@@ -479,6 +675,15 @@ The following must be testable without Android framework:
 
 If a component cannot be tested in isolation, the design is incorrect.
 
+Required proof by change type:
+- Domain/policy/math change -> unit tests with edge cases and invariants
+- Replay/time-base/cadence change -> fake-clock tests plus deterministic repeat-run coverage
+- Persistence/settings/schema change -> round-trip, restore, and migration/compat tests
+- UI interaction/lifecycle change -> UI or instrumentation coverage when behavior depends on runtime collection/gesture sequencing
+- Hot-path/performance/SLO change -> measured evidence or benchmark/SLO artifact
+
+If required proof is intentionally skipped, the rationale belongs in the change plan or an approved deviation.
+
 ---
 
 ## 13. AI / Tooling Assumptions
@@ -503,9 +708,12 @@ These rules prevent regressions and future rewrites.
 Rules:
 - Non-trivial refactors must have a written plan doc with phases, ownership, and tests.
 - Use `CHANGE_PLAN_TEMPLATE.md` as the default starting point for non-trivial feature/refactor plans.
+- Boundary/module/API surface decisions that should outlive one task must be recorded with `ADR_TEMPLATE.md`.
 - SSOT ownership must be explicit with a simple flow diagram or bullet flow.
+- New long-lived scopes, compatibility shims, canonical formula owners, and non-deterministic identity generation points must be explicit in plans and tests.
 - Time base must be specified and enforced in code and tests (monotonic or replay only).
 - State machines must be explicit: list states and transitions in docs.
+- Global contract docs must remain durable; they must not hardcode temporary active-plan pointers or one-off execution state.
 - Regression tests are mandatory for new behavior (unit tests first, replay tests when applicable).
 
 Red flags in review (reject changes):
@@ -530,6 +738,7 @@ Rules:
 
 ## Related Docs
 - `CHANGE_PLAN_TEMPLATE.md`: neutral plan template for new features and refactors.
+- `ADR_TEMPLATE.md`: durable record template for non-trivial architecture decisions.
 - `../../mapposition.md`: map display update flow and time-base rules.
 
 ## Final Rule

@@ -1,6 +1,5 @@
 package com.example.xcpro
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -40,6 +39,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.navigation.MapNavigationSignals
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileViewModel
@@ -79,17 +79,17 @@ fun MainActivityScreen(
     
     // Apply saved status bar style when profile changes
     LaunchedEffect(profileUiState.activeProfile?.id) {
-        Log.d("MainActivity", " LaunchedEffect triggered for profile: ${profileUiState.activeProfile?.id} (${profileUiState.activeProfile?.name})")
+        AppLogger.d(TAG, "Applying saved status bar style for active profile change")
         val activity = context as? MainActivity
         if (activity != null) {
-            Log.d("MainActivity", " MainActivity reference obtained, calling applyUserStatusBarStyle")
+            AppLogger.d(TAG, "MainActivity reference obtained for status bar style update")
             activity.applyUserStatusBarStyle(profileUiState.activeProfile?.id)
         } else {
-            Log.e("MainActivity", " Failed to get MainActivity reference from context")
+            AppLogger.e(TAG, "Failed to get MainActivity reference from context")
         }
     }
 
-    Log.d(TAG, "MainActivity: Current route=${currentRoute?.destination?.route}")
+    AppLogger.d(TAG, "MainActivity route=${currentRoute?.destination?.route}")
 
     if (!profileUiState.isHydrated) {
         Box(
@@ -104,10 +104,9 @@ fun MainActivityScreen(
     val showProfileSelection =
         profileUiState.profiles.isEmpty() || profileUiState.activeProfile == null
     if (showProfileSelection) {
-        Log.i(
+        AppLogger.i(
             TAG,
-            "Profile selection required: package=${context.packageName}, " +
-                "profileCount=${profileUiState.profiles.size}, " +
+            "Profile selection required: profileCount=${profileUiState.profiles.size}, " +
                 "hasActive=${profileUiState.activeProfile != null}, " +
                 "bootstrapError=${profileUiState.bootstrapError}"
         )
@@ -157,11 +156,11 @@ fun MainActivityScreen(
                     .onGloballyPositioned { coordinates ->
                         val heightPx = coordinates.size.height
                         navigationBarHeight = with(density) { heightPx.toDp() }
-                        Log.d(TAG, "NavigationBar: Height measured as $navigationBarHeight")
+                        AppLogger.d(TAG, "NavigationBar height=$navigationBarHeight")
                     },
                 tonalElevation = 0.dp
             ) {
-                Log.d(TAG, "NavigationBar: Composing for '${currentRoute?.destination?.route}' route")
+                AppLogger.d(TAG, "NavigationBar composing for '${currentRoute?.destination?.route}' route")
                 if (currentRoute?.destination?.route == "task") {
                     val taskIcons = listOf(
                         Pair("Task", Icons.Default.Add),
@@ -173,11 +172,11 @@ fun MainActivityScreen(
                         NavigationBarItem(
                             selected = selectedNavItem == name,
                             onClick = {
-                                Log.d(TAG, "NavigationBar: $name item clicked")
+                                AppLogger.d(TAG, "NavigationBar item clicked: $name")
                                 scope.launch {
                                     selectedNavItem = name
                                     if (name == "Task") {
-                                        Log.d(TAG, "Task item clicked, no action performed")
+                                        AppLogger.d(TAG, "Task item clicked; no action performed")
                                     } else if (name == "Files") {
                                         isBottomSheetVisible = true
                                     } else if (name == "Favorite" || name == "Places") {
@@ -200,7 +199,7 @@ fun MainActivityScreen(
                     NavigationBarItem(
                         selected = selectedNavItem == "Home",
                         onClick = {
-                            Log.d(TAG, "NavigationBar: Home item clicked")
+                            AppLogger.d(TAG, "NavigationBar item clicked: Home")
                             selectedNavItem = "Home"
                             scope.launch {
                                 if (currentRoute?.destination?.route == "support" && isBottomSheetVisible) {
@@ -225,7 +224,7 @@ fun MainActivityScreen(
                     NavigationBarItem(
                         selected = selectedNavItem == "Waypoints",
                         onClick = {
-                            Log.d(TAG, "NavigationBar: Waypoints item clicked")
+                            AppLogger.d(TAG, "NavigationBar item clicked: Waypoints")
                             selectedNavItem = "Waypoints"
                             scope.launch {
                                 if (currentRoute?.destination?.route == "support") {

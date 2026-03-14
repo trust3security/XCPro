@@ -1,8 +1,8 @@
 package com.example.xcpro.tasks.racing.turnpoints
 
-import android.util.Log
-import com.example.xcpro.tasks.racing.models.RacingWaypoint
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
+import com.example.xcpro.tasks.racing.models.RacingWaypoint
 import kotlin.math.*
 
 /**
@@ -12,57 +12,58 @@ import kotlin.math.*
  * Finish line is perpendicular to the track from previous turnpoint.
  */
 class FinishLineDisplay : TurnPointDisplay {
+    companion object {
+        private const val TAG = "FinishLineDisplay"
+    }
 
     override fun generateVisualGeometry(waypoint: RacingWaypoint, context: TaskContext): String {
         val gateWidthMeters = waypoint.gateWidthMeters
 
-        // Log waypoint information for FAI compliance verification
-        Log.d("FinishLineDisplay", "=== FAI FINISH LINE CALCULATION ===")
-        Log.d("FinishLineDisplay", "Finish waypoint: ${waypoint.title} at (${waypoint.lat}, ${waypoint.lon})")
-        Log.d("FinishLineDisplay", "Gate width meters: $gateWidthMeters")
-
-        if (context.previousWaypoint != null) {
-            Log.d("FinishLineDisplay", "Previous waypoint: ${context.previousWaypoint.title} at (${context.previousWaypoint.lat}, ${context.previousWaypoint.lon})")
-        } else {
-            Log.w("FinishLineDisplay", "No previous waypoint found - using default bearing 0")
+        if (context.previousWaypoint == null) {
+            AppLogger.w(TAG, "No previous waypoint found; using default finish-line bearing")
         }
 
         // Calculate direction from previous waypoint (final task leg)
         val bearing = if (context.previousWaypoint != null) {
-            val calculatedBearing = RacingGeometryUtils.calculateBearing(context.previousWaypoint.lat, context.previousWaypoint.lon, waypoint.lat, waypoint.lon)
-            Log.d("FinishLineDisplay", "Final task leg bearing: ${String.format("%.2f", calculatedBearing)} (from previous to finish)")
+            val calculatedBearing = RacingGeometryUtils.calculateBearing(
+                context.previousWaypoint.lat,
+                context.previousWaypoint.lon,
+                waypoint.lat,
+                waypoint.lon
+            )
             calculatedBearing
         } else {
-            Log.w("FinishLineDisplay", "Using default bearing: 0 (no previous waypoint)")
             0.0 // Default direction if no previous waypoint
         }
 
         // Finish line is perpendicular to the bearing (FAI Rule: perpendicular to final task leg)
         val perpBearing = (bearing + 90.0) % 360.0
-        Log.d("FinishLineDisplay", "Perpendicular bearing: ${String.format("%.2f", perpBearing)} (${String.format("%.2f", bearing)} + 90)")
-        Log.d("FinishLineDisplay", "FAI Compliance:  Finish line perpendicular to final task leg")
 
         val halfWidth = gateWidthMeters / 2.0
-        Log.d("FinishLineDisplay", "Half width: ${halfWidth}m")
 
         // Calculate both ends of the finish line
         val point1 = RacingGeometryUtils.calculateDestinationPoint(waypoint.lat, waypoint.lon, perpBearing, halfWidth)
         val point2 = RacingGeometryUtils.calculateDestinationPoint(waypoint.lat, waypoint.lon, (perpBearing + 180.0) % 360.0, halfWidth)
 
-        Log.d("FinishLineDisplay", "Finish line Point1: (${String.format("%.6f", point1.first)}, ${String.format("%.6f", point1.second)})")
-        Log.d("FinishLineDisplay", "Finish line Point2: (${String.format("%.6f", point2.first)}, ${String.format("%.6f", point2.second)})")
-
         // Validate line length
         val calculatedLength = RacingGeometryUtils.haversineDistanceMeters(point1.first, point1.second, point2.first, point2.second)
-        Log.d("FinishLineDisplay", "Calculated line length: ${String.format("%.2f", calculatedLength)}m (expected: ${gateWidthMeters}m)")
+        val lengthDeltaMeters = abs(calculatedLength - gateWidthMeters)
 
-        if (Math.abs(calculatedLength - gateWidthMeters) < 1.0) {
-            Log.d("FinishLineDisplay", "FAI Compliance:  Line length matches gate width")
-        } else {
-            Log.w("FinishLineDisplay", "FAI Warning: Line length mismatch - difference: ${String.format("%.2f", Math.abs(calculatedLength - gateWidthMeters))}m")
+        if (lengthDeltaMeters >= 1.0) {
+            AppLogger.w(
+                TAG,
+                "Finish line length mismatch: delta=${String.format("%.2f", lengthDeltaMeters)}m"
+            )
         }
 
-        Log.d("FinishLineDisplay", "=== END FAI FINISH LINE CALCULATION ===\n")
+        AppLogger.dRateLimited(TAG, "finish_line_geometry", 5_000L) {
+            "Finish line geometry computed: gateWidth=${String.format("%.2f", gateWidthMeters)}m, " +
+                "hasPrevious=${context.previousWaypoint != null}, " +
+                "bearing=${String.format("%.2f", bearing)}, " +
+                "perpendicular=${String.format("%.2f", perpBearing)}, " +
+                "length=${String.format("%.2f", calculatedLength)}m, " +
+                "lengthDelta=${String.format("%.2f", lengthDeltaMeters)}m"
+        }
 
         return """
         {

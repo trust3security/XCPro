@@ -1,8 +1,6 @@
 package com.example.xcpro.igc.domain
 
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,13 +35,17 @@ class IgcFileNamingPolicy @Inject constructor() {
     }
 
     fun resolve(request: Request): Result {
-        val (utcDate, usedFallbackDate) = resolveUtcDate(
+        val resolvedUtcDate = IgcSessionFileIdentityCodec.resolveUtcDate(
             firstValidFixWallTimeMs = request.firstValidFixWallTimeMs,
             sessionStartWallTimeMs = request.sessionStartWallTimeMs
         )
+        val utcDate = resolvedUtcDate.utcDate
         val datePrefix = DATE_FORMATTER.format(utcDate)
-        val normalizedManufacturer = normalizeManufacturer(request.manufacturerId)
-        val normalizedSerial = normalizeSerial(request.sessionSerial)
+        val filePrefix = IgcSessionFileIdentityCodec.buildSessionPrefix(
+            utcDate = utcDate,
+            manufacturerId = request.manufacturerId,
+            sessionSerial = request.sessionSerial
+        )
         val usedIndices = request.existingFileNames
             .asSequence()
             .mapNotNull { parseFlightIndex(it, datePrefix) }
@@ -56,11 +58,7 @@ class IgcFileNamingPolicy @Inject constructor() {
             )
 
         val fileName = buildString {
-            append(datePrefix)
-            append('-')
-            append(normalizedManufacturer)
-            append('-')
-            append(normalizedSerial)
+            append(filePrefix)
             append('-')
             append(nextIndex.toString().padStart(2, '0'))
             append(".IGC")
@@ -69,37 +67,8 @@ class IgcFileNamingPolicy @Inject constructor() {
             fileName = fileName,
             utcDate = utcDate,
             dayFlightIndex = nextIndex,
-            usedFallbackDate = usedFallbackDate
+            usedFallbackDate = resolvedUtcDate.usedFallbackDate
         )
-    }
-
-    private fun resolveUtcDate(
-        firstValidFixWallTimeMs: Long?,
-        sessionStartWallTimeMs: Long
-    ): Pair<LocalDate, Boolean> {
-        if (firstValidFixWallTimeMs != null && firstValidFixWallTimeMs >= 0L) {
-            return Pair(firstValidFixWallTimeMs.toUtcDate(), false)
-        }
-        return Pair(sessionStartWallTimeMs.toUtcDate(), true)
-    }
-
-    private fun normalizeManufacturer(raw: String): String {
-        val normalized = raw.trim().uppercase()
-            .replace(Regex("[^A-Z0-9]"), "")
-        return when {
-            normalized.length >= 3 -> normalized.take(3)
-            normalized.isBlank() -> "XCP"
-            else -> normalized.padEnd(3, 'X')
-        }
-    }
-
-    private fun normalizeSerial(raw: String): String {
-        val digits = raw.filter { it.isDigit() }
-        return when {
-            digits.length >= 6 -> digits.takeLast(6)
-            digits.isBlank() -> "000000"
-            else -> digits.padStart(6, '0')
-        }
     }
 
     private fun parseFlightIndex(fileName: String, expectedDatePrefix: String): Int? {
@@ -108,11 +77,6 @@ class IgcFileNamingPolicy @Inject constructor() {
         if (datePart != expectedDatePrefix) return null
         return match.groupValues[4].toIntOrNull()
     }
-
-    private fun Long.toUtcDate(): LocalDate =
-        Instant.ofEpochMilli(this)
-            .atOffset(ZoneOffset.UTC)
-            .toLocalDate()
 
     companion object {
         private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE

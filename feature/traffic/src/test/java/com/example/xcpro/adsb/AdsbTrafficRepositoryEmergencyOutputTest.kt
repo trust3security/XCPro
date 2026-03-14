@@ -73,9 +73,9 @@ class AdsbTrafficRepositoryEmergencyOutputTest : AdsbTrafficRepositoryTestBase()
             cooldownMs = 30_000L
         )
         val outputPort = FakeEmergencyAudioOutputPort()
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),
@@ -157,10 +157,10 @@ class AdsbTrafficRepositoryEmergencyOutputTest : AdsbTrafficRepositoryTestBase()
             cooldownMs = 30_000L
         )
         val outputPort = FakeEmergencyAudioOutputPort()
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
-            emergencyAudioEnabled = false
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
+            emergencyAudioEnabled = false,
             emergencyAudioShadowMode = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),
@@ -229,9 +229,9 @@ class AdsbTrafficRepositoryEmergencyOutputTest : AdsbTrafficRepositoryTestBase()
             cooldownMs = 30_000L
         )
         val outputPort = FakeEmergencyAudioOutputPort(throwOnPlay = true)
-        val featureFlags = AdsbEmergencyAudioFeatureFlags().apply {
+        val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
-        }
+        )
         val repository = AdsbTrafficRepositoryImpl(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),

@@ -168,7 +168,6 @@ internal fun VariometerPanel(
             when {
                 !hasWind -> "NO WIND"
                 !hasPolar -> "NO POLAR"
-                sample == null -> "--"
                 else -> {
                     val formatted = UnitsFormatter.verticalSpeed(
                         VerticalSpeedMs(sample.levoNetto),

@@ -33,6 +33,39 @@ If touching variometer/replay pipeline behavior, also read:
 - If architecture rules are violated, fix the code or record a time-boxed
   exception in `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` (issue ID, owner, expiry).
 
+## Feature Implementation Defaults
+
+When implementing a feature, agents must keep ownership explicit and file
+responsibilities narrow.
+
+- Target `<= 450` lines per file when practical. The repo-wide enforced default
+  remains `<= 500`; do not treat `450` as permission to ignore the hard cap.
+- Split code by responsibility before a file becomes large. Prefer several
+  focused files over one mixed-responsibility file.
+- Reuse existing feature structure and naming before introducing new patterns.
+- Identify the authoritative owner for each new piece of state before editing.
+
+Ownership defaults:
+- UI owns rendering, user input forwarding, and display-only logic.
+- ViewModels own screen state, intent handling, and orchestration.
+- Use cases/domain classes own business rules, calculations, and policy.
+- Repositories own authoritative data coordination and persistence-facing state.
+- Data sources/adapters own API, database, device, and file I/O.
+- Mappers own model transformations between layers.
+
+Implementation expectations:
+- Do not put business logic in Composables, Activities, Fragments, adapters, or
+  other UI classes.
+- Do not bypass layers for convenience.
+- Before touching runtime-heavy code, inspect existing use of `CoroutineScope(`,
+  direct `Log.*`, `UUID.randomUUID()`, `TimeBridge.nowWallMs()`, `NoOp`, and
+  compatibility shims so new code follows the established or corrected policy.
+- When adding a new Kotlin `object`, singleton-like holder, or convenience
+  constructor, state why it will not become a hidden state owner, service
+  locator, or silent production fallback path.
+- Before editing, state which files will be created or changed and what each
+  file will own.
+- After editing, summarize file ownership so review can confirm boundaries.
 
 ## Task Execution Template (Per-Change)
 
@@ -47,6 +80,8 @@ This ensures phased execution, acceptance criteria, required checks, and a manda
 - If pipeline wiring changes, update `docs/ARCHITECTURE/PIPELINE.md`.
 - If rules/policies change, update `docs/ARCHITECTURE/ARCHITECTURE.md` and/or
   `docs/ARCHITECTURE/CODING_RULES.md`.
+- If ownership boundaries, module APIs, or long-lived architecture tradeoffs
+  change, add or update an ADR using `docs/ARCHITECTURE/ADR_TEMPLATE.md`.
 - For non-trivial feature/refactor work, start from
   `docs/ARCHITECTURE/CHANGE_PLAN_TEMPLATE.md` before implementation.
 - Do not rely on unstated assumptions; document intent in-repo.

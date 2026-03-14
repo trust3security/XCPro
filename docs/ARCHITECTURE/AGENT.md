@@ -45,6 +45,30 @@ UI → domain → data
 
 No upward leaks allowed.
 
+## 1.2A Reference Pattern Check (MANDATORY)
+
+Before editing, inspect 1-2 similar existing features/files and record:
+
+- Reference files reviewed:
+- Pattern/structure to reuse:
+- Any intentional deviation and why:
+
+If no suitable reference exists, state that explicitly and choose the
+smallest architecture-consistent structure.
+
+## 1.2B File Ownership Plan (MANDATORY)
+
+Before editing, list each file to create or modify and declare:
+
+| File | New / Existing | Owner / Responsibility | Why this file owns it | Why not another layer/file |
+|---|---|---|---|---|
+| | | | | |
+
+If a touched file is near the line budget or already mixes responsibilities:
+
+- Split by responsibility before adding more logic.
+- Name the focused files that will be created by the split.
+
 ## 1.3 Time Base Declaration (MANDATORY)
 
 For every time-dependent value:
@@ -75,6 +99,7 @@ If skipped, justify.
 ## Phase 0 --- Baseline
 
 -   Identify affected flow in PIPELINE.md.
+-   Review similar existing feature paths and lock the reference pattern.
 -   Add or confirm regression tests locking current behavior.
 -   Repo builds with no behavior changes.
 
@@ -217,6 +242,8 @@ At end of each phase:
 ## Phase N Summary
 
 -   What changed:
+-   Reference pattern reused:
+-   Ownership confirmation:
 -   Files touched:
 -   Tests added/updated:
 -   Verification results:
@@ -227,6 +254,7 @@ At final completion:
 -   Done checklist (Section 3 satisfied)
 -   Quality Rescore (Section 6)
 -   PR-ready summary (what / why / architectural impact)
+-   File ownership summary
 -   Manual verification steps (2--5 steps)
 
 ------------------------------------------------------------------------

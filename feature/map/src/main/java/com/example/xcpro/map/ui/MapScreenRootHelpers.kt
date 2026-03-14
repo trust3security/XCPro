@@ -15,9 +15,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.OffsetPx
-import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.map.MapCameraEffects
-import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.widgets.MapWidgetId
@@ -219,20 +216,8 @@ internal fun trackSafeContainerSize(
 @Composable
 internal fun rememberMapRuntimeController(
     overlayManager: MapOverlayManager,
-    mapViewModel: MapScreenViewModel,
-    cameraManager: MapCameraManager,
-    orientationData: OrientationData,
-    isReplayPlaying: Boolean
+    mapViewModel: MapScreenViewModel
 ): MapRuntimeController {
-    // Centralized camera effects to keep map animations + orientation in sync.
-    MapCameraEffects.AllCameraEffects(
-        cameraManager = cameraManager,
-        bearing = orientationData.bearing,
-        orientationMode = orientationData.mode,
-        bearingSource = orientationData.bearingSource,
-        replayPlaying = isReplayPlaying
-    )
-
     val mapRuntimeController = remember(overlayManager) {
         MapRuntimeController(overlayManager)
     }

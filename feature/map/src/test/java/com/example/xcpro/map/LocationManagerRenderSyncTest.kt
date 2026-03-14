@@ -1,0 +1,178 @@
+package com.example.xcpro.map
+
+import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.orientation.OrientationData
+import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.domain.MapShiftBiasMode
+import com.example.xcpro.map.model.MapLocationUiModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.maplibre.android.geometry.LatLng
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+class LocationManagerRenderSyncTest {
+
+    @Test
+    fun updateOrientation_requestsRepaint_whenRenderFrameSyncIsEnabled() {
+        val cameraController = FakeCameraController()
+        val manager = createManager(
+            featureFlags = MapFeatureFlags().apply { useRenderFrameSync = true },
+            cameraController = cameraController
+        )
+
+        manager.updateOrientation(OrientationData())
+
+        assertEquals(1, cameraController.repaintCount)
+    }
+
+    @Test
+    fun updateLocationFromGps_requestsRepaint_whenRenderFrameSyncIsEnabled() {
+        val cameraController = FakeCameraController()
+        val manager = createManager(
+            featureFlags = MapFeatureFlags().apply { useRenderFrameSync = true },
+            cameraController = cameraController
+        )
+
+        manager.updateLocationFromGPS(
+            location = MapLocationUiModel(
+                latitude = -35.0,
+                longitude = 149.0,
+                speedMs = 18.0,
+                bearingDeg = 90.0,
+                accuracyMeters = 3.0,
+                timestampMs = 1_000L
+            ),
+            orientation = OrientationData()
+        )
+
+        assertEquals(1, cameraController.repaintCount)
+    }
+
+    private fun createManager(
+        featureFlags: MapFeatureFlags,
+        cameraController: FakeCameraController
+    ): LocationManager {
+        return LocationManager(
+            mapStateReader = FakeMapStateReader(),
+            stateActions = NoOpMapStateActions(),
+            featureFlags = featureFlags,
+            cameraPreferenceReader = object : MapCameraPreferenceReader {
+                override fun getMapShiftBiasMode(): MapShiftBiasMode = MapShiftBiasMode.NONE
+                override fun getMapShiftBiasStrength(): Double = 0.0
+                override fun getGliderScreenPercent(): Int = 35
+            },
+            locationPreferences = object : MapLocationPreferencesPort {
+                override fun getMinSpeedThreshold(): Double = 0.0
+                override fun setActiveProfileId(profileId: String) = Unit
+            },
+            paddingProvider = { intArrayOf(0, 0, 0, 0) },
+            sensorsPort = object : MapLocationSensorsPort {
+                override fun onLocationPermissionsResult(fineLocationGranted: Boolean) = Unit
+                override fun requestLocationPermissions(permissionRequester: MapLocationPermissionRequester) = Unit
+                override fun stopLocationTracking(force: Boolean) = Unit
+                override fun restartSensorsIfNeeded() = Unit
+                override fun isGpsEnabled(): Boolean = true
+            },
+            cameraControllerProvider = object : MapCameraControllerProvider {
+                override fun controllerOrNull(): MapCameraController = cameraController
+            },
+            mapViewSizeProvider = object : MapViewSizeProvider {
+                override fun size(): MapViewSize = MapViewSize(widthPx = 1080, heightPx = 1920)
+            },
+            cameraUpdateGate = object : MapCameraUpdateGate {
+                override fun accept(location: LatLng): Boolean = true
+                override fun resetTo(location: LatLng) = Unit
+            },
+            locationOverlayPort = object : MapLocationOverlayPort {
+                override fun updateBlueLocation(
+                    location: LatLng,
+                    trackBearing: Double,
+                    iconHeading: Double,
+                    mapBearing: Double,
+                    orientationMode: com.example.xcpro.common.orientation.MapOrientationMode
+                ) = Unit
+
+                override fun setBlueLocationVisible(visible: Boolean) = Unit
+            },
+            displayPoseSurfacePort = object : MapDisplayPoseSurfacePort {
+                override fun isMapReady(): Boolean = true
+                override fun currentCameraBearing(): Double? = 0.0
+            }
+        )
+    }
+
+    private class FakeMapStateReader : MapStateReader {
+        override val safeContainerSize: StateFlow<MapSize> = MutableStateFlow(MapSize(0, 0))
+        override val mapStyleName: StateFlow<String> = MutableStateFlow("Topo")
+        override val showRecenterButton: StateFlow<Boolean> = MutableStateFlow(false)
+        override val showReturnButton: StateFlow<Boolean> = MutableStateFlow(false)
+        override val isTrackingLocation: StateFlow<Boolean> = MutableStateFlow(true)
+        override val showDistanceCircles: StateFlow<Boolean> = MutableStateFlow(false)
+        override val lastUserPanTime: StateFlow<Long> = MutableStateFlow(0L)
+        override val hasInitiallyCentered: StateFlow<Boolean> = MutableStateFlow(true)
+        override val savedLocation: StateFlow<MapPoint?> = MutableStateFlow(null)
+        override val savedZoom: StateFlow<Double?> = MutableStateFlow(null)
+        override val savedBearing: StateFlow<Double?> = MutableStateFlow(null)
+        override val lastCameraSnapshot: StateFlow<CameraSnapshot?> = MutableStateFlow(null)
+        override val currentMode: StateFlow<FlightMode> = MutableStateFlow(FlightMode.CRUISE)
+        override val currentFlightMode: StateFlow<FlightModeSelection> =
+            MutableStateFlow(FlightModeSelection.CRUISE)
+        override val currentZoom: StateFlow<Float> = MutableStateFlow(10f)
+        override val targetLatLng: StateFlow<MapPoint?> = MutableStateFlow(null)
+        override val targetZoom: StateFlow<Float?> = MutableStateFlow(null)
+        override val currentUserLocation: StateFlow<MapPoint?> = MutableStateFlow(null)
+        override val displayPoseMode: StateFlow<DisplayPoseMode> =
+            MutableStateFlow(DisplayPoseMode.SMOOTHED)
+        override val displaySmoothingProfile: StateFlow<DisplaySmoothingProfile> =
+            MutableStateFlow(DisplaySmoothingProfile.SMOOTH)
+    }
+
+    private class NoOpMapStateActions : MapStateActions {
+        override fun setShowDistanceCircles(show: Boolean) = Unit
+        override fun toggleDistanceCircles() = Unit
+        override fun updateCurrentZoom(zoom: Float) = Unit
+        override fun setTarget(location: MapPoint?, zoom: Float?) = Unit
+        override fun setCurrentUserLocation(location: MapPoint?) = Unit
+        override fun setHasInitiallyCentered(centered: Boolean) = Unit
+        override fun setTrackingLocation(enabled: Boolean) = Unit
+        override fun setShowRecenterButton(show: Boolean) = Unit
+        override fun setShowReturnButton(show: Boolean) = Unit
+        override fun updateLastUserPanTime(timestampMillis: Long) = Unit
+        override fun saveLocation(location: MapPoint?, zoom: Double?, bearing: Double?) = Unit
+        override fun updateCameraSnapshot(target: MapPoint?, zoom: Double?, bearing: Double?) = Unit
+        override fun setDisplayPoseMode(mode: DisplayPoseMode) = Unit
+        override fun setDisplaySmoothingProfile(profile: DisplaySmoothingProfile) = Unit
+    }
+
+    private class FakeCameraController : MapCameraController {
+        private var position =
+            MapCameraPositionSnapshot(target = LatLng(0.0, 0.0), zoom = 10.0, bearing = 0.0, tilt = 0.0)
+        var repaintCount: Int = 0
+
+        override val cameraPosition: MapCameraPositionSnapshot
+            get() = position
+
+        override fun moveCamera(position: MapCameraPositionSnapshot) {
+            this.position = position
+        }
+
+        override fun animateCamera(
+            position: MapCameraPositionSnapshot,
+            durationMs: Int,
+            callback: MapCameraController.CancelableCallback?
+        ) {
+            this.position = position
+        }
+
+        override fun setPadding(left: Int, top: Int, right: Int, bottom: Int) = Unit
+
+        override fun triggerRepaint() {
+            repaintCount += 1
+        }
+    }
+}

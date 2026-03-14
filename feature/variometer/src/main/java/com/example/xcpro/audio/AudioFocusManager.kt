@@ -5,7 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -65,7 +65,9 @@ class AudioFocusManager @Inject constructor(
         }
         hasFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
         if (!hasFocus) {
-            Log.w(TAG, "Audio focus not granted (result=$result)")
+            if (AppLogger.rateLimit(TAG, "focus_not_granted", 5_000L)) {
+                AppLogger.w(TAG, "Audio focus not granted (result=$result)")
+            }
         }
         return hasFocus
     }
@@ -83,7 +85,7 @@ class AudioFocusManager @Inject constructor(
             audioManager.abandonAudioFocus(focusChangeListener)
         }
         hasFocus = false
-        Log.d(TAG, "Audio focus abandoned (result=$result)")
+        AppLogger.d(TAG, "Audio focus abandoned (result=$result)")
     }
 
     fun hasFocus(): Boolean = hasFocus

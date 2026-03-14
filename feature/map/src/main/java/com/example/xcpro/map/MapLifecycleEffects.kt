@@ -12,7 +12,7 @@ object MapLifecycleEffects {
 
     @Composable
     fun LifecycleObserverEffect(
-        lifecycleManager: MapLifecycleManager
+        lifecycleManager: MapLifecycleRuntimePort
     ) {
         val lifecycle = LocalLifecycleOwner.current.lifecycle
 
@@ -31,7 +31,7 @@ object MapLifecycleEffects {
 
     @Composable
     fun LocationCleanupEffect(
-        locationManager: LocationManager
+        locationManager: MapLocationRuntimePort
     ) {
         DisposableEffect(Unit) {
             onDispose {

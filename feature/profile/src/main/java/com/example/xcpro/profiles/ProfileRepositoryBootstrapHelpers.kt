@@ -1,6 +1,6 @@
 package com.example.xcpro.profiles
 
-import com.example.xcpro.core.time.TimeBridge
+import com.example.xcpro.core.time.Clock
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 
@@ -93,10 +93,13 @@ internal fun sanitizeProfiles(rawProfiles: List<UserProfile?>): SanitizedProfile
     )
 }
 
-internal fun ensureBootstrapProfile(profiles: List<UserProfile>): DefaultProfileProvisioningResult {
+internal fun ensureBootstrapProfile(
+    profiles: List<UserProfile>,
+    clock: Clock
+): DefaultProfileProvisioningResult {
     if (profiles.isEmpty()) {
         return DefaultProfileProvisioningResult(
-            profiles = listOf(buildDefaultProfile()),
+            profiles = listOf(buildDefaultProfile(clock)),
             insertedDefaultProfile = true,
             migratedLegacyDefaultAlias = false
         )
@@ -124,19 +127,19 @@ internal fun ensureBootstrapProfile(profiles: List<UserProfile>): DefaultProfile
     }
 
     return DefaultProfileProvisioningResult(
-        profiles = listOf(buildDefaultProfile()) + profiles,
+        profiles = listOf(buildDefaultProfile(clock)) + profiles,
         insertedDefaultProfile = true,
         migratedLegacyDefaultAlias = false
     )
 }
 
-internal fun buildDefaultProfile(): UserProfile =
+internal fun buildDefaultProfile(clock: Clock): UserProfile =
     UserProfile(
         id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
         name = "Default",
         aircraftType = AircraftType.PARAGLIDER,
-        createdAt = TimeBridge.nowWallMs(),
-        lastUsed = TimeBridge.nowWallMs()
+        createdAt = clock.nowWallMs(),
+        lastUsed = clock.nowWallMs()
     )
 
 internal fun dedupeProfilesById(profiles: List<UserProfile>): List<UserProfile> {

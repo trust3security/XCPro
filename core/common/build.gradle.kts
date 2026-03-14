@@ -25,9 +25,10 @@ android {
 }
 
 dependencies {
-    implementation(project(":dfcards-library"))
+    implementation(project(":core:time"))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.datastore.core.android)
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation("javax.inject:javax.inject:1")
 }

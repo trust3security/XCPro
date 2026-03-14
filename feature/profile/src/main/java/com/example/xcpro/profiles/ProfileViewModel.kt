@@ -256,7 +256,7 @@ class ProfileViewModel @Inject constructor(
         return useCase.previewBundle(json)
     }
 
-    suspend fun exportBundle(profileIds: Set<String>? = null): Result<String> {
+    suspend fun exportBundle(profileIds: Set<String>? = null): Result<ProfileBundleExportArtifact> {
         return useCase.exportBundle(profileIds)
     }
 

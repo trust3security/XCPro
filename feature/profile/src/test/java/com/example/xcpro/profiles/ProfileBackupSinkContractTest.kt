@@ -19,7 +19,9 @@ class ProfileBackupSinkContractTest {
         val profile = UserProfile(
             id = "pilot-1",
             name = "Pilot One",
-            aircraftType = AircraftType.SAILPLANE
+            aircraftType = AircraftType.SAILPLANE,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
         val settingsSnapshot = ProfileSettingsSnapshot(
             sections = mapOf(
@@ -51,6 +53,7 @@ class ProfileBackupSinkContractTest {
 
         val parsedBundle = ProfileBundleCodec.parse(payload.bundleJson).getOrThrow()
         assertEquals(ProfileBundleSourceFormat.BUNDLE_V2, parsedBundle.sourceFormat)
+        assertEquals(1234L, parsedBundle.exportedAtWallMs)
         assertEquals(profile.id, parsedBundle.activeProfileId)
         assertEquals(1, parsedBundle.profiles.size)
         assertTrue(

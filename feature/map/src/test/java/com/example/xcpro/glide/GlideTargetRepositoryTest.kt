@@ -41,7 +41,7 @@ class GlideTargetRepositoryTest {
         assertEquals(GlideTargetKind.TASK_FINISH, snapshot.kind)
         assertEquals("Finish", snapshot.label)
         assertEquals(2, snapshot.remainingWaypoints.size)
-        assertEquals(900.0, snapshot.finishConstraint?.requiredAltitudeMeters, 0.0)
+        assertEquals(900.0, snapshot.finishConstraint?.requiredAltitudeMeters ?: Double.NaN, 0.0)
     }
 
     @Test

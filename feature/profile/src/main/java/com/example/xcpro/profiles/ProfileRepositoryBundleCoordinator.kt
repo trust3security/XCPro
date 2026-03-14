@@ -1,6 +1,9 @@
 package com.example.xcpro.profiles
 
+import com.example.xcpro.core.time.Clock
+
 internal class ProfileRepositoryBundleCoordinator(
+    private val clock: Clock,
     private val aircraftProfileSectionIds: Set<String>,
     private val profileSettingsRestoreApplier: ProfileSettingsRestoreApplier,
     private val captureSettingsSnapshot: suspend (Set<String>, Set<String>) -> ProfileSettingsSnapshot,
@@ -22,7 +25,7 @@ internal class ProfileRepositoryBundleCoordinator(
         availableProfiles: List<UserProfile>,
         activeProfileId: String?,
         selectedProfileIds: Set<String>? = null
-    ): Result<String> {
+    ): Result<ProfileBundleExportArtifact> {
         return runCatching {
             require(availableProfiles.isNotEmpty()) { "No profiles available to export." }
             val selectedProfiles = if (selectedProfileIds.isNullOrEmpty()) {
@@ -34,15 +37,25 @@ internal class ProfileRepositoryBundleCoordinator(
             require(selectedProfiles.isNotEmpty()) { "Selected profiles were not found." }
             val selectedIds = selectedProfiles.mapTo(linkedSetOf()) { it.id }
             val scopedActiveId = activeProfileId?.takeIf { selectedIds.contains(it) }
+            val exportedAtWallMs = clock.nowWallMs()
             val settingsSnapshot = captureSettingsSnapshot(
                 selectedIds,
                 aircraftProfileSectionIds
             )
-            ProfileBundleCodec.serialize(
+            val bundleJson = ProfileBundleCodec.serialize(
                 ProfileBundleDocument(
+                    exportedAtWallMs = exportedAtWallMs,
                     activeProfileId = scopedActiveId,
                     profiles = selectedProfiles,
                     settings = settingsSnapshot
+                )
+            )
+            ProfileBundleExportArtifact(
+                bundleJson = bundleJson,
+                exportedAtWallMs = exportedAtWallMs,
+                suggestedFileName = AircraftProfileFileNames.buildExportFileName(
+                    profile = selectedProfiles.singleOrNull(),
+                    nowWallMs = exportedAtWallMs
                 )
             )
         }

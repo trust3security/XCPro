@@ -276,15 +276,13 @@ fun CustomMapGestureHandler(
                                                 )
                                                 val centerLatLng = projection.fromScreenLocation(screenCenter)
                                                 val pannedLatLng = projection.fromScreenLocation(screenPanned)
-                                                if (centerLatLng != null && pannedLatLng != null) {
-                                                    val latDelta = pannedLatLng.latitude - centerLatLng.latitude
-                                                    val lngDelta = pannedLatLng.longitude - centerLatLng.longitude
-                                                    val newTarget = org.maplibre.android.geometry.LatLng(
-                                                        currentTarget.latitude + latDelta,
-                                                        currentTarget.longitude + lngDelta
-                                                    )
-                                                    map.moveCamera(CameraUpdateFactory.newLatLng(newTarget))
-                                                }
+                                                val latDelta = pannedLatLng.latitude - centerLatLng.latitude
+                                                val lngDelta = pannedLatLng.longitude - centerLatLng.longitude
+                                                val newTarget = org.maplibre.android.geometry.LatLng(
+                                                    currentTarget.latitude + latDelta,
+                                                    currentTarget.longitude + lngDelta
+                                                )
+                                                map.moveCamera(CameraUpdateFactory.newLatLng(newTarget))
                                             }
                                         }
                                     }

@@ -1,5 +1,6 @@
 package com.example.xcpro.profiles
 
+import com.example.xcpro.core.common.profiles.ProfileSettingsSectionContract
 import com.google.gson.JsonElement
 
 /**
@@ -21,58 +22,44 @@ data class ProfileSettingsSnapshot(
  * Canonical Tier A section identifiers for full profile settings export.
  */
 object ProfileSettingsSectionIds {
-    const val CARD_PREFERENCES = "tier_a.card_preferences"
-    const val FLIGHT_MGMT_PREFERENCES = "tier_a.flight_mgmt_preferences"
-    const val LOOK_AND_FEEL_PREFERENCES = "tier_a.look_and_feel_preferences"
-    const val THEME_PREFERENCES = "tier_a.theme_preferences"
-    const val MAP_WIDGET_LAYOUT = "tier_a.map_widget_layout"
-    const val VARIOMETER_WIDGET_LAYOUT = "tier_a.variometer_widget_layout"
-    const val GLIDER_CONFIG = "tier_a.glider_config"
-    const val UNITS_PREFERENCES = "tier_a.units_preferences"
-    const val MAP_STYLE_PREFERENCES = "tier_a.map_style_preferences"
-    const val SNAIL_TRAIL_PREFERENCES = "tier_a.snail_trail_preferences"
-    const val ORIENTATION_PREFERENCES = "tier_a.orientation_preferences"
-    const val QNH_PREFERENCES = "tier_a.qnh_preferences"
-    const val WAYPOINT_FILE_PREFERENCES = "tier_a.waypoint_file_preferences"
-    const val AIRSPACE_PREFERENCES = "tier_a.airspace_preferences"
-    const val LEVO_VARIO_PREFERENCES = "tier_a.levo_vario_preferences"
-    const val THERMALLING_MODE_PREFERENCES = "tier_a.thermalling_mode_preferences"
-    const val OGN_TRAFFIC_PREFERENCES = "tier_a.ogn_traffic_preferences"
-    const val OGN_TRAIL_SELECTION_PREFERENCES = "tier_a.ogn_trail_selection_preferences"
-    const val ADSB_TRAFFIC_PREFERENCES = "tier_a.adsb_traffic_preferences"
-    const val WEATHER_OVERLAY_PREFERENCES = "tier_a.weather_overlay_preferences"
-    const val FORECAST_PREFERENCES = "tier_a.forecast_preferences"
-    const val WIND_OVERRIDE_PREFERENCES = "tier_a.wind_override_preferences"
+    const val CARD_PREFERENCES = ProfileSettingsSectionContract.CARD_PREFERENCES
+    const val FLIGHT_MGMT_PREFERENCES = ProfileSettingsSectionContract.FLIGHT_MGMT_PREFERENCES
+    const val LOOK_AND_FEEL_PREFERENCES = ProfileSettingsSectionContract.LOOK_AND_FEEL_PREFERENCES
+    const val THEME_PREFERENCES = ProfileSettingsSectionContract.THEME_PREFERENCES
+    const val MAP_WIDGET_LAYOUT = ProfileSettingsSectionContract.MAP_WIDGET_LAYOUT
+    const val VARIOMETER_WIDGET_LAYOUT = ProfileSettingsSectionContract.VARIOMETER_WIDGET_LAYOUT
+    const val GLIDER_CONFIG = ProfileSettingsSectionContract.GLIDER_CONFIG
+    const val UNITS_PREFERENCES = ProfileSettingsSectionContract.UNITS_PREFERENCES
+    const val MAP_STYLE_PREFERENCES = ProfileSettingsSectionContract.MAP_STYLE_PREFERENCES
+    const val SNAIL_TRAIL_PREFERENCES = ProfileSettingsSectionContract.SNAIL_TRAIL_PREFERENCES
+    const val ORIENTATION_PREFERENCES = ProfileSettingsSectionContract.ORIENTATION_PREFERENCES
+    const val QNH_PREFERENCES = ProfileSettingsSectionContract.QNH_PREFERENCES
+    const val WAYPOINT_FILE_PREFERENCES = ProfileSettingsSectionContract.WAYPOINT_FILE_PREFERENCES
+    const val AIRSPACE_PREFERENCES = ProfileSettingsSectionContract.AIRSPACE_PREFERENCES
+    const val LEVO_VARIO_PREFERENCES = ProfileSettingsSectionContract.LEVO_VARIO_PREFERENCES
+    const val THERMALLING_MODE_PREFERENCES =
+        ProfileSettingsSectionContract.THERMALLING_MODE_PREFERENCES
+    const val OGN_TRAFFIC_PREFERENCES = ProfileSettingsSectionContract.OGN_TRAFFIC_PREFERENCES
+    const val OGN_TRAIL_SELECTION_PREFERENCES =
+        ProfileSettingsSectionContract.OGN_TRAIL_SELECTION_PREFERENCES
+    const val ADSB_TRAFFIC_PREFERENCES = ProfileSettingsSectionContract.ADSB_TRAFFIC_PREFERENCES
+    const val WEATHER_OVERLAY_PREFERENCES =
+        ProfileSettingsSectionContract.WEATHER_OVERLAY_PREFERENCES
+    const val FORECAST_PREFERENCES = ProfileSettingsSectionContract.FORECAST_PREFERENCES
+    const val WIND_OVERRIDE_PREFERENCES = ProfileSettingsSectionContract.WIND_OVERRIDE_PREFERENCES
 }
 
 object ProfileSettingsSectionSets {
-    val AIRCRAFT_PROFILE_SECTION_IDS = setOf(
-        ProfileSettingsSectionIds.CARD_PREFERENCES,
-        ProfileSettingsSectionIds.FLIGHT_MGMT_PREFERENCES,
-        ProfileSettingsSectionIds.LOOK_AND_FEEL_PREFERENCES,
-        ProfileSettingsSectionIds.THEME_PREFERENCES,
-        ProfileSettingsSectionIds.MAP_WIDGET_LAYOUT,
-        ProfileSettingsSectionIds.VARIOMETER_WIDGET_LAYOUT,
-        ProfileSettingsSectionIds.GLIDER_CONFIG,
-        ProfileSettingsSectionIds.UNITS_PREFERENCES,
-        ProfileSettingsSectionIds.MAP_STYLE_PREFERENCES,
-        ProfileSettingsSectionIds.SNAIL_TRAIL_PREFERENCES,
-        ProfileSettingsSectionIds.ORIENTATION_PREFERENCES,
-        ProfileSettingsSectionIds.QNH_PREFERENCES
-    )
+    val AIRCRAFT_PROFILE_SECTION_ORDER =
+        ProfileSettingsSectionContract.AIRCRAFT_PROFILE_SECTION_ORDER
 
-    val GLOBAL_APP_SECTION_IDS = setOf(
-        ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES,
-        ProfileSettingsSectionIds.THERMALLING_MODE_PREFERENCES,
-        ProfileSettingsSectionIds.OGN_TRAFFIC_PREFERENCES,
-        ProfileSettingsSectionIds.OGN_TRAIL_SELECTION_PREFERENCES,
-        ProfileSettingsSectionIds.ADSB_TRAFFIC_PREFERENCES,
-        ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES,
-        ProfileSettingsSectionIds.FORECAST_PREFERENCES,
-        ProfileSettingsSectionIds.WIND_OVERRIDE_PREFERENCES
-    )
+    val GLOBAL_APP_SECTION_ORDER = ProfileSettingsSectionContract.GLOBAL_APP_SECTION_ORDER
 
-    val CAPTURED_SECTION_IDS = AIRCRAFT_PROFILE_SECTION_IDS + GLOBAL_APP_SECTION_IDS
+    val CAPTURED_SECTION_ORDER = ProfileSettingsSectionContract.CAPTURED_SECTION_ORDER
+
+    val AIRCRAFT_PROFILE_SECTION_IDS = AIRCRAFT_PROFILE_SECTION_ORDER.toSet()
+    val GLOBAL_APP_SECTION_IDS = GLOBAL_APP_SECTION_ORDER.toSet()
+    val CAPTURED_SECTION_IDS = CAPTURED_SECTION_ORDER.toSet()
 }
 
 interface ProfileSettingsSnapshotProvider {

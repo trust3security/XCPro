@@ -41,14 +41,7 @@ class IgcFlightLogRepositoryTest {
         whenever(context.contentResolver).thenReturn(resolver)
         whenever(context.filesDir).thenReturn(Files.createTempDirectory("igc-empty").toFile())
         val downloads = FakeDownloadsRepository()
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = downloads,
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context, downloads = downloads)
 
         val result = repository.finalizeSession(
             request = baseRequest(sessionId = 101L, lines = emptyList())
@@ -69,14 +62,7 @@ class IgcFlightLogRepositoryTest {
         whenever(context.contentResolver).thenReturn(resolver)
         whenever(context.filesDir).thenReturn(filesDir)
         val downloads = FakeDownloadsRepository()
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = downloads,
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context, downloads = downloads)
 
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
         val itemUri = Uri.parse("content://downloads/public_downloads/42")
@@ -118,14 +104,7 @@ class IgcFlightLogRepositoryTest {
         whenever(context.contentResolver).thenReturn(resolver)
         whenever(context.filesDir).thenReturn(filesDir)
         val downloads = FakeDownloadsRepository()
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = downloads,
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context, downloads = downloads)
 
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
         val itemUri = Uri.parse("content://downloads/public_downloads/43")
@@ -173,14 +152,7 @@ class IgcFlightLogRepositoryTest {
         whenever(context.contentResolver).thenReturn(resolver)
         whenever(context.filesDir).thenReturn(filesDir)
         val downloads = FakeDownloadsRepository()
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = downloads,
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context, downloads = downloads)
 
         val result = repository.finalizeSession(
             request = baseRequest(
@@ -215,6 +187,26 @@ class IgcFlightLogRepositoryTest {
         )
     }
 
+    private fun newRepository(
+        context: Context,
+        downloads: FakeDownloadsRepository,
+        recoveryMetadataStore: IgcRecoveryMetadataStore = NoopIgcRecoveryMetadataStore
+    ): MediaStoreIgcFlightLogRepository {
+        return MediaStoreIgcFlightLogRepository(
+            downloadsRepository = downloads,
+            recoveryMetadataStore = recoveryMetadataStore,
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner(),
+            stagingStore = IgcRecoveryStagingStore(context),
+            publishTransport = IgcFlightLogPublishTransport(context),
+            recoveryFinalizedEntryResolver = IgcRecoveryFinalizedEntryResolver(
+                context,
+                FakeRecoveryDownloadsLookup()
+            )
+        )
+    }
+
     private class FakeDownloadsRepository : IgcDownloadsRepository {
         private val state = MutableStateFlow<List<IgcLogEntry>>(emptyList())
         override val entries: StateFlow<List<IgcLogEntry>> = state
@@ -236,6 +228,13 @@ class IgcFlightLogRepositoryTest {
                 message = "not used in test"
             )
         }
+    }
+
+    private class FakeRecoveryDownloadsLookup : IgcRecoveryDownloadsLookup {
+        override fun findFinalizedEntriesByPrefix(
+            expectedPrefix: String,
+            utcDate: LocalDate
+        ): List<IgcLogEntry> = emptyList()
     }
 
     private fun newValidationAdapter(): IgcExportValidationAdapter {

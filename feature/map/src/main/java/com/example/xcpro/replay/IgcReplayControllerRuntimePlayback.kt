@@ -30,12 +30,12 @@ internal suspend fun IgcReplayControllerRuntime.finishReplay() {
             session = _session.value,
             simConfig = simConfig,
             sampleEmitter = sampleEmitter,
-            replayFusionRepository = pipeline.replayFusionRepository
+            replayFusionRepository = replayFusionRepository
         )
     }
     silenceReplayAudio("finish")
     flightDataRepository.clear()
-    pipeline.replayFusionRepository?.stop()
+    replayFusionRepository?.stop()
     _session.update { it.copy(status = SessionStatus.PAUSED) }
     flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
     flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
@@ -56,7 +56,7 @@ internal fun IgcReplayControllerRuntime.resetReplayAfterFinish() {
     flightDataRepository.clear()
     flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
     flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
-    pipeline.replayFusionRepository?.resetQnhToStandard()
+    replayFusionRepository?.resetQnhToStandard()
     points = emptyList()
     currentIndex = 0
     _session.value = SessionState(speedMultiplier = _session.value.speedMultiplier)
@@ -77,7 +77,7 @@ internal suspend fun IgcReplayControllerRuntime.resumeSensors() {
 }
 
 internal fun IgcReplayControllerRuntime.silenceReplayAudio(reason: String) {
-    val repo = pipeline.replayFusionRepository ?: return
+    val repo = replayFusionRepository ?: return
     AppLogger.i(IgcReplayControllerRuntime.TAG, "REPLAY_AUDIO silence reason=$reason")
     repo.stop()
 }
@@ -129,7 +129,7 @@ internal fun IgcReplayControllerRuntime.prepareSession(log: IgcLog, selection: S
     replaySensorSource.reset()
 
     flightDataRepository.setActiveSource(FlightDataRepository.Source.REPLAY)
-    val repo = checkNotNull(pipeline.replayFusionRepository) { "Replay fusion pipeline not initialized" }
+    val repo = checkNotNull(replayFusionRepository) { "Replay fusion pipeline not initialized" }
     repo.stop()
     repo.setManualQnh(prepared.qnhHpa)
     _session.value = SessionState(
@@ -149,7 +149,7 @@ internal fun IgcReplayControllerRuntime.prepareSession(log: IgcLog, selection: S
             null,
             prepared.qnhHpa,
             prepared.startMillis,
-            pipeline.replayFusionRepository,
+            replayFusionRepository,
             interpolated?.movement
         )
     } else {
@@ -158,7 +158,7 @@ internal fun IgcReplayControllerRuntime.prepareSession(log: IgcLog, selection: S
             null,
             prepared.qnhHpa,
             prepared.startMillis,
-            pipeline.replayFusionRepository
+            replayFusionRepository
         )
     }
 }
@@ -176,7 +176,7 @@ internal suspend fun IgcReplayControllerRuntime.playRuntimeInterpolation() {
             previousPoint,
             _session.value.qnhHpa,
             _session.value.startTimestampMillis,
-            pipeline.replayFusionRepository,
+            replayFusionRepository,
             fix.movement
         )
         previousPoint = fix.point

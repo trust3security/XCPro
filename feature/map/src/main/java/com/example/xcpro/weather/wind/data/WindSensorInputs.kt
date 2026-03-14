@@ -5,12 +5,12 @@ import com.example.xcpro.weather.wind.model.GpsSample
 import com.example.xcpro.weather.wind.model.GLoadSample
 import com.example.xcpro.weather.wind.model.HeadingSample
 import com.example.xcpro.weather.wind.model.PressureSample
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 
 data class WindSensorInputs(
-    val gps: StateFlow<GpsSample?>,
-    val pressure: StateFlow<PressureSample?>,
-    val airspeed: StateFlow<AirspeedSample?>,
-    val heading: StateFlow<HeadingSample?>,
-    val gLoad: StateFlow<GLoadSample?>
+    val gps: Flow<GpsSample?>,
+    val pressure: Flow<PressureSample?>,
+    val airspeed: Flow<AirspeedSample?>,
+    val heading: Flow<HeadingSample?>,
+    val gLoad: Flow<GLoadSample?>
 )

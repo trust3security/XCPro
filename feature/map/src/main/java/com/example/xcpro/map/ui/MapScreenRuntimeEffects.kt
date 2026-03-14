@@ -4,19 +4,22 @@ import android.util.Log
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.DisplayPoseSnapshot
 import com.example.xcpro.map.MapTaskIntegration
-import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.tasks.core.TaskType
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.StateFlow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 internal fun MapScreenRuntimeEffects(
@@ -25,15 +28,16 @@ internal fun MapScreenRuntimeEffects(
     isAATEditMode: Boolean,
     onExitAATEditMode: () -> Unit,
     snailTrailManager: SnailTrailManager,
-    locationManager: LocationManager,
+    locationManager: MapLocationRuntimePort,
     featureFlags: MapFeatureFlags,
     trailUpdateResult: TrailUpdateResult?,
     trailSettings: TrailSettings,
-    currentZoom: Float,
+    currentZoomFlow: StateFlow<Float>,
     suppressLiveGps: Boolean,
     currentFlightModeSelection: FlightModeSelection,
     orientationManager: MapOrientationManager
 ) {
+    val currentZoom by currentZoomFlow.collectAsStateWithLifecycle()
     // GAA CRITICAL FIX: Reset AAT edit mode when task type changes
     LaunchedEffect(taskType, isAATEditMode) {
         if (taskType != TaskType.AAT && isAATEditMode) {

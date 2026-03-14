@@ -42,17 +42,7 @@ class IgcFlightLogRepositoryIdempotencyTest {
         whenever(context.contentResolver).thenReturn(resolver)
         whenever(context.filesDir).thenReturn(filesDir)
         val downloads = FakeDownloadsRepository()
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = downloads,
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = IgcExportValidationAdapter(
-                lintValidator = StrictIgcLintValidator(),
-                lintMessageMapper = IgcLintMessageMapper()
-            ),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context, downloads = downloads)
 
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
         val itemUri = Uri.parse("content://downloads/public_downloads/77")
@@ -109,5 +99,34 @@ class IgcFlightLogRepositoryIdempotencyTest {
                 message = "not used in test"
             )
         }
+    }
+
+    private fun newRepository(
+        context: Context,
+        downloads: FakeDownloadsRepository
+    ): MediaStoreIgcFlightLogRepository {
+        return MediaStoreIgcFlightLogRepository(
+            downloadsRepository = downloads,
+            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = IgcExportValidationAdapter(
+                lintValidator = StrictIgcLintValidator(),
+                lintMessageMapper = IgcLintMessageMapper()
+            ),
+            gRecordSigner = IgcGRecordSigner(),
+            stagingStore = IgcRecoveryStagingStore(context),
+            publishTransport = IgcFlightLogPublishTransport(context),
+            recoveryFinalizedEntryResolver = IgcRecoveryFinalizedEntryResolver(
+                context,
+                FakeRecoveryDownloadsLookup()
+            )
+        )
+    }
+
+    private class FakeRecoveryDownloadsLookup : IgcRecoveryDownloadsLookup {
+        override fun findFinalizedEntriesByPrefix(
+            expectedPrefix: String,
+            utcDate: LocalDate
+        ): List<IgcLogEntry> = emptyList()
     }
 }

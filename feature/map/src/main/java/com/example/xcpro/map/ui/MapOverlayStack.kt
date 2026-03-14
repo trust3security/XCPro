@@ -20,10 +20,11 @@ import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.Icao24
-import com.example.xcpro.map.LocationManager
-import com.example.xcpro.map.MapCameraManager
 import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapInitializer
+import com.example.xcpro.map.MapCameraRuntimePort
+import com.example.xcpro.map.MapLocationRenderFrameBinder
+import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapModalUI
 import com.example.xcpro.map.MapOverlayManager
@@ -49,14 +50,15 @@ internal fun MapOverlayStack(
     mapInitializer: MapInitializer,
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     onMapViewBound: () -> Unit,
-    locationManager: LocationManager,
+    locationManager: MapLocationRuntimePort,
+    locationRenderFrameBinder: MapLocationRenderFrameBinder,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskType: TaskType,
     createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
     windArrowState: WindArrowUiState,
     showWindSpeedOnVario: Boolean,
-    cameraManager: MapCameraManager,
+    cameraManager: MapCameraRuntimePort,
     currentMode: FlightMode,
     currentZoom: Float,
     unitsPreferences: UnitsPreferences,
@@ -131,7 +133,7 @@ internal fun MapOverlayStack(
             mapInitializer = mapInitializer,
             onMapReady = onMapReady,
             onMapViewBound = onMapViewBound,
-            locationManager = locationManager,
+            locationRenderFrameBinder = locationRenderFrameBinder,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
             overlayManager = overlayManager,

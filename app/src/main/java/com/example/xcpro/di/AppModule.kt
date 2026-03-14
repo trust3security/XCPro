@@ -103,8 +103,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideProfileBackupSink(
-        @ApplicationContext context: Context
-    ): ProfileBackupSink = DownloadsProfileBackupSink(context)
+        @ApplicationContext context: Context,
+        clock: Clock
+    ): ProfileBackupSink = DownloadsProfileBackupSink(context, clock)
 
     @Provides
     @Singleton

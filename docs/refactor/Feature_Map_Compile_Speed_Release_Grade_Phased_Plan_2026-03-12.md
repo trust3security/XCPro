@@ -8,6 +8,85 @@
 - Issue/PR: TBD
 - Status: In Progress
 - Progress note:
+  - 2026-03-13: Camera/location/lifecycle Phase A implemented under the dedicated contract and verified:
+    - added explicit shell-facing runtime ports in `:feature:map-runtime`
+    - concrete owners remain in `feature:map`, but the direct shell consumers now depend on ports instead of concrete manager APIs
+    - broad scaffold/content-host fan-out is still deferred to the dedicated plan's Phase B
+    - `:feature:map-runtime:compileDebugKotlin`, `:feature:map:compileDebugKotlin`, and `assembleDebug` passed
+    - remaining red gates are unrelated existing blockers: `MapScreenViewModel.kt` line budget plus existing map unit-test compile failures
+  - 2026-03-13: Camera/location/lifecycle Phase B seam pass narrowed the actual shell fan-out blocker set:
+    - the live concrete fan-out is centered on `MapScreenManagers`, scaffold/content inputs, `MapOverlayStack`, and the `MapViewHost` render-frame binding seam in `MapScreenSections`
+    - the previously listed effects/helper files are already port-based after Phase A and do not need another Phase B rewrite
+  - 2026-03-13: Camera/location/lifecycle Phase B implemented and verified:
+    - `MapScreenManagers` now exposes camera/location/lifecycle through ports instead of concrete owner fields
+    - the scaffold/content path now carries a shell-local render-frame binding bridge rather than the concrete `LocationManager`
+    - `:feature:map-runtime:compileDebugKotlin`, `:feature:map:compileDebugKotlin`, and `assembleDebug` passed
+    - remaining red gates are still unrelated existing blockers: `MapScreenViewModel.kt` line budget plus existing map unit-test compile failures
+  - 2026-03-13: Camera/location/lifecycle Phase C seam pass corrected the next camera move:
+    - the broad shell fan-out blocker for `MapCameraManager` is already gone after Phases A/B
+    - the actual remaining blocker is inside `MapCameraManager.kt`:
+      - direct `MapScreenState`
+      - direct `MapLibreMap`
+      - direct `MapView`
+    - the next no-churn camera step is therefore a narrow camera-surface bridge plus the owner move, not a wider helper-graph extraction
+  - 2026-03-13: Camera/location/lifecycle Phase C implemented and verified:
+    - added a shell-local camera-surface bridge in `feature:map`
+    - moved `MapCameraManager` and `MapZoomConstraints` into `:feature:map-runtime`
+    - retained shell wiring in `MapScreenManagers` while keeping the public package contract stable for shell call sites
+    - `:feature:map-runtime:compileDebugKotlin`, `:feature:map:compileDebugKotlin`, and `assembleDebug` passed
+    - `enforceRules` remains red only on the pre-existing `MapScreenViewModel.kt` line-budget gate after updating rule ownership for the moved camera owner
+    - `testDebugUnitTest` remains blocked by pre-existing map unit-test compile failures
+    - warm edit timing after the move:
+      - tiny edit in moved `MapCameraManager.kt` compiled in `:feature:map-runtime` in about `15.9s`
+      - tiny edit in retained shell `MapScreenManagers.kt` still compiled in `:feature:map` in about `55.9s`
+  - 2026-03-13: Camera/location/lifecycle Phase D seam pass narrowed the next move:
+    - the shell is already port-based for location after Phases A/B/C
+    - the remaining blocker is internal to `LocationManager` and its lifecycle coupling, not another broad shell fan-out rewrite
+    - the next justified work is a bounded `LocationManager` owner split, not more shell cleanup
+  - 2026-03-13: Camera/location/lifecycle Phase D implemented and verified:
+    - moved `LocationManager` and the runtime-owned display-pose/location helper cluster into `:feature:map-runtime`
+    - retained shell-owned binding/surface adapters in `feature:map`
+    - `:feature:map-runtime:compileDebugKotlin`, `:feature:map:compileDebugKotlin`, `:feature:map-runtime:testDebugUnitTest`, and `assembleDebug` passed
+    - `enforceRules` remains red only on the pre-existing `MapScreenViewModel.kt` line-budget gate after updating rule ownership for the moved `LocationManager`
+    - `testDebugUnitTest` remains blocked only by the pre-existing `GlideTargetRepositoryTest.kt` and `MapScreenViewModelTestRuntime.kt` compile failures
+  - 2026-03-13: Camera/location/lifecycle Phase E implemented and verified:
+    - moved `MapLifecycleManager` into `:feature:map-runtime`
+    - kept `MapLifecycleEffects.kt` shell-owned in `feature:map`
+    - `:feature:map-runtime:compileDebugKotlin`, `:feature:map:compileDebugKotlin`, and `:feature:map-runtime:testDebugUnitTest` passed
+    - `enforceRules` remains red only on the pre-existing `MapScreenViewModel.kt` line-budget gate
+    - broader repo tests remain blocked only by the existing unrelated `GlideTargetRepositoryTest.kt` and `MapScreenViewModelTestRuntime.kt` failures
+  - 2026-03-13: Camera/location/lifecycle Phase F completed and hit the stop rule:
+    - warm no-change baselines:
+      - `:feature:map-runtime:compileDebugKotlin` about `1.8s`
+      - `:feature:map:compileDebugKotlin` about `2.2s`
+    - warm one-line edits in moved runtime owners:
+      - `MapCameraManager.kt` about `18.5s`
+      - `LocationManager.kt` about `16.8s`
+      - `MapLifecycleManager.kt` about `16.6s`
+    - warm one-line edits in retained shell files:
+      - `MapScreenManagers.kt` about `55.6s`
+      - `MapScreenScaffoldInputs.kt` about `48.6s`
+    - result:
+      - the dedicated camera/location/lifecycle extraction achieved the intended compile-scope reduction
+      - moved-owner edits now stay in `:feature:map-runtime` rather than paying the retained `:feature:map` shell cost
+      - the plan should stop here unless a fresh seam pass proves another broad module-boundary win
+    - unrelated verification note:
+      - `assembleDebug` is currently blocked by an app compile issue in `AppNavGraph.kt` (`MyAbout` unresolved) caused by `AboutKt.class` being absent from the packaged `feature:map` library jar despite existing in tmp classes; this is outside the runtime-extraction scope
+  - 2026-03-13: Dedicated camera/location/lifecycle plan seam-audited phase-by-phase to stable blockers:
+    - no new major blocker classes remain beyond the documented shell fan-out/content-host/helper graph in `Map_Camera_Location_Lifecycle_Runtime_Extraction_Plan_2026-03-13.md`
+    - next justified work under that plan is Phase A, not another whole-cluster re-audit
+  - 2026-03-13: Added a task-specific autonomous execution contract for the full camera/location/lifecycle extraction:
+    - `docs/refactor/Map_Camera_Location_Lifecycle_Runtime_Extraction_Agent_Contract_2026-03-13.md`
+    - phases are now explicitly constrained to one seam pass plus one bounded implementation slice at a time
+  - 2026-03-13: Dedicated camera/location/lifecycle runtime extraction plan created:
+    - `docs/refactor/Map_Camera_Location_Lifecycle_Runtime_Extraction_Plan_2026-03-13.md`
+    - exact shell fan-out boundary locked:
+      - `MapScreenManagers.kt`
+      - `MapScreenScaffoldInputs.kt`
+      - `MapScreenScaffoldInputModel.kt`
+      - `MapCameraEffects.kt`
+      - `MapScreenRootEffects.kt`
+    - this is now the next major compile-speed lever after overlay-runtime Phase C3; the plan intentionally avoids standalone builder/factory churn
   - 2026-03-12: Phase 1 implemented for `feature:map` Room cleanup; removed unused Room runtime and Room KSP dependencies after repo-wide usage verification.
   - 2026-03-12: Phase 2 repass found forecast ownership is already split between `feature:profile` and `feature:map`; Phase 2 is now split into a no-churn `feature:forecast` bootstrap (Phase 2A) and a later map-owned forecast slice move (Phase 2B).
   - 2026-03-12: Phase 2A implemented; created `feature:forecast`, moved the shared forecast foundations and two shared-owner tests into it, and rewired `feature:map` plus `feature:profile` to depend on the new module without app/nav churn.
@@ -72,6 +151,18 @@
     - `MapOverlayRuntimeInteractionDelegateTest.kt` must move with that helper because the delegate is `internal`
     - `MapOverlayManagerRuntime.kt` still carries stale shell imports that must be removed in the move slice because `:feature:map-runtime` does not depend on those owners
     - the existing `MapOverlayManager*` behavior tests stay shell-owned because they instantiate `MapOverlayManager`, not the runtime owner directly
+  - 2026-03-12: Overlay/runtime core Phase C2 implemented:
+    - moved `MapOverlayManagerRuntime.kt` into `:feature:map-runtime`
+    - moved `MapOverlayRuntimeInteractionDelegate.kt` and its `internal` test into `:feature:map-runtime`
+    - kept `MapOverlayManager.kt`, shell adapters, and `MapOverlayManager*` behavior tests in `feature:map`
+    - removed stale shell imports from the moved runtime owner
+  - 2026-03-12: Verification for overlay/runtime core Phase C2:
+    - `./gradlew :feature:map-runtime:compileDebugKotlin` passed
+    - `./gradlew :feature:map:compileDebugKotlin` passed
+    - `./gradlew :feature:map-runtime:testDebugUnitTest` passed
+    - `./gradlew assembleDebug` passed
+    - `./gradlew enforceRules` still fails only on the existing `MapScreenViewModel.kt` line-budget gate
+    - `./gradlew testDebugUnitTest` still fails on the existing unrelated test compile blockers in `GlideTargetRepositoryTest.kt` and `MapScreenViewModelTestRuntime.kt`
   - 2026-03-12: Post-Phase 2B compile measurements:
     - one-line `feature:map` leaf edit -> `./gradlew :feature:map:compileDebugKotlin` about `64.4s`
     - one-line `feature:forecast` leaf edit -> `./gradlew :feature:forecast:compileDebugKotlin` about `21s`
@@ -1213,6 +1304,20 @@ Expected build impact:
           - `MapOverlayRuntimeMapLifecycleDelegate.kt`
           - `MapOverlayRuntimeStatusCoordinator.kt`
           - `MapOverlayManagerRuntimeStatus.kt`
+        - focused C3 seam pass correction:
+          - the next clean payload is `MapOverlayManagerRuntimeBaseOpsDelegate.kt`, not the camera/location/lifecycle cluster
+          - remove the currently unused `SnailTrailManager` dependency from that delegate instead of dragging trail ownership into the move
+          - keep `MapOverlayRuntimeMapLifecycleDelegate.kt`, `MapOverlayRuntimeStatusCoordinator.kt`, and `MapOverlayManagerRuntimeStatus.kt` shell-owned for C3
+          - there is no dedicated `MapOverlayManagerRuntimeBaseOpsDelegateTest`; existing behavior coverage remains through the shell-owned `MapOverlayManager*` tests
+          - because `:feature:map-runtime` uses the `com.example.xcpro.map.runtime` namespace, the moved delegate must not rely on the shell module's implicit `BuildConfig` resolution
+        - implemented 2026-03-12:
+          - moved `MapOverlayManagerRuntimeBaseOpsDelegate.kt` into `:feature:map-runtime`
+          - replaced direct shell use-case/helper dependencies with shell-supplied refresh closures from `MapOverlayManager.kt`
+          - removed the unused `SnailTrailManager` dependency from the delegate
+          - kept lifecycle/status/reporting adapters shell-owned in `feature:map`
+          - verification:
+            - `./gradlew :feature:map-runtime:compileDebugKotlin` passed
+            - `./gradlew :feature:map:compileDebugKotlin` passed
         - keep as shell-owned bridges:
           - `MapOverlayManager.kt` as the thin shell-facing adapter
           - `MapRuntimeController.kt`

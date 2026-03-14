@@ -6,8 +6,17 @@ Audit date: 2026-02-18
 This file lists known deviations from ARCHITECTURE.md and CODING_RULES.md.
 Each entry must include an issue ID, owner, and expiry date.
 
-Active remediation plan:
+Lifecycle rules:
+- This file is the only allowed location for temporary rule exceptions.
+- Expired entries block merge until they are removed or explicitly renewed.
+- Entries must be updated when mitigation, scope, or exit criteria changes.
+- Historical entries may be backfilled with approval metadata when the original record lacked it; backfills must say so.
+
+Tracked remediation plans:
 - `docs/refactor/Map_Task_Maintainability_5of5_Refactor_Plan_2026-02-14.md`
+- `docs/refactor/Runtime_Ownership_Boundary_Standardization_Phased_IP_2026-03-14.md`
+- `docs/refactor/Profile_Identity_Time_Ownership_Standardization_Phased_IP_2026-03-14.md`
+- `docs/refactor/Logging_Architecture_Standardization_Phased_IP_2026-03-14.md`
 
 README consistency rule:
 - `docs/ARCHITECTURE/README.md` must never duplicate or summarize deviation status.
@@ -20,10 +29,14 @@ Use this template for every new deviation entry:
 1) `<short title>`
 - Rule:
 - Issue:
+- Introduced:
+- Approved by:
 - Owner:
+- Next review:
 - Expiry:
 - Scope:
 - Risk:
+- Rationale:
 - Mitigation:
 - Removal steps:
 - Exit criteria:
@@ -33,7 +46,10 @@ Use this template for every new deviation entry:
 1) Legally required weather provider literals and attribution link usage in implementation internals
 - Rule: Vendor neutrality (`ARCHITECTURE.md`: no vendor names in production strings or public APIs).
 - Issue: RULES-20260220-11
+- Introduced: 2026-02-20
+- Approved by: XCPro Team (backfilled 2026-03-14)
 - Owner: XCPro Team
+- Next review: 2026-05-15
 - Expiry: 2026-06-30
 - Scope:
   - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainAttribution.kt`
@@ -56,7 +72,10 @@ Compliance note (2026-02-20):
 2) MAPSCREEN `pkg-e1` fails `MS-UX-01` threshold gate in strict completion contract runs
 - Rule: Map visual SLO gate (`CODING_RULES.md` section `1A Enforcement`; `docs/MAPSCREEN/02_BASELINE_PROFILING_AND_SLO_MATRIX_2026-03-05.md`).
 - Issue: RULES-20260305-12
+- Introduced: 2026-03-05
+- Approved by: XCPro Team (backfilled 2026-03-14)
 - Owner: XCPro Team
+- Next review: 2026-04-01
 - Expiry: 2026-04-15
 - Scope:
   - `artifacts/mapscreen/phase3/pkg-e1/20260305-193049/`
@@ -77,68 +96,82 @@ Compliance note (2026-02-20):
   - `verify_mapscreen_package_evidence.ps1 -PackageId pkg-e1` passes with no failed SLOs.
   - `run_mapscreen_completion_contract.ps1` reaches phase 8 with no allow-failure flags.
 
-3) Rain overlay deferred-config replay can apply stale frame order after interaction release
-- Rule:
-  - Deterministic/replay-safe behavior and explicit state-machine safety (`ARCHITECTURE.md` section `14`).
-  - Regression-resistance requirement for state transitions and mandatory regression tests (`CODING_RULES.md` section `15A`).
-- Issue: RULES-20260306-13
-- Owner: XCPro Team
-- Expiry: 2026-04-30
-- Scope:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerWeatherRainTest.kt`
-- Risk:
-  - During map interaction throttling, a deferred older weather-rain config can be flushed after a newer frame already rendered, causing backward frame jumps.
-  - While interaction is active, disabling the rain overlay can still leave a previously deferred enabled config queued; that deferred config can be flushed at interaction end and re-enable stale rain unexpectedly.
-  - Deferred weather-rain config can survive detach/null-map transitions and be replayed later.
-- Mitigation:
-  - Treat rain-frame selection as latest-wins while interaction is active.
-  - Clear deferred rain config on any successful newer apply and on map detach/clear paths.
-  - Block behavior regressions with interaction-aware integration tests in weather-rain runtime manager tests.
-- Removal steps:
-  - Update `MapOverlayManagerRuntimeForecastWeatherDelegate` deferred logic so stale frame replay cannot occur after newer applies.
-  - Clear deferred rain config immediately on successful non-deferred applies and on disabled/clear applies, including when interaction is active.
-  - Ensure deferred rain config is cleared on detach/null-map paths.
-  - Add regression tests covering:
-    - defer(old) -> apply(new) -> interaction end (must not replay old),
-    - defer -> disable while interaction active -> interaction end (must remain disabled),
-    - defer -> map detach/null -> reattach (must not replay stale deferred config).
-- Exit criteria:
-  - New interaction/deferred replay regression tests pass in `:feature:map:testDebugUnitTest`.
-  - Manual verification confirms no weather-rain frame rewind on pan/rotate release in cycle mode.
-  - Manual verification confirms rain overlay disable action remains sticky through pan/rotate interaction release.
-
-4) Kotlin default line-budget rule drift in active map/weather runtime files
+3) Kotlin default line-budget exceptions pending split/remediation
 - Rule:
   - Kotlin source files must be `<= 500` lines by default unless explicitly excepted (`ARCHITECTURE.md` section "File Size and Modularization Policy"; `CODING_RULES.md` sections `1A` and `1A.4`).
 - Issue: RULES-20260306-14
+- Introduced: 2026-03-06
+- Approved by: XCPro Team (backfilled 2026-03-14)
 - Owner: XCPro Team
+- Next review: 2026-04-15
 - Expiry: 2026-04-30
 - Execution plan:
   - `docs/refactor/Kotlin_Line_Budget_Compliance_Phased_IP_2026-03-06.md`
 - Scope:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
+  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+  - `dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt`
+  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
+  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt`
 - Risk:
-  - Oversized files increase review blind spots and make state-machine regressions (including replay/defer edge cases) easier to miss.
-  - The current `enforceRules` script does not fail on all global `>500` Kotlin files, so policy drift can continue silently.
+  - Oversized files increase review blind spots and make state-machine and regression gaps harder to spot.
+  - Without explicit exceptions, the documented global `<= 500` budget would block current work before these files are split.
 - Mitigation:
-  - Split oversized files into focused delegates/helpers with clear responsibility boundaries.
-  - Add explicit static gate coverage for default `<=500` Kotlin file budget (or explicit per-file caps) so violations fail CI.
+  - `scripts/ci/enforce_rules.ps1` now enforces the global default `<= 500` Kotlin-file budget for all non-excepted files.
+  - The scoped files above are the only temporary exceptions and remain tracked here until split/remediated.
+  - Stricter hotspot caps continue to be enforced separately where configured.
 - Removal steps:
-  - Refactor each scoped file to `<=500` lines or register temporary per-file exception gates with tighter expiry.
-  - Update `scripts/ci/enforce_rules.ps1` to enforce the documented default budget (not hotspot-only checks).
-  - Re-run architecture checks and remove this deviation once all scoped files are compliant.
+  - Refactor each scoped file to `<= 500` lines or split it by responsibility.
+  - Remove the matching exception path from `scripts/ci/enforce_rules.ps1` when each file is compliant.
+  - Remove this deviation entry once the exception list is empty and verification passes.
 - Exit criteria:
-  - No production Kotlin file exceeds 500 lines without an active, time-boxed deviation entry.
-  - `./gradlew enforceRules` fails when a new non-exempt Kotlin file exceeds 500 lines.
+  - No non-excepted Kotlin file above `500` lines passes `./gradlew enforceRules`.
+  - No listed exception file remains above `500` lines.
+  - The exception list in `scripts/ci/enforce_rules.ps1` is empty.
+
+4) Production logging drift bypasses the canonical redaction and hot-path gating seam
+- Rule:
+  - Logging architecture and privacy-safe production logging (`ARCHITECTURE.md` section "Logging Architecture"; `CODING_RULES.md` section `13 Logging Rules`).
+- Issue: RULES-20260314-17
+- Introduced: 2026-03-14
+- Approved by: XCPro Team (backfilled 2026-03-14)
+- Owner: XCPro Team
+- Next review: 2026-04-15
+- Expiry: 2026-05-15
+- Execution plan:
+  - `docs/refactor/Logging_Architecture_Standardization_Phased_IP_2026-03-14.md`
+- Scope:
+  - `core/common/src/main/java/com/example/xcpro/core/common/logging/AppLogger.kt`
+  - `feature/tasks/src/main/java/com/example/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
+  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/OpenMeteoElevationApi.kt`
+  - `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
+  - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+  - hotspot clusters in `feature/variometer`, `feature/map`, `feature/map-runtime`, `feature/tasks`, and `dfcards-library`
+- Risk:
+  - Privacy-sensitive production logs currently print exact coordinates, names, IDs, and session identifiers directly from feature code.
+  - Hot-path debug logs remain inconsistent and can add avoidable string-formatting/log-I/O overhead in runtime-heavy paths.
+  - Review quality is weaker because logging policy is still decided ad hoc at callsites instead of one owned seam.
+- Mitigation:
+  - Harden `AppLogger` as the canonical production logging boundary and make its non-authoritative infra-state contract explicit.
+  - Remove or redact the highest-risk privacy-sensitive raw logs first.
+  - Migrate hotspot clusters incrementally instead of doing blind repo-wide replacement.
+  - Add static enforcement for new production raw `Log.*` drift with narrow platform-edge exceptions only.
+- Removal steps:
+  - Complete the phased remediation in `Logging_Architecture_Standardization_Phased_IP_2026-03-14.md`.
+  - Eliminate scoped privacy-sensitive raw `Log.*` callsites or route them through explicit redaction/gating.
+  - Add enforcement that blocks new production raw `Log.*` except for documented allowlisted edges.
+  - Remove this entry once the canonical seam is hardened and the scoped drift is closed.
+- Exit criteria:
+  - No scoped privacy-sensitive production logs bypass the canonical redaction/removal policy.
+  - `AppLogger` has explicit contract coverage for redaction/gating behavior.
+  - New raw production `Log.*` drift is blocked by automation except for narrow documented platform-edge exceptions.
 
 ## Verification
 
-Last verified: 2026-03-05
+Last verified: 2026-03-14
 - Commands:
   - python scripts/arch_gate.py
+  - powershell -ExecutionPolicy Bypass -File scripts/ci/enforce_rules.ps1
   - ./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.*" --tests "com.example.xcpro.tasks.domain.*" --tests "com.example.xcpro.tasks.aat.*"
   - ./gradlew enforceRules
   - ./gradlew testDebugUnitTest
@@ -331,4 +364,40 @@ Last verified: 2026-03-05
   - Manager leg setters are now map-agnostic (`setRacingLeg(index)` / `setAATLeg(index)`).
   - Task map rendering now routes via UI/runtime `TaskMapRenderRouter` and coordinator core-task snapshots.
   - `enforceRules` now blocks MapLibre imports/legacy map APIs in task managers and Android/UI imports under `tasks/domain`.
+
+26) Runtime ownership boundary drift in selected long-lived runtime helpers
+- Rule:
+  - Authoritative/runtime state must have one explicit owner and read-only exposure (`ARCHITECTURE.md` sections "Scope Ownership and Lifetime" and "Authoritative State Contract").
+  - Public convenience wiring must not hide writable runtime state or ad hoc scope creation (`ARCHITECTURE.md` section "Stateless Objects and No-Op Boundaries"; `CODING_RULES.md` section `5A`).
+- Issue: RULES-20260314-15
+- Owner: XCPro Team
+- Resolved: 2026-03-14
+- Notes:
+  - `TrafficSelectionRuntime`, wind runtime seams, replay runtime ownership, and ADS-B emergency rollout ownership now follow the documented runtime ownership standard.
+  - `AdsbEmergencyAudioFeatureFlags` is now immutable bootstrap config only; `AdsbTrafficRepositoryRuntime` owns the live rollout state.
+  - Closure evidence is tracked in `docs/refactor/Runtime_Ownership_Boundary_Standardization_Phased_IP_2026-03-14.md`.
+
+27) Rain overlay deferred-config replay could apply stale frame order after interaction release
+- Rule:
+  - Deterministic/replay-safe behavior and explicit state-machine safety (`ARCHITECTURE.md` section `14`).
+  - Regression-resistance requirement for state transitions and mandatory regression tests (`CODING_RULES.md` section `15A`).
+- Issue: RULES-20260306-13
+- Owner: XCPro Team
+- Resolved: 2026-03-14
+- Notes:
+  - Weather-rain runtime ownership now lives in `MapOverlayManagerRuntimeWeatherRainDelegate`, with the forecast/weather coordinator reduced to a thin shell.
+  - Deferred rain config now follows latest-wins behavior, clears on disable/detach, and no longer replays during teardown interaction release.
+  - Closure evidence is tracked in `docs/refactor/Forecast_Weather_Runtime_Seam_Extraction_Plan_2026-03-14.md` plus runtime regressions in `feature:map-runtime` and `feature:map`.
+
+28) Profile identity/time ownership drift in models and export helpers
+- Rule:
+  - Explicit owner-controlled identity/time creation and model-data purity (`ARCHITECTURE.md` authoritative state contract and time-base rules; `CODING_RULES.md` identity/model-creation policy).
+- Issue: RULES-20260314-16
+- Owner: XCPro Team
+- Resolved: 2026-03-14
+- Notes:
+  - `UserProfile`, `ProfileBundleDocument`, and `AircraftProfileFileNames` no longer create identity/time metadata implicitly.
+  - `ProfileRepositoryBundleCoordinator` now owns one explicit `exportedAtWallMs` seam and passes it through both bundle JSON and the suggested export filename.
+  - `DownloadsProfileBackupSink` now reuses explicit owner-stamped wall time when writing managed bundle metadata.
+  - Closure evidence is tracked in `docs/refactor/Profile_Identity_Time_Ownership_Standardization_Phased_IP_2026-03-14.md`.
 

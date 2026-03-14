@@ -53,14 +53,7 @@ class IgcFlightLogRepositoryRecoveryTest {
             )
         )
         val context = repositoryContext(filesDir)
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = FakeDownloadsRepository(),
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context)
 
         val metadata = repository.parseStagedRecoveryMetadata(55L)
 
@@ -84,14 +77,7 @@ class IgcFlightLogRepositoryRecoveryTest {
             )
         )
         val context = repositoryContext(filesDir)
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = FakeDownloadsRepository(),
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context)
 
         val metadata = repository.parseStagedRecoveryMetadata(56L)
 
@@ -115,14 +101,7 @@ class IgcFlightLogRepositoryRecoveryTest {
             )
         )
         val context = repositoryContext(filesDir)
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = FakeDownloadsRepository(),
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context)
 
         val metadata = repository.parseStagedRecoveryMetadata(57L)
 
@@ -160,19 +139,17 @@ class IgcFlightLogRepositoryRecoveryTest {
                 finalizedEntry("2026-03-09-XCP-000077-01.IGC")
             )
         }
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = repositoryContext(filesDir),
-            downloadsRepository = downloads,
+        val recoveryDownloadsLookup = ForwardingRecoveryDownloadsLookup(downloads)
+        val repository = newRepository(
+            context = repositoryContext(filesDir),
+            downloads = downloads,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
+            recoveryDownloadsLookup = recoveryDownloadsLookup
         )
 
         val result = repository.recoverSession(sessionId = 77L)
 
         assertTrue(result is IgcRecoveryResult.Recovered)
-        assertEquals(1, downloads.refreshCalls)
         assertTrue(!stagedFile(filesDir, 77L).exists())
         assertNull(metadataStore.loadMetadata(77L))
     }
@@ -202,13 +179,12 @@ class IgcFlightLogRepositoryRecoveryTest {
                 finalizedEntry("2026-03-09-XCP-000088-01.IGC")
             )
         }
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = repositoryContext(filesDir),
-            downloadsRepository = downloads,
+        val recoveryDownloadsLookup = ForwardingRecoveryDownloadsLookup(downloads)
+        val repository = newRepository(
+            context = repositoryContext(filesDir),
+            downloads = downloads,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
+            recoveryDownloadsLookup = recoveryDownloadsLookup
         )
 
         val result = repository.recoverSession(sessionId = 88L)
@@ -239,13 +215,12 @@ class IgcFlightLogRepositoryRecoveryTest {
                 finalizedEntry("2026-03-09-XCP-000089-02.IGC")
             )
         }
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = repositoryContext(filesDir),
-            downloadsRepository = downloads,
+        val recoveryDownloadsLookup = ForwardingRecoveryDownloadsLookup(downloads)
+        val repository = newRepository(
+            context = repositoryContext(filesDir),
+            downloads = downloads,
             recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
+            recoveryDownloadsLookup = recoveryDownloadsLookup
         )
 
         val result = repository.recoverSession(sessionId = 89L)
@@ -258,6 +233,31 @@ class IgcFlightLogRepositoryRecoveryTest {
             result
         )
         assertNull(metadataStore.loadMetadata(89L))
+    }
+
+    @Test
+    fun recoverSession_doesNotQueryPersistedEntries_whenMergedMetadataIsMissing() {
+        val filesDir = Files.createTempDirectory("igc-recover-no-metadata").toFile()
+        val downloads = FakeDownloadsRepository()
+        val recoveryDownloadsLookup = CountingRecoveryDownloadsLookup().apply {
+            entries = listOf(finalizedEntry("2026-03-09-XCP-999999-01.IGC"))
+        }
+        val repository = newRepository(
+            context = repositoryContext(filesDir),
+            downloads = downloads,
+            recoveryDownloadsLookup = recoveryDownloadsLookup
+        )
+
+        val result = repository.recoverSession(sessionId = 999_999L)
+
+        assertEquals(
+            IgcRecoveryResult.Failure(
+                code = IgcRecoveryErrorCode.STAGING_MISSING,
+                message = "Recovery staging file missing for session 999999"
+            ),
+            result
+        )
+        assertEquals(0, recoveryDownloadsLookup.lookupCalls)
     }
 
     @Test
@@ -294,13 +294,9 @@ class IgcFlightLogRepositoryRecoveryTest {
                 )
             )
         }
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = FakeDownloadsRepository(),
-            recoveryMetadataStore = metadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
+        val repository = newRepository(
+            context = context,
+            recoveryMetadataStore = metadataStore
         )
 
         val result = repository.recoverSession(sessionId = 90L)
@@ -325,14 +321,7 @@ class IgcFlightLogRepositoryRecoveryTest {
         whenever(context.contentResolver).thenReturn(resolver)
         whenever(context.filesDir).thenReturn(filesDir)
         val downloads = FakeDownloadsRepository()
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = downloads,
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context, downloads = downloads)
         val itemUri = Uri.parse("content://downloads/public_downloads/100")
         whenever(resolver.insert(eq(MediaStore.Downloads.EXTERNAL_CONTENT_URI), any())).thenReturn(itemUri)
         whenever(resolver.openOutputStream(eq(itemUri), eq("w"))).thenReturn(null)
@@ -355,14 +344,7 @@ class IgcFlightLogRepositoryRecoveryTest {
         whenever(context.contentResolver).thenReturn(resolver)
         whenever(context.filesDir).thenReturn(filesDir)
         val downloads = FakeDownloadsRepository()
-        val repository = MediaStoreIgcFlightLogRepository(
-            appContext = context,
-            downloadsRepository = downloads,
-            recoveryMetadataStore = NoopIgcRecoveryMetadataStore,
-            namingPolicy = IgcFileNamingPolicy(),
-            exportValidationAdapter = newValidationAdapter(),
-            gRecordSigner = IgcGRecordSigner()
-        )
+        val repository = newRepository(context = context, downloads = downloads)
         val itemUri = Uri.parse("content://downloads/public_downloads/101")
         whenever(resolver.insert(eq(MediaStore.Downloads.EXTERNAL_CONTENT_URI), any())).thenReturn(itemUri)
         whenever(resolver.openOutputStream(eq(itemUri), eq("w"))).thenReturn(ByteArrayOutputStream())
@@ -382,6 +364,28 @@ class IgcFlightLogRepositoryRecoveryTest {
         whenever(context.filesDir).thenReturn(filesDir)
         whenever(context.contentResolver).thenReturn(resolver)
         return context
+    }
+
+    private fun newRepository(
+        context: Context,
+        downloads: IgcDownloadsRepository = FakeDownloadsRepository(),
+        recoveryMetadataStore: IgcRecoveryMetadataStore = NoopIgcRecoveryMetadataStore,
+        recoveryDownloadsLookup: IgcRecoveryDownloadsLookup =
+            ForwardingRecoveryDownloadsLookup(downloads)
+    ): MediaStoreIgcFlightLogRepository {
+        return MediaStoreIgcFlightLogRepository(
+            downloadsRepository = downloads,
+            recoveryMetadataStore = recoveryMetadataStore,
+            namingPolicy = IgcFileNamingPolicy(),
+            exportValidationAdapter = newValidationAdapter(),
+            gRecordSigner = IgcGRecordSigner(),
+            stagingStore = IgcRecoveryStagingStore(context),
+            publishTransport = IgcFlightLogPublishTransport(context),
+            recoveryFinalizedEntryResolver = IgcRecoveryFinalizedEntryResolver(
+                context,
+                recoveryDownloadsLookup
+            )
+        )
     }
 
     private fun finalizedEntry(displayName: String): IgcLogEntry {
@@ -459,6 +463,35 @@ class IgcFlightLogRepositoryRecoveryTest {
                 code = IgcDocumentReadResult.ErrorCode.OPEN_FAILED,
                 message = "not used in test"
             )
+        }
+    }
+
+    private class ForwardingRecoveryDownloadsLookup(
+        private val downloadsRepository: IgcDownloadsRepository
+    ) : IgcRecoveryDownloadsLookup {
+        override fun findFinalizedEntriesByPrefix(
+            expectedPrefix: String,
+            utcDate: LocalDate
+        ): List<IgcLogEntry> {
+            return downloadsRepository.entries.value
+                .filter { entry ->
+                    entry.displayName.startsWith(expectedPrefix) &&
+                        entry.displayName.endsWith(".IGC", ignoreCase = true)
+                }
+                .sortedBy { it.displayName }
+        }
+    }
+
+    private class CountingRecoveryDownloadsLookup : IgcRecoveryDownloadsLookup {
+        var lookupCalls: Int = 0
+        var entries: List<IgcLogEntry> = emptyList()
+
+        override fun findFinalizedEntriesByPrefix(
+            expectedPrefix: String,
+            utcDate: LocalDate
+        ): List<IgcLogEntry> {
+            lookupCalls += 1
+            return entries
         }
     }
 

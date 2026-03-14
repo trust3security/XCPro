@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.trail.SnailTrailManager
 import org.maplibre.android.maps.MapLibreMap
 
@@ -16,6 +16,10 @@ internal class MapOverlayRuntimeMapLifecycleDelegate(
     private val bringTrafficOverlaysToFront: () -> Unit,
     private val snailTrailManager: SnailTrailManager
 ) : MapOverlayRuntimeLifecyclePort {
+    companion object {
+        private const val LOG_TAG = "MapOverlayManager"
+    }
+
     override fun toggleDistanceCircles() = baseOpsDelegate.toggleDistanceCircles()
     override fun refreshAirspace(map: MapLibreMap?) = baseOpsDelegate.refreshAirspace(map)
     override fun refreshWaypoints(map: MapLibreMap?) = baseOpsDelegate.refreshWaypoints(map)
@@ -25,9 +29,6 @@ internal class MapOverlayRuntimeMapLifecycleDelegate(
 
     override fun onMapStyleChanged(map: MapLibreMap?) {
         try {
-            if (BuildConfig.DEBUG) {
-                Log.d("MapOverlayManager", "Map style changed, reloading overlays")
-            }
             refreshAirspace(map)
             refreshWaypoints(map)
             taskRenderSyncCoordinator.onMapStyleChanged(map)
@@ -35,30 +36,19 @@ internal class MapOverlayRuntimeMapLifecycleDelegate(
                 mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             }
             mapState.blueLocationOverlay?.initialize()
-            mapState.blueLocationOverlay?.let {
-                if (BuildConfig.DEBUG) {
-                    Log.d("MapOverlayManager", "Blue location overlay initialized via style change")
-                }
-            }
             if (map != null) {
                 initializeTrafficOverlaysFn(map)
                 forecastOnMapStyleChanged(map)
             }
             snailTrailManager.onMapStyleChanged(map)
             bringTrafficOverlaysToFront()
-            if (BuildConfig.DEBUG) {
-                Log.d("MapOverlayManager", "All overlays reloaded for new style")
-            }
         } catch (e: Exception) {
-            Log.e("MapOverlayManager", "Error handling map style change: ${e.message}", e)
+            AppLogger.e(LOG_TAG, "Error handling map style change: ${e.message}", e)
         }
     }
 
     override fun initializeOverlays(map: MapLibreMap?) {
         try {
-            if (BuildConfig.DEBUG) {
-                Log.d("MapOverlayManager", "Initializing map overlays")
-            }
             refreshAirspace(map)
             refreshWaypoints(map)
             taskRenderSyncCoordinator.onOverlayRefresh(map)
@@ -66,11 +56,8 @@ internal class MapOverlayRuntimeMapLifecycleDelegate(
                 initializeTrafficOverlaysFn(map)
                 forecastOnInitialize(map)
             }
-            if (BuildConfig.DEBUG) {
-                Log.d("MapOverlayManager", "Map overlays initialized successfully")
-            }
         } catch (e: Exception) {
-            Log.e("MapOverlayManager", "Error initializing overlays: ${e.message}", e)
+            AppLogger.e(LOG_TAG, "Error initializing overlays: ${e.message}", e)
         }
     }
 

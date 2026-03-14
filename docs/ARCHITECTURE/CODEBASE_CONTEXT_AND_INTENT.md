@@ -1,7 +1,3 @@
-> NOTICE: Review the active task plan before implementing task-related changes.
-
-> Active task compliance plan: `docs/refactor/Map_Task_Maintainability_5of5_Refactor_Plan_2026-02-14.md`
-
 # CODEBASE_CONTEXT_AND_INTENT.md
 
 ## Purpose
@@ -25,6 +21,12 @@ Related implementation specs:
 - `<PHASED_IMPLEMENTATION_PLAN>.md`
 - `<QUALITY_MODEL_SPEC>.md`
 - `<REGRESSION_TEST_PLAN>.md`
+- `CHANGE_PLAN_TEMPLATE.md` for non-trivial execution planning
+- `ADR_TEMPLATE.md` for durable architecture decisions
+
+Durability rule:
+- This file is a global contract and must stay stable across tasks.
+- Temporary active-plan pointers belong in change plans or ADRs, not here.
 
 ---
 
@@ -146,10 +148,11 @@ Silent quality regressions are unacceptable.
 Contributors/agents should:
 
 1) Read `ARCHITECTURE.md`, then `CODING_RULES.md`, then this file.
-2) Execute `docs/refactor/Map_Task_Maintainability_5of5_Refactor_Plan_2026-02-14.md` in strict phase order.
-3) Add/adjust tests at each phase.
-4) Keep `KNOWN_DEVIATIONS.md` empty unless explicitly approved.
-5) Run required build/test checks after each phase.
+2) Use an approved active slice plan if one exists; otherwise start from `CHANGE_PLAN_TEMPLATE.md` for non-trivial work.
+3) Record non-trivial architecture decisions with `ADR_TEMPLATE.md`.
+4) Add/adjust tests at each phase.
+5) Keep `KNOWN_DEVIATIONS.md` empty unless explicitly approved.
+6) Run required build/test checks after each phase.
 
 If blocked by missing code context:
 - Add a short architecture or pipeline map document for the affected area, then continue.

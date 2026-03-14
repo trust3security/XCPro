@@ -1,9 +1,12 @@
 package com.example.xcpro.profiles
 
-import com.example.xcpro.core.time.TimeBridge
+import com.example.xcpro.core.time.Clock
 import java.util.Locale
 
-internal class ProfileRepositoryImportCoordinator {
+internal class ProfileRepositoryImportCoordinator(
+    private val clock: Clock,
+    private val profileIdGenerator: ProfileIdGenerator
+) {
     suspend fun importProfiles(
         request: ProfileImportRequest,
         currentProfiles: List<UserProfile>,
@@ -58,7 +61,7 @@ internal class ProfileRepositoryImportCoordinator {
             val generatedId = if (replaceTargetIndex >= 0) {
                 workingProfiles[replaceTargetIndex].id
             } else {
-                generateUniqueId(knownIds, preferredId)
+                generateUniqueId(knownIds, preferredId, profileIdGenerator)
             }
             val resolvedName = if (replaceTargetIndex >= 0) {
                 normalizedName
@@ -82,7 +85,7 @@ internal class ProfileRepositoryImportCoordinator {
                 createdAt = if (request.preserveImportedPreferences) {
                     incoming.createdAt
                 } else {
-                    TimeBridge.nowWallMs()
+                    clock.nowWallMs()
                 },
                 lastUsed = if (request.preserveImportedPreferences) {
                     incoming.lastUsed

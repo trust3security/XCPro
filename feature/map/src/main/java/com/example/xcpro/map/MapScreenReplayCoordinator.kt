@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
 import com.example.xcpro.replay.IgcReplayController
@@ -11,12 +11,10 @@ import com.example.xcpro.replay.ReplayNoiseProfile
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
+import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
-import com.example.xcpro.tasks.racing.navigation.RacingNavigationEvent
-import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
-import com.example.xcpro.sensors.CompleteFlightData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,12 +52,10 @@ internal class MapScreenReplayCoordinator(
         replaySessionState = replaySessionState
     )
     private var racingReplayActive = false
-    private var lastRacingFix: RacingNavigationFix? = null
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
     private val racingFixFlow = flightDataFlow
         .mapNotNull { data -> data?.let(RacingNavigationFixAdapter::toFix) }
-        .onEach { fix -> lastRacingFix = fix }
     private val liveGpsProfileFlow = flightDataFlow
         .mapNotNull { data -> data?.gps }
         .onEach { gps ->
@@ -81,7 +77,6 @@ internal class MapScreenReplayCoordinator(
             try {
                 demoReplaySnapshots.captureUiIfNeeded()
                 igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO start asset=$VARIO_DEMO_ASSET_PATH")
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
                 igcReplayController.setReplayMode(ReplayMode.REFERENCE, resetAfterSession = true)
                 igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
@@ -92,7 +87,7 @@ internal class MapScreenReplayCoordinator(
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
             } catch (t: Throwable) {
                 demoReplaySnapshots.restoreIfCaptured()
-                Log.e(TAG, "Failed to start vario demo replay", t)
+                AppLogger.e(TAG, "Failed to start vario demo replay", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
             }
         }
@@ -103,7 +98,6 @@ internal class MapScreenReplayCoordinator(
             try {
                 demoReplaySnapshots.captureUiIfNeeded()
                 igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO_SIM start asset=$VARIO_DEMO_ASSET_PATH")
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
                 igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
                 igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo (sim)")
@@ -114,7 +108,7 @@ internal class MapScreenReplayCoordinator(
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay started"))
             } catch (t: Throwable) {
                 demoReplaySnapshots.restoreIfCaptured()
-                Log.e(TAG, "Failed to start vario demo replay (sim)", t)
+                AppLogger.e(TAG, "Failed to start vario demo replay (sim)", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay failed"))
             }
         }
@@ -138,7 +132,6 @@ internal class MapScreenReplayCoordinator(
                 val accuracyM = SIM2_BASELINE_ACCURACY_M
                 igcReplayController.setSpeed(SIM2_REPLAY_SPEED_MULTIPLIER)
                 igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO_SIM_LIVE start asset=$VARIO_DEMO_SIM2_ASSET_PATH")
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
                 igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
                 igcReplayController.setReplayCadence(
@@ -165,7 +158,7 @@ internal class MapScreenReplayCoordinator(
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim2) replay started"))
             } catch (t: Throwable) {
                 demoReplaySnapshots.restoreIfCaptured()
-                Log.e(TAG, "Failed to start vario demo replay (sim2)", t)
+                AppLogger.e(TAG, "Failed to start vario demo replay (sim2)", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim2) replay failed"))
             }
         }
@@ -178,7 +171,6 @@ internal class MapScreenReplayCoordinator(
                 demoReplaySnapshots.captureRuntimeReplaySettingsIfNeeded()
                 igcReplayController.setSpeed(SIM3_REPLAY_SPEED_MULTIPLIER)
                 igcReplayController.setAutoStopAfterFinish(true)
-                Log.i(TAG, "VARIO_DEMO_SIM3 start asset=$VARIO_DEMO_SIM3_ASSET_PATH")
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
                 igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
                 igcReplayController.setReplayCadence(
@@ -205,7 +197,7 @@ internal class MapScreenReplayCoordinator(
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim3) replay started"))
             } catch (t: Throwable) {
                 demoReplaySnapshots.restoreIfCaptured()
-                Log.e(TAG, "Failed to start vario demo replay (sim3)", t)
+                AppLogger.e(TAG, "Failed to start vario demo replay (sim3)", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim3) replay failed"))
             }
         }
@@ -249,7 +241,7 @@ internal class MapScreenReplayCoordinator(
             } catch (t: Throwable) {
                 racingReplaySnapshots.restore()
                 racingReplayActive = false
-                Log.e(TAG, "Failed to start racing task replay", t)
+                AppLogger.e(TAG, "Failed to start racing task replay", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Racing task replay failed"))
             }
         }
@@ -306,19 +298,6 @@ internal class MapScreenReplayCoordinator(
             .onEach { event ->
                 if (racingReplayActive) {
                     racingReplayLogger.record(event)
-                }
-                if (BuildConfig.DEBUG) {
-                    val fix = lastRacingFix
-                    val fixLabel = if (fix != null) {
-                        "fix=${fix.lat},${fix.lon} fixT=${fix.timestampMillis}"
-                    } else {
-                        "fix=unknown"
-                    }
-                    Log.i(
-                        TAG,
-                        "RACING_EVENT type=${event.type} from=${event.fromLegIndex} " +
-                            "to=${event.toLegIndex} t=${event.timestampMillis} $fixLabel"
-                    )
                 }
                 if (!racingEventDebouncer.shouldEmit(event)) return@onEach
                 uiEffects.emit(MapUiEffect.ShowToast(buildRacingEventMessage(taskManager, event)))

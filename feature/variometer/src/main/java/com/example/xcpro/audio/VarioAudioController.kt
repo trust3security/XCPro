@@ -1,7 +1,7 @@
 package com.example.xcpro.audio
 
 import android.content.Context
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -25,9 +25,9 @@ class VarioAudioController(
         val initialized = engine.initialize()
         if (initialized && enableAudio) {
             engine.start()
-            Log.i(TAG, "Audio engine initialized and started")
+            AppLogger.i(TAG, "Audio engine initialized and started")
         } else if (!initialized) {
-            Log.w(TAG, "Audio engine initialization failed; disabling audio")
+            AppLogger.w(TAG, "Audio engine initialization failed; disabling audio")
         }
     }
 

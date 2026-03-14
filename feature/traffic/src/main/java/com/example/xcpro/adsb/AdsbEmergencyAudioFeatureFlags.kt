@@ -3,13 +3,31 @@ package com.example.xcpro.adsb
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Immutable bootstrap config for ADS-B emergency audio defaults.
+ *
+ * Live rollout state is owned by [AdsbTrafficRepositoryRuntime] and may change at runtime through
+ * rollout ports. This object must not become a mutable process-wide authority.
+ */
 @Singleton
-class AdsbEmergencyAudioFeatureFlags @Inject constructor() {
-    // Master rollout gate for emergency audio policy.
-    @Volatile
-    var emergencyAudioEnabled: Boolean = false
+class AdsbEmergencyAudioFeatureFlags private constructor(
+    val emergencyAudioEnabled: Boolean,
+    val emergencyAudioShadowMode: Boolean
+) {
+    @Inject
+    constructor() : this(
+        emergencyAudioEnabled = false,
+        emergencyAudioShadowMode = false
+    )
 
-    // Shadow mode keeps policy/telemetry active while side effects remain disabled.
-    @Volatile
-    var emergencyAudioShadowMode: Boolean = false
+    companion object {
+        fun bootstrap(
+            emergencyAudioEnabled: Boolean = false,
+            emergencyAudioShadowMode: Boolean = false
+        ): AdsbEmergencyAudioFeatureFlags =
+            AdsbEmergencyAudioFeatureFlags(
+                emergencyAudioEnabled = emergencyAudioEnabled,
+                emergencyAudioShadowMode = emergencyAudioShadowMode
+            )
+    }
 }

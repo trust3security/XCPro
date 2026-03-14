@@ -42,6 +42,7 @@ class ProfileRepositoryBackupSyncTest {
     private class RecordingSnapshotProvider : ProfileSettingsSnapshotProvider {
         val requestedProfileIds = MutableStateFlow<List<Set<String>>>(emptyList())
         val requestedSectionIds = MutableStateFlow<List<Set<String>>>(emptyList())
+        val requestedSectionOrders = MutableStateFlow<List<List<String>>>(emptyList())
 
         override suspend fun buildSnapshot(
             profileIds: Set<String>,
@@ -49,11 +50,13 @@ class ProfileRepositoryBackupSyncTest {
         ): ProfileSettingsSnapshot {
             requestedProfileIds.value = requestedProfileIds.value + listOf(profileIds)
             requestedSectionIds.value = requestedSectionIds.value + listOf(sectionIds)
-            return ProfileSettingsSnapshot(
-                sections = mapOf(
-                    ProfileSettingsSectionIds.CARD_PREFERENCES to JsonPrimitive("captured")
-                )
-            )
+            val sectionOrder = sectionIds.toList()
+            requestedSectionOrders.value = requestedSectionOrders.value + listOf(sectionOrder)
+            val sections = linkedMapOf<String, JsonPrimitive>()
+            for (sectionId in sectionOrder) {
+                sections[sectionId] = JsonPrimitive("captured:$sectionId")
+            }
+            return ProfileSettingsSnapshot(sections = sections)
         }
     }
 
@@ -164,6 +167,14 @@ class ProfileRepositoryBackupSyncTest {
             .first { it.isNotEmpty() }
             .last()
         assertEquals(ProfileSettingsSectionSets.CAPTURED_SECTION_IDS, requestedSections)
+        val requestedSectionOrder = harness.snapshotProvider.requestedSectionOrders
+            .first { it.isNotEmpty() }
+            .last()
+        assertEquals(ProfileSettingsSectionSets.CAPTURED_SECTION_ORDER, requestedSectionOrder)
+        assertEquals(
+            ProfileSettingsSectionSets.CAPTURED_SECTION_ORDER,
+            latest.settingsSnapshot.sections.keys.toList()
+        )
     }
 
     @Test

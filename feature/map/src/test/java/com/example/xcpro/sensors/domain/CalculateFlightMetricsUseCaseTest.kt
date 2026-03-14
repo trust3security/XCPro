@@ -2,6 +2,6 @@ package com.example.xcpro.sensors.domain
 
 /**
  * Facade file for line-budget compliance.
- * Implementation moved to CalculateFlightMetricsUseCaseTestRuntime.kt.
+ * Runtime regression coverage is split across focused suites in this package.
  */
 

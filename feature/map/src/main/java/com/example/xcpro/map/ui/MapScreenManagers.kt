@@ -3,19 +3,37 @@ package com.example.xcpro.map.ui
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.example.xcpro.MapOrientationPreferences
 import com.example.xcpro.map.LocationManager
+import com.example.xcpro.map.MapCameraRuntimePort
 import com.example.xcpro.map.MapCameraManager
+import com.example.xcpro.map.MapCameraUpdateGateAdapter
+import com.example.xcpro.map.MapCameraPreferenceReaderAdapter
+import com.example.xcpro.map.MapCameraSurfaceAdapter
+import com.example.xcpro.map.MapLibreCameraControllerProvider
+import com.example.xcpro.map.MapDisplayPoseSurfaceAdapter
 import com.example.xcpro.map.MapInitializer
+import com.example.xcpro.map.MapLifecycleRuntimePort
 import com.example.xcpro.map.MapLifecycleManager
+import com.example.xcpro.map.MapLifecycleSurfaceAdapter
+import com.example.xcpro.map.MapLocationPreferencesAdapter
+import com.example.xcpro.map.MapLocationRenderFrameBinderAdapter
+import com.example.xcpro.map.MapLocationRenderFrameBinder
+import com.example.xcpro.map.MapLocationFilter
+import com.example.xcpro.map.MapLocationOverlayAdapter
+import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
+import com.example.xcpro.map.MapScreenSizeProvider
 import com.example.xcpro.map.MapStateActions
 import com.example.xcpro.map.MapStateReader
 import com.example.xcpro.map.MapSensorsUseCase
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.MapTasksUseCase
 import com.example.xcpro.map.TaskRenderSyncCoordinator
+import com.example.xcpro.map.LocationSensorsController
+import com.example.xcpro.map.helpers.GliderPaddingHelper
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.replay.ReplayDisplayPose
@@ -33,9 +51,10 @@ internal data class MapScreenManagers(
     val overlayManager: MapOverlayManager,
     val widgetManager: MapUIWidgetManager,
     val taskScreenManager: MapTaskScreenManager,
-    val cameraManager: MapCameraManager,
-    val locationManager: LocationManager,
-    val lifecycleManager: MapLifecycleManager,
+    val cameraManager: MapCameraRuntimePort,
+    val locationManager: MapLocationRuntimePort,
+    val locationRenderFrameBinder: MapLocationRenderFrameBinder,
+    val lifecycleManager: MapLifecycleRuntimePort,
     val modalManager: MapModalManager,
     val mapInitializer: MapInitializer
 )
@@ -105,43 +124,111 @@ internal fun rememberMapScreenManagers(
         MapTaskScreenManager(mapState, tasksUseCase, coroutineScope)
     }
 
-    val cameraManager = remember(mapState, mapStateReader, mapStateActions) {
-        MapCameraManager(mapState, mapStateReader, mapStateActions)
+    val cameraSurface = remember(mapState) {
+        MapCameraSurfaceAdapter(mapState)
+    }
+
+    val cameraManager = remember(cameraSurface, mapStateReader, mapStateActions) {
+        MapCameraManager(cameraSurface, mapStateReader, mapStateActions)
+    }
+
+    val orientationPreferences = remember(context) {
+        MapOrientationPreferences(context)
+    }
+    val gliderPaddingHelper = remember(context, orientationPreferences) {
+        GliderPaddingHelper(context.resources, orientationPreferences)
+    }
+    val cameraPreferenceReader = remember(orientationPreferences) {
+        MapCameraPreferenceReaderAdapter(orientationPreferences)
+    }
+    val locationPreferences = remember(orientationPreferences) {
+        MapLocationPreferencesAdapter(orientationPreferences)
+    }
+    val sensorsPort = remember(context, coroutineScope, sensorsUseCase) {
+        LocationSensorsController(
+            context = context,
+            scope = coroutineScope,
+            sensorsUseCase = sensorsUseCase
+        )
+    }
+    val cameraControllerProvider = remember(mapState) {
+        MapLibreCameraControllerProvider(mapState)
+    }
+    val mapViewSizeProvider = remember(mapState) {
+        MapScreenSizeProvider(mapState)
+    }
+    val cameraUpdateGate = remember(mapState, featureFlags) {
+        MapCameraUpdateGateAdapter(
+            gate = MapLocationFilter(
+                config = MapLocationFilter.Config(
+                    thresholdPx = featureFlags.locationJitterThresholdPx,
+                    historySize = featureFlags.locationOffsetHistorySize
+                )
+            ),
+            mapProvider = { mapState.mapLibreMap }
+        )
+    }
+    val locationOverlayPort = remember(mapState) {
+        MapLocationOverlayAdapter(mapState)
+    }
+    val displayPoseSurface = remember(mapState) {
+        MapDisplayPoseSurfaceAdapter(mapState)
     }
 
     val locationManager = remember(
-        mapState,
         mapStateReader,
-        sensorsUseCase,
-        context,
-        featureFlags
+        featureFlags,
+        cameraPreferenceReader,
+        locationPreferences,
+        sensorsPort,
+        cameraControllerProvider,
+        mapViewSizeProvider,
+        cameraUpdateGate,
+        locationOverlayPort,
+        displayPoseSurface
     ) {
         LocationManager(
-            context = context,
-            mapState = mapState,
             mapStateReader = mapStateReader,
             stateActions = mapStateActions,
-            coroutineScope = coroutineScope,
-            sensorsUseCase = sensorsUseCase,
             featureFlags = featureFlags,
+            cameraPreferenceReader = cameraPreferenceReader,
+            locationPreferences = locationPreferences,
+            paddingProvider = gliderPaddingHelper::paddingArray,
+            sensorsPort = sensorsPort,
+            cameraControllerProvider = cameraControllerProvider,
+            mapViewSizeProvider = mapViewSizeProvider,
+            cameraUpdateGate = cameraUpdateGate,
+            locationOverlayPort = locationOverlayPort,
+            displayPoseSurfacePort = displayPoseSurface,
             replayHeadingProvider = replayHeadingProvider,
             replayFixProvider = replayFixProvider
         )
     }
 
+    val locationRenderFrameBinder = remember(featureFlags, locationManager) {
+        MapLocationRenderFrameBinderAdapter(
+            useRenderFrameSync = { featureFlags.useRenderFrameSync },
+            onRenderFrame = { locationManager.onRenderFrame() }
+        )
+    }
+
     val lifecycleManager = remember(
         mapState,
+        mapStateActions,
         orientationManager,
         locationManager,
-        replaySessionState,
-        mapStateActions
+        locationRenderFrameBinder,
+        replaySessionState
     ) {
         MapLifecycleManager(
-            mapState = mapState,
+            lifecycleSurface = MapLifecycleSurfaceAdapter(
+                mapState = mapState,
+                stateActions = mapStateActions
+            ),
             orientationManager = orientationManager,
             locationManager = locationManager,
-            replaySessionState = replaySessionState,
-            stateActions = mapStateActions
+            locationRenderFrameCleanup = locationRenderFrameBinder,
+            replaySessionState = replaySessionState
         )
     }
 
@@ -184,6 +271,7 @@ internal fun rememberMapScreenManagers(
         taskScreenManager = taskScreenManager,
         cameraManager = cameraManager,
         locationManager = locationManager,
+        locationRenderFrameBinder = locationRenderFrameBinder,
         lifecycleManager = lifecycleManager,
         modalManager = modalManager,
         mapInitializer = mapInitializer

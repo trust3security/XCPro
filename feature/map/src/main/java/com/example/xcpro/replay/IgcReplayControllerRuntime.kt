@@ -23,8 +23,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
-import kotlin.coroutines.coroutineContext
 
 
 open class IgcReplayControllerRuntime(
@@ -59,19 +57,23 @@ open class IgcReplayControllerRuntime(
         sessionState = _session.asStateFlow(),
         tag = TAG
     )
+    internal var replayRuntime: ReplayPipelineRuntime = pipeline.createRuntime()
 
     internal val scope: CoroutineScope
-        get() = pipeline.scope
+        get() = replayRuntime.scope
+
+    internal val replayFusionRepository
+        get() = replayRuntime.replayFusionRepository
 
     private fun ensureScopeActive() {
-        pipeline.ensureScope {
+        replayRuntime = pipeline.ensureScope(replayRuntime) {
             replayJob = null
             seekJob = null
         }
     }
 
     internal fun ensureReplayPipelineActive() {
-        pipeline.ensureActive {
+        replayRuntime = pipeline.ensureActive(replayRuntime) {
             replayJob = null
             seekJob = null
         }
@@ -151,7 +153,7 @@ open class IgcReplayControllerRuntime(
                                 previous,
                                 _session.value.qnhHpa,
                                 _session.value.startTimestampMillis,
-                                pipeline.replayFusionRepository
+                                replayFusionRepository
                             )
                             updateProgress(point.timestampMillis)
                             if (AppLogger.rateLimit(TAG, "replay_frame", 1_000L)) {
@@ -223,13 +225,13 @@ open class IgcReplayControllerRuntime(
         // Clear replay data before switching source back to LIVE to avoid stale UI after stop.
         flightDataRepository.clear()
         // Fully reset the replay fusion pipeline so averages/filters don't carry into the next run.
-        pipeline.replayFusionRepository?.stop()
+        replayFusionRepository?.stop()
         flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
         // Propagate a null sample in LIVE mode so UI/audio drop back to zero instead of
         // displaying the last replay value until live sensors tick again.
         flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
         silenceReplayAudio("stop")
-        pipeline.replayFusionRepository?.resetQnhToStandard()
+        replayFusionRepository?.resetQnhToStandard()
         resumeSensors()
         points = emptyList()
         currentIndex = 0
@@ -287,7 +289,7 @@ open class IgcReplayControllerRuntime(
             runCatching {
                 // Seeking is a teleport: reset fusion state so thermal/circling/wind estimators don't
                 // interpret the jump as a single "mega-sample" or carry stale altitude baselines.
-                pipeline.replayFusionRepository?.stop() ?: return@runCatching
+                replayFusionRepository?.stop() ?: return@runCatching
                 if (simConfig.interpolation == ReplayInterpolation.CATMULL_ROM_RUNTIME) {
                     val targetTime = targetTimeForSession
                     val stepMs = simConfig.gpsStepMs.coerceAtLeast(1L)
@@ -306,7 +308,7 @@ open class IgcReplayControllerRuntime(
                         previousInterpolated,
                         _session.value.qnhHpa,
                         _session.value.startTimestampMillis,
-                        pipeline.replayFusionRepository,
+                        replayFusionRepository,
                         interpolated?.movement
                     )
                     updateProgress(targetTime)
@@ -319,7 +321,7 @@ open class IgcReplayControllerRuntime(
                         previous,
                         _session.value.qnhHpa,
                         _session.value.startTimestampMillis,
-                        pipeline.replayFusionRepository
+                        replayFusionRepository
                     )
                     updateProgress(point.timestampMillis)
                 }

@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -41,9 +41,7 @@ class OpenMeteoElevationApi(private val context: Context) {
     }
 
     private inline fun debug(message: () -> String) {
-        if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.d(TAG, message())
-        }
+        AppLogger.d(TAG, message())
     }
 
     /**
@@ -53,7 +51,7 @@ class OpenMeteoElevationApi(private val context: Context) {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.INTERNET) ==
                 PackageManager.PERMISSION_GRANTED
         if (!hasPermission) {
-            Log.e(TAG, " INTERNET permission not granted")
+            AppLogger.e(TAG, "INTERNET permission not granted")
         }
         return hasPermission
     }
@@ -64,20 +62,20 @@ class OpenMeteoElevationApi(private val context: Context) {
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         if (connectivityManager == null) {
-            Log.e(TAG, " ConnectivityManager not available")
+            AppLogger.e(TAG, "ConnectivityManager not available")
             return false
         }
 
         val network = connectivityManager.activeNetwork
         if (network == null) {
-            Log.w(TAG, " No active network")
+            AppLogger.w(TAG, "No active network")
             return false
         }
 
         val capabilities = connectivityManager.getNetworkCapabilities(network)
         val isConnected = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         if (!isConnected) {
-            Log.w(TAG, " Network has no internet capability")
+            AppLogger.w(TAG, "Network has no internet capability")
         }
         return isConnected
     }
@@ -94,13 +92,13 @@ class OpenMeteoElevationApi(private val context: Context) {
     suspend fun fetchElevation(lat: Double, lon: Double): Double? = withContext(Dispatchers.IO) {
         // Reject invalid numeric input before any permission/network work.
         if (!lat.isFinite() || !lon.isFinite()) {
-            Log.e(TAG, "Invalid coordinates (non-finite): lat=$lat, lon=$lon")
+            AppLogger.e(TAG, "Invalid coordinates: non-finite input")
             return@withContext null
         }
 
         // Validate bounds before network work.
         if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-            Log.e(TAG, "Invalid coordinates: lat=$lat, lon=$lon")
+            AppLogger.e(TAG, "Invalid coordinates: out of bounds")
             return@withContext null
         }
 
@@ -120,7 +118,7 @@ class OpenMeteoElevationApi(private val context: Context) {
         var connection: HttpURLConnection? = null
 
         return@withContext try {
-            debug { "Fetching elevation for ($lat, $lon)" }
+            debug { "Fetching elevation for ${AppLogger.redactLatLon(lat, lon)}" }
 
             val url = URL(urlString)
             connection = url.openConnection() as HttpURLConnection
@@ -134,7 +132,7 @@ class OpenMeteoElevationApi(private val context: Context) {
             // Check response code
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                Log.e(TAG, "HTTP error: $responseCode")
+                AppLogger.e(TAG, "HTTP error: $responseCode")
                 return@withContext null
             }
 
@@ -149,15 +147,15 @@ class OpenMeteoElevationApi(private val context: Context) {
 
             if (elevationArray.length() > 0) {
                 val elevation = elevationArray.getDouble(0)
-                debug { "Elevation: ${elevation.toInt()}m at ($lat, $lon)" }
+                debug { "Elevation: ${elevation.toInt()}m for ${AppLogger.redactLatLon(lat, lon)}" }
                 elevation
             } else {
-                Log.e(TAG, " No elevation data in response")
+                AppLogger.e(TAG, "No elevation data in response")
                 null
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, " Failed to fetch elevation: ${e.message}", e)
+            AppLogger.e(TAG, "Failed to fetch elevation: ${e.message}", e)
             null
         } finally {
             connection?.disconnect()

@@ -1,0 +1,108 @@
+# path|allowed_raw_log_count
+#
+# Count-based production raw Log.* freeze baseline for the logging
+# standardization track.
+#
+# Rules:
+# - New production files with raw Log.* are blocked unless added here.
+# - Existing listed files may not increase their raw Log.* count.
+# - Lower counts are allowed so cleanup can land without churn.
+#
+# Update this file only as part of the logging architecture plan or an approved
+# deviation/ADR-backed boundary decision.
+
+# app
+app/src/main/java/com/example/xcpro/FirstTimeSetupManager.kt|10
+app/src/main/java/com/example/xcpro/MainActivity.kt|9
+app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt|3
+app/src/main/java/com/example/xcpro/XCProApplication.kt|2
+
+# core/common
+core/common/src/main/java/com/example/xcpro/common/waypoint/WaypointModels.kt|3
+core/common/src/main/java/com/example/xcpro/core/common/logging/AppLogger.kt|8
+
+# dfcards-library
+dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/CalcBaroAltitude.kt|2
+dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/ElevationCache.kt|1
+dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SimpleAglCalculator.kt|5
+dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SrtmTerrainDatabase.kt|14
+dfcards-library/src/main/java/com/example/dfcards/dfcards/CardContainer.kt|1
+dfcards-library/src/main/java/com/example/dfcards/dfcards/EnhancedGestureHandler.kt|3
+dfcards-library/src/main/java/com/example/dfcards/filters/Modern3StateKalmanFilter.kt|2
+dfcards-library/src/main/java/com/example/dfcards/FlightTemplateCarouselComponents.kt|1
+
+# feature/igc
+feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcRecoveryDiagnosticsReporter.kt|1
+feature/igc/src/main/java/com/example/xcpro/replay/IgcReplayIo.kt|1
+
+# feature/map
+feature/map/src/main/java/com/example/xcpro/components/AirspaceComponents.kt|1
+feature/map/src/main/java/com/example/xcpro/hawk/HawkVarioRepository.kt|1
+feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtonItems.kt|3
+feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt|4
+feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt|3
+feature/map/src/main/java/com/example/xcpro/map/MapInitializerDataLoader.kt|2
+feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt|4
+feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt|2
+feature/map/src/main/java/com/example/xcpro/map/MapTaskIntegration.kt|1
+feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailLogger.kt|6
+feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt|3
+feature/map/src/main/java/com/example/xcpro/map/ui/MapReplayDiagnosticsLogger.kt|2
+feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt|3
+feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt|1
+feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt|3
+feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt|2
+feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt|2
+feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt|1
+feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt|2
+feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt|2
+feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt|4
+feature/map/src/main/java/com/example/xcpro/orientation/HeadingJitterLogger.kt|1
+feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt|8
+feature/map/src/main/java/com/example/xcpro/replay/ReplaySampleEmitter.kt|1
+feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataScreensTab.kt|2
+feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataWaypointsTab.kt|7
+feature/map/src/main/java/com/example/xcpro/screens/flightdata/HomeWaypointSelector.kt|4
+feature/map/src/main/java/com/example/xcpro/screens/flightdata/WaypointParser.kt|3
+feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ColorsScreen.kt|7
+feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ColorsScreenComponents.kt|1
+feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ColorsScreenPickers.kt|6
+feature/map/src/main/java/com/example/xcpro/screens/overlays/MapControlsUI.kt|1
+feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt|6
+feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt|3
+feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt|4
+feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATMapRenderer.kt|1
+feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATTaskRenderer.kt|1
+feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingMapRenderer.kt|1
+feature/map/src/main/java/com/example/xcpro/utils/AirspaceApply.kt|6
+feature/map/src/main/java/com/example/xcpro/utils/AirspaceIO.kt|2
+feature/map/src/main/java/com/example/xcpro/utils/AirspaceParser.kt|1
+feature/map/src/main/java/com/example/xcpro/utils/AirspacePrefs.kt|4
+feature/map/src/main/java/com/example/xcpro/utils/DFUtils.kt|11
+feature/map/src/main/java/com/example/xcpro/utils/WaypointRepository.kt|5
+
+# feature/map-runtime
+feature/map-runtime/src/main/java/com/example/xcpro/map/DisplayPoseFrameLogger.kt|1
+feature/map-runtime/src/main/java/com/example/xcpro/map/LocationManager.kt|1
+feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastRasterDelegate.kt|4
+feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherApply.kt|2
+feature/map-runtime/src/main/java/com/example/xcpro/map/MapPositionController.kt|4
+
+# feature/profile
+feature/profile/src/main/java/com/example/xcpro/profiles/ProfileDiagnosticsReporter.kt|1
+feature/profile/src/main/java/com/example/xcpro/profiles/ProfileQuickActions.kt|3
+feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt|1
+feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt|1
+feature/profile/src/main/java/com/example/xcpro/ui/theme/ColorThemes.kt|7
+
+# feature/tasks
+feature/tasks/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditOverlayRenderer.kt|1
+feature/tasks/src/main/java/com/example/xcpro/tasks/aat/ui/AATTaskPointTypeSelector.kt|1
+feature/tasks/src/main/java/com/example/xcpro/tasks/racing/ui/RacingStartPointSelector.kt|1
+feature/tasks/src/main/java/com/example/xcpro/tasks/racing/ui/RacingTaskPointTypeSelector.kt|1
+
+# feature/traffic
+feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt|3
+
+# feature/variometer
+feature/variometer/src/main/java/com/example/xcpro/variometer/ui/VariometerOverlay.kt|11

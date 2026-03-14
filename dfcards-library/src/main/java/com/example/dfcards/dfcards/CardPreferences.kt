@@ -12,6 +12,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import com.example.dfcards.dfcards.CardState
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.core.time.DefaultClockProvider
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,7 @@ class CardPreferences(
 ) {
 
     companion object {
+        private const val LOG_TAG = "CardPreferences"
         const val MIN_CARDS_ACROSS_PORTRAIT = 3
         const val MAX_CARDS_ACROSS_PORTRAIT = 8
         const val DEFAULT_CARDS_ACROSS_PORTRAIT = MIN_CARDS_ACROSS_PORTRAIT
@@ -34,16 +36,6 @@ class CardPreferences(
         private val VARIO_SMOOTHING_KEY = floatPreferencesKey("vario_smoothing_alpha")
         private val CARDS_ACROSS_PORTRAIT_KEY = intPreferencesKey("cards_across_portrait")
         private val CARDS_ANCHOR_PORTRAIT_KEY = stringPreferencesKey("cards_anchor_portrait")
-    }
-
-    // EXISTING: Save individual card state (keep for backward compatibility)
-    suspend fun saveCardState(cardState: CardState) {
-        context.dataStore.edit { preferences ->
-            preferences[floatPreferencesKey("${cardState.id}_x")] = cardState.x
-            preferences[floatPreferencesKey("${cardState.id}_y")] = cardState.y
-            preferences[floatPreferencesKey("${cardState.id}_width")] = cardState.width
-            preferences[floatPreferencesKey("${cardState.id}_height")] = cardState.height
-        }
     }
 
     // EXISTING: Individual card position (MAKE SURE THIS IS HERE)
@@ -165,13 +157,10 @@ class CardPreferences(
 
     //  NEW: Save profile-specific template configuration
     suspend fun saveProfileTemplateCards(profileId: String, templateId: String, cardIds: List<String>) {
-        android.util.Log.d("CardPreferences", " saveProfileTemplateCards: Profile '$profileId', Template '$templateId', Cards: ${cardIds.joinToString(",")}")
-        
         context.dataStore.edit { preferences ->
             // Save the card configuration for this profile+template combination
             val key = "profile_${profileId}_template_${templateId}_cards"
             preferences[stringPreferencesKey(key)] = cardIds.joinToString(",")
-            android.util.Log.d("CardPreferences", " Saved profile-specific cards: $key = ${cardIds.joinToString(",")}")
         }
     }
     
@@ -183,24 +172,17 @@ class CardPreferences(
             val cards = cardsString
                 ?.split(",")
                 ?.let { CardIdMigration.normalizeAll(it) }
-            android.util.Log.d("CardPreferences", " Loading profile cards: $key = ${cards?.joinToString(",") ?: "NULL (using default)"}")
             cards
         }
     }
     
     // UPDATED: Save ALL templates (unified system) - WITH isPreset support
     suspend fun saveAllTemplates(templates: List<FlightTemplate>) {
-        android.util.Log.d("CardPreferences", " saveAllTemplates called with ${templates.size} templates")
-        templates.forEach { template ->
-            android.util.Log.d("CardPreferences", "   ${template.id}: ${template.name} - ${template.cardIds.size} cards: ${template.cardIds.joinToString(",")}")
-        }
-        
         context.dataStore.edit { preferences ->
             // Clear existing templates
             val keysToRemove = preferences.asMap().keys.filter {
                 it.name.startsWith("all_template_")
             }
-            android.util.Log.d("CardPreferences", " Removing ${keysToRemove.size} old template keys")
             keysToRemove.forEach { preferences.remove(it) }
 
             // Save all templates
@@ -212,7 +194,6 @@ class CardPreferences(
                 preferences[stringPreferencesKey("all_template_${index}_preset")] = template.isPreset.toString() // ADDED
             }
             preferences[stringPreferencesKey("all_template_count")] = templates.size.toString()
-            android.util.Log.d("CardPreferences", " Saved ${templates.size} templates to preferences")
         }
     }
 
@@ -224,7 +205,6 @@ class CardPreferences(
             if (count == 0) {
                 // First time - return defaults AND save them
                 val defaults = FlightTemplates.getDefaultTemplates()
-                android.util.Log.d("CardPreferences", " First time loading - initializing with ${defaults.size} default templates")
                 defaults
             } else {
                 // Check if we have old template IDs that need migration
@@ -235,7 +215,7 @@ class CardPreferences(
                 
                 if (hasOldIds) {
                     // Migrate old templates but preserve user modifications
-                    android.util.Log.w("CardPreferences", " Migrating old template IDs to new id01, id02, id03 system")
+                    AppLogger.w(LOG_TAG, "Migrating legacy template IDs to canonical template IDs")
                     // Don't reset - just continue loading what we have
                 }
                 
@@ -263,22 +243,13 @@ class CardPreferences(
                                 isPreset = isPreset // ADDED
                             )
                         )
-                        android.util.Log.d("CardPreferences", " Loaded template ${id}: ${name} - ${cardIds.size} cards: ${cardIds.joinToString(",")}")
                     }
                 }
-                android.util.Log.d("CardPreferences", " Loaded ${templates.size} templates from preferences")
                 templates
             }
         }
     }
 
-    //  UPDATED: Profile-aware flight mode  template mapping
-    suspend fun saveFlightModeTemplate(flightMode: String, templateId: String) {
-        context.dataStore.edit { preferences ->
-            preferences[stringPreferencesKey("flight_mode_${flightMode}_template")] = templateId
-        }
-    }
-    
     //  NEW: Profile-aware flight mode  template mapping
     suspend fun saveProfileFlightModeTemplate(profileId: String, flightMode: String, templateId: String) {
         context.dataStore.edit { preferences ->
@@ -286,13 +257,6 @@ class CardPreferences(
         }
     }
 
-    //  UPDATED: Get saved template for flight mode (backward compatibility)
-    fun getFlightModeTemplate(flightMode: String): Flow<String?> {
-        return context.dataStore.data.map { preferences ->
-            preferences[stringPreferencesKey("flight_mode_${flightMode}_template")]
-        }
-    }
-    
     //  NEW: Get saved template for profile + flight mode
     fun getProfileFlightModeTemplate(profileId: String, flightMode: String): Flow<String?> {
         return context.dataStore.data.map { preferences ->
@@ -335,23 +299,6 @@ class CardPreferences(
         }
     }
 
-
-    //  NEW: Get all flight mode template mappings
-    fun getAllFlightModeTemplates(): Flow<Map<String, String>> {
-        return context.dataStore.data.map { preferences ->
-            val mappings = mutableMapOf<String, String>()
-
-            // Check for each screen mode (with S prefix)
-            listOf("CRUISE", "THERMAL", "FINAL_GLIDE").forEach { flightMode ->
-                val templateId = preferences[stringPreferencesKey("flight_mode_template_$flightMode")]
-                if (templateId != null) {
-                    mappings[flightMode] = templateId
-                }
-            }
-
-            mappings
-        }
-    }
 
     //  UPDATED: Save card position (backward compatibility)
     suspend fun saveCardPosition(cardState: CardState) {
@@ -425,7 +372,6 @@ class CardPreferences(
 
     //  NEW: Save flight mode visibility for profile
     suspend fun saveProfileFlightModeVisibility(profileId: String, flightMode: String, isVisible: Boolean) {
-        android.util.Log.d("CardPreferences", " Saving flight mode visibility: Profile '$profileId', Mode '$flightMode', Visible: $isVisible")
         context.dataStore.edit { preferences ->
             val key = "profile_${profileId}_${flightMode}_visible"
             preferences[booleanPreferencesKey(key)] = isVisible

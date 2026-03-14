@@ -1,5 +1,6 @@
 package com.example.xcpro.profiles
 
+import com.example.xcpro.core.time.FakeClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,8 @@ class ProfileRepositoryTest {
 
     private class RepositoryHarness(
         scope: CoroutineScope,
+        clock: FakeClock = FakeClock(),
+        profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator(),
         initialSnapshot: ProfileStorageSnapshot = ProfileStorageSnapshot(
             profilesJson = null,
             activeProfileId = null,
@@ -62,11 +65,19 @@ class ProfileRepositoryTest {
             }
         }
 
-        val repository = ProfileRepository(storage, scope, diagnosticsReporter)
+        val repository = ProfileRepository(
+            storage = storage,
+            internalScope = scope,
+            profileDiagnosticsReporter = diagnosticsReporter,
+            clock = clock,
+            profileIdGenerator = profileIdGenerator
+        )
     }
 
     private fun createHarness(
         scope: CoroutineScope,
+        clock: FakeClock = FakeClock(),
+        profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator(),
         initialSnapshot: ProfileStorageSnapshot = ProfileStorageSnapshot(
             profilesJson = null,
             activeProfileId = null,
@@ -74,6 +85,8 @@ class ProfileRepositoryTest {
         )
     ): RepositoryHarness = RepositoryHarness(
         scope = scope,
+        clock = clock,
+        profileIdGenerator = profileIdGenerator,
         initialSnapshot = initialSnapshot
     )
 
@@ -87,6 +100,8 @@ class ProfileRepositoryTest {
     private var writeProfilesCalls = 0
     private var writeActiveCalls = 0
     private var writeStateCalls = 0
+    private val clock = FakeClock()
+    private val profileIdGenerator = ProfileIdGenerator()
 
     private val storage = object : ProfileStorage {
         override val snapshotFlow = snapshotState
@@ -117,10 +132,15 @@ class ProfileRepositoryTest {
         }
     }
 
-    private val repository = ProfileRepository(storage)
+    private val repository = ProfileRepository(
+        storage = storage,
+        clock = clock,
+        profileIdGenerator = profileIdGenerator
+    )
 
     @Test
     fun createAndSelectProfile_updatesActiveProfile() = runTest {
+        clock.setWallMs(10_000L)
         val request = ProfileCreationRequest(
             name = "Test Pilot",
             aircraftType = AircraftType.SAILPLANE
@@ -134,6 +154,42 @@ class ProfileRepositoryTest {
         val active = repository.activeProfile.first()
         assertNotNull(active)
         assertEquals(created.id, active?.id)
+    }
+
+    @Test
+    fun createProfile_usesInjectedClockAndIdGeneratorForOwnerMetadata() = runTest {
+        val harness = createHarness(
+            scope = backgroundScope,
+            clock = FakeClock(wallMs = 123_456L),
+            profileIdGenerator = ProfileIdGenerator.fixed("generated-profile-id")
+        )
+        harness.repository.bootstrapComplete.first { it }
+
+        val created = harness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Owned Metadata",
+                aircraftType = AircraftType.GLIDER
+            )
+        ).getOrThrow()
+
+        assertEquals("generated-profile-id", created.id)
+        assertEquals(123_456L, created.createdAt)
+        assertEquals(123_456L, created.lastUsed)
+    }
+
+    @Test
+    fun bootstrapDefaultProfile_usesInjectedClockForRecoveryMetadata() = runTest {
+        val harness = createHarness(
+            scope = backgroundScope,
+            clock = FakeClock(wallMs = 456_789L)
+        )
+
+        harness.repository.bootstrapComplete.first { it }
+
+        val defaultProfile = harness.repository.profiles.value.first()
+        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, defaultProfile.id)
+        assertEquals(456_789L, defaultProfile.createdAt)
+        assertEquals(456_789L, defaultProfile.lastUsed)
     }
 
     @Test
@@ -163,6 +219,7 @@ class ProfileRepositoryTest {
     @Test
     fun updateProfile_keepsNonAuthoritativeCompatibilityFieldsUnchanged() = runTest {
         val imported = UserProfile(
+            id = "compatibility-baseline",
             name = "Compatibility Baseline",
             aircraftType = AircraftType.SAILPLANE,
             preferences = ProfilePreferences(
@@ -170,6 +227,8 @@ class ProfileRepositoryTest {
                 autoSwitchModes = false,
                 cardAnimations = false
             ),
+            createdAt = 1_000L,
+            lastUsed = 2_000L,
             polar = ProfilePolarSettings(
                 lowSpeedKmh = 85.0,
                 lowSinkMs = 0.55,
@@ -208,6 +267,7 @@ class ProfileRepositoryTest {
             ProfileImportRequest(
                 profiles = listOf(
                     UserProfile(
+                        id = "source-profile",
                         name = "Source",
                         aircraftType = AircraftType.SAILPLANE,
                         aircraftModel = "JS3",
@@ -217,6 +277,8 @@ class ProfileRepositoryTest {
                             autoSwitchModes = false,
                             cardAnimations = false
                         ),
+                        createdAt = 1_000L,
+                        lastUsed = 2_000L,
                         polar = ProfilePolarSettings(
                             lowSpeedKmh = 90.0,
                             lowSinkMs = 0.6,
@@ -268,8 +330,11 @@ class ProfileRepositoryTest {
     @Test
     fun setActiveProfile_mergesProfileIfMissing() = runTest {
         val orphan = UserProfile(
+            id = "orphan-imported",
             name = "Imported",
-            aircraftType = AircraftType.GLIDER
+            aircraftType = AircraftType.GLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
 
         repository.setActiveProfile(orphan).getOrThrow()
@@ -437,8 +502,11 @@ class ProfileRepositoryTest {
         repository.setActiveProfile(existing).getOrThrow()
 
         val incoming = UserProfile(
+            id = "incoming-imported-pilot",
             name = "Imported Pilot",
-            aircraftType = AircraftType.GLIDER
+            aircraftType = AircraftType.GLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
         val result = repository.importProfiles(
             ProfileImportRequest(
@@ -455,6 +523,7 @@ class ProfileRepositoryTest {
     @Test
     fun importProfiles_preservesImportedPreferencesAndMetadata() = runTest {
         val imported = UserProfile(
+            id = "preference-import",
             name = "Preference Import",
             aircraftType = AircraftType.GLIDER,
             preferences = ProfilePreferences(
@@ -482,8 +551,20 @@ class ProfileRepositoryTest {
         val baselineActiveWrites = writeActiveCalls
         val baselineStateWrites = writeStateCalls
         val imports = listOf(
-            UserProfile(name = "Import A", aircraftType = AircraftType.SAILPLANE),
-            UserProfile(name = "Import B", aircraftType = AircraftType.GLIDER)
+            UserProfile(
+                id = "import-a",
+                name = "Import A",
+                aircraftType = AircraftType.SAILPLANE,
+                createdAt = 1_000L,
+                lastUsed = 2_000L
+            ),
+            UserProfile(
+                id = "import-b",
+                name = "Import B",
+                aircraftType = AircraftType.GLIDER,
+                createdAt = 1_000L,
+                lastUsed = 2_000L
+            )
         )
 
         repository.importProfiles(ProfileImportRequest(profiles = imports)).getOrThrow()
@@ -496,8 +577,20 @@ class ProfileRepositoryTest {
     @Test
     fun importProfiles_skipsInvalidEntriesAndReportsFailure() = runTest {
         val imports = listOf(
-            UserProfile(name = " ", aircraftType = AircraftType.SAILPLANE),
-            UserProfile(name = "Valid Import", aircraftType = AircraftType.GLIDER)
+            UserProfile(
+                id = "invalid-blank",
+                name = " ",
+                aircraftType = AircraftType.SAILPLANE,
+                createdAt = 1_000L,
+                lastUsed = 2_000L
+            ),
+            UserProfile(
+                id = "valid-import",
+                name = "Valid Import",
+                aircraftType = AircraftType.GLIDER,
+                createdAt = 1_000L,
+                lastUsed = 2_000L
+            )
         )
 
         val result = repository.importProfiles(ProfileImportRequest(profiles = imports)).getOrThrow()
@@ -519,8 +612,20 @@ class ProfileRepositoryTest {
         ).getOrThrow()
         repository.setActiveProfile(existing).getOrThrow()
 
-        val firstImported = UserProfile(name = "Imported One", aircraftType = AircraftType.GLIDER)
-        val secondImported = UserProfile(name = "Imported Two", aircraftType = AircraftType.PARAGLIDER)
+        val firstImported = UserProfile(
+            id = "imported-one",
+            name = "Imported One",
+            aircraftType = AircraftType.GLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
+        )
+        val secondImported = UserProfile(
+            id = "imported-two",
+            name = "Imported Two",
+            aircraftType = AircraftType.PARAGLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
+        )
 
         val result = repository.importProfiles(
             ProfileImportRequest(
@@ -547,8 +652,20 @@ class ProfileRepositoryTest {
         repository.importProfiles(
             ProfileImportRequest(
                 profiles = listOf(
-                    UserProfile(name = "Pilot", aircraftType = AircraftType.GLIDER),
-                    UserProfile(name = "Pilot", aircraftType = AircraftType.PARAGLIDER)
+                    UserProfile(
+                        id = "pilot-import-1",
+                        name = "Pilot",
+                        aircraftType = AircraftType.GLIDER,
+                        createdAt = 1_000L,
+                        lastUsed = 2_000L
+                    ),
+                    UserProfile(
+                        id = "pilot-import-2",
+                        name = "Pilot",
+                        aircraftType = AircraftType.PARAGLIDER,
+                        createdAt = 1_000L,
+                        lastUsed = 2_000L
+                    )
                 )
             )
         ).getOrThrow()
@@ -575,7 +692,9 @@ class ProfileRepositoryTest {
             id = "incoming-replace-id",
             name = "Replace Me",
             aircraftType = AircraftType.GLIDER,
-            description = "Updated"
+            description = "Updated",
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
 
         val result = repository.importProfiles(
@@ -610,8 +729,20 @@ class ProfileRepositoryTest {
         val result = repository.importProfiles(
             ProfileImportRequest(
                 profiles = listOf(
-                    UserProfile(name = " ", aircraftType = AircraftType.GLIDER),
-                    UserProfile(name = "\t", aircraftType = AircraftType.PARAGLIDER)
+                    UserProfile(
+                        id = "invalid-blank-two",
+                        name = " ",
+                        aircraftType = AircraftType.GLIDER,
+                        createdAt = 1_000L,
+                        lastUsed = 2_000L
+                    ),
+                    UserProfile(
+                        id = "invalid-tab",
+                        name = "\t",
+                        aircraftType = AircraftType.PARAGLIDER,
+                        createdAt = 1_000L,
+                        lastUsed = 2_000L
+                    )
                 )
             )
         ).getOrThrow()
@@ -626,7 +757,9 @@ class ProfileRepositoryTest {
 
     @Test
     fun importProfiles_preserveImportedPreferencesFalse_appliesDefaults() = runTest {
+        clock.setWallMs(90_000L)
         val imported = UserProfile(
+            id = "defaults-import",
             name = "Defaults Import",
             aircraftType = AircraftType.GLIDER,
             preferences = ProfilePreferences(
@@ -649,7 +782,7 @@ class ProfileRepositoryTest {
         assertEquals(UnitSystem.METRIC, stored.preferences.units)
         assertTrue(stored.preferences.autoSwitchModes)
         assertTrue(stored.preferences.cardAnimations)
-        assertFalse(stored.createdAt == 1234L)
+        assertEquals(90_000L, stored.createdAt)
         assertEquals(0L, stored.lastUsed)
     }
 
@@ -659,12 +792,16 @@ class ProfileRepositoryTest {
         val first = UserProfile(
             id = duplicateId,
             name = "Duplicate One",
-            aircraftType = AircraftType.SAILPLANE
+            aircraftType = AircraftType.SAILPLANE,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
         val second = UserProfile(
             id = duplicateId,
             name = "Duplicate Two",
-            aircraftType = AircraftType.GLIDER
+            aircraftType = AircraftType.GLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
         )
 
         val result = repository.importProfiles(
@@ -678,6 +815,46 @@ class ProfileRepositoryTest {
         assertEquals(0, result.failures.size)
         assertEquals(2, stored.size)
         assertTrue(stored.map { it.id }.toSet().size == 2)
+    }
+
+    @Test
+    fun importProfiles_usesInjectedIdGeneratorWhenDuplicateIdNeedsReplacement() = runTest {
+        val harness = createHarness(
+            scope = backgroundScope,
+            clock = FakeClock(wallMs = 789_000L),
+            profileIdGenerator = ProfileIdGenerator.fixed(
+                "existing-profile-id",
+                "replacement-profile-id"
+            )
+        )
+        harness.repository.bootstrapComplete.first { it }
+        val existing = harness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Existing",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+
+        val incoming = UserProfile(
+            id = existing.id,
+            name = "Imported Duplicate",
+            aircraftType = AircraftType.GLIDER,
+            createdAt = 1L,
+            lastUsed = 2L
+        )
+
+        val result = harness.repository.importProfiles(
+            ProfileImportRequest(
+                profiles = listOf(incoming),
+                preserveImportedPreferences = false
+            )
+        ).getOrThrow()
+
+        val imported = harness.repository.profiles.value.first { it.name == "Imported Duplicate" }
+        assertEquals(1, result.importedCount)
+        assertEquals("replacement-profile-id", imported.id)
+        assertEquals(789_000L, imported.createdAt)
+        assertEquals(0L, imported.lastUsed)
     }
 
     @Test

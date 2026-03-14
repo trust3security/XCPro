@@ -1,26 +1,12 @@
 package com.example.xcpro.igc.data
 
-import android.content.ContentUris
-import android.content.ContentValues
-import android.content.Context
-import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
-import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.igc.domain.IgcRecoveryErrorCode
 import com.example.xcpro.igc.domain.IgcRecoveryMetadata
 import com.example.xcpro.igc.domain.IgcRecoveryResult
 import com.example.xcpro.igc.domain.IgcFileNamingPolicy
 import com.example.xcpro.igc.domain.IgcGRecordSigner
 import com.example.xcpro.igc.domain.IgcSecuritySignatureProfile
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
-import java.io.FileOutputStream
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,12 +35,14 @@ object NoopIgcFlightLogRepository : IgcFlightLogRepository {
 
 @Singleton
 class MediaStoreIgcFlightLogRepository @Inject constructor(
-    @ApplicationContext private val appContext: Context,
     private val downloadsRepository: IgcDownloadsRepository,
     private val recoveryMetadataStore: IgcRecoveryMetadataStore,
     private val namingPolicy: IgcFileNamingPolicy,
     private val exportValidationAdapter: IgcExportValidationAdapter,
-    private val gRecordSigner: IgcGRecordSigner
+    private val gRecordSigner: IgcGRecordSigner,
+    private val stagingStore: IgcRecoveryStagingStore,
+    private val publishTransport: IgcFlightLogPublishTransport,
+    private val recoveryFinalizedEntryResolver: IgcRecoveryFinalizedEntryResolver
 ) : IgcFlightLogRepository {
 
     private val lock = Any()
@@ -107,26 +95,18 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
                 }
                 IgcExportValidationResult.Valid -> Unit
             }
-            if (writeStagingFile(request.sessionId, fileBytes) == null) {
+            if (!stagingStore.write(request.sessionId, fileBytes)) {
                 return@synchronized IgcFinalizeResult.Failure(
                     code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
                     message = "Failed to write IGC staging file"
                 )
             }
 
-            val publishResult = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                publishMediaStore(
-                    fileName = naming.fileName,
-                    payload = fileBytes,
-                    utcDate = naming.utcDate
-                )
-            } else {
-                publishLegacy(
-                    fileName = naming.fileName,
-                    payload = fileBytes,
-                    utcDate = naming.utcDate
-                )
-            }
+            val publishResult = publishTransport.publish(
+                fileName = naming.fileName,
+                payload = fileBytes,
+                utcDate = naming.utcDate
+            )
             if (publishResult !is IgcFinalizeResult.Published) {
                 return@synchronized publishResult
             }
@@ -146,30 +126,35 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
                 stored = storedMetadata,
                 staged = stagedMetadata
             )
-            when (val existing = findExistingFinalizedEntriesForSession(
-                sessionId = sessionId,
-                metadata = metadata
-            )) {
-                is ExistingFinalizedMatch.Duplicate -> {
-                    cleanupPendingRowsForMetadata(metadata)
-                    deleteRecoveryArtifacts(sessionId)
-                    return@synchronized IgcRecoveryResult.Failure(
-                        code = IgcRecoveryErrorCode.DUPLICATE_SESSION_GUARD,
-                        message = "Multiple finalized IGC files matched session $sessionId"
-                    )
-                }
-                is ExistingFinalizedMatch.Single -> {
-                    cleanupPendingRowsForMetadata(metadata)
-                    publishedBySessionId[sessionId] = existing.entry
-                    deleteRecoveryArtifacts(sessionId)
-                    return@synchronized IgcRecoveryResult.Recovered(existing.entry.displayName)
-                }
-                ExistingFinalizedMatch.None -> Unit
+
+            publishedBySessionId[sessionId]?.let { existing ->
+                recoveryFinalizedEntryResolver.cleanupPendingRows(metadata)
+                deleteRecoveryArtifacts(sessionId)
+                return@synchronized IgcRecoveryResult.Recovered(existing.displayName)
             }
 
-            val staged = stagedFile(sessionId)
-            if (!staged.exists()) {
-                cleanupPendingRowsForMetadata(metadata)
+            if (metadata?.hasUtcIdentity() == true) {
+                when (val existing = recoveryFinalizedEntryResolver.findExistingFinalizedMatch(metadata)) {
+                    is IgcRecoveryFinalizedEntryMatch.Duplicate -> {
+                        recoveryFinalizedEntryResolver.cleanupPendingRows(metadata)
+                        deleteRecoveryArtifacts(sessionId)
+                        return@synchronized IgcRecoveryResult.Failure(
+                            code = IgcRecoveryErrorCode.DUPLICATE_SESSION_GUARD,
+                            message = "Multiple finalized IGC files matched session $sessionId"
+                        )
+                    }
+                    is IgcRecoveryFinalizedEntryMatch.Single -> {
+                        recoveryFinalizedEntryResolver.cleanupPendingRows(metadata)
+                        publishedBySessionId[sessionId] = existing.entry
+                        deleteRecoveryArtifacts(sessionId)
+                        return@synchronized IgcRecoveryResult.Recovered(existing.entry.displayName)
+                    }
+                    IgcRecoveryFinalizedEntryMatch.None -> Unit
+                }
+            }
+
+            if (!stagingStore.exists(sessionId)) {
+                recoveryFinalizedEntryResolver.cleanupPendingRows(metadata)
                 deleteRecoveryArtifacts(sessionId)
                 return@synchronized IgcRecoveryResult.Failure(
                     code = IgcRecoveryErrorCode.STAGING_MISSING,
@@ -177,10 +162,8 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
                 )
             }
 
-            val lines = runCatching {
-                staged.readLines()
-            }.getOrNull() ?: run {
-                cleanupPendingRowsForMetadata(metadata)
+            val lines = stagingStore.readLines(sessionId) ?: run {
+                recoveryFinalizedEntryResolver.cleanupPendingRows(metadata)
                 deleteRecoveryArtifacts(sessionId)
                 return@synchronized IgcRecoveryResult.Failure(
                     code = IgcRecoveryErrorCode.STAGING_CORRUPT,
@@ -189,7 +172,7 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
             }
 
             if (lines.isEmpty()) {
-                cleanupPendingRowsForMetadata(metadata)
+                recoveryFinalizedEntryResolver.cleanupPendingRows(metadata)
                 deleteRecoveryArtifacts(sessionId)
                 return@synchronized IgcRecoveryResult.Failure(
                     code = IgcRecoveryErrorCode.STAGING_CORRUPT,
@@ -198,7 +181,7 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
             }
 
             if (stagedMetadata == null) {
-                cleanupPendingRowsForMetadata(metadata)
+                recoveryFinalizedEntryResolver.cleanupPendingRows(metadata)
                 deleteRecoveryArtifacts(sessionId)
                 return@synchronized IgcRecoveryResult.Failure(
                     code = IgcRecoveryErrorCode.STAGING_CORRUPT,
@@ -208,7 +191,7 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
 
             val authoritativeMetadata = metadata ?: stagedMetadata
             if (!authoritativeMetadata.hasUtcIdentity()) {
-                cleanupPendingRowsForMetadata(authoritativeMetadata)
+                recoveryFinalizedEntryResolver.cleanupPendingRows(authoritativeMetadata)
                 deleteRecoveryArtifacts(sessionId)
                 return@synchronized IgcRecoveryResult.Failure(
                     code = IgcRecoveryErrorCode.STAGING_CORRUPT,
@@ -216,7 +199,7 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
                 )
             }
 
-            cleanupPendingRowsForMetadata(authoritativeMetadata)
+            recoveryFinalizedEntryResolver.cleanupPendingRows(authoritativeMetadata)
 
             val request = IgcFinalizeRequest(
                 sessionId = sessionId,
@@ -245,138 +228,13 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
     }
 
     override fun parseStagedRecoveryMetadata(sessionId: Long): IgcRecoveryMetadata? {
-        val staged = stagedFile(sessionId)
-        if (!staged.exists()) return null
-        val lines = runCatching { staged.readLines() }.getOrNull() ?: return null
-        if (lines.isEmpty()) return null
-        val aLine = lines.firstOrNull { it.startsWith("A") } ?: return null
-        if (aLine.length < 10) return null
-        val manufacturerId = aLine.substring(1, 4)
-        val sessionSerial = aLine.substring(4, 10)
-        val startDate = lines.firstOrNull(::isSessionHeaderDateLine)
-            ?.let(::parseSessionHeaderDate)
-        val firstB = lines.firstOrNull { it.startsWith("B") }
-        val firstFixMs = startDate?.let { date ->
-            parseFirstBWallTime(firstB, date)
-        }
-        return IgcRecoveryMetadata(
-            manufacturerId = manufacturerId,
-            sessionSerial = sessionSerial,
-            sessionStartWallTimeMs = startDate?.toEpochMillisAtUtcStartOfDay() ?: 0L,
-            firstValidFixWallTimeMs = firstFixMs,
-            signatureProfile = signatureProfileForManufacturer(manufacturerId)
-        )
+        val lines = stagingStore.readLines(sessionId) ?: return null
+        return IgcStagedRecoveryMetadataParser.parse(lines)
     }
 
     override fun deleteRecoveryArtifacts(sessionId: Long) {
-        runCatching { stagedFile(sessionId).delete() }
+        stagingStore.delete(sessionId)
         runCatching { recoveryMetadataStore.clearMetadata(sessionId) }
-    }
-
-    private fun publishMediaStore(
-        fileName: String,
-        payload: ByteArray,
-        utcDate: LocalDate
-    ): IgcFinalizeResult {
-        val resolver = appContext.contentResolver
-        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        val pendingValues = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-            put(MediaStore.Downloads.MIME_TYPE, MIME_IGC)
-            put(MediaStore.Downloads.RELATIVE_PATH, "${MediaStoreIgcDownloadsRepository.DOWNLOAD_RELATIVE_PATH}/")
-            put(MediaStore.Downloads.IS_PENDING, 1)
-        }
-        val itemUri = resolver.insert(collection, pendingValues)
-            ?: return IgcFinalizeResult.Failure(
-                code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
-                message = "Failed to insert MediaStore row for $fileName"
-            )
-        val writeSucceeded = runCatching {
-            resolver.openOutputStream(itemUri, "w").use { output ->
-                requireNotNull(output) { "Unable to open output stream for $fileName" }
-                output.write(payload)
-                output.flush()
-            }
-            val updated = resolver.update(
-                itemUri,
-                ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) },
-                null,
-                null
-            )
-            require(updated > 0) { "Failed to finalize pending row for $fileName" }
-        }.isSuccess
-        if (!writeSucceeded) {
-            runCatching { resolver.delete(itemUri, null, null) }
-            return IgcFinalizeResult.Failure(
-                code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
-                message = "Failed to publish IGC file $fileName"
-            )
-        }
-
-        val sizeBytes = payload.size.toLong()
-        val modifiedEpochMillis = readDateModifiedEpochMillis(itemUri)
-        return IgcFinalizeResult.Published(
-            entry = IgcLogEntry(
-                document = DocumentRef(uri = itemUri.toString(), displayName = fileName),
-                displayName = fileName,
-                sizeBytes = sizeBytes,
-                lastModifiedEpochMillis = modifiedEpochMillis,
-                utcDate = utcDate,
-                durationSeconds = null
-            ),
-            fileName = fileName
-        )
-    }
-
-    private fun publishLegacy(
-        fileName: String,
-        payload: ByteArray,
-        utcDate: LocalDate
-    ): IgcFinalizeResult {
-        val downloadsRoot = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val outputDir = File(downloadsRoot, "XCPro/IGC")
-        if (!outputDir.exists()) {
-            outputDir.mkdirs()
-        }
-        val outputFile = File(outputDir, fileName)
-        val writeSucceeded = runCatching {
-            FileOutputStream(outputFile).use { stream ->
-                stream.write(payload)
-                stream.flush()
-            }
-        }.isSuccess
-        if (!writeSucceeded) {
-            return IgcFinalizeResult.Failure(
-                code = IgcFinalizeResult.ErrorCode.WRITE_FAILED,
-                message = "Failed to write legacy IGC file $fileName"
-            )
-        }
-        return IgcFinalizeResult.Published(
-            entry = IgcLogEntry(
-                document = DocumentRef(uri = Uri.fromFile(outputFile).toString(), displayName = fileName),
-                displayName = fileName,
-                sizeBytes = outputFile.length(),
-                lastModifiedEpochMillis = outputFile.lastModified(),
-                utcDate = utcDate,
-                durationSeconds = null
-            ),
-            fileName = fileName
-        )
-    }
-
-    private fun writeStagingFile(sessionId: Long, payload: ByteArray): File? {
-        val stagingDir = File(appContext.filesDir, STAGING_SUBDIR)
-        if (!stagingDir.exists() && !stagingDir.mkdirs()) {
-            return null
-        }
-        val stagingFile = stagedFile(sessionId)
-        return runCatching {
-            FileOutputStream(stagingFile).use { stream ->
-                stream.write(payload)
-                stream.flush()
-            }
-            stagingFile
-        }.getOrNull()
     }
 
     private fun utcDateForRequest(request: IgcFinalizeRequest): LocalDate {
@@ -386,74 +244,12 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
             .toLocalDate()
     }
 
-    private fun readDateModifiedEpochMillis(itemUri: Uri): Long {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return 0L
-        val projection = arrayOf(MediaStore.Downloads.DATE_MODIFIED)
-        return runCatching {
-            appContext.contentResolver.query(itemUri, projection, null, null, null)?.use { cursor ->
-                if (!cursor.moveToFirst()) return@use 0L
-                val modifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
-                val seconds = cursor.getLong(modifiedColumn).coerceAtLeast(0L)
-                seconds * 1_000L
-            } ?: 0L
-        }.getOrDefault(0L)
-    }
-
     private fun signatureProfileForManufacturer(manufacturerId: String): IgcSecuritySignatureProfile {
         return if (manufacturerId.equals("XCS", ignoreCase = true)) {
             IgcSecuritySignatureProfile.XCS
         } else {
             IgcSecuritySignatureProfile.NONE
         }
-    }
-
-    private fun findExistingFinalizedEntriesForSession(
-        sessionId: Long,
-        metadata: IgcRecoveryMetadata?
-    ): ExistingFinalizedMatch {
-        publishedBySessionId[sessionId]?.let {
-            return ExistingFinalizedMatch.Single(it)
-        }
-        val safeMetadata = metadata ?: return ExistingFinalizedMatch.None
-        val utcDate = resolveRecoveryUtcDate(safeMetadata) ?: return ExistingFinalizedMatch.None
-        val expectedPrefix = buildString {
-            append(RECOVERY_DATE_FORMATTER.format(utcDate))
-            append('-')
-            append(normalizeManufacturer(safeMetadata.manufacturerId))
-            append('-')
-            append(normalizeSerial(safeMetadata.sessionSerial))
-            append('-')
-        }
-        val matches = downloadsRepository.entries.value
-            .asSequence()
-            .filter { entry ->
-                entry.displayName.startsWith(expectedPrefix) &&
-                    entry.displayName.endsWith(".IGC", ignoreCase = true)
-            }
-            .sortedBy { it.displayName }
-            .toList()
-        return when (matches.size) {
-            0 -> ExistingFinalizedMatch.None
-            1 -> ExistingFinalizedMatch.Single(matches.first())
-            else -> ExistingFinalizedMatch.Duplicate(matches)
-        }
-    }
-
-    private fun resolveRecoveryUtcDate(metadata: IgcRecoveryMetadata): LocalDate? {
-        val wallTime = metadata.firstValidFixWallTimeMs
-            ?: metadata.sessionStartWallTimeMs
-        if (wallTime <= 0L) return null
-        return wallTime.toUtcDate()
-    }
-
-    private fun cleanupPendingRowsForMetadata(metadata: IgcRecoveryMetadata?) {
-        val safeMetadata = metadata ?: return
-        val utcDate = resolveRecoveryUtcDate(safeMetadata) ?: return
-        deletePendingRowsForSession(
-            manufacturerId = safeMetadata.manufacturerId,
-            sessionSerial = safeMetadata.sessionSerial,
-            utcDate = utcDate
-        )
     }
 
     private fun mergeRecoveryMetadata(
@@ -477,99 +273,6 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
         )
     }
 
-    private fun deletePendingRowsForSession(
-        manufacturerId: String,
-        sessionSerial: String,
-        utcDate: LocalDate
-    ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        val resolver = appContext.contentResolver
-        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        val projection = arrayOf(MediaStore.Downloads._ID)
-        val selection = buildString {
-            append("${MediaStore.Downloads.DISPLAY_NAME} LIKE ?")
-            append(" AND ${MediaStore.Downloads.RELATIVE_PATH} LIKE ?")
-            append(" AND ${MediaStore.Downloads.IS_PENDING} = 1")
-        }
-        val selectionArgs = arrayOf(
-            buildString {
-                append(RECOVERY_DATE_FORMATTER.format(utcDate))
-                append('-')
-                append(normalizeManufacturer(manufacturerId))
-                append('-')
-                append(normalizeSerial(sessionSerial))
-                append("-%")
-            },
-            "${MediaStoreIgcDownloadsRepository.DOWNLOAD_RELATIVE_PATH}%"
-        )
-        runCatching {
-            resolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
-                while (cursor.moveToNext()) {
-                    val rowUri = ContentUris.withAppendedId(collection, cursor.getLong(idColumn))
-                    resolver.delete(rowUri, null, null)
-                }
-            }
-        }
-    }
-
-    private fun stagedFile(sessionId: Long): File =
-        File(File(appContext.filesDir, STAGING_SUBDIR), "session_${sessionId}.igc.tmp")
-
-    private fun parseSessionHeaderDate(line: String): LocalDate? {
-        val raw = when {
-            line.startsWith("HFDTEDATE:") -> line.removePrefix("HFDTEDATE:")
-            line.startsWith("HFDTE") -> line.removePrefix("HFDTE")
-            else -> return null
-        }
-        val digits = raw.takeWhile { it.isDigit() }.take(6)
-        if (digits.length != 6) return null
-        val day = digits.substring(0, 2).toIntOrNull() ?: return null
-        val month = digits.substring(2, 4).toIntOrNull() ?: return null
-        val year = 2000 + (digits.substring(4, 6).toIntOrNull() ?: return null)
-        return runCatching { LocalDate.of(year, month, day) }.getOrNull()
-    }
-
-    private fun parseFirstBWallTime(line: String?, date: LocalDate): Long? {
-        if (line == null || line.length < 7) return null
-        val hour = line.substring(1, 3).toIntOrNull() ?: return null
-        val minute = line.substring(3, 5).toIntOrNull() ?: return null
-        val second = line.substring(5, 7).toIntOrNull() ?: return null
-        return runCatching {
-            date.atTime(LocalTime.of(hour, minute, second))
-                .toInstant(ZoneOffset.UTC)
-                .toEpochMilli()
-        }.getOrNull()
-    }
-
-    private fun isSessionHeaderDateLine(line: String): Boolean {
-        return line.startsWith("HFDTEDATE:") || line.startsWith("HFDTE")
-    }
-
-    private fun normalizeManufacturer(raw: String): String {
-        val normalized = raw.trim().uppercase().replace(Regex("[^A-Z0-9]"), "")
-        return when {
-            normalized.length >= 3 -> normalized.take(3)
-            normalized.isBlank() -> "XCP"
-            else -> normalized.padEnd(3, 'X')
-        }
-    }
-
-    private fun normalizeSerial(raw: String): String {
-        val digits = raw.filter { it.isDigit() }
-        return when {
-            digits.length >= 6 -> digits.takeLast(6)
-            digits.isBlank() -> "000000"
-            else -> digits.padStart(6, '0')
-        }
-    }
-
-    private fun LocalDate.toEpochMillisAtUtcStartOfDay(): Long =
-        atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-
-    private fun Long.toUtcDate(): LocalDate =
-        java.time.Instant.ofEpochMilli(this).atOffset(ZoneOffset.UTC).toLocalDate()
-
     private fun IgcRecoveryMetadata.hasUtcIdentity(): Boolean {
         return (firstValidFixWallTimeMs ?: sessionStartWallTimeMs) > 0L
     }
@@ -584,15 +287,4 @@ class MediaStoreIgcFlightLogRepository @Inject constructor(
         return IgcRecoveryResult.Failure(code = recoveryCode, message = message)
     }
 
-    companion object {
-        private const val MIME_IGC = "application/vnd.fai.igc"
-        private const val STAGING_SUBDIR = "igc/staging"
-        private val RECOVERY_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
-    }
-
-    private sealed interface ExistingFinalizedMatch {
-        data object None : ExistingFinalizedMatch
-        data class Single(val entry: IgcLogEntry) : ExistingFinalizedMatch
-        data class Duplicate(val entries: List<IgcLogEntry>) : ExistingFinalizedMatch
-    }
 }

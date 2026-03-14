@@ -7,7 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
-import com.example.xcpro.map.MapCameraManager
+import com.example.xcpro.map.MapCameraRuntimePort
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
@@ -17,7 +17,7 @@ import com.example.xcpro.tasks.core.TaskType
 internal fun BoxScope.AatEditFab(
     isAATEditMode: Boolean,
     taskType: TaskType,
-    cameraManager: MapCameraManager,
+    cameraManager: MapCameraRuntimePort,
     onExitAATEditMode: () -> Unit,
     onSyncTaskVisuals: () -> Unit
 ) {

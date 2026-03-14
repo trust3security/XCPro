@@ -3,7 +3,7 @@ package com.example.xcpro.audio
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import kotlin.math.PI
 import kotlin.math.min
 import kotlin.math.sin
@@ -54,7 +54,7 @@ class VarioToneGenerator {
     @Synchronized
     fun initialize(): Boolean {
         if (isInitialized) {
-            Log.w(TAG, "Already initialized")
+            AppLogger.d(TAG, "Initialize ignored; AudioTrack already initialized")
             return true
         }
 
@@ -66,7 +66,7 @@ class VarioToneGenerator {
             )
 
             if (bufferSize == AudioTrack.ERROR_BAD_VALUE || bufferSize == AudioTrack.ERROR || bufferSize <= 0) {
-                Log.e(TAG, "Invalid buffer size: $bufferSize")
+                AppLogger.e(TAG, "Invalid AudioTrack buffer size: $bufferSize")
                 return false
             }
 
@@ -93,7 +93,7 @@ class VarioToneGenerator {
 
             val track = audioTrack
             if (track == null || track.state != AudioTrack.STATE_INITIALIZED) {
-                Log.e(TAG, "AudioTrack not initialized (state=${track?.state})")
+                AppLogger.e(TAG, "AudioTrack not initialized (state=${track?.state})")
                 resetAudioTrack("init_state")
                 return false
             }
@@ -101,11 +101,11 @@ class VarioToneGenerator {
             track.play()
             isInitialized = true
 
-            Log.i(TAG, "AudioTrack initialized (buffer: $optimalBufferSize bytes, sample rate: $SAMPLE_RATE Hz)")
+            AppLogger.d(TAG, "AudioTrack initialized (buffer=$optimalBufferSize, sampleRate=$SAMPLE_RATE)")
             return true
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize AudioTrack", e)
+            AppLogger.e(TAG, "Failed to initialize AudioTrack", e)
             return false
         }
     }
@@ -127,12 +127,16 @@ class VarioToneGenerator {
         preservePhase: Boolean = false
     ) {
         if (!isInitialized) {
-            Log.w(TAG, "Not initialized, call initialize() first")
+            AppLogger.dRateLimited(TAG, "play_before_init", 5_000L) {
+                "playTone ignored; AudioTrack not initialized"
+            }
             return
         }
 
         if (frequencyHz <= 0 || frequencyHz > MAX_FREQUENCY) {
-            Log.w(TAG, "Invalid frequency: $frequencyHz Hz")
+            AppLogger.dRateLimited(TAG, "invalid_frequency", 5_000L) {
+                "Invalid tone frequency: $frequencyHz Hz"
+            }
             return
         }
 
@@ -198,12 +202,16 @@ class VarioToneGenerator {
             val written = track.write(samples, 0, numSamples)
 
             if (written < 0) {
-                Log.e(TAG, "Error writing samples: $written")
+                if (AppLogger.rateLimit(TAG, "write_samples_error", 2_000L)) {
+                    AppLogger.e(TAG, "Error writing tone samples: $written")
+                }
                 resetAudioTrack("write_error_playTone", written)
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing tone at ${frequencyHz}Hz", e)
+            if (AppLogger.rateLimit(TAG, "play_tone_exception", 2_000L)) {
+                AppLogger.e(TAG, "Error playing tone at ${frequencyHz}Hz", e)
+            }
             resetAudioTrack("exception_playTone")
         }
     }
@@ -249,7 +257,9 @@ class VarioToneGenerator {
                 }
                 val written = track.write(ramp, 0, rampCount)
                 if (written < 0) {
-                    Log.e(TAG, "Error writing silence ramp: $written")
+                    if (AppLogger.rateLimit(TAG, "silence_ramp_error", 2_000L)) {
+                        AppLogger.e(TAG, "Error writing silence ramp: $written")
+                    }
                     resetAudioTrack("write_error_playSilence", written)
                     return
                 }
@@ -260,7 +270,9 @@ class VarioToneGenerator {
                 val chunk = min(remaining, silenceBuffer.size)
                 val written = track.write(silenceBuffer, 0, chunk)
                 if (written < 0) {
-                    Log.e(TAG, "Error writing silence samples: $written")
+                    if (AppLogger.rateLimit(TAG, "silence_samples_error", 2_000L)) {
+                        AppLogger.e(TAG, "Error writing silence samples: $written")
+                    }
                     resetAudioTrack("write_error_playSilence", written)
                     break
                 }
@@ -270,7 +282,9 @@ class VarioToneGenerator {
                 remaining -= written
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing silence", e)
+            if (AppLogger.rateLimit(TAG, "play_silence_exception", 2_000L)) {
+                AppLogger.e(TAG, "Error playing silence", e)
+            }
             resetAudioTrack("exception_playSilence")
         }
     }
@@ -297,7 +311,7 @@ class VarioToneGenerator {
             audioTrack?.pause()
             audioTrack?.flush()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping audio", e)
+            AppLogger.e(TAG, "Error stopping audio", e)
         }
     }
 
@@ -311,7 +325,7 @@ class VarioToneGenerator {
         try {
             audioTrack?.play()
         } catch (e: Exception) {
-            Log.e(TAG, "Error resuming audio", e)
+            AppLogger.e(TAG, "Error resuming audio", e)
         }
     }
 
@@ -323,9 +337,9 @@ class VarioToneGenerator {
     fun release() {
         try {
             resetAudioTrack("release")
-            Log.i(TAG, "AudioTrack released")
+            AppLogger.d(TAG, "AudioTrack released")
         } catch (e: Exception) {
-            Log.e(TAG, "Error releasing AudioTrack", e)
+            AppLogger.e(TAG, "Error releasing AudioTrack", e)
         }
     }
 
@@ -354,7 +368,9 @@ class VarioToneGenerator {
     @Synchronized
     private fun resetAudioTrack(reason: String, errorCode: Int? = null) {
         val suffix = errorCode?.let { " code=$it" } ?: ""
-        Log.w(TAG, "Resetting AudioTrack ($reason)$suffix")
+        if (AppLogger.rateLimit(TAG, "reset_audio_track:$reason", 2_000L)) {
+            AppLogger.w(TAG, "Resetting AudioTrack ($reason)$suffix")
+        }
         try {
             audioTrack?.stop()
         } catch (_: Exception) {

@@ -1,12 +1,13 @@
 package com.example.xcpro.map.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntSize
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -19,9 +20,10 @@ import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.map.LocationManager
 import com.example.xcpro.map.MapLifecycleEffects
-import com.example.xcpro.map.MapLifecycleManager
+import com.example.xcpro.map.MapLifecycleRuntimePort
+import com.example.xcpro.map.MapLocationPermissionRequester
+import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
@@ -32,6 +34,7 @@ import com.example.xcpro.map.ui.effects.MapComposeEffects
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -91,12 +94,12 @@ internal fun MapVisibilityLifecycleEffect(mapViewModel: MapScreenViewModel) {
 
 @Composable
 internal fun MapScreenComposeAndLifecycleEffects(
-    lifecycleManager: MapLifecycleManager,
+    lifecycleManager: MapLifecycleRuntimePort,
     runtimeController: MapRuntimeController,
-    locationManager: LocationManager,
-    locationPermissionLauncher: ActivityResultLauncher<Array<String>>,
-    currentLocation: MapLocationUiModel?,
-    orientationData: OrientationData,
+    locationManager: MapLocationRuntimePort,
+    locationPermissionRequester: MapLocationPermissionRequester,
+    currentLocationFlow: StateFlow<MapLocationUiModel?>,
+    orientationFlow: StateFlow<OrientationData>,
     orientationManager: MapOrientationManager,
     profileUiState: ProfileUiState,
     flightDataManager: FlightDataManager,
@@ -108,12 +111,15 @@ internal fun MapScreenComposeAndLifecycleEffects(
     initialMapStyle: String,
     onMapStyleResolved: (String) -> Unit,
     replaySessionState: SessionState,
+    useRenderFrameSync: Boolean,
     suppressLiveGps: Boolean,
     allowSensorStart: Boolean
 ) {
+    val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
+    val orientationData by orientationFlow.collectAsStateWithLifecycle()
     MapComposeEffects.AllMapEffects(
         locationManager = locationManager,
-        locationPermissionLauncher = locationPermissionLauncher,
+        locationPermissionRequester = locationPermissionRequester,
         currentLocation = currentLocation,
         orientationData = orientationData,
         orientationManager = orientationManager,
@@ -130,6 +136,7 @@ internal fun MapScreenComposeAndLifecycleEffects(
         initialMapStyle = initialMapStyle,
         onMapStyleResolved = onMapStyleResolved,
         replaySessionState = replaySessionState,
+        useRenderFrameSync = useRenderFrameSync,
         suppressLiveGps = suppressLiveGps,
         allowSensorStart = allowSensorStart
     )

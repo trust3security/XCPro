@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.weather.wind.model.WindOverride
 import com.example.xcpro.weather.wind.model.WindSource
@@ -16,15 +15,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
 private const val DATASTORE_NAME = "wind_preferences"
 private val Context.windDataStore: DataStore<Preferences> by preferencesDataStore(name = DATASTORE_NAME)
@@ -35,13 +29,9 @@ private val KEY_WIND_TIMESTAMP_MS = longPreferencesKey("manual_wind_timestamp_ms
 @Singleton
 class WindOverrideRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val clock: Clock,
-    @DefaultDispatcher dispatcher: CoroutineDispatcher
+    private val clock: Clock
 ) : WindOverrideSource {
-
-    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
-
-    private val manualFlow: StateFlow<WindOverride?> = context.windDataStore.data
+    override val manualWind: Flow<WindOverride?> = context.windDataStore.data
         .map { preferences ->
             val speed = preferences[KEY_WIND_SPEED_MS]
             val direction = preferences[KEY_WIND_DIR_FROM_DEG]
@@ -57,12 +47,9 @@ class WindOverrideRepository @Inject constructor(
                 null
             }
         }
-        .stateIn(scope, SharingStarted.Eagerly, null)
-
-    override val manualWind: StateFlow<WindOverride?> = manualFlow
 
     private val _externalWind = MutableStateFlow<WindOverride?>(null)
-    override val externalWind: StateFlow<WindOverride?> = _externalWind.asStateFlow()
+    override val externalWind: Flow<WindOverride?> = _externalWind.asStateFlow()
 
     suspend fun setManualWind(
         speedMs: Double,
@@ -74,14 +61,14 @@ class WindOverrideRepository @Inject constructor(
         directionFromDeg: Double,
         timestampMillis: Long
     ): Boolean {
-        val override = toOverride(speedMs, directionFromDeg, timestampMillis, WindSource.MANUAL)
+        toOverride(speedMs, directionFromDeg, timestampMillis, WindSource.MANUAL)
             ?: return false
         context.windDataStore.edit { preferences ->
             preferences[KEY_WIND_SPEED_MS] = speedMs
             preferences[KEY_WIND_DIR_FROM_DEG] = normalizeDirection(directionFromDeg)
             preferences[KEY_WIND_TIMESTAMP_MS] = timestampMillis
         }
-        return override != null
+        return true
     }
 
     suspend fun clearManualWind() {

@@ -1,0 +1,13 @@
+package com.example.xcpro.map
+
+import com.example.xcpro.MapOrientationPreferences
+
+class MapLocationPreferencesAdapter(
+    private val preferences: MapOrientationPreferences
+) : MapLocationPreferencesPort {
+    override fun getMinSpeedThreshold(): Double = preferences.getMinSpeedThreshold()
+
+    override fun setActiveProfileId(profileId: String) {
+        preferences.setActiveProfileId(profileId)
+    }
+}

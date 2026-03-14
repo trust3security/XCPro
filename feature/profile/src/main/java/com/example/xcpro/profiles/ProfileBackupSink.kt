@@ -7,7 +7,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import com.example.xcpro.core.time.TimeBridge
+import com.example.xcpro.core.time.Clock
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,7 +41,8 @@ class NoOpProfileBackupSink : ProfileBackupSink {
 }
 
 class DownloadsProfileBackupSink @Inject constructor(
-    @ApplicationContext private val appContext: Context
+    @ApplicationContext private val appContext: Context,
+    private val clock: Clock
 ) : ProfileBackupSink {
 
     private companion object {
@@ -76,7 +77,7 @@ class DownloadsProfileBackupSink @Inject constructor(
                 }
                 val resolver = appContext.contentResolver
                 val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                val generatedAtWallMs = TimeBridge.nowWallMs()
+                val generatedAtWallMs = clock.nowWallMs()
 
                 val payload = buildManagedBackupPayload(
                     gson = gson,
@@ -137,7 +138,7 @@ class DownloadsProfileBackupSink @Inject constructor(
         fileName: String,
         payloadJson: String
     ) {
-        val stagedFileName = "$fileName.tmp.${TimeBridge.nowWallMs()}"
+        val stagedFileName = "$fileName.tmp.${clock.nowWallMs()}"
 
         val pendingValues = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, stagedFileName)
@@ -198,7 +199,7 @@ class DownloadsProfileBackupSink @Inject constructor(
         stagedUri: Uri,
         fileName: String
     ): Int {
-        val displacedName = "$fileName.previous.${TimeBridge.nowWallMs()}"
+        val displacedName = "$fileName.previous.${clock.nowWallMs()}"
         val displaced = resolver.update(
             existingUri,
             ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, displacedName) },
@@ -360,6 +361,7 @@ internal fun buildManagedBackupPayload(
     )
     val bundleJson = ProfileBundleCodec.serialize(
         ProfileBundleDocument(
+            exportedAtWallMs = generatedAtWallMs,
             activeProfileId = activeProfileId,
             profiles = profiles,
             settings = settingsSnapshot
