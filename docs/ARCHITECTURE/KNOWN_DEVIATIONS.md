@@ -18,6 +18,8 @@ Tracked remediation plans:
 - `docs/refactor/Profile_Identity_Time_Ownership_Standardization_Phased_IP_2026-03-14.md`
 - `docs/refactor/Logging_Architecture_Standardization_Phased_IP_2026-03-14.md`
 - `docs/refactor/ProfileRepository_Test_Suite_Split_Phased_IP_2026-03-15.md`
+- `docs/refactor/Task_AAT_Ownership_Release_Grade_Phased_IP_2026-03-15.md`
+- `docs/refactor/Terrain_Elevation_Ownership_Release_Grade_Phased_IP_2026-03-16.md`
 
 README consistency rule:
 - `docs/ARCHITECTURE/README.md` must never duplicate or summarize deviation status.
@@ -57,7 +59,7 @@ Use this template for every new deviation entry:
   - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`
   - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
   - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - `feature/weather/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
 - Rationale:
   - Weather provider endpoints/host validation and legally required source attribution require provider literals.
   - UI/public API naming remains provider-neutral outside explicit attribution/compliance surfaces.
@@ -97,40 +99,7 @@ Compliance note (2026-02-20):
   - `verify_mapscreen_package_evidence.ps1 -PackageId pkg-e1` passes with no failed SLOs.
   - `run_mapscreen_completion_contract.ps1` reaches phase 8 with no allow-failure flags.
 
-3) Kotlin default line-budget exceptions pending split/remediation
-- Rule:
-  - Kotlin source files must be `<= 500` lines by default unless explicitly excepted (`ARCHITECTURE.md` section "File Size and Modularization Policy"; `CODING_RULES.md` sections `1A` and `1A.4`).
-- Issue: RULES-20260306-14
-- Introduced: 2026-03-06
-- Approved by: XCPro Team (backfilled 2026-03-14)
-- Owner: XCPro Team
-- Next review: 2026-04-15
-  - Expiry: 2026-04-30
-  - Execution plan:
-    - `docs/refactor/Kotlin_Line_Budget_Compliance_Phased_IP_2026-03-06.md`
-    - `docs/refactor/ProfileRepository_Test_Suite_Split_Phased_IP_2026-03-15.md` (`ProfileRepositoryTest.kt` focused split lane)
-  - Scope:
-    - `dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt`
-    - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
-    - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
-    - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt`
-- Risk:
-  - Oversized files increase review blind spots and make state-machine and regression gaps harder to spot.
-  - Without explicit exceptions, the documented global `<= 500` budget would block current work before these files are split.
-- Mitigation:
-  - `scripts/ci/enforce_rules.ps1` now enforces the global default `<= 500` Kotlin-file budget for all non-excepted files.
-  - The scoped files above are the only temporary exceptions and remain tracked here until split/remediated.
-  - Stricter hotspot caps continue to be enforced separately where configured.
-- Removal steps:
-  - Refactor each scoped file to `<= 500` lines or split it by responsibility.
-  - Remove the matching exception path from `scripts/ci/enforce_rules.ps1` when each file is compliant.
-  - Remove this deviation entry once the exception list is empty and verification passes.
-- Exit criteria:
-  - No non-excepted Kotlin file above `500` lines passes `./gradlew enforceRules`.
-  - No listed exception file remains above `500` lines.
-  - The exception list in `scripts/ci/enforce_rules.ps1` is empty.
-
-4) Production logging drift bypasses the canonical redaction and hot-path gating seam
+3) Production logging drift bypasses the canonical redaction and hot-path gating seam
 - Rule:
   - Logging architecture and privacy-safe production logging (`ARCHITECTURE.md` section "Logging Architecture"; `CODING_RULES.md` section `13 Logging Rules`).
 - Issue: RULES-20260314-17
@@ -167,9 +136,49 @@ Compliance note (2026-02-20):
   - `AppLogger` has explicit contract coverage for redaction/gating behavior.
   - New raw production `Log.*` drift is blocked by automation except for narrow documented platform-edge exceptions.
 
+4) Terrain and elevation ownership is split across calculation code and duplicate provider paths
+- Rule:
+  - Layering, SSOT ownership, and boundary adapter rules (`ARCHITECTURE.md` sections "Layering and Dependency Direction", "Single Source of Truth", "Repositories and State Ownership", and "Logging Architecture"; `CODING_RULES.md` sections `2 Architecture`, `13 Logging Rules`, and the "Feature Implementation Defaults" in `AGENTS.md`).
+- Issue: RULES-20260316-18
+- Introduced: 2026-03-16
+- Approved by: XCPro Team (backfilled 2026-03-16)
+- Owner: XCPro Team
+- Next review: 2026-04-15
+- Expiry: 2026-05-31
+- Execution plan:
+  - `docs/refactor/Terrain_Elevation_Ownership_Release_Grade_Phased_IP_2026-03-16.md`
+- Scope:
+  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SimpleAglCalculator.kt`
+  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/OpenMeteoElevationApi.kt`
+  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SrtmTerrainDatabase.kt`
+  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/ElevationCache.kt`
+  - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
+  - `feature/map/src/main/java/com/example/xcpro/qnh/TerrainElevationProvider.kt`
+  - `feature/map/src/main/java/com/example/xcpro/qnh/SrtmTerrainElevationProvider.kt`
+  - `feature/map/src/main/java/com/example/xcpro/qnh/CalibrateQnhUseCase.kt`
+- Risk:
+  - AGL and QNH currently use separate terrain paths and can evolve different source, fallback, cache, and retry policy.
+  - Calculation-layer classes currently own Android `Context`, network, file I/O, cache lifecycle, and retry/backoff policy, which weakens testability and violates intended boundary direction.
+  - `SrtmTerrainDatabase` still uses raw `Log.*` and a hidden runtime scope in a data path that should be explicitly owned and reviewable.
+- Mitigation:
+  - Introduce one shared terrain read port and one terrain repository owner, keeping AGL/QNH as consumers only.
+  - Move Android/network/file/cache concerns out of calculation classes into one data implementation boundary.
+  - Preserve replay determinism by forbidding online terrain fetches in replay paths.
+  - Route remaining terrain-path production logging through `AppLogger` and remove low-value raw logs.
+- Removal steps:
+  - Land the phased remediation in `Terrain_Elevation_Ownership_Release_Grade_Phased_IP_2026-03-16.md`.
+  - Delete the duplicate QNH-only terrain provider seam after both AGL and QNH consume the shared read port.
+  - Remove Android/network/file/cache ownership from `SimpleAglCalculator`.
+  - Remove raw `Log.*` and hidden scope ownership from the terrain data implementation.
+- Exit criteria:
+  - One canonical terrain read port serves both AGL and QNH.
+  - Calculation-layer terrain code no longer owns Android `Context`, network, file I/O, or cache policy.
+  - Replay remains deterministic with no replay-triggered terrain network fetches.
+  - Terrain-path production logging no longer bypasses the canonical logging seam.
+
 ## Verification
 
-Last verified: 2026-03-14
+Last verified: 2026-03-15
 - Commands:
   - python scripts/arch_gate.py
   - powershell -ExecutionPolicy Bypass -File scripts/ci/enforce_rules.ps1
@@ -180,87 +189,98 @@ Last verified: 2026-03-14
 
 ## Resolved deviations
 
-1) MapScreenViewModel uses platform APIs/managers instead of use-cases
+1) Kotlin default line-budget exceptions pending split/remediation
+- Rule:
+  - Kotlin source files must be `<= 500` lines by default unless explicitly excepted (`ARCHITECTURE.md` section "File Size and Modularization Policy"; `CODING_RULES.md` sections `1A` and `1A.4`).
+- Issue: RULES-20260306-14
+- Owner: XCPro Team
+- Resolved: 2026-03-15
+- Notes:
+  - `CardLibraryCatalog.kt` was split into category-owned catalog files with a thin aggregation owner.
+  - The temporary default-budget exception path was removed from `scripts/ci/enforce_rules.ps1`.
+  - The focused execution record remains in `docs/refactor/Kotlin_Line_Budget_Compliance_Phased_IP_2026-03-06.md`.
+
+2) MapScreenViewModel uses platform APIs/managers instead of use-cases
 - Rule: ViewModels depend on use-cases only; no platform APIs or I/O in ViewModels.
 - Issue: RULES-20260204-01
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: MapScreenViewModel now depends on use-case wrappers; Context/WaypointLoader moved to MapWaypointsUseCase; Log removed.
 
-2) TaskSheetViewModel holds UI map handle and constructs dependencies
+3) TaskSheetViewModel holds UI map handle and constructs dependencies
 - Rule: ViewModels must not reference UI types; dependencies must be injected; use-cases only.
 - Issue: RULES-20260204-02
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: MapLibreMap removed from VM; TaskSheetUseCase and TaskSheetCoordinatorUseCase injected.
 
-3) IgcReplayViewModel depends on controller and platform logging
+4) IgcReplayViewModel depends on controller and platform logging
 - Rule: ViewModels depend on use-cases only; no platform APIs in ViewModels.
 - Issue: RULES-20260204-03
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: IgcReplayUseCase added and injected; Log removed from VM.
 
-4) FlightDataViewModel constructs Clock/use-case internally
+5) FlightDataViewModel constructs Clock/use-case internally
 - Rule: Dependencies must be injected; ViewModels should not construct use-cases or clocks.
 - Issue: RULES-20260204-04
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: FlightCardsUseCaseFactory injected; VM no longer constructs clock/use-case.
 
-5) TaskFilesUseCase uses wall time directly
+6) TaskFilesUseCase uses wall time directly
 - Rule: Domain/use-case logic must use injected Clock; no Date/System time direct calls.
 - Issue: RULES-20260204-05
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: TaskFilesUseCase now uses injected Clock for timestamp formatting.
 
-6) UI imports sensor/data models directly
+7) UI imports sensor/data models directly
 - Rule: UI code never imports data repositories or sensor/data models directly.
 - Issue: RULES-20260204-06
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: Map UI now uses UI-safe models mapped in ViewModel.
 
-7) Un-gated println logging in production paths
+8) Un-gated println logging in production paths
 - Rule: No logs in tight loops; logs must not be required for correctness; avoid logging location data in release builds.
 - Issue: RULES-20260204-07
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: println removed from production sources.
 
-8) Global mutable feature flags via Kotlin object singletons
+9) Global mutable feature flags via Kotlin object singletons
 - Rule: No hidden singletons holding mutable state.
 - Issue: RULES-20260204-08
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: MapFeatureFlags and TaskFeatureFlags are injected @Singleton classes.
 
-9) Default wall-time usage in replay parser without injected clock
+10) Default wall-time usage in replay parser without injected clock
 - Rule: Domain logic should use injected time sources; avoid implicit wall time.
 - Issue: RULES-20260204-09
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: IgcParser injected with Clock; default date derived from injected time.
 
-10) AAT map editing uses SystemClock directly
+11) AAT map editing uses SystemClock directly
 - Rule: Domain/use-case logic must use injected Clock; no SystemClock/System.currentTimeMillis direct calls.
 - Issue: RULES-20260204-10
 - Owner: XCPro Team
 - Resolved: 2026-02-04
 - Notes: AAT edit state, tap timestamps, and overlays now use injected Clock.
 
-11) Timebase usage in domain/fusion
+12) Timebase usage in domain/fusion
 - Rule: injected clock only; no System.currentTimeMillis in domain or fusion.
 - Resolved: 2026-01-27
 - Notes: Removed direct system time usage; injected Clock or explicit timestamps.
 
-12) DI: pipeline constructed inside manager
+13) DI: pipeline constructed inside manager
 - Rule: core pipeline components must be injected.
 - Resolved: 2026-01-27
 - Notes: Sensor fusion pipeline provided via Hilt; managers no longer construct it directly.
 
-13) ViewModel purity
+14) ViewModel purity
 - Rule: ViewModels must not touch SharedPreferences or UI types.
 - Resolved: 2026-01-27
 - Notes: SharedPreferences moved to repositories/use-cases; Compose types removed from ViewModels; tests updated.
@@ -401,4 +421,19 @@ Last verified: 2026-03-14
   - `ProfileRepositoryBundleCoordinator` now owns one explicit `exportedAtWallMs` seam and passes it through both bundle JSON and the suggested export filename.
   - `DownloadsProfileBackupSink` now reuses explicit owner-stamped wall time when writing managed bundle metadata.
   - Closure evidence is tracked in `docs/refactor/Profile_Identity_Time_Ownership_Standardization_Phased_IP_2026-03-14.md`.
+
+29) Task/AAT runtime ownership drift left duplicated state authority and task-side MapLibre runtime helpers
+- Rule:
+  - Authoritative state must have one explicit owner and read-only exposure (`ARCHITECTURE.md` section "Authoritative State Contract").
+  - Long-lived runtime state and listeners must have explicit ownership and teardown (`ARCHITECTURE.md` section "Scope Ownership and Lifetime"; `CODING_RULES.md` section `5A. Scope Ownership Rules`).
+  - MapLibre types are runtime-owned and persistence must not be duplicated inside managers (`ARCHITECTURE.md` map/runtime and persistence boundary rules).
+- Issue: RULES-20260315-18
+- Owner: XCPro Team
+- Resolved: 2026-03-15
+- Notes:
+  - `TaskManagerCoordinator.taskSnapshotFlow` is now the canonical cross-feature task runtime read path.
+  - `TaskRepository` is projection-only for task UI, and AAT target metadata now survives autosave/save/load/restore through the canonical task payload.
+  - Task managers no longer own persistence/file-I/O side effects, and listener teardown is caller-scope bound.
+  - Task gesture/runtime ownership moved into `feature:map`; `TaskManagerCoordinator` no longer constructs MapLibre gesture handlers, `feature:tasks` no longer depends on MapLibre, and `enforceRules` blocks MapLibre imports/dependencies from drifting back into `feature:tasks`.
+  - Closure evidence is tracked in `docs/refactor/Task_AAT_Ownership_Release_Grade_Phased_IP_2026-03-15.md`.
 

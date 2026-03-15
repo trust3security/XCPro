@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="thermalling_title">Thermalling</string>
+
+    <string name="thermalling_card_automation_title">Thermalling automation</string>
+    <string name="thermalling_card_automation_description">
+        Automatically switch mode and or zoom when circling starts and stops.
+    </string>
+    <string name="thermalling_switch_enable_title">Enable thermalling automation</string>
+    <string name="thermalling_switch_enable_description">
+        Master toggle for auto mode and zoom behavior.
+    </string>
+    <string name="thermalling_switch_mode_title">Switch to Thermal flight mode</string>
+    <string name="thermalling_switch_mode_description">
+        When active, change flight mode after enter delay.
+    </string>
+    <string name="thermalling_switch_zoom_fallback_title">
+        Zoom fallback if Thermal mode hidden
+    </string>
+    <string name="thermalling_switch_zoom_fallback_description">
+        Apply thermalling zoom even if Thermal mode is unavailable.
+    </string>
+
+    <string name="thermalling_card_timers_title">Activation timers</string>
+    <string name="thermalling_card_timers_description">
+        Set how long circling must be stable before enter and exit actions run.
+    </string>
+    <string name="thermalling_enter_delay_value">Enter delay: %1$d s</string>
+    <string name="thermalling_enter_delay_hint">
+        0s activates immediately. 30s requires stable circling for longer.
+    </string>
+    <string name="thermalling_exit_delay_value">Exit delay: %1$d s</string>
+    <string name="thermalling_exit_delay_hint">
+        Delay restore to avoid mode and zoom flipping during short straight segments.
+    </string>
+
+    <string name="thermalling_card_zoom_title">Zoom and restore</string>
+    <string name="thermalling_card_zoom_description">
+        Configure zoom behavior on thermal entry and restore behavior on exit.
+    </string>
+    <string name="thermalling_switch_apply_zoom_title">Apply zoom on thermal entry</string>
+    <string name="thermalling_switch_apply_zoom_description">
+        Set the map zoom when thermalling activates.
+    </string>
+    <string name="thermalling_zoom_value">Thermal zoom: %1$.1f</string>
+    <string name="thermalling_zoom_range">Zoom range %1$.1f to %2$.1f.</string>
+    <string name="thermalling_switch_remember_zoom_title">
+        Remember manual thermal zoom in session
+    </string>
+    <string name="thermalling_switch_remember_zoom_description">
+        Keep pilot zoom changes while still in active thermalling.
+    </string>
+    <string name="thermalling_switch_restore_mode_title">Restore previous mode on exit</string>
+    <string name="thermalling_switch_restore_mode_description">
+        Return to the pre thermal flight mode after exit delay.
+    </string>
+    <string name="thermalling_switch_restore_zoom_title">Restore previous zoom on exit</string>
+    <string name="thermalling_switch_restore_zoom_description">
+        Return to the pre thermal zoom after exit delay.
+    </string>
+
+    <string name="thermalling_enter_delay_slider_cd">Enter delay slider</string>
+    <string name="thermalling_exit_delay_slider_cd">Exit delay slider</string>
+    <string name="thermalling_zoom_slider_cd">Thermal zoom slider</string>
+</resources>

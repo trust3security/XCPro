@@ -37,15 +37,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideRacingTaskManager(
-        @ApplicationContext context: Context
-    ): RacingTaskManager = RacingTaskManager(context)
+    fun provideRacingTaskManager(): RacingTaskManager = RacingTaskManager()
 
     @Provides
     @Singleton
-    fun provideAATTaskManager(
-        @ApplicationContext context: Context
-    ): AATTaskManager = AATTaskManager(context)
+    fun provideAATTaskManager(): AATTaskManager = AATTaskManager()
 
     @Provides
     @Singleton

@@ -33,8 +33,7 @@ internal fun MapScreenRoot(
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit = {},
-    openGeneralSettingsOnStart: Boolean,
-    onGeneralSettingsLaunchConsumed: () -> Unit,
+    onOpenGeneralSettings: () -> Unit,
     mapViewModel: MapScreenViewModel
 ) {
     val context = LocalContext.current
@@ -104,13 +103,6 @@ internal fun MapScreenRoot(
     LaunchedEffect(profileLookAndFeelBinding.activeProfileId, managers.locationManager) {
         managers.locationManager.setActiveProfileId(profileLookAndFeelBinding.activeProfileId)
     }
-    LaunchedEffect(openGeneralSettingsOnStart) {
-        if (openGeneralSettingsOnStart) {
-            managers.modalManager.showGeneralSettingsModal()
-            onGeneralSettingsLaunchConsumed()
-        }
-    }
-
     val panelState by managers.taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
     val isTaskPanelVisible = panelState != MapTaskScreenManager.TaskPanelState.HIDDEN
     MapScreenBackHandler(
@@ -221,6 +213,7 @@ internal fun MapScreenRoot(
         settingsExpanded = settingsExpanded,
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
+        onOpenGeneralSettings = onOpenGeneralSettings,
         mapViewModel = mapViewModel,
         hotPathBindings = hotPathBindings,
         rootUiBinding = rootUiBinding,

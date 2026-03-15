@@ -9,36 +9,12 @@ class MapModalManagerTest {
     private fun createManager(): MapModalManager = MapModalManager(MapScreenState())
 
     @Test
-    fun showGeneralSettingsModal_opensGeneralAndClosesAirspace() {
+    fun showAirspaceSettingsModal_opensAirspace() {
         val manager = createManager()
-        manager.showAirspaceSettingsModal()
-
-        manager.showGeneralSettingsModal()
-
-        assertTrue(manager.showGeneralSettings.value)
-        assertFalse(manager.showAirspaceSettings.value)
-    }
-
-    @Test
-    fun showAirspaceSettingsModal_opensAirspaceAndClosesGeneral() {
-        val manager = createManager()
-        manager.showGeneralSettingsModal()
 
         manager.showAirspaceSettingsModal()
 
         assertTrue(manager.showAirspaceSettings.value)
-        assertFalse(manager.showGeneralSettings.value)
-    }
-
-    @Test
-    fun handleBackGesture_closesGeneralWhenGeneralIsVisible() {
-        val manager = createManager()
-        manager.showGeneralSettingsModal()
-
-        val consumed = manager.handleBackGesture()
-
-        assertTrue(consumed)
-        assertFalse(manager.showGeneralSettings.value)
     }
 
     @Test
@@ -60,5 +36,14 @@ class MapModalManagerTest {
 
         assertFalse(consumed)
         assertFalse(manager.isAnyModalOpen())
+    }
+
+    @Test
+    fun isAnyModalOpen_returnsTrueWhenAirspaceVisible() {
+        val manager = createManager()
+
+        manager.showAirspaceSettingsModal()
+
+        assertTrue(manager.isAnyModalOpen())
     }
 }

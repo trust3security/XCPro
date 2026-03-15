@@ -20,7 +20,8 @@ This keeps STF safe (it ignores invalid glide-netto) while letting the UI show a
 
 ## Key card IDs and templates
 - Card ID: "levo_netto" (title "LEVO NETTO").
-- Card registry: dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt
+- Card catalog aggregation: dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt
+- Category-owned card definitions: dfcards-library/src/main/java/com/example/dfcards/CardLibraryPerformanceCatalog.kt
 - Card IDs: dfcards-library/src/main/java/com/example/dfcards/CardId.kt + KnownCardId.kt
 
 ## Sensor -> domain pipeline

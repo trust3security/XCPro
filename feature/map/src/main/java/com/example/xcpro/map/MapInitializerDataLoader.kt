@@ -1,8 +1,8 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.util.Log
 import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
@@ -32,7 +32,7 @@ internal class MapInitializerDataLoader(
             }
             mapState.blueLocationOverlay?.bringToFront()
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading map data: ${e.message}", e)
+            AppLogger.e(TAG, "Error loading map data: ${e.message}", e)
         }
     }
 
@@ -43,7 +43,7 @@ internal class MapInitializerDataLoader(
                 loadAndApplyWaypoints(context, map, waypointFiles, waypointChecks)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error refreshing waypoints: ${e.message}", e)
+            AppLogger.e(TAG, "Error refreshing waypoints: ${e.message}", e)
         }
     }
 }

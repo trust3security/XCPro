@@ -4,10 +4,14 @@ import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
 import com.example.xcpro.tasks.domain.engine.AATTaskEngine
+import com.example.xcpro.tasks.domain.engine.AATTaskEngineState
 import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
+import com.example.xcpro.tasks.domain.engine.RacingTaskEngineState
+import com.example.xcpro.tasks.domain.engine.TaskEngineState
 import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
@@ -22,6 +26,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 
 class TaskManagerCoordinatorTest {
@@ -37,18 +42,19 @@ class TaskManagerCoordinatorTest {
     private val persistenceService: TaskEnginePersistenceService = mock()
     private val racingTaskEngine: RacingTaskEngine = mock()
     private val aatTaskEngine: AATTaskEngine = mock()
-    private val sampleTask = Task(id = "sample-task")
 
     private lateinit var coordinator: TaskManagerCoordinator
 
     @Before
     fun setUp() {
+        whenever(racingTaskEngine.state).thenReturn(MutableStateFlow(RacingTaskEngineState()))
+        whenever(aatTaskEngine.state).thenReturn(MutableStateFlow(AATTaskEngineState()))
         coordinator = TaskManagerCoordinator(
             taskEnginePersistenceService = persistenceService,
             racingTaskEngine = racingTaskEngine,
             aatTaskEngine = aatTaskEngine,
-            racingTaskManager = RacingTaskManager(null),
-            aatTaskManager = AATTaskManager(null)
+            racingTaskManager = RacingTaskManager(),
+            aatTaskManager = AATTaskManager()
         )
         coordinator.replaceAATDelegateForTesting(aatDelegate)
         coordinator.replaceRacingDelegateForTesting(racingDelegate)
@@ -156,6 +162,93 @@ class TaskManagerCoordinatorTest {
     }
 
     @Test
+    fun `taskSnapshotFlow mirrors coordinator task mutations`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.RACING)
+        localCoordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        localCoordinator.addWaypoint(searchWaypoint("finish", 0.3, 0.3))
+        localCoordinator.setActiveLeg(1)
+
+        val snapshot = localCoordinator.taskSnapshotFlow.value
+
+        assertEquals(TaskType.RACING, snapshot.taskType)
+        assertEquals(listOf("start", "finish"), snapshot.task.waypoints.map { it.id })
+        assertEquals(1, snapshot.activeLeg)
+    }
+
+    @Test
+    fun `aatEditWaypointIndexFlow tracks enter and exit edit mode`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.AAT)
+        localCoordinator.addWaypoint(searchWaypoint("start", 45.0, 7.0))
+        localCoordinator.addWaypoint(searchWaypoint("tp1", 45.05, 7.05))
+        localCoordinator.addWaypoint(searchWaypoint("finish", 45.1, 7.1))
+
+        localCoordinator.enterAATEditMode(1)
+        assertEquals(1, localCoordinator.aatEditWaypointIndexFlow.value)
+        assertTrue(localCoordinator.isInAATEditMode())
+
+        localCoordinator.exitAATEditMode()
+        assertEquals(null, localCoordinator.aatEditWaypointIndexFlow.value)
+        assertTrue(localCoordinator.isInAATEditMode().not())
+    }
+
+    @Test
+    fun `aatEditWaypointIndexFlow clears on task-type switch`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.AAT)
+        localCoordinator.addWaypoint(searchWaypoint("start", 45.0, 7.0))
+        localCoordinator.addWaypoint(searchWaypoint("tp1", 45.05, 7.05))
+        localCoordinator.addWaypoint(searchWaypoint("finish", 45.1, 7.1))
+        localCoordinator.enterAATEditMode(1)
+
+        localCoordinator.setTaskType(TaskType.RACING)
+
+        assertEquals(null, localCoordinator.aatEditWaypointIndexFlow.value)
+        assertTrue(localCoordinator.isInAATEditMode().not())
+    }
+
+    @Test
+    fun `setAATTargetParam publishes canonical target metadata`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.AAT)
+        localCoordinator.addWaypoint(searchWaypoint("start", 45.0, 7.0))
+        localCoordinator.addWaypoint(searchWaypoint("tp1", 45.05, 7.05))
+        localCoordinator.addWaypoint(searchWaypoint("finish", 45.1, 7.1))
+
+        localCoordinator.setAATTargetParam(1, 0.25)
+
+        val waypoint = localCoordinator.taskSnapshotFlow.value.task.waypoints[1]
+        assertEquals(0.25, waypoint.customParameters[TaskWaypointParamKeys.TARGET_PARAM] as Double, 1e-9)
+        assertEquals(false, waypoint.customParameters[TaskWaypointParamKeys.TARGET_LOCKED])
+        assertTrue(waypoint.customParameters.containsKey(TaskWaypointParamKeys.TARGET_LAT))
+        assertTrue(waypoint.customParameters.containsKey(TaskWaypointParamKeys.TARGET_LON))
+    }
+
+    @Test
+    fun `applyAATTargetState preserves explicit locked target metadata in snapshot`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+        localCoordinator.setTaskTypeForTesting(TaskType.AAT)
+        localCoordinator.addWaypoint(searchWaypoint("start", 45.0, 7.0))
+        localCoordinator.addWaypoint(searchWaypoint("tp1", 45.05, 7.05))
+        localCoordinator.addWaypoint(searchWaypoint("finish", 45.1, 7.1))
+
+        localCoordinator.applyAATTargetState(
+            index = 1,
+            targetParam = 0.67,
+            targetLocked = true,
+            targetLat = 45.11,
+            targetLon = 7.11
+        )
+
+        val waypoint = localCoordinator.taskSnapshotFlow.value.task.waypoints[1]
+        assertEquals(0.67, waypoint.customParameters[TaskWaypointParamKeys.TARGET_PARAM] as Double, 1e-9)
+        assertEquals(true, waypoint.customParameters[TaskWaypointParamKeys.TARGET_LOCKED])
+        assertEquals(45.11, waypoint.customParameters[TaskWaypointParamKeys.TARGET_LAT] as Double, 1e-9)
+        assertEquals(7.11, waypoint.customParameters[TaskWaypointParamKeys.TARGET_LON] as Double, 1e-9)
+    }
+
+    @Test
     fun `racing segment distance calculation is positive and symmetric`() {
         val localCoordinator = createCoordinatorWithoutPersistence()
         localCoordinator.setTaskTypeForTesting(TaskType.RACING)
@@ -259,6 +352,85 @@ class TaskManagerCoordinatorTest {
     }
 
     @Test
+    fun `loadSavedTasks publishes restored task snapshot`() = runTest {
+        val restoredTask = Task(
+            id = "restored-racing-task",
+            waypoints = listOf(
+                coreWaypoint(id = "start", lat = 0.0, lon = 0.0, role = WaypointRole.START),
+                coreWaypoint(id = "finish", lat = 0.1, lon = 0.1, role = WaypointRole.FINISH)
+            )
+        )
+        whenever(persistenceService.restore(any())).thenReturn(TaskType.RACING)
+        whenever(racingTaskEngine.state).thenReturn(
+            MutableStateFlow(
+                RacingTaskEngineState(
+                    base = TaskEngineState(
+                        taskType = TaskType.RACING,
+                        task = restoredTask,
+                        activeLegIndex = 1,
+                        isTaskValid = true
+                    )
+                )
+            )
+        )
+
+        coordinator.loadSavedTasks()
+
+        val snapshot = coordinator.taskSnapshotFlow.value
+        assertEquals(TaskType.RACING, snapshot.taskType)
+        assertEquals("restored-racing-task", snapshot.task.id)
+        assertEquals(listOf("start", "finish"), snapshot.task.waypoints.map { it.id })
+        assertEquals(1, snapshot.activeLeg)
+    }
+
+    @Test
+    fun `loadSavedTasks publishes restored AAT canonical target metadata`() = runTest {
+        val restoredTask = Task(
+            id = "restored-aat-task",
+            waypoints = listOf(
+                coreWaypoint(id = "start", lat = 45.0, lon = 7.0, role = WaypointRole.START),
+                coreWaypoint(
+                    id = "tp1",
+                    lat = 45.1,
+                    lon = 7.1,
+                    role = WaypointRole.TURNPOINT,
+                    customParameters = mapOf(
+                        TaskWaypointParamKeys.TARGET_PARAM to 0.58,
+                        TaskWaypointParamKeys.TARGET_LOCKED to true,
+                        TaskWaypointParamKeys.TARGET_LAT to 45.1234,
+                        TaskWaypointParamKeys.TARGET_LON to 7.2345
+                    )
+                ),
+                coreWaypoint(id = "finish", lat = 45.2, lon = 7.2, role = WaypointRole.FINISH)
+            )
+        )
+        whenever(persistenceService.restore(any())).thenReturn(TaskType.AAT)
+        whenever(aatTaskEngine.state).thenReturn(
+            MutableStateFlow(
+                AATTaskEngineState(
+                    base = TaskEngineState(
+                        taskType = TaskType.AAT,
+                        task = restoredTask,
+                        activeLegIndex = 1
+                    )
+                )
+            )
+        )
+
+        coordinator.loadSavedTasks()
+
+        val snapshot = coordinator.taskSnapshotFlow.value
+        val turnpoint = snapshot.task.waypoints[1]
+        assertEquals(TaskType.AAT, snapshot.taskType)
+        assertEquals("restored-aat-task", snapshot.task.id)
+        assertEquals(1, snapshot.activeLeg)
+        assertEquals(0.58, turnpoint.customParameters[TaskWaypointParamKeys.TARGET_PARAM] as Double, 1e-9)
+        assertEquals(true, turnpoint.customParameters[TaskWaypointParamKeys.TARGET_LOCKED])
+        assertEquals(45.1234, turnpoint.customParameters[TaskWaypointParamKeys.TARGET_LAT] as Double, 1e-9)
+        assertEquals(7.2345, turnpoint.customParameters[TaskWaypointParamKeys.TARGET_LON] as Double, 1e-9)
+    }
+
+    @Test
     fun `saveTask routes named save through persistence service`() = runTest {
         whenever(persistenceService.saveNamedTask(any(), any())).thenReturn(true)
         coordinator.setTaskTypeForTesting(TaskType.RACING)
@@ -276,8 +448,8 @@ class TaskManagerCoordinatorTest {
             taskEnginePersistenceService = null,
             racingTaskEngine = null,
             aatTaskEngine = null,
-            racingTaskManager = RacingTaskManager(null),
-            aatTaskManager = AATTaskManager(null)
+            racingTaskManager = RacingTaskManager(),
+            aatTaskManager = AATTaskManager()
         )
 
     private fun searchWaypoint(id: String, lat: Double, lon: Double): SearchWaypoint =
@@ -293,14 +465,16 @@ class TaskManagerCoordinatorTest {
         id: String,
         lat: Double,
         lon: Double,
-        role: WaypointRole
+        role: WaypointRole,
+        customParameters: Map<String, Any> = emptyMap()
     ): TaskWaypoint = TaskWaypoint(
         id = id,
         title = id,
         subtitle = "",
         lat = lat,
         lon = lon,
-        role = role
+        role = role,
+        customParameters = customParameters
     )
 }
 

@@ -2,10 +2,7 @@ package com.example.xcpro.tasks
 
 import androidx.annotation.VisibleForTesting
 import com.example.xcpro.common.waypoint.SearchWaypoint
-import com.example.xcpro.gestures.TaskGestureCallbacks
-import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.tasks.aat.AATTaskManager
-import com.example.xcpro.tasks.aat.gestures.AatGestureHandler
 import com.example.xcpro.tasks.aat.models.AATFinishPointType
 import com.example.xcpro.tasks.aat.models.AATStartPointType
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
@@ -21,7 +18,6 @@ import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
-import com.example.xcpro.tasks.racing.gestures.RacingGestureHandler
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -53,6 +49,10 @@ class TaskManagerCoordinator(
     private val _taskType = MutableStateFlow(TaskType.RACING)
     val taskType: TaskType get() = _taskType.value
     val taskTypeFlow: StateFlow<TaskType> = _taskType.asStateFlow()
+    private val _aatEditWaypointIndex = MutableStateFlow<Int?>(null)
+    val aatEditWaypointIndexFlow: StateFlow<Int?> = _aatEditWaypointIndex.asStateFlow()
+    private val _taskSnapshot = MutableStateFlow(buildSnapshot())
+    val taskSnapshotFlow: StateFlow<TaskRuntimeSnapshot> = _taskSnapshot.asStateFlow()
     private val persistenceBridge = TaskCoordinatorPersistenceBridge(
         taskTypeState = _taskType,
         taskEnginePersistenceService = taskEnginePersistenceService,
@@ -95,6 +95,52 @@ class TaskManagerCoordinator(
     val currentLeg: Int
         get() = if (_taskType.value == TaskType.RACING) racingTaskManager.currentLeg else aatTaskManager.currentLeg
 
+    private fun buildSnapshot(taskType: TaskType = _taskType.value): TaskRuntimeSnapshot =
+        if (taskType == TaskType.RACING) {
+            TaskRuntimeSnapshot(
+                taskType = TaskType.RACING,
+                task = racingTaskManager.getCoreTask(),
+                activeLeg = racingTaskManager.currentLeg
+            )
+        } else {
+            TaskRuntimeSnapshot(
+                taskType = TaskType.AAT,
+                task = aatTaskManager.getCoreTask(),
+                activeLeg = aatTaskManager.currentLeg
+            )
+        }
+
+    private fun clearAatEditMode() {
+        if (aatDelegate.isInEditMode()) {
+            aatDelegate.exitEditMode()
+        }
+        _aatEditWaypointIndex.value = null
+    }
+
+    private fun syncAatEditModeState(taskType: TaskType = _taskType.value) {
+        if (taskType != TaskType.AAT) {
+            _aatEditWaypointIndex.value = null
+            return
+        }
+        val editWaypointIndex = aatDelegate.editWaypointIndex()
+        val waypointCount = aatTaskManager.getCoreTask().waypoints.size
+        val validEditWaypointIndex = editWaypointIndex?.takeIf { it in 0 until waypointCount }
+        if (editWaypointIndex != validEditWaypointIndex && aatDelegate.isInEditMode()) {
+            aatDelegate.exitEditMode()
+        }
+        _aatEditWaypointIndex.value = validEditWaypointIndex
+    }
+
+    private fun updateTaskSnapshot(taskType: TaskType = _taskType.value) {
+        syncAatEditModeState(taskType)
+        _taskSnapshot.value = buildSnapshot(taskType)
+    }
+
+    private fun publishTaskMutation(taskType: TaskType = _taskType.value) {
+        persistenceBridge.syncAndAutosave(taskType)
+        updateTaskSnapshot(taskType)
+    }
+
     fun switchToTaskType(newTaskType: TaskType) {
         if (newTaskType == _taskType.value) {
             log("Already using ${newTaskType.name} task type"); return
@@ -104,6 +150,7 @@ class TaskManagerCoordinator(
         log("Switching from ${_taskType.value.name} to ${newTaskType.name} (preserveWaypoints=$hasWaypoints)")
 
         clearCurrentTask()
+        clearAatEditMode()
         _taskType.value = newTaskType
 
         if (hasWaypoints) {
@@ -117,39 +164,44 @@ class TaskManagerCoordinator(
             log("No waypoints to preserve during task switch")
         }
         persistenceBridge.persistTaskType(newTaskType)
-        persistenceBridge.syncEngineFromManager(newTaskType)
+        persistenceBridge.syncAllAndAutosave()
+        updateTaskSnapshot(newTaskType)
     }
 
     fun initializeTask(waypoints: List<SearchWaypoint>) =
-        withCurrentManager(racingBlock = { initializeRacingTask(waypoints) }, aatBlock = { initializeAATTask(waypoints) })
+        withCurrentManager(
+            racingBlock = { initializeRacingTask(waypoints) },
+            aatBlock = { initializeAATTask(waypoints) }
+        ).also { publishTaskMutation() }
 
     fun addWaypoint(searchWaypoint: SearchWaypoint) =
-        withCurrentManager(racingBlock = { addRacingWaypoint(searchWaypoint) }, aatBlock = { addAATWaypoint(searchWaypoint) })
+        withCurrentManager(
+            racingBlock = { addRacingWaypoint(searchWaypoint) },
+            aatBlock = { addAATWaypoint(searchWaypoint) }
+        ).also { publishTaskMutation() }
 
     fun removeWaypoint(index: Int) =
-        withCurrentManager(racingBlock = { removeRacingWaypoint(index) }, aatBlock = { removeAATWaypoint(index) })
+        withCurrentManager(
+            racingBlock = { removeRacingWaypoint(index) },
+            aatBlock = { removeAATWaypoint(index) }
+        ).also { publishTaskMutation() }
 
-    fun clearTask() = withCurrentManager(racingBlock = { clearRacingTask() }, aatBlock = { clearAATTask() })
+    fun clearTask() = withCurrentManager(
+        racingBlock = { clearRacingTask() },
+        aatBlock = { clearAATTask() }
+    ).also { publishTaskMutation() }
 
     fun getTaskSummary(): String = withCurrentManager(racingBlock = { getRacingTaskSummary() }, aatBlock = { getAATTaskSummary() })
 
     fun isTaskValid(): Boolean = withCurrentManager(racingBlock = { isRacingTaskValid() }, aatBlock = { isAATTaskValid() })
 
-    fun createGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler {
-        return if (_taskType.value == TaskType.AAT) {
-            AatGestureHandler(
-                waypointsProvider = { currentTask.waypoints },
-                callbacks = callbacks
-            )
-        } else {
-            RacingGestureHandler()
-        }
-    }
-
     fun getCurrentLegWaypoint(): TaskWaypoint? = currentTask.waypoints.getOrNull(currentLeg)
 
     fun reorderWaypoints(fromIndex: Int, toIndex: Int) =
-        withCurrentManager(racingBlock = { reorderRacingWaypoints(fromIndex, toIndex) }, aatBlock = { reorderAATWaypoints(fromIndex, toIndex) })
+        withCurrentManager(
+            racingBlock = { reorderRacingWaypoints(fromIndex, toIndex) },
+            aatBlock = { reorderAATWaypoints(fromIndex, toIndex) }
+        ).also { publishTaskMutation() }
 
     fun updateWaypointPointType(
         index: Int,
@@ -175,13 +227,19 @@ class TaskManagerCoordinator(
             keyholeAngle = keyholeAngle,
             faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
         )
+        publishTaskMutation()
     }
 
     fun replaceWaypoint(index: Int, newWaypoint: SearchWaypoint) =
-        withCurrentManager(racingBlock = { replaceRacingWaypoint(index, newWaypoint) }, aatBlock = { replaceAATWaypoint(index, newWaypoint) })
+        withCurrentManager(
+            racingBlock = { replaceRacingWaypoint(index, newWaypoint) },
+            aatBlock = { replaceAATWaypoint(index, newWaypoint) }
+        ).also { publishTaskMutation() }
 
     suspend fun loadSavedTasks() {
+        clearAatEditMode()
         persistenceBridge.loadSavedTasks()
+        updateTaskSnapshot()
     }
 
     fun advanceToNextLeg() {
@@ -189,6 +247,7 @@ class TaskManagerCoordinator(
         withCurrentManager(racingBlock = { advanceToNextLeg() }, aatBlock = { advanceToNextLeg() })
         val after = currentLeg
         if (after != before) {
+            updateTaskSnapshot()
             legChangeHandlers.forEach { handler -> handler.invoke(after) }
         }
     }
@@ -198,13 +257,17 @@ class TaskManagerCoordinator(
         withCurrentManager(racingBlock = { goToPreviousLeg() }, aatBlock = { goToPreviousLeg() })
         val after = currentLeg
         if (after != before) {
+            updateTaskSnapshot()
             legChangeHandlers.forEach { handler -> handler.invoke(after) }
         }
     }
     fun setActiveLeg(index: Int) = withCurrentManager(
         racingBlock = { setRacingLeg(index) },
         aatBlock = { setAATLeg(index) }
-    ).also { legChangeHandlers.forEach { handler -> handler.invoke(currentLeg) } }
+    ).also {
+        updateTaskSnapshot()
+        legChangeHandlers.forEach { handler -> handler.invoke(currentLeg) }
+    }
 
     fun getActiveLeg(): Int = currentLeg
 
@@ -251,7 +314,12 @@ class TaskManagerCoordinator(
     }
 
     suspend fun loadTask(taskName: String): Boolean {
-        return persistenceBridge.loadTask(taskName)
+        return persistenceBridge.loadTask(taskName).also { loaded ->
+            if (loaded) {
+                clearAatEditMode()
+                updateTaskSnapshot()
+            }
+        }
     }
 
     suspend fun deleteTask(taskName: String): Boolean {
@@ -262,7 +330,9 @@ class TaskManagerCoordinator(
 
     @VisibleForTesting
     fun setTaskTypeForTesting(taskType: TaskType) {
+        clearAatEditMode()
         _taskType.value = taskType
+        updateTaskSnapshot(taskType)
     }
 
     fun updateAATWaypointPointTypeMeters(
@@ -288,6 +358,7 @@ class TaskManagerCoordinator(
             keyholeAngle = keyholeAngle,
             sectorOuterRadiusMeters = sectorOuterRadiusMeters
         )
+        publishTaskMutation()
     }
 
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
@@ -295,6 +366,51 @@ class TaskManagerCoordinator(
             log("Cannot update AAT target point - current task type is ${_taskType.value}"); return
         }
         aatDelegate.updateTargetPoint(index, lat, lon)
+        publishTaskMutation()
+    }
+
+    fun setAATTargetParam(index: Int, targetParam: Double) {
+        if (_taskType.value != TaskType.AAT) {
+            log("Cannot update AAT target param - current task type is ${_taskType.value}"); return
+        }
+        aatDelegate.updateTargetParam(index, targetParam)
+        publishTaskMutation()
+    }
+
+    fun toggleAATTargetLock(index: Int) {
+        if (_taskType.value != TaskType.AAT) {
+            log("Cannot toggle AAT target lock - current task type is ${_taskType.value}"); return
+        }
+        aatDelegate.toggleTargetLock(index)
+        publishTaskMutation()
+    }
+
+    fun setAATTargetLock(index: Int, locked: Boolean) {
+        if (_taskType.value != TaskType.AAT) {
+            log("Cannot set AAT target lock - current task type is ${_taskType.value}"); return
+        }
+        aatDelegate.setTargetLock(index, locked)
+        publishTaskMutation()
+    }
+
+    fun applyAATTargetState(
+        index: Int,
+        targetParam: Double,
+        targetLocked: Boolean,
+        targetLat: Double?,
+        targetLon: Double?
+    ) {
+        if (_taskType.value != TaskType.AAT) {
+            log("Cannot apply AAT target state - current task type is ${_taskType.value}"); return
+        }
+        aatDelegate.applyTargetState(
+            index = index,
+            targetParam = targetParam,
+            targetLocked = targetLocked,
+            targetLat = targetLat,
+            targetLon = targetLon
+        )
+        publishTaskMutation()
     }
 
     fun updateAATParameters(minimumTime: java.time.Duration, maximumTime: java.time.Duration) {
@@ -302,6 +418,7 @@ class TaskManagerCoordinator(
             log("Cannot update AAT parameters - current task type is ${_taskType.value}"); return
         }
         aatDelegate.updateParameters(minimumTime, maximumTime)
+        publishTaskMutation()
     }
 
     fun updateAATArea(index: Int, radiusMeters: Double) {
@@ -309,6 +426,7 @@ class TaskManagerCoordinator(
             log("Cannot update AAT area - current task type is ${_taskType.value}"); return
         }
         aatDelegate.updateArea(index, radiusMeters)
+        publishTaskMutation()
     }
 
     internal fun updateRacingStartRules(command: UpdateRacingStartRulesCommand) {
@@ -317,6 +435,7 @@ class TaskManagerCoordinator(
             return
         }
         racingTaskManager.updateRacingStartRules(command)
+        publishTaskMutation()
     }
 
     internal fun updateRacingFinishRules(command: UpdateRacingFinishRulesCommand) {
@@ -325,6 +444,7 @@ class TaskManagerCoordinator(
             return
         }
         racingTaskManager.updateRacingFinishRules(command)
+        publishTaskMutation()
     }
 
     internal fun updateRacingValidationRules(command: UpdateRacingValidationRulesCommand) {
@@ -333,6 +453,7 @@ class TaskManagerCoordinator(
             return
         }
         racingTaskManager.updateRacingValidationRules(command)
+        publishTaskMutation()
     }
 
     fun getRacingValidationProfile(): RacingTaskStructureRules.Profile =
@@ -344,6 +465,10 @@ class TaskManagerCoordinator(
 
     fun setProximityHandler(handler: (Boolean, Boolean) -> Unit) {
         proximityHandler = handler
+    }
+
+    fun clearProximityHandler() {
+        proximityHandler = null
     }
 
     fun reportProximity(hasEnteredOZ: Boolean, closeToTarget: Boolean) {
@@ -368,9 +493,24 @@ class TaskManagerCoordinator(
 
     fun checkAATAreaTap(lat: Double, lon: Double): Pair<Int, AATWaypoint>? =
         if (_taskType.value == TaskType.AAT) aatDelegate.checkAreaTap(lat, lon) else null
-    fun enterAATEditMode(waypointIndex: Int) { if (_taskType.value == TaskType.AAT) aatDelegate.enterEditMode(waypointIndex) }
-    fun exitAATEditMode() { if (_taskType.value == TaskType.AAT) aatDelegate.exitEditMode() }
-    fun isInAATEditMode(): Boolean = _taskType.value == TaskType.AAT && aatDelegate.isInEditMode()
-    fun getAATEditWaypointIndex(): Int? = if (_taskType.value == TaskType.AAT) aatDelegate.editWaypointIndex() else null
+    fun enterAATEditMode(waypointIndex: Int) {
+        if (_taskType.value != TaskType.AAT) {
+            return
+        }
+        aatDelegate.enterEditMode(waypointIndex)
+        syncAatEditModeState()
+    }
+
+    fun exitAATEditMode() {
+        if (_taskType.value != TaskType.AAT) {
+            _aatEditWaypointIndex.value = null
+            return
+        }
+        aatDelegate.exitEditMode()
+        _aatEditWaypointIndex.value = null
+    }
+
+    fun isInAATEditMode(): Boolean = _aatEditWaypointIndex.value != null
+    fun getAATEditWaypointIndex(): Int? = _aatEditWaypointIndex.value
 
 }

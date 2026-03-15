@@ -162,13 +162,6 @@ class MapInitializer(
             snailTrailManager.initialize(map)
             scaleBarController.setupScaleBar(map)
 
-            // DISABLED: Map-based distance circles replaced with DistanceCirclesCanvas
-            // The circles are now drawn as a fixed screen overlay in MapScreen.kt
-            // This prevents them from moving with the map
-            // mapState.distanceCirclesOverlay = DistanceCirclesOverlay(context, map)
-            // mapState.distanceCirclesOverlay?.initialize()
-            // mapState.distanceCirclesOverlay?.setVisible(mapState.showDistanceCircles)
-
         } catch (e: Exception) {
             AppLogger.e(LOG_TAG, "Error setting up overlays: ${e.message}", e)
         }
@@ -236,7 +229,7 @@ class MapInitializer(
                 scaleBarController.onCameraIdle(map)
                 // Canvas overlay listens to MapStateStore.currentZoom for zoom-adaptive effects.
             } catch (e: Exception) {
-                AppLogger.e(LOG_TAG, "Error updating distance circles zoom: ${e.message}", e)
+                AppLogger.e(LOG_TAG, "Error updating camera-idle overlay state: ${e.message}", e)
             }
         }
     }

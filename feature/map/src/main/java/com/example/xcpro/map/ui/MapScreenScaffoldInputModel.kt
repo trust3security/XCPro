@@ -3,7 +3,6 @@ package com.example.xcpro.map.ui
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.MutableState
 import androidx.navigation.NavHostController
-import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.model.GpsStatusUiModel
 
 internal data class MapScreenScaffoldInputs(
@@ -22,6 +21,5 @@ internal data class MapScreenScaffoldChromeInputs(
     val onMapStyleSelected: (String) -> Unit,
     val gpsStatus: GpsStatusUiModel,
     val isLoadingWaypoints: Boolean,
-    val modalManager: MapModalManager,
     val onOpenGeneralSettingsFromDrawer: () -> Unit
 )

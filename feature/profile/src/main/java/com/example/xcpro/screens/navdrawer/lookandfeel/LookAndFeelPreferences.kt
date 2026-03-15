@@ -11,10 +11,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val LOOK_AND_FEEL_PREFS = "LookAndFeelPrefs"
-private const val COLOR_THEME_PREFS = "ColorThemePrefs"
 private const val DEFAULT_STATUS_BAR_STYLE_ID = "transparent"
 private const val DEFAULT_CARD_STYLE_ID = "standard"
-private const val DEFAULT_COLOR_THEME_ID = "default"
 
 /**
  * Persistence helper for look & feel settings scoped by profile.
@@ -26,10 +24,6 @@ class LookAndFeelPreferences @Inject constructor(
 
     private val lookAndFeelPrefs by lazy {
         context.getSharedPreferences(LOOK_AND_FEEL_PREFS, Context.MODE_PRIVATE)
-    }
-
-    private val colorPrefs by lazy {
-        context.getSharedPreferences(COLOR_THEME_PREFS, Context.MODE_PRIVATE)
     }
 
     fun getStatusBarStyleId(profileId: String): String {
@@ -70,32 +64,10 @@ class LookAndFeelPreferences @Inject constructor(
         DEFAULT_CARD_STYLE_ID
     )
 
-    fun getColorThemeId(profileId: String): String {
-        return colorPrefs.getString(
-            "profile_${profileId}_color_theme",
-            DEFAULT_COLOR_THEME_ID
-        ) ?: DEFAULT_COLOR_THEME_ID
-    }
-
-    fun observeColorThemeId(profileId: String): Flow<String> = stringFlow(
-        colorPrefs,
-        "profile_${profileId}_color_theme",
-        DEFAULT_COLOR_THEME_ID
-    )
-
-    fun setColorThemeId(profileId: String, themeId: String) {
-        colorPrefs.edit()
-            .putString("profile_${profileId}_color_theme", themeId)
-            .apply()
-    }
-
     fun clearProfile(profileId: String) {
         lookAndFeelPrefs.edit()
             .remove("profile_${profileId}_status_bar_style")
             .remove(cardStyleKey(profileId))
-            .apply()
-        colorPrefs.edit()
-            .remove("profile_${profileId}_color_theme")
             .apply()
     }
 

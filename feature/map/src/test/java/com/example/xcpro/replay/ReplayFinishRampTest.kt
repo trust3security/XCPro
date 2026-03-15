@@ -2,7 +2,7 @@ package com.example.xcpro.replay
 
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.map.trail.buildCompleteFlightData
+import com.example.xcpro.map.buildCompleteFlightData
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.VarioDiagnosticsSample

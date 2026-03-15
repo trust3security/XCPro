@@ -37,6 +37,7 @@ dependencies {
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
     implementation(project(":dfcards-library"))
+    implementation(project(":feature:flight-runtime"))
     implementation(project(":feature:variometer"))
 
     implementation(libs.androidx.core.ktx)
@@ -61,11 +62,16 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.robolectric)
     testImplementation(project(":feature:forecast"))
     testImplementation(project(":feature:traffic"))
     testImplementation(project(":feature:weather"))
     testImplementation("org.mockito:mockito-core:5.2.0")
     testImplementation("org.mockito:mockito-inline:5.2.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.0")
+    debugImplementation(libs.androidx.ui.test.manifest)
 }

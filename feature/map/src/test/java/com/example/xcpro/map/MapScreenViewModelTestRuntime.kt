@@ -10,6 +10,8 @@ import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.calculations.ConfidenceLevel
 import com.example.xcpro.MapOrientationManagerFactory
+import com.example.xcpro.MapOrientationHeadingPolicy
+import com.example.xcpro.MapOrientationSensorInputSource
 import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.OrientationDataSourceFactory
 import com.example.xcpro.common.geo.GeoPoint
@@ -70,10 +72,7 @@ import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.tasks.TaskFeatureFlags
 import com.example.xcpro.tasks.TaskNavigationController
-import com.example.xcpro.tasks.TaskRepository
 import com.example.xcpro.tasks.aat.AATTaskManager
-import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
-import com.example.xcpro.tasks.domain.logic.TaskValidator
 import com.example.xcpro.tasks.racing.RacingTaskManager
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
@@ -170,11 +169,11 @@ abstract class MapScreenViewModelTestBase {
     protected val mapFeatureFlags = MapFeatureFlags()
     protected val orientationManagerFactory = MapOrientationManagerFactory(
         orientationDataSourceFactory = OrientationDataSourceFactory(
-            unifiedSensorManager = unifiedSensorManager,
+            sensorInputSource = MapOrientationSensorInputSource(unifiedSensorManager),
             headingResolver = HeadingResolver(),
             flightStateSource = flightStateSource,
             clock = orientationClock,
-            featureFlags = mapFeatureFlags
+            stationaryHeadingPolicy = MapOrientationHeadingPolicy(mapFeatureFlags)
         ),
         settingsRepository = orientationSettingsRepository,
         clock = orientationClock
@@ -317,8 +316,8 @@ abstract class MapScreenViewModelTestBase {
             taskEnginePersistenceService = null,
             racingTaskEngine = null,
             aatTaskEngine = null,
-            racingTaskManager = RacingTaskManager(null),
-            aatTaskManager = AATTaskManager(null)
+            racingTaskManager = RacingTaskManager(),
+            aatTaskManager = AATTaskManager()
         )
         val localTaskFeatureFlags = TaskFeatureFlags()
         val localTaskNavigationController = TaskNavigationController(
@@ -327,10 +326,6 @@ abstract class MapScreenViewModelTestBase {
             advanceState = RacingAdvanceState(),
             engine = RacingNavigationEngine(),
             featureFlags = localTaskFeatureFlags
-        )
-        val taskRepository = TaskRepository(
-            validator = TaskValidator(),
-            proximityEvaluator = TaskProximityEvaluator()
         )
         val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
         val mapAirspaceUseCase = Mockito.mock(AirspaceUseCase::class.java)
@@ -348,7 +343,7 @@ abstract class MapScreenViewModelTestBase {
             taskManager = localTaskManager,
             taskNavigationController = localTaskNavigationController,
             glideTargetRepository = GlideTargetRepository(
-                taskRepository = taskRepository,
+                taskManager = localTaskManager,
                 taskNavigationController = localTaskNavigationController
             ),
             finalGlideUseCase = FinalGlideUseCase(

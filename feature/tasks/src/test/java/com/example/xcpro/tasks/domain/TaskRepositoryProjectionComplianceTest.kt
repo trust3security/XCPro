@@ -6,15 +6,13 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.WaypointRole
-import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TaskRepositoryProjectionComplianceTest {
     private val repository = TaskRepository(
-        validator = TaskValidator(),
-        proximityEvaluator = TaskProximityEvaluator()
+        validator = TaskValidator()
     )
 
     @Test

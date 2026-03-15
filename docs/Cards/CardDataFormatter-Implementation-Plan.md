@@ -70,7 +70,7 @@ Key observations:
 
 ### Phase 0 - Discovery and Alignment
 Deliverables:
-- Inventory of all card IDs used in CardLibraryCatalog and template configs.
+- Inventory of all card IDs used in the card catalog aggregation and template configs.
 - A table documenting each card's primary/secondary values, units, placeholders,
   and validity rules.
 - Decision on timebase fields for RealTimeFlightData:

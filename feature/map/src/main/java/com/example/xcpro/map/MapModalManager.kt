@@ -28,25 +28,11 @@ class MapModalManager(
     private val _showAirspaceSettings = MutableStateFlow(false)
     val showAirspaceSettings: StateFlow<Boolean> = _showAirspaceSettings.asStateFlow()
 
-    private val _showGeneralSettings = MutableStateFlow(false)
-    val showGeneralSettings: StateFlow<Boolean> = _showGeneralSettings.asStateFlow()
-
-    private fun setModalState(
-        showGeneralSettings: Boolean,
-        showAirspaceSettings: Boolean
-    ) {
-        _showGeneralSettings.value = showGeneralSettings
-        _showAirspaceSettings.value = showAirspaceSettings
-    }
-
     /**
      * Show airspace settings modal
      */
     fun showAirspaceSettingsModal() {
-        setModalState(
-            showGeneralSettings = false,
-            showAirspaceSettings = true
-        )
+        _showAirspaceSettings.value = true
     }
 
     /**
@@ -56,31 +42,15 @@ class MapModalManager(
         _showAirspaceSettings.value = false
     }
 
-    fun showGeneralSettingsModal() {
-        setModalState(
-            showGeneralSettings = true,
-            showAirspaceSettings = false
-        )
-    }
-
-    fun hideGeneralSettingsModal() {
-        _showGeneralSettings.value = false
-    }
-
     /**
      * Handle back gesture - close current modal
      */
     fun handleBackGesture(): Boolean {
-        return when {
-            _showGeneralSettings.value -> {
-                hideGeneralSettingsModal()
-                true
-            }
-            _showAirspaceSettings.value -> {
-                hideAirspaceSettingsModal()
-                true
-            }
-            else -> false
+        return if (_showAirspaceSettings.value) {
+            hideAirspaceSettingsModal()
+            true
+        } else {
+            false
         }
     }
 
@@ -88,7 +58,7 @@ class MapModalManager(
      * Check if any modal is currently open
      */
     fun isAnyModalOpen(): Boolean {
-        return _showGeneralSettings.value || _showAirspaceSettings.value
+        return _showAirspaceSettings.value
     }
 
     /**
@@ -97,7 +67,6 @@ class MapModalManager(
     fun getModalStatus(): String {
         return buildString {
             append("MapModalManager Status:\n")
-            append("- General Settings: ${if (_showGeneralSettings.value) "Open" else "Closed"}\n")
             append("- Airspace Settings: ${if (_showAirspaceSettings.value) "Open" else "Closed"}\n")
         }
     }

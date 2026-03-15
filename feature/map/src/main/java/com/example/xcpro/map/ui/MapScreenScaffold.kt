@@ -11,18 +11,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.navdrawer.NavigationDrawer
-import com.example.ui1.screens.GeneralSettingsSheetHost
-import kotlinx.coroutines.launch
 
 /**
  * Drawer + content scaffold for the map screen, with GPS status and loading overlay.
@@ -33,8 +28,6 @@ internal fun MapScreenScaffold(
     content: @Composable BoxScope.() -> Unit
 ) {
     val scaffold = inputs.scaffold
-    val coroutineScope = rememberCoroutineScope()
-    val showGeneralSettings by scaffold.modalManager.showGeneralSettings.collectAsStateWithLifecycle()
     NavigationDrawer(
         drawerState = scaffold.drawerState,
         navController = scaffold.navController,
@@ -69,31 +62,6 @@ internal fun MapScreenScaffold(
             }
         }
     )
-    if (showGeneralSettings) {
-        GeneralSettingsSheetHost(
-            navController = scaffold.navController,
-            drawerState = scaffold.drawerState,
-            onDismissRequest = {
-                scaffold.modalManager.hideGeneralSettingsModal()
-            },
-            onNavigateUp = {
-                coroutineScope.launch {
-                    scaffold.modalManager.hideGeneralSettingsModal()
-                    if (!scaffold.drawerState.isOpen) {
-                        scaffold.drawerState.open()
-                    }
-                }
-            },
-            onNavigateToMap = {
-                coroutineScope.launch {
-                    scaffold.modalManager.hideGeneralSettingsModal()
-                    if (scaffold.drawerState.isOpen) {
-                        scaffold.drawerState.close()
-                    }
-                }
-            }
-        )
-    }
 }
 
 @Composable

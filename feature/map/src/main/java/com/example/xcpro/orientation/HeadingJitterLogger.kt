@@ -1,14 +1,13 @@
 package com.example.xcpro.orientation
 
 import android.util.Log
-import com.example.xcpro.OrientationDataSource
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.OrientationSensorData
 import java.util.Locale
 import kotlin.math.abs
 
 internal class HeadingJitterLogger(
-    private val snapshotProvider: (Long) -> OrientationDataSource.HeadingDebugSnapshot?
+    private val snapshotProvider: (Long) -> OrientationHeadingDebugSnapshot?
 ) {
     private var lastHeadingSampleTime = 0L
     private var lastHeadingSampleBearing = 0.0

@@ -11,11 +11,11 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.CardContainer
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.tasks.TaskMapOverlay
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.FlightDataManager
@@ -221,14 +221,14 @@ private fun MapViewHost(
                                 if (error is CancellationException) {
                                     throw error
                                 }
-                                Log.e("MapViewHost", "Map initialization failed: ${error.message}", error)
+                                AppLogger.e("MapViewHost", "Map initialization failed: ${error.message}", error)
                             }
                         if (!isActive) {
                             return@launch
                         }
                         runCatching { latestOnMapReady.value(map) }
                             .onFailure { callbackError ->
-                                Log.e(
+                                AppLogger.e(
                                     "MapViewHost",
                                     "onMapReady callback failed after initialization: ${callbackError.message}",
                                     callbackError

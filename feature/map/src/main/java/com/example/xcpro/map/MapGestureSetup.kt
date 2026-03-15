@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -11,6 +10,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.gestures.CustomMapGestureHandler
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
@@ -78,13 +78,13 @@ object MapGestureSetup {
                     cameraManager.zoomToAATAreaForEdit(lat, lon, radiusMeters)
                     onEnterAATEditMode(waypointIndex)
                     onSyncTaskVisuals()
-                    Log.d(TAG, "Entered AAT edit mode for waypoint $waypointIndex")
+                    AppLogger.d(TAG, "Entered AAT edit mode for waypoint $waypointIndex")
                 },
                 onExitEditMode = {
                     cameraManager.restoreAATCameraPosition()
                     onExitAATEditMode()
                     onSyncTaskVisuals()
-                    Log.d(TAG, "Exited AAT edit mode")
+                    AppLogger.d(TAG, "Exited AAT edit mode")
                 },
                 onDragTargetPreview = { waypointIndex, lat, lon ->
                     onPreviewAATTargetPoint(waypointIndex, lat, lon)
@@ -112,7 +112,7 @@ object MapGestureSetup {
                 mapLibreMap = mapState.mapLibreMap,
                 currentMode = currentMode,
                 onModeChange = { newMode ->
-                    Log.d(TAG, " onModeChange callback called with: ${newMode.displayName}")
+                    AppLogger.d(TAG, "onModeChange callback called with: ${newMode.displayName}")
                     onModeChange(newMode)
                 },
                 showReturnButton = showReturnButton,

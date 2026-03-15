@@ -11,6 +11,7 @@ import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.core.AATTaskTimeCustomParams
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.TargetStateCustomParams
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.core.AATWaypointCustomParams
 import java.time.Duration
@@ -73,6 +74,7 @@ internal object AATWaypointInitializationSupport {
                 fallbackLon = genericWaypoint.lon,
                 fallbackRadiusMeters = radiusMeters
             )
+            val targetState = TargetStateCustomParams.from(genericWaypoint.customParameters)
 
             AATWaypoint(
                 id = genericWaypoint.id,
@@ -91,7 +93,9 @@ internal object AATWaypointInitializationSupport {
                     lineWidthMeters = typedParams.lineWidthMeters
                 ),
                 targetPoint = AATLatLng(typedParams.targetLat, typedParams.targetLon),
-                isTargetPointCustomized = typedParams.isTargetPointCustomized
+                isTargetPointCustomized = typedParams.isTargetPointCustomized,
+                targetParam = targetState.targetParam,
+                targetLocked = targetState.targetLocked
             )
         }
 

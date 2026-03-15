@@ -10,7 +10,8 @@ Last updated: 2026-01-30
 
 ## Key card IDs and templates
 - Card IDs: "netto_avg30", "netto".
-- Card definitions: dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt
+- Card catalog aggregation: dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt
+- Category-owned card definitions: dfcards-library/src/main/java/com/example/dfcards/CardLibraryPerformanceCatalog.kt
 - Card ID constants: dfcards-library/src/main/java/com/example/dfcards/CardId.kt and KnownCardId.kt
 - Default Thermal template includes netto_avg30: dfcards-library/src/main/java/com/example/dfcards/FlightTemplates.kt
 

@@ -4,89 +4,98 @@ import com.example.xcpro.tasks.TaskRepository
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.TaskWaypointParamKeys
 import com.example.xcpro.tasks.core.WaypointRole
-import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class TaskRepositoryTargetStateTest {
     private val repository = TaskRepository(
-        validator = TaskValidator(),
-        proximityEvaluator = TaskProximityEvaluator()
+        validator = TaskValidator()
     )
 
     @Test
-    fun `target mutations preserve active leg`() {
-        repository.updateFrom(taskWithUniqueIds(), TaskType.AAT, activeIndex = 2)
+    fun `projection preserves active leg from canonical snapshot input`() {
+        repository.updateFrom(taskWithLockedTarget(), TaskType.AAT, activeIndex = 2)
 
-        repository.setTargetParam(index = 1, param = 0.20)
-        assertEquals(2, repository.state.value.stats.activeIndex)
-
-        repository.toggleTargetLock(index = 1)
-        assertEquals(2, repository.state.value.stats.activeIndex)
-
-        repository.setTargetLock(index = 1, locked = false)
         assertEquals(2, repository.state.value.stats.activeIndex)
     }
 
     @Test
-    fun `locked target does not move when param changes`() {
-        repository.updateFrom(taskWithUniqueIds(), TaskType.AAT, activeIndex = 1)
-        repository.setTargetParam(index = 1, param = 0.15)
-        repository.setTargetLock(index = 1, locked = true)
-        val before = repository.state.value.targets[1].target!!
+    fun `locked target projection preserves canonical target coordinates`() {
+        repository.updateFrom(taskWithLockedTarget(), TaskType.AAT, activeIndex = 1)
 
-        repository.setTargetParam(index = 1, param = 0.85)
-        val after = repository.state.value.targets[1].target!!
-
-        assertEquals(before.lat, after.lat, 1e-9)
-        assertEquals(before.lon, after.lon, 1e-9)
+        val target = repository.state.value.targets[1].target!!
+        assertEquals(45.11, target.lat, 1e-9)
+        assertEquals(7.11, target.lon, 1e-9)
+        assertEquals(true, repository.state.value.targets[1].isLocked)
+        assertEquals(0.67, repository.state.value.targets[1].targetParam, 1e-9)
     }
 
     @Test
-    fun `duplicate waypoint ids do not alias target memory across indices`() {
-        repository.updateFrom(taskWithDuplicateTurnpointIds(), TaskType.AAT, activeIndex = 1)
+    fun `unlocked target projection derives target from canonical param`() {
+        repository.updateFrom(taskWithUnlockedParam(), TaskType.AAT, activeIndex = 1)
 
-        repository.setTargetParam(index = 1, param = 0.10)
-        val indexOneBefore = repository.state.value.targets[1].target!!
-
-        repository.setTargetParam(index = 2, param = 0.90)
-        val indexOneAfter = repository.state.value.targets[1].target!!
-
-        assertEquals(indexOneBefore.lat, indexOneAfter.lat, 1e-9)
-        assertEquals(indexOneBefore.lon, indexOneAfter.lon, 1e-9)
+        val target = repository.state.value.targets[1].target!!
+        assertEquals(false, repository.state.value.targets[1].isLocked)
+        assertNotEquals(45.0, target.lat, 1e-9)
+        assertNotEquals(7.05, target.lon, 1e-9)
+        assertEquals(0.25, repository.state.value.targets[1].targetParam, 1e-9)
     }
 
-    private fun taskWithUniqueIds(): Task = Task(
-        id = "aat-unique",
+    private fun taskWithLockedTarget(): Task = Task(
+        id = "aat-locked",
         waypoints = listOf(
-            waypoint("start", 0.0, 0.0, WaypointRole.START),
-            waypoint("tp-1", 0.0, 0.05, WaypointRole.TURNPOINT),
-            waypoint("tp-2", 0.0, 0.10, WaypointRole.TURNPOINT),
-            waypoint("finish", 0.0, 0.15, WaypointRole.FINISH)
+            waypoint("start", 45.0, 7.0, WaypointRole.START),
+            waypoint(
+                "tp-1",
+                45.05,
+                7.05,
+                WaypointRole.TURNPOINT,
+                customParameters = mapOf(
+                    TaskWaypointParamKeys.TARGET_PARAM to 0.67,
+                    TaskWaypointParamKeys.TARGET_LOCKED to true,
+                    TaskWaypointParamKeys.TARGET_LAT to 45.11,
+                    TaskWaypointParamKeys.TARGET_LON to 7.11
+                )
+            ),
+            waypoint("finish", 45.1, 7.1, WaypointRole.FINISH)
         )
     )
 
-    private fun taskWithDuplicateTurnpointIds(): Task = Task(
-        id = "aat-duplicate",
+    private fun taskWithUnlockedParam(): Task = Task(
+        id = "aat-unlocked",
         waypoints = listOf(
-            waypoint("start", 0.0, 0.0, WaypointRole.START),
-            waypoint("dup", 0.0, 0.05, WaypointRole.TURNPOINT),
-            waypoint("dup", 0.0, 0.10, WaypointRole.TURNPOINT),
-            waypoint("tp-3", 0.0, 0.15, WaypointRole.TURNPOINT),
-            waypoint("finish", 0.0, 0.20, WaypointRole.FINISH)
+            waypoint("start", 45.0, 7.0, WaypointRole.START),
+            waypoint(
+                "tp-1",
+                45.05,
+                7.05,
+                WaypointRole.TURNPOINT,
+                customParameters = mapOf(
+                    TaskWaypointParamKeys.TARGET_PARAM to 0.25,
+                    TaskWaypointParamKeys.TARGET_LOCKED to false
+                )
+            ),
+            waypoint("finish", 45.1, 7.1, WaypointRole.FINISH)
         )
     )
 
-    private fun waypoint(id: String, lat: Double, lon: Double, role: WaypointRole): TaskWaypoint {
-        return TaskWaypoint(
-            id = id,
-            title = id,
-            subtitle = id,
-            lat = lat,
-            lon = lon,
-            role = role
-        )
-    }
+    private fun waypoint(
+        id: String,
+        lat: Double,
+        lon: Double,
+        role: WaypointRole,
+        customParameters: Map<String, Any> = emptyMap()
+    ): TaskWaypoint = TaskWaypoint(
+        id = id,
+        title = id,
+        subtitle = id,
+        lat = lat,
+        lon = lon,
+        role = role,
+        customParameters = customParameters
+    )
 }

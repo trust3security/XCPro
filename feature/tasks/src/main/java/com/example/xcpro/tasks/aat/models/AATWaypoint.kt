@@ -23,7 +23,9 @@ data class AATWaypoint(
 
     // NEW: Movable target point within assigned area
     val targetPoint: AATLatLng = AATLatLng(lat, lon), // Default to area center
-    val isTargetPointCustomized: Boolean = false
+    val isTargetPointCustomized: Boolean = false,
+    val targetParam: Double = 0.5,
+    val targetLocked: Boolean = false
 
     //  SSOT FIX: Removed duplicate radius properties (gateWidth, keyholeInnerRadius, sectorOuterRadius)
     // All radius values now read from assignedArea via AATRadiusAuthority.getRadiusMetersForWaypoint()

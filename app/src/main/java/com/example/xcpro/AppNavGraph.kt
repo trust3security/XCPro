@@ -12,6 +12,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -31,6 +34,9 @@ import com.example.ui1.screens.Paragliders
 import com.example.ui1.screens.ProfilesScreen
 import com.example.ui1.screens.Sailplanes
 import com.example.ui1.screens.Task
+import com.example.xcpro.appshell.settings.GeneralSettingsSheetHost
+import com.example.xcpro.appshell.settings.consumeOpenGeneralSettingsOnMap
+import com.example.xcpro.appshell.settings.requestOpenGeneralSettingsOnMap
 import com.example.xcpro.appshell.navdrawer.MyAbout
 import com.example.xcpro.appshell.navdrawer.MySupport
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
@@ -53,10 +59,10 @@ import com.example.xcpro.screens.navdrawer.OgnSettingsScreen
 import com.example.xcpro.screens.navdrawer.WeatherSettingsScreen
 import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
-import com.example.xcpro.navigation.MapNavigationSignals
 import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.navigation.TrafficSettingsRoutes
 import com.example.xcpro.profiles.ManageAccount
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavGraph(
@@ -78,45 +84,75 @@ fun AppNavGraph(
         composable("map") { backStackEntry ->
             val mapViewModel: MapScreenViewModel = hiltViewModel(backStackEntry)
             val openGeneralSettingsOnMap by backStackEntry.savedStateHandle
-                .getStateFlow(MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP, false)
+                .getStateFlow(
+                    com.example.xcpro.navigation.MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP,
+                    false
+                )
                 .collectAsStateWithLifecycle()
-            MapScreen(
-                navController = navController,
-                drawerState = drawerState,
-                profileExpanded = remember(config) {
-                    mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("profileExpanded", true) ?: true)
-                },
-                mapStyleExpanded = remember(config) {
-                    mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false)
-                },
-                settingsExpanded = remember(config) {
-                    mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true)
-                },
-                initialMapStyle = initialMapStyle,
-                openGeneralSettingsOnStart = openGeneralSettingsOnMap,
-                onGeneralSettingsLaunchConsumed = {
-                    backStackEntry.savedStateHandle[MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP] = false
-                },
-                mapViewModel = mapViewModel
-            )
+            val scope = rememberCoroutineScope()
+            var showGeneralSettings by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(openGeneralSettingsOnMap) {
+                if (openGeneralSettingsOnMap && consumeOpenGeneralSettingsOnMap(backStackEntry)) {
+                    showGeneralSettings = true
+                }
+            }
+            Box(modifier = Modifier.fillMaxSize()) {
+                MapScreen(
+                    navController = navController,
+                    drawerState = drawerState,
+                    profileExpanded = remember(config) {
+                        mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("profileExpanded", true) ?: true)
+                    },
+                    mapStyleExpanded = remember(config) {
+                        mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false)
+                    },
+                    settingsExpanded = remember(config) {
+                        mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true)
+                    },
+                    initialMapStyle = initialMapStyle,
+                    onOpenGeneralSettings = {
+                        showGeneralSettings = true
+                    },
+                    mapViewModel = mapViewModel
+                )
+                if (showGeneralSettings) {
+                    GeneralSettingsSheetHost(
+                        navController = navController,
+                        drawerState = drawerState,
+                        onDismissRequest = {
+                            showGeneralSettings = false
+                        },
+                        onNavigateUp = {
+                            showGeneralSettings = false
+                            scope.launch {
+                                if (!drawerState.isOpen) {
+                                    drawerState.open()
+                                }
+                            }
+                        },
+                        onNavigateToMap = {
+                            showGeneralSettings = false
+                            scope.launch {
+                                if (drawerState.isOpen) {
+                                    drawerState.close()
+                                }
+                            }
+                        }
+                    )
+                }
+            }
         }
         composable(SettingsRoutes.GENERAL) {
             // Compatibility shim for legacy callers still navigating to "settings".
             LaunchedEffect(Unit) {
-                val requestOpenGeneralOnMap = {
-                    runCatching { navController.getBackStackEntry("map") }
-                        .getOrNull()
-                        ?.savedStateHandle
-                        ?.set(MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP, true)
-                }
-                requestOpenGeneralOnMap()
+                requestOpenGeneralSettingsOnMap(navController)
                 val poppedToMap = navController.popBackStack("map", inclusive = false)
                 if (!poppedToMap) {
                     navController.navigate("map") {
                         popUpTo(navController.graph.startDestinationId) { inclusive = false }
                         launchSingleTop = true
                     }
-                    requestOpenGeneralOnMap()
+                    requestOpenGeneralSettingsOnMap(navController)
                 }
             }
         }

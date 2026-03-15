@@ -29,6 +29,7 @@ internal fun rememberMapScreenScaffoldInputs(
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit,
+    onOpenGeneralSettings: () -> Unit,
     mapViewModel: MapScreenViewModel,
     hotPathBindings: MapScreenHotPathBindings,
     rootUiBinding: MapScreenRootUiBinding,
@@ -88,7 +89,7 @@ internal fun rememberMapScreenScaffoldInputs(
                 if (drawerState.isOpen) {
                     drawerState.close()
                 }
-                managers.modalManager.showGeneralSettingsModal()
+                onOpenGeneralSettings()
             }
         }
     }
@@ -104,7 +105,6 @@ internal fun rememberMapScreenScaffoldInputs(
             onMapStyleSelected = onResolvedMapStyleSelected,
             gpsStatus = mapBindings.gpsStatus,
             isLoadingWaypoints = mapUiState.isLoadingWaypoints,
-            modalManager = managers.modalManager,
             onOpenGeneralSettingsFromDrawer = openGeneralSettingsFromMap
         ),
         content = MapScreenContentInputs(

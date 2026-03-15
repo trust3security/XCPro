@@ -30,6 +30,22 @@ internal class TaskCoordinatorPersistenceBridge(
         }
     }
 
+    fun syncAndAutosave(taskType: TaskType) {
+        val service = taskEnginePersistenceService ?: return
+        syncEngineFromManager(taskType)
+        scope.launch {
+            service.autosaveEngines()
+        }
+    }
+
+    fun syncAllAndAutosave() {
+        val service = taskEnginePersistenceService ?: return
+        syncEnginesFromManagers()
+        scope.launch {
+            service.autosaveEngines()
+        }
+    }
+
     suspend fun loadSavedTasks() {
         val service = taskEnginePersistenceService
         if (service != null) {

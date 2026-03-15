@@ -84,6 +84,7 @@ dependencies {
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
     implementation(project(":feature:forecast"))
+    implementation(project(":feature:flight-runtime"))
     implementation(project(":feature:igc"))
     implementation(project(":feature:profile"))
     implementation(project(":feature:tasks"))

@@ -7,6 +7,7 @@ Scope: Discovery and alignment for CardDataFormatter refactor.
 ## Sources reviewed
 - dfcards-library/src/main/java/com/example/dfcards/CardDataFormatter.kt
 - dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt
+- dfcards-library/src/main/java/com/example/dfcards/CardLibrary*Catalog.kt
 - dfcards-library/src/main/java/com/example/dfcards/FlightTemplates.kt
 - dfcards-library/src/main/java/com/example/dfcards/dfcards/CardStateRepository.kt
 - dfcards-library/src/main/java/com/example/dfcards/dfcards/CardStateRepositoryUpdates.kt
@@ -18,7 +19,7 @@ Scope: Discovery and alignment for CardDataFormatter refactor.
 - feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt
 
 ## Card ID inventory (catalog vs formatter vs templates)
-All CardDefinition ids in CardLibraryCatalog are handled in CardDataFormatter (39 of 39).
+All CardDefinition ids in the card catalog aggregation are handled in CardDataFormatter (39 of 39).
 Default templates cover 18 unique cards; the rest are only available via the card library.
 
 Legend:

@@ -91,6 +91,27 @@ class TaskNavigationControllerTest {
         }
     }
 
+    @Test
+    fun cancelledBindReleasesLegChangeListener() = runTest {
+        val coordinator = createCoordinator()
+        coordinator.initializeTask(sampleWaypoints())
+        val controller = createController(coordinator)
+        controller.setAdvanceArmed(true)
+
+        val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 1)
+        val job = controller.bind(fixes, this)
+        advanceUntilIdle()
+
+        job.cancel()
+        advanceUntilIdle()
+        coordinator.advanceToNextLeg()
+        advanceUntilIdle()
+
+        val snapshot = controller.snapshot()
+        assertEquals(true, snapshot.isArmed)
+        assertEquals(0, controller.racingState.value.currentLegIndex)
+    }
+
     private fun sampleWaypoints(): List<SearchWaypoint> = listOf(
         SearchWaypoint(id = "start", title = "Start", subtitle = "", lat = 0.0, lon = 0.0),
         SearchWaypoint(id = "tp1", title = "TP1", subtitle = "", lat = 0.0, lon = 0.1),
@@ -113,7 +134,7 @@ class TaskNavigationControllerTest {
             taskEnginePersistenceService = null,
             racingTaskEngine = null,
             aatTaskEngine = null,
-            racingTaskManager = RacingTaskManager(null),
-            aatTaskManager = AATTaskManager(null)
+            racingTaskManager = RacingTaskManager(),
+            aatTaskManager = AATTaskManager()
         )
 }

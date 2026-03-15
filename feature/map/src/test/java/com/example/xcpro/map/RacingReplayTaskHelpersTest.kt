@@ -81,8 +81,8 @@ class RacingReplayTaskHelpersTest {
             taskEnginePersistenceService = null,
             racingTaskEngine = null,
             aatTaskEngine = null,
-            racingTaskManager = RacingTaskManager(null),
-            aatTaskManager = AATTaskManager(null)
+            racingTaskManager = RacingTaskManager(),
+            aatTaskManager = AATTaskManager()
         )
 
     private fun searchWaypoint(id: String, lat: Double, lon: Double): SearchWaypoint =

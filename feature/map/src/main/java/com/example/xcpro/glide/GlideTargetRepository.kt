@@ -1,8 +1,8 @@
 package com.example.xcpro.glide
 
 import com.example.xcpro.tasks.TaskNavigationController
-import com.example.xcpro.tasks.TaskRepository
-import com.example.xcpro.tasks.TaskUiState
+import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.RacingAltitudeReference
 import com.example.xcpro.tasks.core.RacingFinishCustomParams
 import com.example.xcpro.tasks.core.TaskType
@@ -54,22 +54,22 @@ internal data class GlideTargetSnapshot(
 
 @ViewModelScoped
 class GlideTargetRepository @Inject constructor(
-    taskRepository: TaskRepository,
+    taskManager: TaskManagerCoordinator,
     taskNavigationController: TaskNavigationController
 ) {
     internal val finishTarget: Flow<GlideTargetSnapshot> = combine(
-        taskRepository.state,
+        taskManager.taskSnapshotFlow,
         taskNavigationController.racingState,
         ::resolveFinishTarget
     ).distinctUntilChanged()
 }
 
 internal fun resolveFinishTarget(
-    taskState: TaskUiState,
+    taskSnapshot: TaskRuntimeSnapshot,
     navigationState: RacingNavigationState
 ): GlideTargetSnapshot {
-    val task = taskState.task
-    if (taskState.taskType != TaskType.RACING || task.waypoints.size < 2) {
+    val task = taskSnapshot.task
+    if (taskSnapshot.taskType != TaskType.RACING || task.waypoints.size < 2) {
         return GlideTargetSnapshot()
     }
 

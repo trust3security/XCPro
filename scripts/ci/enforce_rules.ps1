@@ -257,6 +257,74 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "MapLibre imports in task managers" -RgArgs $taskManagerMapLibreImportsArgs
 
+    # 8A) Phase-5 guard: no production MapLibre imports remain anywhere in feature:tasks.
+    $taskFeatureMapLibreImportsArgs = @(
+        "-n",
+        "^import\s+org\.maplibre\.android",
+        "--glob", "feature/tasks/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Phase-5 guard: MapLibre imports remain in feature:tasks" -RgArgs $taskFeatureMapLibreImportsArgs
+
+    # 8B) Phase-5 guard: feature:tasks must not reintroduce the MapLibre dependency.
+    $taskFeatureMapLibreDependencyArgs = @(
+        "-n",
+        "libs\.maplibre\.android",
+        "--glob", "feature/tasks/build.gradle.kts"
+    )
+    Assert-NoMatches -Name "Phase-5 guard: feature:tasks MapLibre dependency reintroduced" -RgArgs $taskFeatureMapLibreDependencyArgs
+
+    # 8C) Follow-on guard: task gesture runtime owners must stay out of feature:map.
+    $taskGestureRuntimeOwnersInMapArgs = @(
+        "-n",
+        "(interface\s+TaskGestureHandler\b|object\s+TaskGestureHandlerFactory\b|object\s+NoOpTaskGestureHandler\b|class\s+AatGestureHandler\b|class\s+AATMapCoordinateConverter\b|object\s+AATMapCoordinateConverterFactory\b)",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/gestures/*.kt",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/gestures/*.kt",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/*.kt"
+    )
+    Assert-NoMatches -Name "Follow-on guard: task gesture runtime owners reintroduced in feature:map" -RgArgs $taskGestureRuntimeOwnersInMapArgs
+
+    # 8D) Legacy cleanup guard: removed AAT overlay/manager stack must not return in feature:map.
+    $legacyAatOverlayStackArgs = @(
+        "-n",
+        "(class\s+AATInteractiveTurnpointManager\b|fun\s+rememberAATInteractiveTurnpointManager\b|fun\s+AATInteractiveTurnpointIntegration\b|class\s+AATMapInteractionHandler\b|fun\s+rememberAATMapInteractionHandler\b|class\s+AATTargetPointDragHandler\b|fun\s+rememberAATTargetPointDragHandler\b|class\s+AATEditModeStateManager\b|fun\s+rememberAATEditModeState\b|fun\s+AATInteractiveOverlay\b|fun\s+AATDisplayOverlay\b|object\s+AATOverlayFactory\b|fun\s+AATLongPressOverlay\b|fun\s+AATEditModeOverlay\b|fun\s+AATMapVisualIndicators\b|fun\s+AnimatedTargetPointIndicator\b|fun\s+EditModeStatusIndicator\b)",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/**/*.kt"
+    )
+    Assert-NoMatches -Name "Legacy AAT overlay/manager stack reintroduced in feature:map" -RgArgs $legacyAatOverlayStackArgs
+
+    # 8E) Phase-1A guard: feature:map must not reintroduce the General Settings host/registry.
+    $mapGeneralSettingsHostArgs = @(
+        "-n",
+        "(fun\s+SettingsScreen\b|fun\s+GeneralSettingsSheetHost\b|enum\s+class\s+GeneralSubSheet\b|fun\s+GeneralSettingsCategoryGrid\b|fun\s+GeneralSettingsSubSheetContent\b|fun\s+closeGeneralToMap\b|fun\s+closeGeneralToDrawer\b)",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/**/*.kt"
+    )
+    Assert-NoMatches -Name "Phase-1A guard: General Settings host/registry reintroduced in feature:map" -RgArgs $mapGeneralSettingsHostArgs
+
+    # 8F) Phase-3A guard: owner feature settings wrappers and settings-side owners must not drift back into feature:map.
+    $mapOwnerSettingsWrappersArgs = @(
+        "-n",
+        "(fun\s+ForecastSettingsScreen\b|fun\s+WeatherSettingsScreen\b|fun\s+WeatherSettingsSheet\b|fun\s+UnitsSettingsScreen\b|class\s+UnitsSettingsViewModel\b|fun\s+ThermallingSettingsScreen\b|fun\s+ThermallingSettingsSubSheet\b|class\s+ThermallingSettingsViewModel\b|class\s+ThermallingSettingsUseCase\b|data\s+class\s+ThermallingSettingsUiState\b|fun\s+PolarSettingsScreen\b|class\s+GliderViewModel\b|class\s+GliderUseCase\b|object\s+PolarCalculator\b|interface\s+StillAirSinkProvider\b|class\s+PolarStillAirSinkProvider\b|object\s+GlidePolarMetricsResolver\b|fun\s+LayoutScreen\b|class\s+LayoutViewModel\b|class\s+LayoutPreferencesUseCase\b|data\s+class\s+LayoutUiState\b|fun\s+ColorsScreen\b|class\s+ColorsViewModel\b|class\s+ThemePreferencesUseCase\b|fun\s+HawkVarioSettingsScreen\b|class\s+HawkVarioSettingsViewModel\b|class\s+HawkVarioSettingsUseCase\b)",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/**/*.kt",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/glider/**/*.kt",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/ui/theme/**/*.kt"
+    )
+    Assert-NoMatches -Name "Phase-2 guard: owner settings wrappers reintroduced in feature:map" -RgArgs $mapOwnerSettingsWrappersArgs
+
+    # 8G) Phase-3B.2 guard: generic color-picker UI must stay out of feature:map.
+    $mapGenericColorPickerArgs = @(
+        "-n",
+        "(fun\s+ModernColorPicker\b|internal\s+fun\s+CompactColorPreviewHeader\b|internal\s+fun\s+drawCompactHueRing\b|internal\s+fun\s+CompactColorInputMethods\b)",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/ui/components/ColorPicker*.kt"
+    )
+    Assert-NoMatches -Name "Phase-3B.2 guard: generic color-picker UI reintroduced in feature:map" -RgArgs $mapGenericColorPickerArgs
+
+    # 8H) Parent Phase-2A guard: HAWK runtime owners and preview-contract types must stay out of feature:map.
+    $mapHawkRuntimeOwnersArgs = @(
+        "-n",
+        "(class\s+HawkVarioRepository\b|class\s+HawkConfigRepository\b|class\s+HawkVarioUseCase\b|class\s+HawkVarioEngine\b|data\s+class\s+HawkOutput\b|data\s+class\s+HawkConfig\b|class\s+AdaptiveAccelTrust\b|object\s+BaroQc\b|class\s+RollingVarianceWindow\b|data\s+class\s+HawkVarioUiState\b|enum\s+class\s+HawkConfidence\b|interface\s+HawkVarioPreviewReadPort\b)",
+        "--glob", "feature/map/src/main/java/com/example/xcpro/hawk/*.kt"
+    )
+    Assert-NoMatches -Name "Parent Phase-2A guard: HAWK runtime owners reintroduced in feature:map" -RgArgs $mapHawkRuntimeOwnersArgs
+
     # 9) Task manager boundary: no legacy map-render/edit APIs on task managers.
     $taskManagerMapApiArgs = @(
         "-n",
@@ -342,6 +410,7 @@ if ($runHygieneRules) {
         "-n",
         "(@Ignore|@Disabled)",
         "--glob", "feature/map/src/test/java/**/*.kt",
+        "--glob", "feature/map-runtime/src/test/java/**/*.kt",
         "--glob", "feature/tasks/src/test/java/**/*.kt",
         "--glob", "app/src/test/java/**/*.kt",
         "--glob", "app/src/androidTest/java/**/*.kt"
@@ -471,6 +540,25 @@ $legacyHelperFilesArgs = @(
 )
 Assert-NoMatches -Name "Legacy dead helper files reintroduced (AirspaceGestureMath/KeyholeVerification)" -RgArgs $legacyHelperFilesArgs
 
+# 27A) Parent Phase-4 guard: dead map-layer distance-circles overlay path must not return.
+$distanceCirclesOverlayResidualArgs = @(
+    "-n",
+    "(class\s+DistanceCirclesOverlay\b|\bdistanceCirclesOverlay\b)",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/**/*.kt"
+)
+Assert-NoMatches -Name "Parent Phase-4 guard: dead DistanceCirclesOverlay path reintroduced" -RgArgs $distanceCirclesOverlayResidualArgs
+
+# 27B) Parent Phase-4 guard: touched shell runtime files must keep using AppLogger.
+$mapShellRawLogArgs = @(
+    "-n",
+    "\bLog\.[dwei]\(",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt",
+    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapInitializerDataLoader.kt"
+)
+Assert-NoMatches -Name "Parent Phase-4 guard: raw Log reintroduced in hardened map shell files" -RgArgs $mapShellRawLogArgs
+
 # 28) Closed residual guard: AATEditGeometry must remain meter-only.
 $aatEditGeometryKmWrappersArgs = @(
     "-n",
@@ -527,8 +615,8 @@ Assert-NoMatches -Name "#18 guard: legacy AAT point-type wrapper route reintrodu
 $aatGestureRadiusKmContractArgs = @(
     "-n",
     "(\bradiusKm\b|turnpointRadiusKm\b)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt",
+    "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt",
+    "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt",
     "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt",
     "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt"
 )
@@ -732,12 +820,7 @@ if ($runLineBudgetRules) {
     $globalDefaultLineBudgetExceptionPaths = @(
         # Keep synchronized with active time-boxed exceptions in
         # docs/ARCHITECTURE/KNOWN_DEVIATIONS.md.
-        "app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt",
-        "dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt",
-        "feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt",
-        "feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt",
-        "feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt",
-        "feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt"
+        "feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt"
     )
     $globalDefaultLineBudgetExceptionSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($exceptionPath in $globalDefaultLineBudgetExceptionPaths) {
@@ -823,7 +906,7 @@ Assert-MaxLines `
     -MaxLines 320
 Assert-MaxLines `
     -Name "BlueLocationOverlay line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingNavigationEngine line budget" `
@@ -886,22 +969,6 @@ Assert-MaxLines `
     -FilePath "feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtonItems.kt" `
     -MaxLines 350
 Assert-MaxLines `
-    -Name "AATEditModeOverlay line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeOverlay.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "AATEditModeHeader line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeHeader.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "AATEditModeInfoCard line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeInfoCard.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "AATEditModeActions line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATEditModeActions.kt" `
-    -MaxLines 350
-Assert-MaxLines `
     -Name "SectorAreaCalculator line budget" `
     -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaCalculator.kt" `
     -MaxLines 350
@@ -931,11 +998,11 @@ Assert-MaxLines `
     -MaxLines 350
 Assert-MaxLines `
     -Name "SnailTrailOverlay line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "SnailTrailTailRenderer line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailTailRenderer.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/trail/SnailTrailTailRenderer.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATManageList line budget" `
@@ -962,24 +1029,12 @@ Assert-MaxLines `
     -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATPathOptimizerSupport.kt" `
     -MaxLines 350
 Assert-MaxLines `
-    -Name "AATInteractiveTurnpointManager line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "AATInteractiveTurnpointIntegration line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointIntegration.kt" `
-    -MaxLines 350
-Assert-MaxLines `
     -Name "AATManageListTypeInference line budget" `
     -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATManageListTypeInference.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATAreaTapDetector line budget" `
     -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/map/AATAreaTapDetector.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "AATMapInteractionHandler line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATMapInteractionHandler.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATMovablePointManager line budget" `
@@ -1000,14 +1055,6 @@ Assert-MaxLines `
 Assert-MaxLines `
     -Name "AATTargetPointPinRenderer line budget" `
     -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATTargetPointPinRenderer.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "AATMapVisualIndicators line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATMapVisualIndicators.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "AATMapVisualStatusIndicators line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATMapVisualStatusIndicators.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "FAIComplianceRules line budget" `
@@ -1085,7 +1132,7 @@ Assert-MaxLines `
     -MaxLines 300
 Assert-MaxLines `
     -Name "Top20: CalculateFlightMetricsUseCaseTest line budget" `
-    -FilePath "feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt" `
+    -FilePath "feature/flight-runtime/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt" `
     -MaxLines 450
 Assert-MaxLines `
     -Name "Top20: OgnThermalRepositoryTest line budget" `
@@ -1121,11 +1168,11 @@ Assert-MaxLines `
     -MaxLines 300
 Assert-MaxLines `
     -Name "Top20: WeatherSettingsScreen line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt" `
+    -FilePath "feature/weather/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt" `
     -MaxLines 300
 Assert-MaxLines `
     -Name "Top20: CalculateFlightMetricsUseCase line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt" `
+    -FilePath "feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: AdsbSettingsScreen line budget" `
@@ -1137,8 +1184,8 @@ Assert-MaxLines `
     -MaxLines 500
     Assert-MaxLines `
         -Name "Top20: HawkVarioSettingsScreen line budget" `
-        -FilePath "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt" `
-        -MaxLines 300
+        -FilePath "feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntime.kt" `
+        -MaxLines 450
 }
 
 if ($script:HadFailures) {

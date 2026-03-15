@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.map.trail.SnailTrailOverlay
+import com.example.xcpro.map.trail.SnailTrailRuntimeState
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.plugins.scalebar.ScaleBarPlugin
@@ -10,11 +11,10 @@ import org.maplibre.android.plugins.scalebar.ScaleBarWidget
  * Runtime-only map handles owned by the UI layer.
  * UI state belongs in MapStateStore; this class caches MapLibre objects/overlays only.
  */
-class MapScreenState {
+class MapScreenState : MapScaleBarRuntimeState, SnailTrailRuntimeState {
     var mapLibreMap: MapLibreMap? = null
-    var mapView: MapView? = null
-    var blueLocationOverlay: BlueLocationOverlay? = null
-    var distanceCirclesOverlay: DistanceCirclesOverlay? = null
+    override var mapView: MapView? = null
+    override var blueLocationOverlay: BlueLocationOverlay? = null
     var ognTrafficOverlay: OgnTrafficOverlayHandle? = null
     var ognTargetRingOverlay: OgnTargetRingOverlayHandle? = null
     var ognTargetLineOverlay: OgnTargetLineOverlayHandle? = null
@@ -25,8 +25,8 @@ class MapScreenState {
     var forecastWindOverlay: ForecastRasterOverlay? = null
     var skySightSatelliteOverlay: SkySightSatelliteOverlay? = null
     var weatherRainOverlay: WeatherRainOverlay? = null
-    var snailTrailOverlay: SnailTrailOverlay? = null
-    var scaleBarPlugin: ScaleBarPlugin? = null
-    var scaleBarWidget: ScaleBarWidget? = null
+    override var snailTrailOverlay: SnailTrailOverlay? = null
+    override var scaleBarPlugin: ScaleBarPlugin? = null
+    override var scaleBarWidget: ScaleBarWidget? = null
     internal var scaleBarController: MapScaleBarController? = null
 }

@@ -1,26 +1,16 @@
 package com.example.xcpro.tasks.aat
 
-import android.content.Context
 import com.example.xcpro.common.waypoint.SearchWaypoint
-import com.example.xcpro.tasks.core.AATTaskTimeCustomParams
-import com.example.xcpro.tasks.core.AATWaypointCustomParams
 import com.example.xcpro.tasks.core.Task
-import com.example.xcpro.tasks.core.TaskWaypoint
-import com.example.xcpro.tasks.core.WaypointRole
-import java.time.Duration
-
 import com.example.xcpro.tasks.aat.models.AATWaypoint
-import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
 import com.example.xcpro.tasks.aat.calculations.AATMathUtils
-import com.example.xcpro.tasks.aat.models.getAuthorityRadiusMeters
-
 import com.example.xcpro.tasks.aat.geometry.AATGeometryGenerator
-import com.example.xcpro.tasks.aat.persistence.AATTaskFileIO
 import com.example.xcpro.tasks.aat.navigation.AATNavigationManager
 import com.example.xcpro.tasks.aat.interaction.AATEditModeManager
 import com.example.xcpro.tasks.aat.validation.AATValidationBridge
 import com.example.xcpro.tasks.aat.waypoints.AATWaypointManager
+import java.time.Duration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,17 +22,16 @@ data class SimpleAATTask(
     val maximumTime: Duration? = null
 )
 
-class AATTaskManager(val context: Context? = null) {
+class AATTaskManager {
 
     private val geometryGenerator = AATGeometryGenerator()
-    private val fileIO = context?.let { AATTaskFileIO(it) }
     private val navigationManager = AATNavigationManager()
     private val editModeManager = AATEditModeManager()
     private val validationBridge = AATValidationBridge()
     private val waypointManager = AATWaypointManager()
     private val pointTypeConfigurator = AATPointTypeConfigurator()
     private val validationWrapper = AATTaskValidationWrapper(validationBridge)
-    private val fileOperationsWrapper = AATFileOperationsWrapper(fileIO)
+    private val targetStateMutator = AATTargetStateMutator()
 
     private val aatTaskCalculator = AATTaskCalculator()
 
@@ -65,51 +54,7 @@ class AATTaskManager(val context: Context? = null) {
     val currentAATTask: SimpleAATTask get() = _currentAATTask
     val currentLeg: Int get() = _currentLeg
 
-    fun getCoreTask(): Task {
-        val minTimeSeconds = _currentAATTask.minimumTime.seconds.toDouble()
-        val maxTimeSeconds = _currentAATTask.maximumTime?.seconds?.toDouble()
-        return Task(
-            id = _currentAATTask.id,
-            waypoints = _currentAATTask.waypoints.map { waypoint ->
-                val customParameters = mutableMapOf<String, Any>()
-                AATWaypointCustomParams(
-                    radiusMeters = waypoint.assignedArea.radiusMeters,
-                    innerRadiusMeters = waypoint.assignedArea.innerRadiusMeters,
-                    outerRadiusMeters = waypoint.assignedArea.outerRadiusMeters,
-                    startAngleDegrees = waypoint.assignedArea.startAngleDegrees,
-                    endAngleDegrees = waypoint.assignedArea.endAngleDegrees,
-                    lineWidthMeters = waypoint.assignedArea.lineWidthMeters,
-                    targetLat = waypoint.targetPoint.latitude,
-                    targetLon = waypoint.targetPoint.longitude,
-                    isTargetPointCustomized = waypoint.isTargetPointCustomized
-                ).applyTo(customParameters)
-                AATTaskTimeCustomParams(
-                    minimumTimeSeconds = minTimeSeconds,
-                    maximumTimeSeconds = maxTimeSeconds
-                ).applyTo(customParameters)
-                TaskWaypoint(
-                    id = waypoint.id,
-                    title = waypoint.title,
-                    subtitle = waypoint.subtitle,
-                    lat = waypoint.lat,
-                    lon = waypoint.lon,
-                    role = when (waypoint.role) {
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> WaypointRole.START
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> WaypointRole.TURNPOINT
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> WaypointRole.FINISH
-                    },
-                    customRadius = null,
-                    customRadiusMeters = waypoint.getAuthorityRadiusMeters(),
-                    customPointType = when (waypoint.role) {
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.START -> waypoint.startPointType.name
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.TURNPOINT -> waypoint.turnPointType.name
-                        com.example.xcpro.tasks.aat.models.AATWaypointRole.FINISH -> waypoint.finishPointType.name
-                    },
-                    customParameters = customParameters
-                )
-            }
-        )
-    }
+    fun getCoreTask(): Task = _currentAATTask.toCoreTask()
 
     fun goToPreviousLeg() {
         navigationManager.goToPreviousLeg(_currentAATTask)
@@ -129,13 +74,11 @@ class AATTaskManager(val context: Context? = null) {
 
     fun initializeAATTask(waypoints: List<SearchWaypoint>) {
         _currentAATTask = waypointManager.initializeTask(waypoints)
-        saveAATTask()
     }
 
     fun initializeFromGenericWaypoints(genericWaypoints: List<com.example.xcpro.tasks.core.TaskWaypoint>) {
         _currentAATTask = waypointManager.initializeFromGenericWaypoints(genericWaypoints)
         _currentLeg = 0
-        saveAATTask()
     }
 
     fun initializeFromCoreTask(task: Task, activeLegIndex: Int = 0) {
@@ -145,7 +88,6 @@ class AATTaskManager(val context: Context? = null) {
         } else {
             activeLegIndex.coerceIn(0, _currentAATTask.waypoints.lastIndex)
         }
-        saveAATTask()
     }
 
     fun calculateAATDistanceMeters(): Double {
@@ -164,24 +106,51 @@ class AATTaskManager(val context: Context? = null) {
 
     fun addAATWaypoint(searchWaypoint: SearchWaypoint) {
         _currentAATTask = waypointManager.addWaypoint(_currentAATTask, searchWaypoint)
-        saveAATTask()
     }
 
     fun removeAATWaypoint(index: Int) {
         val (updatedTask, newCurrentLeg) = waypointManager.removeWaypoint(_currentAATTask, _currentLeg, index)
         _currentAATTask = updatedTask
         _currentLeg = newCurrentLeg
-        saveAATTask()
     }
 
     fun updateAATArea(index: Int, newArea: AATAssignedArea) {
         _currentAATTask = waypointManager.updateArea(_currentAATTask, index, newArea)
-        saveAATTask()
     }
 
     fun updateAATTimes(minTime: Duration, maxTime: Duration?) {
         _currentAATTask = waypointManager.updateTimes(_currentAATTask, minTime, maxTime)
-        saveAATTask()
+    }
+
+    fun updateTargetParam(index: Int, targetParam: Double) {
+        applyTaskUpdate(targetStateMutator.updateTargetParam(_currentAATTask, index, targetParam))
+    }
+
+    fun toggleTargetLock(index: Int) {
+        applyTaskUpdate(targetStateMutator.toggleTargetLock(_currentAATTask, index))
+    }
+
+    fun setTargetLock(index: Int, locked: Boolean) {
+        applyTaskUpdate(targetStateMutator.setTargetLock(_currentAATTask, index, locked))
+    }
+
+    fun applyTargetState(
+        index: Int,
+        targetParam: Double,
+        targetLocked: Boolean,
+        targetLat: Double?,
+        targetLon: Double?
+    ) {
+        applyTaskUpdate(
+            targetStateMutator.applyTargetState(
+                task = _currentAATTask,
+                index = index,
+                targetParam = targetParam,
+                targetLocked = targetLocked,
+                targetLat = targetLat,
+                targetLon = targetLon
+            )
+        )
     }
 
     fun updateAATWaypointPointTypeMeters(
@@ -213,7 +182,6 @@ class AATTaskManager(val context: Context? = null) {
 
             currentWaypoints[index] = updatedWaypoint
             _currentAATTask = _currentAATTask.copy(waypoints = currentWaypoints)
-            saveAATTask()
         }
     }
 
@@ -221,27 +189,14 @@ class AATTaskManager(val context: Context? = null) {
     fun clearAATTask() {
         _currentAATTask = SimpleAATTask()
         _currentLeg = 0
-        saveAATTask()
     }
 
     fun reorderAATWaypoints(fromIndex: Int, toIndex: Int) {
         _currentAATTask = waypointManager.reorderWaypoints(_currentAATTask, fromIndex, toIndex)
-        saveAATTask()
     }
 
     fun replaceAATWaypoint(index: Int, newWaypoint: SearchWaypoint) {
         _currentAATTask = waypointManager.replaceWaypoint(_currentAATTask, index, newWaypoint)
-        saveAATTask()
-    }
-
-    fun saveAATTask() {
-        fileOperationsWrapper.saveToPreferences(_currentAATTask)
-    }
-
-    fun loadAATTask(): SimpleAATTask? {
-        return fileOperationsWrapper.loadFromPreferences()?.also { task ->
-            _currentAATTask = task
-        }
     }
 
     fun getAATTaskSummary(): String {
@@ -270,27 +225,6 @@ class AATTaskManager(val context: Context? = null) {
             waypointIndex = _currentLeg,
             waypoints = _currentAATTask.waypoints
         )
-    }
-
-    fun getSavedAATTasks(context: Context): List<String> {
-        return fileOperationsWrapper.getSavedTaskFiles()
-    }
-
-    fun saveAATTask(context: Context, taskName: String): Boolean {
-        return fileOperationsWrapper.saveTaskToFile(_currentAATTask, taskName)
-    }
-
-    fun loadAATTaskFromFile(context: Context, taskName: String): Boolean {
-        return fileOperationsWrapper.loadTaskFromFile(taskName)?.let { task ->
-            _currentAATTask = task
-            _currentLeg = 0
-            saveAATTask()
-            true
-        } ?: false
-    }
-
-    fun deleteAATTask(context: Context, taskName: String): Boolean {
-        return fileOperationsWrapper.deleteTaskFile(taskName)
     }
 
     fun isAATTaskValid(): Boolean = validationWrapper.isTaskValid(_currentAATTask)
@@ -323,10 +257,15 @@ class AATTaskManager(val context: Context? = null) {
 
     fun updateTargetPoint(index: Int, lat: Double, lon: Double) {
         editModeManager.updateTargetPoint(_currentAATTask, index, lat, lon)?.let { updatedWaypoint ->
-            val updatedWaypoints = _currentAATTask.waypoints.toMutableList()
-            updatedWaypoints[index] = updatedWaypoint
-            _currentAATTask = _currentAATTask.copy(waypoints = updatedWaypoints)
-            saveAATTask()
+            applyTaskUpdate(targetStateMutator.applyEditedTargetPoint(_currentAATTask, index, updatedWaypoint))
         }
     }
+
+    private fun applyTaskUpdate(updatedTask: SimpleAATTask) {
+        if (updatedTask == _currentAATTask) {
+            return
+        }
+        _currentAATTask = updatedTask
+    }
+
 }

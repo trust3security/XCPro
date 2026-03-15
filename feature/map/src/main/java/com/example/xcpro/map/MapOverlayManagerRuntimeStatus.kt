@@ -18,11 +18,6 @@ internal fun buildMapOverlayManagerStatus(
         append("MapOverlayManager Status:\n")
         append("- Distance Circles: $showDistanceCircles\n")
         append(
-            "- Distance Circles Overlay: ${
-                if (mapState.distanceCirclesOverlay != null) "Initialized" else "Not Initialized"
-            }\n"
-        )
-        append(
             "- Blue Location Overlay: ${
                 if (mapState.blueLocationOverlay != null) "Initialized" else "Not Initialized"
             }\n"

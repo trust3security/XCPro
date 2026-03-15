@@ -17,6 +17,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     kotlinOptions {
@@ -38,6 +39,7 @@ dependencies {
     implementation(project(":core:geometry"))
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
+    implementation(project(":feature:flight-runtime"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

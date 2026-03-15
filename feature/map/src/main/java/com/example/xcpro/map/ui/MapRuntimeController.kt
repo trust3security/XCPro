@@ -1,6 +1,6 @@
 package com.example.xcpro.map.ui
 
-import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.MapCommand
 import com.example.xcpro.map.MapStyleUrlResolver
 import com.example.xcpro.map.MapOverlayManager
@@ -59,16 +59,14 @@ class MapRuntimeController(
                 val isCurrentMap = map === currentMap && mapGeneration == activeGeneration
                 val isCurrentRequest = styleRequestToken == requestToken
                 if (!isCurrentMap || !isCurrentRequest) {
-                    if (com.example.xcpro.map.BuildConfig.DEBUG) {
-                        Log.d(TAG, "Ignoring stale map style callback for $styleName")
-                    }
+                    AppLogger.d(TAG, "Ignoring stale map style callback for $styleName")
                     return@setStyle
                 }
-                Log.d(TAG, "Map style loaded: $styleName")
+                AppLogger.d(TAG, "Map style loaded: $styleName")
                 overlayManager.onMapStyleChanged(currentMap)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set map style: $styleName", e)
+            AppLogger.e(TAG, "Failed to set map style: $styleName", e)
         }
     }
 }

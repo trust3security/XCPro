@@ -84,7 +84,9 @@ Provide a **pilot-facing TAS card** and a **stable TAS estimate** using **phone 
 2. For strict phone-only mode, rely on circling wind + hold.
 
 ## UI plan: add TAS card
-1. Add a new card definition in `dfcards-library/src/main/java/com/example/dfcards/CardLibraryCatalog.kt`:
+1. Add a new card definition in the appropriate category-owned catalog file under
+   `dfcards-library/src/main/java/com/example/dfcards/` and keep
+   `CardLibraryCatalog.kt` as the aggregation owner:
    - `id = "tas"`
    - `title = "TAS"`
    - `unit = "kt"` (actual unit conversion already comes from `UnitsPreferences`)

@@ -1,32 +1,27 @@
 package com.example.xcpro.igc.data
 
 import com.example.xcpro.igc.domain.IgcTaskDeclarationStartSnapshot
-import com.example.xcpro.tasks.TaskRepository
+import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
-import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
-import com.example.xcpro.tasks.domain.logic.TaskValidator
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class IgcTaskDeclarationSourceTest {
 
     @Test
     fun snapshotForStart_returnsDeclarationForRacingTaskFixture() {
-        val repository = TaskRepository(
-            validator = TaskValidator(),
-            proximityEvaluator = TaskProximityEvaluator()
+        val source = TaskRepositoryIgcTaskDeclarationSource(
+            taskCoordinator = coordinatorWith(task = racingTaskFixture())
         )
-        repository.updateFrom(
-            task = racingTaskFixture(),
-            taskType = TaskType.RACING,
-            activeIndex = 0
-        )
-        val source = TaskRepositoryIgcTaskDeclarationSource(repository)
 
         val snapshot = source.snapshotForStart(
             sessionId = 1L,
@@ -43,28 +38,23 @@ class IgcTaskDeclarationSourceTest {
 
     @Test
     fun snapshotForStart_returnsInvalidWhenTaskHasTooFewWaypoints() {
-        val repository = TaskRepository(
-            validator = TaskValidator(),
-            proximityEvaluator = TaskProximityEvaluator()
-        )
-        repository.updateFrom(
-            task = Task(
-                id = "task-invalid",
-                waypoints = listOf(
-                    TaskWaypoint(
-                        id = "wp-start",
-                        title = "START",
-                        subtitle = "",
-                        lat = -33.865,
-                        lon = 151.209,
-                        role = WaypointRole.START
+        val source = TaskRepositoryIgcTaskDeclarationSource(
+            taskCoordinator = coordinatorWith(
+                task = Task(
+                    id = "task-invalid",
+                    waypoints = listOf(
+                        TaskWaypoint(
+                            id = "wp-start",
+                            title = "START",
+                            subtitle = "",
+                            lat = -33.865,
+                            lon = 151.209,
+                            role = WaypointRole.START
+                        )
                     )
                 )
-            ),
-            taskType = TaskType.RACING,
-            activeIndex = 0
+            )
         )
-        val source = TaskRepositoryIgcTaskDeclarationSource(repository)
 
         val snapshot = source.snapshotForStart(
             sessionId = 2L,
@@ -78,36 +68,31 @@ class IgcTaskDeclarationSourceTest {
 
     @Test
     fun snapshotForStart_returnsInvalidWhenWaypointCoordinatesAreOutOfRange() {
-        val repository = TaskRepository(
-            validator = TaskValidator(),
-            proximityEvaluator = TaskProximityEvaluator()
-        )
-        repository.updateFrom(
-            task = Task(
-                id = "task-invalid-coords",
-                waypoints = listOf(
-                    TaskWaypoint(
-                        id = "wp-start",
-                        title = "START",
-                        subtitle = "",
-                        lat = -33.865,
-                        lon = 151.209,
-                        role = WaypointRole.START
-                    ),
-                    TaskWaypoint(
-                        id = "wp-bad",
-                        title = "BAD",
-                        subtitle = "",
-                        lat = 96.0,
-                        lon = 151.250,
-                        role = WaypointRole.TURNPOINT
+        val source = TaskRepositoryIgcTaskDeclarationSource(
+            taskCoordinator = coordinatorWith(
+                task = Task(
+                    id = "task-invalid-coords",
+                    waypoints = listOf(
+                        TaskWaypoint(
+                            id = "wp-start",
+                            title = "START",
+                            subtitle = "",
+                            lat = -33.865,
+                            lon = 151.209,
+                            role = WaypointRole.START
+                        ),
+                        TaskWaypoint(
+                            id = "wp-bad",
+                            title = "BAD",
+                            subtitle = "",
+                            lat = 96.0,
+                            lon = 151.250,
+                            role = WaypointRole.TURNPOINT
+                        )
                     )
                 )
-            ),
-            taskType = TaskType.RACING,
-            activeIndex = 0
+            )
         )
-        val source = TaskRepositoryIgcTaskDeclarationSource(repository)
 
         val snapshot = source.snapshotForStart(
             sessionId = 3L,
@@ -149,5 +134,19 @@ class IgcTaskDeclarationSourceTest {
                 )
             )
         )
+    }
+
+    private fun coordinatorWith(task: Task): TaskManagerCoordinator {
+        val taskCoordinator: TaskManagerCoordinator = mock()
+        whenever(taskCoordinator.taskSnapshotFlow).thenReturn(
+            MutableStateFlow(
+                TaskRuntimeSnapshot(
+                    taskType = TaskType.RACING,
+                    task = task,
+                    activeLeg = 0
+                )
+            )
+        )
+        return taskCoordinator
     }
 }

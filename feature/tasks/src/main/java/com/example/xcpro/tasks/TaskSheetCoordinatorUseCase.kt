@@ -17,6 +17,8 @@ import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import java.time.Duration
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 data class TaskCoordinatorSnapshot(
     val task: Task,
@@ -28,15 +30,21 @@ data class TaskCoordinatorSnapshot(
 class TaskSheetCoordinatorUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator
 ) {
-    fun snapshot(): TaskCoordinatorSnapshot = TaskCoordinatorSnapshot(
-        task = taskManager.currentTask,
-        taskType = taskManager.taskType,
-        activeLeg = taskManager.currentLeg,
-        racingValidationProfile = taskManager.getRacingValidationProfile()
-    )
+    val snapshotFlow: Flow<TaskCoordinatorSnapshot> = taskManager.taskSnapshotFlow.map { snapshot ->
+        TaskCoordinatorSnapshot(
+            task = snapshot.task,
+            taskType = snapshot.taskType,
+            activeLeg = snapshot.activeLeg,
+            racingValidationProfile = taskManager.getRacingValidationProfile()
+        )
+    }
 
     fun setProximityHandler(handler: (Boolean, Boolean) -> Unit) {
         taskManager.setProximityHandler(handler)
+    }
+
+    fun clearProximityHandler() {
+        taskManager.clearProximityHandler()
     }
 
     fun addLegChangeListener(handler: (Int) -> Unit) {
@@ -159,6 +167,34 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
 
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
         taskManager.updateAATTargetPoint(index, lat, lon)
+    }
+
+    fun setAATTargetParam(index: Int, targetParam: Double) {
+        taskManager.setAATTargetParam(index, targetParam)
+    }
+
+    fun toggleAATTargetLock(index: Int) {
+        taskManager.toggleAATTargetLock(index)
+    }
+
+    fun setAATTargetLock(index: Int, locked: Boolean) {
+        taskManager.setAATTargetLock(index, locked)
+    }
+
+    fun applyAATTargetState(
+        index: Int,
+        targetParam: Double,
+        targetLocked: Boolean,
+        targetLat: Double?,
+        targetLon: Double?
+    ) {
+        taskManager.applyAATTargetState(
+            index = index,
+            targetParam = targetParam,
+            targetLocked = targetLocked,
+            targetLat = targetLat,
+            targetLon = targetLon
+        )
     }
 
     fun updateAATArea(index: Int, radiusMeters: Double) {

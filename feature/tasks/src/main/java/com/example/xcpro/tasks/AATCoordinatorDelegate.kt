@@ -74,6 +74,38 @@ internal class AATCoordinatorDelegate(
     fun updateTargetPoint(index: Int, lat: Double, lon: Double) =
         editController.updateTargetPoint(index, lat, lon)
 
+    fun updateTargetParam(index: Int, targetParam: Double) {
+        taskManager.updateTargetParam(index, targetParam)
+        log("Updated AAT target param at index $index to $targetParam")
+    }
+
+    fun toggleTargetLock(index: Int) {
+        taskManager.toggleTargetLock(index)
+        log("Toggled AAT target lock at index $index")
+    }
+
+    fun setTargetLock(index: Int, locked: Boolean) {
+        taskManager.setTargetLock(index, locked)
+        log("Set AAT target lock at index $index to $locked")
+    }
+
+    fun applyTargetState(
+        index: Int,
+        targetParam: Double,
+        targetLocked: Boolean,
+        targetLat: Double?,
+        targetLon: Double?
+    ) {
+        taskManager.applyTargetState(
+            index = index,
+            targetParam = targetParam,
+            targetLocked = targetLocked,
+            targetLat = targetLat,
+            targetLon = targetLon
+        )
+        log("Applied AAT target state at index $index")
+    }
+
     fun updateParameters(minimumTime: Duration, maximumTime: Duration) {
         taskManager.updateAATTimes(minimumTime, maximumTime)
         log("Updated AAT parameters - min: ${minimumTime.toHours()}h, max: ${maximumTime.toHours()}h")

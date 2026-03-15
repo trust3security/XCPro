@@ -156,6 +156,36 @@ class TaskPersistSerializerFidelityTest {
     }
 
     @Test
+    fun `serialize falls back to waypoint canonical target state when overlays are absent`() {
+        val waypoint = TaskWaypoint(
+            id = "tp1",
+            title = "TP1",
+            subtitle = "",
+            lat = 45.0,
+            lon = 7.0,
+            role = WaypointRole.TURNPOINT,
+            customParameters = mapOf(
+                TaskWaypointParamKeys.TARGET_PARAM to 0.42,
+                TaskWaypointParamKeys.TARGET_LOCKED to true,
+                TaskWaypointParamKeys.TARGET_LAT to 45.12,
+                TaskWaypointParamKeys.TARGET_LON to 7.12
+            )
+        )
+
+        val serialized = TaskPersistSerializer.serialize(
+            task = Task(id = "canonical-target-fallback", waypoints = listOf(waypoint)),
+            taskType = TaskType.AAT,
+            targets = emptyList()
+        )
+        val persistedWaypoint = TaskPersistSerializer.deserialize(serialized).waypoints.single()
+
+        assertEquals(0.42, persistedWaypoint.targetParam ?: Double.NaN, 1e-9)
+        assertEquals(true, persistedWaypoint.targetLocked)
+        assertEquals(45.12, persistedWaypoint.targetLat ?: Double.NaN, 1e-9)
+        assertEquals(7.12, persistedWaypoint.targetLon ?: Double.NaN, 1e-9)
+    }
+
+    @Test
     fun `toTask converts legacy km radius into canonical meters and clears legacy field`() {
         val persisted = TaskPersistSerializer.PersistedTask(
             taskId = "legacy-km",

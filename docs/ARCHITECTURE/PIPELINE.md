@@ -28,7 +28,7 @@ Gate intent:
 Sensors
   -> SensorRegistry (Android listeners, timestamps)
   -> UnifiedSensorManager (StateFlow per sensor)
-  -> FlightDataCalculatorEngine (fusion + metrics + audio)
+  -> FlightDataCalculatorEngine (fusion + metrics + audio-port wiring)
   -> SensorFusionRepository.flightDataFlow
   -> VarioServiceManager
   -> FlightDataRepository (SSOT, Source gating)
@@ -43,7 +43,10 @@ Sensors
   -> UI overlays + dfcards FlightDataViewModel (cards)
 
 Audio taps the pipeline inside FlightDataCalculatorEngine:
-  FlightDataCalculatorEngine -> VarioAudioController -> VarioAudioEngine
+  FlightDataCalculatorEngine
+    -> VarioAudioControllerPort (from `feature:flight-runtime`)
+    -> VarioAudioController (variometer implementation)
+    -> VarioAudioEngine
 
 ## 1) Sensor Ingestion (Live)
 
@@ -73,18 +76,24 @@ DI bindings:
 ## 2) Fusion + Metrics (Live)
 
 Fusion entry:
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt`
   - builds a `SensorFusionRepository` using a `SensorDataSource`.
   - selects source-aware airspeed feed (`@LiveSource` vs `@ReplaySource` `AirspeedDataSource`)
     and injects it into the fusion engine.
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
+  - injects the shared runtime ports:
+    - `StillAirSinkProvider`
+    - `VarioAudioControllerFactory`
+    - `HawkAudioVarioReadPort`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
   - thin wrapper around `FlightDataCalculatorEngine`.
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-  - owns fusion loops, filters, metrics use case, and audio controller.
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
+  - owns fusion loops, filters, metrics use case, and the shared audio port.
   - caches latest external/replay airspeed sample from `AirspeedDataSource`.
+  - consumes HAWK audio vario samples through `HawkAudioVarioReadPort` rather
+    than depending on the full HAWK repository.
 
 Loops (two decoupled loops):
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
   - High-rate baro + accel loop (50 Hz target):
     - `updateVarioFilter(baro, accel)`
     - updates vario filters, baro altitude, TE fusion inputs, and audio.
@@ -94,13 +103,13 @@ Loops (two decoupled loops):
     - updates cached GPS, GPS vario, and emits a frame if baro is stale.
 
 Filters and vario:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataFilters.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataFilters.kt`
   - pressure Kalman + baro filter.
-- `feature/map/src/main/java/com/example/xcpro/sensors/VarioSuite.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/VarioSuite.kt`
   - optimized/legacy/raw/gps/complementary vario implementations.
 
 Metrics use case:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
   - TE/netto, display smoothing, circling detection, LD, thermal metrics.
   - Flight-only polar-derived metrics now include:
     - measured glide ratio (`currentLD`)
@@ -127,7 +136,7 @@ Mapping to SSOT model:
   - defines `CompleteFlightData` (SSOT for calculated flight data).
 
 Emission:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
   - builds `FlightDisplaySnapshot`, maps to `CompleteFlightData`,
     and publishes to `flightDataFlow`.
   - forwards cached external/replay airspeed sample into `FlightMetricsRequest`.
@@ -228,6 +237,57 @@ ViewModel:
     existing `setFlightMode(...)` and map zoom target actions.
   - Exposes a separate `feature:weglide`-owned WeGlide prompt flow for UI rendering,
     instead of threading the prompt through `MapUiState`.
+- `feature/profile/src/main/java/com/example/xcpro/thermalling/ThermallingModePreferencesRepository.kt`
+  - Profile-owned SSOT for thermalling automation settings consumed by both the
+    thermalling settings UI and the live thermalling runtime binding in
+    `MapScreenViewModel`.
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettingsScreen.kt`
+  - Profile owns the thermalling settings route shell, screen-local ViewModel,
+    and shared settings content.
+- `feature/profile/src/main/java/com/example/ui1/screens/ThermallingSettingsSubSheet.kt`
+  - Profile owns the thermalling General Settings sub-sheet entrypoint used by
+    the app-owned General Settings host.
+- `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
+  - Profile-owned SSOT for glider configuration and profile-scoped glider
+    persistence used by both the polar settings surface and live glide runtime.
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/PolarSettingsScreen.kt`
+  - Profile owns the polar settings route shell, polar cards, and the
+    settings-side `GliderViewModel` / `GliderUseCase`.
+- `feature/flight-runtime/src/main/java/com/example/xcpro/glider/StillAirSinkProvider.kt`
+  - Shared runtime sink/bounds port used by flight metrics and glide runtime.
+- `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt`
+  - Profile-owned implementation of the shared sink port backed by the glider
+    repository and polar settings state.
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/Layout.kt`
+  - Profile owns the layout settings route shell plus the settings-side
+    `LayoutViewModel` / `LayoutPreferencesUseCase` that wrap canonical
+    `CardPreferences`.
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/ColorsScreen.kt`
+  - Profile owns the colors settings route shell, `ColorsViewModel`, and the
+    settings-side `ThemePreferencesUseCase` used for theme writes and custom
+    color persistence.
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntime.kt`
+  - Profile owns the HAWK settings route shell plus the
+    `HawkVarioSettingsViewModel` / `HawkVarioSettingsUseCase` used for HAWK
+    preference writes and live-preview consumption.
+- `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioPreviewReadPort.kt`
+  - Variometer owns the read-only HAWK preview contract
+    (`HawkVarioPreviewReadPort`, `HawkVarioUiState`, `HawkConfidence`) shared
+    by the profile-owned settings surface and the live HAWK runtime owner.
+- `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt`
+  - Variometer owns the live HAWK runtime owner plus its repository/config
+    stack and implements the variometer-owned `HawkVarioPreviewReadPort`.
+- `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt`
+  - `feature:map` keeps the temporary app theme runtime read path over the
+    profile-owned theme use case; the colors owner move does not leave writes
+    in `feature:map`.
+- `feature/map/src/main/java/com/example/xcpro/hawk/MapHawkRuntimeAdapters.kt`
+  - `feature:map` keeps only the temporary HAWK sensor/source adapters that
+    feed the variometer-owned runtime until Parent Phase 2B moves those
+    upstream owners behind the future flight-runtime boundary.
+- `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutViewModel.kt`
+  - `feature:map` keeps the widget drag/resize runtime owner; the layout
+    settings route move does not change widget runtime ownership.
 
 ## 5) ViewModel -> UI (Map + Cards)
 
@@ -239,7 +299,8 @@ Observers:
     the main observer combine path.
   - Solves task-finish glide through `FinalGlideUseCase` before mapping.
   - Converts `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
-  - Pushes to `FlightDataManager` and trail processor.
+  - Pushes to `FlightDataManager` and the `feature:map-runtime` trail
+    processor.
   - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
 
 Mapping for cards:
@@ -285,18 +346,26 @@ Map bindings:
     (`SIDE_HAMBURGER`, `FLIGHT_MODE`, `SETTINGS_SHORTCUT`, `BALLAST`).
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
   - Renders `SettingsShortcut` with existing widget gesture registry; drag is edit-mode
-    only, tap delegates to `MapModalManager.showGeneralSettingsModal()` through
+    only, tap delegates to an app-owned General Settings host callback through
     scaffold callback wiring.
 - `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
-  - Map drawer `Settings -> General` uses the same map-owned General modal callback
-    when provided by `NavigationDrawer`; route navigation remains as compatibility fallback.
+  - Map drawer `Settings -> General` uses the same app-owned General Settings host
+    callback when provided by `NavigationDrawer`; route navigation remains as a
+    compatibility fallback.
+- `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - Owns the cross-feature General Settings sheet host for the map route.
+  - Consumes `OPEN_GENERAL_SETTINGS_ON_MAP` and keeps `SettingsRoutes.GENERAL`
+    as a compatibility shim that reopens the app-owned host on `map`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
   - Retains map-owned auxiliary panel orchestration and renders the WeGlide prompt through
     `feature/weglide/src/main/java/com/example/xcpro/weglide/ui/WeGlideUploadPromptDialogHost.kt`.
   - Consumes the dedicated `MapAuxiliaryPanelsInputs` seam from the retained map shell
     rather than a long per-field prompt/QNH argument list.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-  - Retained drawer/loading shell only; no longer imports the owner-side WeGlide prompt type.
+  - Retained drawer/loading shell only; forwards General Settings open intents but
+    no longer hosts the General Settings sheet.
+- `feature/map/src/main/java/com/example/xcpro/map/MapModalManager.kt`
+  - Reduced to airspace-modal ownership only; General Settings is no longer map-modal state.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
   - Small map-owned render seam that binds scaffold inputs plus owner-side prompt callbacks
     into `MapScreenContent` without spreading prompt ABI through the scaffold shell.
@@ -554,14 +623,13 @@ Weather rain overlay path:
   - Map bottom tab host includes `RainViewer` as an in-map tab in the same `ModalBottomSheet` host used by SkySight/Scia/Map4.
   - Retains tab selection, sheet visibility, and the map-specific OGN/Map4 tabs.
   - Delegates RainViewer and SkySight tab-body content to shared hosts in `feature:weather` and `feature:forecast`; map remains visible behind the sheet.
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt`
-  - Drawer weather route remains available as a compatibility shell and hosts the same shared `feature:weather` controls content.
+- `feature/weather/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - Weather owns the drawer weather compatibility shell, its bottom-sheet host, and the shared RainViewer controls route used by app-shell settings entrypoints.
 - `feature/forecast/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsContent.kt`
   - Shared SkySight settings content body owned by `feature:forecast`.
   - Keeps forecast settings UI edits and presentation changes inside the forecast leaf module.
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
-  - Drawer/local-subsheet SkySight settings route remains available as a compatibility shell.
-  - Retains top-bar and navigation fallback behavior while delegating the owner-side settings content body to `feature:forecast`.
+- `feature/forecast/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+  - Forecast owns the SkySight drawer/local-subsheet compatibility shell and keeps route-level navigation fallback behavior with the forecast settings content body.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
   - Collects `feature:weather` overlay state and forwards frame-based runtime updates (including transition duration) to overlay manager.
   - RainViewer enable state participates in SkySight non-wind rain arbitration through map runtime composition.
@@ -629,6 +697,9 @@ Card configuration + hydration (current):
 - `MapStateReader` / `MapStateActions` now live in `feature/map-runtime` as the
   runtime-facing map-state contracts, while `TrailSettings` remains outside that contract;
   shell/runtime trail wiring is threaded separately from `MapScreenViewModel.trailSettings`.
+- `SnailTrailRuntimeState` now lives in `feature/map-runtime` as the narrow
+  shell/runtime trail-handle contract implemented by `MapScreenState` in
+  `feature:map`.
 - `MapTasksUseCase`, `TaskRenderSyncCoordinator`, `MapFeatureFlags`, and map UI model
   types now live in `feature/map-runtime` as part of the retained shell/runtime split.
 - `DisplayPoseSnapshot` now lives in `feature/map-runtime` as the runtime-facing
@@ -696,7 +767,9 @@ Key files:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/SailplaneIconBitmapFactory.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapScaleBarController.kt`
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapFollowCameraMotionPolicy.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/CardIngestionCoordinator.kt`
 - `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataMgmt.kt`
@@ -711,12 +784,13 @@ Target architecture flow:
 Task UI (Compose)
   -> `TaskSheetViewModel` intents
   -> `TaskSheetUseCase` + `TaskSheetCoordinatorUseCase`
-  -> task repository/coordinator authoritative state
+  -> `TaskManagerCoordinator` runtime authority + task UI projection
   -> `TaskUiState` StateFlow
   -> Task UI render
 
 Authoritative ownership:
-- Task definition and active leg: task repository/coordinator owners.
+- Cross-feature task definition and active leg: `TaskManagerCoordinator.taskSnapshotFlow`.
+- Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskRepository.state` is not the cross-feature runtime authority.
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).
 - Map drawing side effects: runtime controllers invoked by use-case/viewmodel orchestration, not direct Composable manager calls.
@@ -748,11 +822,18 @@ Current persistence startup bridge (2026-02-11):
   -> `MapTasksUseCase.loadSavedTasks()`
   -> `TaskManagerCoordinator.loadSavedTasks()` (suspend)
   -> `TaskEnginePersistenceService.restore()` for task type + autosaved engine state
-  -> coordinator applies restored engine state into legacy managers for current UI compatibility.
+  -> coordinator applies restored engine state into legacy managers for current UI compatibility
+  -> coordinator publishes `TaskRuntimeSnapshot` to cross-feature consumers (`MapTasksUseCase`, glide, IGC).
 
 Named task persistence bridge (2026-02-11):
 - `TaskManagerCoordinator` named operations (`list/save/load/delete`) route to
   `TaskEnginePersistenceService` in DI runtime.
+- Task-content autosave ownership (2026-03-15, Phase 4):
+  - `TaskManagerCoordinator` task-content mutations
+  -> `TaskCoordinatorPersistenceBridge.syncAndAutosave(...)`
+  -> `TaskEnginePersistenceService.autosaveEngines()`
+  -> racing/AAT persistence adapters.
+- `RacingTaskManager` and `AATTaskManager` are mutation-only and do not construct persistence/file-I/O collaborators.
 - Runtime coordinator construction is DI-only; compatibility access uses the DI singleton.
 
 Task map rendering bridge (2026-02-12):
@@ -782,16 +863,53 @@ Task map rendering bridge (2026-02-12):
   of coordinator manager escape hatches.
 - `RacingTaskManager` / `AATTaskManager` no longer expose MapLibre render/edit APIs;
   map rendering/editing flows are UI/runtime-only via renderers/controllers.
+- `TaskNavigationController.bind(...)` listener lifetime is caller-scope owned;
+  canceling the returned job or caller scope unregisters the coordinator listener.
 - `MapInitializer` orchestration is split into focused runtime collaborators:
-  - `MapScaleBarController` (scale bar lifecycle/zoom constraints)
+  - `MapScaleBarController` in `feature:map-runtime`
+    (scale bar lifecycle/zoom constraints)
   - `MapInitializerDataLoader` (airspace/waypoint bootstrap and refresh)
   - `MapStyleUrlResolver` (canonical style-name -> URL resolution for runtime style paths)
   - `MapOverlayManager` (traffic overlay creation owner for OGN/ADS-b on startup and style transitions)
 - `MapInitializer.setupMapStyle(...)` uses bounded style-load wait with fallback init to avoid startup hangs.
 - `MapRuntimeController` applies style commands with map-generation/request-token guards so stale callbacks do not mutate active overlays.
-- `MapScreenViewModel` now exposes task type and task gesture/edit operations through
-  `MapTasksUseCase`, and map runtime effects consume ViewModel-bound task type state
+- Parent Phase 3 visual/runtime primitive ownership now also lives in
+  `feature:map-runtime`:
+  - `BlueLocationOverlay`
+  - `SailplaneIconBitmapFactory`
+  - `MapScaleBarController`
+  - `MapScaleBarRuntimeState` is the narrow shell/runtime bridge implemented by
+    `MapScreenState` in `feature:map`
+- Parent Phase 3 trail runtime ownership now also lives in
+  `feature:map-runtime`:
+  - `SnailTrailManager`
+  - `SnailTrailOverlay`
+  - trail render helpers plus the trail-domain runtime path
+    (`TrailProcessor`, `TrailUpdateInput`, `TrailUpdateResult`,
+    `TrailRenderState`, `TrailTimeBase`)
+  - `SnailTrailRuntimeState` is the narrow shell/runtime bridge implemented by
+    `MapScreenState` in `feature:map`
+- `MapScreenViewModel` delegates task gesture creation and AAT edit forwarding to
+  `feature/map/src/main/java/com/example/xcpro/map/MapScreenTaskShellCoordinator.kt`,
+  which consumes `MapTasksUseCase`.
+- Map runtime effects consume ViewModel-bound task type and AAT edit-mode state
   instead of reading coordinator state directly in Composables.
+- Task gesture/runtime ownership now splits cleanly between the map shell and `feature:map-runtime`:
+  - `feature/map-runtime/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt`
+    carries the reusable `MapLibreMap`-typed gesture contract.
+  - `feature/map-runtime/src/main/java/com/example/xcpro/gestures/TaskGestureHandlerFactory.kt`,
+    `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt`,
+    and `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt`
+    are the runtime owners for task gesture creation, AAT drag/hit-test behavior, and coordinate conversion.
+  - `MapScreenTaskShellCoordinator.createTaskGestureHandler(...)` is the map-shell creation owner and uses `MapTasksUseCase` task snapshots.
+  - `TaskManagerCoordinator` no longer constructs MapLibre gesture handlers.
+- `MapTasksUseCase` task read helpers now derive from `TaskManagerCoordinator.taskSnapshotFlow`
+  for runtime task/task-type reads, and AAT edit-mode shell reads derive from
+  `TaskManagerCoordinator.aatEditWaypointIndexFlow`.
+- `TaskSheetViewModel` no longer calls manual `sync()` after task mutations. It collects the coordinator snapshot flow and routes AAT target param/lock edits through coordinator-owned mutations.
+- AAT service-backed autosave and named-task persistence now run through a canonical JSON store in
+  `feature/tasks/src/main/java/com/example/xcpro/tasks/data/persistence/AATCanonicalTaskStorage.kt`.
+  Legacy AAT CUP/prefs storage remains read fallback only behind that adapter; task managers no longer own AAT persistence paths.
 - Runtime UI/composable dependency lookup no longer uses entrypoint accessors:
   - `TaskManagerCoordinator` is provided via `TaskManagerCoordinatorHostViewModel`.
   - Task navdrawer airspace use-case access is provided via `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/TaskScreenUseCasesViewModel.kt`.
@@ -825,8 +943,44 @@ Settings:
 
 ## 7) Parallel Pipelines (Wind + Flight State)
 
+Flight runtime foundations (2026-03-16):
+- `app` now depends directly on `feature:flight-runtime` at the composition
+  root because generated Hilt component sources import moved runtime owners
+  directly.
+- `feature:flight-runtime` now owns the reusable runtime foundations:
+  - sensor contracts/models
+  - `FlightDataRepository` / `FlightDisplayMapper`
+  - `FlightStateRepository`
+  - `WindSensorFusionRepository` and its pure wind helper/domain contracts
+  - `ReplaySensorSource`, `ReplayAirspeedRepository`,
+    `ExternalAirspeedRepository`
+  - shared wind override/model contracts (`WindOverrideSource`,
+    `WindOverride`, `WindSource`, `WindVector`)
+  - shared glider/audio/HAWK runtime contracts:
+    - `StillAirSinkProvider`
+    - `SpeedBoundsMs`
+    - `VarioAudioSettings`
+    - `VarioAudioControllerPort` / `VarioAudioControllerFactory`
+    - `HawkAudioVarioReadPort`
+  - pure orientation support owners:
+    - `HeadingResolver`
+    - `OrientationClock`
+    - `OrientationMath`
+  - reusable orientation input assembly owners:
+    - `OrientationSensorSource`
+    - `OrientationDataSource`
+    - `OrientationDataSourceFactory`
+    - narrow orientation sensor/policy contracts
+- `feature:map` still owns live sensor/device owners, replay shell/controllers,
+  DI composition, thin live-orientation adapters, and the map-specific
+  orientation controller path (`MapOrientationManager`, `OrientationEngine`,
+  `HeadingJitterLogger`) for those runtime foundations.
+- `feature:profile` keeps the concrete still-air sink implementation.
+- `feature:variometer` keeps the concrete audio engine/controller and HAWK
+  repository implementations behind the shared runtime ports.
+
 Wind fusion:
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
   - Consumes wind inputs derived from sensors/airspeed.
   - Switches live/replay inputs based on `FlightDataRepository.activeSource`.
   - `windState` feeds:
@@ -834,7 +988,7 @@ Wind fusion:
     - `MapScreenObservers` (cards/wind UI, wrapped by `FlightDataUiAdapter`)
 
 Flight state:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
   - Derives `FlyingState` from GPS/baro/airspeed and SSOT AGL from `FlightDataRepository.flightData`.
   - Does not perform independent terrain-network fetches; AGL authority remains in fusion output.
   - Used by metrics and map observers.
@@ -852,7 +1006,7 @@ Replay/UI contract layer:
   - Replay file picker / speed / timeline UI.
 
 Replay sensors:
-- `feature/map/src/main/java/com/example/xcpro/replay/ReplaySensorSource.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/replay/ReplaySensorSource.kt`
   - `SensorDataSource` implementation for replay samples.
 - `feature/map/src/main/java/com/example/xcpro/replay/ReplaySampleEmitter.kt`
   - emits replay airspeed samples (IAS/TAS) into `ReplayAirspeedRepository`.
@@ -881,16 +1035,16 @@ Controller:
   - Replay: IGC time for UI.
 
 Key references:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
 - `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt`
 
 ## 10) Primary Files Index
 
 Core pipeline:
 - `feature/map/src/main/java/com/example/xcpro/sensors/UnifiedSensorManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
-- `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
 

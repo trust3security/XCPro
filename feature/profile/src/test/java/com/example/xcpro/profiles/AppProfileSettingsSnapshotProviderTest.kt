@@ -125,10 +125,11 @@ class AppProfileSettingsSnapshotProviderTest {
         val lookAndFeelPreferences = mock<LookAndFeelPreferences>()
         whenever(lookAndFeelPreferences.getStatusBarStyleId(any())).thenReturn("transparent")
         whenever(lookAndFeelPreferences.getCardStyleId(any())).thenReturn("standard")
-        whenever(lookAndFeelPreferences.getColorThemeId(any())).thenReturn("default")
 
         val themePreferences = mock<ThemePreferencesRepository>()
-        whenever(themePreferences.getThemeId(any())).thenReturn("default")
+        whenever(themePreferences.getThemeId(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID))
+            .thenReturn("default")
+        whenever(themePreferences.getThemeId("pilot-1")).thenReturn("sunset")
         whenever(themePreferences.getCustomColorsJson(any(), any())).thenReturn(null)
 
         val mapWidgetLayout = mock<MapWidgetLayoutRepository>()
@@ -396,6 +397,33 @@ class AppProfileSettingsSnapshotProviderTest {
             setOf(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, "pilot-1"),
             flightMgmtSection.profileLastFlightModes.keys
         )
+        val lookAndFeelSectionJson = snapshot.sections
+            .getValue(ProfileSettingsSectionIds.LOOK_AND_FEEL_PREFERENCES)
+            .asJsonObject
+        val lookAndFeelSection = gson.fromJson(
+            lookAndFeelSectionJson,
+            LookAndFeelSectionSnapshot::class.java
+        )
+        assertEquals(
+            "transparent",
+            lookAndFeelSection.statusBarStyleByProfile
+                .getValue(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
+        )
+        assertEquals(
+            "standard",
+            lookAndFeelSection.cardStyleByProfile.getValue("pilot-1")
+        )
+        assertTrue(!lookAndFeelSectionJson.has("colorThemeByProfile"))
+        val themeSection = gson.fromJson(
+            snapshot.sections.getValue(ProfileSettingsSectionIds.THEME_PREFERENCES),
+            ThemeSectionSnapshot::class.java
+        )
+        assertEquals(
+            "default",
+            themeSection.themeIdByProfile
+                .getValue(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
+        )
+        assertEquals("sunset", themeSection.themeIdByProfile.getValue("pilot-1"))
         val unitsSection = gson.fromJson(
             snapshot.sections.getValue(ProfileSettingsSectionIds.UNITS_PREFERENCES),
             UnitsSectionSnapshot::class.java

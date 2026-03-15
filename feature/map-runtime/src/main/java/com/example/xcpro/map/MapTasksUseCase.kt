@@ -1,7 +1,4 @@
 package com.example.xcpro.map
-
-import com.example.xcpro.gestures.TaskGestureCallbacks
-import com.example.xcpro.gestures.TaskGestureHandler
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
@@ -18,13 +15,10 @@ class MapTasksUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator
 ) {
     val taskTypeFlow: StateFlow<TaskType> = taskManager.taskTypeFlow
+    val aatEditWaypointIndexFlow: StateFlow<Int?> = taskManager.aatEditWaypointIndexFlow
 
     suspend fun loadSavedTasks() {
         taskManager.loadSavedTasks()
-    }
-
-    fun createGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler {
-        return taskManager.createGestureHandler(callbacks)
     }
 
     fun enterAATEditMode(waypointIndex: Int) {
@@ -45,13 +39,16 @@ class MapTasksUseCase @Inject constructor(
 
     suspend fun saveTask(taskName: String): Boolean = taskManager.saveTask(taskName)
 
-    fun currentTaskSnapshot(): Task = taskManager.currentTask
+    fun currentTaskSnapshot(): Task = taskManager.taskSnapshotFlow.value.task
 
-    fun currentWaypointCount(): Int = taskManager.currentTask.waypoints.size
+    fun currentWaypointCount(): Int = taskManager.taskSnapshotFlow.value.task.waypoints.size
 
-    fun taskRenderSnapshot(): TaskRenderSnapshot = TaskRenderSnapshot(
-        task = taskManager.currentTask,
-        taskType = taskManager.taskType,
-        aatEditWaypointIndex = taskManager.getAATEditWaypointIndex()
-    )
+    fun taskRenderSnapshot(): TaskRenderSnapshot {
+        val snapshot = taskManager.taskSnapshotFlow.value
+        return TaskRenderSnapshot(
+            task = snapshot.task,
+            taskType = snapshot.taskType,
+            aatEditWaypointIndex = aatEditWaypointIndexFlow.value
+        )
+    }
 }

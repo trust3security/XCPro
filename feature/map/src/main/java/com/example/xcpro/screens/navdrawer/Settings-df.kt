@@ -2,6 +2,7 @@ package com.example.ui1.screens
 
 /**
  * Facade file for line-budget compliance.
- * Implementation moved to SettingsDfRuntime.kt.
+ * General settings host ownership moved to app shell.
+ * This module now retains only map-owned settings wrappers.
  */
 

@@ -166,7 +166,6 @@ class MapScreenViewModel @Inject constructor(
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
-    private val _isAATEditMode = MutableStateFlow(false)
     private val adsbFilterStates: AdsbFilterStateFlows = createAdsbFilterStateFlows(viewModelScope, adsbTrafficFacade)
     val cardHydrationReady: StateFlow<Boolean> = createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
     private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
@@ -239,8 +238,12 @@ class MapScreenViewModel @Inject constructor(
         adsbTrafficFacade = adsbTrafficFacade,
         uiEffects = _uiEffects
     )
-    val isAATEditMode: StateFlow<Boolean> = _isAATEditMode.asStateFlow()
-    val taskType: StateFlow<TaskType> = mapTasksUseCase.taskTypeFlow
+    private val taskShellCoordinator = MapScreenTaskShellCoordinator(
+        scope = viewModelScope,
+        mapTasksUseCase = mapTasksUseCase
+    )
+    val isAATEditMode: StateFlow<Boolean> = taskShellCoordinator.isAATEditMode
+    val taskType: StateFlow<TaskType> = taskShellCoordinator.taskType
     private val unitsState = profileSessionDependencies.unitsUseCase.unitsFlow
         .inVm(scope = viewModelScope, initial = UnitsPreferences())
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
@@ -308,17 +311,16 @@ class MapScreenViewModel @Inject constructor(
         profileSessionDependencies.variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
     fun onVariometerSizeCommitted(sizePx: Float, screenWidthPx: Float, screenHeightPx: Float, minSizePx: Float, maxSizePx: Float) =
         profileSessionDependencies.variometerLayoutUseCase.onSizeCommitted(sizePx, screenWidthPx, screenHeightPx, minSizePx, maxSizePx)
-    fun setAATEditMode(enabled: Boolean) { _isAATEditMode.value = enabled }
     fun createTaskGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler =
-        mapTasksUseCase.createGestureHandler(callbacks)
+        taskShellCoordinator.createTaskGestureHandler(callbacks)
     fun getInterpolatedReplayHeadingDeg(nowMs: Long): Double? =
         mapReplayUseCase.getInterpolatedReplayHeadingDeg(nowMs)
     fun getInterpolatedReplayPose(nowMs: Long): ReplayDisplayPose? =
         mapReplayUseCase.getInterpolatedReplayPose(nowMs)
-    fun enterAATEditMode(waypointIndex: Int) { _isAATEditMode.value = true; mapTasksUseCase.enterAATEditMode(waypointIndex) }
+    fun enterAATEditMode(waypointIndex: Int) = taskShellCoordinator.enterAATEditMode(waypointIndex)
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) =
-        mapTasksUseCase.updateAATTargetPoint(index, lat, lon)
-    fun exitAATEditMode() { _isAATEditMode.value = false; mapTasksUseCase.exitAATEditMode() }
+        taskShellCoordinator.updateAATTargetPoint(index, lat, lon)
+    fun exitAATEditMode() = taskShellCoordinator.exitAATEditMode()
     fun submitBallastCommand(command: BallastCommand) = ballastController.submit(command)
     fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)

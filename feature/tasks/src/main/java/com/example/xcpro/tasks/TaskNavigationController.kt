@@ -35,27 +35,24 @@ class TaskNavigationController(
     val racingEvents = stateStore.events
 
     private var suppressManualDisarm = false
-    private var legChangeListenerAdded = false
+    private var activeBindingCount = 0
+    private var legChangeListener: ((Int) -> Unit)? = null
 
     fun bind(
         fixes: Flow<RacingNavigationFix>,
         scope: CoroutineScope
     ): Job {
-        if (!legChangeListenerAdded) {
-            taskManager.addLegChangeListener { newLegIndex ->
-                if (suppressManualDisarm) {
-                    return@addLegChangeListener
-                }
-                advanceState.setArmed(false)
-                syncManualLegChange(newLegIndex)
-            }
-            legChangeListenerAdded = true
-        }
+        ensureLegChangeListener()
+        activeBindingCount += 1
 
         return fixes.onEach { fix ->
             if (!featureFlags.enableRacingNavigation) return@onEach
             handleFix(fix)
-        }.launchIn(scope)
+        }.launchIn(scope).also { job ->
+            job.invokeOnCompletion {
+                releaseLegChangeListener()
+            }
+        }
     }
 
     private fun handleFix(fix: RacingNavigationFix) {
@@ -146,4 +143,29 @@ class TaskNavigationController(
     }
 
     fun snapshot(): RacingAdvanceState.Snapshot = advanceState.snapshot()
+
+    private fun ensureLegChangeListener() {
+        if (legChangeListener != null) {
+            return
+        }
+        val listener: (Int) -> Unit = { newLegIndex ->
+            if (!suppressManualDisarm) {
+                advanceState.setArmed(false)
+                syncManualLegChange(newLegIndex)
+            }
+        }
+        taskManager.addLegChangeListener(listener)
+        legChangeListener = listener
+    }
+
+    private fun releaseLegChangeListener() {
+        if (activeBindingCount > 0) {
+            activeBindingCount -= 1
+        }
+        if (activeBindingCount != 0) {
+            return
+        }
+        legChangeListener?.let(taskManager::removeLegChangeListener)
+        legChangeListener = null
+    }
 }

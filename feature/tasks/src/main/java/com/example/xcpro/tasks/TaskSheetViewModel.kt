@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.aat.models.AATFinishPointType
 import com.example.xcpro.tasks.aat.models.AATStartPointType
@@ -21,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Duration
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Bridges UI intents to task use-cases while maintaining
@@ -38,22 +40,25 @@ class TaskSheetViewModel @Inject constructor(
 ) : ViewModel() {
 
     val uiState: StateFlow<TaskUiState> = useCase.state
-
-    private val legChangeListener: (Int) -> Unit = {
-        useCase.armAdvance(false) // manual leg change disarms auto-advance
-        sync()
-    }
+    private var lastObservedActiveLeg: Int? = null
 
     init {
         taskCoordinator.setProximityHandler { entered, close ->
             onProximityEvent(entered, close)
         }
-        taskCoordinator.addLegChangeListener(legChangeListener)
-        sync()
+        viewModelScope.launch {
+            taskCoordinator.snapshotFlow.collect { snapshot ->
+                if (lastObservedActiveLeg != null && lastObservedActiveLeg != snapshot.activeLeg) {
+                    useCase.armAdvance(false)
+                }
+                lastObservedActiveLeg = snapshot.activeLeg
+                useCase.projectSnapshot(snapshot)
+            }
+        }
     }
 
     override fun onCleared() {
-        taskCoordinator.removeLegChangeListener(legChangeListener)
+        taskCoordinator.clearProximityHandler()
         super.onCleared()
     }
 
@@ -74,13 +79,11 @@ class TaskSheetViewModel @Inject constructor(
     }
 
     fun onSetTargetParam(index: Int, param: Double) {
-        useCase.setTargetParam(index, param)
-        syncAatTargetAt(index)
+        taskCoordinator.setAATTargetParam(index, param)
     }
 
     fun onToggleTargetLock(index: Int) {
-        useCase.toggleTargetLock(index)
-        syncAatTargetAt(index)
+        taskCoordinator.toggleAATTargetLock(index)
     }
 
     fun onAdvanceMode(mode: TaskAdvanceState.Mode) {
@@ -248,13 +251,6 @@ class TaskSheetViewModel @Inject constructor(
 
     private fun mutate(block: () -> Unit) {
         block()
-        sync()
-    }
-
-    private fun syncAatTargetAt(index: Int) {
-        useCase.state.value.targets.getOrNull(index)?.target?.let { target ->
-            taskCoordinator.updateAATTargetPoint(index, target.lat, target.lon)
-        }
     }
 
     private fun importWaypoints(importedTask: Task) {
@@ -274,11 +270,13 @@ class TaskSheetViewModel @Inject constructor(
     private fun applyImportedTargets(taskType: TaskType, targets: List<TaskTargetSnapshot>) {
         if (taskType != TaskType.AAT) return
         targets.forEach { targetSnapshot ->
-            useCase.setTargetParam(targetSnapshot.index, targetSnapshot.targetParam)
-            useCase.setTargetLock(targetSnapshot.index, targetSnapshot.isLocked)
-            targetSnapshot.target?.let { target ->
-                taskCoordinator.updateAATTargetPoint(targetSnapshot.index, target.lat, target.lon)
-            }
+            taskCoordinator.applyAATTargetState(
+                index = targetSnapshot.index,
+                targetParam = targetSnapshot.targetParam,
+                targetLocked = targetSnapshot.isLocked,
+                targetLat = targetSnapshot.target?.lat,
+                targetLon = targetSnapshot.target?.lon
+            )
         }
     }
 
@@ -339,13 +337,4 @@ class TaskSheetViewModel @Inject constructor(
         )
     }
 
-    private fun sync() {
-        val snapshot = taskCoordinator.snapshot()
-        useCase.updateFrom(
-            task = snapshot.task,
-            taskType = snapshot.taskType,
-            activeIndex = snapshot.activeLeg,
-            racingValidationProfile = snapshot.racingValidationProfile
-        )
-    }
 }

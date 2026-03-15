@@ -10,8 +10,7 @@ internal data class FlightMgmtSectionSnapshot(
 
 internal data class LookAndFeelSectionSnapshot(
     val statusBarStyleByProfile: Map<String, String>,
-    val cardStyleByProfile: Map<String, String>,
-    val colorThemeByProfile: Map<String, String>
+    val cardStyleByProfile: Map<String, String>
 )
 
 internal data class ThemeSectionSnapshot(

@@ -17,7 +17,7 @@ import com.example.xcpro.igc.domain.IgcTaskDeclarationStartSnapshot
 import com.example.xcpro.igc.domain.IgcTaskDeclarationSource
 import com.example.xcpro.igc.domain.IgcTaskDeclarationWaypoint
 import com.example.xcpro.profiles.ProfileUseCase
-import com.example.xcpro.tasks.TaskRepository
+import com.example.xcpro.tasks.TaskManagerCoordinator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,14 +39,13 @@ class ProfileUseCaseIgcProfileMetadataSource @Inject constructor(
 
 @Singleton
 class TaskRepositoryIgcTaskDeclarationSource @Inject constructor(
-    private val taskRepository: TaskRepository
+    private val taskCoordinator: TaskManagerCoordinator
 ) : IgcTaskDeclarationSource {
     override fun snapshotForStart(
         sessionId: Long,
         capturedAtUtcMs: Long
     ): IgcTaskDeclarationStartSnapshot {
-        val taskState = taskRepository.state.value
-        val task = taskState.task
+        val task = taskCoordinator.taskSnapshotFlow.value.task
         if (task.waypoints.isEmpty()) {
             return IgcTaskDeclarationStartSnapshot.Absent
         }

@@ -1,47 +1,35 @@
 package com.example.xcpro.tasks
 
-import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import com.example.xcpro.tasks.domain.logic.TaskProximityDecision
-import com.example.xcpro.tasks.racing.RacingTaskStructureRules
+import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class TaskSheetUseCase @Inject constructor(
-    private val repository: TaskRepository
+    private val repository: TaskRepository,
+    private val proximityEvaluator: TaskProximityEvaluator
 ) {
-    val state: StateFlow<TaskUiState> = repository.state
+    private val advanceState = TaskAdvanceState()
+    private val _state = MutableStateFlow(repository.state.value.copy(advanceSnapshot = advanceState.snapshot()))
+    val state: StateFlow<TaskUiState> = _state.asStateFlow()
 
-    fun updateFrom(
-        task: Task,
-        taskType: TaskType,
-        activeIndex: Int,
-        racingValidationProfile: RacingTaskStructureRules.Profile
-    ) {
+    fun projectSnapshot(snapshot: TaskCoordinatorSnapshot) {
         repository.updateFrom(
-            task = task,
-            taskType = taskType,
-            activeIndex = activeIndex,
-            racingValidationProfile = racingValidationProfile
+            task = snapshot.task,
+            taskType = snapshot.taskType,
+            activeIndex = snapshot.activeLeg,
+            racingValidationProfile = snapshot.racingValidationProfile
         )
-    }
-
-    fun setTargetParam(index: Int, param: Double) {
-        repository.setTargetParam(index, param)
-    }
-
-    fun toggleTargetLock(index: Int) {
-        repository.toggleTargetLock(index)
-    }
-
-    fun setTargetLock(index: Int, locked: Boolean) {
-        repository.setTargetLock(index, locked)
+        publishState()
     }
 
     fun shouldAutoAdvance(hasEntered: Boolean, closeToTarget: Boolean): Boolean =
-        repository.shouldAutoAdvance(hasEntered, closeToTarget)
+        advanceState.shouldAdvance(hasEntered, closeToTarget)
 
     fun evaluateProximity(
         taskType: TaskType,
@@ -51,7 +39,7 @@ class TaskSheetUseCase @Inject constructor(
         targetLat: Double,
         targetLon: Double
     ): TaskProximityDecision =
-        repository.evaluateProximity(
+        proximityEvaluator.evaluate(
             taskType = taskType,
             waypointRole = waypointRole,
             aircraftLat = aircraftLat,
@@ -65,17 +53,26 @@ class TaskSheetUseCase @Inject constructor(
         fromLon: Double,
         toLat: Double,
         toLon: Double
-    ): Double = repository.distanceMeters(fromLat, fromLon, toLat, toLon)
+    ): Double = proximityEvaluator.distanceMeters(fromLat, fromLon, toLat, toLon)
 
     fun setAdvanceMode(mode: TaskAdvanceState.Mode) {
-        repository.setAdvanceMode(mode)
+        advanceState.setMode(mode)
+        publishState()
     }
 
-    fun armAdvance(doArm: Boolean) {
-        repository.armAdvance(doArm)
+    fun armAdvance(armed: Boolean) {
+        advanceState.setArmed(armed)
+        publishState()
     }
 
     fun toggleAdvanceArm() {
-        repository.toggleAdvanceArm()
+        advanceState.toggleArmed()
+        publishState()
+    }
+
+    private fun publishState() {
+        _state.value = repository.state.value.copy(
+            advanceSnapshot = advanceState.snapshot()
+        )
     }
 }

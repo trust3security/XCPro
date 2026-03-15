@@ -1,10 +1,12 @@
 package com.example.xcpro.screens.navdrawer.lookandfeel
 
+import com.example.xcpro.ui.theme.ThemePreferencesRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 
 class LookAndFeelUseCase @Inject constructor(
-    private val repository: LookAndFeelPreferences
+    private val repository: LookAndFeelPreferences,
+    private val themePreferencesRepository: ThemePreferencesRepository
 ) {
     fun getStatusBarStyleId(profileId: String): String = repository.getStatusBarStyleId(profileId)
 
@@ -24,12 +26,12 @@ class LookAndFeelUseCase @Inject constructor(
         repository.setCardStyleId(profileId, styleId)
     }
 
-    fun getColorThemeId(profileId: String): String = repository.getColorThemeId(profileId)
+    fun getColorThemeId(profileId: String): String = themePreferencesRepository.getThemeId(profileId)
 
     fun observeColorThemeId(profileId: String): Flow<String> =
-        repository.observeColorThemeId(profileId)
+        themePreferencesRepository.observeThemeId(profileId)
 
     fun setColorThemeId(profileId: String, themeId: String) {
-        repository.setColorThemeId(profileId, themeId)
+        themePreferencesRepository.setThemeId(profileId, themeId)
     }
 }

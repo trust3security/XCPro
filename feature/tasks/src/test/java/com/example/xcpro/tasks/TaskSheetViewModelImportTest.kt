@@ -5,19 +5,26 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
+import com.example.xcpro.testing.MainDispatcherRule
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 
 class TaskSheetViewModelImportTest {
 
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     @Test
     fun importPersistedTask_aat_appliesTargetsAndObservationZones() {
-        val coordinator = mockCoordinator(taskType = TaskType.AAT)
-        val viewModel = createViewModel(coordinator)
+        val fixture = mockCoordinator(taskType = TaskType.AAT)
+        val viewModel = createViewModel(fixture.coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val persisted = TaskPersistSerializer.PersistedTask(
             taskType = TaskType.AAT,
             waypoints = listOf(
@@ -64,14 +71,14 @@ class TaskSheetViewModelImportTest {
 
         viewModel.importPersistedTask(Gson().toJson(persisted))
 
-        Mockito.verify(coordinator).setTaskType(TaskType.AAT)
-        Mockito.verify(coordinator).clearTask()
-        Mockito.verify(coordinator).setActiveLeg(0)
-        Mockito.verify(coordinator).updateAATTargetPoint(1, -34.9510, 138.7010)
-        Mockito.verify(coordinator).updateAATArea(1, 5500.0)
+        Mockito.verify(fixture.coordinator).setTaskType(TaskType.AAT)
+        Mockito.verify(fixture.coordinator).clearTask()
+        Mockito.verify(fixture.coordinator).setActiveLeg(0)
+        Mockito.verify(fixture.coordinator).applyAATTargetState(1, 0.62, true, -34.9510, 138.7010)
+        Mockito.verify(fixture.coordinator).updateAATArea(1, 5500.0)
 
         val indexCaptor = ArgumentCaptor.forClass(Int::class.javaObjectType)
-        Mockito.verify(coordinator, Mockito.times(3)).updateAATWaypointPointTypeMeters(
+        Mockito.verify(fixture.coordinator, Mockito.times(3)).updateAATWaypointPointTypeMeters(
             indexCaptor.capture(),
             Mockito.isNull(),
             Mockito.isNull(),
@@ -86,8 +93,9 @@ class TaskSheetViewModelImportTest {
 
     @Test
     fun importPersistedTask_racing_appliesGateWidthOnlyForTurnpoints() {
-        val coordinator = mockCoordinator(taskType = TaskType.RACING)
-        val viewModel = createViewModel(coordinator)
+        val fixture = mockCoordinator(taskType = TaskType.RACING)
+        val viewModel = createViewModel(fixture.coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val persisted = TaskPersistSerializer.PersistedTask(
             taskType = TaskType.RACING,
             waypoints = listOf(
@@ -136,13 +144,13 @@ class TaskSheetViewModelImportTest {
 
         viewModel.importPersistedTask(Gson().toJson(persisted))
 
-        Mockito.verify(coordinator).setTaskType(TaskType.RACING)
-        Mockito.verify(coordinator).clearTask()
-        Mockito.verify(coordinator).setActiveLeg(0)
+        Mockito.verify(fixture.coordinator).setTaskType(TaskType.RACING)
+        Mockito.verify(fixture.coordinator).clearTask()
+        Mockito.verify(fixture.coordinator).setActiveLeg(0)
 
         val indexCaptor = ArgumentCaptor.forClass(Int::class.javaObjectType)
         val gateWidthCaptor = ArgumentCaptor.forClass(Double::class.java)
-        Mockito.verify(coordinator, Mockito.times(2)).updateWaypointPointType(
+        Mockito.verify(fixture.coordinator, Mockito.times(2)).updateWaypointPointType(
             indexCaptor.capture(),
             Mockito.isNull(),
             Mockito.isNull(),
@@ -155,103 +163,75 @@ class TaskSheetViewModelImportTest {
         assertEquals(listOf(1, 2), indexCaptor.allValues)
         assertEquals(listOf(800.0, 1200.0), gateWidthCaptor.allValues)
 
-        Mockito.verify(coordinator, Mockito.times(0)).updateAATTargetPoint(
+        Mockito.verify(fixture.coordinator, Mockito.times(0)).applyAATTargetState(
             Mockito.anyInt(),
             Mockito.anyDouble(),
-            Mockito.anyDouble()
-        )
-        Mockito.verify(coordinator, Mockito.times(0)).updateAATArea(Mockito.anyInt(), Mockito.anyDouble())
-        Mockito.verify(coordinator, Mockito.times(0)).updateAATWaypointPointTypeMeters(
-            Mockito.anyInt(),
-            Mockito.isNull(),
-            Mockito.isNull(),
-            Mockito.isNull(),
-            Mockito.nullable(Double::class.java),
-            Mockito.nullable(Double::class.java),
+            Mockito.anyBoolean(),
             Mockito.nullable(Double::class.java),
             Mockito.nullable(Double::class.java)
         )
     }
 
     @Test
-    fun tryImportPersistedTask_batchesCoordinatorSyncToSingleSnapshotRefresh() {
-        val coordinator = mockCoordinator(taskType = TaskType.AAT)
-        val viewModel = createViewModel(coordinator)
-        Mockito.clearInvocations(coordinator)
-        Mockito.`when`(coordinator.snapshot()).thenReturn(
-            TaskCoordinatorSnapshot(
-                task = Task(id = "snapshot-task"),
-                taskType = TaskType.AAT,
-                activeLeg = 0
-            )
-        )
-        val persisted = TaskPersistSerializer.PersistedTask(
+    fun uiState_tracks_external_coordinator_snapshot_updates() {
+        val fixture = mockCoordinator(taskType = TaskType.AAT)
+        val viewModel = createViewModel(fixture.coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+
+        fixture.snapshots.value = TaskCoordinatorSnapshot(
+            task = Task(id = "updated-task"),
             taskType = TaskType.AAT,
-            waypoints = listOf(
-                TaskPersistSerializer.PersistedWaypoint(
-                    id = "start",
-                    title = "Start",
-                    subtitle = "",
-                    lat = -34.90,
-                    lon = 138.60,
-                    role = WaypointRole.START,
-                    ozType = "LINE",
-                    ozParams = emptyMap()
-                ),
-                TaskPersistSerializer.PersistedWaypoint(
-                    id = "tp1",
-                    title = "TP1",
-                    subtitle = "",
-                    lat = -34.95,
-                    lon = 138.70,
-                    role = WaypointRole.TURNPOINT,
-                    ozType = "SEGMENT",
-                    ozParams = mapOf(
-                        "outerRadiusMeters" to 5000.0,
-                        "innerRadiusMeters" to 0.0,
-                        "angleDeg" to 90.0
-                    )
-                ),
-                TaskPersistSerializer.PersistedWaypoint(
-                    id = "finish",
-                    title = "Finish",
-                    subtitle = "",
-                    lat = -35.0,
-                    lon = 138.80,
-                    role = WaypointRole.FINISH,
-                    ozType = "CYLINDER",
-                    ozParams = mapOf("radiusMeters" to 3000.0)
-                )
-            )
+            activeLeg = 2
         )
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
 
-        val imported = viewModel.tryImportPersistedTask(Gson().toJson(persisted))
+        assertEquals("updated-task", viewModel.uiState.value.task.id)
+        assertEquals(2, viewModel.uiState.value.stats.activeIndex)
+    }
 
-        assertTrue(imported)
-        Mockito.verify(coordinator, Mockito.times(1)).snapshot()
+    @Test
+    fun onCleared_clearsCoordinatorProximityHandler() {
+        val fixture = mockCoordinator(taskType = TaskType.AAT)
+        val viewModel = createViewModel(fixture.coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+
+        TaskSheetViewModel::class.java.getDeclaredMethod("onCleared").apply {
+            isAccessible = true
+            invoke(viewModel)
+        }
+
+        Mockito.verify(fixture.coordinator).clearProximityHandler()
     }
 
     private fun createViewModel(coordinator: TaskSheetCoordinatorUseCase): TaskSheetViewModel {
         val repository = TaskRepository(
-            validator = TaskValidator(),
+            validator = TaskValidator()
+        )
+        val useCase = TaskSheetUseCase(
+            repository = repository,
             proximityEvaluator = TaskProximityEvaluator()
         )
-        val useCase = TaskSheetUseCase(repository)
         return TaskSheetViewModel(
             taskCoordinator = coordinator,
             useCase = useCase
         )
     }
 
-    private fun mockCoordinator(taskType: TaskType): TaskSheetCoordinatorUseCase {
+    private fun mockCoordinator(taskType: TaskType): CoordinatorFixture {
         val coordinator = Mockito.mock(TaskSheetCoordinatorUseCase::class.java)
-        Mockito.`when`(coordinator.snapshot()).thenReturn(
+        val snapshots = MutableStateFlow(
             TaskCoordinatorSnapshot(
                 task = Task(id = "snapshot-task"),
                 taskType = taskType,
                 activeLeg = 0
             )
         )
-        return coordinator
+        Mockito.`when`(coordinator.snapshotFlow).thenReturn(snapshots)
+        return CoordinatorFixture(coordinator, snapshots)
     }
+
+    private data class CoordinatorFixture(
+        val coordinator: TaskSheetCoordinatorUseCase,
+        val snapshots: MutableStateFlow<TaskCoordinatorSnapshot>
+    )
 }

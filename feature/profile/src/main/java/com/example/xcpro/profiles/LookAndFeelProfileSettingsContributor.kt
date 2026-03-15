@@ -29,14 +29,10 @@ class LookAndFeelProfileSettingsContributor @Inject constructor(
         val cardStyleByProfile = profileIds.associateWith { profileId ->
             lookAndFeelPreferences.getCardStyleId(profileId)
         }
-        val colorThemeByProfile = profileIds.associateWith { profileId ->
-            lookAndFeelPreferences.getColorThemeId(profileId)
-        }
         return gson.toJsonTree(
             LookAndFeelSectionSnapshot(
                 statusBarStyleByProfile = statusBarStyleByProfile,
-                cardStyleByProfile = cardStyleByProfile,
-                colorThemeByProfile = colorThemeByProfile
+                cardStyleByProfile = cardStyleByProfile
             )
         )
     }
@@ -57,11 +53,6 @@ class LookAndFeelProfileSettingsContributor @Inject constructor(
             val profileId = resolveImportedProfileId(sourceProfileId, importedProfileIdMap)
                 ?: return@forEach
             lookAndFeelPreferences.setCardStyleId(profileId, styleId)
-        }
-        section.colorThemeByProfile.forEach { (sourceProfileId, themeId) ->
-            val profileId = resolveImportedProfileId(sourceProfileId, importedProfileIdMap)
-                ?: return@forEach
-            lookAndFeelPreferences.setColorThemeId(profileId, themeId)
         }
     }
 }

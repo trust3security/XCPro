@@ -18,7 +18,7 @@ class RacingTaskManagerRulePersistenceTest {
 
     @Test
     fun waypointMutations_preserveStartAndFinishRulePayloads() {
-        val manager = RacingTaskManager(null)
+        val manager = RacingTaskManager()
         manager.initializeFromCoreTask(seedTask())
 
         manager.updateRacingWaypointType(
@@ -44,7 +44,7 @@ class RacingTaskManagerRulePersistenceTest {
 
     @Test
     fun reorderWaypoints_keepsRuleKeysBoundToCurrentStartAndFinishRoles() {
-        val manager = RacingTaskManager(null)
+        val manager = RacingTaskManager()
         manager.initializeFromCoreTask(seedTask())
 
         manager.reorderRacingWaypoints(fromIndex = 0, toIndex = 1)
@@ -62,7 +62,7 @@ class RacingTaskManagerRulePersistenceTest {
 
     @Test
     fun updateRuleCommands_persistAllStartAndFinishFields() {
-        val manager = RacingTaskManager(null)
+        val manager = RacingTaskManager()
         manager.initializeFromCoreTask(seedTask())
 
         manager.updateRacingStartRules(

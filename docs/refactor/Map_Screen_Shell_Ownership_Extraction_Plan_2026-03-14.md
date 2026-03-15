@@ -31,6 +31,10 @@
   - completed
   - `MapScreenViewModel.kt` now delegates the proven profile/session and WeGlide prompt seams
   - `MapScreenViewModel.kt` reduced to `332` lines and is back under the enforced hotspot budget
+- Phase 4B:
+  - completed on 2026-03-15
+  - the retained task shell moved out of `MapScreenViewModel.kt` into `MapScreenTaskShellCoordinator.kt`
+  - AAT edit-mode UI state now derives from the task authority seam instead of a local ViewModel mirror
 - Verification snapshot after Phase 4A:
   - `./gradlew enforceRules --no-configuration-cache` passed
   - `./gradlew testDebugUnitTest --no-configuration-cache` passed

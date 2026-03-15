@@ -87,8 +87,6 @@ class MapLifecycleSurfaceAdapter(
         mapState.blueLocationOverlay = null
         mapState.snailTrailOverlay?.cleanup()
         mapState.snailTrailOverlay = null
-        mapState.distanceCirclesOverlay?.cleanup()
-        mapState.distanceCirclesOverlay = null
         mapState.scaleBarController?.clear()
         mapState.scaleBarController = null
         mapState.scaleBarPlugin = null

@@ -49,7 +49,7 @@ Files:
 - dfcards-library/src/main/java/com/example/dfcards/KnownCardId.kt (new)
 
 Actions:
-1) Add an enum listing all known cards, matching CardLibraryCatalog ids.
+1) Add an enum listing all known cards, matching the card catalog ids.
 2) Provide a mapping table in CardId to convert raw string -> KnownCardId.
 3) Use KnownCardId for exhaustive `when` in formatter later.
 

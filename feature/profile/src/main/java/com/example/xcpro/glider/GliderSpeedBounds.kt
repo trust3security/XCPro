@@ -8,13 +8,6 @@ import com.example.xcpro.common.units.UnitsConverter
 import kotlin.math.max
 import kotlin.math.min
 
-data class SpeedBoundsMs(
-    val minMs: Double,
-    val maxMs: Double
-) {
-    fun clamp(value: Double): Double = value.coerceIn(minMs, maxMs)
-}
-
 object GliderSpeedBoundsResolver {
 
     data class PolarRangeMs(val minMs: Double, val maxMs: Double)

@@ -1,26 +1,33 @@
 package com.example.xcpro.tasks
 
+import com.example.xcpro.tasks.core.RacingAltitudeReference
 import com.example.xcpro.tasks.core.RacingFinishCustomParams
+import com.example.xcpro.tasks.core.RacingPevCustomParams
 import com.example.xcpro.tasks.core.RacingStartCustomParams
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.tasks.core.RacingAltitudeReference
-import com.example.xcpro.tasks.core.RacingPevCustomParams
 import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
 import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
+import com.example.xcpro.testing.MainDispatcherRule
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mockito
 
 class TaskSheetViewModelRacingRulesCommandTest {
 
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     @Test
     fun onUpdateRacingStartRules_forwardsTypedCommandToCoordinator() {
         val coordinator = mockCoordinator()
         val viewModel = createViewModel(coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val command = UpdateRacingStartRulesCommand(
             rules = RacingStartCustomParams(
                 gateOpenTimeMillis = 1_000L,
@@ -52,6 +59,7 @@ class TaskSheetViewModelRacingRulesCommandTest {
     fun onUpdateRacingFinishRules_forwardsTypedCommandToCoordinator() {
         val coordinator = mockCoordinator()
         val viewModel = createViewModel(coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val command = UpdateRacingFinishRulesCommand(
             rules = RacingFinishCustomParams(
                 closeTimeMillis = 3_000L,
@@ -78,6 +86,7 @@ class TaskSheetViewModelRacingRulesCommandTest {
     fun onUpdateRacingValidationRules_forwardsTypedCommandToCoordinator() {
         val coordinator = mockCoordinator()
         val viewModel = createViewModel(coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val command = UpdateRacingValidationRulesCommand(
             profile = RacingTaskStructureRules.Profile.XC_PRO_EXTENDED
         )
@@ -89,10 +98,12 @@ class TaskSheetViewModelRacingRulesCommandTest {
 
     private fun createViewModel(coordinator: TaskSheetCoordinatorUseCase): TaskSheetViewModel {
         val repository = TaskRepository(
-            validator = TaskValidator(),
+            validator = TaskValidator()
+        )
+        val useCase = TaskSheetUseCase(
+            repository = repository,
             proximityEvaluator = TaskProximityEvaluator()
         )
-        val useCase = TaskSheetUseCase(repository)
         return TaskSheetViewModel(
             taskCoordinator = coordinator,
             useCase = useCase
@@ -101,12 +112,14 @@ class TaskSheetViewModelRacingRulesCommandTest {
 
     private fun mockCoordinator(): TaskSheetCoordinatorUseCase {
         val coordinator = Mockito.mock(TaskSheetCoordinatorUseCase::class.java)
-        Mockito.`when`(coordinator.snapshot()).thenReturn(
-            TaskCoordinatorSnapshot(
-                task = Task(id = "snapshot-task"),
-                taskType = TaskType.RACING,
-                activeLeg = 0,
-                racingValidationProfile = RacingTaskStructureRules.Profile.FAI_STRICT
+        Mockito.`when`(coordinator.snapshotFlow).thenReturn(
+            MutableStateFlow(
+                TaskCoordinatorSnapshot(
+                    task = Task(id = "snapshot-task"),
+                    taskType = TaskType.RACING,
+                    activeLeg = 0,
+                    racingValidationProfile = RacingTaskStructureRules.Profile.FAI_STRICT
+                )
             )
         )
         return coordinator

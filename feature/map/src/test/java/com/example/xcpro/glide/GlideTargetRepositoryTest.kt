@@ -1,6 +1,6 @@
 package com.example.xcpro.glide
 
-import com.example.xcpro.tasks.TaskUiState
+import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.RacingFinishCustomParams
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
@@ -18,7 +18,7 @@ class GlideTargetRepositoryTest {
     @Test
     fun resolveFinishTarget_returns_prestart_until_racing_task_has_started() {
         val snapshot = resolveFinishTarget(
-            taskState = racingTaskState(),
+            taskSnapshot = racingTaskSnapshot(),
             navigationState = RacingNavigationState(status = RacingNavigationStatus.PENDING_START)
         )
 
@@ -30,7 +30,7 @@ class GlideTargetRepositoryTest {
     @Test
     fun resolveFinishTarget_returns_remaining_route_for_started_racing_task() {
         val snapshot = resolveFinishTarget(
-            taskState = racingTaskState(),
+            taskSnapshot = racingTaskSnapshot(),
             navigationState = RacingNavigationState(
                 status = RacingNavigationStatus.IN_PROGRESS,
                 currentLegIndex = 1
@@ -47,7 +47,7 @@ class GlideTargetRepositoryTest {
     @Test
     fun resolveFinishTarget_requires_finish_altitude_rule_in_mvp() {
         val snapshot = resolveFinishTarget(
-            taskState = racingTaskState(finishMinAltitudeMeters = null),
+            taskSnapshot = racingTaskSnapshot(finishMinAltitudeMeters = null),
             navigationState = RacingNavigationState(
                 status = RacingNavigationStatus.STARTED,
                 currentLegIndex = 1
@@ -58,10 +58,10 @@ class GlideTargetRepositoryTest {
         assertEquals(GlideInvalidReason.NO_FINISH_ALTITUDE, snapshot.invalidReason)
     }
 
-    private fun racingTaskState(finishMinAltitudeMeters: Double? = 900.0): TaskUiState {
+    private fun racingTaskSnapshot(finishMinAltitudeMeters: Double? = 900.0): TaskRuntimeSnapshot {
         val finishParams = mutableMapOf<String, Any>()
         RacingFinishCustomParams(minAltitudeMeters = finishMinAltitudeMeters).applyTo(finishParams)
-        return TaskUiState(
+        return TaskRuntimeSnapshot(
             task = Task(
                 id = "task-1",
                 waypoints = listOf(
@@ -70,7 +70,8 @@ class GlideTargetRepositoryTest {
                     waypoint("finish", 0.0, 0.1, WaypointRole.FINISH, finishParams)
                 )
             ),
-            taskType = TaskType.RACING
+            taskType = TaskType.RACING,
+            activeLeg = 0
         )
     }
 
