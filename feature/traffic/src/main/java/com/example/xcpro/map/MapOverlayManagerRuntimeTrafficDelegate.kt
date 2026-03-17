@@ -230,7 +230,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
 
     private fun resolveAdsbViewportZoom(map: MapLibreMap): Float =
         adsbViewportZoom
-            ?: map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() }
+            ?: map.cameraPosition?.zoom?.toFloat()?.takeIf { it.isFinite() }
             ?: ADSB_VIEWPORT_ZOOM_FALLBACK
 
     private fun projectedAdsbStyleIds(renderMonoMs: Long): Map<String, String> =

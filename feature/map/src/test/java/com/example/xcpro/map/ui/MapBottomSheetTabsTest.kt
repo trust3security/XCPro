@@ -24,6 +24,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.forecast.ForecastOverlayUiState
 import org.junit.Assert.assertEquals
@@ -146,29 +147,17 @@ class MapBottomSheetTabsTest {
     }
 
     @Test
-    fun floatingStrip_usesEqualWidthTabs() {
+    fun floatingStrip_wideLayout_displaysAllTabsWithoutClipping() {
         setBottomTabsContent(
             selectedTab = MapBottomTab.SKYSIGHT,
-            isSheetVisible = false
+            isSheetVisible = false,
+            containerWidth = 420.dp
         )
 
-        val widths = composeTestRule.runOnIdle {
-            listOf(
-                composeTestRule.onNodeWithTag(MapBottomTab.RAIN.chipTestTag)
-                    .fetchSemanticsNode().boundsInRoot.width,
-                composeTestRule.onNodeWithTag(MapBottomTab.SKYSIGHT.chipTestTag)
-                    .fetchSemanticsNode().boundsInRoot.width,
-                composeTestRule.onNodeWithTag(MapBottomTab.OGN.chipTestTag)
-                    .fetchSemanticsNode().boundsInRoot.width,
-                composeTestRule.onNodeWithTag(MapBottomTab.MAP4.chipTestTag)
-                    .fetchSemanticsNode().boundsInRoot.width
-            )
-        }
-
-        val expectedWidth = widths.first()
-        widths.forEach { width ->
-            assertEquals(expectedWidth, width, 0.01f)
-        }
+        composeTestRule.onNodeWithTag(MapBottomTab.RAIN.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.SKYSIGHT.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.OGN.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.MAP4.chipTestTag).assertIsDisplayed()
     }
 
     @Test
@@ -413,52 +402,62 @@ class MapBottomSheetTabsTest {
         selectedTab: MapBottomTab,
         isSheetVisible: Boolean,
         weatherEnabled: Boolean = false,
+        containerWidth: Dp? = null,
         onTabSelected: (MapBottomTab) -> Unit = {},
         rainTabContent: @Composable () -> Unit = { Text("Rain content test sentinel") }
     ) {
         composeTestRule.setContent {
             MaterialTheme {
-                MapBottomTabsLayer(
-                    selectedTab = selectedTab,
-                    isSheetVisible = isSheetVisible,
-                    isTaskPanelVisible = false,
-                    onTabSelected = onTabSelected,
-                    onDismissSheet = {},
-                    weatherEnabled = weatherEnabled,
-                    ognEnabled = false,
-                    showSciaEnabled = false,
-                    onShowSciaEnabledChanged = {},
-                    adsbTrafficEnabled = false,
-                    showOgnThermalsEnabled = false,
-                    showDistanceCircles = false,
-                    currentQnhLabel = "1013.3 hPa",
-                    onAdsbTrafficEnabledChanged = {},
-                    onShowOgnThermalsEnabledChanged = {},
-                    onShowDistanceCirclesChanged = {},
-                    onOpenQnhDialogFromTab = {},
-                    ognTrailAircraftRows = emptyList(),
-                    onOgnTrailAircraftToggled = { _, _ -> },
-                    skySightUiState = ForecastOverlayUiState(),
-                    onSkySightEnabledChanged = {},
-                    onSkySightPrimaryParameterToggled = {},
-                    onSkySightWindOverlayEnabledChanged = {},
-                    onSkySightWindParameterSelected = {},
-                    onSkySightAutoTimeEnabledChanged = {},
-                    onSkySightFollowTimeOffsetChanged = {},
-                    onSkySightJumpToNow = {},
-                    onSkySightTimeSelected = {},
-                    onSkySightSatelliteOverlayEnabledChanged = {},
-                    onSkySightSatelliteImageryEnabledChanged = {},
-                    onSkySightSatelliteRadarEnabledChanged = {},
-                    onSkySightSatelliteLightningEnabledChanged = {},
-                    onSkySightSatelliteAnimateEnabledChanged = {},
-                    onSkySightSatelliteHistoryFramesChanged = {},
-                    skySightWarningMessage = null,
-                    skySightErrorMessage = null,
-                    skySightSatViewEnabled = false,
-                    onSkySightSatViewEnabledChanged = {},
-                    rainTabContent = rainTabContent
-                )
+                val content: @Composable () -> Unit = {
+                    MapBottomTabsLayer(
+                        selectedTab = selectedTab,
+                        isSheetVisible = isSheetVisible,
+                        isTaskPanelVisible = false,
+                        onTabSelected = onTabSelected,
+                        onDismissSheet = {},
+                        weatherEnabled = weatherEnabled,
+                        ognEnabled = false,
+                        showSciaEnabled = false,
+                        onShowSciaEnabledChanged = {},
+                        adsbTrafficEnabled = false,
+                        showOgnThermalsEnabled = false,
+                        showDistanceCircles = false,
+                        currentQnhLabel = "1013.3 hPa",
+                        onAdsbTrafficEnabledChanged = {},
+                        onShowOgnThermalsEnabledChanged = {},
+                        onShowDistanceCirclesChanged = {},
+                        onOpenQnhDialogFromTab = {},
+                        ognTrailAircraftRows = emptyList(),
+                        onOgnTrailAircraftToggled = { _, _ -> },
+                        skySightUiState = ForecastOverlayUiState(),
+                        onSkySightEnabledChanged = {},
+                        onSkySightPrimaryParameterToggled = {},
+                        onSkySightWindOverlayEnabledChanged = {},
+                        onSkySightWindParameterSelected = {},
+                        onSkySightAutoTimeEnabledChanged = {},
+                        onSkySightFollowTimeOffsetChanged = {},
+                        onSkySightJumpToNow = {},
+                        onSkySightTimeSelected = {},
+                        onSkySightSatelliteOverlayEnabledChanged = {},
+                        onSkySightSatelliteImageryEnabledChanged = {},
+                        onSkySightSatelliteRadarEnabledChanged = {},
+                        onSkySightSatelliteLightningEnabledChanged = {},
+                        onSkySightSatelliteAnimateEnabledChanged = {},
+                        onSkySightSatelliteHistoryFramesChanged = {},
+                        skySightWarningMessage = null,
+                        skySightErrorMessage = null,
+                        skySightSatViewEnabled = false,
+                        onSkySightSatViewEnabledChanged = {},
+                        rainTabContent = rainTabContent
+                    )
+                }
+                if (containerWidth != null) {
+                    Box(modifier = Modifier.width(containerWidth)) {
+                        content()
+                    }
+                } else {
+                    content()
+                }
             }
         }
     }

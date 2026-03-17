@@ -411,11 +411,8 @@ class AdsbMetadataEnrichmentUseCaseTest {
                 target("def456").copy(distanceMeters = 2_000.0, ageSec = 1)
             )
         )
-        val shared = useCase.targetsWithMetadata(targets).shareIn(
-            scope = backgroundScope,
-            started = SharingStarted.Eagerly,
-            replay = 1
-        )
+        val shared = useCase.targetsWithMetadata(targets)
+            .shareIn(scope = backgroundScope, started = SharingStarted.Eagerly, replay = 1)
         advanceUntilIdle()
         shared.first()
         assertEquals(1, metadataRepository.lookupCallCount)
@@ -438,14 +435,18 @@ class AdsbMetadataEnrichmentUseCaseTest {
             ioDispatcher = StandardTestDispatcher(testScheduler)
         )
         val targets = MutableStateFlow(listOf(target("abc123"), target("def456")))
-        val job = backgroundScope.launch {
-            useCase.targetsWithMetadata(targets).collect {}
-        }
+        val shared = useCase.targetsWithMetadata(targets)
+            .shareIn(scope = backgroundScope, started = SharingStarted.Eagerly, replay = 1)
+        val collectorJob = backgroundScope.launch { shared.collect {} }
         advanceUntilIdle()
+        shared.first()
         assertEquals(1, metadataRepository.lookupCallCount)
         metadataRepository.advanceLookupProgress()
         advanceUntilIdle()
-        job.cancel()
+        withTimeout(5_000) {
+            shared.drop(1).first()
+        }
+        collectorJob.cancel()
         assertEquals(2, metadataRepository.lookupCallCount)
     }
 
