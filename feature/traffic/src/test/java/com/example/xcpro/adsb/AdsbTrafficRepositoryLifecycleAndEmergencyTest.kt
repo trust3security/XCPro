@@ -159,7 +159,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
     }
 
     @Test
-    fun emergencyAudio_emergencyOnly_staysActiveWithoutDuplicateTriggers() = runTest {
+    fun emergencyAudio_emergencyEligibilityGap_entersCooldownWithoutDuplicateTriggers() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val clock = FakeClock(monoMs = 0L, wallMs = 0L)
         val provider = SequenceProvider(
@@ -250,33 +250,34 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
 
             clock.setMonoMs(20_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=20 emergency remains continuous
+            runCurrent() // t=20 prior emergency remains active through the current evaluation tick
             val activeContinue = repository.snapshot.value
             assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeContinue.emergencyAudioState)
             assertEquals(1, activeContinue.emergencyAudioAlertTriggerCount)
 
             clock.setMonoMs(30_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=30 still continuous emergency
-            val activeAt30 = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeAt30.emergencyAudioState)
-            assertEquals(1, activeAt30.emergencyAudioAlertTriggerCount)
+            runCurrent() // t=30 the prior eligibility gap transitions ACTIVE -> COOLDOWN
+            val cooldownAt30 = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.COOLDOWN, cooldownAt30.emergencyAudioState)
+            assertEquals(1, cooldownAt30.emergencyAudioAlertTriggerCount)
+            assertEquals(0, cooldownAt30.emergencyAudioCooldownBlockEpisodeCount)
 
             clock.setMonoMs(40_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=40 still continuous emergency
-            val activeAt40 = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeAt40.emergencyAudioState)
-            assertEquals(1, activeAt40.emergencyAudioAlertTriggerCount)
-            assertEquals(0, activeAt40.emergencyAudioCooldownBlockEpisodeCount)
+            runCurrent() // t=40 emergency is back but remains blocked during cooldown
+            val cooldownAt40 = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.COOLDOWN, cooldownAt40.emergencyAudioState)
+            assertEquals(1, cooldownAt40.emergencyAudioAlertTriggerCount)
+            assertEquals(0, cooldownAt40.emergencyAudioCooldownBlockEpisodeCount)
 
             clock.setMonoMs(50_000L)
             advanceTimeBy(10_000L)
-            runCurrent() // t=50 still continuous emergency, no duplicate trigger
-            val activeAt50 = repository.snapshot.value
-            assertEquals(AdsbEmergencyAudioAlertState.ACTIVE, activeAt50.emergencyAudioState)
-            assertEquals(1, activeAt50.emergencyAudioAlertTriggerCount)
-            assertEquals(0, activeAt50.emergencyAudioCooldownBlockEpisodeCount)
+            runCurrent() // t=50 cooldown still suppresses duplicate triggers for the same episode
+            val cooldownAt50 = repository.snapshot.value
+            assertEquals(AdsbEmergencyAudioAlertState.COOLDOWN, cooldownAt50.emergencyAudioState)
+            assertEquals(1, cooldownAt50.emergencyAudioAlertTriggerCount)
+            assertEquals(0, cooldownAt50.emergencyAudioCooldownBlockEpisodeCount)
         } finally {
             repository.stop()
             runCurrent()

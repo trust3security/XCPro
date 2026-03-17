@@ -18,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -109,7 +110,7 @@ class CalibrateQnhUseCaseTest {
         )
     }
 
-    private fun newUseCase(
+    private fun TestScope.newUseCase(
         terrainPort: TerrainElevationReadPort,
         qnhRepository: FakeQnhRepository,
         flightDataRepository: FlightDataRepository,
@@ -123,7 +124,7 @@ class CalibrateQnhUseCaseTest {
             terrainElevationReadPort = terrainPort,
             qnhRepository = qnhRepository,
             flightDataRepository = flightDataRepository,
-            dispatcher = UnconfinedTestDispatcher(),
+            dispatcher = UnconfinedTestDispatcher(testScheduler),
             clock = FakeClock(monoMs = 5_000L, wallMs = 9_000L),
             config = config
         )
