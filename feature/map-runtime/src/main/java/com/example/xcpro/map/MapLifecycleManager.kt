@@ -48,12 +48,18 @@ class MapLifecycleManager(
             }
             Lifecycle.Event.ON_PAUSE -> {
                 if (mapViewResumed) {
-                    mapViewResumed = lifecycleSurface.dispatchPauseIfPresent()
+                    lifecycleSurface.dispatchPauseIfPresent()
+                    mapViewResumed = false
                 }
             }
             Lifecycle.Event.ON_STOP -> {
+                if (mapViewResumed) {
+                    lifecycleSurface.dispatchPauseIfPresent()
+                    mapViewResumed = false
+                }
                 if (mapViewStarted) {
-                    mapViewStarted = lifecycleSurface.dispatchStopIfPresent()
+                    lifecycleSurface.dispatchStopIfPresent()
+                    mapViewStarted = false
                 }
                 orientationManager.stop()
             }

@@ -7,7 +7,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import androidx.core.content.ContextCompat
-import com.example.xcpro.adsb.ADSB_ICON_SIZE_DEFAULT_PX
+import com.example.xcpro.adsb.ADSB_ICON_BITMAP_BASE_SIZE_PX
 import com.example.xcpro.adsb.ui.AdsbAircraftIcon
 import org.maplibre.android.maps.Style
 
@@ -78,13 +78,12 @@ private fun tintBitmap(source: Bitmap, tintColor: Int): Bitmap {
 private fun drawableToBitmap(context: Context, drawableId: Int): Bitmap? {
     val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
     val bitmap = Bitmap.createBitmap(
-        ADSB_ICON_SIZE_DEFAULT_PX,
-        ADSB_ICON_SIZE_DEFAULT_PX,
+        ADSB_ICON_BITMAP_BASE_SIZE_PX,
+        ADSB_ICON_BITMAP_BASE_SIZE_PX,
         Bitmap.Config.ARGB_8888
     )
     val canvas = Canvas(bitmap)
-    drawable.setBounds(0, 0, ADSB_ICON_SIZE_DEFAULT_PX, ADSB_ICON_SIZE_DEFAULT_PX)
+    drawable.setBounds(0, 0, ADSB_ICON_BITMAP_BASE_SIZE_PX, ADSB_ICON_BITMAP_BASE_SIZE_PX)
     drawable.draw(canvas)
     return bitmap
 }
-

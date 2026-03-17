@@ -147,6 +147,7 @@ class MapInitializer(
             zoom = zoomToUse,
             bearing = bearingToUse
         )
+        overlayManager.setAdsbViewportZoom(zoomToUse.toFloat())
     }
 
     private fun setupOverlays(map: MapLibreMap) {
@@ -218,6 +219,7 @@ class MapInitializer(
                 val cameraPosition = map.cameraPosition
                 val currentZoom = cameraPosition.zoom
                 stateActions.updateCurrentZoom(currentZoom.toFloat())
+                overlayManager.setAdsbViewportZoom(currentZoom.toFloat())
                 val target = cameraPosition.target
                 if (target != null) {
                     stateActions.updateCameraSnapshot(

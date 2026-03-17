@@ -44,6 +44,8 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
     private val lookupScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val mutableMetadataRevision = MutableStateFlow(0L)
     override val metadataRevision: StateFlow<Long> = mutableMetadataRevision.asStateFlow()
+    private val mutableLookupProgressRevision = MutableStateFlow(0L)
+    override val lookupProgressRevision: StateFlow<Long> = mutableLookupProgressRevision.asStateFlow()
     private val mutableLookupTelemetry = MutableStateFlow(AdsbMetadataLookupTelemetrySnapshot())
     val lookupTelemetry: StateFlow<AdsbMetadataLookupTelemetrySnapshot> = mutableLookupTelemetry.asStateFlow()
 
@@ -159,6 +161,7 @@ class AircraftMetadataRepositoryImpl @Inject constructor(
                     dao.upsertActive(hydratedRows)
                     mutableMetadataRevision.update { revision -> revision + 1L }
                 }
+                mutableLookupProgressRevision.update { revision -> revision + 1L }
             } finally {
                 eligibleMissing.forEach(onDemandInFlightByIcao24::remove)
             }

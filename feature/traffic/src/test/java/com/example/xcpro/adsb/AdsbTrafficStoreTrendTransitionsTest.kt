@@ -261,9 +261,13 @@ class AdsbTrafficStoreTrendTransitionsTest {
             lon = 151.2145,
             receivedMonoMs = now + 3_000L
         )
-        val reClosing = far.copy(
+        val reClosingNoise = far.copy(
             lon = 151.2130,
             receivedMonoMs = now + 8_300L
+        )
+        val reClosing = far.copy(
+            lon = 151.2125,
+            receivedMonoMs = now + 9_400L
         )
 
         store.upsertAll(listOf(far))
@@ -281,8 +285,11 @@ class AdsbTrafficStoreTrendTransitionsTest {
         store.upsertAll(listOf(divergingAfterDwell))
         val deEscalatedUi = selectAt(store = store, nowMonoMs = now + 7_200L).displayed.first()
 
+        store.upsertAll(listOf(reClosingNoise))
+        val reClosingNoiseUi = selectAt(store = store, nowMonoMs = now + 8_300L).displayed.first()
+
         store.upsertAll(listOf(reClosing))
-        val reClosingUi = selectAt(store = store, nowMonoMs = now + 8_300L).displayed.first()
+        val reClosingUi = selectAt(store = store, nowMonoMs = now + 9_400L).displayed.first()
 
         assertEquals(AdsbProximityTier.RED, closingUi.proximityTier)
         assertTrue(closingUi.isClosing)
@@ -290,6 +297,8 @@ class AdsbTrafficStoreTrendTransitionsTest {
         assertFalse(recoveringUi.isClosing)
         assertEquals(AdsbProximityTier.AMBER, deEscalatedUi.proximityTier)
         assertFalse(deEscalatedUi.isClosing)
+        assertEquals(AdsbProximityTier.GREEN, reClosingNoiseUi.proximityTier)
+        assertFalse(reClosingNoiseUi.isClosing)
         assertEquals(AdsbProximityTier.RED, reClosingUi.proximityTier)
         assertTrue(reClosingUi.isClosing)
     }

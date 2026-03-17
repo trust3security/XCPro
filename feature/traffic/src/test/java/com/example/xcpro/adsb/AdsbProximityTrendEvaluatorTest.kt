@@ -190,7 +190,7 @@ class AdsbProximityTrendEvaluatorTest {
     }
 
     @Test
-    fun evaluate_reEntersClosingAfterRecoveryAndReEscalatesAlert() {
+    fun evaluate_requiresConsecutiveClosingSamplesToReEnterAfterRecovery() {
         val evaluator = AdsbProximityTrendEvaluator()
 
         evaluator.evaluate(
@@ -217,16 +217,24 @@ class AdsbProximityTrendEvaluatorTest {
             nowMonoMs = 7_100L,
             hasOwnshipReference = true
         )
-        val reClosing = evaluator.evaluate(
+        val reClosingNoise = evaluator.evaluate(
             id = id,
             distanceMeters = 1_979.0,
             nowMonoMs = 8_200L,
+            hasOwnshipReference = true
+        )
+        val reClosing = evaluator.evaluate(
+            id = id,
+            distanceMeters = 1_976.0,
+            nowMonoMs = 9_300L,
             hasOwnshipReference = true
         )
 
         assertFalse(recovered.isClosing)
         assertFalse(recovered.showClosingAlert)
         assertEquals(1, recovered.postPassDivergingSampleCount)
+        assertFalse(reClosingNoise.isClosing)
+        assertFalse(reClosingNoise.showClosingAlert)
         assertTrue(reClosing.isClosing)
         assertTrue(reClosing.showClosingAlert)
         assertEquals(0, reClosing.postPassDivergingSampleCount)

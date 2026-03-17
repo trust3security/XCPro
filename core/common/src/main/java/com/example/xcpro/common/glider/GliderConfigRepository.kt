@@ -7,6 +7,7 @@ interface GliderConfigRepository {
     val effectiveModel: StateFlow<GliderModel>
     val isFallbackPolarActive: StateFlow<Boolean>
     val config: StateFlow<GliderConfig>
+    val activePolar: StateFlow<ActivePolarSnapshot>
 
     fun listModels(): List<GliderModel>
     fun selectModelById(id: String)

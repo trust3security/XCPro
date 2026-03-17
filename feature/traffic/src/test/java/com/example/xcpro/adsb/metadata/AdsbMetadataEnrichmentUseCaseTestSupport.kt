@@ -35,6 +35,7 @@ internal class FakeMetadataRepository(
     values: Map<String, AircraftMetadata>
 ) : AircraftMetadataRepository {
     override val metadataRevision = MutableStateFlow(0L)
+    override val lookupProgressRevision = MutableStateFlow(0L)
     private val metadataByIcao24 = values.toMutableMap()
     var lastLookupOrder: List<String> = emptyList()
         private set
@@ -50,6 +51,10 @@ internal class FakeMetadataRepository(
     fun upsertMetadata(metadata: AircraftMetadata) {
         metadataByIcao24[metadata.icao24] = metadata
         metadataRevision.value = metadataRevision.value + 1L
+    }
+
+    fun advanceLookupProgress() {
+        lookupProgressRevision.value = lookupProgressRevision.value + 1L
     }
 }
 

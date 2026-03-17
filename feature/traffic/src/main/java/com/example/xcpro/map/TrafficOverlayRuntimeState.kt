@@ -33,6 +33,7 @@ data class OverlayCoordinate(
 interface AdsbTrafficOverlayHandle {
     fun initialize()
     fun setIconSizePx(iconSizePx: Int)
+    fun setViewportZoom(zoomLevel: Float)
     fun setEmergencyFlashEnabled(enabled: Boolean)
     fun render(
         targets: List<AdsbTrafficUiModel>,

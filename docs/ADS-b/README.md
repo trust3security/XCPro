@@ -38,6 +38,9 @@ This folder was reduced to a minimal, current set so future agents have one clea
      for this run.
 14. `docs/ADS-b/EXECUTION_LOG_ADSB_POSITION_FRESHNESS_PHASED_EXECUTION_2026-03-10.md`
    - Live execution log for the ADS-B position-freshness automation run.
+15. `docs/ADS-b/CHANGE_PLAN_ADSB_CATEGORY_METADATA_ICON_REFINEMENT_PHASED_IP_2026-03-16.md`
+   - Detailed phased implementation plan for refining fixed-wing ADS-B icons with
+     metadata/typecode heuristics while keeping the current unknown-icon rollout.
 
 ## Notes
 
@@ -50,6 +53,9 @@ This folder was reduced to a minimal, current set so future agents have one clea
   default-icon UX and icon-resolution-latency hardening work.
 - Use `CHANGE_PLAN_ADSB_ICON_CORRECTNESS_RELEASE_GRADE_2026-03-09.md` to execute the
   targeted release-grade icon correctness tightening pass.
+- Use `CHANGE_PLAN_ADSB_CATEGORY_METADATA_ICON_REFINEMENT_PHASED_IP_2026-03-16.md`
+  for the next refinement slice: category plus metadata/typecode fixed-wing icon
+  upgrades, label completion, and release-safe scope cuts.
 - Use `CHANGE_PLAN_ADSB_POSITION_FRESHNESS_REWIND_FIX_2026-03-10.md` for ADS-B
   provider timing, freshness, stale-geometry, and reverse-jump hardening work.
 - Use `AGENT_CONTRACT_ADSB_DEFAULT_ICON_PHASE_EXECUTION_2026-03-08.md` when

@@ -1,4 +1,4 @@
-package com.example.xcpro.qnh
+package com.example.xcpro.terrain
 
 import android.content.Context
 import com.example.dfcards.dfcards.calculations.SrtmTerrainDatabase
@@ -7,18 +7,18 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
 
 @Singleton
-class SrtmTerrainElevationProvider @Inject constructor(
+class SrtmTerrainDataSource @Inject constructor(
     @ApplicationContext context: Context,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
-) : TerrainElevationProvider {
-    private val terrainDatabase = SrtmTerrainDatabase(context)
+    @IoDispatcher ioDispatcher: CoroutineDispatcher
+) : TerrainElevationDataSource {
+
+    private val terrainDatabase = SrtmTerrainDatabase(
+        context = context,
+        ioDispatcher = ioDispatcher
+    )
 
     override suspend fun getElevationMeters(lat: Double, lon: Double): Double? =
-        withContext(ioDispatcher) {
-            terrainDatabase.getElevation(lat, lon)
-        }
+        terrainDatabase.getElevation(lat, lon)
 }
-

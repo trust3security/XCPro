@@ -56,6 +56,7 @@ internal class AdsbProximityTrendEvaluator(
                 closingRateMps = null,
                 recoveryUntilMonoMs = null,
                 hadClosingEpisode = false,
+                closingReentrySampleCount = 0,
                 postPassDivergingSampleCount = 0
             )
             return AdsbProximityTrendAssessment(
@@ -83,9 +84,19 @@ internal class AdsbProximityTrendEvaluator(
 
         val closingRateMps =
             (existing.previousDistanceMeters - distanceMeters) / (sampleDtMs.toDouble() / 1_000.0)
+        val nextClosingCandidate = closingRateMps >= closingEnterMs
+        val nextClosingReentrySampleCount = when {
+            existing.isClosing -> 0
+            existing.hasTrendSample && existing.hadClosingEpisode && nextClosingCandidate ->
+                (existing.closingReentrySampleCount + 1)
+                    .coerceAtMost(MAX_CLOSING_REENTRY_SAMPLES)
+            else -> 0
+        }
         val nextIsClosing = when {
             !existing.hasTrendSample -> closingRateMps >= closingEnterMs
             existing.isClosing -> closingRateMps > closingExitMs
+            existing.hadClosingEpisode ->
+                nextClosingReentrySampleCount >= CLOSING_REENTRY_MIN_CONSECUTIVE_SAMPLES
             else -> closingRateMps >= closingEnterMs
         }
         val nextRecoveryUntilMonoMs = when {
@@ -116,6 +127,7 @@ internal class AdsbProximityTrendEvaluator(
             closingRateMps = closingRateMps,
             recoveryUntilMonoMs = nextRecoveryUntilMonoMs,
             hadClosingEpisode = nextHadClosingEpisode,
+            closingReentrySampleCount = nextClosingReentrySampleCount.coerceAtLeast(0),
             postPassDivergingSampleCount = nextPostPassDivergingSampleCount
         )
         stateByTargetId[id] = nextState
@@ -141,6 +153,7 @@ internal class AdsbProximityTrendEvaluator(
         val closingRateMps: Double?,
         val recoveryUntilMonoMs: Long?,
         val hadClosingEpisode: Boolean,
+        val closingReentrySampleCount: Int,
         val postPassDivergingSampleCount: Int
     )
 
@@ -150,6 +163,8 @@ internal class AdsbProximityTrendEvaluator(
         const val RECOVERY_DWELL_MS = 4_000L
         const val MIN_TREND_SAMPLE_DT_MS = 800L
         const val PASS_DISTANCE_DELTA_METERS = 120.0
+        const val CLOSING_REENTRY_MIN_CONSECUTIVE_SAMPLES = 2
+        const val MAX_CLOSING_REENTRY_SAMPLES = 2
         const val MAX_POST_PASS_DIVERGING_SAMPLES = 8
     }
 }

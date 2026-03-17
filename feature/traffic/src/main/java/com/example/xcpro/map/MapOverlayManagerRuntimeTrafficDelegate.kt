@@ -22,6 +22,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
     private var latestAdsbOwnshipAltitudeMeters: Double? = null
     private var latestAdsbUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var adsbIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
+    private var adsbViewportZoom: Float? = null
     private var adsbEmergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
     private var lastOverlayFrontOrderSignature: OverlayFrontOrderSignature? = null
     private var lastOverlayFrontOrderApplyMonoMs: Long = 0L
@@ -39,6 +40,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         if (map == null) return
         runtimeState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         runtimeState.adsbTrafficOverlay?.initialize()
+        runtimeState.adsbTrafficOverlay?.setViewportZoom(resolveAdsbViewportZoom(map))
         val projectedStyleIds = projectedAdsbStyleIds(nowMonoMs())
         runtimeState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
@@ -79,6 +81,16 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         val clamped = clampAdsbIconSizePx(iconSizePx)
         adsbIconSizePx = clamped
         runtimeState.adsbTrafficOverlay?.setIconSizePx(clamped)
+    }
+
+    fun setAdsbViewportZoom(zoomLevel: Float) {
+        val normalizedZoom = zoomLevel.takeIf { it.isFinite() } ?: return
+        val zoomChanged = adsbViewportZoom != normalizedZoom
+        adsbViewportZoom = normalizedZoom
+        runtimeState.adsbTrafficOverlay?.setViewportZoom(normalizedZoom)
+        if (zoomChanged && latestAdsbTargets.isNotEmpty()) {
+            scheduleAdsbRender(forceImmediate = true)
+        }
     }
 
     fun setAdsbEmergencyFlashEnabled(enabled: Boolean) {
@@ -194,6 +206,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         if (runtimeState.adsbTrafficOverlay == null) {
             runtimeState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
             runtimeState.adsbTrafficOverlay?.initialize()
+            runtimeState.adsbTrafficOverlay?.setViewportZoom(resolveAdsbViewportZoom(map))
         }
         adsbIconTelemetryTracker.onRenderedTargets(
             targets = latestAdsbTargets,
@@ -214,6 +227,11 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         adsbTrafficOverlayFactory(context, map, adsbIconSizePx).also { overlay ->
             overlay.setEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
         }
+
+    private fun resolveAdsbViewportZoom(map: MapLibreMap): Float =
+        adsbViewportZoom
+            ?: map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() }
+            ?: ADSB_VIEWPORT_ZOOM_FALLBACK
 
     private fun projectedAdsbStyleIds(renderMonoMs: Long): Map<String, String> =
         stickyIconProjectionCache.projectStyleImageIds(
@@ -236,5 +254,9 @@ class MapOverlayManagerRuntimeTrafficDelegate(
             ognTargetLineOverlayId = runtimeState.ognTargetLineOverlay?.let { System.identityHashCode(it) } ?: 0,
             adsbOverlayId = runtimeState.adsbTrafficOverlay?.let { System.identityHashCode(it) } ?: 0
         )
+    }
+
+    private companion object {
+        private const val ADSB_VIEWPORT_ZOOM_FALLBACK = 10f
     }
 }

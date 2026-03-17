@@ -18,9 +18,17 @@
             <option value="$PROJECT_DIR$/core/ui" />
             <option value="$PROJECT_DIR$/dfcards-library" />
             <option value="$PROJECT_DIR$/feature" />
+            <option value="$PROJECT_DIR$/feature/flight-runtime" />
+            <option value="$PROJECT_DIR$/feature/forecast" />
+            <option value="$PROJECT_DIR$/feature/igc" />
             <option value="$PROJECT_DIR$/feature/map" />
+            <option value="$PROJECT_DIR$/feature/map-runtime" />
             <option value="$PROJECT_DIR$/feature/profile" />
+            <option value="$PROJECT_DIR$/feature/tasks" />
+            <option value="$PROJECT_DIR$/feature/traffic" />
             <option value="$PROJECT_DIR$/feature/variometer" />
+            <option value="$PROJECT_DIR$/feature/weather" />
+            <option value="$PROJECT_DIR$/feature/weglide" />
           </set>
         </option>
       </GradleProjectSettings>

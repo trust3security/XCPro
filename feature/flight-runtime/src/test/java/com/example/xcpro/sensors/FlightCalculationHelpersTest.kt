@@ -1,8 +1,7 @@
 package com.example.xcpro.sensors
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.SpeedMs
@@ -37,8 +36,6 @@ import java.util.concurrent.atomic.AtomicLong
 @OptIn(ExperimentalCoroutinesApi::class)
 class FlightCalculationHelpersTest {
 
-    private val context: Context = ApplicationProvider.getApplicationContext()
-
     @Test
     fun resetAll_clearsThermalTracking() {
         val sinkProvider = object : StillAirSinkProvider {
@@ -48,7 +45,7 @@ class FlightCalculationHelpersTest {
 
         val helpers = FlightCalculationHelpers(
             scope = CoroutineScope(UnconfinedTestDispatcher()),
-            aglCalculator = SimpleAglCalculator(context),
+            aglCalculator = noOpAglCalculator(),
             locationHistory = mutableListOf(),
             sinkProvider = sinkProvider
         )
@@ -86,7 +83,7 @@ class FlightCalculationHelpersTest {
 
         val helpers = FlightCalculationHelpers(
             scope = CoroutineScope(UnconfinedTestDispatcher()),
-            aglCalculator = SimpleAglCalculator(context),
+            aglCalculator = noOpAglCalculator(),
             locationHistory = mutableListOf(),
             sinkProvider = sinkProvider
         )
@@ -418,6 +415,13 @@ class FlightCalculationHelpersTest {
             accuracy = 5f,
             timestamp = 1_000L,
             monotonicTimestampMillis = 1_000L
+        )
+
+    private fun noOpAglCalculator(): SimpleAglCalculator =
+        SimpleAglCalculator(
+            terrainElevationReadPort = object : TerrainElevationReadPort {
+                override suspend fun getElevationMeters(lat: Double, lon: Double): Double? = null
+            }
         )
 }
 

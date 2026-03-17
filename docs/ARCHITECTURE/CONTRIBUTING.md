@@ -142,8 +142,25 @@ dev-fast.bat feature:map assemble
 dev-fast.bat app install
 ```
 
+Repo-owned verification bundles:
+```bat
+scripts\qa\run_change_verification.bat -Profile fast-loop
+scripts\qa\run_change_verification.bat -Profile slice-terrain
+scripts\qa\run_change_verification.bat -Profile pr-ready
+```
+
+Reliable root unit-test wrapper:
+```bat
+scripts\qa\run_root_unit_tests_reliable.bat
+```
+
 `dev-fast.bat` is optimized for compile/install loops; run tests with
 `gradlew` directly (or with explicit arguments via `check-quick.bat`).
+
+Use the verification bundles as the default local developer/agent workflow for
+common lanes. Keep root `testDebugUnitTest` as the PR-ready unit-test gate; the
+reliable wrapper only hardens Windows lock recovery and does not narrow the
+meaning of that gate.
 
 Use `preflight.bat` before PR/release validation.
 For fast daily local verification, use `check-quick.bat`:
@@ -156,6 +173,11 @@ For Windows test file-lock resilience (`output.bin`/`.lck`), use
 ```bat
 gradlew testDebugUnitTest
 gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase*"
+```
+
+Preferred root-gate retry path:
+```bat
+scripts\qa\run_root_unit_tests_reliable.bat
 ```
 
 For lock resilience on a failing local test pass, run manual recovery:

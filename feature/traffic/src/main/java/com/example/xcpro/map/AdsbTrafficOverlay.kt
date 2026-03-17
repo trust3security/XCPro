@@ -17,6 +17,14 @@ class AdsbTrafficOverlay(
     initialIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
 ) : AdsbTrafficOverlayHandle {
     private var currentIconSizePx: Int = clampAdsbIconSizePx(initialIconSizePx)
+    private var currentViewportZoom: Float =
+        map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() } ?: ADSB_TRAFFIC_INITIAL_VIEWPORT_ZOOM
+    private var currentViewportRangeMeters: Double? = resolveAdsbViewportRangeMeters(map)
+    private var currentViewportPolicy: AdsbTrafficViewportDeclutterPolicy =
+        resolveAdsbTrafficViewportDeclutterPolicy(
+            zoomLevel = currentViewportZoom,
+            viewportRangeMeters = currentViewportRangeMeters
+        )
     private var emergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
     private var currentOwnshipAltitudeMeters: Double? = null
     private var currentUnitsPreferences: UnitsPreferences = UnitsPreferences()
@@ -62,7 +70,10 @@ class AdsbTrafficOverlay(
                 emergencyIconColor = ADSB_TRAFFIC_EMERGENCY_ICON_COLOR
             )
             if (style.getLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID) == null) {
-                val outlineLayer = createAdsbIconOutlineLayer(currentIconSizePx)
+                val outlineLayer = createAdsbIconOutlineLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
                 val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
                 if (style.getLayer(anchorId) != null) {
                     style.addLayerBelow(outlineLayer, anchorId)
@@ -71,7 +82,10 @@ class AdsbTrafficOverlay(
                 }
             }
             if (style.getLayer(ADSB_TRAFFIC_ICON_LAYER_ID) == null) {
-                val iconLayer = createAdsbIconLayer(currentIconSizePx)
+                val iconLayer = createAdsbIconLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
                 if (style.getLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID) != null) {
                     style.addLayerAbove(iconLayer, ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID)
                 } else {
@@ -85,7 +99,10 @@ class AdsbTrafficOverlay(
             }
 
             if (style.getLayer(ADSB_TRAFFIC_TOP_LABEL_LAYER_ID) == null) {
-                val topLayer = createAdsbTopLabelLayer(currentIconSizePx)
+                val topLayer = createAdsbTopLabelLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
                 if (style.getLayer(ADSB_TRAFFIC_ICON_LAYER_ID) != null) {
                     style.addLayerAbove(topLayer, ADSB_TRAFFIC_ICON_LAYER_ID)
                 } else {
@@ -93,7 +110,10 @@ class AdsbTrafficOverlay(
                 }
             }
             if (style.getLayer(ADSB_TRAFFIC_BOTTOM_LABEL_LAYER_ID) == null) {
-                val bottomLayer = createAdsbBottomLabelLayer(currentIconSizePx)
+                val bottomLayer = createAdsbBottomLabelLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
                 if (style.getLayer(ADSB_TRAFFIC_TOP_LABEL_LAYER_ID) != null) {
                     style.addLayerAbove(bottomLayer, ADSB_TRAFFIC_TOP_LABEL_LAYER_ID)
                 } else if (style.getLayer(ADSB_TRAFFIC_ICON_LAYER_ID) != null) {
@@ -102,7 +122,7 @@ class AdsbTrafficOverlay(
                     style.addLayer(bottomLayer)
                 }
             }
-            applyIconSizeToStyle()
+            applyViewportPolicyToStyle()
         } catch (t: Throwable) {
             AppLogger.e(ADSB_TRAFFIC_OVERLAY_TAG, "Failed to initialize ADS-B overlay: ${t.message}", t)
         }
@@ -112,7 +132,13 @@ class AdsbTrafficOverlay(
         val clamped = clampAdsbIconSizePx(iconSizePx)
         if (clamped == currentIconSizePx) return
         currentIconSizePx = clamped
-        applyIconSizeToStyle()
+        applyViewportPolicyToStyle()
+    }
+
+    override fun setViewportZoom(zoomLevel: Float) {
+        val normalizedZoom = zoomLevel.takeIf { it.isFinite() } ?: return
+        currentViewportZoom = normalizedZoom
+        applyViewportPolicyToStyle()
     }
 
     override fun setEmergencyFlashEnabled(enabled: Boolean) {
@@ -232,19 +258,45 @@ class AdsbTrafficOverlay(
             style.removeLayer(ADSB_TRAFFIC_TOP_LABEL_LAYER_ID)
             style.removeLayer(ADSB_TRAFFIC_ICON_LAYER_ID)
             style.removeLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID)
-            style.addLayer(createAdsbIconOutlineLayer(currentIconSizePx))
-            style.addLayer(createAdsbIconLayer(currentIconSizePx))
-            style.addLayer(createAdsbTopLabelLayer(currentIconSizePx))
-            style.addLayer(createAdsbBottomLabelLayer(currentIconSizePx))
+            style.addLayer(
+                createAdsbIconOutlineLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
+            )
+            style.addLayer(
+                createAdsbIconLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
+            )
+            style.addLayer(
+                createAdsbTopLabelLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
+            )
+            style.addLayer(
+                createAdsbBottomLabelLayer(
+                    currentIconSizePx = currentIconSizePx,
+                    viewportPolicy = currentViewportPolicy
+                )
+            )
         } catch (t: Throwable) {
             AppLogger.w(ADSB_TRAFFIC_OVERLAY_TAG, "Failed to bring ADS-B overlay to front: ${t.message}")
         }
     }
 
-    private fun applyIconSizeToStyle() {
-        applyAdsbIconSizeToStyle(
+    private fun applyViewportPolicyToStyle() {
+        currentViewportRangeMeters = resolveAdsbViewportRangeMeters(map)
+        currentViewportPolicy = resolveAdsbTrafficViewportDeclutterPolicy(
+            zoomLevel = currentViewportZoom,
+            viewportRangeMeters = currentViewportRangeMeters
+        )
+        applyAdsbViewportPolicyToStyle(
             style = map.style ?: return,
-            iconSizePx = currentIconSizePx
+            iconSizePx = currentIconSizePx,
+            viewportPolicy = currentViewportPolicy
         )
     }
 
@@ -261,7 +313,8 @@ class AdsbTrafficOverlay(
             ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
             unitsPreferences = currentUnitsPreferences,
             iconStyleIdOverrides = currentIconStyleIdOverrides,
-            emergencyFlashEnabled = emergencyFlashEnabled
+            emergencyFlashEnabled = emergencyFlashEnabled,
+            maxTargets = currentViewportPolicy.maxTargets
         )
     }
 
@@ -284,5 +337,6 @@ class AdsbTrafficOverlay(
 
     private companion object {
         private const val SOURCE_ID = ADSB_TRAFFIC_SOURCE_ID
+        private const val ADSB_TRAFFIC_INITIAL_VIEWPORT_ZOOM = 10f
     }
 }

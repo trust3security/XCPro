@@ -30,14 +30,14 @@ class AdsbAircraftIconMapperTest {
 
     @Test
     fun mapsMediumLargeAndHeavyAircraftCategories() {
-        assertEquals(AdsbAircraftIcon.PlaneMedium, iconForCategory(4))
+        assertEquals(AdsbAircraftIcon.PlaneLarge, iconForCategory(4))
         assertEquals(AdsbAircraftIcon.PlaneLarge, iconForCategory(5))
         assertEquals(AdsbAircraftIcon.PlaneHeavy, iconForCategory(6))
     }
 
     @Test
-    fun mapsHighPerformanceCategoryToLargePlane() {
-        assertEquals(AdsbAircraftIcon.PlaneLarge, iconForCategory(7))
+    fun mapsHighPerformanceCategoryToTwinJet() {
+        assertEquals(AdsbAircraftIcon.PlaneTwinJet, iconForCategory(7))
     }
 
     @Test
@@ -90,10 +90,20 @@ class AdsbAircraftIconMapperTest {
     }
 
     @Test
-    fun labelsKnownAndUnknownCategories() {
+    fun labelsKnownReservedAndUnknownCategories() {
         assertEquals("Rotorcraft", openSkyCategoryLabel(8))
+        assertEquals("Reserved", openSkyCategoryLabel(13))
         assertEquals("Unknown", openSkyCategoryLabel(null))
-        assertEquals("Unknown", openSkyCategoryLabel(19))
+    }
+
+    @Test
+    fun labelsSurfaceSpaceAndObstacleCategoriesExplicitly() {
+        assertEquals("Space / trans-atmospheric vehicle", openSkyCategoryLabel(15))
+        assertEquals("Surface vehicle - emergency", openSkyCategoryLabel(16))
+        assertEquals("Surface vehicle - service", openSkyCategoryLabel(17))
+        assertEquals("Point obstacle", openSkyCategoryLabel(18))
+        assertEquals("Cluster obstacle", openSkyCategoryLabel(19))
+        assertEquals("Line obstacle", openSkyCategoryLabel(20))
     }
 
     @Test
@@ -165,6 +175,26 @@ class AdsbAircraftIconMapperTest {
     }
 
     @Test
+    fun fallsBackToMediumFixedWingForLightAndSmallCategoriesWhenMetadataMissing() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneMedium,
+            iconForAircraft(
+                category = 2,
+                metadataTypecode = null,
+                metadataIcaoAircraftType = null
+            )
+        )
+        assertEquals(
+            AdsbAircraftIcon.PlaneMedium,
+            iconForAircraft(
+                category = 3,
+                metadataTypecode = null,
+                metadataIcaoAircraftType = null
+            )
+        )
+    }
+
+    @Test
     fun classifiesTwinEngineJetClassAsTwinJetAircraft() {
         assertEquals(
             AdsbAircraftIcon.PlaneTwinJet,
@@ -189,6 +219,18 @@ class AdsbAircraftIconMapperTest {
     }
 
     @Test
+    fun classifiesL2TIcaoAircraftTypeAsTwinPropWithoutTypecode() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneTwinProp,
+            iconForAircraft(
+                category = 3,
+                metadataTypecode = null,
+                metadataIcaoAircraftType = "L2T"
+            )
+        )
+    }
+
+    @Test
     fun classifiesTwinEngineTurbopropTypecodeAsTwinPropAircraft() {
         assertEquals(
             AdsbAircraftIcon.PlaneTwinProp,
@@ -198,6 +240,22 @@ class AdsbAircraftIconMapperTest {
                 metadataIcaoAircraftType = null
             )
         )
+    }
+
+    @Test
+    fun classifiesCommonTwinPropTypecodesWithoutIcaoClass() {
+        val twinPropTypecodes = listOf("BE58", "B350", "C90", "PA34", "DA42")
+
+        twinPropTypecodes.forEach { typecode ->
+            assertEquals(
+                AdsbAircraftIcon.PlaneTwinProp,
+                iconForAircraft(
+                    category = 2,
+                    metadataTypecode = typecode,
+                    metadataIcaoAircraftType = null
+                )
+            )
+        }
     }
 
     @Test
@@ -359,6 +417,34 @@ class AdsbAircraftIconMapperTest {
                 metadataIcaoAircraftType = null
             )
         )
+    }
+
+    @Test
+    fun classifies737MetadataAsTwinJetEvenWhenEmitterCategoryIsSmall() {
+        assertEquals(
+            AdsbAircraftIcon.PlaneTwinJet,
+            iconForAircraft(
+                category = 3,
+                metadataTypecode = "B738",
+                metadataIcaoAircraftType = "L2J"
+            )
+        )
+    }
+
+    @Test
+    fun classifies737MaxTypecodesAsTwinJetWhenIcaoClassMissing() {
+        val maxTypecodes = listOf("B37M", "B38M", "B39M", "B3XM")
+
+        maxTypecodes.forEach { typecode ->
+            assertEquals(
+                AdsbAircraftIcon.PlaneTwinJet,
+                iconForAircraft(
+                    category = 0,
+                    metadataTypecode = typecode,
+                    metadataIcaoAircraftType = null
+                )
+            )
+        }
     }
 
     @Test

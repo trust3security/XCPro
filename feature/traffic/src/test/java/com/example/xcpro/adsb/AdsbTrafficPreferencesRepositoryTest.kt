@@ -39,10 +39,11 @@ class AdsbTrafficPreferencesRepositoryTest {
     }
 
     @Test
-    fun iconSizePolicy_matches124To248Contract() {
-        assertEquals(124, ADSB_ICON_SIZE_MIN_PX)
-        assertEquals(124, ADSB_ICON_SIZE_DEFAULT_PX)
-        assertEquals(248, ADSB_ICON_SIZE_MAX_PX)
+    fun iconSizePolicy_matches80To180UserRangeWith100DefaultAnd124BitmapBase() {
+        assertEquals(80, ADSB_ICON_SIZE_MIN_PX)
+        assertEquals(100, ADSB_ICON_SIZE_DEFAULT_PX)
+        assertEquals(180, ADSB_ICON_SIZE_MAX_PX)
+        assertEquals(124, ADSB_ICON_BITMAP_BASE_SIZE_PX)
     }
 
     @Test

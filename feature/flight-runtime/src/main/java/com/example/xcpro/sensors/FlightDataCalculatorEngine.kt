@@ -1,7 +1,7 @@
 package com.example.xcpro.sensors
-import android.content.Context
 import com.example.dfcards.calculations.BarometricAltitudeCalculator
 import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
 import com.example.xcpro.audio.VarioAudioControllerPort
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.common.flight.FlightMode
@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
  * Sensor access lives in [SensorDataSource]; this class only fuses/filters and publishes.
  */
 internal class FlightDataCalculatorEngine(
-    private val context: Context,
     private val sensorDataSource: SensorDataSource,
     private val airspeedDataSource: AirspeedDataSource,
     private val scope: CoroutineScope,
@@ -41,6 +40,7 @@ internal class FlightDataCalculatorEngine(
     internal val audioController: VarioAudioControllerPort,
     internal val clock: Clock,
     private val hawkAudioVarioReadPort: HawkAudioVarioReadPort,
+    private val terrainElevationReadPort: TerrainElevationReadPort,
     internal val isReplayMode: Boolean = false
 ): SensorFusionRepository {
 
@@ -60,9 +60,8 @@ internal class FlightDataCalculatorEngine(
     }
     internal val locationHistory = mutableListOf<LocationWithTime>()
     internal val aglCalculator = SimpleAglCalculator(
-        context = context,
-        nowMonoMsProvider = { clock.nowMonoMs() }
-    )  // KISS: SRTM terrain database
+        terrainElevationReadPort = terrainElevationReadPort
+    )
     internal val baroCalculator = BarometricAltitudeCalculator()
     internal val filters = FlightFilters()
     internal val flightHelpers = FlightCalculationHelpers(

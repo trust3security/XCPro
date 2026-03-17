@@ -200,6 +200,8 @@ open class MapOverlayManagerRuntime(
         normalizeOwnshipAltitudeForRender = ::normalizeOwnshipAltitudeForRender
     )
 
+    fun setAdsbViewportZoom(zoomLevel: Float) = trafficDelegate.setAdsbViewportZoom(zoomLevel)
+
     fun setForecastOverlay(
         enabled: Boolean,
         primaryTileSpec: ForecastTileSpec?,

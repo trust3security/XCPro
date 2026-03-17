@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -459,6 +460,29 @@ class AdsbMetadataEnrichmentUseCaseTest {
     }
 
     @Test
+    fun targetsWithMetadata_retriesLookupWhenLookupProgressAdvancesWithoutMetadataInsert() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(emptyMap())
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val targets = MutableStateFlow(listOf(target("abc123"), target("def456")))
+        val job = backgroundScope.launch {
+            useCase.targetsWithMetadata(targets).collect {}
+        }
+
+        advanceUntilIdle()
+        assertEquals(1, metadataRepository.lookupCallCount)
+        metadataRepository.advanceLookupProgress()
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(2, metadataRepository.lookupCallCount)
+    }
+
+    @Test
     fun selectedTargetDetails_sameSelectionRawChurn_doesNotRepeatLookups() = runTest {
         val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
         val metadataRepository = FakeMetadataRepository(
@@ -500,6 +524,39 @@ class AdsbMetadataEnrichmentUseCaseTest {
         advanceUntilIdle()
         shared.first()
         assertEquals(1, metadataRepository.lookupCallCount)
+    }
+
+    @Test
+    fun selectedTargetDetails_retriesLookupWhenLookupProgressAdvancesWithoutMetadataInsert() = runTest {
+        val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
+        val metadataRepository = FakeMetadataRepository(emptyMap())
+        val useCase = AdsbMetadataEnrichmentUseCase(
+            aircraftMetadataRepository = metadataRepository,
+            metadataSyncRepository = syncRepository,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val selectedId = MutableStateFlow(Icao24.from("abc123"))
+        val targets = MutableStateFlow(listOf(target("abc123")))
+        val shared = useCase.selectedTargetDetails(selectedId, targets)
+            .filterNotNull()
+            .shareIn(
+                scope = backgroundScope,
+                started = SharingStarted.Eagerly,
+                replay = 1
+            )
+
+        advanceUntilIdle()
+        shared.first()
+        assertEquals(1, metadataRepository.lookupCallCount)
+
+        val awaitUpdated = backgroundScope.async {
+            shared.drop(1).first()
+        }
+        metadataRepository.advanceLookupProgress()
+        advanceUntilIdle()
+        withTimeout(1_000) { awaitUpdated.await() }
+
+        assertEquals(2, metadataRepository.lookupCallCount)
     }
 
 }

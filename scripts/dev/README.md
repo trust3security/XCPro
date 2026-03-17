@@ -71,6 +71,26 @@ If you need tests, pass them directly:
 check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
 ```
 
+## QA bundles
+
+For repo-owned slice verification bundles, use:
+
+```bat
+scripts\qa\run_change_verification.bat -Profile fast-loop
+scripts\qa\run_change_verification.bat -Profile slice-terrain
+scripts\qa\run_change_verification.bat -Profile pr-ready
+```
+
+These bundles are intended to work with the `xcpro-qa` skill and keep the
+default local workflow lighter than immediately jumping to repo-wide
+`testDebugUnitTest`.
+
+For the canonical root unit-test gate with Windows lock recovery, use:
+
+```bat
+scripts\qa\run_root_unit_tests_reliable.bat
+```
+
 ## Retired
 
 The dedicated edit-impact benchmark helper and its synthetic benchmark sources

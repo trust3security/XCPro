@@ -10,7 +10,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 
@@ -30,13 +33,20 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
 
         val metadataByIcao24 = combine(
             lookupOrder,
-            aircraftMetadataRepository.metadataRevision
-        ) { orderedIcao24s, _ ->
+            aircraftMetadataRepository.metadataRevision,
+            aircraftMetadataRepository.lookupProgressRevision
+        ) { orderedIcao24s, _, _ ->
             orderedIcao24s
-        }.mapLatest { orderedIcao24s ->
-            if (orderedIcao24s.isEmpty()) return@mapLatest emptyMap()
-            withContext(ioDispatcher) {
-                aircraftMetadataRepository.getMetadataFor(orderedIcao24s)
+        }.flatMapConcat { orderedIcao24s ->
+            if (orderedIcao24s.isEmpty()) {
+                flowOf(emptyMap())
+            } else {
+                flow {
+                    val metadata = withContext(ioDispatcher) {
+                        aircraftMetadataRepository.getMetadataFor(orderedIcao24s)
+                    }
+                    emit(metadata)
+                }
             }
         }
 
@@ -58,8 +68,9 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
 
         val selectedMetadata = combine(
             selectedIcao24Raw,
-            aircraftMetadataRepository.metadataRevision
-        ) { selectedRawIcao24, _ ->
+            aircraftMetadataRepository.metadataRevision,
+            aircraftMetadataRepository.lookupProgressRevision
+        ) { selectedRawIcao24, _, _ ->
             selectedRawIcao24
         }.mapLatest { selectedRawIcao24 ->
             if (selectedRawIcao24 == null) {
@@ -139,7 +150,7 @@ class AdsbMetadataEnrichmentUseCase @Inject constructor(
                 effectivePositionEpochSec = target.effectivePositionEpochSec,
                 positionFreshnessSource = target.positionFreshnessSource
             )
-        }.distinctUntilChanged()
+        }
     }
 
     private fun prioritizedLookupOrder(targets: List<AdsbTrafficUiModel>): List<String> {

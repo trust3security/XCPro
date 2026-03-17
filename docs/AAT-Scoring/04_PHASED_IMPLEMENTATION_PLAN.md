@@ -1,248 +1,325 @@
-# 04 — Phased Implementation Plan
+# 04 - Phased Implementation Plan
 
 ## Delivery philosophy
 
 Ship this in phases so each phase leaves the repo in a valid, testable state.
 
-The order below is chosen to reduce rework:
+The repo-specific order below is chosen to preserve the current task SSOT while
+adding a new competition-scoring authority.
 
-1. make rules/config explicit
-2. correct/finish the domain engine
-3. add live aggregation
-4. add leaderboard UI
-5. reconcile with official logs
-6. add optional/custom extras
+High-level rule:
+
+- `feature:tasks` remains the owner of task declaration and editing.
+- `feature:competition` becomes the owner of pure AAT live scoring domain logic.
+- `feature:map-runtime` becomes the owner of runtime composition and live
+  competition state.
+- `feature:map` becomes the owner of organizer-facing setup and leaderboard UI.
+- live scoring runs against a frozen published competition day, not the mutable
+  task editor snapshot.
 
 ---
 
-## Phase 0 — Repo Discovery and Guardrails
+## Phase 0 - Discovery, ADR, and Guardrails
 
 ### Goal
 
-Understand what already exists so no duplicate AAT subsystem is created.
+Lock the module boundary before code is written so scoring does not leak into
+task editor state.
 
 ### Tasks
 
-- inspect actual AAT package path(s)
-- locate existing:
-  - task calculators
-  - geometry classes
-  - tracking pipeline
-  - scoring pipeline
-  - config persistence
-  - UI framework (Compose / XML / other)
-- identify whether there is already:
-  - handicap support
-  - competition roster model
-  - results table / leaderboard UI
-  - FR-log ingestion path
+- confirm the current authoritative seams:
+  - `TaskManagerCoordinator.taskSnapshotFlow`
+  - `TaskRepository.state`
+  - `IgcFlightLogRepository`
+  - `MapTasksUseCase`
+- confirm tracker identity and timestamp quality seams:
+  - OGN `competitionNumber`
+  - OGN `canonicalKey`
+  - source timestamp vs `lastSeenMillis`
+- reconcile older scoring docs so implementation does not start from stale
+  assumptions about mutable task input or raw tracker identity
+- write the repo-specific change plan
+- write the module-boundary ADR
+- identify temporary bridge points that are allowed in early phases
 
 ### Deliverables
 
-- repo-specific short plan
-- list of files/classes to extend
-- no new behavior yet
+- approved change plan
+- approved ADR
+- repo-specific module and seam proposal
 
 ### Exit criteria
 
-- Codex knows exactly where the real AAT code lives
-- Codex has identified whether setup page should be new or an extension of an existing admin/settings screen
+- there is one explicit answer for where scoring state will live
+- there is one explicit answer for where task definition will stay
+- no implementation task depends on extending `TaskUiState`
 
 ---
 
-## Phase 1 — Rules Profile + Config Foundation
+## Phase 1 - New Competition Module Foundation
 
 ### Goal
 
-Create the configuration backbone that all later phases depend on.
+Create the new pure scoring domain module and its normalized contracts.
 
 ### Tasks
 
-- add `RulesProfile`
-- add `ScoringSystem`
-- add `LeaderboardMetric`
-- add `ProjectionMode`
-- add `AatCompetitionConfig`
-- add config validation
-- add config hash generation
-- persist draft + published config
-- create initial AAT setup screen skeleton
+- add `:feature:competition`
+- add package roots:
+  - `com.example.xcpro.competition.aat.config`
+  - `com.example.xcpro.competition.aat.model`
+  - `com.example.xcpro.competition.aat.roster`
+  - `com.example.xcpro.competition.aat.engine`
+  - `com.example.xcpro.competition.aat.policy`
+  - `com.example.xcpro.competition.aat.ports`
+- add normalized models:
+  - `AatPublishedCompetitionDay`
+  - `AatTaskDefinitionSnapshot`
+  - `AatCompetitionConfig`
+  - `AatRosterSnapshot`
+  - `AatPilotFix`
+  - `AatPilotFixQuality`
+  - `AatAcceptedTrack`
+  - `AatPilotScoringState`
+  - `AatPilotResult`
+  - `AatLeaderboardRow`
+- add config validation and config hash generation
+- add published-day hash generation from config + task snapshot + roster snapshot
+- keep the module free of Compose, ViewModels, MapLibre, and direct IGC/task
+  dependencies
 
 ### Deliverables
 
-- serializable config model
-- validator
-- setup page stub with save/load
-- FAI vs custom profile toggles
+- compiling `feature:competition` module
+- normalized scoring contracts
+- config validator and hash policy owner
 
 ### Exit criteria
 
-- no AAT leaderboard code depends on hidden constants anymore
-- a saved task config can be loaded and validated
+- scoring formulas no longer need to read task editor models directly
+- no new scoring code is added to `feature:tasks`
 
 ---
 
-## Phase 2 — Official/Provisional Single-Pilot Engine Hardening
+## Phase 2 - Organizer Config and Persistence
 
 ### Goal
 
-Make the per-pilot AAT engine rules-correct before competition-level aggregation.
+Make organizer scoring configuration, publish freeze, and roster identity
+explicit without using the task sheet as the state owner.
 
 ### Tasks
 
-- implement or verify:
-  - area achievement by segment intersection
-  - candidate point generation
-  - credited-fix optimizer
-  - explicit finished / outlanded-last-leg / outlanded-earlier-leg marking-distance paths
-  - marking time and marking speed formulas
-  - handicap transforms
-- separate official vs provisional result calculation paths
+- add draft config persistence owner in `feature:map-runtime`
+- add published competition-day persistence owner in `feature:map-runtime`
+- add published vs draft states
+- create `Task` -> `AatTaskDefinitionSnapshot` adapter in `feature:map-runtime`
+- add roster source and `AatPilotIdentityResolver` in `feature:map-runtime`
+- publish must freeze:
+  - config
+  - current task snapshot
+  - current roster snapshot
+- build organizer-facing setup screen in `feature:map`
+- wire setup UI to draft and published-day repositories
+- keep task min/max time editing in task UI, but do not let task UI own
+  leaderboard policy
+- detect task changes after publish and require republish
 
 ### Deliverables
 
-- trusted single-pilot AAT scoring core
-- unit tests for each rule path
+- `AatCompetitionDraftRepository`
+- `AatPublishedCompetitionDayRepository`
+- `AatPilotRosterRepository`
+- organizer setup page skeleton
+- saved draft and published-day paths
 
 ### Exit criteria
 
-- one pilot can be scored correctly from both live data and FR-log data
-- credited-fix logic is no longer just “area centers” or “current target points”
+- rules profile, scoring system, visibility policy, finish closure policy, and
+  projection mode are stored in explicit config
+- the scored day is frozen at publish time
+- task edits after publish do not silently alter scoring inputs
+- no leaderboard policy is hidden inside UI constants or `RulesBTTab`
 
 ---
 
-## Phase 3 — Live Pilot State Aggregation
+## Phase 3 - Single-Pilot Scoring Engine Hardening
 
 ### Goal
 
-Add competition-level live state that updates as tracker fixes arrive.
+Replace the current scoring-like helpers with a trusted single-pilot scorer in
+the new module.
 
 ### Tasks
 
-- create per-pilot live state model
-- integrate tracker fix ingestion
-- update start/finish/area status in real time
-- store provisional credited fixes
-- add status transitions:
-  - not started -> started
-  - started -> achieved prefix
-  - achieved prefix -> finished
-  - achieved prefix -> outlanded
-  - airborne -> finish-closed-unfinished
+- implement scoring-grade area achievement
+- implement credited-fix selection from real track intersection
+- implement completed / outlanded / finish-closed-unfinished / DNF result paths
+- implement official vs provisional result production
+- add handicap hooks behind explicit policy
+- require stable roster `pilotId` on domain inputs
+- keep edit-time validation separate from scoring-time evaluation
+- treat current `AATValidationBridge` and `AATTaskCalculator.calculateFlightResult`
+  as non-authoritative compatibility code
 
 ### Deliverables
 
-- live state repository
-- recompute loop
-- pilot status cards / debug logs
+- `AatSinglePilotScorer`
+- `AatProjectionEngine`
+- `AatOfficialResultReconciler`
+- unit tests for each rules path
+
+### Exit criteria
+
+- one pilot can be scored from live fixes or accepted tracks using the same
+  domain models
+- credited fixes are no longer area centers or current UI targets by fallback
+
+---
+
+## Phase 4 - Live Runtime Repository in `feature:map-runtime`
+
+### Goal
+
+Add the runtime authority that composes the published competition day, live
+fixes, and accepted tracks into one live competition state.
+
+### Tasks
+
+- add `AatCompetitionRuntimeRepository` in `feature:map-runtime`
+- add adapters:
+  - `TaskCoordinatorAatTaskDefinitionAdapter`
+  - tracker/live-fix adapter
+  - roster identity resolver
+  - published competition-day repository adapter
+- process pilot fixes deterministically in arrival order
+- maintain per-pilot live state and provisional result state
+- publish `StateFlow<AatCompetitionState>`
+- consume published competition day, not mutable live task/editor state
+- preserve fix quality/confidence from adapters into runtime state
+
+### Deliverables
+
+- runtime repository
+- deterministic event-processing loop
+- per-pilot live scoring state
+- explicit degraded/unmatched pilot states
 
 ### Exit criteria
 
 - all pilots on a task can be represented at once
-- every tracker fix can trigger a deterministic pilot-state update
+- leaderboard consumers read one runtime state owner instead of recomputing in
+  UI code
+- raw OGN targets are not used as scoring models directly
 
 ---
 
-## Phase 4 — Projection Engine + Live Leaderboard
+## Phase 5 - Projection and Leaderboard UI
 
 ### Goal
 
-Rank the field in real time.
+Rank the field in real time and render it through dedicated organizer UI.
 
 ### Tasks
 
 - implement projection modes:
-  - optimize to min time
+  - optimize to minimum time
   - head home now
   - auto wrapper
-- compute projected per-pilot outputs
-- implement classic day-parameter engine
-- compute projected/provisional classic scores
-- build leaderboard ranking service
-- add organizer-facing leaderboard screen
+- compute projected rows for airborne pilots
+- compute provisional rows for unfinished but no-longer-airborne pilots
+- add organizer leaderboard screen in `feature:map`
+- add pilot detail drill-down and confidence labeling
+- surface stale-published-day and unmatched-pilot warnings in organizer UI when
+  relevant
 
 ### Deliverables
 
-- competition-level real-time AAT leaderboard
-- clear official / provisional / projected labeling
-- stable rank ordering
+- live leaderboard state
+- organizer leaderboard screen
+- official / provisional / projected labels
 
 ### Exit criteria
 
-- XCPro can show who is leading right now in a defensible projected/provisional sense
-- hidden pending-accounting pilots do not leak into visible ranking before finish closure
+- XCPro can show who is leading now without claiming those rows are official
+- hidden or not-yet-accounted-for pilots do not leak into the visible ranking
+- operators can see when live results are degraded because roster matching or
+  source timing quality is weak
 
 ---
 
-## Phase 5 — Finish Closure + Official Reconciliation
+## Phase 6 - Finish Closure and Official Reconciliation
 
 ### Goal
 
-Move from live standings to officialized standings cleanly.
+Move from live standings to final standings using accepted tracks and one
+scoring authority.
 
 ### Tasks
 
-- implement finish closure timestamp handling
-- convert airborne pilots to outlanded-at-closure
-- accept FR-log input
-- recompute official scored results from accepted logs
-- preserve live-to-official delta for audit/debug
-- refresh leaderboard after officialization
+- add finish closure handling
+- convert airborne pilots to closure-state results when required by policy
+- add a narrow accepted-track read seam over `feature:igc`
+- reconcile official results from accepted tracks
+- reconcile accepted tracks to the same roster-owned `pilotId`
+- preserve live vs official delta for audit/debug
 
 ### Deliverables
 
-- finalization path
-- official result rows
-- audit-safe comparison of live vs official numbers
+- finish closure path
+- official reconciliation path
+- accepted-track adapter
 
 ### Exit criteria
 
-- a class day can move from live operation to final accepted results without manual rewrite of scoring logic
+- live standings can move to official standings without changing scoring
+  formulas
+- accepted-track reconciliation is explicit and testable
 
 ---
 
-## Phase 6 — Polish, Custom Rules, and Optional Features
+## Phase 7 - Custom Rules, Flags, and Polish
 
 ### Goal
 
-Support repo-specific extras without compromising the default FAI path.
+Support repo-specific extras without corrupting the default FAI profile.
 
 ### Tasks
 
-- expose custom geometries behind custom profile
-- add richer confidence markers for sparse trackers
-- add drill-down pilot detail screen
-- add exports / debug traces
-- add feature flags for unsupported scoring modes
+- expose keyhole and start-sector only under `CUSTOM_LOCAL_RULES`
+- add feature flags for unsupported scoring variants
+- add exports, traces, and operator debug views
+- add richer sparse-tracker confidence markers
 
 ### Deliverables
 
-- cleaner UX
-- safer extension points
-- better operator visibility into why scores changed
+- custom/local rules path
+- debugging and audit tooling
+- cleaner organizer UX
 
 ### Exit criteria
 
-- custom features no longer masquerade as standard FAI behavior
-- debugging live scoring differences is practical
+- custom geometries do not masquerade as default FAI behavior
+- operators can explain why a score changed
 
 ---
 
 ## Recommended ship cut lines
 
-### Cut line A — Strong V1
+### Cut line A - Strong V1
 
-Ship phases 1 through 5.
+Ship phases 1 through 6.
 
-This is the recommended release.
+This is the recommended first release.
 
-### Cut line B — Minimum viable internal beta
+### Cut line B - Internal beta only
 
-Ship phases 1 through 4 only if:
+Ship phases 1 through 5 only if:
 
-- finish closure is still handled
-- official log reconciliation is at least stubbed with obvious warnings
-- output is clearly labeled non-official
+- finish closure policy is already explicit in config
+- official reconciliation is visibly not yet final
+- every row is labeled non-official until reconciliation lands
 
 Do not call this production-ready scoring.
 
@@ -254,65 +331,65 @@ Prefer multiple coherent PRs over one giant PR.
 
 ### PR 1
 
-- Phase 1 config foundation
-- setup page skeleton
-- validators
+- Phase 1 competition module foundation
+- ADR and change plan references
 
 ### PR 2
 
-- Phase 2 per-pilot engine hardening
-- unit tests
+- Phase 2 organizer config and persistence
+- setup UI skeleton
 
 ### PR 3
 
-- Phase 3 live state aggregation
-- tracker integration
+- Phase 3 single-pilot scoring hardening
+- unit tests
 
 ### PR 4
 
-- Phase 4 projection + leaderboard
-- leaderboard UI
+- Phase 4 live runtime repository
+- task/tracker adapters
 
 ### PR 5
 
-- Phase 5 finish closure + FR reconciliation
+- Phase 5 projection and leaderboard UI
+
+### PR 6
+
+- Phase 6 finish closure and official reconciliation
 - final integration tests
 
 ---
 
 ## Risks and mitigations
 
-### Risk: existing repo already has half-built leaderboard logic
+### Risk: scoring gets bolted onto task sheet state
 
 Mitigation:
 
-- inspect first
-- refactor/replace surgically
-- do not create duplicated state models
+- keep task declaration and competition state in different authorities
+- reject leaderboard state in `TaskUiState`
 
-### Risk: custom task geometry is already deeply used
-
-Mitigation:
-
-- keep it under custom profile
-- do not break old behavior unnecessarily
-- separate compliance labeling from feature support
-
-### Risk: sparse tracker data makes live scoring noisy
+### Risk: existing AAT helpers look complete but are not
 
 Mitigation:
 
-- use segment intersection
-- keep confidence metadata
-- clearly label projected rows
+- treat current validation and calculator helpers as compatibility code
+- replace scoring authority with the new module before multi-pilot work
 
-### Risk: Alternative scoring requested too early
+### Risk: `feature:competition` starts pulling in task and IGC internals
 
 Mitigation:
 
-- support config field now
-- gate execution path
-- keep V1 honest and Classic-first
+- normalize all input through ports
+- keep adapters in `feature:map-runtime`
+
+### Risk: sparse trackers make live rows noisy
+
+Mitigation:
+
+- store confidence metadata
+- label projected rows clearly
+- reconcile with accepted tracks later
 
 ---
 
@@ -320,8 +397,8 @@ Mitigation:
 
 The implementation is done when:
 
-- organizers can configure the task/rules explicitly
-- pilots update live through a single scoring pipeline
-- the leaderboard reflects official/provisional/projected status correctly
-- finish closure and official FR-log reconciliation are covered
-- automated tests cover the critical rule paths
+- organizers configure AAT live scoring through explicit config
+- live scoring uses one runtime state owner
+- official / provisional / projected states are explicit
+- finish closure and accepted-track reconciliation are covered
+- automated tests cover the critical scoring and boundary paths

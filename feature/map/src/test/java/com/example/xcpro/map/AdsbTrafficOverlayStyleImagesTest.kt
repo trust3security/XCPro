@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.core.content.ContextCompat
 import androidx.test.core.app.ApplicationProvider
+import com.example.xcpro.adsb.ADSB_ICON_BITMAP_BASE_SIZE_PX
 import com.example.xcpro.traffic.R
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -69,12 +70,12 @@ class AdsbTrafficOverlayStyleImagesTest {
 private fun renderAdsbDrawableBitmap(context: Context, drawableId: Int): Bitmap {
     val drawable = ContextCompat.getDrawable(context, drawableId) ?: error("Missing drawable id: $drawableId")
     val bitmap = Bitmap.createBitmap(
-        ADSB_ICON_SIZE_DEFAULT_PX,
-        ADSB_ICON_SIZE_DEFAULT_PX,
+        ADSB_ICON_BITMAP_BASE_SIZE_PX,
+        ADSB_ICON_BITMAP_BASE_SIZE_PX,
         Bitmap.Config.ARGB_8888
     )
     val canvas = Canvas(bitmap)
-    drawable.setBounds(0, 0, ADSB_ICON_SIZE_DEFAULT_PX, ADSB_ICON_SIZE_DEFAULT_PX)
+    drawable.setBounds(0, 0, ADSB_ICON_BITMAP_BASE_SIZE_PX, ADSB_ICON_BITMAP_BASE_SIZE_PX)
     drawable.draw(canvas)
     return bitmap
 }

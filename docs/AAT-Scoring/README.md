@@ -1,36 +1,44 @@
 # XCPro Real-Time AAT Package for Codex
 
+## Canonical location
+
+Use `docs/AAT-Scoring` as the canonical AAT-LiveScoring planning folder for
+this repo.
+
+There is no separate `docs/AAT-LiveScoring` folder at the moment. Keep the work
+here unless the repo explicitly renames the package later.
+
 ## Purpose
 
-This package is a codex-ready implementation brief for adding a **real-time AAT leaderboard** to XCPro without pretending that in-flight results are already official.
+This package is a Codex-ready implementation brief for adding a real-time AAT
+leaderboard to XCPro without pretending that in-flight results are already
+official.
 
-The package assumes:
+The package now assumes the repo-specific architecture decision below:
 
-- XCPro already has a meaningful amount of **single-pilot AAT geometry and calculator code**.
-- The missing capability is mainly **competition-level aggregation, live projection, rule-aware configuration, and final reconciliation**.
-- The safest product model is:
-  - **Official** = finished or outlanded and validated from accepted FR logs
-  - **Provisional** = finished or outlanded from live tracking but not yet log-validated
-  - **Projected** = still airborne, ranked by a deterministic live projection
+- `feature:tasks` remains the owner of task declaration and editing.
+- `feature:competition` is the recommended new pure domain module for AAT live
+  scoring.
+- `feature:map-runtime` composes task snapshots, live fixes, config, and
+  accepted tracks into one live competition state.
+- `feature:map` owns organizer-facing setup and leaderboard UI.
 
-## Why a dedicated AAT Setup page is recommended
+## Why a dedicated AAT setup page is still recommended
 
-Yes — add it.
+Without a dedicated organizer-facing setup/config page, the implementation will
+hide critical scoring decisions inside task editor UI or scoring defaults.
 
-Without a dedicated setup/config page, the implementation will end up with hidden assumptions about:
+That is not acceptable for competition scoring.
+
+The setup page should own explicit choices for:
 
 - rules profile
-- classic vs alternative scoring
-- handicaps
-- minimum task time
-- allowed geometries
+- scoring system
+- minimum task time enforcement
+- projection mode
 - finish closure handling
 - leaderboard visibility
-- algorithm version / hash
-
-That is too much implicit behavior for competition scoring.
-
-The setup page should be **organizer/admin-facing**, not pilot-editable in flight.
+- algorithm version and config hash
 
 ## Read order for Codex
 
@@ -38,37 +46,32 @@ The setup page should be **organizer/admin-facing**, not pilot-editable in fligh
 2. `01_RULES_REFERENCE.md`
 3. `02_REALTIME_ENGINE_SPEC.md`
 4. `03_AAT_SETUP_PAGE_SPEC.md`
-5. `04_PHASED_IMPLEMENTATION_PLAN.md`
-6. `05_TEST_PLAN.md`
+5. `06_REPO_MODULE_AND_SEAMS.md`
+6. `04_PHASED_IMPLEMENTATION_PLAN.md`
+7. `05_TEST_PLAN.md`
+8. `../ARCHITECTURE/CHANGE_PLAN_AAT_LIVE_SCORING_2026-03-16.md`
+9. `../ARCHITECTURE/ADR_AAT_LIVE_SCORING_BOUNDARIES_2026-03-16.md`
 
 ## Key decisions already made
 
-1. **Build a live projected leaderboard, not “official live scoring.”**
-2. **Default rules profile = current FAI Annex A-compatible behavior.**
-3. **Treat custom geometries or local variants as a separate custom profile.**
-4. **Ship Classic scoring first.**
-5. **Alternative scoring should be configurable only if already present; otherwise gate it and clearly label it unsupported in V1.**
-6. **Do not create a second AAT module if one already exists. Extend the real one.**
-7. **Keep domain math and scoring out of UI layers.**
-8. **Persist an algorithm version + config hash for auditability.**
+1. Build a live projected leaderboard, not "official live scoring."
+2. Keep task editing and competition scoring as separate authorities.
+3. Create a new pure scoring domain module rather than expanding task editor
+   state.
+4. Keep runtime composition in `feature:map-runtime`, not in `feature:tasks`.
+5. Treat custom geometries or local variants as a separate custom profile.
+6. Ship Classic scoring first.
+7. Keep domain math and scoring out of UI layers.
+8. Persist an algorithm version and config hash for auditability.
 
-## Important corrections to existing internal docs
+## Important repo-specific corrections
 
-The uploaded internal AAT docs are useful, but Codex should correct these points:
-
-- `Speed = Distance / MAX(elapsed_time, minimum_time)` is the **AAT marking speed formula**, not the entire day score.
-- Current FAI Annex A does **not** make “keyhole” or “start sector” a default AAT geometry. If XCPro already supports them, they belong under a **custom/local rules profile**, not the default FAI profile.
-- A cylinder start exists in Annex A, but it is noted as not to be used **without a specific waiver**.
-- Before finish closure, pilots not fully accounted for should not appear in the ranking even though scorers may use assumptions to keep preliminary results representative.
-
-## Repo hygiene expectations for Codex
-
-Before editing code:
-
-- inspect the actual repo for the existing AAT package path
-- reuse existing AAT calculator / validator / path optimizer code where possible
-- do not duplicate package trees because the uploaded docs show inconsistent historical paths
-- route all new rules/config through a single source of truth
+- The current production AAT validation and calculator stack is not a safe
+  leaderboard authority.
+- `AATValidationBridge` is lossy and should not normalize task definition for
+  scoring.
+- `AATTaskCalculator.calculateFlightResult` is not scoring-grade authority.
+- `TaskUiState` is task editor projection state, not competition runtime state.
 
 ## Minimum V1 deliverable
 
@@ -79,28 +82,16 @@ A pull request is acceptable only if it includes all of the following:
 - multi-pilot live state model
 - projected/provisional/official status model
 - live leaderboard for AAT
-- classic scoring day-parameter computation
-- reconciliation path from live tracking to accepted FR logs
+- Classic scoring first
+- reconciliation path from live tracking to accepted tracks
 - automated tests
-
-## Suggested delivery cut line
-
-If the repo or time budget forces a narrower first release, the minimum acceptable cut line is:
-
-- Rules profile + setup page
-- Live state aggregation
-- Provisional/projected leaderboard
-- Classic scoring only
-- Final log reconciliation
-- Tests
-
-Anything else can stay behind feature flags.
 
 ## Output expectation for Codex
 
 Codex should produce:
 
 1. a repo-specific implementation plan after inspection
-2. the actual code changes
-3. tests
-4. a short note listing any assumptions or TODOs that could not be resolved from the repo itself
+2. the architecture decision and module split
+3. the actual code changes
+4. tests
+5. a short note listing any unresolved assumptions

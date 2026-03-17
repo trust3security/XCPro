@@ -1,9 +1,14 @@
 package com.example.dfcards.dfcards.calculations
 
 import android.content.Context
-import android.util.Log
-import kotlinx.coroutines.*
-import java.io.*
+import com.example.xcpro.core.common.logging.AppLogger
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.DataInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.ZipInputStream
@@ -28,7 +33,7 @@ import kotlin.math.floor
  */
 class SrtmTerrainDatabase(
     private val context: Context,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     companion object {
         private const val TAG = "SrtmTerrain"
@@ -54,7 +59,7 @@ class SrtmTerrainDatabase(
     suspend fun getElevation(lat: Double, lon: Double): Double? {
         // Check bounds
         if (lat < -60 || lat > 60) {
-            Log.w(TAG, "Outside SRTM coverage: lat=$lat")
+            AppLogger.w(TAG, "Outside SRTM coverage: lat=$lat")
             return null
         }
 
@@ -91,14 +96,14 @@ class SrtmTerrainDatabase(
     /**
      * Load SRTM tile (KISS - checks memory, disk, then downloads)
      */
-    private suspend fun loadTile(tileName: String): SrtmTile? = withContext(Dispatchers.IO) {
+    private suspend fun loadTile(tileName: String): SrtmTile? = withContext(ioDispatcher) {
         // Check memory cache
         loadedTiles[tileName]?.let { return@withContext it }
 
         // Check disk cache
         val cacheFile = getTileCacheFile(tileName)
         if (cacheFile.exists()) {
-            Log.d(TAG, "Loading tile $tileName from disk cache")
+            AppLogger.d(TAG, "Loading tile $tileName from disk cache")
             val tile = SrtmTile.fromFile(cacheFile, tileName)
             if (tile != null) {
                 loadedTiles[tileName] = tile
@@ -109,7 +114,7 @@ class SrtmTerrainDatabase(
         // Check if already downloading (prevent concurrent downloads)
         synchronized(downloadingTiles) {
             if (downloadingTiles.contains(tileName)) {
-                Log.d(TAG, "Tile $tileName already downloading, skipping")
+                AppLogger.d(TAG, "Tile $tileName already downloading, skipping")
                 return@withContext null
             }
             downloadingTiles.add(tileName)
@@ -117,18 +122,18 @@ class SrtmTerrainDatabase(
 
         // Download tile
         try {
-            Log.d(TAG, "Downloading tile $tileName...")
+            AppLogger.d(TAG, "Downloading tile $tileName...")
             val downloaded = downloadTile(tileName, cacheFile)
             if (downloaded) {
                 val tile = SrtmTile.fromFile(cacheFile, tileName)
                 if (tile != null) {
                     loadedTiles[tileName] = tile
-                    Log.d(TAG, " Tile $tileName ready")
+                    AppLogger.d(TAG, "Tile $tileName ready")
                     return@withContext tile
                 }
             }
 
-            Log.e(TAG, " Failed to load tile $tileName")
+            AppLogger.e(TAG, "Failed to load tile $tileName")
             null
         } finally {
             synchronized(downloadingTiles) {
@@ -145,7 +150,7 @@ class SrtmTerrainDatabase(
             // USGS path: SRTMGL1.003/2000.02.11/S34E151.SRTMGL1.hgt.zip
             val url = "$SRTM_BASE_URL$tileName.SRTMGL1.hgt.zip"
 
-            Log.d(TAG, "Downloading: $url")
+            AppLogger.d(TAG, "Downloading: $url")
 
             val connection = URL(url).openConnection() as HttpURLConnection
             connection.connectTimeout = 30000
@@ -163,21 +168,21 @@ class SrtmTerrainDatabase(
                             FileOutputStream(outputFile).use { output ->
                                 zipInput.copyTo(output)
                             }
-                            Log.d(TAG, " Downloaded and extracted ${outputFile.length() / 1024}KB")
+                            AppLogger.d(TAG, "Downloaded and extracted ${outputFile.length() / 1024}KB")
                             return true
                         }
                         entry = zipInput.nextEntry
                     }
                 }
 
-                Log.e(TAG, " No .hgt file found in ZIP")
+                AppLogger.e(TAG, "No .hgt file found in ZIP")
                 false
             } else {
-                Log.e(TAG, " HTTP ${connection.responseCode}")
+                AppLogger.e(TAG, "HTTP ${connection.responseCode}")
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, " Download failed: ${e.message}")
+            AppLogger.e(TAG, "Download failed: ${e.message}", e)
             false
         }
     }
@@ -189,16 +194,6 @@ class SrtmTerrainDatabase(
         val cacheDir = File(context.cacheDir, TILE_DIR)
         cacheDir.mkdirs()
         return File(cacheDir, "$tileName.hgt")
-    }
-
-    /**
-     * Clear cache (for testing)
-     */
-    fun clearCache() {
-        loadedTiles.clear()
-        val cacheDir = File(context.cacheDir, TILE_DIR)
-        cacheDir.deleteRecursively()
-        Log.d(TAG, "Cache cleared")
     }
 }
 
@@ -224,7 +219,7 @@ private class SrtmTile(
             return try {
                 val expectedSize = SAMPLES * SAMPLES * 2 // 2 bytes per sample
                 if (file.length() != expectedSize.toLong()) {
-                    Log.e(TAG, "Invalid file size: ${file.length()} (expected $expectedSize)")
+                    AppLogger.e(TAG, "Invalid file size: ${file.length()} (expected $expectedSize)")
                     return null
                 }
 
@@ -247,7 +242,7 @@ private class SrtmTile(
 
                 SrtmTile(tileName, data, latMin, lonMin)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load $tileName: ${e.message}")
+                AppLogger.e(TAG, "Failed to load $tileName: ${e.message}", e)
                 null
             }
         }

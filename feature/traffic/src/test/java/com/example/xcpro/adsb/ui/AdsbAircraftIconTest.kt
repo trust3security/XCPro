@@ -29,7 +29,7 @@ class AdsbAircraftIconTest {
 
     @Test
     fun hasExpectedDrawableMappings() {
-        assertEquals(R.drawable.ic_adsb_plane_medium, AdsbAircraftIcon.PlaneLight.resId)
+        assertEquals(R.drawable.ic_adsb_plane_light, AdsbAircraftIcon.PlaneLight.resId)
         assertEquals(R.drawable.ic_adsb_plane_medium, AdsbAircraftIcon.PlaneMedium.resId)
         assertEquals(R.drawable.ic_adsb_plane_large, AdsbAircraftIcon.PlaneLarge.resId)
         assertEquals(R.drawable.ic_adsb_plane_heavy, AdsbAircraftIcon.PlaneHeavy.resId)

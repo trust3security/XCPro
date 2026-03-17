@@ -33,9 +33,9 @@ Resolution order:
 ## OpenSky category fallback mapping
 
 - `2`, `3` -> `PLANE_LIGHT`
-- `4` -> `PLANE_MEDIUM`
-- `5`, `7` -> `PLANE_LARGE`
+- `4`, `5` -> `PLANE_LARGE`
 - `6` -> `PLANE_HEAVY`
+- `7` -> `PLANE_TWINJET`
 - `8` -> `HELICOPTER`
 - `9` -> `GLIDER`
 - `10` -> `BALLOON`
@@ -43,6 +43,14 @@ Resolution order:
 - `12` -> `HANGGLIDER`
 - `14` -> `DRONE`
 - else -> `UNKNOWN`
+
+Notes:
+
+- `PLANE_LIGHT` remains a semantic distinction even though the current icon enum
+  still binds it to the same drawable asset as `PLANE_MEDIUM`.
+- Categories `13` and `15..20` currently use explicit labels but still fall back
+  to the existing unknown/default-medium visual path until dedicated art is
+  intentionally added in a later slice.
 
 ## Unknown visual fallback contract
 

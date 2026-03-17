@@ -2,6 +2,7 @@ package com.example.xcpro.glider
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.xcpro.common.glider.ActivePolarSource
 import com.example.xcpro.common.glider.ThreePointPolar
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -36,6 +37,7 @@ class GliderRepositoryFallbackTest {
         assertNull(repository.selectedModel.value)
         assertTrue(repository.isFallbackPolarActive.value)
         assertEquals(FALLBACK_ID, repository.effectiveModel.value.id)
+        assertEquals(ActivePolarSource.FALLBACK_MODEL, repository.activePolar.value.source)
     }
 
     @Test
@@ -47,6 +49,7 @@ class GliderRepositoryFallbackTest {
         assertEquals("ASG-29-18", repository.selectedModel.value?.id)
         assertTrue(repository.isFallbackPolarActive.value)
         assertEquals(FALLBACK_ID, repository.effectiveModel.value.id)
+        assertEquals(ActivePolarSource.FALLBACK_MODEL, repository.activePolar.value.source)
     }
 
     @Test
@@ -66,6 +69,7 @@ class GliderRepositoryFallbackTest {
 
         assertFalse(repository.isFallbackPolarActive.value)
         assertEquals("ASG-29-18", repository.effectiveModel.value.id)
+        assertEquals(ActivePolarSource.MANUAL_THREE_POINT, repository.activePolar.value.source)
     }
 
     @Test
@@ -76,6 +80,34 @@ class GliderRepositoryFallbackTest {
 
         assertFalse(repository.isFallbackPolarActive.value)
         assertEquals("js1c-18", repository.effectiveModel.value.id)
+        assertEquals(ActivePolarSource.SELECTED_MODEL, repository.activePolar.value.source)
+    }
+
+    @Test
+    fun manualThreePointWithoutSelectedModel_usesManualSourceWithoutFallback() {
+        val repository = GliderRepository(appContext)
+
+        repository.setThreePointPolar(
+            ThreePointPolar.fromKmh(
+                lowKmh = 85.0,
+                lowSinkMs = 0.55,
+                midKmh = 110.0,
+                midSinkMs = 0.80,
+                highKmh = 170.0,
+                highSinkMs = 1.95
+            )
+        )
+
+        val activePolar = repository.activePolar.value
+        assertNull(repository.selectedModel.value)
+        assertFalse(repository.isFallbackPolarActive.value)
+        assertEquals(ActivePolarSource.MANUAL_THREE_POINT, activePolar.source)
+        assertEquals(FALLBACK_ID, activePolar.effectiveModelId)
+        assertTrue(activePolar.hasThreePointPolar)
+        assertEquals(
+            false,
+            repository.loadProfileSnapshot("default-profile").isFallbackPolarActive
+        )
     }
 
     private companion object {

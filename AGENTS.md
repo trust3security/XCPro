@@ -96,6 +96,17 @@ Run these checks locally for non-trivial changes:
 ./gradlew assembleDebug
 ```
 
+Staged verification policy for in-progress edits:
+- Do not default to repo-wide heavy gates after every small edit.
+- Prefer the smallest sufficient verification tier first:
+  - local compile/debug loop: `dev-fast.bat` or `check-quick.bat`
+  - architecture-sensitive or cross-layer/module edits: `./gradlew enforceRules` plus targeted module/class tests when useful
+  - slice-complete / merge-ready local proof: `./gradlew enforceRules`, `./gradlew testDebugUnitTest`, `./gradlew assembleDebug`
+- Escalate early when ownership, timebase, replay, DI wiring, or runtime/device behavior changes would make lighter checks misleading.
+- Reserve connected tests for runtime/device/lifecycle behavior or explicit release/CI verification needs.
+- Reserve `scripts/qa/*` evidence runs for map/overlay/replay/task gesture/runtime changes that require measured SLO proof.
+- If local KSP/cache/lock state is the blocker, prefer `repair-build.bat` or targeted cleanup before repeating heavy gates.
+
 Run when relevant (device/emulator available):
 
 ```bash

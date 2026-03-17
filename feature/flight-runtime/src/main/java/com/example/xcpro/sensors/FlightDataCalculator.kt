@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import android.content.Context
+import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
 import com.example.xcpro.audio.VarioAudioControllerFactory
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.core.time.Clock
@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
  * Thin wrapper around [FlightDataCalculatorEngine] to keep the public API stable.
  */
 class FlightDataCalculator(
-    context: Context,
     sensorDataSource: SensorDataSource,
     airspeedDataSource: AirspeedDataSource,
     scope: CoroutineScope,
@@ -25,12 +24,12 @@ class FlightDataCalculator(
     audioControllerFactory: VarioAudioControllerFactory,
     clock: Clock,
     hawkAudioVarioReadPort: HawkAudioVarioReadPort,
+    terrainElevationReadPort: TerrainElevationReadPort,
     enableAudio: Boolean = true,
     isReplayMode: Boolean = false
 ) : SensorFusionRepository {
 
     private val engine = FlightDataCalculatorEngine(
-        context = context,
         sensorDataSource = sensorDataSource,
         airspeedDataSource = airspeedDataSource,
         scope = scope,
@@ -40,6 +39,7 @@ class FlightDataCalculator(
         audioController = audioControllerFactory.create(scope = scope, enableAudio = enableAudio),
         clock = clock,
         hawkAudioVarioReadPort = hawkAudioVarioReadPort,
+        terrainElevationReadPort = terrainElevationReadPort,
         isReplayMode = isReplayMode
     )
 

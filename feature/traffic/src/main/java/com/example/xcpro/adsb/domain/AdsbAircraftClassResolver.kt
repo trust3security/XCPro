@@ -25,9 +25,9 @@ enum class AdsbAircraftClass {
 
 fun classForCategory(category: Int?): AdsbAircraftClass = when (category) {
     2, 3 -> AdsbAircraftClass.PlaneLight
-    4 -> AdsbAircraftClass.PlaneMedium
-    5, 7 -> AdsbAircraftClass.PlaneLarge
+    4, 5 -> AdsbAircraftClass.PlaneLarge
     6 -> AdsbAircraftClass.PlaneHeavy
+    7 -> AdsbAircraftClass.PlaneTwinJet
     8 -> AdsbAircraftClass.Helicopter
     9 -> AdsbAircraftClass.Glider
     10 -> AdsbAircraftClass.Balloon
@@ -55,12 +55,22 @@ fun classForAircraft(
     if (normalizeIcao24(icao24Raw) in LARGE_ICON_ICAO24_OVERRIDES) {
         return AdsbAircraftClass.PlaneLargeIcaoOverride
     }
-    return fromMetadata ?: classForCategory(category)
+    return fromMetadata ?: aircraftFallbackClassForCategory(category)
 }
 
 private fun authoritativeCategoryClass(category: Int?): AdsbAircraftClass? = when (category) {
     6, 8, 9, 10, 11, 12, 14 -> classForCategory(category)
     else -> null
+}
+
+private fun aircraftFallbackClassForCategory(category: Int?): AdsbAircraftClass = when (category) {
+    // Keep the pure emitter-category table unchanged, but avoid a too-specific
+    // light-aircraft silhouette when only coarse fixed-wing category data exists.
+    2, 3 -> AdsbAircraftClass.PlaneMedium
+    4, 5 -> AdsbAircraftClass.PlaneLarge
+    6 -> AdsbAircraftClass.PlaneHeavy
+    7 -> AdsbAircraftClass.PlaneTwinJet
+    else -> classForCategory(category)
 }
 
 private fun classFromIcaoMetadata(
@@ -150,7 +160,11 @@ private fun classFromTypecode(normalizedTypecode: String): TypecodeClassificatio
             MEDIUM_FIXED_WING_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ->
                 TypecodeClassification(AdsbAircraftClass.PlaneMedium, MappingStrength.Strong)
 
-            else -> TypecodeClassification(AdsbAircraftClass.PlaneLight, MappingStrength.WeakFallback)
+            LIGHT_FIXED_WING_TYPECODE_PREFIXES.any { normalizedTypecode.startsWith(it) } ||
+                LIGHT_FIXED_WING_TYPECODE_EXACT.contains(normalizedTypecode) ->
+                TypecodeClassification(AdsbAircraftClass.PlaneLight, MappingStrength.Strong)
+
+            else -> TypecodeClassification(AdsbAircraftClass.PlaneMedium, MappingStrength.WeakFallback)
         }
     }
     return null
@@ -217,6 +231,10 @@ private val FOUR_ENGINE_JET_TYPECODE_EXACT = setOf(
 private val TWIN_JET_TYPECODE_PREFIXES = listOf(
     "A2",
     "A3",
+    "B37",
+    "B38",
+    "B39",
+    "B3X",
     "B73",
     "B75",
     "B76",
@@ -241,7 +259,24 @@ private val LARGE_FIXED_WING_TYPECODE_PREFIXES = listOf(
 private val TWIN_PROP_TYPECODE_PREFIXES = listOf(
     "AT7",
     "AT8",
-    "DH8"
+    "BE20",
+    "BE30",
+    "BE5",
+    "BE6",
+    "BE9",
+    "B19",
+    "B20",
+    "B30",
+    "B35",
+    "B360",
+    "C90",
+    "DA42",
+    "DH8",
+    "E90",
+    "F90",
+    "P68",
+    "PA34",
+    "PA44"
 )
 
 private val MEDIUM_FIXED_WING_TYPECODE_PREFIXES = listOf(
@@ -250,6 +285,33 @@ private val MEDIUM_FIXED_WING_TYPECODE_PREFIXES = listOf(
     "C295",
     "L410",
     "SF34"
+)
+
+private val LIGHT_FIXED_WING_TYPECODE_EXACT = setOf(
+    "BE35",
+    "BE36",
+    "C152",
+    "C172",
+    "C182",
+    "C208",
+    "C210",
+    "SR20",
+    "SR22"
+)
+
+private val LIGHT_FIXED_WING_TYPECODE_PREFIXES = listOf(
+    "C15",
+    "C17",
+    "C18",
+    "C20",
+    "C21",
+    "M20",
+    "P28",
+    "PA18",
+    "PA24",
+    "PA28",
+    "PA32",
+    "SR2"
 )
 
 private data class TypecodeClassification(

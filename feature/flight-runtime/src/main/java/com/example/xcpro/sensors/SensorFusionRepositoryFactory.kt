@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import android.content.Context
+import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
 import com.example.xcpro.audio.VarioAudioControllerFactory
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.di.LiveSource
@@ -9,7 +9,6 @@ import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.hawk.HawkAudioVarioReadPort
 import com.example.xcpro.weather.wind.data.AirspeedDataSource
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 
@@ -17,7 +16,6 @@ import kotlinx.coroutines.CoroutineScope
  * DI-owned factory for creating sensor fusion pipelines with explicit scopes and data sources.
  */
 class SensorFusionRepositoryFactory @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val sinkProvider: StillAirSinkProvider,
     private val windRepository: WindSensorFusionRepository,
     private val flightStateSource: FlightStateSource,
@@ -25,7 +23,8 @@ class SensorFusionRepositoryFactory @Inject constructor(
     @ReplaySource private val replayAirspeedSource: AirspeedDataSource,
     private val audioControllerFactory: VarioAudioControllerFactory,
     private val clock: Clock,
-    private val hawkAudioVarioReadPort: HawkAudioVarioReadPort
+    private val hawkAudioVarioReadPort: HawkAudioVarioReadPort,
+    private val terrainElevationReadPort: TerrainElevationReadPort
 ) {
     fun create(
         sensorDataSource: SensorDataSource,
@@ -35,7 +34,6 @@ class SensorFusionRepositoryFactory @Inject constructor(
     ): SensorFusionRepository {
         val airspeedSource = if (isReplayMode) replayAirspeedSource else liveAirspeedSource
         return FlightDataCalculator(
-            context = context,
             sensorDataSource = sensorDataSource,
             airspeedDataSource = airspeedSource,
             scope = scope,
@@ -45,6 +43,7 @@ class SensorFusionRepositoryFactory @Inject constructor(
             audioControllerFactory = audioControllerFactory,
             clock = clock,
             hawkAudioVarioReadPort = hawkAudioVarioReadPort,
+            terrainElevationReadPort = terrainElevationReadPort,
             enableAudio = enableAudio,
             isReplayMode = isReplayMode
         )

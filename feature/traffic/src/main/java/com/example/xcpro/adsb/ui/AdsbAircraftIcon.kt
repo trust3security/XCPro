@@ -11,9 +11,7 @@ enum class AdsbAircraftIcon(
     val styleImageId: String
 ) {
     PlaneLight(
-        // Dedicated light-aircraft asset was removed from the drawable set.
-        // Keep light classification distinct while using the closest available fixed-wing icon.
-        resId = R.drawable.ic_adsb_plane_medium,
+        resId = R.drawable.ic_adsb_plane_light,
         styleImageId = "adsb_icon_plane_light"
     ),
     PlaneMedium(

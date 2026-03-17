@@ -1,5 +1,6 @@
 package com.example.xcpro.glider
 
+import com.example.xcpro.common.glider.ActivePolarSnapshot
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.glider.GliderModel
@@ -16,6 +17,7 @@ class GliderUseCase @Inject constructor(
     val effectiveModel: StateFlow<GliderModel> = repository.effectiveModel
     val isFallbackPolarActive: StateFlow<Boolean> = repository.isFallbackPolarActive
     val config: StateFlow<GliderConfig> = repository.config
+    val activePolar: StateFlow<ActivePolarSnapshot> = repository.activePolar
 
     fun listModels(): List<GliderModel> = repository.listModels()
 

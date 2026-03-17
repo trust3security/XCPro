@@ -1,5 +1,6 @@
 package com.example.xcpro.glider
 
+import com.example.xcpro.common.glider.ActivePolarSnapshot
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.common.glider.GliderConfig
@@ -20,12 +21,14 @@ data class GliderUiState(
     val selectedModel: GliderModel? = null,
     val effectiveModel: GliderModel? = null,
     val isFallbackPolarActive: Boolean = false,
+    val activePolar: ActivePolarSnapshot? = null,
     val models: List<GliderModel> = emptyList()
 )
 
 @HiltViewModel
 class GliderViewModel @Inject constructor(
-    private val useCase: GliderUseCase
+    private val useCase: GliderUseCase,
+    private val polarPreviewUseCase: PolarPreviewUseCase
 ) : ViewModel() {
 
     private val models = useCase.listModels()
@@ -38,13 +41,15 @@ class GliderViewModel @Inject constructor(
             useCase.config,
             useCase.selectedModel,
             useCase.effectiveModel,
-            useCase.isFallbackPolarActive
-        ) { config, selectedModel, effectiveModel, fallbackActive ->
+            useCase.isFallbackPolarActive,
+            useCase.activePolar
+        ) { config, selectedModel, effectiveModel, fallbackActive, activePolar ->
             GliderUiState(
                 config = config,
                 selectedModel = selectedModel,
                 effectiveModel = effectiveModel,
                 isFallbackPolarActive = fallbackActive,
+                activePolar = activePolar,
                 models = models
             )
         }.onEach { state ->
@@ -100,4 +105,7 @@ class GliderViewModel @Inject constructor(
     fun setThreePointPolar(polar: ThreePointPolar) {
         useCase.setThreePointPolar(polar)
     }
+
+    fun previewAtSpeedKmh(activePolar: ActivePolarSnapshot?, speedKmh: Float): PolarPreviewState =
+        polarPreviewUseCase.resolve(activePolar = activePolar, speedKmh = speedKmh.toDouble())
 }

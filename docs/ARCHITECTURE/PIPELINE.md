@@ -84,6 +84,7 @@ Fusion entry:
     - `StillAirSinkProvider`
     - `VarioAudioControllerFactory`
     - `HawkAudioVarioReadPort`
+    - `TerrainElevationReadPort`
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
   - thin wrapper around `FlightDataCalculatorEngine`.
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
@@ -91,6 +92,17 @@ Fusion entry:
   - caches latest external/replay airspeed sample from `AirspeedDataSource`.
   - consumes HAWK audio vario samples through `HawkAudioVarioReadPort` rather
     than depending on the full HAWK repository.
+  - constructs `SimpleAglCalculator` with the injected shared `TerrainElevationReadPort`;
+    the calculator no longer constructs terrain adapters directly.
+- `feature/map/src/main/java/com/example/xcpro/terrain/TerrainElevationRepository.kt`
+  - canonical live terrain implementation bound to `TerrainElevationReadPort`.
+  - owns terrain source policy (`SRTM` offline-first, `Open-Meteo` fallback),
+    cache lifecycle, retry/backoff, and rate-limited terrain diagnostics.
+- `feature/map/src/main/java/com/example/xcpro/terrain/SrtmTerrainDataSource.kt`
+  and `feature/map/src/main/java/com/example/xcpro/terrain/OpenMeteoTerrainDataSource.kt`
+  - focused terrain source adapters used only by the repository.
+  - `SrtmTerrainDatabase` and `OpenMeteoElevationApi` stay below this adapter
+    seam and no longer define the cross-feature terrain contract.
 
 Loops (two decoupled loops):
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
@@ -126,6 +138,8 @@ Metrics use case:
     counted once per contiguous episode (not once per frame).
   - Replay requests explicitly disable online terrain fetch updates to keep replay deterministic
     and avoid network-driven memory pressure.
+  - The terrain replay guard remains outside the terrain read port/repository seam; replay policy
+    is still decided in the metrics request path before AGL lookup is attempted.
   - Metrics execution is synchronized to serialize stateful domain windows/decisions across live emit paths.
   - Owns deterministic windows and is testable without Android.
 
@@ -142,6 +156,12 @@ Emission:
   - forwards cached external/replay airspeed sample into `FlightMetricsRequest`.
 
 ## 3) SSOT Repository + Source Gating
+
+QNH terrain calibration:
+- `feature/map/src/main/java/com/example/xcpro/qnh/CalibrateQnhUseCase.kt`
+  - consumes `TerrainElevationReadPort` directly, using the same canonical terrain repository seam as live AGL.
+  - uses terrain elevation plus `estimatedAglMeters` for `AUTO_TERRAIN` calibration, and falls back to GPS altitude when terrain is unavailable.
+  - blocks calibration in replay mode before any terrain read so replay determinism remains outside the terrain repository.
 
 SSOT:
 - `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
@@ -495,9 +515,10 @@ ADS-b lifecycle/visibility semantics:
   - OGN traffic streams do not influence ADS-b details distance/bearing or ADS-b proximity color tiers.
 - `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
   - On-demand ICAO metadata upserts emit a metadata revision signal.
+  - Completed on-demand lookup batches also emit a lookup-progress revision signal, even when no rows were inserted.
 - `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
-  - Target/icon enrichment and selected-target details recompute when metadata revision changes,
-    so icon/category overrides refresh immediately after metadata persistence (no extra poll wait).
+  - Target/icon enrichment and selected-target details recompute when metadata revision or lookup-progress revision changes,
+    so icon/category overrides refresh immediately after metadata persistence and unresolved ICAO batches can keep advancing without target churn.
 - `feature/traffic/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`
   - ADS-B live polling HTTP client and ADS-B metadata HTTP client are split:
     polling stays low-latency cadence-focused, metadata uses longer download-safe timeouts.

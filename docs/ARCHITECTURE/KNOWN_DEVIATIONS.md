@@ -136,49 +136,9 @@ Compliance note (2026-02-20):
   - `AppLogger` has explicit contract coverage for redaction/gating behavior.
   - New raw production `Log.*` drift is blocked by automation except for narrow documented platform-edge exceptions.
 
-4) Terrain and elevation ownership is split across calculation code and duplicate provider paths
-- Rule:
-  - Layering, SSOT ownership, and boundary adapter rules (`ARCHITECTURE.md` sections "Layering and Dependency Direction", "Single Source of Truth", "Repositories and State Ownership", and "Logging Architecture"; `CODING_RULES.md` sections `2 Architecture`, `13 Logging Rules`, and the "Feature Implementation Defaults" in `AGENTS.md`).
-- Issue: RULES-20260316-18
-- Introduced: 2026-03-16
-- Approved by: XCPro Team (backfilled 2026-03-16)
-- Owner: XCPro Team
-- Next review: 2026-04-15
-- Expiry: 2026-05-31
-- Execution plan:
-  - `docs/refactor/Terrain_Elevation_Ownership_Release_Grade_Phased_IP_2026-03-16.md`
-- Scope:
-  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SimpleAglCalculator.kt`
-  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/OpenMeteoElevationApi.kt`
-  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SrtmTerrainDatabase.kt`
-  - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/ElevationCache.kt`
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-  - `feature/map/src/main/java/com/example/xcpro/qnh/TerrainElevationProvider.kt`
-  - `feature/map/src/main/java/com/example/xcpro/qnh/SrtmTerrainElevationProvider.kt`
-  - `feature/map/src/main/java/com/example/xcpro/qnh/CalibrateQnhUseCase.kt`
-- Risk:
-  - AGL and QNH currently use separate terrain paths and can evolve different source, fallback, cache, and retry policy.
-  - Calculation-layer classes currently own Android `Context`, network, file I/O, cache lifecycle, and retry/backoff policy, which weakens testability and violates intended boundary direction.
-  - `SrtmTerrainDatabase` still uses raw `Log.*` and a hidden runtime scope in a data path that should be explicitly owned and reviewable.
-- Mitigation:
-  - Introduce one shared terrain read port and one terrain repository owner, keeping AGL/QNH as consumers only.
-  - Move Android/network/file/cache concerns out of calculation classes into one data implementation boundary.
-  - Preserve replay determinism by forbidding online terrain fetches in replay paths.
-  - Route remaining terrain-path production logging through `AppLogger` and remove low-value raw logs.
-- Removal steps:
-  - Land the phased remediation in `Terrain_Elevation_Ownership_Release_Grade_Phased_IP_2026-03-16.md`.
-  - Delete the duplicate QNH-only terrain provider seam after both AGL and QNH consume the shared read port.
-  - Remove Android/network/file/cache ownership from `SimpleAglCalculator`.
-  - Remove raw `Log.*` and hidden scope ownership from the terrain data implementation.
-- Exit criteria:
-  - One canonical terrain read port serves both AGL and QNH.
-  - Calculation-layer terrain code no longer owns Android `Context`, network, file I/O, or cache policy.
-  - Replay remains deterministic with no replay-triggered terrain network fetches.
-  - Terrain-path production logging no longer bypasses the canonical logging seam.
-
 ## Verification
 
-Last verified: 2026-03-15
+Last verified: 2026-03-16
 - Commands:
   - python scripts/arch_gate.py
   - powershell -ExecutionPolicy Bypass -File scripts/ci/enforce_rules.ps1
@@ -436,4 +396,18 @@ Last verified: 2026-03-15
   - Task managers no longer own persistence/file-I/O side effects, and listener teardown is caller-scope bound.
   - Task gesture/runtime ownership moved into `feature:map`; `TaskManagerCoordinator` no longer constructs MapLibre gesture handlers, `feature:tasks` no longer depends on MapLibre, and `enforceRules` blocks MapLibre imports/dependencies from drifting back into `feature:tasks`.
   - Closure evidence is tracked in `docs/refactor/Task_AAT_Ownership_Release_Grade_Phased_IP_2026-03-15.md`.
+
+30) Terrain and elevation ownership was split across calculation code and duplicate provider paths
+- Rule:
+  - Layering, SSOT ownership, and boundary adapter rules (`ARCHITECTURE.md` sections "Layering and Dependency Direction", "Single Source of Truth", "Repositories and State Ownership", and "Logging Architecture"; `CODING_RULES.md` sections `2 Architecture`, `13 Logging Rules`, and the "Feature Implementation Defaults" in `AGENTS.md`).
+- Issue: RULES-20260316-18
+- Owner: XCPro Team
+- Resolved: 2026-03-16
+- Notes:
+  - `TerrainElevationReadPort` is now the one shared terrain seam for both live AGL and QNH.
+  - `SimpleAglCalculator` is calculation-only; it no longer owns Android `Context`, direct terrain source construction, cache policy, or retry/backoff behavior.
+  - `TerrainElevationRepository` is the canonical terrain policy owner with `SRTM` offline-first and `Open-Meteo` fallback.
+  - `CalibrateQnhUseCase` now consumes the shared terrain seam directly, and the old `TerrainElevationProvider` / `SrtmTerrainElevationProvider` path was deleted.
+  - Replay determinism remains locked by runtime tests proving replay does not invoke the injected terrain port.
+  - Closure evidence is tracked in `docs/refactor/Terrain_Elevation_Ownership_Release_Grade_Phased_IP_2026-03-16.md`.
 

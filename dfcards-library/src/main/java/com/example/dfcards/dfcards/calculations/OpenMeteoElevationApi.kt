@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.example.xcpro.core.common.logging.AppLogger
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -32,7 +33,10 @@ import java.net.URL
  * val elevation = api.fetchElevation(47.5, 13.4) // Returns 1421.0 meters
  * ```
  */
-class OpenMeteoElevationApi(private val context: Context) {
+class OpenMeteoElevationApi(
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
 
     companion object {
         private const val TAG = "OpenMeteoAPI"
@@ -89,7 +93,7 @@ class OpenMeteoElevationApi(private val context: Context) {
      * @param lon Longitude (-180 to 180)
      * @return Elevation in meters above sea level, or null if request fails
      */
-    suspend fun fetchElevation(lat: Double, lon: Double): Double? = withContext(Dispatchers.IO) {
+    suspend fun fetchElevation(lat: Double, lon: Double): Double? = withContext(ioDispatcher) {
         // Reject invalid numeric input before any permission/network work.
         if (!lat.isFinite() || !lon.isFinite()) {
             AppLogger.e(TAG, "Invalid coordinates: non-finite input")

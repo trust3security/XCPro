@@ -23,9 +23,6 @@ core/common/src/main/java/com/example/xcpro/core/common/logging/AppLogger.kt|8
 
 # dfcards-library
 dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/CalcBaroAltitude.kt|2
-dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/ElevationCache.kt|1
-dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SimpleAglCalculator.kt|5
-dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SrtmTerrainDatabase.kt|14
 dfcards-library/src/main/java/com/example/dfcards/dfcards/CardContainer.kt|1
 dfcards-library/src/main/java/com/example/dfcards/dfcards/EnhancedGestureHandler.kt|3
 dfcards-library/src/main/java/com/example/dfcards/filters/Modern3StateKalmanFilter.kt|2

@@ -20,23 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.glider.GliderViewModel
-import com.example.xcpro.glider.PolarCalculator
 
 @Composable
 fun PreviewCard() {
     val viewModel: GliderViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedModel = uiState.selectedModel
-    val effectiveModel = uiState.effectiveModel
-    val fallbackActive = uiState.isFallbackPolarActive
-    val cfg = uiState.config
 
     val speedKmh = remember { mutableStateOf(100f) }
-    val sink = effectiveModel?.let { model ->
-        runCatching {
-            PolarCalculator.sinkMs(speedKmh.value.toDouble() / 3.6, model, cfg)
-        }.getOrNull()?.takeIf { it.isFinite() }
-    }
+    val preview = viewModel.previewAtSpeedKmh(uiState.activePolar, speedKmh.value)
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -56,13 +47,7 @@ fun PreviewCard() {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = if (selectedModel == null && !fallbackActive) {
-                    "Select an aircraft to preview polar"
-                } else if (fallbackActive) {
-                    "Fallback active: ${effectiveModel?.name ?: "Default club"} - ${speedKmh.value.toInt()} km/h"
-                } else {
-                    "Model: ${selectedModel?.name ?: effectiveModel?.name.orEmpty()} - ${speedKmh.value.toInt()} km/h"
-                },
+                text = preview.headline,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -71,20 +56,15 @@ fun PreviewCard() {
                 onValueChange = { speedKmh.value = it },
                 valueRange = 50f..200f
             )
-            if (sink != null) {
-                Text(String.format("Estimated sink: %.2f m/s", sink))
-            }
-            val hint = when {
-                fallbackActive -> "Using default club fallback polar"
-                cfg.threePointPolar != null -> "Using 3-point polar"
-                else -> "Using model polar"
+            if (preview.sinkMs != null) {
+                Text(String.format("Estimated sink: %.2f m/s", preview.sinkMs))
             }
             Text(
-                text = hint,
+                text = preview.hint,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (fallbackActive) {
+            if (preview.showFallbackHelp) {
                 Text(
                     text = "Select a glider or enter a 3-point polar to replace fallback.",
                     style = MaterialTheme.typography.bodySmall,

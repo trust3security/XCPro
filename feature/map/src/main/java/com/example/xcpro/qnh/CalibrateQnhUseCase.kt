@@ -1,5 +1,6 @@
 package com.example.xcpro.qnh
 
+import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
 import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
@@ -22,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class CalibrateQnhUseCase @Inject constructor(
     @LiveSource private val sensorDataSource: SensorDataSource,
-    private val terrainProvider: TerrainElevationProvider,
+    private val terrainElevationReadPort: TerrainElevationReadPort,
     private val qnhRepository: QnhRepository,
     private val flightDataRepository: FlightDataRepository,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
@@ -70,7 +71,7 @@ class CalibrateQnhUseCase @Inject constructor(
                 if (!terrainAttempted) {
                     terrainAttempted = true
                     terrainElevation = runCatching {
-                        terrainProvider.getElevationMeters(
+                        terrainElevationReadPort.getElevationMeters(
                             gps.position.latitude,
                             gps.position.longitude
                         )

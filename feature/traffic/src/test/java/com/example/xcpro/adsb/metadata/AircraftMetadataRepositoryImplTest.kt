@@ -44,6 +44,7 @@ class AircraftMetadataRepositoryImplTest {
 
         assertEquals("N757F", result["aa3487"]?.registration)
         assertEquals(0L, repository.metadataRevision.value)
+        assertEquals(0L, repository.lookupProgressRevision.value)
         verify(client, times(0)).fetchByIcao24("aa3487")
         assertEquals(0L, repository.lookupTelemetry.value.lookupSampleCount)
     }
@@ -69,8 +70,10 @@ class AircraftMetadataRepositoryImplTest {
         val first = repository.getMetadataFor(listOf("AA3487"))
         assertNull(first["aa3487"])
         assertEquals(0L, repository.metadataRevision.value)
+        assertEquals(0L, repository.lookupProgressRevision.value)
         advanceUntilIdle()
         assertEquals(1L, repository.metadataRevision.value)
+        assertEquals(1L, repository.lookupProgressRevision.value)
         val second = repository.getMetadataFor(listOf("AA3487"))
 
         assertEquals("N757F", second["aa3487"]?.registration)
@@ -107,6 +110,7 @@ class AircraftMetadataRepositoryImplTest {
 
         assertNull(first["abcdef"])
         assertNull(second["abcdef"])
+        assertEquals(1L, repository.lookupProgressRevision.value)
         verify(client, times(1)).fetchByIcao24("abcdef")
         val telemetry = repository.lookupTelemetry.value
         assertEquals(1L, telemetry.lookupSampleCount)
@@ -141,6 +145,7 @@ class AircraftMetadataRepositoryImplTest {
         val firstRead = repository.getMetadataFor(ids)
         ids.forEach { id -> assertNull(firstRead[id]) }
         advanceUntilIdle()
+        assertEquals(1L, repository.lookupProgressRevision.value)
         val secondRead = repository.getMetadataFor(ids)
 
         firstBatch.forEachIndexed { index, row ->
@@ -179,10 +184,12 @@ class AircraftMetadataRepositoryImplTest {
 
         repository.getMetadataFor(ids)
         advanceUntilIdle()
+        assertEquals(1L, repository.lookupProgressRevision.value)
         clock.advanceMonoMs(1_000L)
         val second = repository.getMetadataFor(ids)
         assertNull(second[trailing])
         advanceUntilIdle()
+        assertEquals(2L, repository.lookupProgressRevision.value)
         val third = repository.getMetadataFor(ids)
 
         assertEquals("N9", third[trailing]?.registration)
@@ -215,6 +222,7 @@ class AircraftMetadataRepositoryImplTest {
 
         val first = repository.getMetadataFor(listOf("ABCDEF"))
         advanceUntilIdle()
+        assertEquals(1L, repository.lookupProgressRevision.value)
         clock.advanceMonoMs(10_000L)
         val stillCoolingDown = repository.getMetadataFor(listOf("ABCDEF"))
         advanceUntilIdle()
@@ -222,6 +230,7 @@ class AircraftMetadataRepositoryImplTest {
         val beforeRetryHydrate = repository.getMetadataFor(listOf("ABCDEF"))
         assertNull(beforeRetryHydrate["abcdef"])
         advanceUntilIdle()
+        assertEquals(2L, repository.lookupProgressRevision.value)
         val retried = repository.getMetadataFor(listOf("ABCDEF"))
 
         assertNull(first["abcdef"])

@@ -2,6 +2,8 @@ package com.example.xcpro.glider
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.xcpro.common.glider.ActivePolarSnapshot
+import com.example.xcpro.common.glider.ActivePolarSource
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.glider.GliderModel
@@ -34,6 +36,22 @@ class GliderRepository @Inject constructor(
     override val effectiveModel: StateFlow<GliderModel> = _effectiveModel.asStateFlow()
     private val _isFallbackPolarActive = MutableStateFlow(true)
     override val isFallbackPolarActive: StateFlow<Boolean> = _isFallbackPolarActive.asStateFlow()
+    private val _activePolar = MutableStateFlow(
+        ActivePolarSnapshot(
+            source = ActivePolarSource.FALLBACK_MODEL,
+            selectedModelId = null,
+            selectedModelName = null,
+            effectiveModelId = fallbackModel.id,
+            effectiveModelName = fallbackModel.name,
+            isFallbackPolarActive = true,
+            hasThreePointPolar = false,
+            referenceWeightConfigured = false,
+            userCoefficientsConfigured = false,
+            iasMinMs = null,
+            iasMaxMs = null
+        )
+    )
+    override val activePolar: StateFlow<ActivePolarSnapshot> = _activePolar.asStateFlow()
 
     private val _config = MutableStateFlow(GliderConfig())
     override val config: StateFlow<GliderConfig> = _config.asStateFlow()
@@ -118,8 +136,7 @@ class GliderRepository @Inject constructor(
             runCatching { loadPersistedConfig(json) }.getOrNull()
         } ?: GliderConfig()
         val effective = resolveEffectiveModel(selected, config)
-        val fallbackPolarActive =
-            selected == null || !GliderSpeedBoundsResolver.hasPolar(selected, config)
+        val fallbackPolarActive = isFallbackPolarActive(selected, config)
         return GliderProfileSnapshot(
             selectedModelId = selected?.id,
             effectiveModelId = effective.id,
@@ -181,12 +198,52 @@ class GliderRepository @Inject constructor(
     private fun refreshDerivedModelState() {
         val configValue = _config.value
         val selectedValue = _selectedModel.value
-        val selectedHasUsablePolar =
-            selectedValue != null && GliderSpeedBoundsResolver.hasPolar(selectedValue, configValue)
-        val fallbackPolarActive =
-            !selectedHasUsablePolar && !GliderSpeedBoundsResolver.hasPolar(null, configValue)
-        _effectiveModel.value = resolveEffectiveModel(selectedValue, configValue)
+        val fallbackPolarActive = isFallbackPolarActive(selectedValue, configValue)
+        val effectiveModel = resolveEffectiveModel(selectedValue, configValue)
+        _effectiveModel.value = effectiveModel
         _isFallbackPolarActive.value = fallbackPolarActive
+        _activePolar.value = buildActivePolarSnapshot(
+            selectedModel = selectedValue,
+            effectiveModel = effectiveModel,
+            config = configValue,
+            isFallbackPolarActive = fallbackPolarActive
+        )
+    }
+
+    private fun buildActivePolarSnapshot(
+        selectedModel: GliderModel?,
+        effectiveModel: GliderModel,
+        config: GliderConfig,
+        isFallbackPolarActive: Boolean
+    ): ActivePolarSnapshot {
+        val source = when {
+            config.threePointPolar != null -> ActivePolarSource.MANUAL_THREE_POINT
+            isFallbackPolarActive -> ActivePolarSource.FALLBACK_MODEL
+            else -> ActivePolarSource.SELECTED_MODEL
+        }
+        val bounds = GliderSpeedBoundsResolver.resolveIasBoundsMs(effectiveModel, config)
+        return ActivePolarSnapshot(
+            source = source,
+            selectedModelId = selectedModel?.id,
+            selectedModelName = selectedModel?.name,
+            effectiveModelId = effectiveModel.id,
+            effectiveModelName = effectiveModel.name,
+            isFallbackPolarActive = isFallbackPolarActive,
+            hasThreePointPolar = config.threePointPolar != null,
+            referenceWeightConfigured = config.referenceWeightKg != null,
+            userCoefficientsConfigured = config.userCoefficients != null,
+            iasMinMs = bounds?.minMs,
+            iasMaxMs = bounds?.maxMs
+        )
+    }
+
+    private fun isFallbackPolarActive(
+        selectedModel: GliderModel?,
+        config: GliderConfig
+    ): Boolean {
+        val selectedHasUsablePolar =
+            selectedModel != null && GliderSpeedBoundsResolver.hasPolar(selectedModel, config)
+        return !selectedHasUsablePolar && !GliderSpeedBoundsResolver.hasPolar(null, config)
     }
 
     private fun resolveEffectiveModel(
