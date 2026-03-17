@@ -99,6 +99,23 @@ class MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest {
         )
     }
 
+    @Test
+    fun missingMapCameraPosition_fallsBackToDefaultViewportZoom() = runTest {
+        val overlay: AdsbTrafficOverlayHandle = mock()
+        val fixture = createFixture(scope = this, overlay = overlay)
+
+        fixture.delegate.updateAdsbTrafficTargets(
+            targets = listOf(target("abc123")),
+            ownshipAltitudeMeters = 1_200.0,
+            unitsPreferences = UnitsPreferences(),
+            normalizeOwnshipAltitudeForRender = { it }
+        )
+        runCurrent()
+
+        verify(overlay).initialize()
+        verify(overlay).setViewportZoom(10.0f)
+    }
+
     private fun createFixture(
         scope: TestScope,
         overlay: AdsbTrafficOverlayHandle
