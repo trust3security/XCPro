@@ -153,8 +153,10 @@ internal fun MapScreenRoot(
 
     val mapRuntimeController = rememberMapRuntimeController(
         overlayManager = managers.overlayManager,
-        mapViewModel = mapViewModel
+        mapViewModel = mapViewModel,
+        cameraManager = managers.cameraManager
     )
+    TaskViewportCommandEffects(mapViewModel = mapViewModel)
     MapScreenCameraRuntimeEffects(
         cameraManager = managers.cameraManager,
         hotPathBindings = hotPathBindings,

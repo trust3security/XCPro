@@ -21,7 +21,10 @@ import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Duration
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -40,6 +43,8 @@ class TaskSheetViewModel @Inject constructor(
 ) : ViewModel() {
 
     val uiState: StateFlow<TaskUiState> = useCase.state
+    private val _viewportEffects = MutableSharedFlow<TaskSheetViewportEffect>(extraBufferCapacity = 1)
+    val viewportEffects: SharedFlow<TaskSheetViewportEffect> = _viewportEffects.asSharedFlow()
     private var lastObservedActiveLeg: Int? = null
 
     init {
@@ -64,6 +69,7 @@ class TaskSheetViewModel @Inject constructor(
 
     fun onAddWaypoint(wp: SearchWaypoint) = mutate {
         taskCoordinator.addWaypoint(wp)
+        emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
     }
 
     fun onRemoveWaypoint(index: Int) = mutate {
@@ -170,15 +176,23 @@ class TaskSheetViewModel @Inject constructor(
         taskCoordinator.updateAATParameters(minimumTime, maximumTime)
     }
 
-    fun importPersistedTask(json: String) {
-        tryImportPersistedTask(json)
-    }
+    fun importPersistedTask(json: String) = tryImportPersistedTask(json)
 
     fun tryImportPersistedTask(json: String): Boolean {
         val persisted = runCatching { TaskPersistSerializer.deserialize(json) }.getOrNull() ?: return false
-        return runCatching {
+        val imported = runCatching {
             mutate { applyPersistedTask(persisted) }
         }.isSuccess
+        if (imported) {
+            emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
+        }
+        return imported
+    }
+
+    fun loadTask(taskName: String) = viewModelScope.launch {
+        if (taskCoordinator.loadTask(taskName)) {
+            emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
+        }
     }
 
     private fun applyPersistedTask(persisted: TaskPersistSerializer.PersistedTask) {
@@ -249,9 +263,9 @@ class TaskSheetViewModel @Inject constructor(
     fun onUpdateRacingValidationRules(command: UpdateRacingValidationRulesCommand) = mutate { taskCoordinator.updateRacingValidationRules(command) }
     fun onClearTask() = mutate { taskCoordinator.clearTask() }
 
-    private fun mutate(block: () -> Unit) {
-        block()
-    }
+    private fun mutate(block: () -> Unit) = block()
+
+    private fun emitViewportEffect(effect: TaskSheetViewportEffect) { _viewportEffects.tryEmit(effect) }
 
     private fun importWaypoints(importedTask: Task) {
         importedTask.waypoints.forEach { waypoint ->

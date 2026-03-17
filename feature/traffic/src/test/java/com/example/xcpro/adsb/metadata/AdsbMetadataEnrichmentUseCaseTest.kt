@@ -82,7 +82,6 @@ class AdsbMetadataEnrichmentUseCaseTest {
         assertEquals(1.8, latest.closingRateMps ?: Double.NaN, 1e-6)
         assertEquals(true, latest.isEmergencyCollisionRisk)
     }
-
     @Test
     fun selectedTarget_missingWhileRunning_emitsSyncInProgress() = runTest {
         val syncRepository = FakeSyncRepository(MetadataSyncState.Running)
@@ -109,7 +108,6 @@ class AdsbMetadataEnrichmentUseCaseTest {
         requireNotNull(latest)
         assertEquals(MetadataAvailability.SyncInProgress, latest.metadataAvailability)
     }
-
     @Test
     fun selectedTarget_missingAfterFailure_emitsUnavailable() = runTest {
         val syncRepository = FakeSyncRepository(
@@ -133,7 +131,6 @@ class AdsbMetadataEnrichmentUseCaseTest {
         requireNotNull(latest)
         assertTrue(latest.metadataAvailability is MetadataAvailability.Unavailable)
     }
-
     @Test
     fun selectedTarget_unknownCategoryAndMissingMetadata_preservesUnknownTruth() = runTest {
         val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
@@ -154,7 +151,6 @@ class AdsbMetadataEnrichmentUseCaseTest {
         assertEquals(null, latest.typecode)
         assertEquals(null, latest.icaoAircraftType)
     }
-
     @Test
     fun selectedTargetSwitch_doesNotCarryOverOldMetadata() = runTest {
         val syncRepository = FakeSyncRepository(MetadataSyncState.Success(100L, "key", null))
@@ -195,7 +191,6 @@ class AdsbMetadataEnrichmentUseCaseTest {
         assertEquals(null, latest.registration)
         assertEquals(MetadataAvailability.Missing, latest.metadataAvailability)
     }
-
     @Test
     fun targetsWithMetadata_appliesTypecodeAndIcaoAircraftTypeByIcao() = runTest {
         val syncRepository = FakeSyncRepository(MetadataSyncState.Idle)
@@ -220,9 +215,7 @@ class AdsbMetadataEnrichmentUseCaseTest {
             ioDispatcher = StandardTestDispatcher(testScheduler)
         )
         val targets = MutableStateFlow(listOf(target("abc123"), target("def456")))
-
         val enriched = useCase.targetsWithMetadata(targets).first()
-
         val first = enriched.first { it.id.raw == "abc123" }
         assertEquals("R44", first.metadataTypecode)
         assertEquals("H1P", first.metadataIcaoAircraftType)
@@ -245,9 +238,7 @@ class AdsbMetadataEnrichmentUseCaseTest {
             metadataIcaoAircraftType = "L1P"
         )
         val targets = MutableStateFlow(listOf(baseTarget))
-
         val enriched = useCase.targetsWithMetadata(targets).first()
-
         val first = enriched.first()
         assertEquals(null, first.metadataTypecode)
         assertEquals(null, first.metadataIcaoAircraftType)
@@ -263,21 +254,14 @@ class AdsbMetadataEnrichmentUseCaseTest {
             ioDispatcher = StandardTestDispatcher(testScheduler)
         )
         val targets = MutableStateFlow(listOf(target("abc123")))
-
-        val shared = useCase.targetsWithMetadata(targets).shareIn(
-            scope = backgroundScope,
-            started = SharingStarted.Eagerly,
-            replay = 1
-        )
+        val shared = useCase.targetsWithMetadata(targets)
+            .shareIn(scope = backgroundScope, started = SharingStarted.Eagerly, replay = 1)
         advanceUntilIdle()
-
         val initial = shared.first()
         assertEquals(null, initial.first().metadataTypecode)
-
         val awaitUpdated = backgroundScope.async {
             shared.drop(1).first()
         }
-
         metadataRepository.upsertMetadata(
             AircraftMetadata(
                 icao24 = "abc123",
@@ -309,23 +293,15 @@ class AdsbMetadataEnrichmentUseCaseTest {
         )
         val selectedId = MutableStateFlow(Icao24.from("abc123"))
         val targets = MutableStateFlow(listOf(target("abc123")))
-
         val shared = useCase.selectedTargetDetails(selectedId, targets)
             .filterNotNull()
-            .shareIn(
-                scope = backgroundScope,
-                started = SharingStarted.Eagerly,
-                replay = 1
-            )
+            .shareIn(scope = backgroundScope, started = SharingStarted.Eagerly, replay = 1)
         advanceUntilIdle()
-
         val initial = shared.first()
         assertEquals(MetadataAvailability.Missing, initial.metadataAvailability)
-
         val awaitUpdated = backgroundScope.async {
             shared.drop(1).first()
         }
-
         metadataRepository.upsertMetadata(
             AircraftMetadata(
                 icao24 = "abc123",
@@ -363,9 +339,7 @@ class AdsbMetadataEnrichmentUseCaseTest {
                 target("fedcba", category = 8)
             )
         )
-
         useCase.targetsWithMetadata(targets).first()
-
         assertEquals(listOf("def456", "fedcba", "abc123"), metadataRepository.lastLookupOrder)
     }
 
@@ -385,9 +359,7 @@ class AdsbMetadataEnrichmentUseCaseTest {
         val unknown = target("def456", category = 0)
         val regular = target("fedcba", category = 2)
         val targets = MutableStateFlow(listOf(hinted, unknown, regular))
-
         useCase.targetsWithMetadata(targets).first()
-
         assertEquals(listOf("abc123", "def456", "fedcba"), metadataRepository.lastLookupOrder)
     }
 
@@ -406,9 +378,7 @@ class AdsbMetadataEnrichmentUseCaseTest {
         val regularA = target("def456", category = 2)
         val regularB = target("fedcba", category = 2)
         val targets = MutableStateFlow(listOf(hinted, regularA, regularB))
-
         useCase.targetsWithMetadata(targets).first()
-
         assertEquals(listOf("abc123", "def456", "fedcba"), metadataRepository.lastLookupOrder)
     }
 
@@ -449,7 +419,6 @@ class AdsbMetadataEnrichmentUseCaseTest {
         advanceUntilIdle()
         shared.first()
         assertEquals(1, metadataRepository.lookupCallCount)
-
         targets.value = listOf(
             target("abc123").copy(distanceMeters = 1_100.0, ageSec = 2),
             target("def456").copy(distanceMeters = 2_100.0, ageSec = 2)
@@ -472,13 +441,11 @@ class AdsbMetadataEnrichmentUseCaseTest {
         val job = backgroundScope.launch {
             useCase.targetsWithMetadata(targets).collect {}
         }
-
         advanceUntilIdle()
         assertEquals(1, metadataRepository.lookupCallCount)
         metadataRepository.advanceLookupProgress()
         advanceUntilIdle()
         job.cancel()
-
         assertEquals(2, metadataRepository.lookupCallCount)
     }
 
@@ -519,7 +486,6 @@ class AdsbMetadataEnrichmentUseCaseTest {
         advanceUntilIdle()
         shared.first()
         assertEquals(1, metadataRepository.lookupCallCount)
-
         targets.value = listOf(target("abc123").copy(distanceMeters = 1_200.0, ageSec = 3))
         advanceUntilIdle()
         shared.first()

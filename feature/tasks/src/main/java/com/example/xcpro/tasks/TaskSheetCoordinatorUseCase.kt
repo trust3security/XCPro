@@ -216,4 +216,6 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
     fun updateAATParameters(minimumTime: Duration, maximumTime: Duration) {
         taskManager.updateAATParameters(minimumTime, maximumTime)
     }
+
+    suspend fun loadTask(taskName: String): Boolean = taskManager.loadTask(taskName)
 }

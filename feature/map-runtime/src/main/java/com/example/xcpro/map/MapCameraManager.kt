@@ -272,6 +272,29 @@ class MapCameraManager(
             AppLogger.e(TAG, "dYZ_ AAT: Error restoring camera position: ${e.message}")
         }
     }
+
+    override fun fitTaskViewport(snapshot: TaskRenderSnapshot) {
+        try {
+            val plan = TaskViewportPlanner.plan(
+                task = snapshot.task,
+                viewport = cameraSurface.viewportMetricsOrNull()
+            ) ?: return
+            val targetZoom = clampZoom(
+                zoom = plan.zoom,
+                latitude = plan.target.latitude
+            )
+            stateActions.setTarget(
+                location = plan.target,
+                zoom = targetZoom.toFloat()
+            )
+            AppLogger.d(
+                TAG,
+                "Fit task viewport target=${plan.target.latitude},${plan.target.longitude} zoom=$targetZoom"
+            )
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error fitting task viewport: ${e.message}")
+        }
+    }
 }
 
 internal fun resolveCameraBearingUpdate(

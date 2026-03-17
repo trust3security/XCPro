@@ -19,8 +19,7 @@ class TaskRenderSyncCoordinator(
     data class TaskStateSignature(
         val taskId: String,
         val taskHash: Int,
-        val taskType: TaskType,
-        val activeLeg: Int
+        val taskType: TaskType
     )
 
     data class RuntimeCounters(

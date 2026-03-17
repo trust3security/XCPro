@@ -84,4 +84,39 @@ class MapRuntimeControllerWeatherStyleTest {
 
         verify(overlayManager, never()).onMapStyleChanged(anyOrNull())
     }
+
+    @Test
+    fun applyFitCurrentTask_beforeMapReady_replaysWhenMapBecomesReady() {
+        val overlayManager: MapOverlayManager = mock()
+        val map: MapLibreMap = mock()
+        var fitCount = 0
+        val controller = MapRuntimeController(
+            overlayManager = overlayManager,
+            fitCurrentTask = { fitCount += 1 }
+        )
+
+        controller.apply(MapCommand.FitCurrentTask)
+        assertEquals(0, fitCount)
+
+        controller.onMapReady(map)
+
+        assertEquals(1, fitCount)
+    }
+
+    @Test
+    fun clearMap_dropsQueuedFitCurrentTask() {
+        val overlayManager: MapOverlayManager = mock()
+        val map: MapLibreMap = mock()
+        var fitCount = 0
+        val controller = MapRuntimeController(
+            overlayManager = overlayManager,
+            fitCurrentTask = { fitCount += 1 }
+        )
+
+        controller.apply(MapCommand.FitCurrentTask)
+        controller.clearMap()
+        controller.onMapReady(map)
+
+        assertEquals(0, fitCount)
+    }
 }

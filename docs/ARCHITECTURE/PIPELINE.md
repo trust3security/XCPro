@@ -870,6 +870,9 @@ Task map rendering bridge (2026-02-12):
 - Coordinator owns the only runtime call path to:
   - `TaskMapRenderRouter.syncTaskVisuals(...)`
   - This API owns clear + orphan cleanup + conditional replot sequencing.
+- Manual active-leg changes no longer participate in the task render-state signature.
+  `TaskMapOverlay` emits only real render inputs, so next/prev turnpoint updates
+  task/nav/glide consumers without forcing a generic redraw.
 - AAT drag split (2026-03-05):
   - gesture move path publishes preview-only target updates through
     `TaskRenderSyncCoordinator.previewAatTargetPoint(...)` ->
@@ -878,6 +881,15 @@ Task map rendering bridge (2026-02-12):
     (no full task clear/replot per move).
   - gesture end commits canonical target mutation and triggers one full
     `TaskMapRenderRouter.syncTaskVisuals(...)` pass.
+- Explicit task-fit path (2026-03-17):
+  - `TaskSheetViewModel` emits one-shot `TaskSheetViewportEffect.RequestFitCurrentTask`
+    only for approved explicit task actions (waypoint add while building, persisted-task import,
+    and named-task load when surfaced).
+  - `feature:map` collects that task-local effect and translates it to
+    `MapCommand.FitCurrentTask`.
+  - `MapRuntimeController` applies the command through `MapCameraManager.fitTaskViewport(...)`.
+  - Generic Racing redraw no longer fits or recenters the camera; `RacingTaskDisplay`
+    is draw-only and camera fit is explicit runtime behavior.
 - Rendering is selected by current task type (RACING/AAT) in the UI runtime layer.
 - `TaskMapRenderRouter` consumes `TaskRenderSnapshot` from `MapTasksUseCase`
   (`taskRenderSnapshot()`) and shared core->task mappers (Racing/AAT) instead

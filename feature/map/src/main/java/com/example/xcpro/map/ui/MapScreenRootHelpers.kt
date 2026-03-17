@@ -17,6 +17,7 @@ import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.map.MapCameraRuntimePort
 import com.example.xcpro.map.widgets.MapWidgetId
 import com.example.xcpro.map.widgets.MapWidgetLayoutViewModel
 import com.example.xcpro.map.widgets.MapWidgetOffsets
@@ -216,10 +217,18 @@ internal fun trackSafeContainerSize(
 @Composable
 internal fun rememberMapRuntimeController(
     overlayManager: MapOverlayManager,
-    mapViewModel: MapScreenViewModel
+    mapViewModel: MapScreenViewModel,
+    cameraManager: MapCameraRuntimePort
 ): MapRuntimeController {
-    val mapRuntimeController = remember(overlayManager) {
-        MapRuntimeController(overlayManager)
+    val mapRuntimeController = remember(overlayManager, mapViewModel, cameraManager) {
+        MapRuntimeController(
+            overlayManager = overlayManager,
+            fitCurrentTask = {
+                cameraManager.fitTaskViewport(
+                    mapViewModel.runtimeDependencies.tasksUseCase.taskRenderSnapshot()
+                )
+            }
+        )
     }
 
     LaunchedEffect(mapRuntimeController) {

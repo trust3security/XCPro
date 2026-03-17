@@ -444,6 +444,7 @@ abstract class MapScreenViewModelTestBase {
             ?: AdsbTrafficPreferencesRepository(newTestPreferencesDataStore("adsb_traffic"))
         val metadataRepository = object : AircraftMetadataRepository {
             override val metadataRevision = MutableStateFlow(0L)
+            override val lookupProgressRevision = MutableStateFlow(0L)
 
             override suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata> {
                 return emptyMap()

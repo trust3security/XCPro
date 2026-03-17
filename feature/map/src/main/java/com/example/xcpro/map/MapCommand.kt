@@ -6,4 +6,5 @@ package com.example.xcpro.map
  */
 sealed interface MapCommand {
     data class SetStyle(val styleName: String) : MapCommand
+    object FitCurrentTask : MapCommand
 }

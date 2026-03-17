@@ -75,11 +75,29 @@ class TaskRenderSyncCoordinatorTest {
             renderClear = { _ -> }
         )
 
-        coordinator.onTaskStateChanged(signature(taskHash = 1, taskType = TaskType.RACING, activeLeg = 0))
-        coordinator.onTaskStateChanged(signature(taskHash = 2, taskType = TaskType.RACING, activeLeg = 0))
-        coordinator.onTaskStateChanged(signature(taskHash = 2, taskType = TaskType.AAT, activeLeg = 1))
+        coordinator.onTaskStateChanged(signature(taskHash = 1, taskType = TaskType.RACING))
+        coordinator.onTaskStateChanged(signature(taskHash = 2, taskType = TaskType.RACING))
+        coordinator.onTaskStateChanged(signature(taskHash = 2, taskType = TaskType.AAT))
 
         assertEquals(3, syncCount)
+    }
+
+    @Test
+    fun onTaskStateChanged_manualLegSelectionWithoutTaskChange_doesNotResync() {
+        val map: MapLibreMap = mock()
+        var syncCount = 0
+        val coordinator = TaskRenderSyncCoordinator(
+            snapshotProvider = ::sampleSnapshot,
+            mapProvider = { map },
+            renderSync = { _, _ -> syncCount += 1 },
+            renderClear = { _ -> }
+        )
+        val unchangedTaskState = signature(taskHash = 808, taskType = TaskType.RACING)
+
+        coordinator.onTaskStateChanged(unchangedTaskState)
+        coordinator.onTaskStateChanged(unchangedTaskState)
+
+        assertEquals(1, syncCount)
     }
 
     @Test
@@ -258,14 +276,12 @@ class TaskRenderSyncCoordinatorTest {
     private fun signature(
         taskId: String = "task-1",
         taskHash: Int = 1,
-        taskType: TaskType = TaskType.RACING,
-        activeLeg: Int = 0
+        taskType: TaskType = TaskType.RACING
     ): TaskRenderSyncCoordinator.TaskStateSignature {
         return TaskRenderSyncCoordinator.TaskStateSignature(
             taskId = taskId,
             taskHash = taskHash,
-            taskType = taskType,
-            activeLeg = activeLeg
+            taskType = taskType
         )
     }
 

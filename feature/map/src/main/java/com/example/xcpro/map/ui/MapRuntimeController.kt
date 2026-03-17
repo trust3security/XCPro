@@ -10,7 +10,8 @@ import org.maplibre.android.maps.MapLibreMap
  * UI-only runtime controller that applies imperative map commands.
  */
 class MapRuntimeController(
-    private val overlayManager: MapOverlayManager
+    private val overlayManager: MapOverlayManager,
+    private val fitCurrentTask: () -> Unit = {}
 ) {
     companion object {
         private const val TAG = "MapRuntimeController"
@@ -18,6 +19,7 @@ class MapRuntimeController(
 
     private var map: MapLibreMap? = null
     private var pendingStyleName: String? = null
+    private var pendingFitCurrentTask = false
     private var mapGeneration: Long = 0L
     private var styleRequestToken: Long = 0L
 
@@ -30,12 +32,16 @@ class MapRuntimeController(
         if (!queuedStyleName.isNullOrBlank()) {
             applyStyle(queuedStyleName)
         }
+        if (pendingFitCurrentTask) {
+            applyFitCurrentTask()
+        }
     }
 
     fun clearMap() {
         overlayManager.onMapDetached()
         map = null
         pendingStyleName = null
+        pendingFitCurrentTask = false
         mapGeneration++
         styleRequestToken++
     }
@@ -43,6 +49,7 @@ class MapRuntimeController(
     fun apply(command: MapCommand) {
         when (command) {
             is MapCommand.SetStyle -> applyStyle(command.styleName)
+            MapCommand.FitCurrentTask -> applyFitCurrentTask()
         }
     }
 
@@ -67,6 +74,20 @@ class MapRuntimeController(
             }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to set map style: $styleName", e)
+        }
+    }
+
+    private fun applyFitCurrentTask() {
+        val currentMap = map ?: run {
+            pendingFitCurrentTask = true
+            return
+        }
+        try {
+            pendingFitCurrentTask = false
+            fitCurrentTask()
+            AppLogger.d(TAG, "Fit current task applied for active map=${currentMap.hashCode()}")
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to fit current task", e)
         }
     }
 }

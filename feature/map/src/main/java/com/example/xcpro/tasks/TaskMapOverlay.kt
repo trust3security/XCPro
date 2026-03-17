@@ -23,13 +23,11 @@ fun TaskMapOverlay(
     val uiState by resolvedViewModel.uiState.collectAsStateWithLifecycle()
     val currentTask = uiState.task
     val currentTaskType = uiState.taskType
-    val activeLeg = uiState.stats.activeIndex
-    val taskStateSignature = remember(currentTask, currentTaskType, activeLeg) {
+    val taskStateSignature = remember(currentTask, currentTaskType) {
         TaskRenderSyncCoordinator.TaskStateSignature(
             taskId = currentTask.id,
             taskHash = currentTask.hashCode(),
-            taskType = currentTaskType,
-            activeLeg = activeLeg
+            taskType = currentTaskType
         )
     }
 

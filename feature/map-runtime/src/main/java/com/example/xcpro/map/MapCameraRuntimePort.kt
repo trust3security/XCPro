@@ -26,4 +26,6 @@ interface MapCameraRuntimePort {
     )
 
     fun restoreAATCameraPosition()
+
+    fun fitTaskViewport(snapshot: TaskRenderSnapshot)
 }

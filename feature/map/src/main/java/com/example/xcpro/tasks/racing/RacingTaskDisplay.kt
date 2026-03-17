@@ -1,10 +1,6 @@
 package com.example.xcpro.tasks.racing
 
 import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.Style
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.geometry.LatLngBounds
-import org.maplibre.android.camera.CameraUpdateFactory
 import com.example.xcpro.tasks.racing.models.*
 import com.example.xcpro.tasks.racing.turnpoints.*
 
@@ -142,37 +138,6 @@ class RacingTaskDisplay {
                 if (waypoints.size > 1) {
                     mapRenderer.drawRacingCourseLine(style, waypoints, racingTaskCalculator)
                 }
-
-                // Center map on task
-                centerMapOnRacingTask(map, waypoints)
-            }
-        }
-    }
-
-    /**
-     * Center map on Racing task
-     */
-    fun centerMapOnRacingTask(map: MapLibreMap, waypoints: List<RacingWaypoint>) {
-        if (waypoints.isNotEmpty()) {
-            if (waypoints.size == 1) {
-                // Single waypoint - just center on it
-                val waypoint = waypoints[0]
-                map.animateCamera(
-                    CameraUpdateFactory.newLatLngZoom(LatLng(waypoint.lat, waypoint.lon), 12.0),
-                    1000
-                )
-            } else {
-                // Multiple waypoints - use bounds
-                val bounds = LatLngBounds.Builder()
-                waypoints.forEach { waypoint ->
-                    bounds.include(LatLng(waypoint.lat, waypoint.lon))
-                }
-
-                val padding = 100
-                map.animateCamera(
-                    CameraUpdateFactory.newLatLngBounds(bounds.build(), padding),
-                    1000
-                )
             }
         }
     }
