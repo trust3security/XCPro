@@ -136,13 +136,39 @@ class MapBottomSheetTabsTest {
     }
 
     @Test
-    fun floatingStrip_showsMap4Label() {
+    fun floatingStrip_showsXcProLabel() {
         setBottomTabsContent(
             selectedTab = MapBottomTab.SKYSIGHT,
             isSheetVisible = false
         )
 
-        composeTestRule.onNodeWithText("Map4").assertIsDisplayed()
+        composeTestRule.onNodeWithText("XCPro").assertIsDisplayed()
+    }
+
+    @Test
+    fun floatingStrip_usesEqualWidthTabs() {
+        setBottomTabsContent(
+            selectedTab = MapBottomTab.SKYSIGHT,
+            isSheetVisible = false
+        )
+
+        val widths = composeTestRule.runOnIdle {
+            listOf(
+                composeTestRule.onNodeWithTag(MapBottomTab.RAIN.chipTestTag)
+                    .fetchSemanticsNode().boundsInRoot.width,
+                composeTestRule.onNodeWithTag(MapBottomTab.SKYSIGHT.chipTestTag)
+                    .fetchSemanticsNode().boundsInRoot.width,
+                composeTestRule.onNodeWithTag(MapBottomTab.OGN.chipTestTag)
+                    .fetchSemanticsNode().boundsInRoot.width,
+                composeTestRule.onNodeWithTag(MapBottomTab.MAP4.chipTestTag)
+                    .fetchSemanticsNode().boundsInRoot.width
+            )
+        }
+
+        val expectedWidth = widths.first()
+        widths.forEach { width ->
+            assertEquals(expectedWidth, width, 0.01f)
+        }
     }
 
     @Test

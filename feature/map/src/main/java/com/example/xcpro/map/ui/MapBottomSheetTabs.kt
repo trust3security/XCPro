@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
@@ -124,7 +124,6 @@ internal fun MapBottomTabsLayer(
                 satelliteViewEnabled = skySightSatViewEnabled,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
                     .padding(bottom = FLOATING_TAB_STRIP_BOTTOM_PADDING)
             )
         }
@@ -291,6 +290,7 @@ private fun BottomTabStrip(
             )
             AssistChip(
                 modifier = Modifier
+                    .width(TAB_CHIP_WIDTH)
                     .testTag(tab.chipTestTag)
                     .semantics {
                         selected = isSelected
@@ -322,13 +322,14 @@ private fun BottomTabStrip(
     }
 }
 
-private val FLOATING_TAB_STRIP_BOTTOM_PADDING = 0.dp
+private val FLOATING_TAB_STRIP_BOTTOM_PADDING = 6.dp
 private val SHEET_CONTENT_HORIZONTAL_PADDING = 16.dp
 private val SHEET_CONTENT_TOP_PADDING = 8.dp
 private val SHEET_CONTENT_BOTTOM_PADDING = 0.dp
 private val SHEET_DIVIDER_TOP_PADDING = 4.dp
 private val SHEET_DIVIDER_BOTTOM_PADDING = 1.dp
 private val SHEET_TAB_STRIP_BOTTOM_PADDING = 0.dp
+private val TAB_CHIP_WIDTH = 96.dp
 private val TAB_CHIP_BORDER_WIDTH = 1.dp
 private const val SELECTED_TAB_FILL_ALPHA = 0.28f
 private const val UNSELECTED_TAB_FILL_ALPHA = 0.14f

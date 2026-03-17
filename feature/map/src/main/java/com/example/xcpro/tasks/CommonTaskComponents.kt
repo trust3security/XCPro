@@ -2,9 +2,11 @@ package com.example.xcpro.tasks
 
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -147,15 +150,14 @@ fun AdvanceControls(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = "Advance",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             AssistChip(
+                modifier = Modifier.testTag(ADVANCE_MANUAL_CHIP_TAG),
                 onClick = { onModeChange(TaskAdvanceState.Mode.MANUAL) },
                 label = { Text("Manual") },
                 leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -164,6 +166,7 @@ fun AdvanceControls(
                 )
             )
             AssistChip(
+                modifier = Modifier.testTag(ADVANCE_AUTO_CHIP_TAG),
                 onClick = { onModeChange(TaskAdvanceState.Mode.AUTO) },
                 label = { Text("Auto") },
                 leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) },
@@ -171,15 +174,25 @@ fun AdvanceControls(
                     containerColor = if (snapshot.mode == TaskAdvanceState.Mode.AUTO) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
                 )
             )
-        }
-        AssistChip(
-            onClick = onToggleArm,
-            label = { Text(if (snapshot.isArmed) "Armed" else "Disarmed") },
-            leadingIcon = { Icon(if (snapshot.isArmed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, contentDescription = null) },
-            colors = AssistChipDefaults.assistChipColors(
-                containerColor = if (snapshot.isArmed) MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
+            AssistChip(
+                modifier = Modifier.testTag(ADVANCE_ARM_CHIP_TAG),
+                onClick = onToggleArm,
+                label = { Text(if (snapshot.isArmed) "Armed" else "Disarmed") },
+                leadingIcon = {
+                    Icon(
+                        if (snapshot.isArmed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                        contentDescription = null
+                    )
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (snapshot.isArmed) {
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
             )
-        )
+        }
     }
 }
 
@@ -213,6 +226,7 @@ fun PersistentWaypointSearchBar(
                 } else emptyList()
             },
             modifier = Modifier
+                .testTag(PERSISTENT_WAYPOINT_SEARCH_FIELD_TAG)
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
                 .onFocusChanged { focusState ->
@@ -256,22 +270,13 @@ fun PersistentWaypointSearchBar(
                 ) {
                     items(searchResults) { result ->
                         DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(
-                                        text = result.title,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (result.subtitle.isNotBlank()) {
-                                        Text(
-                                            text = result.subtitle,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
+                        text = {
+                                Text(
+                                    text = result.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             },
                             onClick = {
                                 onWaypointSelected(result)
@@ -287,3 +292,8 @@ fun PersistentWaypointSearchBar(
         }
     }
 }
+
+internal const val ADVANCE_MANUAL_CHIP_TAG = "advance_manual_chip"
+internal const val ADVANCE_AUTO_CHIP_TAG = "advance_auto_chip"
+internal const val ADVANCE_ARM_CHIP_TAG = "advance_arm_chip"
+internal const val PERSISTENT_WAYPOINT_SEARCH_FIELD_TAG = "persistent_waypoint_search_field"
