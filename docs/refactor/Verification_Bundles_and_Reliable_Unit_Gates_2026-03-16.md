@@ -13,7 +13,7 @@
 - Problem statement:
   - `testDebugUnitTest` is the correct PR-ready repo gate, but it is too heavy for routine slice validation.
   - Windows file-lock churn on `output.bin` can make the root unit-test gate fail for local-environment reasons rather than code regressions.
-  - `xcpro-qa` can choose a lighter tier, but the repo itself still needs explicit reusable verification bundles.
+  - `xcpro-build` can choose a lighter tier, but the repo itself still needs explicit reusable verification bundles.
 - Why now:
   - Recent terrain work showed that the repo had focused proof available, but the default local path still pushed directly into the heaviest gate.
   - The skill should be able to discover repo-owned commands instead of inventing raw Gradle task sets each time.
@@ -122,7 +122,7 @@ After:
 ### Phase 2
 
 - Goal:
-  - document the new workflow where developers and `xcpro-qa` can discover it
+  - document the new workflow where developers and `xcpro-build` can discover it
 - Files to change:
   - `docs/ARCHITECTURE/CONTRIBUTING.md`
   - `scripts/dev/README.md`

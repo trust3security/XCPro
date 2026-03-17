@@ -81,7 +81,7 @@ scripts\qa\run_change_verification.bat -Profile slice-terrain
 scripts\qa\run_change_verification.bat -Profile pr-ready
 ```
 
-These bundles are intended to work with the `xcpro-qa` skill and keep the
+These bundles are intended to work with the `xcpro-build` skill and keep the
 default local workflow lighter than immediately jumping to repo-wide
 `testDebugUnitTest`.
 
