@@ -1,0 +1,242 @@
+package com.example.xcpro.livefollow.data.session
+
+import com.example.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
+import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
+import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentityType
+import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
+import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
+import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
+import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class LiveFollowSessionRepositoryTest {
+
+    @Test
+    fun startPilotSession_updatesStateFromGatewaySuccess() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource()
+        val gateway = FakeSessionGateway(
+            startResult = LiveFollowSessionGatewayResult.Success(
+                snapshot = LiveFollowSessionGatewaySnapshot(
+                    sessionId = "pilot-1",
+                    role = LiveFollowSessionRole.PILOT,
+                    lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                    watchIdentity = null,
+                    directWatchAuthorized = false,
+                    lastError = null
+                )
+            )
+        )
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+
+        val result = repository.startPilotSession(
+            StartPilotLiveFollowSession(
+                pilotIdentity = identityProfile("AB12CD")
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(LiveFollowCommandResult.Success, result)
+        assertEquals(1, gateway.startCalls)
+        assertEquals("pilot-1", repository.state.value.sessionId)
+        assertEquals(LiveFollowSessionRole.PILOT, repository.state.value.role)
+        assertEquals(LiveFollowSessionLifecycle.ACTIVE, repository.state.value.lifecycle)
+        assertTrue(repository.state.value.sideEffectsAllowed)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun joinWatchSession_updatesWatcherStateFromGatewaySuccess() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource()
+        val gateway = FakeSessionGateway(
+            joinResult = LiveFollowSessionGatewayResult.Success(
+                snapshot = LiveFollowSessionGatewaySnapshot(
+                    sessionId = "watch-1",
+                    role = LiveFollowSessionRole.WATCHER,
+                    lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                    watchIdentity = identityProfile("F1A2B3"),
+                    directWatchAuthorized = true,
+                    lastError = null
+                )
+            )
+        )
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+
+        val result = repository.joinWatchSession("watch-1")
+        advanceUntilIdle()
+
+        assertEquals(LiveFollowCommandResult.Success, result)
+        assertEquals(1, gateway.joinCalls)
+        assertEquals(LiveFollowSessionRole.WATCHER, repository.state.value.role)
+        assertEquals(LiveFollowSessionLifecycle.ACTIVE, repository.state.value.lifecycle)
+        assertTrue(repository.state.value.directWatchAuthorized)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun replayMode_blocksGatewaySideEffects() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource(
+            runtimeMode = MutableStateFlow(LiveFollowRuntimeMode.REPLAY)
+        )
+        val gateway = FakeSessionGateway()
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+        advanceUntilIdle()
+
+        val result = repository.joinWatchSession("blocked")
+
+        assertEquals(
+            LiveFollowCommandResult.Rejected(LiveFollowReplayBlockReason.REPLAY_MODE),
+            result
+        )
+        assertEquals(0, gateway.joinCalls)
+        assertEquals(LiveFollowRuntimeMode.REPLAY, repository.state.value.runtimeMode)
+        assertEquals(false, repository.state.value.sideEffectsAllowed)
+        assertEquals(
+            LiveFollowReplayBlockReason.REPLAY_MODE,
+            repository.state.value.replayBlockReason
+        )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun failedCommand_preservesPreviousSnapshotAndRecordsError() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource()
+        val initialSnapshot = LiveFollowSessionGatewaySnapshot(
+            sessionId = "pilot-1",
+            role = LiveFollowSessionRole.PILOT,
+            lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+            watchIdentity = null,
+            directWatchAuthorized = false,
+            lastError = null
+        )
+        val gateway = FakeSessionGateway(
+            initialSnapshot = initialSnapshot,
+            stopResult = LiveFollowSessionGatewayResult.Failure("backend stop failed")
+        )
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+        advanceUntilIdle()
+
+        val result = repository.stopCurrentSession()
+        advanceUntilIdle()
+
+        assertEquals(LiveFollowCommandResult.Failure("backend stop failed"), result)
+        assertEquals(1, gateway.stopCalls)
+        assertEquals("pilot-1", repository.state.value.sessionId)
+        assertEquals(LiveFollowSessionRole.PILOT, repository.state.value.role)
+        assertEquals(LiveFollowSessionLifecycle.ACTIVE, repository.state.value.lifecycle)
+        assertEquals("backend stop failed", repository.state.value.lastError)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    private fun TestScope.repoScope(): CoroutineScope =
+        CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+
+    private fun identityProfile(hex: String): LiveFollowIdentityProfile =
+        LiveFollowIdentityProfile(
+            canonicalIdentity = LiveFollowAircraftIdentity.create(
+                type = LiveFollowAircraftIdentityType.FLARM,
+                rawValue = hex,
+                verified = true
+            )
+        )
+
+    private class FakeOwnshipSnapshotSource(
+        override val snapshot: StateFlow<LiveOwnshipSnapshot?> = MutableStateFlow(null),
+        override val runtimeMode: MutableStateFlow<LiveFollowRuntimeMode> =
+            MutableStateFlow(LiveFollowRuntimeMode.LIVE)
+    ) : LiveOwnshipSnapshotSource
+
+    private class FakeSessionGateway(
+        initialSnapshot: LiveFollowSessionGatewaySnapshot = liveFollowGatewayIdleSnapshot(),
+        var startResult: LiveFollowSessionGatewayResult = LiveFollowSessionGatewayResult.Success(
+            liveFollowGatewayIdleSnapshot()
+        ),
+        var stopResult: LiveFollowSessionGatewayResult = LiveFollowSessionGatewayResult.Success(
+            liveFollowGatewayIdleSnapshot()
+        ),
+        var joinResult: LiveFollowSessionGatewayResult = LiveFollowSessionGatewayResult.Success(
+            liveFollowGatewayIdleSnapshot()
+        ),
+        var leaveResult: LiveFollowSessionGatewayResult = LiveFollowSessionGatewayResult.Success(
+            liveFollowGatewayIdleSnapshot()
+        )
+    ) : LiveFollowSessionGateway {
+        override val sessionState = MutableStateFlow(initialSnapshot)
+        var startCalls: Int = 0
+        var stopCalls: Int = 0
+        var joinCalls: Int = 0
+        var leaveCalls: Int = 0
+
+        override suspend fun startPilotSession(
+            request: StartPilotLiveFollowSession
+        ): LiveFollowSessionGatewayResult {
+            startCalls += 1
+            return startResult.also(::applyResult)
+        }
+
+        override suspend fun stopCurrentSession(sessionId: String): LiveFollowSessionGatewayResult {
+            stopCalls += 1
+            return stopResult.also(::applyResult)
+        }
+
+        override suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult {
+            joinCalls += 1
+            return joinResult.also(::applyResult)
+        }
+
+        override suspend fun leaveSession(sessionId: String): LiveFollowSessionGatewayResult {
+            leaveCalls += 1
+            return leaveResult.also(::applyResult)
+        }
+
+        private fun applyResult(result: LiveFollowSessionGatewayResult) {
+            if (result is LiveFollowSessionGatewayResult.Success) {
+                sessionState.value = result.snapshot
+            }
+        }
+    }
+}

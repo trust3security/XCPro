@@ -26,7 +26,13 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:common"))
     implementation(project(":core:time"))
+    implementation(project(":dfcards-library"))
+    implementation(project(":feature:flight-runtime"))
+    implementation(project(":feature:traffic"))
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
