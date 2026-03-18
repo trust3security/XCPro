@@ -2,6 +2,7 @@ package com.example.xcpro.profiles
 
 import com.example.xcpro.core.time.FakeClock
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private fun emptyProfileStorageSnapshot(): ProfileStorageSnapshot = ProfileStorageSnapshot(
@@ -147,3 +148,17 @@ internal fun createScopedProfileRepositoryTestHarness(
     clock = clock,
     profileIdGenerator = profileIdGenerator
 )
+
+internal suspend fun createReadyScopedProfileRepositoryTestHarness(
+    scope: CoroutineScope,
+    initialSnapshot: ProfileStorageSnapshot = emptyProfileStorageSnapshot(),
+    clock: FakeClock = FakeClock(),
+    profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator()
+): ProfileRepositoryTestHarness = createScopedProfileRepositoryTestHarness(
+    scope = scope,
+    initialSnapshot = initialSnapshot,
+    clock = clock,
+    profileIdGenerator = profileIdGenerator
+).also { harness ->
+    harness.repository.bootstrapComplete.first { it }
+}
