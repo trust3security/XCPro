@@ -1,5 +1,6 @@
 package com.example.xcpro.profiles
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -10,18 +11,10 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileRepositoryMutationTest {
 
-    private val harness = createProfileRepositoryTestHarness()
-    private val repository
-        get() = harness.repository
-    private val writeProfilesCalls
-        get() = harness.writeProfilesCalls
-    private val writeActiveCalls
-        get() = harness.writeActiveCalls
-    private val writeStateCalls
-        get() = harness.writeStateCalls
-
     @Test
     fun createAndSelectProfile_updatesActiveProfile() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val request = ProfileCreationRequest(
             name = "Test Pilot",
             aircraftType = AircraftType.SAILPLANE
@@ -38,6 +31,8 @@ class ProfileRepositoryMutationTest {
 
     @Test
     fun createProfile_allowsMultipleProfilesForSameAircraftType() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         repository.createProfile(
             ProfileCreationRequest(
                 name = "Club Ship",
@@ -62,6 +57,8 @@ class ProfileRepositoryMutationTest {
 
     @Test
     fun updateProfile_keepsNonAuthoritativeCompatibilityFieldsUnchanged() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val imported = UserProfile(
             id = "compatibility-baseline",
             name = "Compatibility Baseline",
@@ -107,6 +104,8 @@ class ProfileRepositoryMutationTest {
 
     @Test
     fun createProfile_copyFromProfile_copiesCompatibilityFieldsAndOptionalMetadata() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val source = repository.importProfiles(
             ProfileImportRequest(
                 profiles = listOf(
@@ -159,6 +158,8 @@ class ProfileRepositoryMutationTest {
 
     @Test
     fun updateProfile_blankNameFailsValidation() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val created = repository.createProfile(
             ProfileCreationRequest(
                 name = "Validate Update",
@@ -173,6 +174,8 @@ class ProfileRepositoryMutationTest {
 
     @Test
     fun setActiveProfile_mergesProfileIfMissing() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val orphan = UserProfile(
             id = "orphan-imported",
             name = "Imported",
@@ -191,9 +194,11 @@ class ProfileRepositoryMutationTest {
 
     @Test
     fun createFirstProfile_usesAtomicStorageWrite() = runTest {
-        val baselineProfilesWrites = writeProfilesCalls
-        val baselineActiveWrites = writeActiveCalls
-        val baselineStateWrites = writeStateCalls
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
+        val baselineProfilesWrites = harness.writeProfilesCalls
+        val baselineActiveWrites = harness.writeActiveCalls
+        val baselineStateWrites = harness.writeStateCalls
 
         repository.createProfile(
             ProfileCreationRequest(
@@ -202,9 +207,9 @@ class ProfileRepositoryMutationTest {
             )
         ).getOrThrow()
 
-        assertEquals(baselineStateWrites + 1, writeStateCalls)
-        assertEquals(baselineProfilesWrites, writeProfilesCalls)
-        assertEquals(baselineActiveWrites, writeActiveCalls)
+        assertEquals(baselineStateWrites + 1, harness.writeStateCalls)
+        assertEquals(baselineProfilesWrites, harness.writeProfilesCalls)
+        assertEquals(baselineActiveWrites, harness.writeActiveCalls)
     }
 
     @Test
@@ -223,4 +228,7 @@ class ProfileRepositoryMutationTest {
         assertTrue(deletion.isFailure)
         assertTrue((deletion.exceptionOrNull()?.message ?: "").contains("default profile"))
     }
+
+    private suspend fun createHarness(scope: CoroutineScope): ProfileRepositoryTestHarness =
+        createReadyScopedProfileRepositoryTestHarness(scope)
 }

@@ -1,6 +1,7 @@
 package com.example.xcpro.profiles
 
 import com.example.xcpro.core.time.FakeClock
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -12,20 +13,10 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileRepositoryImportTest {
 
-    private val harness = createProfileRepositoryTestHarness()
-    private val repository
-        get() = harness.repository
-    private val clock
-        get() = harness.clock
-    private val writeProfilesCalls
-        get() = harness.writeProfilesCalls
-    private val writeActiveCalls
-        get() = harness.writeActiveCalls
-    private val writeStateCalls
-        get() = harness.writeStateCalls
-
     @Test
     fun importProfiles_preservesActiveProfile_whenKeepCurrentActive() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val existing = repository.createProfile(
             ProfileCreationRequest(
                 name = "Existing Pilot",
@@ -55,6 +46,8 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_preservesImportedPreferencesAndMetadata() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val imported = UserProfile(
             id = "preference-import",
             name = "Preference Import",
@@ -80,9 +73,11 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_usesSingleAtomicWrite() = runTest {
-        val baselineProfilesWrites = writeProfilesCalls
-        val baselineActiveWrites = writeActiveCalls
-        val baselineStateWrites = writeStateCalls
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
+        val baselineProfilesWrites = harness.writeProfilesCalls
+        val baselineActiveWrites = harness.writeActiveCalls
+        val baselineStateWrites = harness.writeStateCalls
         val imports = listOf(
             UserProfile(
                 id = "import-a",
@@ -102,13 +97,15 @@ class ProfileRepositoryImportTest {
 
         repository.importProfiles(ProfileImportRequest(profiles = imports)).getOrThrow()
 
-        assertEquals(baselineStateWrites + 1, writeStateCalls)
-        assertEquals(baselineProfilesWrites, writeProfilesCalls)
-        assertEquals(baselineActiveWrites, writeActiveCalls)
+        assertEquals(baselineStateWrites + 1, harness.writeStateCalls)
+        assertEquals(baselineProfilesWrites, harness.writeProfilesCalls)
+        assertEquals(baselineActiveWrites, harness.writeActiveCalls)
     }
 
     @Test
     fun importProfiles_skipsInvalidEntriesAndReportsFailure() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val imports = listOf(
             UserProfile(
                 id = "invalid-blank",
@@ -137,6 +134,8 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_canSelectNewestImported_whenKeepCurrentActiveFalse() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val existing = repository.createProfile(
             ProfileCreationRequest(
                 name = "Existing Pilot",
@@ -175,6 +174,8 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_appliesDeterministicNameCollisionSuffixPolicy() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         repository.createProfile(
             ProfileCreationRequest(
                 name = "Pilot",
@@ -212,6 +213,8 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_replaceExistingPolicy_reusesExistingIdAndAvoidsDuplicate() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val existing = repository.createProfile(
             ProfileCreationRequest(
                 name = "Replace Me",
@@ -248,6 +251,8 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_withAllInvalidItems_isNoOp() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val existing = repository.createProfile(
             ProfileCreationRequest(
                 name = "Baseline",
@@ -255,7 +260,7 @@ class ProfileRepositoryImportTest {
             )
         ).getOrThrow()
         repository.setActiveProfile(existing).getOrThrow()
-        val baselineStateWrites = writeStateCalls
+        val baselineStateWrites = harness.writeStateCalls
         val baselineActiveId = repository.activeProfile.value?.id
         val baselineProfiles = repository.profiles.value
 
@@ -283,14 +288,16 @@ class ProfileRepositoryImportTest {
         assertEquals(0, result.importedCount)
         assertEquals(2, result.skippedCount)
         assertEquals(2, result.failures.size)
-        assertEquals(baselineStateWrites, writeStateCalls)
+        assertEquals(baselineStateWrites, harness.writeStateCalls)
         assertEquals(baselineActiveId, repository.activeProfile.value?.id)
         assertEquals(baselineProfiles, repository.profiles.value)
     }
 
     @Test
     fun importProfiles_preserveImportedPreferencesFalse_appliesDefaults() = runTest {
-        clock.setWallMs(90_000L)
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
+        harness.clock.setWallMs(90_000L)
         val imported = UserProfile(
             id = "defaults-import",
             name = "Defaults Import",
@@ -321,6 +328,8 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_duplicateIdsAreRegeneratedWithoutFailure() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
         val duplicateId = "duplicate-id"
         val first = UserProfile(
             id = duplicateId,
@@ -352,7 +361,7 @@ class ProfileRepositoryImportTest {
 
     @Test
     fun importProfiles_usesInjectedIdGeneratorWhenDuplicateIdNeedsReplacement() = runTest {
-        val harness = createScopedProfileRepositoryTestHarness(
+        val harness = createReadyScopedProfileRepositoryTestHarness(
             scope = backgroundScope,
             clock = FakeClock(wallMs = 789_000L),
             profileIdGenerator = ProfileIdGenerator.fixed(
@@ -360,7 +369,6 @@ class ProfileRepositoryImportTest {
                 "replacement-profile-id"
             )
         )
-        harness.repository.bootstrapComplete.first { it }
         val existing = harness.repository.createProfile(
             ProfileCreationRequest(
                 name = "Existing",
@@ -389,4 +397,7 @@ class ProfileRepositoryImportTest {
         assertEquals(789_000L, imported.createdAt)
         assertEquals(0L, imported.lastUsed)
     }
+
+    private suspend fun createHarness(scope: CoroutineScope): ProfileRepositoryTestHarness =
+        createReadyScopedProfileRepositoryTestHarness(scope)
 }
