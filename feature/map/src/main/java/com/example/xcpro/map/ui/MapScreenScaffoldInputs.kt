@@ -147,6 +147,7 @@ internal fun rememberMapScreenScaffoldInputs(
                 overlayManager = managers.overlayManager,
                 modalManager = managers.modalManager,
                 taskScreenManager = managers.taskScreenManager,
+                taskRenderSnapshotProvider = mapViewModel.runtimeDependencies.tasksUseCase::taskRenderSnapshot,
                 waypointData = mapUiState.waypoints,
                 unitsPreferences = mapUiState.unitsPreferences,
                 qnhCalibrationState = mapUiState.qnhCalibrationState,
