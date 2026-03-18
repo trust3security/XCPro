@@ -140,8 +140,8 @@ LiveOwnshipSnapshot
 - groundSpeedMs: Double?
 - trackDeg: Double?
 - verticalSpeedMs: Double?
-- fixMonotonicNanos: Long
-- fixWallEpochMs: Long?          // boundary/display/storage only
+- fixMonoMs: Long
+- fixWallMs: Long?          // boundary/display/storage only
 - positionQuality: PositionQuality
 - verticalQuality: VerticalQuality
 - canonicalAircraftIdentity: CanonicalAircraftIdentity
@@ -180,8 +180,8 @@ OwnshipSourceLabel
 
 - Internal units are SI only.
 - Field names must encode units.
-- `fixMonotonicNanos` is the authoritative live freshness input.
-- `fixWallEpochMs` is optional and boundary-only.
+- `fixMonoMs` is the authoritative live freshness input.
+- `fixWallMs` is optional and boundary-only.
 - `canonicalAircraftIdentity` must already be typed before upload logic sees it.
 - Unknown or unsupported source labels must fail safe.
 
