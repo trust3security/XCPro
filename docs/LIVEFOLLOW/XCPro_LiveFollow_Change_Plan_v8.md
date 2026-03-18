@@ -26,6 +26,7 @@ Use these docs together:
 - `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v8.md`
 - `docs/LIVEFOLLOW/PHASE3_REVIEW_CHECKLIST.md`
 - `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v4.md`
+- `docs/ARCHITECTURE/PIPELINE.md`
 - `docs/ARCHITECTURE/PIPELINE_LiveFollow_Addendum.md`
 
 Treat older phase plans and checklists as historical context only.
@@ -85,6 +86,10 @@ Codex should:
 
 ### Important
 The human should **not** be manually creating Kotlin source files or deciding package names for this slice.
+
+### Doc sync correction
+If Phase 3 lands real route/runtime wiring, update `docs/ARCHITECTURE/PIPELINE.md` in the same PR.
+Do not rely on the addendum alone once the path is buildable in the app.
 
 ---
 
@@ -319,7 +324,6 @@ Do not treat Phase 3 as complete until all are true:
 After Phase 3 merge, move to **Phase 4** only:
 - hardening
 - replay/privacy verification
-- `PIPELINE.md` update
 - final doc sync
 - quality rescore / PR summary hygiene
 
