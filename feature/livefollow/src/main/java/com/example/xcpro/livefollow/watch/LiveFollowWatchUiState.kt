@@ -1,12 +1,13 @@
 package com.example.xcpro.livefollow.watch
 
 import com.example.xcpro.livefollow.formatAgeLabel
+import com.example.xcpro.livefollow.liveFollowTaskAttachmentMessage
+import com.example.xcpro.livefollow.liveFollowTransportLabel
 import com.example.xcpro.livefollow.toDisplayLabel
 import com.example.xcpro.livefollow.data.session.LiveFollowCommandResult
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
-import com.example.xcpro.livefollow.data.watch.DIRECT_WATCH_SOURCE_UNAVAILABLE_MESSAGE
 import com.example.xcpro.livefollow.data.watch.WatchTrafficSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
 import com.example.xcpro.livefollow.state.LiveFollowSessionState
@@ -17,13 +18,15 @@ data class LiveFollowWatchUiState(
     val lifecycleLabel: String = "Idle",
     val headline: String = "No active watch session",
     val detail: String = "Open a LiveFollow watch route to begin.",
+    val sessionTransportLabel: String = "Available",
     val sourceLabel: String = "Unavailable",
     val stateLabel: String = "Stopped",
+    val directTransportLabel: String = "Available",
     val aircraftLabel: String? = null,
     val aircraftIdentityLabel: String? = null,
     val fixAgeLabel: String? = null,
     val feedbackMessage: String? = null,
-    val directSourceMessage: String? = null,
+    val directTransportMessage: String? = null,
     val taskMessage: String? = null,
     val canStopWatching: Boolean = false,
     val canDismissMessage: Boolean = false,
@@ -50,20 +53,13 @@ internal fun buildLiveFollowWatchUiState(
         watchSnapshot = watchSnapshot
     )
     val feedbackMessage = feedback.message ?: session.lastError
-    val taskMessage = when (mapRenderState.taskRenderPolicy) {
-        LiveFollowTaskRenderPolicy.BLOCKED_AMBIGUOUS ->
-            "Task attach blocked while identity is ambiguous."
-
-        LiveFollowTaskRenderPolicy.READ_ONLY_UNAVAILABLE ->
-            "Watched task metadata unavailable in this Phase 3 build."
-
-        LiveFollowTaskRenderPolicy.HIDDEN -> null
-    }
+    val taskMessage = liveFollowTaskAttachmentMessage(mapRenderState.taskRenderPolicy)
     val visible = hasActiveWatch || feedback.requestedSessionId != null || feedbackMessage != null
     return LiveFollowWatchUiState(
         visible = visible,
         sessionId = session.sessionId ?: feedback.requestedSessionId,
         lifecycleLabel = session.lifecycle.name.toDisplayLabel(),
+        sessionTransportLabel = liveFollowTransportLabel(session.transportAvailability),
         headline = watchHeadline(
             hasActiveWatch = hasActiveWatch,
             watchState = watchSnapshot.sourceState,
@@ -80,14 +76,18 @@ internal fun buildLiveFollowWatchUiState(
             activeSource = watchSnapshot.activeSource
         ),
         stateLabel = watchSnapshot.sourceState.name.toDisplayLabel(),
+        directTransportLabel = liveFollowTransportLabel(watchSnapshot.directTransportAvailability),
         aircraftLabel = watchSnapshot.aircraft?.displayLabel,
         aircraftIdentityLabel = watchSnapshot.aircraft?.canonicalIdentity?.canonicalKey
             ?: session.watchIdentity?.canonicalIdentity?.canonicalKey,
         fixAgeLabel = formatAgeLabel(watchSnapshot.ageMs),
         feedbackMessage = feedbackMessage,
-        directSourceMessage = visible.takeIf { it }?.let {
-            DIRECT_WATCH_SOURCE_UNAVAILABLE_MESSAGE
-        },
+        directTransportMessage = watchDirectTransportMessage(
+            hasActiveWatch = hasActiveWatch,
+            requestedSessionId = feedback.requestedSessionId,
+            feedbackMessage = feedbackMessage,
+            watchSnapshot = watchSnapshot
+        ),
         taskMessage = taskMessage,
         canStopWatching = !feedback.isBusy &&
             session.sideEffectsAllowed &&
@@ -201,4 +201,16 @@ private fun sourceLabel(
         LiveFollowSessionState.OFFLINE -> "Offline"
         LiveFollowSessionState.STOPPED -> "Unavailable"
     }
+}
+
+private fun watchDirectTransportMessage(
+    hasActiveWatch: Boolean,
+    requestedSessionId: String?,
+    feedbackMessage: String?,
+    watchSnapshot: WatchTrafficSnapshot
+): String? {
+    if (feedbackMessage != null) return null
+    if (!hasActiveWatch && requestedSessionId == null) return null
+    val availability = watchSnapshot.directTransportAvailability
+    return availability.message?.takeIf { !availability.isAvailable }
 }

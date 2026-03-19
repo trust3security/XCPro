@@ -5,6 +5,8 @@ import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentityType
 import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
 import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
+import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
+import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +39,7 @@ class LiveFollowSessionRepositoryTest {
                     lifecycle = LiveFollowSessionLifecycle.ACTIVE,
                     watchIdentity = null,
                     directWatchAuthorized = false,
+                    transportAvailability = liveFollowAvailableTransport(),
                     lastError = null
                 )
             )
@@ -78,6 +81,7 @@ class LiveFollowSessionRepositoryTest {
                     lifecycle = LiveFollowSessionLifecycle.ACTIVE,
                     watchIdentity = identityProfile("F1A2B3"),
                     directWatchAuthorized = true,
+                    transportAvailability = liveFollowAvailableTransport(),
                     lastError = null
                 )
             )
@@ -145,6 +149,7 @@ class LiveFollowSessionRepositoryTest {
             lifecycle = LiveFollowSessionLifecycle.ACTIVE,
             watchIdentity = null,
             directWatchAuthorized = false,
+            transportAvailability = liveFollowAvailableTransport(),
             lastError = null
         )
         val gateway = FakeSessionGateway(
@@ -167,6 +172,50 @@ class LiveFollowSessionRepositoryTest {
         assertEquals(LiveFollowSessionRole.PILOT, repository.state.value.role)
         assertEquals(LiveFollowSessionLifecycle.ACTIVE, repository.state.value.lifecycle)
         assertEquals("backend stop failed", repository.state.value.lastError)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun unavailableTransport_blocksStartAndJoinWithoutCallingGateway() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource()
+        val gateway = FakeSessionGateway(
+            initialSnapshot = liveFollowGatewayIdleSnapshot(
+                transportAvailability = liveFollowUnavailableTransport(
+                    LIVEFOLLOW_SESSION_GATEWAY_UNAVAILABLE_MESSAGE
+                )
+            )
+        )
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+        advanceUntilIdle()
+
+        val startResult = repository.startPilotSession(
+            StartPilotLiveFollowSession(pilotIdentity = identityProfile("AB12CD"))
+        )
+        val joinResult = repository.joinWatchSession("watch-1")
+
+        assertEquals(
+            LiveFollowCommandResult.Failure(LIVEFOLLOW_SESSION_GATEWAY_UNAVAILABLE_MESSAGE),
+            startResult
+        )
+        assertEquals(
+            LiveFollowCommandResult.Failure(LIVEFOLLOW_SESSION_GATEWAY_UNAVAILABLE_MESSAGE),
+            joinResult
+        )
+        assertEquals(0, gateway.startCalls)
+        assertEquals(0, gateway.joinCalls)
+        assertEquals(false, repository.state.value.transportAvailability.isAvailable)
+        assertEquals(
+            LIVEFOLLOW_SESSION_GATEWAY_UNAVAILABLE_MESSAGE,
+            repository.state.value.transportAvailability.message
+        )
         } finally {
             scope.cancel()
         }

@@ -98,6 +98,10 @@ fun LiveFollowPilotScreen(
                     StatusField(label = "Lifecycle", value = uiState.lifecycleLabel)
                     StatusField(label = "Session ID", value = uiState.sessionId ?: "Unavailable")
                     StatusField(
+                        label = "Session transport",
+                        value = uiState.sessionTransportLabel
+                    )
+                    StatusField(
                         label = "Replay block reason",
                         value = uiState.replayBlockReasonLabel
                     )

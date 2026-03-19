@@ -1,7 +1,7 @@
 # XCPro LiveFollow Change Plan v9
 
 Date: 2026-03-19
-Status: Active baseline after Phase 3 merge
+Status: Active baseline with Phase 4 hardening seam corrections
 Supersedes for active use: `XCPro_LiveFollow_Change_Plan_v8.md` for implementation sequencing
 
 ## Purpose
@@ -109,6 +109,9 @@ Do **not** add:
 ### 1. Unavailable transport behavior must stay explicit
 If backend/direct transports remain unavailable in this phase:
 - the pilot/watch UI must surface that honestly
+- session transport availability must come from the session-side owner/boundary
+- direct-watch availability must come from the watch/direct-side owner/boundary
+- UI must map explicit owner-provided transport state instead of inferring availability from command failure
 - failure/unavailable states must be user-understandable
 - there must be no silent fallback that looks like a working transport
 - there must be no fake production backend behavior
@@ -123,6 +126,8 @@ Phase 4 must confirm:
 ### 3. Lifecycle/route behavior must be safe
 Phase 4 must confirm:
 - invalid/missing session arguments fail safely
+- `joinWatchSession(sessionId)` is not duplicated by route/ViewModel behavior
+- same-session re-entry is a no-op
 - watch session leave remains explicit, not tied to Composable disposal
 - route re-entry / process-lifecycle edge cases do not silently mutate session truth
 
@@ -131,6 +136,7 @@ Any remaining Phase 3/4 map interaction must remain:
 - render-only
 - task-snapshot-consumer only
 - free of business logic, source arbitration, or session truth ownership
+- if task-attach copy would otherwise drift, the shared presentation mapping helper stays owned by `feature:livefollow`, not `feature:map`
 
 ### 5. Docs must match reality
 Before merge, docs must reflect:
@@ -201,6 +207,7 @@ Avoid:
 Minimum expected coverage:
 - unavailable gateway/direct-source state surfaces correctly in pilot/watch UI state
 - replay still blocks start/stop/join/leave side effects through the UI wiring
+- same-session re-entry does not duplicate `joinWatchSession(sessionId)`
 - watch leave remains explicit and is not triggered by disposal alone
 - invalid/missing route args still fail safely
 - no UI-local freshness or source-math drift was introduced

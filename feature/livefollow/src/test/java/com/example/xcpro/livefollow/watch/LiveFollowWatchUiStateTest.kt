@@ -8,7 +8,10 @@ import com.example.xcpro.livefollow.data.watch.WatchTrafficSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentityType
 import com.example.xcpro.livefollow.model.LiveFollowSourceEligibility
+import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
+import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
+import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import com.example.xcpro.livefollow.toDisplayLabel
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
@@ -65,6 +68,26 @@ class LiveFollowWatchUiStateTest {
         assertEquals("Ogn", uiState.sourceLabel)
     }
 
+    @Test
+    fun directTransportAvailability_isShownFromOwnerState() {
+        val uiState = buildLiveFollowWatchUiState(
+            session = sessionSnapshot(),
+            watchSnapshot = watchSnapshot(
+                state = LiveFollowSessionState.LIVE_OGN,
+                directTransportAvailability = liveFollowUnavailableTransport(
+                    "Direct watch transport is unavailable in this transport-limited build."
+                )
+            ),
+            feedback = LiveFollowWatchRouteFeedback(requestedSessionId = "watch-1")
+        )
+
+        assertEquals("Unavailable", uiState.directTransportLabel)
+        assertEquals(
+            "Direct watch transport is unavailable in this transport-limited build.",
+            uiState.directTransportMessage
+        )
+    }
+
     private fun sessionSnapshot(
         role: LiveFollowSessionRole = LiveFollowSessionRole.WATCHER
     ): LiveFollowSessionSnapshot {
@@ -75,6 +98,7 @@ class LiveFollowWatchUiStateTest {
             runtimeMode = LiveFollowRuntimeMode.LIVE,
             watchIdentity = null,
             directWatchAuthorized = true,
+            transportAvailability = liveFollowAvailableTransport(),
             sideEffectsAllowed = true,
             replayBlockReason = LiveFollowReplayBlockReason.NONE,
             lastError = null
@@ -82,7 +106,8 @@ class LiveFollowWatchUiStateTest {
     }
 
     private fun watchSnapshot(
-        state: LiveFollowSessionState
+        state: LiveFollowSessionState,
+        directTransportAvailability: LiveFollowTransportAvailability = liveFollowAvailableTransport()
     ): WatchTrafficSnapshot {
         val activeSource = when (state) {
             LiveFollowSessionState.LIVE_OGN -> LiveFollowSourceType.OGN
@@ -115,6 +140,7 @@ class LiveFollowWatchUiStateTest {
             ageMs = 5_000L,
             ognEligibility = LiveFollowSourceEligibility.UNAVAILABLE,
             directEligibility = LiveFollowSourceEligibility.UNAVAILABLE,
+            directTransportAvailability = directTransportAvailability,
             identityResolution = null
         )
     }

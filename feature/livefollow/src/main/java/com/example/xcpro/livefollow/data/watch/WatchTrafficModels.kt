@@ -4,6 +4,8 @@ import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.example.xcpro.livefollow.model.LiveFollowIdentityResolution
 import com.example.xcpro.livefollow.model.LiveFollowSourceEligibility
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
+import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
+import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.state.LiveFollowSessionState
 
 data class WatchTrafficSnapshot(
@@ -13,6 +15,7 @@ data class WatchTrafficSnapshot(
     val ageMs: Long?,
     val ognEligibility: LiveFollowSourceEligibility,
     val directEligibility: LiveFollowSourceEligibility,
+    val directTransportAvailability: LiveFollowTransportAvailability,
     val identityResolution: LiveFollowIdentityResolution?
 )
 
@@ -29,12 +32,15 @@ data class WatchAircraftSnapshot(
     val displayLabel: String?
 )
 
-internal fun stoppedWatchTrafficSnapshot(): WatchTrafficSnapshot = WatchTrafficSnapshot(
+internal fun stoppedWatchTrafficSnapshot(
+    directTransportAvailability: LiveFollowTransportAvailability = liveFollowAvailableTransport()
+): WatchTrafficSnapshot = WatchTrafficSnapshot(
     sourceState = LiveFollowSessionState.STOPPED,
     activeSource = null,
     aircraft = null,
     ageMs = null,
     ognEligibility = LiveFollowSourceEligibility.UNAVAILABLE,
     directEligibility = LiveFollowSourceEligibility.UNAVAILABLE,
+    directTransportAvailability = directTransportAvailability,
     identityResolution = null
 )

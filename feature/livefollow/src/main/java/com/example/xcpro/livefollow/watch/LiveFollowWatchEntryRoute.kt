@@ -96,8 +96,10 @@ fun BoxScope.LiveFollowWatchMapHost(
             )
             WatchField(label = "Session", value = uiState.sessionId ?: "Unavailable")
             WatchField(label = "Lifecycle", value = uiState.lifecycleLabel)
+            WatchField(label = "Session transport", value = uiState.sessionTransportLabel)
             WatchField(label = "Source", value = uiState.sourceLabel)
             WatchField(label = "State", value = uiState.stateLabel)
+            WatchField(label = "Direct transport", value = uiState.directTransportLabel)
             uiState.aircraftLabel?.let { label ->
                 WatchField(label = "Target", value = label)
             }
@@ -114,7 +116,7 @@ fun BoxScope.LiveFollowWatchMapHost(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            uiState.directSourceMessage?.let { message ->
+            uiState.directTransportMessage?.let { message ->
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodySmall,

@@ -12,6 +12,7 @@ import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
 import com.example.xcpro.livefollow.model.LiveFollowSourceEligibility
 import com.example.xcpro.livefollow.model.LiveFollowSourceState
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
+import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
 import com.example.xcpro.livefollow.state.LiveFollowSessionState
@@ -223,6 +224,7 @@ class WatchTrafficRepositoryTest {
         runtimeMode = LiveFollowRuntimeMode.LIVE,
         watchIdentity = watchIdentity,
         directWatchAuthorized = directWatchAuthorized,
+        transportAvailability = liveFollowAvailableTransport(),
         sideEffectsAllowed = true,
         replayBlockReason = LiveFollowReplayBlockReason.NONE,
         lastError = null
@@ -290,6 +292,7 @@ class WatchTrafficRepositoryTest {
 
     private class FakeDirectWatchTrafficSource : DirectWatchTrafficSource {
         override val aircraft = MutableStateFlow<DirectWatchAircraftSample?>(null)
+        override val transportAvailability = MutableStateFlow(liveFollowAvailableTransport())
     }
 
     private class FakeOgnTrafficRepository : OgnTrafficRepository {

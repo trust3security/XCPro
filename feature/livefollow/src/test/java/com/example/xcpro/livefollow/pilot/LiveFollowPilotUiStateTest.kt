@@ -6,10 +6,13 @@ import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentityType
 import com.example.xcpro.livefollow.model.LiveFollowConfidence
+import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
 import com.example.xcpro.livefollow.model.LiveFollowValueQuality
 import com.example.xcpro.livefollow.model.LiveFollowValueState
 import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
 import com.example.xcpro.livefollow.model.LiveOwnshipSourceLabel
+import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
+import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
 import org.junit.Assert.assertEquals
@@ -67,13 +70,34 @@ class LiveFollowPilotUiStateTest {
         assertEquals("pilot-1", uiState.sessionId)
     }
 
+    @Test
+    fun unavailableTransport_disablesStartAndShowsTransportStatus() {
+        val uiState = buildLiveFollowPilotUiState(
+            session = sessionSnapshot(
+                transportAvailability = liveFollowUnavailableTransport(
+                    "LiveFollow session transport is unavailable in this transport-limited build."
+                )
+            ),
+            ownshipSnapshot = ownshipSnapshot(),
+            actionState = LiveFollowPilotActionState()
+        )
+
+        assertFalse(uiState.canStartSharing)
+        assertEquals("Unavailable", uiState.sessionTransportLabel)
+        assertEquals(
+            "LiveFollow session transport is unavailable in this transport-limited build.",
+            uiState.statusMessage
+        )
+    }
+
     private fun sessionSnapshot(
         sessionId: String? = null,
         role: LiveFollowSessionRole = LiveFollowSessionRole.NONE,
         lifecycle: LiveFollowSessionLifecycle = LiveFollowSessionLifecycle.IDLE,
         runtimeMode: LiveFollowRuntimeMode = LiveFollowRuntimeMode.LIVE,
         sideEffectsAllowed: Boolean = true,
-        replayBlockReason: LiveFollowReplayBlockReason = LiveFollowReplayBlockReason.NONE
+        replayBlockReason: LiveFollowReplayBlockReason = LiveFollowReplayBlockReason.NONE,
+        transportAvailability: LiveFollowTransportAvailability = liveFollowAvailableTransport()
     ): LiveFollowSessionSnapshot {
         return LiveFollowSessionSnapshot(
             sessionId = sessionId,
@@ -82,6 +106,7 @@ class LiveFollowPilotUiStateTest {
             runtimeMode = runtimeMode,
             watchIdentity = null,
             directWatchAuthorized = false,
+            transportAvailability = transportAvailability,
             sideEffectsAllowed = sideEffectsAllowed,
             replayBlockReason = replayBlockReason,
             lastError = null

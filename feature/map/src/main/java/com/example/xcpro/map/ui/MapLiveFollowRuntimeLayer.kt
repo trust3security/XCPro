@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.livefollow.liveFollowTaskAttachmentMessage
 import com.example.xcpro.livefollow.watch.LiveFollowMapRenderState
 import com.example.xcpro.livefollow.watch.LiveFollowTaskRenderPolicy
 import com.example.xcpro.livefollow.watch.LiveFollowWatchMapHost
@@ -24,7 +25,7 @@ internal fun resolveMapLiveFollowTaskAttachmentState(
         LiveFollowTaskRenderPolicy.BLOCKED_AMBIGUOUS -> {
             MapLiveFollowTaskAttachmentState(
                 attachTask = false,
-                message = "Task attach blocked while identity is ambiguous."
+                message = liveFollowTaskAttachmentMessage(mapRenderState.taskRenderPolicy)
             )
         }
 
@@ -33,7 +34,7 @@ internal fun resolveMapLiveFollowTaskAttachmentState(
             taskRenderSnapshotProvider()
             MapLiveFollowTaskAttachmentState(
                 attachTask = false,
-                message = "Watched task metadata unavailable in this Phase 3 build."
+                message = liveFollowTaskAttachmentMessage(mapRenderState.taskRenderPolicy)
             )
         }
 
