@@ -19,6 +19,7 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.map.TaskRenderSnapshot
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -77,6 +78,7 @@ internal data class MapScreenOverlayContentInputs(
     val overlayManager: MapOverlayManager,
     val modalManager: MapModalManager,
     val taskScreenManager: MapTaskScreenManager,
+    val taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
     val waypointData: List<WaypointData>,
     val unitsPreferences: UnitsPreferences,
     val qnhCalibrationState: QnhCalibrationState,

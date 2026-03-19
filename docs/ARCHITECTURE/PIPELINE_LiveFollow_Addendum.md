@@ -1,7 +1,8 @@
 # PIPELINE.md Addendum Draft - LiveFollow
 
 Date: 2026-03-17
-Status: Draft text to merge into `docs/ARCHITECTURE/PIPELINE.md` when wiring lands
+Status: `docs/ARCHITECTURE/PIPELINE.md` now contains the landed runtime wiring.
+Keep this file only as LiveFollow-focused supporting detail, not as the authoritative pipeline source.
 
 ---
 

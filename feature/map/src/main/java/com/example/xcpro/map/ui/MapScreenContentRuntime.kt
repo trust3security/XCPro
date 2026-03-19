@@ -96,6 +96,7 @@ internal fun MapScreenContent(
     val overlayManager = overlayInputs.overlayManager
     val modalManager = overlayInputs.modalManager
     val taskScreenManager = overlayInputs.taskScreenManager
+    val taskRenderSnapshotProvider = overlayInputs.taskRenderSnapshotProvider
     val waypointData = overlayInputs.waypointData
     val unitsPreferences = overlayInputs.unitsPreferences
     val qnhCalibrationState = overlayInputs.qnhCalibrationState
@@ -384,6 +385,9 @@ internal fun MapScreenContent(
             },
             unitsPreferences = unitsPreferences,
             trafficActions = trafficActions
+        )
+        MapLiveFollowRuntimeLayer(
+            taskRenderSnapshotProvider = taskRenderSnapshotProvider
         )
     }
     ReplayDiagnosticsLogger(

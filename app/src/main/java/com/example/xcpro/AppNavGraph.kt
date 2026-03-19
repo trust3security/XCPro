@@ -37,6 +37,9 @@ import com.example.ui1.screens.Task
 import com.example.xcpro.appshell.settings.GeneralSettingsSheetHost
 import com.example.xcpro.appshell.settings.consumeOpenGeneralSettingsOnMap
 import com.example.xcpro.appshell.settings.requestOpenGeneralSettingsOnMap
+import com.example.xcpro.livefollow.LiveFollowRoutes
+import com.example.xcpro.livefollow.pilot.LiveFollowPilotScreen
+import com.example.xcpro.livefollow.watch.LiveFollowWatchEntryRoute
 import com.example.xcpro.appshell.navdrawer.MyAbout
 import com.example.xcpro.appshell.navdrawer.MySupport
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
@@ -237,6 +240,33 @@ fun AppNavGraph(
         composable("igcReplay") { IgcReplayScreen(navController = navController) }
         composable("support") { MySupport(navController = navController, drawerState = drawerState, onShowBottomSheet = { setBottomSheetVisible(true) }, onHideBottomSheet = { setBottomSheetVisible(false) }) }
         composable("about") { MyAbout(navController, drawerState) }
+        composable(LiveFollowRoutes.PILOT) {
+            LiveFollowPilotScreen(
+                onNavigateBack = {
+                    val popped = navController.popBackStack(route = "map", inclusive = false)
+                    if (!popped) {
+                        navController.navigate("map") {
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            )
+        }
+        composable(
+            route = LiveFollowRoutes.WATCH_ENTRY,
+            arguments = listOf(
+                navArgument(LiveFollowRoutes.WATCH_SESSION_ID_ARG) {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            LiveFollowWatchEntryRoute(
+                navController = navController,
+                rawSessionId = backStackEntry.arguments?.getString(
+                    LiveFollowRoutes.WATCH_SESSION_ID_ARG
+                )
+            )
+        }
     }
 }
 
