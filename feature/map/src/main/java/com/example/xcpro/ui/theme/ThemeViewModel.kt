@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.xcpro.profiles.ProfileIdResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,7 @@ data class ThemeUiState(
 )
 
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 class ThemeViewModel @Inject constructor(
     private val useCase: ThemePreferencesUseCase
 ) : ViewModel() {

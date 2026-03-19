@@ -25,7 +25,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -125,7 +124,7 @@ internal fun SettingsShortcutWidgetImpl(
                                         maxX = screenWidthPx - currentSize,
                                         maxY = screenHeightPx - currentSize
                                     )
-                                    change.consumePositionChange()
+                                    change.consume()
                                 },
                                 onDragEnd = {
                                     onOffsetChange(displayOffset.value)
@@ -189,7 +188,7 @@ private fun SettingsResizeHandle(
                     detectDragGestures(
                         onDrag = { change, dragAmount ->
                             onResize(dragAmount)
-                            change.consumePositionChange()
+                            change.consume()
                         },
                         onDragEnd = { onResizeEnd() },
                         onDragCancel = { onResizeEnd() }
