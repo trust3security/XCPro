@@ -19,7 +19,11 @@ class LiveFollowSessionRepository(
 ) {
     private val localGatewayState = MutableStateFlow(gateway.sessionState.value)
     private val mutableState = MutableStateFlow(
-        idleSessionSnapshot(runtimeMode = ownshipSnapshotSource.runtimeMode.value)
+        sessionSnapshotFor(
+            gatewaySnapshot = localGatewayState.value,
+            runtimeMode = ownshipSnapshotSource.runtimeMode.value,
+            replayPolicy = replayPolicy
+        )
     )
 
     val state: StateFlow<LiveFollowSessionSnapshot> = mutableState.asStateFlow()
@@ -36,17 +40,10 @@ class LiveFollowSessionRepository(
                 localGatewayState,
                 ownshipSnapshotSource.runtimeMode
             ) { gatewaySnapshot, runtimeMode ->
-                val replayDecision = replayPolicy.evaluate(runtimeMode)
-                LiveFollowSessionSnapshot(
-                    sessionId = gatewaySnapshot.sessionId,
-                    role = gatewaySnapshot.role,
-                    lifecycle = gatewaySnapshot.lifecycle,
+                sessionSnapshotFor(
+                    gatewaySnapshot = gatewaySnapshot,
                     runtimeMode = runtimeMode,
-                    watchIdentity = gatewaySnapshot.watchIdentity,
-                    directWatchAuthorized = gatewaySnapshot.directWatchAuthorized,
-                    sideEffectsAllowed = replayDecision.sideEffectsAllowed,
-                    replayBlockReason = replayDecision.blockReason,
-                    lastError = gatewaySnapshot.lastError
+                    replayPolicy = replayPolicy
                 )
             }.collect { sessionSnapshot ->
                 mutableState.value = sessionSnapshot
@@ -60,6 +57,7 @@ class LiveFollowSessionRepository(
         if (!state.value.sideEffectsAllowed) {
             return LiveFollowCommandResult.Rejected(state.value.replayBlockReason)
         }
+        commandTransportUnavailableResult(state.value)?.let { return it }
 
         val previous = localGatewayState.value
         localGatewayState.value = previous.copy(
@@ -99,6 +97,7 @@ class LiveFollowSessionRepository(
         if (!state.value.sideEffectsAllowed) {
             return LiveFollowCommandResult.Rejected(state.value.replayBlockReason)
         }
+        commandTransportUnavailableResult(state.value)?.let { return it }
 
         val previous = localGatewayState.value
         localGatewayState.value = previous.copy(
@@ -151,4 +150,34 @@ class LiveFollowSessionRepository(
             }
         }
     }
+
+    private fun commandTransportUnavailableResult(
+        sessionSnapshot: LiveFollowSessionSnapshot
+    ): LiveFollowCommandResult.Failure? {
+        val availability = sessionSnapshot.transportAvailability
+        if (availability.isAvailable) return null
+        return LiveFollowCommandResult.Failure(
+            availability.message ?: "LiveFollow session transport unavailable."
+        )
+    }
+}
+
+private fun sessionSnapshotFor(
+    gatewaySnapshot: LiveFollowSessionGatewaySnapshot,
+    runtimeMode: com.example.xcpro.livefollow.state.LiveFollowRuntimeMode,
+    replayPolicy: LiveFollowReplayPolicy
+): LiveFollowSessionSnapshot {
+    val replayDecision = replayPolicy.evaluate(runtimeMode)
+    return LiveFollowSessionSnapshot(
+        sessionId = gatewaySnapshot.sessionId,
+        role = gatewaySnapshot.role,
+        lifecycle = gatewaySnapshot.lifecycle,
+        runtimeMode = runtimeMode,
+        watchIdentity = gatewaySnapshot.watchIdentity,
+        directWatchAuthorized = gatewaySnapshot.directWatchAuthorized,
+        transportAvailability = gatewaySnapshot.transportAvailability,
+        sideEffectsAllowed = replayDecision.sideEffectsAllowed,
+        replayBlockReason = replayDecision.blockReason,
+        lastError = gatewaySnapshot.lastError
+    )
 }

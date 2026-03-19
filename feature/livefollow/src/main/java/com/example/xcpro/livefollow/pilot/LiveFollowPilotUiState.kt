@@ -5,11 +5,13 @@ import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
 import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
+import com.example.xcpro.livefollow.liveFollowTransportLabel
 import com.example.xcpro.livefollow.toDisplayLabel
 
 data class LiveFollowPilotUiState(
     val lifecycleLabel: String = "Idle",
     val sessionId: String? = null,
+    val sessionTransportLabel: String = "Available",
     val replayBlockReasonLabel: String = "None",
     val ownshipIdentityLabel: String = "Unavailable",
     val ownshipSourceLabel: String = "Unknown",
@@ -33,6 +35,7 @@ internal fun buildLiveFollowPilotUiState(
 ): LiveFollowPilotUiState {
     val canStartSharing = !actionState.isBusy &&
         session.sideEffectsAllowed &&
+        session.transportAvailability.isAvailable &&
         session.role == LiveFollowSessionRole.NONE &&
         session.lifecycle == LiveFollowSessionLifecycle.IDLE &&
         ownshipSnapshot?.canonicalIdentity != null
@@ -49,6 +52,7 @@ internal fun buildLiveFollowPilotUiState(
     return LiveFollowPilotUiState(
         lifecycleLabel = session.lifecycle.name.toDisplayLabel(),
         sessionId = session.sessionId,
+        sessionTransportLabel = liveFollowTransportLabel(session.transportAvailability),
         replayBlockReasonLabel = session.replayBlockReason.name.toDisplayLabel(),
         ownshipIdentityLabel = ownshipSnapshot?.canonicalIdentity?.canonicalKey ?: "Unavailable",
         ownshipSourceLabel = ownshipSnapshot?.sourceLabel?.name?.toDisplayLabel() ?: "Unknown",
@@ -82,6 +86,10 @@ private fun pilotStatusMessage(
     session.lastError?.let { error -> return error }
     if (!session.sideEffectsAllowed) {
         return "LiveFollow sharing is blocked during replay."
+    }
+    if (!session.transportAvailability.isAvailable) {
+        return session.transportAvailability.message
+            ?: "LiveFollow session transport unavailable."
     }
     return when {
         session.role == LiveFollowSessionRole.PILOT &&

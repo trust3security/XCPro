@@ -46,7 +46,7 @@ class MapLiveFollowRuntimeLayerTest {
         assertFalse(taskAttachmentState.attachTask)
         assertEquals(1, providerCalls)
         assertEquals(
-            "Watched task metadata unavailable in this Phase 3 build.",
+            "Watched task metadata is unavailable in this transport-limited build.",
             taskAttachmentState.message
         )
     }

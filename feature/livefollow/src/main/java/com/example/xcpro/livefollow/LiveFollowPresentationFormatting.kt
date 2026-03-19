@@ -1,5 +1,7 @@
 package com.example.xcpro.livefollow
 
+import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
+import com.example.xcpro.livefollow.watch.LiveFollowTaskRenderPolicy
 import java.util.Locale
 
 internal fun String.toDisplayLabel(): String {
@@ -18,5 +20,23 @@ internal fun formatAgeLabel(ageMs: Long?): String? {
         safeAgeMs < 1_000L -> "< 1 s"
         safeAgeMs < 60_000L -> "${safeAgeMs / 1_000L} s"
         else -> "${safeAgeMs / 60_000L} min"
+    }
+}
+
+internal fun liveFollowTransportLabel(
+    availability: LiveFollowTransportAvailability
+): String = availability.state.name.toDisplayLabel()
+
+fun liveFollowTaskAttachmentMessage(
+    taskRenderPolicy: LiveFollowTaskRenderPolicy
+): String? {
+    return when (taskRenderPolicy) {
+        LiveFollowTaskRenderPolicy.BLOCKED_AMBIGUOUS ->
+            "Task attach blocked while identity is ambiguous."
+
+        LiveFollowTaskRenderPolicy.READ_ONLY_UNAVAILABLE ->
+            "Watched task metadata is unavailable in this transport-limited build."
+
+        LiveFollowTaskRenderPolicy.HIDDEN -> null
     }
 }

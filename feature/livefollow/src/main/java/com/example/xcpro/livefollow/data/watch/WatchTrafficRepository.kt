@@ -66,7 +66,11 @@ class WatchTrafficRepository(
         require(evaluationIntervalMs > 0L) { "evaluationIntervalMs must be > 0" }
     }
 
-    private val mutableState = MutableStateFlow(stoppedWatchTrafficSnapshot())
+    private val mutableState = MutableStateFlow(
+        stoppedWatchTrafficSnapshot(
+            directTransportAvailability = directWatchTrafficSource.transportAvailability.value
+        )
+    )
     val state: StateFlow<WatchTrafficSnapshot> = mutableState.asStateFlow()
 
     init {
@@ -75,12 +79,14 @@ class WatchTrafficRepository(
                 sessionState,
                 ognTrafficRepository.targets,
                 directWatchTrafficSource.aircraft,
+                directWatchTrafficSource.transportAvailability,
                 monotonicTickFlow(evaluationIntervalMs)
-            ) { sessionSnapshot, ognTargets, directAircraft, _ ->
+            ) { sessionSnapshot, ognTargets, directAircraft, directTransportAvailability, _ ->
                 evaluateWatchState(
                     sessionSnapshot = sessionSnapshot,
                     ognTargets = ognTargets,
-                    directAircraft = directAircraft
+                    directAircraft = directAircraft,
+                    directTransportAvailability = directTransportAvailability
                 )
             }.collect { watchSnapshot ->
                 mutableState.value = watchSnapshot
@@ -91,7 +97,8 @@ class WatchTrafficRepository(
     private fun evaluateWatchState(
         sessionSnapshot: LiveFollowSessionSnapshot,
         ognTargets: List<OgnTrafficTarget>,
-        directAircraft: DirectWatchAircraftSample?
+        directAircraft: DirectWatchAircraftSample?,
+        directTransportAvailability: com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
     ): WatchTrafficSnapshot {
         val watcherActive = sessionSnapshot.role == LiveFollowSessionRole.WATCHER &&
             sessionSnapshot.lifecycle in setOf(
@@ -100,7 +107,9 @@ class WatchTrafficRepository(
             )
         if (!watcherActive) {
             clearRuntimeState()
-            return stoppedWatchTrafficSnapshot()
+            return stoppedWatchTrafficSnapshot(
+                directTransportAvailability = directTransportAvailability
+            )
         }
 
         resetIfSessionChanged(sessionTrackingKey(sessionSnapshot))
@@ -132,7 +141,8 @@ class WatchTrafficRepository(
             arbitrationDecision = arbitrationDecision,
             identityResolution = ognResolution.identityResolution,
             ognAircraft = ognResolution.aircraft,
-            directAircraft = directAircraft
+            directAircraft = directAircraft,
+            directTransportAvailability = directTransportAvailability
         )
     }
 
@@ -141,7 +151,8 @@ class WatchTrafficRepository(
         arbitrationDecision: LiveFollowSourceArbitrationDecision,
         identityResolution: LiveFollowIdentityResolution?,
         ognAircraft: WatchAircraftSnapshot?,
-        directAircraft: DirectWatchAircraftSample?
+        directAircraft: DirectWatchAircraftSample?,
+        directTransportAvailability: com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
     ): WatchTrafficSnapshot {
         val aircraft = when (stateDecision.activeSource ?: stateDecision.lastLiveSource) {
             LiveFollowSourceType.OGN -> ognAircraft
@@ -155,6 +166,7 @@ class WatchTrafficRepository(
             ageMs = stateDecision.ageMs,
             ognEligibility = arbitrationDecision.ognEligibility,
             directEligibility = arbitrationDecision.directEligibility,
+            directTransportAvailability = directTransportAvailability,
             identityResolution = identityResolution
         )
     }

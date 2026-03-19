@@ -1,7 +1,7 @@
 # LiveFollow — What to do next (v5)
 
 Date: 2026-03-19
-Status: Updated after Phase 3 merge
+Status: Updated for Phase 4 hardening implementation
 
 ## Active baseline
 
@@ -44,30 +44,35 @@ Completed and merged:
 - explicit unavailable adapters
 - runtime path documented in `PIPELINE.md`
 
+### Phase 4 - Hardening and final app-side doc/runtime sync
+Implemented on this branch:
+- explicit owner-provided session transport availability from the session boundary
+- explicit owner-provided direct-watch transport availability from the watch/direct boundary
+- centralized task-attach unavailable copy owned by `feature:livefollow`
+- pilot/watch presentation hardening for transport-limited builds
+- route/ViewModel hardening for invalid args, same-session re-entry, replay-blocked join/leave, and explicit leave-only behavior
+- deterministic JVM tests for pilot/watch UI state and ViewModel wiring
+- doc/runtime sync for the transport-limited runtime path
+
 ---
 
 ## Immediate next step
 
-Start Phase 4 on a new branch and do it in two passes:
-1. seam/audit pass
-2. implementation pass
-
-Do **not** jump straight into code without the seam pass.
+Run the required repo gates for this Phase 4 branch, review against `PHASE4_REVIEW_CHECKLIST.md`, and merge only if the hardening-only scope remains intact.
 
 ---
 
 ## Phase order from here
 
 ### Phase 4 — Hardening and final app-side doc/runtime sync
-Now:
-- unavailable-adapter UX hardening
-- replay/privacy verification
+Completed on this branch:
+- unavailable-adapter UX hardening with explicit owner-provided transport availability
+- replay/privacy verification through repository and ViewModel wiring
 - route/lifecycle edge-case cleanup
-- risky test gap closure
+- risky deterministic JVM test gap closure
 - final docs/runtime sync
-- connected/instrumentation tests only if truly needed
 
-Still do **not** add backend/network implementation or notification delivery.
+Connected/instrumentation tests remain unnecessary unless a device-only behavior appears that unit tests cannot prove.
 
 ### Next track after Phase 4
 Only after Phase 4 is merged should you choose a new track, for example:
@@ -95,6 +100,7 @@ For Phase 4:
 - start from the merged Phase 3 baseline
 - keep the work minimal and hardening-focused
 - keep unavailable transports explicit
+- keep transport availability owner-provided, not inferred from command failure
 - keep replay/privacy guarantees provable
 - keep map/runtime render-only
 - keep task truth external

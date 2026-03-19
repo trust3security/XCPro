@@ -259,10 +259,10 @@ Pilot path:
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotUseCase.kt`
   - builds the pilot start request from the exported ownship snapshot plus optional callsign alias input.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/LiveFollowSessionRepository.kt`
-  - remains the local session truth owner and enforces replay-safe command blocking before any gateway side effect.
+  - remains the local session truth owner, carries explicit session transport availability from the session gateway boundary, and enforces replay-safe or transport-unavailable command blocking before any gateway side effect.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/UnavailableLiveFollowSessionGateway.kt`
-  - explicit Phase 3 unavailable adapter for backend session transport.
-  - surfaces user-visible failure; it is not a silent fallback and it is not production backend behavior.
+  - explicit transport-limited unavailable adapter for backend session transport.
+  - exports explicit transport-unavailable state plus user-visible failure; it is not a silent fallback and it is not production backend behavior.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotViewModel.kt`
   and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotScreen.kt`
   - own pilot presentation state and the limited Start sharing / Stop sharing route shell.
@@ -277,10 +277,10 @@ Watch path:
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/WatchTrafficRepository.kt`
   - combines session state, typed OGN traffic candidates, and the direct-watch source behind the existing arbitration/state-machine seams.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/UnavailableDirectWatchTrafficSource.kt`
-  - explicit Phase 3 unavailable adapter for the direct-watch feed.
-  - keeps direct-source unavailability visible in watch state instead of simulating live direct traffic.
+  - explicit transport-limited unavailable adapter for the direct-watch feed.
+  - exports explicit direct transport-unavailable state and keeps direct-source unavailability visible in watch state instead of simulating live direct traffic.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchViewModel.kt`
-  - maps session/watch truth into watch UI state and render state only.
+  - maps session/watch truth plus explicit session/direct transport availability into watch UI state and render state only.
 
 Map/task render handoff:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
@@ -294,7 +294,7 @@ Rules:
 - LiveFollow does not create a second ownship pipeline.
 - Watch mode does not depend on ordinary OGN overlay preference state to stay visible.
 - No backend, WebSocket, Retrofit, FCM, or notification runtime is implemented in Phase 3.
-- Task attach remains blocked on ambiguity and unavailable in this Phase 3 runtime path.
+- Task attach remains blocked on ambiguity and unavailable in this transport-limited runtime path.
 
 ## 4) Use Case -> ViewModel
 

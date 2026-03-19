@@ -1,6 +1,8 @@
 package com.example.xcpro.livefollow.data.session
 
 import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
+import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
+import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import kotlinx.coroutines.flow.StateFlow
 
 interface LiveFollowSessionGateway {
@@ -23,6 +25,7 @@ data class LiveFollowSessionGatewaySnapshot(
     val lifecycle: LiveFollowSessionLifecycle,
     val watchIdentity: LiveFollowIdentityProfile?,
     val directWatchAuthorized: Boolean,
+    val transportAvailability: LiveFollowTransportAvailability,
     val lastError: String?
 )
 
@@ -37,12 +40,14 @@ sealed interface LiveFollowSessionGatewayResult {
 }
 
 fun liveFollowGatewayIdleSnapshot(
-    lastError: String? = null
+    lastError: String? = null,
+    transportAvailability: LiveFollowTransportAvailability = liveFollowAvailableTransport()
 ): LiveFollowSessionGatewaySnapshot = LiveFollowSessionGatewaySnapshot(
     sessionId = null,
     role = LiveFollowSessionRole.NONE,
     lifecycle = LiveFollowSessionLifecycle.IDLE,
     watchIdentity = null,
     directWatchAuthorized = false,
+    transportAvailability = transportAvailability,
     lastError = lastError
 )
