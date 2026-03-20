@@ -1,5 +1,6 @@
 package com.example.xcpro.livefollow.data.session
 
+import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
 import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
@@ -17,6 +18,10 @@ interface LiveFollowSessionGateway {
     suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult
 
     suspend fun leaveSession(sessionId: String): LiveFollowSessionGatewayResult
+
+    suspend fun uploadPilotPosition(
+        snapshot: LiveOwnshipSnapshot
+    ): LiveFollowPilotPositionUploadResult
 }
 
 data class LiveFollowSessionGatewaySnapshot(
@@ -37,6 +42,25 @@ sealed interface LiveFollowSessionGatewayResult {
     data class Failure(
         val message: String
     ) : LiveFollowSessionGatewayResult
+}
+
+sealed interface LiveFollowPilotPositionUploadResult {
+    data object Uploaded : LiveFollowPilotPositionUploadResult
+
+    data class Skipped(
+        val reason: LiveFollowPilotPositionSkipReason
+    ) : LiveFollowPilotPositionUploadResult
+
+    data class Failure(
+        val message: String
+    ) : LiveFollowPilotPositionUploadResult
+}
+
+enum class LiveFollowPilotPositionSkipReason {
+    NOT_PILOT_SESSION,
+    MISSING_CREDENTIALS,
+    MISSING_REQUIRED_FIELDS,
+    NON_INCREASING_TIMESTAMP
 }
 
 fun liveFollowGatewayIdleSnapshot(

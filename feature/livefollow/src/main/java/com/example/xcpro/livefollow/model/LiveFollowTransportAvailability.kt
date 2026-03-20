@@ -17,6 +17,13 @@ data class LiveFollowTransportAvailability(
 fun liveFollowAvailableTransport(): LiveFollowTransportAvailability =
     LiveFollowTransportAvailability(state = LiveFollowTransportState.AVAILABLE)
 
+fun liveFollowDegradedTransport(
+    message: String
+): LiveFollowTransportAvailability = LiveFollowTransportAvailability(
+    state = LiveFollowTransportState.DEGRADED,
+    message = message
+)
+
 fun liveFollowUnavailableTransport(
     message: String
 ): LiveFollowTransportAvailability = LiveFollowTransportAvailability(

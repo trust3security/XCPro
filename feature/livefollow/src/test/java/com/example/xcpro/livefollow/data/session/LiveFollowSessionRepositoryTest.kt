@@ -3,8 +3,12 @@ package com.example.xcpro.livefollow.data.session
 import com.example.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentityType
+import com.example.xcpro.livefollow.model.LiveFollowConfidence
 import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
 import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
+import com.example.xcpro.livefollow.model.LiveOwnshipSourceLabel
+import com.example.xcpro.livefollow.model.LiveFollowValueQuality
+import com.example.xcpro.livefollow.model.LiveFollowValueState
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
@@ -221,6 +225,76 @@ class LiveFollowSessionRepositoryTest {
         }
     }
 
+    @Test
+    fun startPilotSession_triggersImmediateEligibleUpload() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource(
+            snapshot = MutableStateFlow(sampleOwnshipSnapshot())
+        )
+        val gateway = FakeSessionGateway(
+            startResult = LiveFollowSessionGatewayResult.Success(
+                snapshot = LiveFollowSessionGatewaySnapshot(
+                    sessionId = "pilot-1",
+                    role = LiveFollowSessionRole.PILOT,
+                    lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                    watchIdentity = null,
+                    directWatchAuthorized = false,
+                    transportAvailability = liveFollowAvailableTransport(),
+                    lastError = null
+                )
+            )
+        )
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+
+        val result = repository.startPilotSession(
+            StartPilotLiveFollowSession(pilotIdentity = identityProfile("AB12CD"))
+        )
+        advanceUntilIdle()
+
+        assertEquals(LiveFollowCommandResult.Success, result)
+        assertEquals(1, gateway.uploadCalls)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun replayMode_blocksUploadLoopForActivePilotState() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource(
+            snapshot = MutableStateFlow(sampleOwnshipSnapshot()),
+            runtimeMode = MutableStateFlow(LiveFollowRuntimeMode.REPLAY)
+        )
+        val gateway = FakeSessionGateway(
+            initialSnapshot = LiveFollowSessionGatewaySnapshot(
+                sessionId = "pilot-1",
+                role = LiveFollowSessionRole.PILOT,
+                lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                watchIdentity = null,
+                directWatchAuthorized = false,
+                transportAvailability = liveFollowAvailableTransport(),
+                lastError = null
+            )
+        )
+        LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+        advanceUntilIdle()
+
+        assertEquals(0, gateway.uploadCalls)
+        } finally {
+            scope.cancel()
+        }
+    }
+
     private fun TestScope.repoScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
 
@@ -259,6 +333,7 @@ class LiveFollowSessionRepositoryTest {
         var stopCalls: Int = 0
         var joinCalls: Int = 0
         var leaveCalls: Int = 0
+        var uploadCalls: Int = 0
 
         override suspend fun startPilotSession(
             request: StartPilotLiveFollowSession
@@ -282,10 +357,45 @@ class LiveFollowSessionRepositoryTest {
             return leaveResult.also(::applyResult)
         }
 
+        override suspend fun uploadPilotPosition(
+            snapshot: LiveOwnshipSnapshot
+        ): LiveFollowPilotPositionUploadResult {
+            uploadCalls += 1
+            return LiveFollowPilotPositionUploadResult.Uploaded
+        }
+
         private fun applyResult(result: LiveFollowSessionGatewayResult) {
             if (result is LiveFollowSessionGatewayResult.Success) {
                 sessionState.value = result.snapshot
             }
         }
+    }
+
+    private fun sampleOwnshipSnapshot(): LiveOwnshipSnapshot {
+        return LiveOwnshipSnapshot(
+            latitudeDeg = -33.9,
+            longitudeDeg = 151.2,
+            gpsAltitudeMslMeters = 500.0,
+            pressureAltitudeMslMeters = 495.0,
+            groundSpeedMs = 12.0,
+            trackDeg = 180.0,
+            verticalSpeedMs = 1.2,
+            fixMonoMs = 10_000L,
+            fixWallMs = 20_000L,
+            positionQuality = LiveFollowValueQuality(
+                state = LiveFollowValueState.VALID,
+                confidence = LiveFollowConfidence.HIGH
+            ),
+            verticalQuality = LiveFollowValueQuality(
+                state = LiveFollowValueState.VALID,
+                confidence = LiveFollowConfidence.HIGH
+            ),
+            canonicalIdentity = LiveFollowAircraftIdentity.create(
+                type = LiveFollowAircraftIdentityType.FLARM,
+                rawValue = "AB12CD",
+                verified = true
+            ),
+            sourceLabel = LiveOwnshipSourceLabel.LIVE_FLIGHT_RUNTIME
+        )
     }
 }

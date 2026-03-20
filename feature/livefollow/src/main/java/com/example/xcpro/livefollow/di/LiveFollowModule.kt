@@ -1,48 +1,56 @@
 package com.example.xcpro.livefollow.di
 
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.livefollow.data.ownship.FlightDataLiveOwnshipSnapshotSource
 import com.example.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
+import com.example.xcpro.livefollow.data.session.CurrentApiLiveFollowSessionGateway
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionGateway
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRepository
-import com.example.xcpro.livefollow.data.session.UnavailableLiveFollowSessionGateway
+import com.example.xcpro.livefollow.data.watch.CurrentApiDirectWatchTrafficSource
 import com.example.xcpro.livefollow.data.watch.DirectWatchTrafficSource
-import com.example.xcpro.livefollow.data.watch.UnavailableDirectWatchTrafficSource
 import com.example.xcpro.livefollow.data.watch.WatchTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
 import com.example.xcpro.ogn.OgnTrafficRepository
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class LiveFollowBindingsModule {
-
-    @Binds
-    @Singleton
-    abstract fun bindLiveFollowSessionGateway(
-        impl: UnavailableLiveFollowSessionGateway
-    ): LiveFollowSessionGateway
-
-    @Binds
-    @Singleton
-    abstract fun bindDirectWatchTrafficSource(
-        impl: UnavailableDirectWatchTrafficSource
-    ): DirectWatchTrafficSource
-}
+import okhttp3.OkHttpClient
 
 @Module
 @InstallIn(SingletonComponent::class)
 object LiveFollowDataModule {
+    @Provides
+    @Singleton
+    @LiveFollowHttpClient
+    fun provideLiveFollowHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(20, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideLiveFollowSessionGateway(
+        @LiveFollowHttpClient httpClient: OkHttpClient,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher
+    ): LiveFollowSessionGateway {
+        return CurrentApiLiveFollowSessionGateway(
+            httpClient = httpClient,
+            ioDispatcher = ioDispatcher
+        )
+    }
 
     @Provides
     @Singleton
@@ -70,6 +78,24 @@ object LiveFollowDataModule {
             scope = liveFollowScope(defaultDispatcher),
             ownshipSnapshotSource = ownshipSnapshotSource,
             gateway = gateway
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideDirectWatchTrafficSource(
+        clock: Clock,
+        sessionRepository: LiveFollowSessionRepository,
+        @LiveFollowHttpClient httpClient: OkHttpClient,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher,
+        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+    ): DirectWatchTrafficSource {
+        return CurrentApiDirectWatchTrafficSource(
+            scope = liveFollowScope(defaultDispatcher),
+            clock = clock,
+            sessionState = sessionRepository.state,
+            httpClient = httpClient,
+            ioDispatcher = ioDispatcher
         )
     }
 

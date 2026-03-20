@@ -2,14 +2,20 @@
 
 ## Current state
 
-App-side LiveFollow is complete through Phase 4:
+App-side LiveFollow is complete through Phase 4, and the first XCPro current-API transport slice is now implemented:
 - Phase 1: domain logic
 - Phase 2: contracts / repository seams
 - Phase 3: pilot/watch UI and route wiring
 - Phase 4: hardening and doc sync
+- Phase 5C slice 1:
+  - `POST /api/v1/session/start`
+  - `POST /api/v1/position`
+  - `POST /api/v1/session/end`
+  - `GET /api/v1/live/{session_id}`
 
-The next track is still **current deployed API integration**, but the real server-code audit now shows
-that XCPro transport adapter work is not ready to start blindly.
+This slice stores `session_id`, `share_code`, and `write_token` transport-locally, keeps `write_token`
+out of UI state, preserves local freshness derivation, and leaves task upsert, share-code watch,
+notifications, and WebSockets for later slices.
 
 ## Active baseline docs
 
@@ -31,7 +37,7 @@ Do not use the older `/api/v1/client/sessions/...` design docs for current imple
 
 ## Next sequence
 
-### Phase 5A — contract reconciliation
+### Phase 5A - contract reconciliation
 - land `LiveFollow_Current_Deployed_API_Contract_v2.md`
 - review the extracted current contract against the checklist
 - explicitly decide:
@@ -40,23 +46,29 @@ Do not use the older `/api/v1/client/sessions/...` design docs for current imple
   - first watch key (`share_code` vs `session_id`)
   - upload gating for missing nullable fields
   - speed-unit assumption
-- do not code yet
+- status: completed for slice 1
 
-### Phase 5B — server hardening only if required
+### Phase 5B - server hardening only if required
 Only if Phase 5A says client integration is still blocked.
 Likely candidates:
 - machine-readable error codes
 - minimal contract clarification
 - minimal read-shape clarification if truly needed
+- status: not required for slice 1
 
-### Phase 5C — XCPro current API client integration
-After 5A passes, or after 5B if needed:
-- implement real transport adapters against the deployed API
-- replace unavailable adapters
-- preserve existing app-side ownership boundaries
-- update docs in the same PR
+### Phase 5C - XCPro current API client integration
+Current slice landed:
+- real transport adapters replaced the unavailable session and direct-watch stubs for the first slice
+- pilot upload is single-sample `POST /api/v1/position`
+- watch polling is direct `GET /api/v1/live/{session_id}`
+- existing app-side ownership boundaries remain unchanged
 
-### Phase 5D — end-to-end verification
+Remaining Phase 5C work:
+- task upsert transport
+- share-code watch path / share UX
+- any richer server read mapping if later slices need it
+
+### Phase 5D - end-to-end verification
 - session start / write token
 - position upload
 - task upsert
@@ -65,17 +77,15 @@ After 5A passes, or after 5B if needed:
 - stale / ended behavior
 - replay remains side-effect free
 
-## Current proven blockers from the server-code audit
+## Remaining gaps after slice 1
 
-The real server audit found these current mismatches:
+The current deployed API still leaves these fuller-integration gaps:
 
-1. current live-read payload is weaker than XCPro’s richer direct-watch seam
-2. position upload currently requires non-null fields where XCPro ownship export is more nullable
-3. session gateway abstraction is not one-to-one with current server endpoints
-4. `share_code` and `write_token` are real server outputs but not yet fully surfaced/mapped in XCPro
-5. current server uses FastAPI default string `detail` errors, not stable machine-readable domain codes
-
-These blockers should be resolved in docs first, then in code only where necessary.
+1. current live-read payload is weaker than XCPro's richer direct-watch seam
+2. position upload still requires non-null fields where XCPro ownship export is more nullable
+3. task upsert is still not wired in XCPro
+4. share-code watch/share UX is still not wired in XCPro
+5. current server uses string `detail` errors, not stable machine-readable domain codes
 
 ## Out of scope right now
 
@@ -87,10 +97,9 @@ These blockers should be resolved in docs first, then in code only where necessa
 
 ## Human guidance
 
-Use a docs-only PR for the contract-reconciliation update first.
-Then use a new Codex task for:
-1. Pass 1 contract reconciliation review
-2. Pass 2A minimal server hardening if required
-3. Pass 2B XCPro adapter implementation only after the contract is genuinely ready
+Use the frozen current-contract docs as the implementation baseline for follow-on slices.
 
-Do not start adapter coding on assumptions.
+Next focused XCPro tasks should cover:
+1. task upsert transport
+2. share-code based watch/share UX decisions
+3. end-to-end runtime verification against the deployed API
