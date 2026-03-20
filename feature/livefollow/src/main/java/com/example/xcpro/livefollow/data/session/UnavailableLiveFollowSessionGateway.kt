@@ -1,5 +1,6 @@
 package com.example.xcpro.livefollow.data.session
 
+import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
 import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,6 +33,15 @@ class UnavailableLiveFollowSessionGateway @Inject constructor() : LiveFollowSess
     override suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult = fail()
 
     override suspend fun leaveSession(sessionId: String): LiveFollowSessionGatewayResult = fail()
+
+    override suspend fun uploadPilotPosition(
+        snapshot: LiveOwnshipSnapshot
+    ): LiveFollowPilotPositionUploadResult {
+        fail()
+        return LiveFollowPilotPositionUploadResult.Failure(
+            LIVEFOLLOW_SESSION_GATEWAY_UNAVAILABLE_MESSAGE
+        )
+    }
 
     private fun fail(): LiveFollowSessionGatewayResult {
         mutableSessionState.value = liveFollowGatewayIdleSnapshot(

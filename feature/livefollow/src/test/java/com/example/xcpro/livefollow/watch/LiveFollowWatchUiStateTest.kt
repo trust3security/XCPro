@@ -12,6 +12,7 @@ import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
+import com.example.xcpro.livefollow.liveFollowTaskAttachmentMessage
 import com.example.xcpro.livefollow.toDisplayLabel
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
@@ -85,6 +86,24 @@ class LiveFollowWatchUiStateTest {
         assertEquals(
             "Direct watch transport is unavailable in this transport-limited build.",
             uiState.directTransportMessage
+        )
+    }
+
+    @Test
+    fun liveDirectState_keepsTaskMetadataUnavailableForThisSlice() {
+        val uiState = buildLiveFollowWatchUiState(
+            session = sessionSnapshot(),
+            watchSnapshot = watchSnapshot(LiveFollowSessionState.LIVE_DIRECT),
+            feedback = LiveFollowWatchRouteFeedback()
+        )
+
+        assertEquals(
+            LiveFollowTaskRenderPolicy.READ_ONLY_UNAVAILABLE,
+            uiState.mapRenderState.taskRenderPolicy
+        )
+        assertEquals(
+            "Watched task metadata is unavailable in this transport-limited build.",
+            liveFollowTaskAttachmentMessage(uiState.mapRenderState.taskRenderPolicy)
         )
     }
 

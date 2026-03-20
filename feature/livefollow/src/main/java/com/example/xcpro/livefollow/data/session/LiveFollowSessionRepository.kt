@@ -1,6 +1,7 @@
 package com.example.xcpro.livefollow.data.session
 
 import com.example.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
+import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
 import com.example.xcpro.livefollow.state.LiveFollowReplayPolicy
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +50,12 @@ class LiveFollowSessionRepository(
                 mutableState.value = sessionSnapshot
             }
         }
+
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            ownshipSnapshotSource.snapshot.collect { ownshipSnapshot ->
+                uploadActivePilotSnapshot(ownshipSnapshot)
+            }
+        }
     }
 
     suspend fun startPilotSession(
@@ -65,10 +72,14 @@ class LiveFollowSessionRepository(
             lifecycle = LiveFollowSessionLifecycle.STARTING,
             lastError = null
         )
-        return applyGatewayResult(
+        val commandResult = applyGatewayResult(
             previous = previous,
             result = gateway.startPilotSession(request)
         )
+        if (commandResult == LiveFollowCommandResult.Success) {
+            uploadActivePilotSnapshot(ownshipSnapshotSource.snapshot.value)
+        }
+        return commandResult
     }
 
     suspend fun stopCurrentSession(): LiveFollowCommandResult {
@@ -145,10 +156,22 @@ class LiveFollowSessionRepository(
             }
 
             is LiveFollowSessionGatewayResult.Failure -> {
-                localGatewayState.value = previous.copy(lastError = result.message)
+                val latestGatewaySnapshot = gateway.sessionState.value
+                localGatewayState.value = latestGatewaySnapshot.copy(lastError = result.message)
                 LiveFollowCommandResult.Failure(result.message)
             }
         }
+    }
+
+    private suspend fun uploadActivePilotSnapshot(
+        ownshipSnapshot: LiveOwnshipSnapshot?
+    ) {
+        if (ownshipSnapshot == null) return
+        val currentSession = state.value
+        if (!currentSession.sideEffectsAllowed) return
+        if (currentSession.role != LiveFollowSessionRole.PILOT) return
+        if (currentSession.lifecycle != LiveFollowSessionLifecycle.ACTIVE) return
+        gateway.uploadPilotPosition(ownshipSnapshot)
     }
 
     private fun commandTransportUnavailableResult(

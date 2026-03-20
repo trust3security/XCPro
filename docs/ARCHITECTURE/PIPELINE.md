@@ -259,9 +259,13 @@ Pilot path:
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotUseCase.kt`
   - builds the pilot start request from the exported ownship snapshot plus optional callsign alias input.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/LiveFollowSessionRepository.kt`
-  - remains the local session truth owner, carries explicit session transport availability from the session gateway boundary, and enforces replay-safe or transport-unavailable command blocking before any gateway side effect.
+  - remains the local session truth owner, carries explicit session transport availability from the session gateway boundary, enforces replay-safe or transport-unavailable command blocking before any gateway side effect, and uploads eligible ownship snapshots only while the active pilot session is live and side effects are allowed.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt`
+  - current deployed-API transport adapter for `POST /api/v1/session/start`, `POST /api/v1/position`, and `POST /api/v1/session/end`.
+  - stores `session_id`, `share_code`, and `write_token` transport-locally; `write_token` stays out of UI-facing state.
+  - maps upload wire time from ownship `fixWallMs`, keeps monotonic ordering client-local, and blocks replay-side writes.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/UnavailableLiveFollowSessionGateway.kt`
-  - explicit transport-limited unavailable adapter for backend session transport.
+  - retained explicit transport-limited unavailable adapter for environments where the backend transport is not bound.
   - exports explicit transport-unavailable state plus user-visible failure; it is not a silent fallback and it is not production backend behavior.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotViewModel.kt`
   and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotScreen.kt`
@@ -276,8 +280,12 @@ Watch path:
   - does not auto-leave on Composable disposal; leaving remains an explicit user action.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/WatchTrafficRepository.kt`
   - combines session state, typed OGN traffic candidates, and the direct-watch source behind the existing arbitration/state-machine seams.
+  - current deployed-API slice keeps the direct-watch route session-id based and does not resolve OGN-backed identity from server payloads.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSource.kt`
+  - polls `GET /api/v1/live/{session_id}` for the active watch session and maps the current public payload into the existing direct-watch sample seam.
+  - falls back from `latest` to `positions.last()` when needed, keeps `canonicalIdentity` null, leaves task metadata unavailable for this slice, and derives freshness/stale behavior locally from XCPro clocks.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/UnavailableDirectWatchTrafficSource.kt`
-  - explicit transport-limited unavailable adapter for the direct-watch feed.
+  - retained explicit transport-limited unavailable adapter for the direct-watch feed.
   - exports explicit direct transport-unavailable state and keeps direct-source unavailability visible in watch state instead of simulating live direct traffic.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchViewModel.kt`
   - maps session/watch truth plus explicit session/direct transport availability into watch UI state and render state only.
@@ -293,8 +301,8 @@ Map/task render handoff:
 Rules:
 - LiveFollow does not create a second ownship pipeline.
 - Watch mode does not depend on ordinary OGN overlay preference state to stay visible.
-- No backend, WebSocket, Retrofit, FCM, or notification runtime is implemented in Phase 3.
-- Task attach remains blocked on ambiguity and unavailable in this transport-limited runtime path.
+- Current deployed-API slice uses only start/end/upload/live-read HTTP endpoints; no WebSocket, share-code watch flow, task upsert, FCM, or notification runtime is wired here.
+- Task attach remains blocked and unavailable in this first current-API transport slice.
 
 ## 4) Use Case -> ViewModel
 
