@@ -9,14 +9,22 @@ It is not:
 - the change plan
 - a future API design note
 
-Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v1.md`.
+Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`.
 
 ---
 
 ## Current baseline
 
-- Baseline date from current in-repo server notes: `2026-03-19`
+- Baseline date from current server-code audit: `2026-03-20`
 - Current deployed base URL: `https://api.xcpro.com.au`
+
+### Current contract status
+
+- The current deployed wire contract has now been extracted from real server code.
+- Contract ownership is frozen in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`.
+- Contract readiness is reviewed against `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`.
+- Active implementation planning now lives in:
+  - `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
 
 ### Current deployed endpoints
 
@@ -57,28 +65,30 @@ Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Con
 
 ### Server repo / location
 
-- Not recorded in this repo yet.
-- Must be captured during the Phase 5A server-code extraction pass before claiming the wire contract is fully frozen from code.
+- Inspected server repo:
+  - `C:\Users\Asus\AndroidStudioProjects\XCPro_Server`
 
 ### Server branch / commit inspected
 
-- Not recorded in this repo yet.
-- Must be captured during the Phase 5A server-code extraction pass.
+- Branch: `main`
+- Commit: `696bb110ea5d3b8189d75dfaed5c19e7b07465ea`
 
 ### In-repo factual sources for this note
 
-- `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v12_Current_API_Integration.md`
-- `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v1.md`
+- `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
+- `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`
+- `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`
 
 ---
 
-## Observed gaps relative to contract freeze
+## Remaining gaps before XCPro transport integration
 
-- Exact request bodies are not frozen yet for all endpoints.
-- Exact response bodies are not frozen yet for all endpoints.
-- Stable domain error-code mapping is not frozen yet.
-- Timestamp and ordering field names still need extraction from server code.
-- Intended XCPro use of `GET /api/v1/live/{session_id}` versus `GET /api/v1/live/share/{share_code}` still needs explicit confirmation from server code.
+- Current live-read payload is weaker than the XCPro direct-watch seam.
+- Position upload is stricter than XCPro's nullable ownship snapshot.
+- Current session endpoints are not one-to-one with the app gateway abstraction.
+- `share_code` and `write_token` still need explicit XCPro storage/mapping decisions.
+- Current server errors are still stringly typed for long-lived client transport mapping.
+- These are now reconciliation items, not unknown contract-extraction work.
 
 ---
 
