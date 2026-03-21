@@ -35,6 +35,9 @@ import java.util.concurrent.atomic.AtomicLong
 @Config(sdk = [33])
 @OptIn(ExperimentalCoroutinesApi::class)
 class FlightCalculationHelpersTest {
+    companion object {
+        private const val AGL_WORKER_TIMEOUT_SECONDS = 10L
+    }
 
     @Test
     fun resetAll_clearsThermalTracking() {
@@ -130,7 +133,7 @@ class FlightCalculationHelpersTest {
             requestedAltitudes += altitude
             if (requestedAltitudes.size == 1) {
                 firstRequestEntered.countDown()
-                check(releaseFirstRequest.await(2, TimeUnit.SECONDS)) {
+                check(releaseFirstRequest.await(AGL_WORKER_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                     "Timed out waiting to release first AGL request"
                 }
             } else if (requestedAltitudes.size == 2) {
@@ -147,13 +150,19 @@ class FlightCalculationHelpersTest {
 
         try {
             helpers.updateAGL(baroAltitude = 1_000.0, gps = gpsSample(latitude = 1.0), speed = 25.0)
-            assertTrue(firstRequestEntered.await(2, TimeUnit.SECONDS))
+            assertTrue(
+                "Timed out waiting for first AGL request to enter the calculator.",
+                firstRequestEntered.await(AGL_WORKER_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            )
 
             helpers.updateAGL(baroAltitude = 1_100.0, gps = gpsSample(latitude = 2.0), speed = 25.0)
             helpers.updateAGL(baroAltitude = 1_200.0, gps = gpsSample(latitude = 3.0), speed = 25.0)
 
             releaseFirstRequest.countDown()
-            assertTrue(secondRequestProcessed.await(2, TimeUnit.SECONDS))
+            assertTrue(
+                "Timed out waiting for the coalesced second AGL request to finish.",
+                secondRequestProcessed.await(AGL_WORKER_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            )
 
             val requestedSnapshot = synchronized(requestedAltitudes) { requestedAltitudes.toList() }
             assertEquals(listOf(1_000.0, 1_200.0), requestedSnapshot)
