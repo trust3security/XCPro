@@ -291,6 +291,7 @@ Watch path:
   - exports explicit direct transport-unavailable state and keeps direct-source unavailability visible in watch state instead of simulating live direct traffic.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchViewModel.kt`
   - maps session/watch truth plus explicit session/direct transport availability into watch UI state and render state only.
+  - re-enters join only when the current watcher session already matches both the target value and the intended lookup type, so share-code routes switch polling onto the public share-code endpoint even if the same session was already opened by session id.
 
 Map/task render handoff:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
@@ -303,7 +304,7 @@ Map/task render handoff:
 Rules:
 - LiveFollow does not create a second ownship pipeline.
 - Watch mode does not depend on ordinary OGN overlay preference state to stay visible.
-- Current deployed-API slice uses only start/end/upload/live-read HTTP endpoints; no WebSocket, share-code watch flow, task upsert, FCM, or notification runtime is wired here.
+- Current deployed-API slice uses only start/end/upload/live-read HTTP endpoints; no WebSocket, task upsert, FCM, or notification runtime is wired here.
 - Task attach remains blocked and unavailable in this first current-API transport slice.
 
 ## 4) Use Case -> ViewModel

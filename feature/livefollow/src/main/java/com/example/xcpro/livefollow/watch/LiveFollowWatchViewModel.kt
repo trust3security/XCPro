@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.livefollow.data.session.LiveFollowCommandResult
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
+import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
+import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookupType
 import com.example.xcpro.livefollow.normalizeLiveFollowShareCode
 import com.example.xcpro.livefollow.normalizeLiveFollowSessionId
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,9 +57,7 @@ class LiveFollowWatchViewModel @Inject constructor(
             return
         }
         val currentSession = useCase.sessionState.value
-        if (currentSession.sessionId == sessionId &&
-            currentSession.role == LiveFollowSessionRole.WATCHER
-        ) {
+        if (currentSession.matchesWatchSessionIdEntry(sessionId)) {
             routeFeedback.value = LiveFollowWatchRouteFeedback(
                 requestedSessionId = sessionId
             )
@@ -86,9 +86,7 @@ class LiveFollowWatchViewModel @Inject constructor(
             return
         }
         val currentSession = useCase.sessionState.value
-        if (currentSession.shareCode == shareCode &&
-            currentSession.role == LiveFollowSessionRole.WATCHER
-        ) {
+        if (currentSession.matchesWatchShareCodeEntry(shareCode)) {
             routeFeedback.value = LiveFollowWatchRouteFeedback(
                 requestedShareCode = shareCode
             )
@@ -155,4 +153,20 @@ class LiveFollowWatchViewModel @Inject constructor(
             )
         }
     }
+}
+
+private fun LiveFollowSessionSnapshot.matchesWatchSessionIdEntry(
+    sessionId: String
+): Boolean {
+    if (role != LiveFollowSessionRole.WATCHER) return false
+    if (this.sessionId != sessionId) return false
+    return watchLookup?.type != LiveFollowWatchLookupType.SHARE_CODE
+}
+
+private fun LiveFollowSessionSnapshot.matchesWatchShareCodeEntry(
+    shareCode: String
+): Boolean {
+    if (role != LiveFollowSessionRole.WATCHER) return false
+    if (this.shareCode != shareCode) return false
+    return watchLookup?.type == LiveFollowWatchLookupType.SHARE_CODE
 }

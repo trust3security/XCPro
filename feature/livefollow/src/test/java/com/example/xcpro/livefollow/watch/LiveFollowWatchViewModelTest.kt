@@ -4,6 +4,9 @@ import com.example.xcpro.livefollow.data.session.LiveFollowCommandResult
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
+import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookup
+import com.example.xcpro.livefollow.data.session.liveFollowSessionIdLookup
+import com.example.xcpro.livefollow.data.session.liveFollowShareCodeLookup
 import com.example.xcpro.livefollow.data.watch.WatchTrafficSnapshot
 import com.example.xcpro.livefollow.data.watch.stoppedWatchTrafficSnapshot
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
@@ -107,6 +110,31 @@ class LiveFollowWatchViewModelTest {
     }
 
     @Test
+    fun shareCodeReentry_fromSessionIdWatch_rejoinsUsingShareCodeLookup() = runTest {
+        val sessionState = MutableStateFlow(
+            sessionSnapshot(
+                sessionId = "watch-1",
+                shareCode = "WATCH123",
+                role = LiveFollowSessionRole.WATCHER,
+                watchLookup = liveFollowSessionIdLookup("watch-1")
+            )
+        )
+        val watchState = MutableStateFlow(stoppedWatchTrafficSnapshot())
+        val useCase = mockUseCase(sessionState, watchState).also {
+            whenever(it.joinWatchSessionByShareCode("WATCH123")).thenReturn(
+                LiveFollowCommandResult.Success
+            )
+        }
+        val viewModel = LiveFollowWatchViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.handleWatchShareEntry("WATCH123")
+        advanceUntilIdle()
+
+        verify(useCase).joinWatchSessionByShareCode("WATCH123")
+    }
+
+    @Test
     fun stopWatching_onlyCallsLeaveWhenExplicitlyRequested() = runTest {
         val sessionState = MutableStateFlow(
             sessionSnapshot(
@@ -152,10 +180,18 @@ class LiveFollowWatchViewModelTest {
 
     private fun sessionSnapshot(
         sessionId: String? = null,
+        shareCode: String? = null,
         role: LiveFollowSessionRole = LiveFollowSessionRole.NONE,
         sideEffectsAllowed: Boolean = true,
         replayBlockReason: LiveFollowReplayBlockReason = LiveFollowReplayBlockReason.NONE,
-        runtimeMode: LiveFollowRuntimeMode = LiveFollowRuntimeMode.LIVE
+        runtimeMode: LiveFollowRuntimeMode = LiveFollowRuntimeMode.LIVE,
+        watchLookup: LiveFollowWatchLookup? = if (sessionId != null) {
+            liveFollowSessionIdLookup(sessionId)
+        } else if (shareCode != null) {
+            liveFollowShareCodeLookup(shareCode)
+        } else {
+            null
+        }
     ): LiveFollowSessionSnapshot {
         return LiveFollowSessionSnapshot(
             sessionId = sessionId,
@@ -171,7 +207,9 @@ class LiveFollowWatchViewModelTest {
             transportAvailability = liveFollowAvailableTransport(),
             sideEffectsAllowed = sideEffectsAllowed,
             replayBlockReason = replayBlockReason,
-            lastError = null
+            lastError = null,
+            shareCode = shareCode,
+            watchLookup = watchLookup
         )
     }
 }
