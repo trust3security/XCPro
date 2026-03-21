@@ -5,6 +5,7 @@ import java.util.Locale
 object LiveFollowRoutes {
     const val MAP_ROUTE = "map"
     const val PILOT = "livefollow/pilot"
+    const val FRIENDS_FLYING = "livefollow/friends"
     const val WATCH_SHARE_FORM = "livefollow/watch/share"
     const val WATCH_SESSION_ID_ARG = "sessionId"
     const val WATCH_SHARE_CODE_ARG = "shareCode"

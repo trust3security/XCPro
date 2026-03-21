@@ -274,7 +274,18 @@ Pilot path:
 Watch path:
 - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
   and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/LiveFollowRoutes.kt`
-  - register `livefollow/pilot`, `livefollow/watch/{sessionId}`, `livefollow/watch/share`, and `livefollow/watch/share/{shareCode}`.
+  - register `livefollow/pilot`, `livefollow/friends`, `livefollow/watch/{sessionId}`, `livefollow/watch/share`, and `livefollow/watch/share/{shareCode}`.
+- `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
+  - exposes the small app entry point for `Friends Flying`; the drawer is launch-only and does not own list/session/watch state.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/friends/FriendsFlyingRepository.kt`
+  - owns the active-pilot discovery list SSOT for the Friends Flying picker, keeps transport availability / last error client-local, and blocks refresh during replay.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/friends/CurrentApiActivePilotsDataSource.kt`
+  - fetches `GET /api/v1/live/active`, normalizes `share_code` for handoff, and maps the current-API list payload into repo-safe active-pilot summaries.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingUseCase.kt`
+  - thin UI-to-repository seam for refresh orchestration.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingViewModel.kt`
+  and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingScreen.kt`
+  - own the bottom-sheet list UI, empty/loading/replay-block states, and item-tap handoff into the existing share-code watch route.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt`
   - validates `sessionId`, calls `joinWatchSession(sessionId)` once, then hands off to the existing `map` route.
   - does not auto-leave on Composable disposal; leaving remains an explicit user action.

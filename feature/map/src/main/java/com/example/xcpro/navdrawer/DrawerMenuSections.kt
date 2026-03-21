@@ -20,6 +20,7 @@ import com.example.ui1.icons.Hangglider
 import com.example.ui1.icons.Task
 import com.example.xcpro.common.orientation.MapOrientationMode
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.xcpro.livefollow.LiveFollowRoutes
 import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.screens.flightdata.HomeWaypointViewModel
 import com.example.xcpro.profiles.ProfileViewModel
@@ -296,6 +297,7 @@ fun BottomMenuItems(
     )
 
     listOf(
+        "Friends Flying" to Icons.Outlined.Groups to LiveFollowRoutes.FRIENDS_FLYING,
         "Manage Account" to Icons.Outlined.AccountCircle to "manage_account",
         "Support" to Icons.AutoMirrored.Outlined.HelpOutline to "support",
         "About" to Icons.Outlined.Info to "about"

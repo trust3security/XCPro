@@ -107,6 +107,21 @@ class LiveFollowWatchViewModelTest {
     }
 
     @Test
+    fun validShareCode_handsOffThroughExistingShareWatchJoin() = runTest {
+        val sessionState = MutableStateFlow(sessionSnapshot())
+        val watchState = MutableStateFlow(stoppedWatchTrafficSnapshot())
+        val useCase = mockUseCase(sessionState, watchState)
+        val viewModel = LiveFollowWatchViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.handleWatchShareEntry("watch123")
+        advanceUntilIdle()
+
+        verify(useCase).joinWatchSessionByShareCode("WATCH123")
+        assertEquals("WATCH123", viewModel.uiState.value.shareCode)
+    }
+
+    @Test
     fun stopWatching_onlyCallsLeaveWhenExplicitlyRequested() = runTest {
         val sessionState = MutableStateFlow(
             sessionSnapshot(

@@ -6,6 +6,9 @@ import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.livefollow.data.ownship.FlightDataLiveOwnshipSnapshotSource
 import com.example.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
+import com.example.xcpro.livefollow.data.friends.ActivePilotsDataSource
+import com.example.xcpro.livefollow.data.friends.CurrentApiActivePilotsDataSource
+import com.example.xcpro.livefollow.data.friends.FriendsFlyingRepository
 import com.example.xcpro.livefollow.data.session.CurrentApiLiveFollowSessionGateway
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionGateway
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRepository
@@ -114,6 +117,32 @@ object LiveFollowDataModule {
             sessionState = sessionRepository.state,
             ognTrafficRepository = ognTrafficRepository,
             directWatchTrafficSource = directWatchTrafficSource
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideActivePilotsDataSource(
+        @LiveFollowHttpClient httpClient: OkHttpClient,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher
+    ): ActivePilotsDataSource {
+        return CurrentApiActivePilotsDataSource(
+            httpClient = httpClient,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideFriendsFlyingRepository(
+        ownshipSnapshotSource: LiveOwnshipSnapshotSource,
+        activePilotsDataSource: ActivePilotsDataSource,
+        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+    ): FriendsFlyingRepository {
+        return FriendsFlyingRepository(
+            scope = liveFollowScope(defaultDispatcher),
+            runtimeModeSource = ownshipSnapshotSource,
+            dataSource = activePilotsDataSource
         )
     }
 

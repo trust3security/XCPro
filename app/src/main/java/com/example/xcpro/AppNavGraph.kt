@@ -38,6 +38,7 @@ import com.example.xcpro.appshell.settings.GeneralSettingsSheetHost
 import com.example.xcpro.appshell.settings.consumeOpenGeneralSettingsOnMap
 import com.example.xcpro.appshell.settings.requestOpenGeneralSettingsOnMap
 import com.example.xcpro.livefollow.LiveFollowRoutes
+import com.example.xcpro.livefollow.friends.FriendsFlyingScreen
 import com.example.xcpro.livefollow.pilot.LiveFollowPilotScreen
 import com.example.xcpro.livefollow.watch.LiveFollowWatchEntryRoute
 import com.example.xcpro.livefollow.watch.LiveFollowWatchShareCodeScreen
@@ -251,6 +252,23 @@ fun AppNavGraph(
                             launchSingleTop = true
                         }
                     }
+                }
+            )
+        }
+        composable(LiveFollowRoutes.FRIENDS_FLYING) {
+            FriendsFlyingScreen(
+                onNavigateBack = {
+                    val popped = navController.popBackStack(route = "map", inclusive = false)
+                    if (!popped) {
+                        navController.navigate("map") {
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onOpenWatch = { shareCode ->
+                    // AI-NOTE: Friends Flying must reuse the existing share-code watch route
+                    // so watch/session/map ownership stays unchanged for this slice.
+                    navController.navigate(LiveFollowRoutes.watchShareEntry(shareCode))
                 }
             )
         }

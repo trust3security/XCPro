@@ -31,6 +31,20 @@ internal data class CurrentApiLiveReadResponse(
     val hasTask: Boolean
 )
 
+internal data class CurrentApiActivePilotsResponse(
+    val items: List<CurrentApiActivePilotItem>,
+    val generatedAtWallMs: Long?
+)
+
+internal data class CurrentApiActivePilotItem(
+    val sessionId: String?,
+    val shareCode: String,
+    val status: String,
+    val displayLabel: String?,
+    val lastPositionWallMs: Long?,
+    val latest: CurrentApiLivePoint?
+)
+
 internal data class CurrentApiLivePoint(
     val latitudeDeg: Double,
     val longitudeDeg: Double,
@@ -79,6 +93,25 @@ internal fun parseCurrentApiLiveReadResponse(body: String): CurrentApiLiveReadRe
     )
 }
 
+internal fun parseCurrentApiActivePilotsResponse(body: String): CurrentApiActivePilotsResponse {
+    val root = parseCurrentApiRootObject(body)
+    val items = mutableListOf<CurrentApiActivePilotItem>()
+    val itemsJson = root.optionalArray("items")
+    if (itemsJson != null) {
+        for (itemJson in itemsJson) {
+            val itemObject = itemJson.asObjectOrNull() ?: continue
+            runCatching { parseCurrentApiActivePilotItem(itemObject) }
+                .getOrNull()
+                ?.let(items::add)
+        }
+    }
+
+    return CurrentApiActivePilotsResponse(
+        items = items,
+        generatedAtWallMs = parseCurrentApiWallMs(root.optionalString("generated_at"))
+    )
+}
+
 internal fun preferredCurrentApiLivePoint(
     response: CurrentApiLiveReadResponse
 ): CurrentApiLivePoint? = response.latest ?: response.positions.lastOrNull()
@@ -121,6 +154,17 @@ private fun parseCurrentApiLivePoint(root: JsonObject): CurrentApiLivePoint {
     )
 }
 
+private fun parseCurrentApiActivePilotItem(root: JsonObject): CurrentApiActivePilotItem {
+    return CurrentApiActivePilotItem(
+        sessionId = root.optionalStringAny("session", "session_id"),
+        shareCode = root.requiredString("share_code"),
+        status = root.requiredString("status"),
+        displayLabel = root.optionalString("display_label"),
+        lastPositionWallMs = parseCurrentApiWallMs(root.optionalString("last_position_at")),
+        latest = root.optionalObject("latest")?.let(::parseCurrentApiLivePoint)
+    )
+}
+
 private fun JsonObject.requiredString(key: String): String {
     return optionalString(key)
         ?: throw IllegalArgumentException("Missing $key")
@@ -137,6 +181,10 @@ private fun JsonObject.optionalString(key: String): String? {
         ?.asString
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
+}
+
+private fun JsonObject.optionalStringAny(vararg keys: String): String? {
+    return keys.firstNotNullOfOrNull(::optionalString)
 }
 
 private fun JsonObject.optionalFiniteDouble(key: String): Double? {
