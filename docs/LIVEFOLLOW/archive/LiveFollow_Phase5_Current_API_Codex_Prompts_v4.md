@@ -2,15 +2,20 @@
 
 ## Pass 1 — contract reconciliation review
 
+Status: Historical / archived reference
+Scope: Phase 5 current deployed API prompt pack used during the first current-API transport integration work
+Superseded by: docs/LIVEFOLLOW/LiveFollow_Next_Steps_v10.md and the Friends Flying v14 planning set
+Note: Keep for historical reference only; do not use as the active planning baseline
+
 Use this prompt first:
 
 ```text
 Review the extracted current LiveFollow deployed API contract and decide whether XCPro transport integration can begin cleanly.
 
 Read and follow:
-- docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md
+- docs/LIVEFOLLOW/archive/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md
 - docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md
-- docs/LIVEFOLLOW/LiveFollow_Next_Steps_v9.md
+- docs/LIVEFOLLOW/archive/LiveFollow_Next_Steps_v9.md
 - docs/LIVEFOLLOW/livefollow_v2.md
 - docs/LIVEFOLLOW/ServerInfo.md
 - docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md
@@ -62,9 +67,9 @@ Deliver:
 Implement only the minimum server hardening required before XCPro current-API transport integration can start cleanly.
 
 Read and follow:
-- docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md
+- docs/LIVEFOLLOW/archive/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md
 - docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md
-- docs/LIVEFOLLOW/LiveFollow_Next_Steps_v9.md
+- docs/LIVEFOLLOW/archive/LiveFollow_Next_Steps_v9.md
 - docs/LIVEFOLLOW/ServerInfo.md
 - docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md
 
@@ -99,9 +104,9 @@ Only after Pass 1 approves direct start, or after Pass 2A completes.
 Implement Phase 5C against the currently deployed LiveFollow API.
 
 Read and follow:
-- docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md
+- docs/LIVEFOLLOW/archive/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md
 - docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md
-- docs/LIVEFOLLOW/LiveFollow_Next_Steps_v9.md
+- docs/LIVEFOLLOW/archive/LiveFollow_Next_Steps_v9.md
 - docs/LIVEFOLLOW/livefollow_v2.md
 - docs/LIVEFOLLOW/ServerInfo.md
 - docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md

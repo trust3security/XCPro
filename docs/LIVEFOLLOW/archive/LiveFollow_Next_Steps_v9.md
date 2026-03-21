@@ -1,5 +1,11 @@
 # LiveFollow Next Steps v9
 
+Date: 2026-03-21
+Status: Historical phase-5 baseline snapshot; superseded by `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v10.md`
+
+This document captured the active baseline during the phase-5 current-API transport rollout.
+It is retained for historical closeout only.
+
 ## Current state
 
 App-side LiveFollow is complete through Phase 4, and the first XCPro current-API transport slice is now implemented:
@@ -22,20 +28,20 @@ These slices keep `write_token` transport-local, surface `share_code` into the p
 preserve local freshness derivation, and leave task upsert, richer direct-watch mapping, notifications,
 and WebSockets for later slices.
 
-## Active baseline docs
+## Historical baseline docs
 
-Use these as the active baseline:
+At the time, these were the active baseline docs:
 - `docs/LIVEFOLLOW/livefollow_v2.md`
 - `docs/LIVEFOLLOW/ServerInfo.md`
 - `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`
-- `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
+- `docs/LIVEFOLLOW/archive/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
 - `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`
 - `docs/ARCHITECTURE/PIPELINE.md`
 
 Role split for the active docs:
 - `ServerInfo.md` = factual deployed-server reality and provenance note
 - `LiveFollow_Current_Deployed_API_Contract_v2.md` = frozen contract owner for current implementation work
-- `XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md` = execution plan
+- `archive/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md` = execution plan at the time
 - `LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md` = merge gate for contract readiness
 
 Do not use the older `/api/v1/client/sessions/...` design docs for current implementation work.

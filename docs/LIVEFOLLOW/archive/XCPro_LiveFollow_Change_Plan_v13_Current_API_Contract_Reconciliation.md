@@ -1,8 +1,26 @@
 # XCPro LiveFollow — Change Plan v13 (Current API Contract Reconciliation)
 
 Date: 2026-03-20
-Status: Active baseline after real server-code contract extraction
+Status: Historical phase-5 execution plan after current-API slices 1 and 2 shipped
 Supersedes for active Phase 5 work: `XCPro_LiveFollow_Change_Plan_v12_Current_API_Integration.md`
+
+## Status note (2026-03-21)
+
+Phase 5 current-API slices 1 and 2 shipped.
+
+Shipped from this plan:
+- current-API transport slices 1 and 2
+- share-code watch flow
+- pilot UI surfacing and copying `share_code`
+
+Deferred from this plan:
+- `POST /api/v1/task/upsert` transport
+- richer watch/read payload mapping beyond the current public payload
+- stronger server error model
+
+Current active next-step planning has moved to:
+- `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v14_Friends_Flying_List.md`
+- `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v10.md`
 
 ## Purpose
 
@@ -206,7 +224,7 @@ Verify:
 
 If any runtime wiring lands, update in the same PR:
 - `docs/ARCHITECTURE/PIPELINE.md`
-- `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v9.md`
+- `docs/LIVEFOLLOW/archive/LiveFollow_Next_Steps_v9.md`
 - this plan if scope/status changes
 
 ## Merge gate
