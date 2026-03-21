@@ -5,6 +5,9 @@ import com.example.xcpro.core.time.Clock
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
+import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookup
+import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookupType
+import com.example.xcpro.livefollow.data.session.liveFollowSessionIdLookup
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiErrorMessage
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiLiveReadResponse
 import com.example.xcpro.livefollow.data.transport.preferredCurrentApiLivePoint
@@ -58,35 +61,29 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
 
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             sessionState.collectLatest { snapshot ->
-                val activeSessionId = activeWatchSessionId(snapshot)
-                if (activeSessionId == null) {
+                val activeLookup = activeWatchLookup(snapshot)
+                if (activeLookup == null) {
                     clearWatchState()
                     return@collectLatest
                 }
-                pollSession(activeSessionId)
+                pollWatchLookup(activeLookup)
             }
         }
     }
 
-    private suspend fun pollSession(sessionId: String) {
+    private suspend fun pollWatchLookup(lookup: LiveFollowWatchLookup) {
         while (currentCoroutineContext().isActive) {
-            if (!shouldPollSession(sessionId)) return
-            pollOnce(sessionId)
+            if (!shouldPollLookup(lookup)) return
+            pollOnce(lookup)
             if (!currentCoroutineContext().isActive) return
             delay(pollIntervalMs)
         }
     }
 
-    private suspend fun pollOnce(sessionId: String) = withContext(ioDispatcher) {
-        if (!shouldPollSession(sessionId)) return@withContext
+    private suspend fun pollOnce(lookup: LiveFollowWatchLookup) = withContext(ioDispatcher) {
+        if (!shouldPollLookup(lookup)) return@withContext
         val request = Request.Builder()
-            .url(
-                LIVEFOLLOW_BASE_URL.toHttpUrl()
-                    .newBuilder()
-                    .addPathSegments("api/v1/live")
-                    .addPathSegment(sessionId)
-                    .build()
-            )
+            .url(liveReadUrl(lookup))
             .get()
             .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
             .build()
@@ -155,8 +152,26 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
         mutableTransportAvailability.value = liveFollowAvailableTransport()
     }
 
-    private fun shouldPollSession(sessionId: String): Boolean =
-        activeWatchSessionId(sessionState.value) == sessionId
+    private fun shouldPollLookup(lookup: LiveFollowWatchLookup): Boolean =
+        activeWatchLookup(sessionState.value) == lookup
+
+    private fun liveReadUrl(lookup: LiveFollowWatchLookup) =
+        LIVEFOLLOW_BASE_URL.toHttpUrl()
+            .newBuilder()
+            .apply {
+                when (lookup.type) {
+                    LiveFollowWatchLookupType.SESSION_ID -> {
+                        addPathSegments("api/v1/live")
+                        addPathSegment(lookup.value)
+                    }
+
+                    LiveFollowWatchLookupType.SHARE_CODE -> {
+                        addPathSegments("api/v1/live/share")
+                        addPathSegment(lookup.value)
+                    }
+                }
+            }
+            .build()
 
     private fun availabilityForHttpFailure(
         httpCode: Int,
@@ -176,14 +191,17 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
     }
 }
 
-private fun activeWatchSessionId(
+private fun activeWatchLookup(
     snapshot: LiveFollowSessionSnapshot
-): String? {
+): LiveFollowWatchLookup? {
     if (!snapshot.sideEffectsAllowed) return null
     if (snapshot.runtimeMode != LiveFollowRuntimeMode.LIVE) return null
     if (snapshot.role != LiveFollowSessionRole.WATCHER) return null
     if (snapshot.lifecycle != LiveFollowSessionLifecycle.ACTIVE) return null
-    return snapshot.sessionId?.trim()?.takeIf { it.isNotEmpty() }
+    return snapshot.watchLookup ?: snapshot.sessionId
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let(::liveFollowSessionIdLookup)
 }
 
 private fun deriveLocalFixMonoMs(

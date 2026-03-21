@@ -32,6 +32,10 @@ class UnavailableLiveFollowSessionGateway @Inject constructor() : LiveFollowSess
 
     override suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult = fail()
 
+    override suspend fun joinWatchSessionByShareCode(
+        shareCode: String
+    ): LiveFollowSessionGatewayResult = fail()
+
     override suspend fun leaveSession(sessionId: String): LiveFollowSessionGatewayResult = fail()
 
     override suspend fun uploadPilotPosition(

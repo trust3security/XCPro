@@ -11,6 +11,7 @@ import com.example.xcpro.livefollow.toDisplayLabel
 data class LiveFollowPilotUiState(
     val lifecycleLabel: String = "Idle",
     val sessionId: String? = null,
+    val shareCode: String? = null,
     val sessionTransportLabel: String = "Available",
     val replayBlockReasonLabel: String = "None",
     val ownshipIdentityLabel: String = "Unavailable",
@@ -20,6 +21,7 @@ data class LiveFollowPilotUiState(
     val lastError: String? = null,
     val canStartSharing: Boolean = false,
     val canStopSharing: Boolean = false,
+    val canCopyShareCode: Boolean = false,
     val isBusy: Boolean = false
 )
 
@@ -52,6 +54,7 @@ internal fun buildLiveFollowPilotUiState(
     return LiveFollowPilotUiState(
         lifecycleLabel = session.lifecycle.name.toDisplayLabel(),
         sessionId = session.sessionId,
+        shareCode = session.shareCode,
         sessionTransportLabel = liveFollowTransportLabel(session.transportAvailability),
         replayBlockReasonLabel = session.replayBlockReason.name.toDisplayLabel(),
         ownshipIdentityLabel = ownshipSnapshot?.canonicalIdentity?.canonicalKey ?: "Unavailable",
@@ -64,6 +67,7 @@ internal fun buildLiveFollowPilotUiState(
         lastError = session.lastError,
         canStartSharing = canStartSharing,
         canStopSharing = canStopSharing,
+        canCopyShareCode = !actionState.isBusy && !session.shareCode.isNullOrBlank(),
         isBusy = actionState.isBusy
     )
 }

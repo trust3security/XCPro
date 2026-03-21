@@ -1,5 +1,8 @@
 package com.example.xcpro.livefollow.pilot
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,12 +24,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +41,25 @@ fun LiveFollowPilotScreen(
     viewModel: LiveFollowPilotViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(viewModel, context) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is LiveFollowPilotEvent.CopyShareCode -> {
+                    val clipboard = context.getSystemService(
+                        Context.CLIPBOARD_SERVICE
+                    ) as ClipboardManager
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText(
+                            "LiveFollow share code",
+                            event.shareCode
+                        )
+                    )
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -97,6 +122,16 @@ fun LiveFollowPilotScreen(
                     Text(uiState.statusMessage)
                     StatusField(label = "Lifecycle", value = uiState.lifecycleLabel)
                     StatusField(label = "Session ID", value = uiState.sessionId ?: "Unavailable")
+                    uiState.shareCode?.let { shareCode ->
+                        StatusField(label = "Share code", value = shareCode)
+                        Button(
+                            onClick = viewModel::copyShareCode,
+                            enabled = uiState.canCopyShareCode,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Copy share code")
+                        }
+                    }
                     StatusField(
                         label = "Session transport",
                         value = uiState.sessionTransportLabel
