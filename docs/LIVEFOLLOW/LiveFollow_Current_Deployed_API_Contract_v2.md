@@ -407,21 +407,18 @@ Do **not** map the current server DTOs one-for-one onto XCPro’s transport-loca
 
 ---
 
-## Immediate integration blockers still to resolve before XCPro client adapters
+## Current XCPro integration notes after transport slice 2
 
-1. Where XCPro stores `write_token` and `share_code`
-2. Exact upload gating for missing nullable app-side fields
-3. Speed-unit confirmation / documentation
-4. Whether first watch integration uses `share_code` only
-5. Whether current public read is acceptable as the first watch transport despite missing vertical speed / typed identity / monotonic age
-6. Whether server-side machine-readable error codes should be added before client integration begins
+1. `write_token` and `share_code` are now stored as transport-local state in the current XCPro gateway implementation.
+2. Position upload now gates on required fields and skips non-increasing timestamps before hitting the server.
+3. Public watch by `share_code` is the first user-facing watch path; `session_id` read remains available.
+4. `POST /api/v1/task/upsert` remains part of the deployed contract but is not yet wired in XCPro.
+5. Current public live read remains a degraded transport relative to the richer XCPro direct-watch seam because it does not expose typed identity, vertical speed, or monotonic age.
+6. Server-side machine-readable error codes remain a future hardening improvement, not a frozen deployed-contract field today.
 
 ## Recommended next move
 
-1. Reconcile the active plan/checklist/prompts against this frozen contract
-2. Decide the unresolved adapter-mapping rules listed above
-3. If needed, make a **small server hardening PR** first:
-   - machine-readable error codes
-   - speed-unit clarification
-   - any minimal contract cleanup
-4. Only then start XCPro client transport adapter implementation
+1. Keep this file as the frozen owner for the deployed wire contract.
+2. Use `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v10.md` and `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v14_Friends_Flying_List.md` for active follow-on planning.
+3. Wire the remaining XCPro task-upsert and end-to-end verification work against this contract as separate slices.
+4. Keep future Friends Flying work additive to this contract unless the deployed server shape actually changes.

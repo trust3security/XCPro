@@ -20,11 +20,14 @@ Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Con
 
 ### Current contract status
 
+- Phase 5 current-API transport slice 1/2 is now implemented in XCPro.
 - The current deployed wire contract has now been extracted from real server code.
 - Contract ownership is frozen in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`.
-- Contract readiness is reviewed against `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`.
-- Active implementation planning now lives in:
-  - `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
+- Historical phase-5 gate/plan docs now live under `docs/LIVEFOLLOW/archive/`.
+- Active follow-on planning now lives in:
+  - `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v10.md`
+  - `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v14_Friends_Flying_List.md`
+- `GET /api/v1/live/active` is not part of the frozen deployed contract yet.
 
 ### Current deployed endpoints
 
@@ -75,20 +78,22 @@ Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Con
 
 ### In-repo factual sources for this note
 
-- `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
+- `docs/LIVEFOLLOW/archive/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
 - `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`
 - `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`
 
 ---
 
-## Remaining gaps before XCPro transport integration
+## Remaining gaps after XCPro transport slice 2
 
-- Current live-read payload is weaker than the XCPro direct-watch seam.
-- Position upload is stricter than XCPro's nullable ownship snapshot.
-- Current session endpoints are not one-to-one with the app gateway abstraction.
-- `share_code` and `write_token` still need explicit XCPro storage/mapping decisions.
+- Current live-read payload is still weaker than the XCPro direct-watch seam.
+- `POST /api/v1/task/upsert` is part of the deployed contract but is not yet wired in XCPro.
 - Current server errors are still stringly typed for long-lived client transport mapping.
-- These are now reconciliation items, not unknown contract-extraction work.
+- End-to-end runtime verification against the deployed API still needs a final proof pass.
+- Friends Flying server/app work remains future scope:
+  - `GET /api/v1/live/active`
+  - display-label support
+  - active-pilot picker UI
 
 ---
 
