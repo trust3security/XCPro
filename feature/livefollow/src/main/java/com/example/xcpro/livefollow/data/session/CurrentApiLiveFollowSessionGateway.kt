@@ -10,6 +10,7 @@ import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.model.liveFollowDegradedTransport
 import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import java.io.IOException
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -63,7 +64,8 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                 watchIdentity = null,
                 directWatchAuthorized = false,
                 transportAvailability = liveFollowAvailableTransport(),
-                lastError = null
+                lastError = null,
+                shareCode = response.shareCode
             )
             mutableSessionState.value = snapshot
             LiveFollowSessionGatewayResult.Success(snapshot)
@@ -131,12 +133,57 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                     watchIdentity = null,
                     directWatchAuthorized = true,
                     transportAvailability = liveFollowAvailableTransport(),
-                    lastError = null
+                    lastError = null,
+                    shareCode = response.shareCode,
+                    watchLookup = liveFollowSessionIdLookup(normalizedSessionId)
                 )
                 mutableSessionState.value = snapshot
                 LiveFollowSessionGatewayResult.Success(snapshot)
             }
         }
+
+    override suspend fun joinWatchSessionByShareCode(
+        shareCode: String
+    ): LiveFollowSessionGatewayResult = withContext(ioDispatcher) {
+        val normalizedShareCode = shareCode.trim()
+            .uppercase(Locale.US)
+            .takeIf { it.isNotEmpty() }
+            ?: return@withContext LiveFollowSessionGatewayResult.Failure(
+                "Invalid LiveFollow share code."
+            )
+        val httpRequest = Request.Builder()
+            .url(
+                baseUrlBuilder()
+                    .addPathSegments("api/v1/live/share")
+                    .addPathSegment(normalizedShareCode)
+                    .build()
+            )
+            .get()
+            .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
+            .build()
+
+        executeSessionCommand(httpRequest) { body ->
+            val response = parseCurrentApiLiveReadResponse(body)
+            synchronized(lock) {
+                storedPilotTransport = StoredPilotTransport()
+            }
+            // AI-NOTE: Public share-code watch keeps the share code as the
+            // polling key so later polls stay on the deployed public endpoint.
+            val snapshot = LiveFollowSessionGatewaySnapshot(
+                sessionId = response.sessionId,
+                role = LiveFollowSessionRole.WATCHER,
+                lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                watchIdentity = null,
+                directWatchAuthorized = true,
+                transportAvailability = liveFollowAvailableTransport(),
+                lastError = null,
+                shareCode = response.shareCode ?: normalizedShareCode,
+                watchLookup = liveFollowShareCodeLookup(normalizedShareCode)
+            )
+            mutableSessionState.value = snapshot
+            LiveFollowSessionGatewayResult.Success(snapshot)
+        }
+    }
 
     override suspend fun leaveSession(sessionId: String): LiveFollowSessionGatewayResult {
         synchronized(lock) {

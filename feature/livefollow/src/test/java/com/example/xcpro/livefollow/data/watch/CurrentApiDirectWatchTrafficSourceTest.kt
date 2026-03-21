@@ -4,9 +4,12 @@ import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
+import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookup
+import com.example.xcpro.livefollow.data.session.liveFollowShareCodeLookup
 import com.example.xcpro.livefollow.model.LiveFollowTransportState
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
 import kotlinx.coroutines.CoroutineScope
@@ -140,6 +143,55 @@ class CurrentApiDirectWatchTrafficSourceTest {
     }
 
     @Test
+    fun poll_shareCodeWatch_usesPublicShareEndpoint_andMapsPayload() = runTest {
+        val scope = repoScope()
+        try {
+            val clock = FakeClock(monoMs = 20_000L, wallMs = 1_000_000L)
+            val sessionState = MutableStateFlow(
+                activeWatchSession(
+                    sessionId = "watch-1",
+                    shareCode = "WATCH123",
+                    watchLookup = liveFollowShareCodeLookup("WATCH123")
+                )
+            )
+            val requestedPath = AtomicReference<String>()
+            val source = CurrentApiDirectWatchTrafficSource(
+                scope = scope,
+                clock = clock,
+                sessionState = sessionState,
+                httpClient = OkHttpClient.Builder().addInterceptor(
+                    Interceptor { chain ->
+                        requestedPath.set(chain.request().url.encodedPath)
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(200)
+                            .message("OK")
+                            .body(sampleLivePayload().toResponseBody("application/json".toMediaType()))
+                            .build()
+                    }
+                ).build(),
+                ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+                pollIntervalMs = 60_000L
+            )
+            runCurrent()
+
+            val sample = source.aircraft.value
+            requireNotNull(sample)
+            assertEquals("/api/v1/live/share/WATCH123", requestedPath.get())
+            assertEquals("WATCH123", sample.displayLabel)
+            assertNull(sample.canonicalIdentity)
+            assertNull(sample.verticalSpeedMs)
+            assertEquals(
+                LiveFollowTransportState.AVAILABLE,
+                source.transportAvailability.value.state
+            )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun poll_usesLastPositionWhenLatestIsNull() = runTest {
         val scope = repoScope()
         try {
@@ -240,12 +292,15 @@ class CurrentApiDirectWatchTrafficSourceTest {
         CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
 
     private fun activeWatchSession(
+        sessionId: String = "watch-1",
+        shareCode: String? = null,
+        watchLookup: LiveFollowWatchLookup? = null,
         runtimeMode: LiveFollowRuntimeMode = LiveFollowRuntimeMode.LIVE,
         sideEffectsAllowed: Boolean = true,
         replayBlockReason: LiveFollowReplayBlockReason = LiveFollowReplayBlockReason.NONE
     ): LiveFollowSessionSnapshot {
         return LiveFollowSessionSnapshot(
-            sessionId = "watch-1",
+            sessionId = sessionId,
             role = LiveFollowSessionRole.WATCHER,
             lifecycle = LiveFollowSessionLifecycle.ACTIVE,
             runtimeMode = runtimeMode,
@@ -254,7 +309,9 @@ class CurrentApiDirectWatchTrafficSourceTest {
             transportAvailability = liveFollowAvailableTransport(),
             sideEffectsAllowed = sideEffectsAllowed,
             replayBlockReason = replayBlockReason,
-            lastError = null
+            lastError = null,
+            shareCode = shareCode,
+            watchLookup = watchLookup
         )
     }
 

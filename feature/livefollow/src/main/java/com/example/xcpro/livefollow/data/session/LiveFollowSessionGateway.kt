@@ -17,6 +17,10 @@ interface LiveFollowSessionGateway {
 
     suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult
 
+    suspend fun joinWatchSessionByShareCode(
+        shareCode: String
+    ): LiveFollowSessionGatewayResult
+
     suspend fun leaveSession(sessionId: String): LiveFollowSessionGatewayResult
 
     suspend fun uploadPilotPosition(
@@ -31,7 +35,9 @@ data class LiveFollowSessionGatewaySnapshot(
     val watchIdentity: LiveFollowIdentityProfile?,
     val directWatchAuthorized: Boolean,
     val transportAvailability: LiveFollowTransportAvailability,
-    val lastError: String?
+    val lastError: String?,
+    val shareCode: String? = null,
+    val watchLookup: LiveFollowWatchLookup? = null
 )
 
 sealed interface LiveFollowSessionGatewayResult {
@@ -73,5 +79,7 @@ fun liveFollowGatewayIdleSnapshot(
     watchIdentity = null,
     directWatchAuthorized = false,
     transportAvailability = transportAvailability,
-    lastError = lastError
+    lastError = lastError,
+    shareCode = null,
+    watchLookup = null
 )

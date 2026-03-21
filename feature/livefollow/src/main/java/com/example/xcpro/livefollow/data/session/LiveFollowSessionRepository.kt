@@ -115,11 +115,34 @@ class LiveFollowSessionRepository(
             sessionId = sessionId,
             role = LiveFollowSessionRole.WATCHER,
             lifecycle = LiveFollowSessionLifecycle.JOINING,
-            lastError = null
+            lastError = null,
+            shareCode = null,
+            watchLookup = liveFollowSessionIdLookup(sessionId)
         )
         return applyGatewayResult(
             previous = previous,
             result = gateway.joinWatchSession(sessionId)
+        )
+    }
+
+    suspend fun joinWatchSessionByShareCode(shareCode: String): LiveFollowCommandResult {
+        if (!state.value.sideEffectsAllowed) {
+            return LiveFollowCommandResult.Rejected(state.value.replayBlockReason)
+        }
+        commandTransportUnavailableResult(state.value)?.let { return it }
+
+        val previous = localGatewayState.value
+        localGatewayState.value = previous.copy(
+            sessionId = null,
+            role = LiveFollowSessionRole.WATCHER,
+            lifecycle = LiveFollowSessionLifecycle.JOINING,
+            lastError = null,
+            shareCode = shareCode,
+            watchLookup = liveFollowShareCodeLookup(shareCode)
+        )
+        return applyGatewayResult(
+            previous = previous,
+            result = gateway.joinWatchSessionByShareCode(shareCode)
         )
     }
 
@@ -201,6 +224,8 @@ private fun sessionSnapshotFor(
         transportAvailability = gatewaySnapshot.transportAvailability,
         sideEffectsAllowed = replayDecision.sideEffectsAllowed,
         replayBlockReason = replayDecision.blockReason,
-        lastError = gatewaySnapshot.lastError
+        lastError = gatewaySnapshot.lastError,
+        shareCode = gatewaySnapshot.shareCode,
+        watchLookup = gatewaySnapshot.watchLookup
     )
 }

@@ -15,6 +15,7 @@ import com.example.xcpro.livefollow.state.LiveFollowSessionState
 data class LiveFollowWatchUiState(
     val visible: Boolean = false,
     val sessionId: String? = null,
+    val shareCode: String? = null,
     val lifecycleLabel: String = "Idle",
     val headline: String = "No active watch session",
     val detail: String = "Open a LiveFollow watch route to begin.",
@@ -36,6 +37,7 @@ data class LiveFollowWatchUiState(
 
 internal data class LiveFollowWatchRouteFeedback(
     val requestedSessionId: String? = null,
+    val requestedShareCode: String? = null,
     val message: String? = null,
     val isBusy: Boolean = false
 )
@@ -54,10 +56,14 @@ internal fun buildLiveFollowWatchUiState(
     )
     val feedbackMessage = feedback.message ?: session.lastError
     val taskMessage = liveFollowTaskAttachmentMessage(mapRenderState.taskRenderPolicy)
-    val visible = hasActiveWatch || feedback.requestedSessionId != null || feedbackMessage != null
+    val visible = hasActiveWatch ||
+        feedback.requestedSessionId != null ||
+        feedback.requestedShareCode != null ||
+        feedbackMessage != null
     return LiveFollowWatchUiState(
         visible = visible,
         sessionId = session.sessionId ?: feedback.requestedSessionId,
+        shareCode = session.shareCode ?: feedback.requestedShareCode,
         lifecycleLabel = session.lifecycle.name.toDisplayLabel(),
         sessionTransportLabel = liveFollowTransportLabel(session.transportAvailability),
         headline = watchHeadline(
@@ -85,6 +91,7 @@ internal fun buildLiveFollowWatchUiState(
         directTransportMessage = watchDirectTransportMessage(
             hasActiveWatch = hasActiveWatch,
             requestedSessionId = feedback.requestedSessionId,
+            requestedShareCode = feedback.requestedShareCode,
             feedbackMessage = feedbackMessage,
             watchSnapshot = watchSnapshot
         ),
@@ -174,6 +181,7 @@ private fun watchDetail(
         LiveFollowSessionState.LIVE_DIRECT -> buildString {
             append(
                 watchSnapshot.aircraft?.displayLabel
+                    ?: session.shareCode
                     ?: session.watchIdentity?.canonicalIdentity?.canonicalKey
                     ?: "Watching session"
             )
@@ -206,11 +214,12 @@ private fun sourceLabel(
 private fun watchDirectTransportMessage(
     hasActiveWatch: Boolean,
     requestedSessionId: String?,
+    requestedShareCode: String?,
     feedbackMessage: String?,
     watchSnapshot: WatchTrafficSnapshot
 ): String? {
     if (feedbackMessage != null) return null
-    if (!hasActiveWatch && requestedSessionId == null) return null
+    if (!hasActiveWatch && requestedSessionId == null && requestedShareCode == null) return null
     val availability = watchSnapshot.directTransportAvailability
     return availability.message?.takeIf { !availability.isAvailable }
 }

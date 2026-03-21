@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcpro.livefollow.data.session.LiveFollowCommandResult
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
+import com.example.xcpro.livefollow.normalizeLiveFollowShareCode
 import com.example.xcpro.livefollow.normalizeLiveFollowSessionId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -57,7 +58,9 @@ class LiveFollowWatchViewModel @Inject constructor(
         if (currentSession.sessionId == sessionId &&
             currentSession.role == LiveFollowSessionRole.WATCHER
         ) {
-            routeFeedback.value = LiveFollowWatchRouteFeedback(requestedSessionId = sessionId)
+            routeFeedback.value = LiveFollowWatchRouteFeedback(
+                requestedSessionId = sessionId
+            )
             return
         }
         routeFeedback.value = LiveFollowWatchRouteFeedback(
@@ -71,13 +74,47 @@ class LiveFollowWatchViewModel @Inject constructor(
         )
     }
 
+    suspend fun handleWatchShareEntry(rawShareCode: String?) {
+        val shareCode = normalizeLiveFollowShareCode(rawShareCode)
+        if (shareCode == null) {
+            routeFeedback.value = LiveFollowWatchRouteFeedback(
+                message = "Invalid LiveFollow share code."
+            )
+            return
+        }
+        if (routeFeedback.value.isBusy && routeFeedback.value.requestedShareCode == shareCode) {
+            return
+        }
+        val currentSession = useCase.sessionState.value
+        if (currentSession.shareCode == shareCode &&
+            currentSession.role == LiveFollowSessionRole.WATCHER
+        ) {
+            routeFeedback.value = LiveFollowWatchRouteFeedback(
+                requestedShareCode = shareCode
+            )
+            return
+        }
+        routeFeedback.value = LiveFollowWatchRouteFeedback(
+            requestedShareCode = shareCode,
+            isBusy = true
+        )
+        val result = useCase.joinWatchSessionByShareCode(shareCode)
+        routeFeedback.value = feedbackAfterCommand(
+            requestedShareCode = shareCode,
+            result = result
+        )
+    }
+
     fun stopWatching() {
         if (routeFeedback.value.isBusy) return
         viewModelScope.launch {
-            val sessionId = useCase.sessionState.value.sessionId
+            val sessionSnapshot = useCase.sessionState.value
+            val sessionId = sessionSnapshot.sessionId
+            val shareCode = sessionSnapshot.shareCode
             routeFeedback.update { feedback ->
                 feedback.copy(
                     requestedSessionId = sessionId ?: feedback.requestedSessionId,
+                    requestedShareCode = shareCode ?: feedback.requestedShareCode,
                     isBusy = true,
                     message = null
                 )
@@ -87,6 +124,7 @@ class LiveFollowWatchViewModel @Inject constructor(
                 LiveFollowCommandResult.Success -> LiveFollowWatchRouteFeedback()
                 else -> feedbackAfterCommand(
                     requestedSessionId = sessionId,
+                    requestedShareCode = shareCode,
                     result = result
                 )
             }
@@ -99,15 +137,20 @@ class LiveFollowWatchViewModel @Inject constructor(
     }
 
     private fun feedbackAfterCommand(
-        requestedSessionId: String?,
+        requestedSessionId: String? = null,
+        requestedShareCode: String? = null,
         result: LiveFollowCommandResult
     ): LiveFollowWatchRouteFeedback {
         return when (result) {
             LiveFollowCommandResult.Success ->
-                LiveFollowWatchRouteFeedback(requestedSessionId = requestedSessionId)
+                LiveFollowWatchRouteFeedback(
+                    requestedSessionId = requestedSessionId,
+                    requestedShareCode = requestedShareCode
+                )
 
             else -> LiveFollowWatchRouteFeedback(
                 requestedSessionId = requestedSessionId,
+                requestedShareCode = requestedShareCode,
                 message = liveFollowWatchCommandMessage(result)
             )
         }

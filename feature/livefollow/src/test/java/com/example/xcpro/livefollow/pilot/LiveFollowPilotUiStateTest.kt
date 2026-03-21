@@ -58,6 +58,7 @@ class LiveFollowPilotUiStateTest {
         val uiState = buildLiveFollowPilotUiState(
             session = sessionSnapshot(
                 sessionId = "pilot-1",
+                shareCode = "SHARE123",
                 role = LiveFollowSessionRole.PILOT,
                 lifecycle = LiveFollowSessionLifecycle.ACTIVE
             ),
@@ -68,6 +69,8 @@ class LiveFollowPilotUiStateTest {
         assertFalse(uiState.canStartSharing)
         assertTrue(uiState.canStopSharing)
         assertEquals("pilot-1", uiState.sessionId)
+        assertEquals("SHARE123", uiState.shareCode)
+        assertTrue(uiState.canCopyShareCode)
     }
 
     @Test
@@ -92,6 +95,7 @@ class LiveFollowPilotUiStateTest {
 
     private fun sessionSnapshot(
         sessionId: String? = null,
+        shareCode: String? = null,
         role: LiveFollowSessionRole = LiveFollowSessionRole.NONE,
         lifecycle: LiveFollowSessionLifecycle = LiveFollowSessionLifecycle.IDLE,
         runtimeMode: LiveFollowRuntimeMode = LiveFollowRuntimeMode.LIVE,
@@ -109,7 +113,8 @@ class LiveFollowPilotUiStateTest {
             transportAvailability = transportAvailability,
             sideEffectsAllowed = sideEffectsAllowed,
             replayBlockReason = replayBlockReason,
-            lastError = null
+            lastError = null,
+            shareCode = shareCode
         )
     }
 

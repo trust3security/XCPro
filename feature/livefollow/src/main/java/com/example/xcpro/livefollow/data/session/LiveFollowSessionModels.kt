@@ -36,7 +36,9 @@ data class LiveFollowSessionSnapshot(
     val transportAvailability: LiveFollowTransportAvailability,
     val sideEffectsAllowed: Boolean,
     val replayBlockReason: LiveFollowReplayBlockReason,
-    val lastError: String?
+    val lastError: String?,
+    val shareCode: String? = null,
+    val watchLookup: LiveFollowWatchLookup? = null
 )
 
 sealed interface LiveFollowCommandResult {
@@ -68,5 +70,7 @@ internal fun idleSessionSnapshot(
     } else {
         LiveFollowReplayBlockReason.REPLAY_MODE
     },
-    lastError = null
+    lastError = null,
+    shareCode = null,
+    watchLookup = null
 )

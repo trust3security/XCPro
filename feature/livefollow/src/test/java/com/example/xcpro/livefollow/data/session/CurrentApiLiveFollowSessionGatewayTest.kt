@@ -55,6 +55,7 @@ class CurrentApiLiveFollowSessionGatewayTest {
         assertEquals("pilot-1", result.snapshot.sessionId)
         assertEquals(LiveFollowSessionRole.PILOT, result.snapshot.role)
         assertEquals(LiveFollowSessionLifecycle.ACTIVE, result.snapshot.lifecycle)
+        assertEquals("SHARE123", result.snapshot.shareCode)
         assertEquals(1, interceptor.requests.size)
         assertEquals(
             CurrentApiLiveFollowSessionGateway.StoredPilotTransport(
@@ -93,6 +94,39 @@ class CurrentApiLiveFollowSessionGatewayTest {
 
         require(result is LiveFollowSessionGatewayResult.Success)
         assertEquals("watch-1", result.snapshot.sessionId)
+        assertNull(result.snapshot.watchIdentity)
+        assertTrue(result.snapshot.directWatchAuthorized)
+    }
+
+    @Test
+    fun joinWatchSessionByShareCode_usesPublicEndpoint_andKeepsWatchIdentityNull() = runTest {
+        val interceptor = RecordingInterceptor { request ->
+            assertEquals("/api/v1/live/share/WATCH123", request.url.encodedPath)
+            testResponse(
+                request = request,
+                body = """
+                    {
+                      "session": "watch-1",
+                      "share_code": "WATCH123",
+                      "status": "active",
+                      "created_at": "2026-03-20T10:00:00Z",
+                      "last_position_at": null,
+                      "ended_at": null,
+                      "latest": null,
+                      "positions": [],
+                      "task": null
+                    }
+                """.trimIndent()
+            )
+        }
+        val gateway = gateway(interceptor)
+
+        val result = gateway.joinWatchSessionByShareCode("watch123")
+
+        require(result is LiveFollowSessionGatewayResult.Success)
+        assertEquals("watch-1", result.snapshot.sessionId)
+        assertEquals("WATCH123", result.snapshot.shareCode)
+        assertEquals(LiveFollowWatchLookupType.SHARE_CODE, result.snapshot.watchLookup?.type)
         assertNull(result.snapshot.watchIdentity)
         assertTrue(result.snapshot.directWatchAuthorized)
     }

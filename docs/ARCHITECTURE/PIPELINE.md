@@ -262,7 +262,7 @@ Pilot path:
   - remains the local session truth owner, carries explicit session transport availability from the session gateway boundary, enforces replay-safe or transport-unavailable command blocking before any gateway side effect, and uploads eligible ownship snapshots only while the active pilot session is live and side effects are allowed.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt`
   - current deployed-API transport adapter for `POST /api/v1/session/start`, `POST /api/v1/position`, and `POST /api/v1/session/end`.
-  - stores `session_id`, `share_code`, and `write_token` transport-locally; `write_token` stays out of UI-facing state.
+  - stores `write_token` transport-locally and surfaces `session_id` plus `share_code` into the local session truth; `write_token` stays out of UI-facing state.
   - maps upload wire time from ownship `fixWallMs`, keeps monotonic ordering client-local, and blocks replay-side writes.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/UnavailableLiveFollowSessionGateway.kt`
   - retained explicit transport-limited unavailable adapter for environments where the backend transport is not bound.
@@ -274,15 +274,17 @@ Pilot path:
 Watch path:
 - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
   and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/LiveFollowRoutes.kt`
-  - register `livefollow/pilot` and `livefollow/watch/{sessionId}`.
+  - register `livefollow/pilot`, `livefollow/watch/{sessionId}`, `livefollow/watch/share`, and `livefollow/watch/share/{shareCode}`.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt`
   - validates `sessionId`, calls `joinWatchSession(sessionId)` once, then hands off to the existing `map` route.
   - does not auto-leave on Composable disposal; leaving remains an explicit user action.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchShareCodeScreen.kt`
+  - owns the simple share-code watch input shell and routes valid entries to the share-code watch handoff path.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/WatchTrafficRepository.kt`
   - combines session state, typed OGN traffic candidates, and the direct-watch source behind the existing arbitration/state-machine seams.
-  - current deployed-API slice keeps the direct-watch route session-id based and does not resolve OGN-backed identity from server payloads.
+  - current deployed-API slice keeps the direct-watch route keyed by the session-owned lookup (`session_id` or `share_code`) and does not resolve OGN-backed identity from server payloads.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSource.kt`
-  - polls `GET /api/v1/live/{session_id}` for the active watch session and maps the current public payload into the existing direct-watch sample seam.
+  - polls `GET /api/v1/live/{session_id}` for legacy session-id watch routes and `GET /api/v1/live/share/{share_code}` for share-code watch routes, based on the session-owned watch lookup.
   - falls back from `latest` to `positions.last()` when needed, keeps `canonicalIdentity` null, leaves task metadata unavailable for this slice, and derives freshness/stale behavior locally from XCPro clocks.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/UnavailableDirectWatchTrafficSource.kt`
   - retained explicit transport-limited unavailable adapter for the direct-watch feed.

@@ -54,6 +54,38 @@ fun LiveFollowWatchEntryRoute(
     }
 }
 
+@Composable
+fun LiveFollowWatchShareEntryRoute(
+    navController: NavHostController,
+    rawShareCode: String?,
+    onNavigateToMap: (() -> Unit)? = null
+) {
+    val mapEntry = remember(navController) {
+        navController.getBackStackEntry(LiveFollowRoutes.MAP_ROUTE)
+    }
+    val viewModel: LiveFollowWatchViewModel = hiltViewModel(mapEntry)
+
+    LaunchedEffect(rawShareCode) {
+        viewModel.handleWatchShareEntry(rawShareCode)
+        if (onNavigateToMap != null) {
+            onNavigateToMap()
+        } else {
+            handoffLiveFollowWatchToMap(navController)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CircularProgressIndicator()
+        Text("Opening LiveFollow share-code watch...")
+    }
+}
+
 suspend fun handoffLiveFollowWatchToMap(
     navController: NavHostController
 ) {
@@ -94,6 +126,9 @@ fun BoxScope.LiveFollowWatchMapHost(
                 text = uiState.detail,
                 style = MaterialTheme.typography.bodyMedium
             )
+            uiState.shareCode?.let { shareCode ->
+                WatchField(label = "Share code", value = shareCode)
+            }
             WatchField(label = "Session", value = uiState.sessionId ?: "Unavailable")
             WatchField(label = "Lifecycle", value = uiState.lifecycleLabel)
             WatchField(label = "Session transport", value = uiState.sessionTransportLabel)

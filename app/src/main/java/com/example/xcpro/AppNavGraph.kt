@@ -40,6 +40,8 @@ import com.example.xcpro.appshell.settings.requestOpenGeneralSettingsOnMap
 import com.example.xcpro.livefollow.LiveFollowRoutes
 import com.example.xcpro.livefollow.pilot.LiveFollowPilotScreen
 import com.example.xcpro.livefollow.watch.LiveFollowWatchEntryRoute
+import com.example.xcpro.livefollow.watch.LiveFollowWatchShareCodeScreen
+import com.example.xcpro.livefollow.watch.LiveFollowWatchShareEntryRoute
 import com.example.xcpro.appshell.navdrawer.MyAbout
 import com.example.xcpro.appshell.navdrawer.MySupport
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
@@ -252,6 +254,21 @@ fun AppNavGraph(
                 }
             )
         }
+        composable(LiveFollowRoutes.WATCH_SHARE_FORM) {
+            LiveFollowWatchShareCodeScreen(
+                onNavigateBack = {
+                    val popped = navController.popBackStack(route = "map", inclusive = false)
+                    if (!popped) {
+                        navController.navigate("map") {
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onOpenWatch = { shareCode ->
+                    navController.navigate(LiveFollowRoutes.watchShareEntry(shareCode))
+                }
+            )
+        }
         composable(
             route = LiveFollowRoutes.WATCH_ENTRY,
             arguments = listOf(
@@ -264,6 +281,21 @@ fun AppNavGraph(
                 navController = navController,
                 rawSessionId = backStackEntry.arguments?.getString(
                     LiveFollowRoutes.WATCH_SESSION_ID_ARG
+                )
+            )
+        }
+        composable(
+            route = LiveFollowRoutes.WATCH_SHARE_ENTRY,
+            arguments = listOf(
+                navArgument(LiveFollowRoutes.WATCH_SHARE_CODE_ARG) {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            LiveFollowWatchShareEntryRoute(
+                navController = navController,
+                rawShareCode = backStackEntry.arguments?.getString(
+                    LiveFollowRoutes.WATCH_SHARE_CODE_ARG
                 )
             )
         }

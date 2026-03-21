@@ -110,6 +110,49 @@ class LiveFollowSessionRepositoryTest {
     }
 
     @Test
+    fun joinWatchSessionByShareCode_updatesWatcherStateFromGatewaySuccess() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource()
+        val gateway = FakeSessionGateway(
+            joinByShareCodeResult = LiveFollowSessionGatewayResult.Success(
+                snapshot = LiveFollowSessionGatewaySnapshot(
+                    sessionId = "watch-2",
+                    role = LiveFollowSessionRole.WATCHER,
+                    lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                    watchIdentity = null,
+                    directWatchAuthorized = true,
+                    transportAvailability = liveFollowAvailableTransport(),
+                    lastError = null,
+                    shareCode = "WATCH123",
+                    watchLookup = liveFollowShareCodeLookup("WATCH123")
+                )
+            )
+        )
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            gateway = gateway
+        )
+
+        val result = repository.joinWatchSessionByShareCode("WATCH123")
+        advanceUntilIdle()
+
+        assertEquals(LiveFollowCommandResult.Success, result)
+        assertEquals(1, gateway.joinByShareCodeCalls)
+        assertEquals(LiveFollowSessionRole.WATCHER, repository.state.value.role)
+        assertEquals("watch-2", repository.state.value.sessionId)
+        assertEquals("WATCH123", repository.state.value.shareCode)
+        assertEquals(
+            LiveFollowWatchLookupType.SHARE_CODE,
+            repository.state.value.watchLookup?.type
+        )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun replayMode_blocksGatewaySideEffects() = runTest {
         val scope = repoScope()
         try {
@@ -324,6 +367,9 @@ class LiveFollowSessionRepositoryTest {
         var joinResult: LiveFollowSessionGatewayResult = LiveFollowSessionGatewayResult.Success(
             liveFollowGatewayIdleSnapshot()
         ),
+        var joinByShareCodeResult: LiveFollowSessionGatewayResult = LiveFollowSessionGatewayResult.Success(
+            liveFollowGatewayIdleSnapshot()
+        ),
         var leaveResult: LiveFollowSessionGatewayResult = LiveFollowSessionGatewayResult.Success(
             liveFollowGatewayIdleSnapshot()
         )
@@ -332,6 +378,7 @@ class LiveFollowSessionRepositoryTest {
         var startCalls: Int = 0
         var stopCalls: Int = 0
         var joinCalls: Int = 0
+        var joinByShareCodeCalls: Int = 0
         var leaveCalls: Int = 0
         var uploadCalls: Int = 0
 
@@ -350,6 +397,13 @@ class LiveFollowSessionRepositoryTest {
         override suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult {
             joinCalls += 1
             return joinResult.also(::applyResult)
+        }
+
+        override suspend fun joinWatchSessionByShareCode(
+            shareCode: String
+        ): LiveFollowSessionGatewayResult {
+            joinByShareCodeCalls += 1
+            return joinByShareCodeResult.also(::applyResult)
         }
 
         override suspend fun leaveSession(sessionId: String): LiveFollowSessionGatewayResult {

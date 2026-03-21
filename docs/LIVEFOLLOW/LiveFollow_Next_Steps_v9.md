@@ -12,10 +12,15 @@ App-side LiveFollow is complete through Phase 4, and the first XCPro current-API
   - `POST /api/v1/position`
   - `POST /api/v1/session/end`
   - `GET /api/v1/live/{session_id}`
+- Phase 5C slice 2:
+  - pilot UI now shows and copies `share_code`
+  - watch entry now supports `livefollow/watch/share` and `livefollow/watch/share/{shareCode}`
+  - public watch polling now supports `GET /api/v1/live/share/{share_code}`
+  - existing `session_id` watch polling remains available
 
-This slice stores `session_id`, `share_code`, and `write_token` transport-locally, keeps `write_token`
-out of UI state, preserves local freshness derivation, and leaves task upsert, share-code watch,
-notifications, and WebSockets for later slices.
+These slices keep `write_token` transport-local, surface `share_code` into the pilot session UI,
+preserve local freshness derivation, and leave task upsert, richer direct-watch mapping, notifications,
+and WebSockets for later slices.
 
 ## Active baseline docs
 
@@ -60,12 +65,12 @@ Likely candidates:
 Current slice landed:
 - real transport adapters replaced the unavailable session and direct-watch stubs for the first slice
 - pilot upload is single-sample `POST /api/v1/position`
-- watch polling is direct `GET /api/v1/live/{session_id}`
+- watch polling now supports both `GET /api/v1/live/{session_id}` and `GET /api/v1/live/share/{share_code}`
+- pilot UI shows/copies `share_code`, and watch UX now has a simple share-code entry shell
 - existing app-side ownership boundaries remain unchanged
 
 Remaining Phase 5C work:
 - task upsert transport
-- share-code watch path / share UX
 - any richer server read mapping if later slices need it
 
 ### Phase 5D - end-to-end verification
@@ -84,8 +89,7 @@ The current deployed API still leaves these fuller-integration gaps:
 1. current live-read payload is weaker than XCPro's richer direct-watch seam
 2. position upload still requires non-null fields where XCPro ownship export is more nullable
 3. task upsert is still not wired in XCPro
-4. share-code watch/share UX is still not wired in XCPro
-5. current server uses string `detail` errors, not stable machine-readable domain codes
+4. current server uses string `detail` errors, not stable machine-readable domain codes
 
 ## Out of scope right now
 
@@ -101,5 +105,5 @@ Use the frozen current-contract docs as the implementation baseline for follow-o
 
 Next focused XCPro tasks should cover:
 1. task upsert transport
-2. share-code based watch/share UX decisions
+2. any later-slice read/task enrichment on top of the current public watch payload
 3. end-to-end runtime verification against the deployed API

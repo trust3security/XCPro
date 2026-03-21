@@ -6,8 +6,11 @@ import com.example.xcpro.livefollow.data.session.LiveFollowCommandResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
@@ -19,8 +22,10 @@ class LiveFollowPilotViewModel @Inject constructor(
 ) : ViewModel() {
     private val actionState = MutableStateFlow(LiveFollowPilotActionState())
     private val mutableUiState = MutableStateFlow(LiveFollowPilotUiState())
+    private val mutableEvents = MutableSharedFlow<LiveFollowPilotEvent>(extraBufferCapacity = 1)
 
     val uiState: StateFlow<LiveFollowPilotUiState> = mutableUiState.asStateFlow()
+    val events: SharedFlow<LiveFollowPilotEvent> = mutableEvents.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -54,6 +59,14 @@ class LiveFollowPilotViewModel @Inject constructor(
         }
     }
 
+    fun copyShareCode() {
+        val shareCode = mutableUiState.value.shareCode ?: return
+        actionState.update { state ->
+            state.copy(commandMessage = "Share code copied.")
+        }
+        mutableEvents.tryEmit(LiveFollowPilotEvent.CopyShareCode(shareCode))
+    }
+
     private suspend fun runCommand(
         command: suspend () -> LiveFollowCommandResult
     ) {
@@ -68,4 +81,10 @@ class LiveFollowPilotViewModel @Inject constructor(
             )
         }
     }
+}
+
+sealed interface LiveFollowPilotEvent {
+    data class CopyShareCode(
+        val shareCode: String
+    ) : LiveFollowPilotEvent
 }

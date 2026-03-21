@@ -33,21 +33,25 @@ internal fun BoxScope.MapScreenScaffoldContentHost(
     )
     // Temporary debug launcher to keep MapScreen as a thin entry point while pilot flow testing is active.
     if (BuildConfig.DEBUG) {
-        TemporaryLiveFollowPilotLauncher(
+        TemporaryLiveFollowLauncher(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(horizontal = 24.dp),
-            onOpen = {
+            onOpenPilot = {
                 inputs.scaffold.navController.navigate(LiveFollowRoutes.PILOT)
+            },
+            onOpenWatch = {
+                inputs.scaffold.navController.navigate(LiveFollowRoutes.WATCH_SHARE_FORM)
             }
         )
     }
 }
 
 @Composable
-private fun TemporaryLiveFollowPilotLauncher(
+private fun TemporaryLiveFollowLauncher(
     modifier: Modifier = Modifier,
-    onOpen: () -> Unit
+    onOpenPilot: () -> Unit,
+    onOpenWatch: () -> Unit
 ) {
     Card(
         modifier = modifier.widthIn(max = 220.dp),
@@ -58,11 +62,14 @@ private fun TemporaryLiveFollowPilotLauncher(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Text(
-                text = "LiveFollow Pilot",
+                text = "LiveFollow",
                 style = MaterialTheme.typography.titleMedium
             )
-            Button(onClick = onOpen) {
-                Text(text = "Open")
+            Button(onClick = onOpenPilot) {
+                Text(text = "Pilot")
+            }
+            Button(onClick = onOpenWatch) {
+                Text(text = "Watch")
             }
         }
     }

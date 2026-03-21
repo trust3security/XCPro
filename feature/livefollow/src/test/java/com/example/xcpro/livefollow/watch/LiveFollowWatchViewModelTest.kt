@@ -92,6 +92,21 @@ class LiveFollowWatchViewModelTest {
     }
 
     @Test
+    fun invalidShareCode_doesNotCallShareJoin() = runTest {
+        val sessionState = MutableStateFlow(sessionSnapshot())
+        val watchState = MutableStateFlow(stoppedWatchTrafficSnapshot())
+        val useCase = mockUseCase(sessionState, watchState)
+        val viewModel = LiveFollowWatchViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.handleWatchShareEntry("bad")
+        advanceUntilIdle()
+
+        verify(useCase, never()).joinWatchSessionByShareCode(any())
+        assertEquals("Invalid LiveFollow share code.", viewModel.uiState.value.feedbackMessage)
+    }
+
+    @Test
     fun stopWatching_onlyCallsLeaveWhenExplicitlyRequested() = runTest {
         val sessionState = MutableStateFlow(
             sessionSnapshot(
@@ -130,6 +145,7 @@ class LiveFollowWatchViewModelTest {
         whenever(useCase.sessionState).thenReturn(sessionState)
         whenever(useCase.watchState).thenReturn(watchState)
         whenever(useCase.joinWatchSession(any())).thenReturn(LiveFollowCommandResult.Success)
+        whenever(useCase.joinWatchSessionByShareCode(any())).thenReturn(LiveFollowCommandResult.Success)
         whenever(useCase.stopWatching()).thenReturn(LiveFollowCommandResult.Success)
         return useCase
     }

@@ -3,6 +3,7 @@ package com.example.xcpro.livefollow.watch
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import com.example.xcpro.livefollow.LiveFollowRoutes
+import com.example.xcpro.livefollow.normalizeLiveFollowShareCode
 import com.example.xcpro.livefollow.normalizeLiveFollowSessionId
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -21,6 +22,13 @@ class LiveFollowWatchEntryRoutePolicyTest {
     fun normalizeLiveFollowSessionId_returnsNullForBlankInput() {
         assertNull(normalizeLiveFollowSessionId("   "))
         assertEquals("watch-1", normalizeLiveFollowSessionId(" watch-1 "))
+    }
+
+    @Test
+    fun normalizeLiveFollowShareCode_uppercasesAndRejectsInvalidShape() {
+        assertEquals("WATCH123", normalizeLiveFollowShareCode(" watch123 "))
+        assertNull(normalizeLiveFollowShareCode("watch-123"))
+        assertNull(normalizeLiveFollowShareCode("short"))
     }
 
     @Test

@@ -16,5 +16,9 @@ class LiveFollowWatchUseCase @Inject constructor(
         return sessionRepository.joinWatchSession(sessionId)
     }
 
+    suspend fun joinWatchSessionByShareCode(shareCode: String): LiveFollowCommandResult {
+        return sessionRepository.joinWatchSessionByShareCode(shareCode)
+    }
+
     suspend fun stopWatching(): LiveFollowCommandResult = sessionRepository.leaveSession()
 }

@@ -65,6 +65,40 @@ class LiveFollowPilotViewModelTest {
         )
     }
 
+    @Test
+    fun copyShareCode_emitsClipboardEventWhenAvailable() = runTest {
+        val sessionState = MutableStateFlow(
+            LiveFollowSessionSnapshot(
+                sessionId = "pilot-1",
+                role = LiveFollowSessionRole.PILOT,
+                lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                runtimeMode = LiveFollowRuntimeMode.LIVE,
+                watchIdentity = null,
+                directWatchAuthorized = false,
+                transportAvailability = com.example.xcpro.livefollow.model.liveFollowAvailableTransport(),
+                sideEffectsAllowed = true,
+                replayBlockReason = LiveFollowReplayBlockReason.NONE,
+                lastError = null,
+                shareCode = "SHARE123"
+            )
+        )
+        val ownshipSnapshot = MutableStateFlow(sampleOwnshipSnapshot())
+        val useCase: LiveFollowPilotUseCase = mock()
+        whenever(useCase.sessionState).thenReturn(sessionState)
+        whenever(useCase.ownshipSnapshot).thenReturn(ownshipSnapshot)
+
+        val viewModel = LiveFollowPilotViewModel(useCase)
+        advanceUntilIdle()
+
+        assertEquals("SHARE123", viewModel.uiState.value.shareCode)
+        assertEquals(true, viewModel.uiState.value.canCopyShareCode)
+
+        viewModel.copyShareCode()
+        advanceUntilIdle()
+
+        assertEquals("Share code copied.", viewModel.uiState.value.statusMessage)
+    }
+
     private fun sampleOwnshipSnapshot(): LiveOwnshipSnapshot {
         return LiveOwnshipSnapshot(
             latitudeDeg = -33.9,
