@@ -64,9 +64,11 @@ internal data class MapScreenMapContentInputs(
 )
 
 internal data class MapScreenOverlayContentInputs(
+    val renderLocalOwnship: Boolean,
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,
+    val showPilotStatusIndicator: Boolean,
     val traffic: MapTrafficUiBinding,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,
@@ -79,6 +81,9 @@ internal data class MapScreenOverlayContentInputs(
     val modalManager: MapModalManager,
     val taskScreenManager: MapTaskScreenManager,
     val taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
+    val watchedPilotFocusEpoch: Int,
+    val mapLibreMapProvider: () -> org.maplibre.android.maps.MapLibreMap?,
+    val onFocusWatchedPilot: (Double, Double) -> Boolean,
     val waypointData: List<WaypointData>,
     val unitsPreferences: UnitsPreferences,
     val qnhCalibrationState: QnhCalibrationState,

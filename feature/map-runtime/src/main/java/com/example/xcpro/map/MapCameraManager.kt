@@ -41,7 +41,7 @@ class MapCameraManager(
 
     private var savedCameraPosition: MapCameraPose? = null
 
-    fun moveTo(target: MapPoint, zoom: Double? = null) {
+    override fun moveTo(target: MapPoint, zoom: Double?) {
         try {
             val currentPose = cameraSurface.cameraPoseOrNull() ?: return
             val targetZoom = clampZoom(

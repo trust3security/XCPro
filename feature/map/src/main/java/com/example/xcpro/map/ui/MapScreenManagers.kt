@@ -74,7 +74,8 @@ internal fun rememberMapScreenManagers(
     coroutineScope: CoroutineScope,
     tasksUseCase: MapTasksUseCase,
     airspaceUseCase: AirspaceUseCase,
-    waypointFilesUseCase: WaypointFilesUseCase
+    waypointFilesUseCase: WaypointFilesUseCase,
+    localOwnshipRenderEnabled: () -> Boolean
 ): MapScreenManagers {
     val snailTrailManager = remember(mapState, context, featureFlags) {
         SnailTrailManager(context, mapState, featureFlags)
@@ -200,6 +201,7 @@ internal fun rememberMapScreenManagers(
             cameraUpdateGate = cameraUpdateGate,
             locationOverlayPort = locationOverlayPort,
             displayPoseSurfacePort = displayPoseSurface,
+            localOwnshipRenderEnabledProvider = localOwnshipRenderEnabled,
             replayHeadingProvider = replayHeadingProvider,
             replayFixProvider = replayFixProvider
         )
@@ -260,7 +262,8 @@ internal fun rememberMapScreenManagers(
             snailTrailManager = snailTrailManager,
             coroutineScope = coroutineScope,
             airspaceUseCase = airspaceUseCase,
-            waypointFilesUseCase = waypointFilesUseCase
+            waypointFilesUseCase = waypointFilesUseCase,
+            localOwnshipRenderEnabledProvider = localOwnshipRenderEnabled
         )
     }
 

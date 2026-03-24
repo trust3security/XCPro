@@ -12,6 +12,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
@@ -82,9 +83,11 @@ internal fun MapScreenContent(
     val currentZoom by mapInputs.currentZoom.collectAsStateWithLifecycle()
     val currentLocation by mapInputs.currentLocation.collectAsStateWithLifecycle()
 
+    val renderLocalOwnship = overlayInputs.renderLocalOwnship
     val showRecenterButton = overlayInputs.showRecenterButton
     val showReturnButton = overlayInputs.showReturnButton
     val showDistanceCircles = overlayInputs.showDistanceCircles
+    val showPilotStatusIndicator = overlayInputs.showPilotStatusIndicator
     val trafficBinding = overlayInputs.traffic
     val isUiEditMode = overlayInputs.isUiEditMode
     val onEditModeChange = overlayInputs.onEditModeChange
@@ -97,6 +100,9 @@ internal fun MapScreenContent(
     val modalManager = overlayInputs.modalManager
     val taskScreenManager = overlayInputs.taskScreenManager
     val taskRenderSnapshotProvider = overlayInputs.taskRenderSnapshotProvider
+    val watchedPilotFocusEpoch = overlayInputs.watchedPilotFocusEpoch
+    val mapLibreMapProvider = overlayInputs.mapLibreMapProvider
+    val onFocusWatchedPilot = overlayInputs.onFocusWatchedPilot
     val waypointData = overlayInputs.waypointData
     val unitsPreferences = overlayInputs.unitsPreferences
     val qnhCalibrationState = overlayInputs.qnhCalibrationState
@@ -157,6 +163,20 @@ internal fun MapScreenContent(
     val onDismissOgnTargetDetails = trafficActions.onDismissOgnTargetDetails
     val onDismissOgnThermalDetails = trafficActions.onDismissOgnThermalDetails
     val onDismissAdsbTargetDetails = trafficActions.onDismissAdsbTargetDetails
+    val localOwnshipRenderState = remember(
+        renderLocalOwnship,
+        currentLocation,
+        showRecenterButton,
+        showReturnButton
+    ) {
+        resolveMapLocalOwnshipRenderState(
+            renderLocalOwnship = renderLocalOwnship,
+            currentLocation = currentLocation,
+            showRecenterButton = showRecenterButton,
+            showReturnButton = showReturnButton
+        )
+    }
+    val visibleCurrentLocation = localOwnshipRenderState.currentLocation
 
     val qnhUiState = rememberMapScreenQnhUiState(
         flightDataManager = flightDataManager,
@@ -253,8 +273,8 @@ internal fun MapScreenContent(
                         currentZoom = currentZoom,
                         unitsPreferences = unitsPreferences,
                         onModeChange = onModeChange,
-                        currentLocation = currentLocation,
-                        showReturnButton = showReturnButton,
+                        currentLocation = visibleCurrentLocation,
+                        showReturnButton = localOwnshipRenderState.showReturnButton,
                         showDistanceCircles = showDistanceCircles,
                         ognOverlayEnabled = ognOverlayEnabled,
                         showOgnThermalsEnabled = showOgnThermalsEnabled,
@@ -318,14 +338,14 @@ internal fun MapScreenContent(
             taskScreenManager = taskScreenManager,
             waypointData = waypointData,
             unitsPreferences = unitsPreferences,
-            currentLocation = currentLocation,
+            currentLocation = visibleCurrentLocation,
             currentQnh = qnhUiState.currentQnhLabel
         )
 
         MapActionButtonsLayer(
-            currentLocation = currentLocation,
-            showRecenterButton = showRecenterButton,
-            showReturnButton = showReturnButton,
+            currentLocation = visibleCurrentLocation,
+            showRecenterButton = localOwnshipRenderState.showRecenterButton,
+            showReturnButton = localOwnshipRenderState.showReturnButton,
             showVarioDemoFab = showVarioDemoFab && !hideReplayDebugFabs,
             showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
             showRacingReplayFab = showRacingReplayFab && !hideReplayDebugFabs,
@@ -377,7 +397,7 @@ internal fun MapScreenContent(
         MapTrafficRuntimeLayer(
             traffic = trafficBinding,
             runtimeState = trafficRuntimeState,
-            ownshipCoordinate = currentLocation?.let { location ->
+            ownshipCoordinate = visibleCurrentLocation?.let { location ->
                 TrafficMapCoordinate(
                     latitude = location.latitude,
                     longitude = location.longitude
@@ -387,7 +407,11 @@ internal fun MapScreenContent(
             trafficActions = trafficActions
         )
         MapLiveFollowRuntimeLayer(
-            taskRenderSnapshotProvider = taskRenderSnapshotProvider
+            showPilotStatusIndicator = showPilotStatusIndicator,
+            taskRenderSnapshotProvider = taskRenderSnapshotProvider,
+            watchedPilotFocusEpoch = watchedPilotFocusEpoch,
+            mapLibreMapProvider = mapLibreMapProvider,
+            onFocusWatchedPilot = onFocusWatchedPilot
         )
     }
     ReplayDiagnosticsLogger(

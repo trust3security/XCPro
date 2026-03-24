@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.xcpro.livefollow.data.session.LiveFollowSessionVisibility
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,6 +122,39 @@ fun LiveFollowPilotScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(uiState.statusMessage)
+                    StatusField(
+                        label = "Signed-in live lane",
+                        value = if (uiState.isSignedIn) "Available" else "Public-only fallback"
+                    )
+                    StatusField(
+                        label = "Current visibility",
+                        value = uiState.currentVisibilityLabel
+                    )
+                    Text(
+                        text = uiState.currentVisibilitySummary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    VisibilityOptionGroup(
+                        selected = uiState.selectedVisibility,
+                        canUsePrivateVisibility = uiState.canUsePrivateVisibility,
+                        onSelected = viewModel::selectVisibility
+                    )
+                    if (!uiState.isSignedIn) {
+                        Text(
+                            text = "Sign in from Manage Account to use Off or Followers visibility. Signed-out sharing stays public.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (uiState.canUpdateVisibility) {
+                        Button(
+                            onClick = viewModel::updateVisibility,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Apply visibility")
+                        }
+                    }
                     StatusField(label = "Lifecycle", value = uiState.lifecycleLabel)
                     StatusField(label = "Session ID", value = uiState.sessionId ?: "Unavailable")
                     uiState.shareCode?.let { shareCode ->
@@ -159,6 +194,58 @@ fun LiveFollowPilotScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VisibilityOptionGroup(
+    selected: LiveFollowSessionVisibility,
+    canUsePrivateVisibility: Boolean,
+    onSelected: (LiveFollowSessionVisibility) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Live visibility",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        LiveFollowSessionVisibility.entries.forEach { option ->
+            val enabled = when (option) {
+                LiveFollowSessionVisibility.PUBLIC -> true
+                LiveFollowSessionVisibility.FOLLOWERS,
+                LiveFollowSessionVisibility.OFF -> canUsePrivateVisibility
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                RadioButton(
+                    selected = option == selected,
+                    onClick = if (enabled) {
+                        { onSelected(option) }
+                    } else {
+                        null
+                    },
+                    enabled = enabled
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = option.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (enabled) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    Text(
+                        text = option.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

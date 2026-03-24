@@ -59,7 +59,8 @@ class LiveFollowWatchViewModel @Inject constructor(
             currentSession.role == LiveFollowSessionRole.WATCHER
         ) {
             routeFeedback.value = LiveFollowWatchRouteFeedback(
-                requestedSessionId = sessionId
+                requestedSessionId = sessionId,
+                selectedTarget = null
             )
             return
         }
@@ -74,7 +75,58 @@ class LiveFollowWatchViewModel @Inject constructor(
         )
     }
 
+    suspend fun handleAuthorizedWatchEntry(rawSessionId: String?) {
+        handleAuthorizedWatchEntry(rawSessionId = rawSessionId, selectionHint = null)
+    }
+
+    suspend fun handleAuthorizedWatchEntry(
+        rawSessionId: String?,
+        selectionHint: LiveFollowWatchSelectionHint?
+    ) {
+        val sessionId = normalizeLiveFollowSessionId(rawSessionId)
+        if (sessionId == null) {
+            routeFeedback.value = LiveFollowWatchRouteFeedback(
+                message = "Invalid LiveFollow session id."
+            )
+            return
+        }
+        if (routeFeedback.value.isBusy && routeFeedback.value.requestedSessionId == sessionId) {
+            return
+        }
+        val currentSession = useCase.sessionState.value
+        if (currentSession.sessionId == sessionId &&
+            currentSession.role == LiveFollowSessionRole.WATCHER
+        ) {
+            routeFeedback.value = LiveFollowWatchRouteFeedback(
+                requestedSessionId = sessionId,
+                selectedTarget = selectionHint
+            )
+            return
+        }
+        routeFeedback.value = LiveFollowWatchRouteFeedback(
+            requestedSessionId = sessionId,
+            selectedTarget = selectionHint,
+            isBusy = true
+        )
+        val result = useCase.joinAuthenticatedWatchSession(sessionId)
+        routeFeedback.value = feedbackAfterCommand(
+            requestedSessionId = sessionId,
+            selectedTarget = selectionHint,
+            result = result
+        )
+    }
+
     suspend fun handleWatchShareEntry(rawShareCode: String?) {
+        handleWatchShareEntry(
+            rawShareCode = rawShareCode,
+            selectionHint = null
+        )
+    }
+
+    suspend fun handleWatchShareEntry(
+        rawShareCode: String?,
+        selectionHint: LiveFollowWatchSelectionHint?
+    ) {
         val shareCode = normalizeLiveFollowShareCode(rawShareCode)
         if (shareCode == null) {
             routeFeedback.value = LiveFollowWatchRouteFeedback(
@@ -90,19 +142,35 @@ class LiveFollowWatchViewModel @Inject constructor(
             currentSession.role == LiveFollowSessionRole.WATCHER
         ) {
             routeFeedback.value = LiveFollowWatchRouteFeedback(
-                requestedShareCode = shareCode
+                requestedShareCode = shareCode,
+                selectedTarget = selectionHint
             )
             return
         }
         routeFeedback.value = LiveFollowWatchRouteFeedback(
             requestedShareCode = shareCode,
+            selectedTarget = selectionHint,
             isBusy = true
         )
         val result = useCase.joinWatchSessionByShareCode(shareCode)
         routeFeedback.value = feedbackAfterCommand(
             requestedShareCode = shareCode,
+            selectedTarget = selectionHint,
             result = result
         )
+    }
+
+    fun clearWatchTarget() {
+        if (routeFeedback.value.isBusy) return
+        val sessionSnapshot = useCase.sessionState.value
+        val hasActiveWatch = sessionSnapshot.sideEffectsAllowed &&
+            sessionSnapshot.role == LiveFollowSessionRole.WATCHER &&
+            sessionSnapshot.sessionId != null
+        if (hasActiveWatch) {
+            stopWatching()
+            return
+        }
+        routeFeedback.value = LiveFollowWatchRouteFeedback()
     }
 
     fun stopWatching() {
@@ -115,6 +183,7 @@ class LiveFollowWatchViewModel @Inject constructor(
                 feedback.copy(
                     requestedSessionId = sessionId ?: feedback.requestedSessionId,
                     requestedShareCode = shareCode ?: feedback.requestedShareCode,
+                    selectedTarget = feedback.selectedTarget,
                     isBusy = true,
                     message = null
                 )
@@ -139,18 +208,21 @@ class LiveFollowWatchViewModel @Inject constructor(
     private fun feedbackAfterCommand(
         requestedSessionId: String? = null,
         requestedShareCode: String? = null,
+        selectedTarget: LiveFollowWatchSelectionHint? = null,
         result: LiveFollowCommandResult
     ): LiveFollowWatchRouteFeedback {
         return when (result) {
             LiveFollowCommandResult.Success ->
                 LiveFollowWatchRouteFeedback(
                     requestedSessionId = requestedSessionId,
-                    requestedShareCode = requestedShareCode
+                    requestedShareCode = requestedShareCode,
+                    selectedTarget = selectedTarget
                 )
 
             else -> LiveFollowWatchRouteFeedback(
                 requestedSessionId = requestedSessionId,
                 requestedShareCode = requestedShareCode,
+                selectedTarget = selectedTarget,
                 message = liveFollowWatchCommandMessage(result)
             )
         }

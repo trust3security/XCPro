@@ -2,6 +2,7 @@ package com.example.xcpro.livefollow.data.session
 
 enum class LiveFollowWatchLookupType {
     SESSION_ID,
+    AUTHENTICATED_SESSION_ID,
     SHARE_CODE
 }
 
@@ -13,6 +14,12 @@ data class LiveFollowWatchLookup(
 internal fun liveFollowSessionIdLookup(sessionId: String): LiveFollowWatchLookup =
     LiveFollowWatchLookup(
         type = LiveFollowWatchLookupType.SESSION_ID,
+        value = sessionId
+    )
+
+internal fun liveFollowAuthenticatedSessionIdLookup(sessionId: String): LiveFollowWatchLookup =
+    LiveFollowWatchLookup(
+        type = LiveFollowWatchLookupType.AUTHENTICATED_SESSION_ID,
         value = sessionId
     )
 

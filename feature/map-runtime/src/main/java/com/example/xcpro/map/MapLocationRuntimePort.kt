@@ -19,6 +19,8 @@ interface MapLocationRuntimePort {
         orientation: OrientationData
     )
 
+    fun setLocalOwnshipRenderEnabled(enabled: Boolean)
+
     fun updateOrientation(orientation: OrientationData)
 
     fun setReplaySpeedMultiplier(multiplier: Double)

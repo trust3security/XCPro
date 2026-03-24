@@ -27,4 +27,10 @@ class DisplayClock {
             }
         }
     }
+
+    fun clear() {
+        timeBase = TimeBase.MONOTONIC
+        lastFixTimestampMs = 0L
+        lastFixWallMs = 0L
+    }
 }

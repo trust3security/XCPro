@@ -95,6 +95,32 @@ class FriendsFlyingRepositoryTest {
         }
     }
 
+    @Test
+    fun refresh_emptySuccess_keepsNeutralBrowseState() = runTest {
+        val scope = repoScope()
+        try {
+            val runtimeSource = FakeOwnshipSnapshotSource()
+            val dataSource = FakeActivePilotsDataSource(
+                ActivePilotsFetchResult.Success(emptyList())
+            )
+            val repository = FriendsFlyingRepository(
+                scope = scope,
+                runtimeModeSource = runtimeSource,
+                dataSource = dataSource
+            )
+
+            repository.refresh()
+            advanceUntilIdle()
+
+            assertEquals(1, dataSource.fetchCalls)
+            assertTrue(repository.state.value.items.isEmpty())
+            assertEquals(null, repository.state.value.lastError)
+            assertTrue(repository.state.value.sideEffectsAllowed)
+        } finally {
+            scope.cancel()
+        }
+    }
+
     private fun TestScope.repoScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
 

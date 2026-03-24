@@ -1,5 +1,6 @@
 package com.example.xcpro.livefollow.data.session
 
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
 import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import javax.inject.Inject
@@ -28,9 +29,18 @@ class UnavailableLiveFollowSessionGateway @Inject constructor() : LiveFollowSess
         request: StartPilotLiveFollowSession
     ): LiveFollowSessionGatewayResult = fail()
 
+    override suspend fun updatePilotVisibility(
+        sessionId: String,
+        visibility: LiveFollowSessionVisibility
+    ): LiveFollowSessionGatewayResult = fail()
+
     override suspend fun stopCurrentSession(sessionId: String): LiveFollowSessionGatewayResult = fail()
 
     override suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult = fail()
+
+    override suspend fun joinAuthenticatedWatchSession(
+        sessionId: String
+    ): LiveFollowSessionGatewayResult = fail()
 
     override suspend fun joinWatchSessionByShareCode(
         shareCode: String
@@ -43,6 +53,15 @@ class UnavailableLiveFollowSessionGateway @Inject constructor() : LiveFollowSess
     ): LiveFollowPilotPositionUploadResult {
         fail()
         return LiveFollowPilotPositionUploadResult.Failure(
+            LIVEFOLLOW_SESSION_GATEWAY_UNAVAILABLE_MESSAGE
+        )
+    }
+
+    override suspend fun uploadPilotTask(
+        snapshot: LiveFollowTaskSnapshot?
+    ): LiveFollowPilotTaskUploadResult {
+        fail()
+        return LiveFollowPilotTaskUploadResult.Failure(
             LIVEFOLLOW_SESSION_GATEWAY_UNAVAILABLE_MESSAGE
         )
     }

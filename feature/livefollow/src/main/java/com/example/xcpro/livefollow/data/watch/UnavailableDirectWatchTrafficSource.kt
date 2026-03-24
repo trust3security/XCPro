@@ -2,6 +2,7 @@ package com.example.xcpro.livefollow.data.watch
 
 import com.example.xcpro.livefollow.model.LiveFollowConfidence
 import com.example.xcpro.livefollow.model.LiveFollowSourceState
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
 import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import javax.inject.Inject
@@ -22,6 +23,7 @@ class UnavailableDirectWatchTrafficSource @Inject constructor() : DirectWatchTra
             latitudeDeg = 0.0,
             longitudeDeg = 0.0,
             altitudeMslMeters = null,
+            aglMeters = null,
             groundSpeedMs = null,
             trackDeg = null,
             verticalSpeedMs = null,
@@ -36,6 +38,8 @@ class UnavailableDirectWatchTrafficSource @Inject constructor() : DirectWatchTra
     )
 
     override val aircraft: StateFlow<DirectWatchAircraftSample?> = mutableAircraft.asStateFlow()
+    override val task: StateFlow<LiveFollowTaskSnapshot?> =
+        MutableStateFlow<LiveFollowTaskSnapshot?>(null).asStateFlow()
     override val transportAvailability: StateFlow<LiveFollowTransportAvailability> =
         mutableTransportAvailability.asStateFlow()
 }

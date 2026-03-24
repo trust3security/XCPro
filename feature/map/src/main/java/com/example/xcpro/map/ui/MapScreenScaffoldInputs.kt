@@ -4,11 +4,16 @@ import android.util.Log
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.MapPoint
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapTaskIntegration
@@ -16,8 +21,10 @@ import com.example.xcpro.map.MapUiEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapLibreMap
+import kotlin.math.abs
 
 private const val MapScreenScaffoldInputsTag = "MapScreen"
+private const val LiveFollowWatchFocusZoom = 14.0
 
 @Composable
 internal fun rememberMapScreenScaffoldInputs(
@@ -30,6 +37,8 @@ internal fun rememberMapScreenScaffoldInputs(
     initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit,
     onOpenGeneralSettings: () -> Unit,
+    allowFlightSensorStart: Boolean,
+    renderLocalOwnship: Boolean,
     mapViewModel: MapScreenViewModel,
     hotPathBindings: MapScreenHotPathBindings,
     rootUiBinding: MapScreenRootUiBinding,
@@ -48,6 +57,7 @@ internal fun rememberMapScreenScaffoldInputs(
     screenHeightPx: Float = widgetLayout.screenHeightPx
 ): MapScreenScaffoldInputs {
     val lifecycleOwner = LocalLifecycleOwner.current
+    var watchedPilotFocusEpoch by remember { mutableIntStateOf(0) }
     val mapBindings = bindings.map
     val taskBindings = bindings.task
     val mapUiState = rootUiBinding.mapUiState
@@ -74,6 +84,7 @@ internal fun rememberMapScreenScaffoldInputs(
             port = createTrafficOverlayRenderPort(managers.overlayManager),
             config = createMapReadyTrafficOverlayConfig(bindings.traffic)
         )
+        watchedPilotFocusEpoch += 1
     }
     val onMapViewBound: () -> Unit = {
         managers.lifecycleManager.syncCurrentOwnerState(lifecycleOwner.lifecycle.currentState)
@@ -131,9 +142,11 @@ internal fun rememberMapScreenScaffoldInputs(
                 currentLocation = hotPathBindings.currentLocation
             ),
             overlays = MapScreenOverlayContentInputs(
+                renderLocalOwnship = renderLocalOwnship,
                 showRecenterButton = mapBindings.showRecenterButton,
                 showReturnButton = mapBindings.showReturnButton,
                 showDistanceCircles = mapBindings.showDistanceCircles,
+                showPilotStatusIndicator = allowFlightSensorStart,
                 traffic = bindings.traffic,
                 isUiEditMode = mapUiState.isUiEditMode,
                 onEditModeChange = { enabled ->
@@ -148,6 +161,22 @@ internal fun rememberMapScreenScaffoldInputs(
                 modalManager = managers.modalManager,
                 taskScreenManager = managers.taskScreenManager,
                 taskRenderSnapshotProvider = mapViewModel.runtimeDependencies.tasksUseCase::taskRenderSnapshot,
+                watchedPilotFocusEpoch = watchedPilotFocusEpoch,
+                mapLibreMapProvider = { mapState.mapLibreMap },
+                onFocusWatchedPilot = focusWatchedPilot@ { latitudeDeg, longitudeDeg ->
+                    val activeMap = mapState.mapLibreMap ?: return@focusWatchedPilot false
+                    managers.cameraManager.moveTo(
+                        target = MapPoint(latitudeDeg, longitudeDeg),
+                        zoom = LiveFollowWatchFocusZoom
+                    )
+                    activeMap.cameraPosition.target?.let { target ->
+                        targetMatchesWatchFocusTarget(
+                            latitudeDeg = latitudeDeg,
+                            longitudeDeg = longitudeDeg,
+                            target = target
+                        )
+                    } ?: false
+                },
                 waypointData = mapUiState.waypoints,
                 unitsPreferences = mapUiState.unitsPreferences,
                 qnhCalibrationState = mapUiState.qnhCalibrationState,
@@ -217,4 +246,14 @@ internal fun rememberMapScreenScaffoldInputs(
             )
         )
     )
+}
+
+private fun targetMatchesWatchFocusTarget(
+    latitudeDeg: Double,
+    longitudeDeg: Double,
+    target: org.maplibre.android.geometry.LatLng,
+    epsilonDeg: Double = 1e-6
+): Boolean {
+    return abs(target.latitude - latitudeDeg) <= epsilonDeg &&
+        abs(target.longitude - longitudeDeg) <= epsilonDeg
 }

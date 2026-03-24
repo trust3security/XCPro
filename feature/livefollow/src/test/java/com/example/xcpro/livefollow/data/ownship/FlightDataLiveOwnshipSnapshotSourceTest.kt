@@ -60,6 +60,7 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         assertEquals(98_765L, snapshot?.fixWallMs)
         assertEquals(151.25, snapshot?.pressureAltitudeMslMeters)
         assertEquals(152.5, snapshot?.gpsAltitudeMslMeters)
+        assertEquals(45.0, snapshot?.aglMeters)
         assertEquals(13.2, snapshot?.groundSpeedMs)
         assertEquals(182.0, snapshot?.trackDeg)
         assertEquals(1.8, snapshot?.verticalSpeedMs)
@@ -122,13 +123,40 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         }
     }
 
+    @Test
+    fun snapshot_omitsAglWhenAglTimestampIsUnknown() = runTest {
+        val scope = repoScope()
+        try {
+        val repository = FlightDataRepository()
+        val source = FlightDataLiveOwnshipSnapshotSource(
+            scope = scope,
+            flightDataRepository = repository,
+            ownFlarmHexFlow = MutableStateFlow("AB12CD"),
+            ownIcaoHexFlow = MutableStateFlow("EF34AB")
+        )
+
+        repository.update(
+            data = sampleFlightData(
+                fixMonoMs = 12_345L,
+                aglTimestampMonoMs = 0L
+            )
+        )
+        advanceUntilIdle()
+
+        assertNull(source.snapshot.value?.aglMeters)
+        } finally {
+            scope.cancel()
+        }
+    }
+
     private fun TestScope.repoScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
 
     private fun sampleFlightData(
         fixMonoMs: Long,
         wallMs: Long = 12_000L,
-        gpsAccuracyMeters: Float = 6f
+        gpsAccuracyMeters: Float = 6f,
+        aglTimestampMonoMs: Long = fixMonoMs
     ): CompleteFlightData {
         return CompleteFlightData(
             gps = GPSData(
@@ -151,6 +179,7 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
             baroConfidence = ConfidenceLevel.HIGH,
             qnhCalibrationAgeSeconds = 5,
             agl = AltitudeM(45.0),
+            aglTimestampMonoMs = aglTimestampMonoMs,
             thermalAverage = VerticalSpeedMs(0.7),
             currentLD = 32.0f,
             netto = VerticalSpeedMs(0.6),

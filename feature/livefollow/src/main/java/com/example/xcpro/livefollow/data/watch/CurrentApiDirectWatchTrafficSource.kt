@@ -2,6 +2,7 @@ package com.example.xcpro.livefollow.data.watch
 
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.core.time.Clock
+import com.example.xcpro.livefollow.account.XcAccountRepository
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
@@ -14,6 +15,7 @@ import com.example.xcpro.livefollow.data.transport.preferredCurrentApiLivePoint
 import com.example.xcpro.livefollow.di.LiveFollowHttpClient
 import com.example.xcpro.livefollow.model.LiveFollowConfidence
 import com.example.xcpro.livefollow.model.LiveFollowSourceState
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.model.liveFollowDegradedTransport
@@ -43,16 +45,19 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
     scope: CoroutineScope,
     private val clock: Clock,
     private val sessionState: StateFlow<LiveFollowSessionSnapshot>,
+    private val xcAccountRepository: XcAccountRepository,
     @LiveFollowHttpClient private val httpClient: OkHttpClient,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     private val pollIntervalMs: Long = DEFAULT_POLL_INTERVAL_MS
 ) : DirectWatchTrafficSource {
     private val mutableAircraft = MutableStateFlow<DirectWatchAircraftSample?>(null)
+    private val mutableTask = MutableStateFlow<LiveFollowTaskSnapshot?>(null)
     private val mutableTransportAvailability = MutableStateFlow<LiveFollowTransportAvailability>(
         liveFollowAvailableTransport()
     )
 
     override val aircraft: StateFlow<DirectWatchAircraftSample?> = mutableAircraft.asStateFlow()
+    override val task: StateFlow<LiveFollowTaskSnapshot?> = mutableTask.asStateFlow()
     override val transportAvailability: StateFlow<LiveFollowTransportAvailability> =
         mutableTransportAvailability.asStateFlow()
 
@@ -82,11 +87,8 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
 
     private suspend fun pollOnce(lookup: LiveFollowWatchLookup) = withContext(ioDispatcher) {
         if (!shouldPollLookup(lookup)) return@withContext
-        val request = Request.Builder()
-            .url(liveReadUrl(lookup))
-            .get()
-            .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
-            .build()
+        val request = liveReadRequest(lookup)
+            ?: return@withContext
 
         try {
             httpClient.newCall(request).execute().use { response ->
@@ -109,6 +111,7 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
                         mutableTransportAvailability.value = liveFollowDegradedTransport(message)
                         return@withContext
                     }
+                mutableTask.value = parsed.task
                 val point = preferredCurrentApiLivePoint(parsed)
                 if (point == null) {
                     mutableAircraft.value = null
@@ -130,6 +133,7 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
                     latitudeDeg = point.latitudeDeg,
                     longitudeDeg = point.longitudeDeg,
                     altitudeMslMeters = point.altitudeMslMeters,
+                    aglMeters = point.aglMeters,
                     groundSpeedMs = point.groundSpeedMs,
                     trackDeg = point.headingDeg,
                     verticalSpeedMs = null,
@@ -149,6 +153,7 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
 
     private fun clearWatchState() {
         mutableAircraft.value = null
+        mutableTask.value = null
         mutableTransportAvailability.value = liveFollowAvailableTransport()
     }
 
@@ -165,6 +170,11 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
                         addPathSegment(lookup.value)
                     }
 
+                    LiveFollowWatchLookupType.AUTHENTICATED_SESSION_ID -> {
+                        addPathSegments("api/v2/live/session")
+                        addPathSegment(lookup.value)
+                    }
+
                     LiveFollowWatchLookupType.SHARE_CODE -> {
                         addPathSegments("api/v1/live/share")
                         addPathSegment(lookup.value)
@@ -172,6 +182,28 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
                 }
             }
             .build()
+
+    private fun liveReadRequest(lookup: LiveFollowWatchLookup): Request? {
+        val builder = Request.Builder()
+            .url(liveReadUrl(lookup))
+            .get()
+            .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
+        if (lookup.type != LiveFollowWatchLookupType.AUTHENTICATED_SESSION_ID) {
+            return builder.build()
+        }
+        val accessToken = xcAccountRepository.state.value.session?.accessToken
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        if (accessToken == null) {
+            mutableTransportAvailability.value = liveFollowUnavailableTransport(
+                "Sign in is required for authenticated LiveFollow watch."
+            )
+            return null
+        }
+        return builder
+            .header(HEADER_AUTHORIZATION, "Bearer $accessToken")
+            .build()
+    }
 
     private fun availabilityForHttpFailure(
         httpCode: Int,
@@ -187,6 +219,7 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
         private const val LIVEFOLLOW_BASE_URL = "https://api.xcpro.com.au/"
         private const val CONTENT_TYPE_JSON = "application/json"
         private const val HEADER_ACCEPT = "Accept"
+        private const val HEADER_AUTHORIZATION = "Authorization"
         private const val DEFAULT_POLL_INTERVAL_MS = 5_000L
     }
 }

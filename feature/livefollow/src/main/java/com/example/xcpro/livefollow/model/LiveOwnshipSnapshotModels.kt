@@ -11,6 +11,7 @@ data class LiveOwnshipSnapshot(
     val longitudeDeg: Double,
     val gpsAltitudeMslMeters: Double?,
     val pressureAltitudeMslMeters: Double?,
+    val aglMeters: Double? = null,
     val groundSpeedMs: Double?,
     val trackDeg: Double?,
     val verticalSpeedMs: Double?,

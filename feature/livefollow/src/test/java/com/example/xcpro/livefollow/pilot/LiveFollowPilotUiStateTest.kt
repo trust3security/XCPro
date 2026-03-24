@@ -33,6 +33,7 @@ class LiveFollowPilotUiStateTest {
         assertTrue(uiState.canStartSharing)
         assertFalse(uiState.canStopSharing)
         assertEquals("Idle", uiState.lifecycleLabel)
+        assertEquals(LiveFollowPilotShareIndicatorState.STOPPED, uiState.shareIndicatorState)
     }
 
     @Test
@@ -71,6 +72,7 @@ class LiveFollowPilotUiStateTest {
         assertEquals("pilot-1", uiState.sessionId)
         assertEquals("SHARE123", uiState.shareCode)
         assertTrue(uiState.canCopyShareCode)
+        assertEquals(LiveFollowPilotShareIndicatorState.LIVE, uiState.shareIndicatorState)
     }
 
     @Test
@@ -91,6 +93,34 @@ class LiveFollowPilotUiStateTest {
             "LiveFollow session transport is unavailable in this transport-limited build.",
             uiState.statusMessage
         )
+    }
+
+    @Test
+    fun startingSession_showsStartingIndicator() {
+        val uiState = buildLiveFollowPilotUiState(
+            session = sessionSnapshot(
+                lifecycle = LiveFollowSessionLifecycle.STARTING
+            ),
+            ownshipSnapshot = ownshipSnapshot(),
+            actionState = LiveFollowPilotActionState()
+        )
+
+        assertEquals(LiveFollowPilotShareIndicatorState.STARTING, uiState.shareIndicatorState)
+    }
+
+    @Test
+    fun failedStartAction_showsFailedIndicator() {
+        val uiState = buildLiveFollowPilotUiState(
+            session = sessionSnapshot(),
+            ownshipSnapshot = ownshipSnapshot(),
+            actionState = LiveFollowPilotActionState(
+                commandMessage = "Start failed.",
+                lastShareCommandFailed = true
+            )
+        )
+
+        assertEquals(LiveFollowPilotShareIndicatorState.FAILED, uiState.shareIndicatorState)
+        assertEquals("Start failed.", uiState.statusMessage)
     }
 
     private fun sessionSnapshot(

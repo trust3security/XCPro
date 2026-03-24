@@ -87,6 +87,8 @@ private fun CompleteFlightData.toLiveOwnshipSnapshot(
         longitudeDeg = gpsData.longitude,
         gpsAltitudeMslMeters = gpsData.altitude.value.takeFiniteOrNull(),
         pressureAltitudeMslMeters = baroAltitude.value.takeFiniteOrNull(),
+        aglMeters = agl.value.takeFiniteOrNull()
+            ?.takeIf { aglTimestampMonoMs > 0L },
         groundSpeedMs = gpsData.speed.value.takeFiniteOrNull(),
         trackDeg = gpsData.bearing.takeFiniteOrNull(),
         verticalSpeedMs = verticalSpeed.value.takeFiniteOrNull().takeIf { varioValid },

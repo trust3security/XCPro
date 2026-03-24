@@ -34,7 +34,8 @@ internal fun MapTrafficOverlayRuntimeEffects(
     overlayManager: MapOverlayManager,
     traffic: MapTrafficUiBinding,
     currentLocation: StateFlow<MapLocationUiModel?>,
-    unitsPreferences: UnitsPreferences
+    unitsPreferences: UnitsPreferences,
+    renderLocalOwnship: Boolean
 ) {
     val locationForUi by currentLocation.collectAsStateWithLifecycle()
     val trafficOverlayPort = remember(overlayManager) {
@@ -43,7 +44,8 @@ internal fun MapTrafficOverlayRuntimeEffects(
     val trafficOverlayRenderState = rememberTrafficOverlayRenderState(
         traffic = traffic,
         locationForUi = locationForUi,
-        unitsPreferences = unitsPreferences
+        unitsPreferences = unitsPreferences,
+        renderLocalOwnship = renderLocalOwnship
     )
     MapTrafficOverlayEffects(
         port = trafficOverlayPort,

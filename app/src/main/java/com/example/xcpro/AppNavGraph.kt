@@ -1,7 +1,5 @@
 package com.example.xcpro
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerState
@@ -10,11 +8,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -34,21 +29,24 @@ import com.example.ui1.screens.Paragliders
 import com.example.ui1.screens.ProfilesScreen
 import com.example.ui1.screens.Sailplanes
 import com.example.ui1.screens.Task
-import com.example.xcpro.appshell.settings.GeneralSettingsSheetHost
-import com.example.xcpro.appshell.settings.consumeOpenGeneralSettingsOnMap
 import com.example.xcpro.appshell.settings.requestOpenGeneralSettingsOnMap
 import com.example.xcpro.livefollow.LiveFollowRoutes
+import com.example.xcpro.livefollow.account.ManageAccount
+import com.example.xcpro.livefollow.friends.FriendsFlyingPilotSelection
 import com.example.xcpro.livefollow.friends.FriendsFlyingScreen
+import com.example.xcpro.livefollow.friends.FriendsFlyingWatchTargetType
 import com.example.xcpro.livefollow.pilot.LiveFollowPilotScreen
+import com.example.xcpro.livefollow.pilot.LiveFollowPilotViewModel
 import com.example.xcpro.livefollow.watch.LiveFollowWatchEntryRoute
+import com.example.xcpro.livefollow.watch.LiveFollowWatchSelectionHint
 import com.example.xcpro.livefollow.watch.LiveFollowWatchShareCodeScreen
 import com.example.xcpro.livefollow.watch.LiveFollowWatchShareEntryRoute
+import com.example.xcpro.livefollow.watch.LiveFollowWatchViewModel
 import com.example.xcpro.appshell.navdrawer.MyAbout
 import com.example.xcpro.appshell.navdrawer.MySupport
+import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.screens.navdrawer.lookandfeel.LookAndFeelScreen
 import com.example.xcpro.screens.navdrawer.LayoutScreen
-import com.example.xcpro.map.MapScreenViewModel
-import com.example.xcpro.map.ui.MapScreen
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.screens.navdrawer.ColorsScreen
@@ -67,7 +65,13 @@ import com.example.xcpro.screens.diagnostics.VarioDiagnosticsScreen
 import com.example.xcpro.screens.replay.IgcReplayScreen
 import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.navigation.TrafficSettingsRoutes
-import com.example.xcpro.profiles.ManageAccount
+import com.example.xcpro.startup.AUTO_START_LIVEFOLLOW_SHARING_ON_MAP
+import com.example.xcpro.startup.STARTUP_CHOOSER_ROUTE
+import com.example.xcpro.startup.StartupChooserScreen
+import com.example.xcpro.startup.consumeAutoStartLiveFollowSharingOnMap
+import com.example.xcpro.startup.ensureMapRoute
+import com.example.xcpro.startup.navigateFromStartupToFlyingMap
+import com.example.xcpro.startup.navigateFromStartupToFriendsFlying
 import kotlinx.coroutines.launch
 
 @Composable
@@ -77,6 +81,8 @@ fun AppNavGraph(
     initialMapStyle: String,
     config: org.json.JSONObject?,
     profileUiState: ProfileUiState,
+    allowFlightSensorStart: Boolean,
+    setAllowFlightSensorStart: (Boolean) -> Unit,
     getSelectedNavItem: () -> String?,
     setSelectedNavItem: (String) -> Unit,
     setBottomSheetVisible: (Boolean) -> Unit,
@@ -84,82 +90,51 @@ fun AppNavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "map",
+        startDestination = STARTUP_CHOOSER_ROUTE,
         modifier = modifier
     ) {
+        composable(STARTUP_CHOOSER_ROUTE) {
+            StartupChooserScreen(
+                onOpenFlying = {
+                    setAllowFlightSensorStart(true)
+                    navigateFromStartupToFlyingMap(navController)
+                },
+                onOpenFriendsFlying = {
+                    setAllowFlightSensorStart(false)
+                    navigateFromStartupToFriendsFlying(navController)
+                }
+            )
+        }
         composable("map") { backStackEntry ->
-            val mapViewModel: MapScreenViewModel = hiltViewModel(backStackEntry)
-            val openGeneralSettingsOnMap by backStackEntry.savedStateHandle
+            val liveFollowPilotViewModel: LiveFollowPilotViewModel = hiltViewModel(backStackEntry)
+            val autoStartLiveFollowSharingOnMap by backStackEntry.savedStateHandle
                 .getStateFlow(
-                    com.example.xcpro.navigation.MapNavigationSignals.OPEN_GENERAL_SETTINGS_ON_MAP,
+                    AUTO_START_LIVEFOLLOW_SHARING_ON_MAP,
                     false
                 )
                 .collectAsStateWithLifecycle()
-            val scope = rememberCoroutineScope()
-            var showGeneralSettings by rememberSaveable { mutableStateOf(false) }
-            LaunchedEffect(openGeneralSettingsOnMap) {
-                if (openGeneralSettingsOnMap && consumeOpenGeneralSettingsOnMap(backStackEntry)) {
-                    showGeneralSettings = true
+            LaunchedEffect(autoStartLiveFollowSharingOnMap) {
+                if (
+                    autoStartLiveFollowSharingOnMap &&
+                    consumeAutoStartLiveFollowSharingOnMap(backStackEntry)
+                ) {
+                    liveFollowPilotViewModel.autoStartSharingWhenReady()
                 }
             }
-            Box(modifier = Modifier.fillMaxSize()) {
-                MapScreen(
-                    navController = navController,
-                    drawerState = drawerState,
-                    profileExpanded = remember(config) {
-                        mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("profileExpanded", true) ?: true)
-                    },
-                    mapStyleExpanded = remember(config) {
-                        mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("mapStyleExpanded", false) ?: false)
-                    },
-                    settingsExpanded = remember(config) {
-                        mutableStateOf(config?.optJSONObject("navDrawer")?.optBoolean("settingsExpanded", true) ?: true)
-                    },
-                    initialMapStyle = initialMapStyle,
-                    onOpenGeneralSettings = {
-                        showGeneralSettings = true
-                    },
-                    mapViewModel = mapViewModel
-                )
-                if (showGeneralSettings) {
-                    GeneralSettingsSheetHost(
-                        navController = navController,
-                        drawerState = drawerState,
-                        onDismissRequest = {
-                            showGeneralSettings = false
-                        },
-                        onNavigateUp = {
-                            showGeneralSettings = false
-                            scope.launch {
-                                if (!drawerState.isOpen) {
-                                    drawerState.open()
-                                }
-                            }
-                        },
-                        onNavigateToMap = {
-                            showGeneralSettings = false
-                            scope.launch {
-                                if (drawerState.isOpen) {
-                                    drawerState.close()
-                                }
-                            }
-                        }
-                    )
-                }
-            }
+            SharedMapRouteHost(
+                navController = navController,
+                drawerState = drawerState,
+                initialMapStyle = initialMapStyle,
+                config = config,
+                allowFlightSensorStart = allowFlightSensorStart,
+                viewModelOwnerEntry = backStackEntry
+            )
         }
         composable(SettingsRoutes.GENERAL) {
             // Compatibility shim for legacy callers still navigating to "settings".
             LaunchedEffect(Unit) {
+                ensureMapRoute(navController)
                 requestOpenGeneralSettingsOnMap(navController)
-                val poppedToMap = navController.popBackStack("map", inclusive = false)
-                if (!poppedToMap) {
-                    navController.navigate("map") {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                    requestOpenGeneralSettingsOnMap(navController)
-                }
             }
         }
         composable("look_and_feel") { LookAndFeelScreen(navController = navController, drawerState = drawerState) }
@@ -244,43 +219,65 @@ fun AppNavGraph(
         composable("support") { MySupport(navController = navController, drawerState = drawerState, onShowBottomSheet = { setBottomSheetVisible(true) }, onHideBottomSheet = { setBottomSheetVisible(false) }) }
         composable("about") { MyAbout(navController, drawerState) }
         composable(LiveFollowRoutes.PILOT) {
+            LaunchedEffect(Unit) {
+                setAllowFlightSensorStart(true)
+            }
             LiveFollowPilotScreen(
                 onNavigateBack = {
-                    val popped = navController.popBackStack(route = "map", inclusive = false)
-                    if (!popped) {
-                        navController.navigate("map") {
-                            launchSingleTop = true
-                        }
-                    }
+                    ensureMapRoute(navController)
                 }
             )
         }
         composable(LiveFollowRoutes.FRIENDS_FLYING) {
-            FriendsFlyingScreen(
-                onNavigateBack = {
-                    val popped = navController.popBackStack(route = "map", inclusive = false)
-                    if (!popped) {
-                        navController.navigate("map") {
-                            launchSingleTop = true
+            val mapEntry = remember(navController) {
+                navController.getBackStackEntry(LiveFollowRoutes.MAP_ROUTE)
+            }
+            val liveFollowWatchViewModel: LiveFollowWatchViewModel = hiltViewModel(mapEntry)
+            val watchUiState by liveFollowWatchViewModel.uiState.collectAsStateWithLifecycle()
+            val selectedWatchKey = watchUiState.selectedShareCode ?: watchUiState.selectedSessionId
+            val scope = rememberCoroutineScope()
+            SharedMapRouteHost(
+                navController = navController,
+                drawerState = drawerState,
+                initialMapStyle = initialMapStyle,
+                config = config,
+                allowFlightSensorStart = false,
+                viewModelOwnerEntry = mapEntry
+            ) {
+                FriendsFlyingScreen(
+                    onNavigateBack = {
+                        ensureMapRoute(navController)
+                    },
+                    selectedWatchKey = selectedWatchKey,
+                    onOpenWatch = { pilot ->
+                        scope.launch {
+                            when (pilot.watchTargetType) {
+                                FriendsFlyingWatchTargetType.PUBLIC_SHARE_CODE -> {
+                                    // AI-NOTE: Public Friends Flying keeps the
+                                    // existing share-code watch lane on the shared
+                                    // map owner while the sheet owns browse state.
+                                    liveFollowWatchViewModel.handleWatchShareEntry(
+                                        rawShareCode = pilot.shareCode,
+                                        selectionHint = pilot.toWatchSelectionHint()
+                                    )
+                                }
+
+                                FriendsFlyingWatchTargetType.AUTHENTICATED_SESSION_ID -> {
+                                    liveFollowWatchViewModel.handleAuthorizedWatchEntry(
+                                        rawSessionId = pilot.sessionId,
+                                        selectionHint = pilot.toWatchSelectionHint()
+                                    )
+                                }
+                            }
                         }
                     }
-                },
-                onOpenWatch = { shareCode ->
-                    // AI-NOTE: Friends Flying must reuse the existing share-code watch route
-                    // so watch/session/map ownership stays unchanged for this slice.
-                    navController.navigate(LiveFollowRoutes.watchShareEntry(shareCode))
-                }
-            )
+                )
+            }
         }
         composable(LiveFollowRoutes.WATCH_SHARE_FORM) {
             LiveFollowWatchShareCodeScreen(
                 onNavigateBack = {
-                    val popped = navController.popBackStack(route = "map", inclusive = false)
-                    if (!popped) {
-                        navController.navigate("map") {
-                            launchSingleTop = true
-                        }
-                    }
+                    ensureMapRoute(navController)
                 },
                 onOpenWatch = { shareCode ->
                     navController.navigate(LiveFollowRoutes.watchShareEntry(shareCode))
@@ -318,5 +315,19 @@ fun AppNavGraph(
             )
         }
     }
+}
+
+private fun FriendsFlyingPilotSelection.toWatchSelectionHint(): LiveFollowWatchSelectionHint {
+    return LiveFollowWatchSelectionHint(
+        sessionId = sessionId,
+        shareCode = shareCode,
+        displayLabel = displayLabel,
+        statusLabel = statusLabel,
+        altitudeLabel = altitudeLabel,
+        speedLabel = speedLabel,
+        headingLabel = headingLabel,
+        recencyLabel = recencyLabel,
+        isStale = isStale
+    )
 }
 

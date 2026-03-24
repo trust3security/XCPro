@@ -1,5 +1,6 @@
 package com.example.xcpro.livefollow.data.session
 
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
 import com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
@@ -13,9 +14,16 @@ interface LiveFollowSessionGateway {
         request: StartPilotLiveFollowSession
     ): LiveFollowSessionGatewayResult
 
+    suspend fun updatePilotVisibility(
+        sessionId: String,
+        visibility: LiveFollowSessionVisibility
+    ): LiveFollowSessionGatewayResult
+
     suspend fun stopCurrentSession(sessionId: String): LiveFollowSessionGatewayResult
 
     suspend fun joinWatchSession(sessionId: String): LiveFollowSessionGatewayResult
+
+    suspend fun joinAuthenticatedWatchSession(sessionId: String): LiveFollowSessionGatewayResult
 
     suspend fun joinWatchSessionByShareCode(
         shareCode: String
@@ -26,12 +34,18 @@ interface LiveFollowSessionGateway {
     suspend fun uploadPilotPosition(
         snapshot: LiveOwnshipSnapshot
     ): LiveFollowPilotPositionUploadResult
+
+    suspend fun uploadPilotTask(
+        snapshot: LiveFollowTaskSnapshot?
+    ): LiveFollowPilotTaskUploadResult
 }
 
 data class LiveFollowSessionGatewaySnapshot(
     val sessionId: String?,
+    val ownerUserId: String? = null,
     val role: LiveFollowSessionRole,
     val lifecycle: LiveFollowSessionLifecycle,
+    val visibility: LiveFollowSessionVisibility? = null,
     val watchIdentity: LiveFollowIdentityProfile?,
     val directWatchAuthorized: Boolean,
     val transportAvailability: LiveFollowTransportAvailability,
@@ -69,13 +83,34 @@ enum class LiveFollowPilotPositionSkipReason {
     NON_INCREASING_TIMESTAMP
 }
 
+sealed interface LiveFollowPilotTaskUploadResult {
+    data object Uploaded : LiveFollowPilotTaskUploadResult
+
+    data class Skipped(
+        val reason: LiveFollowPilotTaskSkipReason
+    ) : LiveFollowPilotTaskUploadResult
+
+    data class Failure(
+        val message: String
+    ) : LiveFollowPilotTaskUploadResult
+}
+
+enum class LiveFollowPilotTaskSkipReason {
+    NOT_PILOT_SESSION,
+    MISSING_CREDENTIALS,
+    MISSING_REQUIRED_FIELDS,
+    UNCHANGED_TASK
+}
+
 fun liveFollowGatewayIdleSnapshot(
     lastError: String? = null,
     transportAvailability: LiveFollowTransportAvailability = liveFollowAvailableTransport()
 ): LiveFollowSessionGatewaySnapshot = LiveFollowSessionGatewaySnapshot(
     sessionId = null,
+    ownerUserId = null,
     role = LiveFollowSessionRole.NONE,
     lifecycle = LiveFollowSessionLifecycle.IDLE,
+    visibility = null,
     watchIdentity = null,
     directWatchAuthorized = false,
     transportAvailability = transportAvailability,

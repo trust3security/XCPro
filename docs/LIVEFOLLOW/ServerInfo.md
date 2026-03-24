@@ -2,32 +2,26 @@
 
 ## Purpose
 
-This file records factual deployed-server context for the current LiveFollow API work.
+This file records factual deployed-server context and provenance for the
+current LiveFollow stack.
 
 It is not:
-- the contract owner
-- the change plan
+
+- the deployed-contract owner
+- the product-status summary
 - a future API design note
 
-Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`.
+Contract ownership stays in
+`docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v3.md`.
+Current product/status ownership stays in
+`docs/LIVEFOLLOW/LiveFollow_Current_State_and_Next_Slice_2026-03-23.md`.
 
 ---
 
-## Current baseline
+## Current Baseline
 
-- Baseline date from current server-code audit: `2026-03-20`
+- Baseline date from current server-code audit: `2026-03-23`
 - Current deployed base URL: `https://api.xcpro.com.au`
-
-### Current contract status
-
-- Phase 5 current-API transport slice 1/2 is now implemented in XCPro.
-- The current deployed wire contract has now been extracted from real server code.
-- Contract ownership is frozen in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`.
-- Historical phase-5 gate/plan docs now live under `docs/LIVEFOLLOW/archive/`.
-- Active follow-on planning now lives in:
-  - `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v10.md`
-  - `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v14_Friends_Flying_List.md`
-- `GET /api/v1/live/active` is not part of the frozen deployed contract yet.
 
 ### Current deployed endpoints
 
@@ -35,6 +29,7 @@ Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Con
 - `POST /api/v1/position`
 - `POST /api/v1/task/upsert`
 - `POST /api/v1/session/end`
+- `GET /api/v1/live/active`
 - `GET /api/v1/live/{session_id}`
 - `GET /api/v1/live/share/{share_code}`
 - `GET /`
@@ -46,21 +41,39 @@ Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Con
   - `share_code`
   - `status`
   - `write_token`
-- Write endpoints use header:
+- write endpoints use:
   - `X-Session-Token: <write_token>`
-- Public follow/read by `share_code` does not require a write token.
+- public reads currently include:
+  - `GET /api/v1/live/active`
+  - `GET /api/v1/live/{session_id}`
+  - `GET /api/v1/live/share/{share_code}`
 
 ### Current verified server behavior
 
-- session lifecycle supports `active`, `stale`, and `ended`
-- position validation is implemented
-- position upload dedupe is retry-safe
-- task snapshot upsert is implemented
-- task revisioning is implemented
-- identical task upserts dedupe correctly
-- ended sessions reject further writes
+- session lifecycle supports `active`, computed `stale`, and `ended`
+- `GET /api/v1/live/active` is part of the current deployed contract
+- active list excludes ended sessions and sessions with no accepted position
+- active list preserves stale status
+- active list keeps a session even if the latest-cache entry is missing
+- position upload accepts optional `agl_meters`
+- live reads and active-list `latest` relay `agl_meters` when present
+- task upsert accepts explicit `clear_task`
+- a clear is stored as the current task revision and live reads return `task: null`
+- repeated identical clears dedupe without advancing revision
+- re-adding a task after clear restores `task` in live reads
+- machine-readable error responses use `code` plus `detail`
+- request-validation failures return `422` with `code: validation_error`
+- ended sessions reject further position and task writes
 - deployed API is served over HTTPS behind Caddy
 - backend uses PostgreSQL plus Redis in Docker
+
+### Current XCPro app integration facts
+
+These are factual app-side integrations that now exist in the XCPro repo:
+
+- Friends Flying fetches `GET /api/v1/live/active`
+- LiveFollow position upload maps optional `agl_meters`
+- task upsert is wired for both full task payloads and explicit clears
 
 ---
 
@@ -73,34 +86,22 @@ Contract ownership stays in `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Con
 
 ### Server branch / commit inspected
 
-- Branch: `main`
-- Commit: `696bb110ea5d3b8189d75dfaed5c19e7b07465ea`
+- Branch: `feature/livefollow-phase6-active-pilots-endpoint`
+- Commit: `99a9565858afee59c430c59009f28b1de9fb5b7a`
 
 ### In-repo factual sources for this note
 
-- `docs/LIVEFOLLOW/archive/XCPro_LiveFollow_Change_Plan_v13_Current_API_Contract_Reconciliation.md`
-- `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v2.md`
-- `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`
+- `C:\Users\Asus\AndroidStudioProjects\XCPro_Server\app\main.py`
+- `C:\Users\Asus\AndroidStudioProjects\XCPro_Server\app\tests\test_livefollow_api.py`
+- `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v3.md`
 
 ---
 
-## Remaining gaps after XCPro transport slice 2
-
-- Current live-read payload is still weaker than the XCPro direct-watch seam.
-- `POST /api/v1/task/upsert` is part of the deployed contract but is not yet wired in XCPro.
-- Current server errors are still stringly typed for long-lived client transport mapping.
-- End-to-end runtime verification against the deployed API still needs a final proof pass.
-- Friends Flying server/app work remains future scope:
-  - `GET /api/v1/live/active`
-  - display-label support
-  - active-pilot picker UI
-
----
-
-## Operator note
+## Operator Note
 
 Treat this file as deployed-server reality and provenance only.
 
 - If server code says something different, update this file.
-- If the contract shape changes, update the contract doc.
-- If future API design changes are proposed, record them in the plan docs instead of here.
+- If the wire contract shape changes, update the deployed-contract doc.
+- If product behavior changes, update the current-state summary doc.
+- Do not use this file as the planning owner for future slices.

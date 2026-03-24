@@ -6,12 +6,36 @@ plugins {
     alias(libs.plugins.dagger.hilt)
 }
 
+import java.util.Properties
+
+fun readSecretProperty(name: String): String {
+    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
+    if (gradleValue.isNotEmpty()) return gradleValue
+    val localProperties = Properties().apply {
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { load(it) }
+        }
+    }
+    return localProperties.getProperty(name)?.trim().orEmpty()
+}
+
 android {
     namespace = "com.example.xcpro.livefollow"
     compileSdk = 35
 
     defaultConfig {
         minSdk = 30
+        buildConfigField(
+            "String",
+            "XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN",
+            "\"${readSecretProperty("XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN")}\""
+        )
+        buildConfigField(
+            "String",
+            "XCPRO_GOOGLE_SERVER_CLIENT_ID",
+            "\"${readSecretProperty("XCPRO_GOOGLE_SERVER_CLIENT_ID")}\""
+        )
     }
 
     compileOptions {
@@ -25,6 +49,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -39,6 +64,8 @@ dependencies {
     implementation(project(":feature:flight-runtime"))
     implementation(project(":feature:traffic"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
@@ -48,9 +75,11 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.googleid)
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.kotlinx.coroutines.core)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     ksp(libs.hilt.compiler)

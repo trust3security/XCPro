@@ -6,9 +6,12 @@ import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.map.model.MapLocationUiModel
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.maplibre.android.geometry.LatLng
@@ -53,13 +56,46 @@ class LocationManagerRenderSyncTest {
         assertEquals(1, cameraController.repaintCount)
     }
 
+    @Test
+    fun spectatorModeClearsLocalOwnshipStateAndHidesOverlay() {
+        val stateActions = RecordingMapStateActions()
+        val overlayPort = RecordingLocationOverlayPort()
+        val manager = createManager(
+            featureFlags = MapFeatureFlags(),
+            cameraController = FakeCameraController(),
+            stateActions = stateActions,
+            locationOverlayPort = overlayPort
+        )
+
+        manager.setLocalOwnshipRenderEnabled(false)
+        manager.updateLocationFromGPS(
+            location = MapLocationUiModel(
+                latitude = -35.0,
+                longitude = 149.0,
+                speedMs = 18.0,
+                bearingDeg = 90.0,
+                accuracyMeters = 3.0,
+                timestampMs = 1_000L
+            ),
+            orientation = OrientationData()
+        )
+
+        assertEquals(listOf(false), overlayPort.visibleCalls)
+        assertEquals(listOf<MapPoint?>(null), stateActions.currentUserLocations)
+        assertEquals(listOf(false), stateActions.recenterButtonStates)
+        assertEquals(listOf(false), stateActions.returnButtonStates)
+        assertFalse(overlayPort.updateCalls > 0)
+    }
+
     private fun createManager(
         featureFlags: MapFeatureFlags,
-        cameraController: FakeCameraController
+        cameraController: FakeCameraController,
+        stateActions: MapStateActions = NoOpMapStateActions(),
+        locationOverlayPort: MapLocationOverlayPort = NoOpLocationOverlayPort()
     ): LocationManager {
         return LocationManager(
             mapStateReader = FakeMapStateReader(),
-            stateActions = NoOpMapStateActions(),
+            stateActions = stateActions,
             featureFlags = featureFlags,
             cameraPreferenceReader = object : MapCameraPreferenceReader {
                 override fun getMapShiftBiasMode(): MapShiftBiasMode = MapShiftBiasMode.NONE
@@ -88,17 +124,7 @@ class LocationManagerRenderSyncTest {
                 override fun accept(location: LatLng): Boolean = true
                 override fun resetTo(location: LatLng) = Unit
             },
-            locationOverlayPort = object : MapLocationOverlayPort {
-                override fun updateBlueLocation(
-                    location: LatLng,
-                    trackBearing: Double,
-                    iconHeading: Double,
-                    mapBearing: Double,
-                    orientationMode: com.example.xcpro.common.orientation.MapOrientationMode
-                ) = Unit
-
-                override fun setBlueLocationVisible(visible: Boolean) = Unit
-            },
+            locationOverlayPort = locationOverlayPort,
             displayPoseSurfacePort = object : MapDisplayPoseSurfacePort {
                 override fun isMapReady(): Boolean = true
                 override fun currentCameraBearing(): Double? = 0.0
@@ -149,6 +175,36 @@ class LocationManagerRenderSyncTest {
         override fun setDisplaySmoothingProfile(profile: DisplaySmoothingProfile) = Unit
     }
 
+    private class RecordingMapStateActions : MapStateActions {
+        val currentUserLocations = CopyOnWriteArrayList<MapPoint?>()
+        val recenterButtonStates = CopyOnWriteArrayList<Boolean>()
+        val returnButtonStates = CopyOnWriteArrayList<Boolean>()
+
+        override fun setShowDistanceCircles(show: Boolean) = Unit
+        override fun toggleDistanceCircles() = Unit
+        override fun updateCurrentZoom(zoom: Float) = Unit
+        override fun setTarget(location: MapPoint?, zoom: Float?) = Unit
+        override fun setCurrentUserLocation(location: MapPoint?) {
+            currentUserLocations += location
+        }
+
+        override fun setHasInitiallyCentered(centered: Boolean) = Unit
+        override fun setTrackingLocation(enabled: Boolean) = Unit
+        override fun setShowRecenterButton(show: Boolean) {
+            recenterButtonStates += show
+        }
+
+        override fun setShowReturnButton(show: Boolean) {
+            returnButtonStates += show
+        }
+
+        override fun updateLastUserPanTime(timestampMillis: Long) = Unit
+        override fun saveLocation(location: MapPoint?, zoom: Double?, bearing: Double?) = Unit
+        override fun updateCameraSnapshot(target: MapPoint?, zoom: Double?, bearing: Double?) = Unit
+        override fun setDisplayPoseMode(mode: DisplayPoseMode) = Unit
+        override fun setDisplaySmoothingProfile(profile: DisplaySmoothingProfile) = Unit
+    }
+
     private class FakeCameraController : MapCameraController {
         private var position =
             MapCameraPositionSnapshot(target = LatLng(0.0, 0.0), zoom = 10.0, bearing = 0.0, tilt = 0.0)
@@ -174,5 +230,36 @@ class LocationManagerRenderSyncTest {
         override fun triggerRepaint() {
             repaintCount += 1
         }
+    }
+
+    private class RecordingLocationOverlayPort : MapLocationOverlayPort {
+        var updateCalls: Int = 0
+        val visibleCalls = mutableListOf<Boolean>()
+
+        override fun updateBlueLocation(
+            location: LatLng,
+            trackBearing: Double,
+            iconHeading: Double,
+            mapBearing: Double,
+            orientationMode: com.example.xcpro.common.orientation.MapOrientationMode
+        ) {
+            updateCalls += 1
+        }
+
+        override fun setBlueLocationVisible(visible: Boolean) {
+            visibleCalls += visible
+        }
+    }
+
+    private class NoOpLocationOverlayPort : MapLocationOverlayPort {
+        override fun updateBlueLocation(
+            location: LatLng,
+            trackBearing: Double,
+            iconHeading: Double,
+            mapBearing: Double,
+            orientationMode: com.example.xcpro.common.orientation.MapOrientationMode
+        ) = Unit
+
+        override fun setBlueLocationVisible(visible: Boolean) = Unit
     }
 }

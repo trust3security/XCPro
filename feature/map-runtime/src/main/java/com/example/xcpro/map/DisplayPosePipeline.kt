@@ -20,6 +20,11 @@ class DisplayPosePipeline(
         displaySmoother.reset()
     }
 
+    fun clear() {
+        lastRawFix = null
+        displaySmoother.reset()
+    }
+
     fun selectPose(
         nowMs: Long,
         mode: DisplayPoseMode,

@@ -4,6 +4,10 @@ import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.livefollow.account.XcAccountRepository
+import com.example.xcpro.livefollow.data.following.CurrentApiFollowingActivePilotsDataSource
+import com.example.xcpro.livefollow.data.following.FollowingActivePilotsDataSource
+import com.example.xcpro.livefollow.data.following.FollowingLiveRepository
 import com.example.xcpro.livefollow.data.ownship.FlightDataLiveOwnshipSnapshotSource
 import com.example.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
 import com.example.xcpro.livefollow.data.friends.ActivePilotsDataSource
@@ -12,6 +16,7 @@ import com.example.xcpro.livefollow.data.friends.FriendsFlyingRepository
 import com.example.xcpro.livefollow.data.session.CurrentApiLiveFollowSessionGateway
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionGateway
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRepository
+import com.example.xcpro.livefollow.data.task.LiveFollowTaskSnapshotSource
 import com.example.xcpro.livefollow.data.watch.CurrentApiDirectWatchTrafficSource
 import com.example.xcpro.livefollow.data.watch.DirectWatchTrafficSource
 import com.example.xcpro.livefollow.data.watch.WatchTrafficRepository
@@ -47,10 +52,12 @@ object LiveFollowDataModule {
     @Singleton
     fun provideLiveFollowSessionGateway(
         @LiveFollowHttpClient httpClient: OkHttpClient,
+        xcAccountRepository: XcAccountRepository,
         @IoDispatcher ioDispatcher: CoroutineDispatcher
     ): LiveFollowSessionGateway {
         return CurrentApiLiveFollowSessionGateway(
             httpClient = httpClient,
+            xcAccountRepository = xcAccountRepository,
             ioDispatcher = ioDispatcher
         )
     }
@@ -74,12 +81,14 @@ object LiveFollowDataModule {
     @Singleton
     fun provideLiveFollowSessionRepository(
         ownshipSnapshotSource: LiveOwnshipSnapshotSource,
+        taskSnapshotSource: LiveFollowTaskSnapshotSource,
         gateway: LiveFollowSessionGateway,
         @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
     ): LiveFollowSessionRepository {
         return LiveFollowSessionRepository(
             scope = liveFollowScope(defaultDispatcher),
             ownshipSnapshotSource = ownshipSnapshotSource,
+            taskSnapshotSource = taskSnapshotSource,
             gateway = gateway
         )
     }
@@ -89,6 +98,7 @@ object LiveFollowDataModule {
     fun provideDirectWatchTrafficSource(
         clock: Clock,
         sessionRepository: LiveFollowSessionRepository,
+        xcAccountRepository: XcAccountRepository,
         @LiveFollowHttpClient httpClient: OkHttpClient,
         @IoDispatcher ioDispatcher: CoroutineDispatcher,
         @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
@@ -97,6 +107,7 @@ object LiveFollowDataModule {
             scope = liveFollowScope(defaultDispatcher),
             clock = clock,
             sessionState = sessionRepository.state,
+            xcAccountRepository = xcAccountRepository,
             httpClient = httpClient,
             ioDispatcher = ioDispatcher
         )
@@ -143,6 +154,36 @@ object LiveFollowDataModule {
             scope = liveFollowScope(defaultDispatcher),
             runtimeModeSource = ownshipSnapshotSource,
             dataSource = activePilotsDataSource
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideFollowingActivePilotsDataSource(
+        xcAccountRepository: XcAccountRepository,
+        @LiveFollowHttpClient httpClient: OkHttpClient,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher
+    ): FollowingActivePilotsDataSource {
+        return CurrentApiFollowingActivePilotsDataSource(
+            xcAccountRepository = xcAccountRepository,
+            httpClient = httpClient,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideFollowingLiveRepository(
+        ownshipSnapshotSource: LiveOwnshipSnapshotSource,
+        xcAccountRepository: XcAccountRepository,
+        followingActivePilotsDataSource: FollowingActivePilotsDataSource,
+        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+    ): FollowingLiveRepository {
+        return FollowingLiveRepository(
+            scope = liveFollowScope(defaultDispatcher),
+            runtimeModeSource = ownshipSnapshotSource,
+            accountRepository = xcAccountRepository,
+            dataSource = followingActivePilotsDataSource
         )
     }
 

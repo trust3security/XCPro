@@ -1,6 +1,6 @@
 # LiveFollow Current Deployed API Contract v2
 
-Date: 2026-03-20
+Date: 2026-03-23
 Status: Frozen from current server-code audit
 
 ## Purpose
@@ -71,6 +71,9 @@ X-Session-Token: <write_token>
 ```
 
 ### Request body
+Current deployed server accepts one of two explicit shapes.
+
+Task upsert:
 ```json
 {
   "session_id": "string",
@@ -154,7 +157,16 @@ X-Session-Token: <write_token>
 }
 ```
 
+Task clear:
+```json
+{
+  "session_id": "string",
+  "clear_task": true
+}
+```
+
 ### Required task rules
+- clear payload must not include `task_name` or `task`
 - `turnpoints` must contain at least 2 objects
 - each turnpoint requires:
   - nonblank `name`
@@ -171,8 +183,11 @@ Optional `radius_m` follows the same allowed range.
 
 ### Storage / revisioning
 - everything else inside `task` is stored verbatim
+- explicit clear is stored as the current task revision and live reads return `task: null`
 - first create -> `200 {"ok": true, "task_id": "<uuid>", "revision": 1}`
+- first clear on a session with no prior task -> `200 {"ok": true, "task_id": "<uuid>", "revision": 1, "cleared": true}`
 - exact current-payload match -> same revision plus `"deduped": true`
+- clear responses include `"cleared": true`; non-clear upserts include `"cleared": false`
 - otherwise revision increments by 1
 - dedupe compares only with the current revision
 
@@ -268,7 +283,7 @@ These currently return the same payload shape.
 - the key is `session`, not `session_id`
 - `status` is lowercase
 - `positions` contains up to 10 accepted positions, oldest to newest
-- `task` may be null
+- `task` may be null before any task is shared and after an explicit task clear
 
 ### Current XCPro implication
 This is enough for a first polling-based follow integration, but it does **not** yet provide:
@@ -412,7 +427,7 @@ Do **not** map the current server DTOs one-for-one onto XCPro’s transport-loca
 1. `write_token` and `share_code` are now stored as transport-local state in the current XCPro gateway implementation.
 2. Position upload now gates on required fields and skips non-increasing timestamps before hitting the server.
 3. Public watch by `share_code` is the first user-facing watch path; `session_id` read remains available.
-4. `POST /api/v1/task/upsert` remains part of the deployed contract but is not yet wired in XCPro.
+4. `POST /api/v1/task/upsert` is now wired in XCPro for both full task upserts and explicit task clears.
 5. Current public live read remains a degraded transport relative to the richer XCPro direct-watch seam because it does not expose typed identity, vertical speed, or monotonic age.
 6. Server-side machine-readable error codes remain a future hardening improvement, not a frozen deployed-contract field today.
 

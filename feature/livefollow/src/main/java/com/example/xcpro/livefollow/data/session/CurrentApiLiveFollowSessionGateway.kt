@@ -1,13 +1,18 @@
 package com.example.xcpro.livefollow.data.session
 
 import com.example.xcpro.common.di.IoDispatcher
+import com.example.xcpro.livefollow.account.XcAccountRepository
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiErrorMessage
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiLiveReadResponse
+import com.example.xcpro.livefollow.data.transport.mapCurrentApiTaskClearPayload
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiSessionEndResponse
+import com.example.xcpro.livefollow.data.transport.parseCurrentApiSessionVisibilityResponse
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiSessionStartResponse
+import com.example.xcpro.livefollow.data.transport.mapCurrentApiTaskUpsertPayload
 import com.example.xcpro.livefollow.di.LiveFollowHttpClient
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.model.liveFollowDegradedTransport
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.example.xcpro.livefollow.model.liveFollowUnavailableTransport
 import java.io.IOException
 import java.util.Locale
@@ -18,15 +23,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 
 @Singleton
 class CurrentApiLiveFollowSessionGateway @Inject constructor(
     @LiveFollowHttpClient private val httpClient: OkHttpClient,
+    private val xcAccountRepository: XcAccountRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : LiveFollowSessionGateway {
     private val lock = Any()
@@ -41,11 +44,21 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
     override suspend fun startPilotSession(
         request: StartPilotLiveFollowSession
     ): LiveFollowSessionGatewayResult = withContext(ioDispatcher) {
-        val httpRequest = Request.Builder()
-            .url(baseUrlBuilder().addPathSegments("api/v1/session/start").build())
-            .post(EMPTY_REQUEST_BODY)
-            .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
-            .build()
+        val accessToken = currentAccessToken()
+        val visibility = request.visibility ?: LiveFollowSessionVisibility.PUBLIC
+        if (accessToken == null && visibility != LiveFollowSessionVisibility.PUBLIC) {
+            return@withContext LiveFollowSessionGatewayResult.Failure(
+                "Sign in is required for follower-only or off live visibility."
+            )
+        }
+        val httpRequest = if (accessToken != null) {
+            buildAuthenticatedSessionStartRequest(
+                accessToken = accessToken,
+                visibility = visibility
+            )
+        } else {
+            buildPublicSessionStartRequest()
+        }
 
         executeSessionCommand(httpRequest) { body ->
             val response = parseCurrentApiSessionStartResponse(body)
@@ -54,13 +67,16 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                     sessionId = response.sessionId,
                     shareCode = response.shareCode,
                     writeToken = response.writeToken,
-                    lastUploadedFixWallMs = null
+                    lastUploadedFixWallMs = null,
+                    lastUploadedTaskPayloadJson = null
                 )
             }
             val snapshot = LiveFollowSessionGatewaySnapshot(
                 sessionId = response.sessionId,
+                ownerUserId = response.ownerUserId,
                 role = LiveFollowSessionRole.PILOT,
                 lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                visibility = response.visibility ?: visibility,
                 watchIdentity = null,
                 directWatchAuthorized = false,
                 transportAvailability = liveFollowAvailableTransport(),
@@ -68,6 +84,50 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                 shareCode = response.shareCode
             )
             mutableSessionState.value = snapshot
+            LiveFollowSessionGatewayResult.Success(snapshot)
+        }
+    }
+
+    override suspend fun updatePilotVisibility(
+        sessionId: String,
+        visibility: LiveFollowSessionVisibility
+    ): LiveFollowSessionGatewayResult = withContext(ioDispatcher) {
+        val accessToken = currentAccessToken()
+            ?: return@withContext LiveFollowSessionGatewayResult.Failure(
+                "Sign in is required to update authenticated live visibility."
+            )
+        val currentSnapshot = mutableSessionState.value
+        if (currentSnapshot.ownerUserId.isNullOrBlank()) {
+            return@withContext LiveFollowSessionGatewayResult.Failure(
+                "Current pilot session is not owned by a signed-in XCPro account."
+            )
+        }
+        val httpRequest = buildVisibilityPatchRequest(
+            sessionId = sessionId,
+            accessToken = accessToken,
+            visibility = visibility
+        )
+
+        executeSessionCommand(httpRequest) { body ->
+            val response = parseCurrentApiSessionVisibilityResponse(body)
+            val snapshot = mutableSessionState.value.copy(
+                sessionId = response.sessionId,
+                ownerUserId = response.ownerUserId ?: currentSnapshot.ownerUserId,
+                role = LiveFollowSessionRole.PILOT,
+                lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                visibility = response.visibility ?: visibility,
+                directWatchAuthorized = false,
+                transportAvailability = liveFollowAvailableTransport(),
+                lastError = null,
+                shareCode = response.shareCode
+            )
+            mutableSessionState.value = snapshot
+            synchronized(lock) {
+                storedPilotTransport = storedPilotTransport.copy(
+                    sessionId = response.sessionId,
+                    shareCode = response.shareCode
+                )
+            }
             LiveFollowSessionGatewayResult.Success(snapshot)
         }
     }
@@ -80,14 +140,10 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                     "LiveFollow session write token is unavailable."
                 )
 
-            val requestBody = """{"session_id":"${escapeJson(sessionId)}"}"""
-                .toRequestBody(JSON_MEDIA_TYPE)
-            val httpRequest = Request.Builder()
-                .url(baseUrlBuilder().addPathSegments("api/v1/session/end").build())
-                .post(requestBody)
-                .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
-                .header(HEADER_SESSION_TOKEN, writeToken)
-                .build()
+            val httpRequest = buildSessionEndRequest(
+                sessionId = sessionId,
+                writeToken = writeToken
+            )
 
             executeSessionCommand(httpRequest) { body ->
                 parseCurrentApiSessionEndResponse(body)
@@ -106,16 +162,7 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                 ?: return@withContext LiveFollowSessionGatewayResult.Failure(
                     "Invalid LiveFollow session id."
                 )
-            val httpRequest = Request.Builder()
-                .url(
-                    baseUrlBuilder()
-                        .addPathSegments("api/v1/live")
-                        .addPathSegment(normalizedSessionId)
-                        .build()
-                )
-                .get()
-                .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
-                .build()
+            val httpRequest = buildPublicLiveSessionRequest(normalizedSessionId)
 
             executeSessionCommand(httpRequest) { body ->
                 val response = parseCurrentApiLiveReadResponse(body)
@@ -128,8 +175,10 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                 // watchIdentity null and task metadata unavailable.
                 val snapshot = LiveFollowSessionGatewaySnapshot(
                     sessionId = response.sessionId,
+                    ownerUserId = response.ownerUserId,
                     role = LiveFollowSessionRole.WATCHER,
                     lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                    visibility = response.visibility ?: LiveFollowSessionVisibility.PUBLIC,
                     watchIdentity = null,
                     directWatchAuthorized = true,
                     transportAvailability = liveFollowAvailableTransport(),
@@ -142,6 +191,45 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
             }
         }
 
+    override suspend fun joinAuthenticatedWatchSession(
+        sessionId: String
+    ): LiveFollowSessionGatewayResult = withContext(ioDispatcher) {
+        val normalizedSessionId = sessionId.trim().takeIf { it.isNotEmpty() }
+            ?: return@withContext LiveFollowSessionGatewayResult.Failure(
+                "Invalid LiveFollow session id."
+            )
+        val accessToken = currentAccessToken()
+            ?: return@withContext LiveFollowSessionGatewayResult.Failure(
+                "Sign in is required for authorized LiveFollow watch."
+            )
+        val httpRequest = buildAuthenticatedLiveSessionRequest(
+            sessionId = normalizedSessionId,
+            accessToken = accessToken
+        )
+
+        executeSessionCommand(httpRequest) { body ->
+            val response = parseCurrentApiLiveReadResponse(body)
+            synchronized(lock) {
+                storedPilotTransport = StoredPilotTransport()
+            }
+            val snapshot = LiveFollowSessionGatewaySnapshot(
+                sessionId = response.sessionId,
+                ownerUserId = response.ownerUserId,
+                role = LiveFollowSessionRole.WATCHER,
+                lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                visibility = response.visibility,
+                watchIdentity = null,
+                directWatchAuthorized = true,
+                transportAvailability = liveFollowAvailableTransport(),
+                lastError = null,
+                shareCode = response.shareCode,
+                watchLookup = liveFollowAuthenticatedSessionIdLookup(normalizedSessionId)
+            )
+            mutableSessionState.value = snapshot
+            LiveFollowSessionGatewayResult.Success(snapshot)
+        }
+    }
+
     override suspend fun joinWatchSessionByShareCode(
         shareCode: String
     ): LiveFollowSessionGatewayResult = withContext(ioDispatcher) {
@@ -151,16 +239,7 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
             ?: return@withContext LiveFollowSessionGatewayResult.Failure(
                 "Invalid LiveFollow share code."
             )
-        val httpRequest = Request.Builder()
-            .url(
-                baseUrlBuilder()
-                    .addPathSegments("api/v1/live/share")
-                    .addPathSegment(normalizedShareCode)
-                    .build()
-            )
-            .get()
-            .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
-            .build()
+        val httpRequest = buildLiveShareCodeRequest(normalizedShareCode)
 
         executeSessionCommand(httpRequest) { body ->
             val response = parseCurrentApiLiveReadResponse(body)
@@ -171,8 +250,10 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
             // polling key so later polls stay on the deployed public endpoint.
             val snapshot = LiveFollowSessionGatewaySnapshot(
                 sessionId = response.sessionId,
+                ownerUserId = response.ownerUserId,
                 role = LiveFollowSessionRole.WATCHER,
                 lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                visibility = response.visibility ?: LiveFollowSessionVisibility.PUBLIC,
                 watchIdentity = null,
                 directWatchAuthorized = true,
                 transportAvailability = liveFollowAvailableTransport(),
@@ -229,12 +310,10 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
             )
         }
 
-        val httpRequest = Request.Builder()
-            .url(baseUrlBuilder().addPathSegments("api/v1/position").build())
-            .post(requestPayload.toJsonString().toRequestBody(JSON_MEDIA_TYPE))
-            .header(HEADER_ACCEPT, CONTENT_TYPE_JSON)
-            .header(HEADER_SESSION_TOKEN, writeToken)
-            .build()
+        val httpRequest = buildPilotPositionUploadRequest(
+            writeToken = writeToken,
+            requestJson = requestPayload.toJsonString()
+        )
 
         try {
             httpClient.newCall(httpRequest).execute().use { response ->
@@ -245,7 +324,7 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                         httpCode = response.code
                     )
                     mutableSessionState.value = mutableSessionState.value.copy(
-                        transportAvailability = availabilityForHttpFailure(
+                        transportAvailability = availabilityForLiveFollowHttpFailure(
                             httpCode = response.code,
                             message = message
                         ),
@@ -276,6 +355,89 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
         }
     }
 
+    override suspend fun uploadPilotTask(
+        snapshot: LiveFollowTaskSnapshot?
+    ): LiveFollowPilotTaskUploadResult = withContext(ioDispatcher) {
+        val currentSnapshot = mutableSessionState.value
+        if (currentSnapshot.role != LiveFollowSessionRole.PILOT ||
+            currentSnapshot.lifecycle != LiveFollowSessionLifecycle.ACTIVE
+        ) {
+            return@withContext LiveFollowPilotTaskUploadResult.Skipped(
+                LiveFollowPilotTaskSkipReason.NOT_PILOT_SESSION
+            )
+        }
+
+        val stored = synchronized(lock) { storedPilotTransport }
+        val sessionId = stored.sessionId
+        val writeToken = stored.writeToken
+        if (sessionId.isNullOrBlank() || writeToken.isNullOrBlank()) {
+            return@withContext LiveFollowPilotTaskUploadResult.Skipped(
+                LiveFollowPilotTaskSkipReason.MISSING_CREDENTIALS
+            )
+        }
+
+        val requestJson = snapshot?.let {
+            mapCurrentApiTaskUpsertPayload(
+                sessionId = sessionId,
+                snapshot = it
+            )
+        } ?: mapCurrentApiTaskClearPayload(sessionId)
+        if (snapshot != null && requestJson.isBlank()) {
+            return@withContext LiveFollowPilotTaskUploadResult.Skipped(
+                LiveFollowPilotTaskSkipReason.MISSING_REQUIRED_FIELDS
+            )
+        }
+        if (requestJson == stored.lastUploadedTaskPayloadJson) {
+            return@withContext LiveFollowPilotTaskUploadResult.Skipped(
+                LiveFollowPilotTaskSkipReason.UNCHANGED_TASK
+            )
+        }
+
+        val httpRequest = buildPilotTaskUploadRequest(
+            writeToken = writeToken,
+            requestJson = requestJson
+        )
+
+        try {
+            httpClient.newCall(httpRequest).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    val message = parseCurrentApiErrorMessage(
+                        responseBody = responseBody,
+                        httpCode = response.code
+                    )
+                    mutableSessionState.value = mutableSessionState.value.copy(
+                        transportAvailability = availabilityForLiveFollowHttpFailure(
+                            httpCode = response.code,
+                            message = message
+                        ),
+                        lastError = message
+                    )
+                    return@withContext LiveFollowPilotTaskUploadResult.Failure(message)
+                }
+
+                synchronized(lock) {
+                    storedPilotTransport = storedPilotTransport.copy(
+                        lastUploadedTaskPayloadJson = requestJson
+                    )
+                }
+                mutableSessionState.value = mutableSessionState.value.copy(
+                    transportAvailability = liveFollowAvailableTransport(),
+                    lastError = null
+                )
+                LiveFollowPilotTaskUploadResult.Uploaded
+            }
+        } catch (e: IOException) {
+            val message = e.localizedMessage?.takeIf { it.isNotBlank() }
+                ?: e::class.java.simpleName
+            mutableSessionState.value = mutableSessionState.value.copy(
+                transportAvailability = liveFollowUnavailableTransport(message),
+                lastError = message
+            )
+            LiveFollowPilotTaskUploadResult.Failure(message)
+        }
+    }
+
     internal fun storedPilotTransportForTests(): StoredPilotTransport = synchronized(lock) {
         storedPilotTransport
     }
@@ -293,7 +455,7 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                         httpCode = response.code
                     )
                     mutableSessionState.value = mutableSessionState.value.copy(
-                        transportAvailability = availabilityForHttpFailure(
+                        transportAvailability = availabilityForLiveFollowHttpFailure(
                             httpCode = response.code,
                             message = message
                         ),
@@ -324,32 +486,9 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
         }
     }
 
-    private fun availabilityForHttpFailure(
-        httpCode: Int,
-        message: String
-    ) = when {
-        httpCode >= 500 -> liveFollowDegradedTransport(message)
-        else -> liveFollowAvailableTransport()
-    }
-
-    private fun baseUrlBuilder() = LIVEFOLLOW_BASE_URL.toHttpUrl().newBuilder()
-
-    internal data class StoredPilotTransport(
-        val sessionId: String? = null,
-        val shareCode: String? = null,
-        val writeToken: String? = null,
-        val lastUploadedFixWallMs: Long? = null
-    )
-
-    private companion object {
-        private const val LIVEFOLLOW_BASE_URL = "https://api.xcpro.com.au/"
-        private const val CONTENT_TYPE_JSON = "application/json"
-        private const val HEADER_ACCEPT = "Accept"
-        private const val HEADER_SESSION_TOKEN = "X-Session-Token"
-        private val JSON_MEDIA_TYPE = CONTENT_TYPE_JSON.toMediaType()
-        private val EMPTY_REQUEST_BODY = ByteArray(0).toRequestBody()
+    private fun currentAccessToken(): String? {
+        return xcAccountRepository.state.value.session?.accessToken
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     }
 }
-
-private fun escapeJson(value: String): String =
-    value.replace("\\", "\\\\").replace("\"", "\\\"")

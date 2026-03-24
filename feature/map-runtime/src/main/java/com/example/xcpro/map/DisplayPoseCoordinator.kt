@@ -32,6 +32,12 @@ class DisplayPoseCoordinator(
 
     fun nowMs(): Long = clock.nowMs()
 
+    fun clear() {
+        timeBase = null
+        clock.clear()
+        pipeline.clear()
+    }
+
     fun selectPose(
         nowMs: Long,
         mode: DisplayPoseMode,
@@ -45,6 +51,7 @@ interface DisplayTimeSource {
     var replaySpeedMultiplier: Double
     fun updateFromFix(timestampMs: Long, base: DisplayClock.TimeBase)
     fun nowMs(): Long
+    fun clear()
 }
 
 class DisplayClockSource(
@@ -61,11 +68,16 @@ class DisplayClockSource(
     }
 
     override fun nowMs(): Long = clock.nowMs()
+
+    override fun clear() {
+        clock.clear()
+    }
 }
 
 interface PosePipeline {
     fun pushRawFix(fix: DisplayPoseSmoother.RawFix)
     fun resetSmoother()
+    fun clear()
     fun selectPose(
         nowMs: Long,
         mode: DisplayPoseMode,
@@ -82,6 +94,10 @@ class DisplayPosePipelineAdapter(
 
     override fun resetSmoother() {
         pipeline.resetSmoother()
+    }
+
+    override fun clear() {
+        pipeline.clear()
     }
 
     override fun selectPose(

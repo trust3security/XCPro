@@ -1,7 +1,9 @@
 package com.example.xcpro.livefollow.friends
 
+import com.example.xcpro.core.time.FakeClock
+import com.example.xcpro.livefollow.account.signedOutAccountSnapshot
+import com.example.xcpro.livefollow.data.following.FollowingLiveSnapshot
 import com.example.xcpro.livefollow.data.friends.FriendsFlyingSnapshot
-import com.example.xcpro.livefollow.model.LiveFollowActivePilot
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.testing.MainDispatcherRule
 import kotlinx.coroutines.CoroutineStart
@@ -26,53 +28,73 @@ class FriendsFlyingViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun onSheetShown_refreshesOnce() = runTest {
+    fun onSheetShown_refreshesPublicAndFollowingOnce() = runTest {
         val useCase: FriendsFlyingUseCase = mock()
-        whenever(useCase.state).thenReturn(
+        val clock = FakeClock(wallMs = 1_000L)
+        whenever(useCase.publicState).thenReturn(
             MutableStateFlow(
                 FriendsFlyingSnapshot(transportAvailability = liveFollowAvailableTransport())
             )
         )
+        whenever(useCase.followingState).thenReturn(
+            MutableStateFlow(
+                FollowingLiveSnapshot(transportAvailability = liveFollowAvailableTransport())
+            )
+        )
+        whenever(useCase.accountState).thenReturn(
+            MutableStateFlow(signedOutAccountSnapshot())
+        )
 
-        val viewModel = FriendsFlyingViewModel(useCase)
+        val viewModel = FriendsFlyingViewModel(useCase, clock)
         advanceUntilIdle()
 
         viewModel.onSheetShown()
         viewModel.onSheetShown()
         advanceUntilIdle()
 
-        verify(useCase, times(1)).refresh()
+        verify(useCase, times(1)).refreshPublic()
+        verify(useCase, times(1)).refreshFollowing()
     }
 
     @Test
-    fun selectPilot_emitsShareCodeWatchHandoffEvent() = runTest {
+    fun selectPilot_emitsWatchHandoffEvent() = runTest {
         val useCase: FriendsFlyingUseCase = mock()
-        whenever(useCase.state).thenReturn(
+        val clock = FakeClock(wallMs = 1_000L)
+        whenever(useCase.publicState).thenReturn(
             MutableStateFlow(
-                FriendsFlyingSnapshot(
-                    items = listOf(
-                        LiveFollowActivePilot(
-                            sessionId = "watch-1",
-                            shareCode = "WATCH123",
-                            status = "active",
-                            displayLabel = "Pilot One",
-                            lastPositionWallMs = 100L,
-                            latest = null
-                        )
-                    ),
-                    transportAvailability = liveFollowAvailableTransport()
-                )
+                FriendsFlyingSnapshot(transportAvailability = liveFollowAvailableTransport())
             )
         )
+        whenever(useCase.followingState).thenReturn(
+            MutableStateFlow(
+                FollowingLiveSnapshot(transportAvailability = liveFollowAvailableTransport())
+            )
+        )
+        whenever(useCase.accountState).thenReturn(
+            MutableStateFlow(signedOutAccountSnapshot())
+        )
 
-        val viewModel = FriendsFlyingViewModel(useCase)
+        val viewModel = FriendsFlyingViewModel(useCase, clock)
         advanceUntilIdle()
 
+        val selection = FriendsFlyingPilotSelection(
+            watchKey = "WATCH123",
+            watchTargetType = FriendsFlyingWatchTargetType.PUBLIC_SHARE_CODE,
+            shareCode = "WATCH123",
+            displayLabel = "Pilot One",
+            statusLabel = "Active",
+            altitudeLabel = null,
+            speedLabel = null,
+            headingLabel = null,
+            recencyLabel = "Updated < 1 s ago",
+            isStale = false
+        )
         val eventDeferred = async(start = CoroutineStart.UNDISPATCHED) { viewModel.events.first() }
-        viewModel.selectPilot("watch123")
+
+        viewModel.selectPilot(selection)
 
         assertEquals(
-            FriendsFlyingEvent.OpenWatch("WATCH123"),
+            FriendsFlyingEvent.OpenWatch(selection),
             eventDeferred.await()
         )
     }

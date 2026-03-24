@@ -28,7 +28,8 @@ class MapInitializer(
     private val snailTrailManager: SnailTrailManager,
     private val coroutineScope: CoroutineScope,
     private val airspaceUseCase: AirspaceUseCase,
-    private val waypointFilesUseCase: WaypointFilesUseCase
+    private val waypointFilesUseCase: WaypointFilesUseCase,
+    private val localOwnshipRenderEnabledProvider: () -> Boolean = { true }
 ) {
     companion object {
         private const val LOG_TAG = "MapInitializer"
@@ -117,8 +118,11 @@ class MapInitializer(
 
     private fun setupInitialPosition(map: MapLibreMap) {
         val cameraSnapshot = mapStateReader.lastCameraSnapshot.value
-        val fallbackLocation = mapStateReader.currentUserLocation.value
-            ?: mapStateReader.savedLocation.value
+        val fallbackLocation = if (localOwnshipRenderEnabledProvider()) {
+            mapStateReader.currentUserLocation.value
+        } else {
+            null
+        } ?: mapStateReader.savedLocation.value
         val target = cameraSnapshot?.target ?: fallbackLocation
         val targetLatLng = target?.let {
             org.maplibre.android.geometry.LatLng(it.latitude, it.longitude)
@@ -156,6 +160,7 @@ class MapInitializer(
             // Initialize blue location overlay
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()
+            mapState.blueLocationOverlay?.setVisible(localOwnshipRenderEnabledProvider())
             overlayManager.initializeTrafficOverlays(map)
             overlayManager.reapplyForecastOverlay()
             overlayManager.reapplySkySightSatelliteOverlay()

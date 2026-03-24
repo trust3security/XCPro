@@ -112,6 +112,8 @@ class DisplayPoseCoordinatorTest {
         }
 
         override fun nowMs(): Long = nowMsValue
+
+        override fun clear() = Unit
     }
 
     private class FakePipeline : PosePipeline {
@@ -134,5 +136,7 @@ class DisplayPoseCoordinatorTest {
         ): DisplayPoseSmoother.DisplayPose? {
             return selectPoseResult
         }
+
+        override fun clear() = Unit
     }
 }

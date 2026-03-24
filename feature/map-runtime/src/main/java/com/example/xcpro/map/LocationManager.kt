@@ -24,6 +24,7 @@ class LocationManager(
     private val cameraUpdateGate: MapCameraUpdateGate,
     private val locationOverlayPort: MapLocationOverlayPort,
     private val displayPoseSurfacePort: MapDisplayPoseSurfacePort,
+    private val localOwnshipRenderEnabledProvider: () -> Boolean = { true },
     private val replayHeadingProvider: ((Long) -> Double?)? = null,
     private val replayFixProvider: ((Long) -> ReplayDisplayPose?)? = null
 ) : MapLocationRuntimePort {
@@ -122,6 +123,7 @@ class LocationManager(
         positionController = positionController,
         frameLogger = frameLogger
     )
+    private var localOwnshipRenderEnabled: Boolean = localOwnshipRenderEnabledProvider()
 
     // Map UI state proxies (MapStateStore is the single owner)
     private var currentUserLocation: LatLng?
@@ -163,6 +165,9 @@ class LocationManager(
         location: MapLocationUiModel,
         orientation: OrientationData
     ) {
+        if (!localOwnshipRenderEnabled) {
+            return
+        }
         displayPoseRenderer.updateOrientation(orientation)
         if (!isValidCoordinate(location.latitude, location.longitude)) {
             logLocationDebug {
@@ -172,6 +177,22 @@ class LocationManager(
         }
         val envelope = feedAdapter.fromGps(location, orientation)
         pushRawFix(envelope)
+    }
+
+    override fun setLocalOwnshipRenderEnabled(enabled: Boolean) {
+        if (localOwnshipRenderEnabled == enabled) {
+            return
+        }
+        localOwnshipRenderEnabled = enabled
+        if (!enabled) {
+            displayPoseRenderer.clear()
+            currentUserLocation = null
+            stateActions.setShowRecenterButton(false)
+            stateActions.setShowReturnButton(false)
+            locationOverlayPort.setBlueLocationVisible(false)
+            return
+        }
+        requestRenderFrameIfEnabled()
     }
 
     override fun updateOrientation(orientation: OrientationData) {
@@ -213,6 +234,9 @@ class LocationManager(
     }
 
     private fun renderDisplayFrame() {
+        if (!localOwnshipRenderEnabled) {
+            return
+        }
         displayPoseRenderer.renderDisplayFrame { poseLocation, zoom ->
             saveLocation(poseLocation, zoom, 0.0)
             logLocationDebug {
@@ -226,6 +250,9 @@ class LocationManager(
         liveData: RealTimeFlightData,
         orientation: OrientationData
     ) {
+        if (!localOwnshipRenderEnabled) {
+            return
+        }
         logLocationDebug {
             val groundSpeedKnots = String.format(
                 "%.1f",

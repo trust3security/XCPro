@@ -1,8 +1,11 @@
 package com.example.xcpro.livefollow.pilot
 
+import com.example.xcpro.livefollow.account.signedOutAccountSnapshot
+import com.example.xcpro.livefollow.data.session.LiveFollowCommandResult
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
+import com.example.xcpro.livefollow.data.session.LiveFollowSessionVisibility
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentityType
 import com.example.xcpro.livefollow.model.LiveFollowConfidence
@@ -22,7 +25,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -53,6 +59,9 @@ class LiveFollowPilotViewModelTest {
         val useCase: LiveFollowPilotUseCase = mock()
         whenever(useCase.sessionState).thenReturn(sessionState)
         whenever(useCase.ownshipSnapshot).thenReturn(ownshipSnapshot)
+        whenever(useCase.accountState).thenReturn(
+            MutableStateFlow(signedOutAccountSnapshot())
+        )
 
         val viewModel = LiveFollowPilotViewModel(useCase)
         advanceUntilIdle()
@@ -86,17 +95,107 @@ class LiveFollowPilotViewModelTest {
         val useCase: LiveFollowPilotUseCase = mock()
         whenever(useCase.sessionState).thenReturn(sessionState)
         whenever(useCase.ownshipSnapshot).thenReturn(ownshipSnapshot)
+        whenever(useCase.accountState).thenReturn(
+            MutableStateFlow(signedOutAccountSnapshot())
+        )
 
         val viewModel = LiveFollowPilotViewModel(useCase)
         advanceUntilIdle()
 
         assertEquals("SHARE123", viewModel.uiState.value.shareCode)
         assertEquals(true, viewModel.uiState.value.canCopyShareCode)
+        assertEquals(LiveFollowPilotShareIndicatorState.LIVE, viewModel.uiState.value.shareIndicatorState)
 
         viewModel.copyShareCode()
         advanceUntilIdle()
 
         assertEquals("Share code copied.", viewModel.uiState.value.statusMessage)
+        assertEquals(LiveFollowPilotShareIndicatorState.LIVE, viewModel.uiState.value.shareIndicatorState)
+    }
+
+    @Test
+    fun autoStartSharing_waitsForOwnshipSnapshotBeforeCallingStartSharing() = runTest {
+        val sessionState = MutableStateFlow(idleAvailableSession())
+        val ownshipSnapshot = MutableStateFlow<LiveOwnshipSnapshot?>(null)
+        val useCase: LiveFollowPilotUseCase = mock()
+        whenever(useCase.sessionState).thenReturn(sessionState)
+        whenever(useCase.ownshipSnapshot).thenReturn(ownshipSnapshot)
+        whenever(useCase.accountState).thenReturn(
+            MutableStateFlow(signedOutAccountSnapshot())
+        )
+        whenever(useCase.startSharing(any())).thenReturn(LiveFollowCommandResult.Success)
+
+        val viewModel = LiveFollowPilotViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.autoStartSharingWhenReady()
+        advanceUntilIdle()
+        verify(useCase, never()).startSharing(any())
+
+        ownshipSnapshot.value = sampleOwnshipSnapshot()
+        advanceUntilIdle()
+
+        verify(useCase).startSharing(LiveFollowSessionVisibility.PUBLIC)
+    }
+
+    @Test
+    fun autoStartSharing_startsImmediatelyWhenOwnshipSnapshotAlreadyAvailable() = runTest {
+        val sessionState = MutableStateFlow(idleAvailableSession())
+        val ownshipSnapshot = MutableStateFlow(sampleOwnshipSnapshot())
+        val useCase: LiveFollowPilotUseCase = mock()
+        whenever(useCase.sessionState).thenReturn(sessionState)
+        whenever(useCase.ownshipSnapshot).thenReturn(ownshipSnapshot)
+        whenever(useCase.accountState).thenReturn(
+            MutableStateFlow(signedOutAccountSnapshot())
+        )
+        whenever(useCase.startSharing(any())).thenReturn(LiveFollowCommandResult.Success)
+
+        val viewModel = LiveFollowPilotViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.autoStartSharingWhenReady()
+        advanceUntilIdle()
+
+        verify(useCase).startSharing(LiveFollowSessionVisibility.PUBLIC)
+    }
+
+    @Test
+    fun autoStartSharing_failure_surfacesFailedIndicator() = runTest {
+        val sessionState = MutableStateFlow(idleAvailableSession())
+        val ownshipSnapshot = MutableStateFlow(sampleOwnshipSnapshot())
+        val useCase: LiveFollowPilotUseCase = mock()
+        whenever(useCase.sessionState).thenReturn(sessionState)
+        whenever(useCase.ownshipSnapshot).thenReturn(ownshipSnapshot)
+        whenever(useCase.accountState).thenReturn(
+            MutableStateFlow(signedOutAccountSnapshot())
+        )
+        whenever(useCase.startSharing(any())).thenReturn(
+            LiveFollowCommandResult.Failure("Start failed.")
+        )
+
+        val viewModel = LiveFollowPilotViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.autoStartSharingWhenReady()
+        advanceUntilIdle()
+
+        assertEquals(LiveFollowPilotShareIndicatorState.FAILED, viewModel.uiState.value.shareIndicatorState)
+        assertEquals("Start failed.", viewModel.uiState.value.statusMessage)
+    }
+
+    private fun idleAvailableSession(): LiveFollowSessionSnapshot {
+        return LiveFollowSessionSnapshot(
+            sessionId = null,
+            role = LiveFollowSessionRole.NONE,
+            lifecycle = LiveFollowSessionLifecycle.IDLE,
+            runtimeMode = LiveFollowRuntimeMode.LIVE,
+            watchIdentity = null,
+            directWatchAuthorized = false,
+            transportAvailability = com.example.xcpro.livefollow.model.liveFollowAvailableTransport(),
+            sideEffectsAllowed = true,
+            replayBlockReason = LiveFollowReplayBlockReason.NONE,
+            lastError = null
+        )
     }
 
     private fun sampleOwnshipSnapshot(): LiveOwnshipSnapshot {

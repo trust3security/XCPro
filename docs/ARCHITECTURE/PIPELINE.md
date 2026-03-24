@@ -37,11 +37,12 @@ Sensors
        -> LiveFollowSessionRepository
        -> LiveFollowPilotViewModel
        -> LiveFollowPilotScreen
+       -> Flying-mode map status indicator
     -> LiveFollowWatchUseCase + WatchTrafficRepository
        -> LiveFollowWatchViewModel
        -> `livefollow/watch/{sessionId}` route validation + join
        -> handoff to `map`
-       -> MapLiveFollowRuntimeLayer (render-only)
+       -> MapLiveFollowRuntimeLayer (render-only watched glider + watched task overlay)
   -> FlightDataUseCase
   -> MapScreenViewModel
      -> FlightDataUiAdapter (MapScreenObservers)
@@ -249,27 +250,36 @@ Flight-state detector feed:
 
 Authoritative owners:
 - ownship flight truth stays in `FlightDataRepository`; `feature:livefollow` reads it only through `LiveOwnshipSnapshotSource`
+- pilot task truth stays in `TaskManagerCoordinator.taskSnapshotFlow`; LiveFollow consumes it only through a narrow exported snapshot boundary
 - session lifecycle and watch membership truth stay in `LiveFollowSessionRepository`
 - watch source arbitration truth stays in `WatchTrafficRepository`
 - map/task rendering stays on the map side; `feature:map` is not the LiveFollow owner
 
 Pilot path:
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/ownship/FlightDataLiveOwnshipSnapshotSource.kt`
-  - exports ownship snapshot data from the existing live flight SSOT for LiveFollow.
+  - exports ownship snapshot data from the existing live flight SSOT for LiveFollow, including optional `aglMeters` when the flight SSOT carries a known AGL timestamp.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotUseCase.kt`
   - builds the pilot start request from the exported ownship snapshot plus optional callsign alias input.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/task/LiveFollowTaskSnapshotSource.kt`
+  and `feature/map/src/main/java/com/example/xcpro/livefollow/data/task/TaskCoordinatorLiveFollowTaskSnapshotSource.kt`
+  - define the narrow LiveFollow task-export seam and map-owned adapter from `TaskManagerCoordinator.taskSnapshotFlow`.
+  - export geometry-only watched-task inputs for the transport path and filter non-geometry churn so active-leg-only changes do not trigger task re-upload.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/LiveFollowSessionRepository.kt`
   - remains the local session truth owner, carries explicit session transport availability from the session gateway boundary, enforces replay-safe or transport-unavailable command blocking before any gateway side effect, and uploads eligible ownship snapshots only while the active pilot session is live and side effects are allowed.
+  - uploads the exported pilot task snapshot on session start and when task geometry changes; if the exported task becomes `null` while the pilot session is active, it routes an explicit clear signal through the task transport path.
+  - task geometry is not attached to every position tick.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt`
-  - current deployed-API transport adapter for `POST /api/v1/session/start`, `POST /api/v1/position`, and `POST /api/v1/session/end`.
+  - current deployed-API transport adapter for `POST /api/v1/session/start`, `POST /api/v1/position`, `POST /api/v1/task/upsert`, and `POST /api/v1/session/end`.
   - stores `write_token` transport-locally and surfaces `session_id` plus `share_code` into the local session truth; `write_token` stays out of UI-facing state.
-  - maps upload wire time from ownship `fixWallMs`, keeps monotonic ordering client-local, and blocks replay-side writes.
+  - maps upload wire time from ownship `fixWallMs`, carries optional wire `agl_meters`, emits explicit task-clear payloads (`clear_task = true`) when no task is shared, dedupes unchanged task upsert/clear payloads transport-locally, keeps monotonic ordering client-local, and blocks replay-side writes.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/UnavailableLiveFollowSessionGateway.kt`
   - retained explicit transport-limited unavailable adapter for environments where the backend transport is not bound.
   - exports explicit transport-unavailable state plus user-visible failure; it is not a silent fallback and it is not production backend behavior.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotViewModel.kt`
   and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotScreen.kt`
   - own pilot presentation state and the limited Start sharing / Stop sharing route shell.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt`
+  - renders the compact Flying-mode status light and dropdown actions on the map using `LiveFollowPilotViewModel` state only.
 
 Watch path:
 - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
@@ -285,7 +295,7 @@ Watch path:
   - thin UI-to-repository seam for refresh orchestration.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingViewModel.kt`
   and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingScreen.kt`
-  - own the bottom-sheet list UI, empty/loading/replay-block states, and item-tap handoff into the existing share-code watch route.
+  - own the bottom-sheet list UI, empty/loading/replay-block states, selected-row reflection from shared watch UI state, and item-tap handoff into the shared map-entry watch ViewModel.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt`
   - validates `sessionId`, calls `joinWatchSession(sessionId)` once, then hands off to the existing `map` route.
   - does not auto-leave on Composable disposal; leaving remains an explicit user action.
@@ -293,29 +303,40 @@ Watch path:
   - owns the simple share-code watch input shell and routes valid entries to the share-code watch handoff path.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/WatchTrafficRepository.kt`
   - combines session state, typed OGN traffic candidates, and the direct-watch source behind the existing arbitration/state-machine seams.
-  - current deployed-API slice keeps the direct-watch route keyed by the session-owned lookup (`session_id` or `share_code`) and does not resolve OGN-backed identity from server payloads.
+  - current deployed-API slice keeps the direct-watch route keyed by the session-owned lookup (`session_id` or `share_code`), carries the watched task snapshot through the same watch SSOT, and does not resolve OGN-backed identity from server payloads.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSource.kt`
   - polls `GET /api/v1/live/{session_id}` for legacy session-id watch routes and `GET /api/v1/live/share/{share_code}` for share-code watch routes, based on the session-owned watch lookup.
-  - falls back from `latest` to `positions.last()` when needed, keeps `canonicalIdentity` null, leaves task metadata unavailable for this slice, and derives freshness/stale behavior locally from XCPro clocks.
+  - falls back from `latest` to `positions.last()` when needed, parses optional `agl_meters` into the watched direct sample, parses optional single-pilot task payload into the watched task snapshot, publishes `task = null` when the server returns no active task after a clear, keeps `canonicalIdentity` null, and derives freshness/stale behavior locally from XCPro clocks.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/UnavailableDirectWatchTrafficSource.kt`
   - retained explicit transport-limited unavailable adapter for the direct-watch feed.
   - exports explicit direct transport-unavailable state and keeps direct-source unavailability visible in watch state instead of simulating live direct traffic.
 - `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchViewModel.kt`
   - maps session/watch truth plus explicit session/direct transport availability into watch UI state and render state only.
+  - owns the currently selected watched-pilot hint during Friends Flying browse/switch flows so the compact top panel, bottom telemetry strip, and list highlight stay aligned until the underlying watch session catches up.
+  - exposes optional watched `panelAglLabel` only from the true watched transport path; no UI-side AGL synthesis is allowed.
 
 Map/task render handoff:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
-  - consumes `LiveFollowWatchViewModel.mapRenderState` as prepared render input only.
-  - consumes `TaskRenderSnapshot` from the map-owned seam only; no task coordinator or manager bypass is introduced.
+  - consumes `LiveFollowWatchViewModel.uiState` as prepared render input only.
+  - resolves single watched-aircraft overlay visibility, watched-task overlay visibility, and one-shot focus on the map side only after the selected watch target matches the live session-owned share code.
+  - in Flying mode, also hosts the compact pilot status indicator by collecting `LiveFollowPilotViewModel.uiState`
+    and routing start/stop commands back through that existing owner; dropdown visibility remains local UI state.
+- `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+  - owns the read-only single watched-aircraft MapLibre source/layer runtime for Friends Flying observer mode, including the enlarged watched-glider icon scale while preserving track/heading rotation.
+- `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchTaskOverlay.kt`
+  - owns the read-only single watched-pilot task MapLibre runtime for Friends Flying observer mode and renders turnpoint cylinders plus connecting legs.
+- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt`
+  - owns the compact watched-pilot top panel and bottom telemetry strip chrome rendered over the shared map host.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
   and `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - thread the map-side task render snapshot provider down to the LiveFollow runtime layer without moving task truth into `feature:livefollow`.
+  - thread the map runtime access, watched-pilot focus callback, and Flying-mode overlay gate down to the LiveFollow runtime layer without moving task truth into `feature:livefollow`.
 
 Rules:
 - LiveFollow does not create a second ownship pipeline.
 - Watch mode does not depend on ordinary OGN overlay preference state to stay visible.
-- Current deployed-API slice uses only start/end/upload/live-read HTTP endpoints; no WebSocket, share-code watch flow, task upsert, FCM, or notification runtime is wired here.
-- Task attach remains blocked and unavailable in this first current-API transport slice.
+- Current deployed-API slice uses start/end/position-upload/task-upsert/live-read HTTP endpoints; no WebSocket, multi-pilot spectator mode, FCM, or notification runtime is wired here.
+- Watched task geometry is uploaded rarely from pilot task SSOT: on share start and on task-geometry change only, never on every position tick.
+- Friends Flying watched-task rendering is single-pilot and read-only; it does not clone the full pilot map/task shell.
 
 ## 4) Use Case -> ViewModel
 

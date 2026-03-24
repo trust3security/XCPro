@@ -12,6 +12,8 @@ import com.example.xcpro.livefollow.model.LiveFollowIdentityProfile
 import com.example.xcpro.livefollow.model.LiveFollowSourceEligibility
 import com.example.xcpro.livefollow.model.LiveFollowSourceState
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
+import com.example.xcpro.livefollow.model.LiveFollowTaskPoint
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
@@ -33,6 +35,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -115,6 +118,7 @@ class WatchTrafficRepositoryTest {
         assertEquals(LiveFollowSourceEligibility.UNRESOLVED_IDENTITY, snapshot.ognEligibility)
         assertEquals(LiveFollowSourceEligibility.SELECTABLE, snapshot.directEligibility)
         assertEquals("DIRECT-1", snapshot.aircraft?.displayLabel)
+        assertEquals(45.0, requireNotNull(snapshot.aircraft?.aglMeters), 0.0)
         } finally {
             scope.cancel()
         }
@@ -211,6 +215,85 @@ class WatchTrafficRepositoryTest {
         }
     }
 
+    @Test
+    fun clearingDirectTask_doesNotChangeFreshWatchedPilotLiveness() = runTest {
+        val scope = repoScope()
+        try {
+        val clock = FakeClock(monoMs = 12_000L, wallMs = 0L)
+        val sessionState = MutableStateFlow(
+            watchSessionSnapshot(
+                watchIdentity = null,
+                directWatchAuthorized = true
+            )
+        )
+        val directSource = FakeDirectWatchTrafficSource()
+        directSource.aircraft.value = directAircraftSample(fixMonoMs = 11_950L)
+        directSource.task.value = sampleTaskSnapshot()
+        val repository = WatchTrafficRepository(
+            scope = scope,
+            clock = clock,
+            sessionState = sessionState,
+            ognTrafficRepository = FakeOgnTrafficRepository(),
+            directWatchTrafficSource = directSource
+        )
+        runCurrent()
+
+        assertEquals(LiveFollowSessionState.LIVE_DIRECT, repository.state.value.sourceState)
+        assertNotNull(repository.state.value.aircraft)
+        assertEquals("task-alpha", repository.state.value.task?.taskName)
+
+        directSource.task.value = null
+        runCurrent()
+
+        assertEquals(LiveFollowSessionState.LIVE_DIRECT, repository.state.value.sourceState)
+        assertNotNull(repository.state.value.aircraft)
+        assertNull(repository.state.value.task)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun watchedTask_isExposedFromDirectSessionEvenWhenOgnWinsAircraftSelection() = runTest {
+        val scope = repoScope()
+        try {
+        val clock = FakeClock(monoMs = 12_000L, wallMs = 0L)
+        val sessionState = MutableStateFlow(
+            watchSessionSnapshot(
+                watchIdentity = canonicalProfile("AB12CD"),
+                directWatchAuthorized = true
+            )
+        )
+        val ognRepository = FakeOgnTrafficRepository()
+        ognRepository.targets.value = listOf(
+            ognTarget(
+                addressHex = "AB12CD",
+                addressType = OgnAddressType.FLARM,
+                lastSeenMillis = 11_900L
+            )
+        )
+        val directSource = FakeDirectWatchTrafficSource()
+        directSource.aircraft.value = directAircraftSample(fixMonoMs = 11_800L)
+        directSource.task.value = sampleTaskSnapshot()
+        val repository = WatchTrafficRepository(
+            scope = scope,
+            clock = clock,
+            sessionState = sessionState,
+            ognTrafficRepository = ognRepository,
+            directWatchTrafficSource = directSource
+        )
+        runCurrent()
+
+        val snapshot = repository.state.value
+        assertEquals(LiveFollowSessionState.LIVE_OGN, snapshot.sourceState)
+        assertEquals(LiveFollowSourceType.OGN, snapshot.activeSource)
+        assertEquals("task-alpha", snapshot.task?.taskName)
+        assertEquals(2, snapshot.task?.points?.size)
+        } finally {
+            scope.cancel()
+        }
+    }
+
     private fun TestScope.repoScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
 
@@ -281,6 +364,7 @@ class WatchTrafficRepositoryTest {
             latitudeDeg = -33.91,
             longitudeDeg = 151.21,
             altitudeMslMeters = 510.0,
+            aglMeters = 45.0,
             groundSpeedMs = 13.0,
             trackDeg = 185.0,
             verticalSpeedMs = 2.0,
@@ -292,6 +376,7 @@ class WatchTrafficRepositoryTest {
 
     private class FakeDirectWatchTrafficSource : DirectWatchTrafficSource {
         override val aircraft = MutableStateFlow<DirectWatchAircraftSample?>(null)
+        override val task = MutableStateFlow<LiveFollowTaskSnapshot?>(null)
         override val transportAvailability = MutableStateFlow(liveFollowAvailableTransport())
     }
 
@@ -326,5 +411,29 @@ class WatchTrafficRepositoryTest {
         override fun stop() {
             isEnabled.value = false
         }
+    }
+
+    private fun sampleTaskSnapshot(): LiveFollowTaskSnapshot {
+        return LiveFollowTaskSnapshot(
+            taskName = "task-alpha",
+            points = listOf(
+                LiveFollowTaskPoint(
+                    order = 0,
+                    latitudeDeg = -33.9,
+                    longitudeDeg = 151.2,
+                    radiusMeters = 10_000.0,
+                    name = "Start",
+                    type = "START_LINE"
+                ),
+                LiveFollowTaskPoint(
+                    order = 1,
+                    latitudeDeg = -33.8,
+                    longitudeDeg = 151.3,
+                    radiusMeters = 500.0,
+                    name = "TP1",
+                    type = "TURN_POINT_CYLINDER"
+                )
+            )
+        )
     }
 }

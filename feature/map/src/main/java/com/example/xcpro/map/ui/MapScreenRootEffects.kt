@@ -113,7 +113,8 @@ internal fun MapScreenComposeAndLifecycleEffects(
     replaySessionState: SessionState,
     useRenderFrameSync: Boolean,
     suppressLiveGps: Boolean,
-    allowSensorStart: Boolean
+    allowSensorStart: Boolean,
+    renderLocalOwnship: Boolean
 ) {
     val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
     val orientationData by orientationFlow.collectAsStateWithLifecycle()
@@ -138,7 +139,8 @@ internal fun MapScreenComposeAndLifecycleEffects(
         replaySessionState = replaySessionState,
         useRenderFrameSync = useRenderFrameSync,
         suppressLiveGps = suppressLiveGps,
-        allowSensorStart = allowSensorStart
+        allowSensorStart = allowSensorStart,
+        renderLocalOwnship = renderLocalOwnship
     )
     MapLifecycleEffects.LifecycleObserverEffect(lifecycleManager)
     DisposableEffect(lifecycleManager, runtimeController) {

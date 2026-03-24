@@ -46,6 +46,14 @@ internal class DisplayPoseRenderCoordinator(
         displayPoseFrameListener = listener
     }
 
+    fun clear() {
+        poseCoordinator.clear()
+        lastDisplayPoseLocation = null
+        lastDisplayPoseTimestampMs = 0L
+        lastDisplayPoseFrameId = 0L
+        displayFrameCounter = 0L
+    }
+
     fun renderDisplayFrame(onInitialCenteredZoom: (location: LatLng, zoom: Double) -> Unit) {
         val nowMs = poseCoordinator.nowMs()
         val mode = mapStateReader.displayPoseMode.value

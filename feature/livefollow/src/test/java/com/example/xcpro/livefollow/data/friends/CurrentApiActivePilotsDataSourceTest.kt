@@ -20,7 +20,7 @@ import org.junit.Test
 class CurrentApiActivePilotsDataSourceTest {
 
     @Test
-    fun fetchActivePilots_usesActiveEndpoint_andMapsPayload() = runTest {
+    fun fetchActivePilots_usesActiveEndpoint_andMapsDeployedArrayPayload() = runTest {
         val requestedPath = AtomicReference<String>()
         val dataSource = CurrentApiActivePilotsDataSource(
             httpClient = OkHttpClient.Builder().addInterceptor(
@@ -31,7 +31,7 @@ class CurrentApiActivePilotsDataSourceTest {
                         .protocol(Protocol.HTTP_1_1)
                         .code(200)
                         .message("OK")
-                        .body(samplePayload().toResponseBody(JSON_MEDIA_TYPE))
+                        .body(arrayRootPayload().toResponseBody(JSON_MEDIA_TYPE))
                         .build()
                 }
             ).build(),
@@ -60,6 +60,77 @@ class CurrentApiActivePilotsDataSourceTest {
     }
 
     @Test
+    fun fetchActivePilots_acceptsObjectRootPayloadForCompatibility() = runTest {
+        val dataSource = CurrentApiActivePilotsDataSource(
+            httpClient = OkHttpClient.Builder().addInterceptor(
+                Interceptor { chain ->
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body(objectRootPayload().toResponseBody(JSON_MEDIA_TYPE))
+                        .build()
+                }
+            ).build(),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler)
+        )
+
+        val result = dataSource.fetchActivePilots()
+
+        require(result is ActivePilotsFetchResult.Success)
+        assertEquals(2, result.items.size)
+        assertEquals("WATCH123", result.items.first().shareCode)
+    }
+
+    @Test
+    fun fetchActivePilots_emptyArrayPayload_returnsSuccessEmptyList() = runTest {
+        val dataSource = CurrentApiActivePilotsDataSource(
+            httpClient = OkHttpClient.Builder().addInterceptor(
+                Interceptor { chain ->
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("[]".toResponseBody(JSON_MEDIA_TYPE))
+                        .build()
+                }
+            ).build(),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler)
+        )
+
+        val result = dataSource.fetchActivePilots()
+
+        require(result is ActivePilotsFetchResult.Success)
+        assertTrue(result.items.isEmpty())
+    }
+
+    @Test
+    fun fetchActivePilots_skipsMalformedRows_withoutFailingWholeList() = runTest {
+        val dataSource = CurrentApiActivePilotsDataSource(
+            httpClient = OkHttpClient.Builder().addInterceptor(
+                Interceptor { chain ->
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body(malformedRowPayload().toResponseBody(JSON_MEDIA_TYPE))
+                        .build()
+                }
+            ).build(),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler)
+        )
+
+        val result = dataSource.fetchActivePilots()
+
+        require(result is ActivePilotsFetchResult.Success)
+        assertEquals(1, result.items.size)
+        assertEquals("VALID123", result.items.single().shareCode)
+    }
+
+    @Test
     fun fetchActivePilots_httpFailure_marksTransportDegraded() = runTest {
         val dataSource = CurrentApiActivePilotsDataSource(
             httpClient = OkHttpClient.Builder().addInterceptor(
@@ -83,7 +154,37 @@ class CurrentApiActivePilotsDataSourceTest {
         assertTrue(result.message.contains("active list unavailable"))
     }
 
-    private fun samplePayload(): String {
+    private fun arrayRootPayload(): String {
+        return """
+            [
+              {
+                "session_id": "watch-1",
+                "share_code": "WATCH123",
+                "status": "active",
+                "display_label": "Pilot One",
+                "last_position_at": "2024-03-21T00:20:05Z",
+                "latest": {
+                  "lat": -33.9100,
+                  "lon": 151.2100,
+                  "alt": 510.0,
+                  "speed": 13.0,
+                  "heading": 185.0,
+                  "timestamp": "2024-03-21T00:20:05Z"
+                }
+              },
+              {
+                "session_id": "watch-2",
+                "share_code": "z4waa57n",
+                "status": "stale",
+                "display_label": "",
+                "last_position_at": "2024-03-21T00:18:05Z",
+                "latest": null
+              }
+            ]
+        """.trimIndent()
+    }
+
+    private fun objectRootPayload(): String {
         return """
             {
               "items": [
@@ -113,6 +214,37 @@ class CurrentApiActivePilotsDataSourceTest {
               ],
               "generated_at": "2024-03-21T00:20:10Z"
             }
+        """.trimIndent()
+    }
+
+    private fun malformedRowPayload(): String {
+        return """
+            [
+              {
+                "session_id": "watch-1",
+                "share_code": "VALID123",
+                "status": "active",
+                "display_label": "Pilot One",
+                "last_position_at": "2024-03-21T00:20:05Z",
+                "latest": {
+                  "lat": -33.9100,
+                  "lon": 151.2100,
+                  "alt": 510.0,
+                  "speed": 13.0,
+                  "heading": 185.0,
+                  "timestamp": "2024-03-21T00:20:05Z"
+                }
+              },
+              {
+                "session_id": "watch-2",
+                "share_code": "BADROW1",
+                "status": "active",
+                "display_label": "Broken Pilot",
+                "latest": {
+                  "lat": -33.9200
+                }
+              }
+            ]
         """.trimIndent()
     }
 

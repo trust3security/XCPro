@@ -2,41 +2,44 @@
 
 ## Purpose
 
-Use this checklist to validate the **extracted current deployed API contract** before starting
-XCPro transport adapter implementation.
+Use this checklist as a recurring audit gate whenever the **current deployed
+LiveFollow wire contract** changes.
 
-This checklist assumes:
-- the current deployed simple API is authoritative for current work
-- the older nested `/api/v1/client/sessions/...` API is future design only
-- app-side LiveFollow Phases 1–4 are already merged
-- the real server code has now been inspected
+This checklist is not the contract owner. Contract ownership stays in:
+
+- `docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v3.md`
 
 ---
 
-## ✅ REQUIRED
+## Required
 
-### Current deployed API is explicit
-Confirm the docs clearly define:
+### Current deployed endpoints are explicit
+Confirm the contract doc defines:
+
 - `POST /api/v1/session/start`
 - `POST /api/v1/position`
 - `POST /api/v1/task/upsert`
 - `POST /api/v1/session/end`
+- `GET /api/v1/live/active`
 - `GET /api/v1/live/{session_id}`
 - `GET /api/v1/live/share/{share_code}`
 - `GET /`
 
-### Current request/response bodies are frozen
-Confirm the docs define exact request/response bodies for:
+### Request and response bodies are frozen
+Confirm the contract doc freezes the wire shapes for:
+
 - session start
 - position upload
 - task upsert
 - session end
+- active-pilots list
 - live read by session id
 - live read by share code
 - root health
 
-### Current auth model is explicit
+### Auth model is explicit
 Confirm the docs clearly define:
+
 - which endpoints require `X-Session-Token`
 - which endpoints are public
 - that `session/start` returns:
@@ -45,128 +48,94 @@ Confirm the docs clearly define:
   - `status`
   - `write_token`
 
-### Lifecycle semantics are explicit
-Confirm the docs clearly define:
-- active / stale / ended behavior
-- stale threshold
-- ended-session write rejection
-- reactivation after a later accepted position
-- whether task upsert affects stale/active status
-
-### Ownership split is explicit
-Confirm the docs distinguish:
-
-**Server-owned**
-- `session_id`
-- `share_code`
-- `write_token`
-- session lifecycle/status
-- authorization outcomes
-- server validation/dedupe decisions
-- server response payload fields
-
-**Client transport-local**
-- `transportAvailability`
-- `lastError`
-- retry/backoff/reconnect state
-- local pending-command state
-- local monotonic freshness derivation
-- direct-vs-OGN arbitration
-
-### Time semantics are explicit
-Confirm the docs say:
-- XCPro keeps `fixMonoMs` internally
-- the wire/server contract uses wall-time / ordering semantics
-- device monotonic time is not cross-system truth
-
-### Telemetry upload rules are explicit
+### Telemetry rules are explicit
 Confirm the contract defines:
-- all currently required telemetry fields
-- which app-side nullable fields must be gated before upload
-- speed-unit assumption / confirmation
-- ordering semantics
-- dedupe behavior
-- jump validation behavior
 
-### Follow/read integration rules are explicit
-Confirm the docs explain:
-- whether current first XCPro watch integration should use `share_code`
-- whether `session_id` read is still needed for client UX
-- that current live-read shape is a degraded polling transport relative to the app’s richer direct-watch seam
-- whether missing read fields (typed identity, vertical speed, monotonic age) are acceptable for first integration
+- required position fields
+- optional `agl_meters`
+- that client monotonic fields are rejected on the wire
+- speed units and wall-time timestamp semantics
+- ordering, dedupe, and impossible-jump rules
+
+### Task rules are explicit
+Confirm the contract defines:
+
+- full task upsert shape
+- explicit `clear_task` shape
+- that clear cannot be combined with `task_name` or `task`
+- revision and dedupe behavior
+- that live reads return `task: null` after clear
+
+### Active-pilots list behavior is explicit
+Confirm the contract defines:
+
+- that `GET /api/v1/live/active` returns a JSON list
+- the list-item fields
+- inclusion rules for active/stale/ended/never-started sessions
+- current `display_label` behavior
+- `latest` nullability and `agl_meters` behavior
+
+### Live-read behavior is explicit
+Confirm the contract defines:
+
+- public read by both `session_id` and `share_code`
+- the `latest` and `positions` payload shapes
+- optional `agl_meters` in read payloads
+- `task` nullability before any task and after clear
+- that the current read payload is still a degraded transport relative to XCPro's richer internal watch seam
 
 ### Error behavior is explicit
-Confirm the docs clearly state:
-- current FastAPI-style `detail` behavior
-- current 401 / 403 / 404 / 409 / 422 patterns
-- whether a server hardening step for machine-readable error codes is required before XCPro transport work
+Confirm the contract defines:
 
-### Adapter decisions are explicit
-Before approving transport work, confirm the docs explicitly decide:
-- where `write_token` is stored
-- where `share_code` is stored
-- whether pilot UI surfaces `share_code`
-- how `join/leave` are represented when the current server has no explicit watch-membership endpoints
+- machine-readable `code` plus `detail` responses
+- current 401 / 403 / 404 / 409 patterns
+- `422` validation behavior and payload shape
 
----
+### Ownership and time semantics are explicit
+Confirm the contract distinguishes:
 
-## ❌ FORBIDDEN
-
-Reject if any of these happen:
-
-- mixing the current deployed API and the older nested target API as if both are current
-- client code planned against `/api/v1/client/sessions/...` for current work
-- server DTOs defined one-to-one with client-local fields like `transportAvailability` or `lastError`
-- cross-device monotonic timestamps treated as shared truth
-- app-side repository/state-machine ownership moved into the server contract
-- map/UI ownership concerns mixed into the server wire contract
-- future refactor ideas presented as deployed reality
-- XCPro transport coding started before upload gating / token storage / watch key decisions are frozen
+- server-owned fields and decisions
+- client-transport-local state
+- wall-time wire semantics versus XCPro-local monotonic freshness
 
 ---
 
-## ⚠️ VALIDATION QUESTIONS
+## Forbidden
 
-Before approving the contract, confirm:
+Reject the contract update if any of these happen:
 
-1. Is the first XCPro watcher integration meant to use `share_code` as the external/public key?
-2. Is `GET /api/v1/live/{session_id}` still intentionally public and intentionally used by the client?
-3. Is the current server read payload rich enough for first watch integration, or does Phase 5B need a small server gap fill first?
-4. Are machine-readable error codes needed before adapter coding starts?
-5. Are altitude/speed/heading/timestamp upload requirements compatible with XCPro ownship reality without unsafe guessing?
-
----
-
-## 📊 FINAL DECISION
-
-### APPROVE if:
-- all required contract details are frozen
-- no forbidden mixing or ownership drift exists
-- remaining adapter decisions are explicit
-- it is clear whether server hardening is required before XCPro integration
-
-### REJECT if:
-- current bodies are still only partially known
-- token/share-code storage and watch-key decisions are unresolved
-- telemetry upload rules remain ambiguous
-- the current server read payload limitations are being ignored
-- implementation is about to start on assumptions rather than a frozen contract
+- mixing the current deployed API with older future-target APIs as if both are current
+- leaving duplicate current owners for the same wire contract
+- keeping a separate active-pilots contract active after its details were merged into the main contract
+- mapping server DTOs one-to-one onto client-local fields like `transportAvailability` or `lastError`
+- treating cross-device monotonic timestamps as shared truth
+- mixing product-planning content into `ServerInfo.md`
+- presenting future refactor ideas as deployed reality
 
 ---
 
-## 🤖 Codex validation prompt
+## Validation Questions
 
-Use this prompt to audit the current extracted contract:
+Before approving a contract change, confirm:
 
-> Review the current extracted LiveFollow deployed API contract against `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`.
-> Confirm:
-> - all REQUIRED contract items are frozen
-> - no FORBIDDEN contract mistakes are present
-> - the remaining adapter decisions are explicit
-> - whether a small server hardening slice is required before XCPro transport adapter implementation
->
-> Provide:
-> 1. PASS or FAIL
-> 2. exact remaining gaps
-> 3. whether server hardening is required first
-> 4. whether XCPro client transport integration can safely begin
+1. Does the deployed contract doc reflect real current server behavior rather than planned behavior?
+2. If a separate side doc exists, does it still have a unique purpose and a non-conflicting owner?
+3. Are all new additive fields, endpoints, and nullability rules described in the contract owner?
+4. Did the current-state summary and `README_current.md` get updated if the active doc canon changed?
+
+---
+
+## Decision
+
+### Approve if:
+
+- the current deployed contract is frozen and explicit
+- there is a single obvious contract owner
+- current docs do not conflict with one another
+- the error, time, auth, and ownership rules are all clear
+
+### Reject if:
+
+- deployed behavior is still described by superseded plan docs
+- current docs disagree about the active contract
+- live-read, task-clear, or active-list behavior is still ambiguous

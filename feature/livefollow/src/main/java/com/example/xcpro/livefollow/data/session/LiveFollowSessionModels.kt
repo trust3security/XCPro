@@ -21,15 +21,47 @@ enum class LiveFollowSessionLifecycle {
     ERROR
 }
 
+enum class LiveFollowSessionVisibility(
+    val wireValue: String,
+    val title: String,
+    val subtitle: String
+) {
+    OFF(
+        wireValue = "off",
+        title = "Off",
+        subtitle = "Visible only to you."
+    ),
+    FOLLOWERS(
+        wireValue = "followers",
+        title = "Followers",
+        subtitle = "Visible to approved XCPro followers."
+    ),
+    PUBLIC(
+        wireValue = "public",
+        title = "Public",
+        subtitle = "Visible through the public LiveFollow lane."
+    );
+
+    companion object {
+        fun fromWireValue(rawValue: String?): LiveFollowSessionVisibility? {
+            val normalized = rawValue?.trim() ?: return null
+            return entries.firstOrNull { it.wireValue == normalized }
+        }
+    }
+}
+
 data class StartPilotLiveFollowSession(
     val pilotIdentity: LiveFollowIdentityProfile,
+    val visibility: LiveFollowSessionVisibility? = null,
     val taskId: String? = null
 )
 
 data class LiveFollowSessionSnapshot(
     val sessionId: String?,
+    val ownerUserId: String? = null,
     val role: LiveFollowSessionRole,
     val lifecycle: LiveFollowSessionLifecycle,
+    val visibility: LiveFollowSessionVisibility? = null,
     val runtimeMode: LiveFollowRuntimeMode,
     val watchIdentity: LiveFollowIdentityProfile?,
     val directWatchAuthorized: Boolean,
@@ -58,8 +90,10 @@ internal fun idleSessionSnapshot(
     transportAvailability: LiveFollowTransportAvailability = liveFollowAvailableTransport()
 ): LiveFollowSessionSnapshot = LiveFollowSessionSnapshot(
     sessionId = null,
+    ownerUserId = null,
     role = LiveFollowSessionRole.NONE,
     lifecycle = LiveFollowSessionLifecycle.IDLE,
+    visibility = null,
     runtimeMode = runtimeMode,
     watchIdentity = null,
     directWatchAuthorized = false,

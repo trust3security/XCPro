@@ -14,6 +14,7 @@ fun MapScreen(
     mapStyleExpanded: MutableState<Boolean>,
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
+    allowFlightSensorStart: Boolean,
     onMapStyleSelected: (String) -> Unit = {},
     onOpenGeneralSettings: () -> Unit = {},
     mapViewModel: MapScreenViewModel
@@ -25,6 +26,7 @@ fun MapScreen(
         mapStyleExpanded = mapStyleExpanded,
         settingsExpanded = settingsExpanded,
         initialMapStyle = initialMapStyle,
+        allowFlightSensorStart = allowFlightSensorStart,
         onMapStyleSelected = onMapStyleSelected,
         onOpenGeneralSettings = onOpenGeneralSettings,
         mapViewModel = mapViewModel

@@ -122,6 +122,75 @@ class LiveFollowWatchViewModelTest {
     }
 
     @Test
+    fun selectionHint_updatesUiImmediatelyWhileJoinRuns() = runTest {
+        val sessionState = MutableStateFlow(
+            sessionSnapshot(
+                sessionId = "watch-1",
+                shareCode = "OLD1111",
+                role = LiveFollowSessionRole.WATCHER
+            )
+        )
+        val watchState = MutableStateFlow(stoppedWatchTrafficSnapshot())
+        val useCase = mockUseCase(sessionState, watchState)
+        val viewModel = LiveFollowWatchViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.handleWatchShareEntry(
+            rawShareCode = "watch123",
+            selectionHint = LiveFollowWatchSelectionHint(
+                shareCode = "WATCH123",
+                displayLabel = "Pilot One",
+                statusLabel = "Active",
+                altitudeLabel = "510 m MSL",
+                speedLabel = "13 m/s",
+                headingLabel = "185 deg",
+                recencyLabel = "Updated 12 s ago",
+                isStale = false
+            )
+        )
+        advanceUntilIdle()
+
+        verify(useCase).joinWatchSessionByShareCode("WATCH123")
+        assertEquals("WATCH123", viewModel.uiState.value.selectedShareCode)
+        assertEquals("Pilot One", viewModel.uiState.value.aircraftLabel)
+        assertEquals("510 m MSL", viewModel.uiState.value.panelAltitudeLabel)
+        assertEquals("13 m/s", viewModel.uiState.value.panelSpeedLabel)
+        assertEquals("185 deg", viewModel.uiState.value.panelHeadingLabel)
+        assertEquals("Updated 12 s ago", viewModel.uiState.value.panelFreshnessLabel)
+    }
+
+    @Test
+    fun clearWatchTarget_withoutActiveWatch_resetsSelectedPilotState() = runTest {
+        val sessionState = MutableStateFlow(sessionSnapshot())
+        val watchState = MutableStateFlow(stoppedWatchTrafficSnapshot())
+        val useCase = mockUseCase(sessionState, watchState)
+        val viewModel = LiveFollowWatchViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.handleWatchShareEntry(
+            rawShareCode = "watch123",
+            selectionHint = LiveFollowWatchSelectionHint(
+                shareCode = "WATCH123",
+                displayLabel = "Pilot One",
+                statusLabel = "Active",
+                altitudeLabel = null,
+                speedLabel = null,
+                headingLabel = null,
+                recencyLabel = "Updated 12 s ago",
+                isStale = false
+            )
+        )
+        advanceUntilIdle()
+
+        viewModel.clearWatchTarget()
+        advanceUntilIdle()
+
+        verify(useCase, never()).stopWatching()
+        assertEquals(null, viewModel.uiState.value.selectedShareCode)
+        assertEquals(false, viewModel.uiState.value.visible)
+    }
+
+    @Test
     fun stopWatching_onlyCallsLeaveWhenExplicitlyRequested() = runTest {
         val sessionState = MutableStateFlow(
             sessionSnapshot(
@@ -152,6 +221,26 @@ class LiveFollowWatchViewModelTest {
         assertEquals("Replay Mode", viewModel.uiState.value.feedbackMessage)
     }
 
+    @Test
+    fun clearWatchTarget_withActiveWatch_usesExistingStopPath() = runTest {
+        val sessionState = MutableStateFlow(
+            sessionSnapshot(
+                sessionId = "watch-3",
+                shareCode = "WATCH123",
+                role = LiveFollowSessionRole.WATCHER
+            )
+        )
+        val watchState = MutableStateFlow(stoppedWatchTrafficSnapshot())
+        val useCase = mockUseCase(sessionState, watchState)
+        val viewModel = LiveFollowWatchViewModel(useCase)
+        advanceUntilIdle()
+
+        viewModel.clearWatchTarget()
+        advanceUntilIdle()
+
+        verify(useCase).stopWatching()
+    }
+
     private suspend fun mockUseCase(
         sessionState: MutableStateFlow<LiveFollowSessionSnapshot>,
         watchState: MutableStateFlow<WatchTrafficSnapshot>
@@ -167,6 +256,7 @@ class LiveFollowWatchViewModelTest {
 
     private fun sessionSnapshot(
         sessionId: String? = null,
+        shareCode: String? = null,
         role: LiveFollowSessionRole = LiveFollowSessionRole.NONE,
         sideEffectsAllowed: Boolean = true,
         replayBlockReason: LiveFollowReplayBlockReason = LiveFollowReplayBlockReason.NONE,
@@ -186,7 +276,8 @@ class LiveFollowWatchViewModelTest {
             transportAvailability = liveFollowAvailableTransport(),
             sideEffectsAllowed = sideEffectsAllowed,
             replayBlockReason = replayBlockReason,
-            lastError = null
+            lastError = null,
+            shareCode = shareCode
         )
     }
 }

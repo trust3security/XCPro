@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.appshell.settings.requestOpenGeneralSettingsOnMap
 import com.example.xcpro.profiles.ProfileSelectionScreen
 import com.example.xcpro.profiles.ProfileViewModel
+import com.example.xcpro.startup.ensureMapRoute
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainActivityScreen"
@@ -73,6 +75,7 @@ fun MainActivityScreen(
     val scope = rememberCoroutineScope()
     var isBottomSheetVisible by remember { mutableStateOf(false) }
     var selectedNavItem by remember { mutableStateOf<String?>(null) }
+    var allowFlightSensorStart by rememberSaveable { mutableStateOf(false) }
 
     // Check if we need to show profile selection based on state
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
@@ -111,15 +114,7 @@ fun MainActivityScreen(
                 "bootstrapError=${profileUiState.bootstrapError}"
         )
         ProfileSelectionScreen(
-            onProfileSelected = {
-                val poppedToMap = navController.popBackStack("map", inclusive = false)
-                if (!poppedToMap) {
-                    navController.navigate("map") {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-            },
+            onProfileSelected = {},
             onEditProfile = { profile ->
                 navController.navigate("profile_settings/${profile.id}")
             }
@@ -137,6 +132,8 @@ fun MainActivityScreen(
                 initialMapStyle = initialMapStyle,
                 config = configUiState.config,
                 profileUiState = profileUiState,
+                allowFlightSensorStart = allowFlightSensorStart,
+                setAllowFlightSensorStart = { allowFlightSensorStart = it },
                 getSelectedNavItem = { selectedNavItem },
                 setSelectedNavItem = { selectedNavItem = it },
                 setBottomSheetVisible = { isBottomSheetVisible = it },
@@ -205,9 +202,7 @@ fun MainActivityScreen(
                                 if (currentRoute?.destination?.route == "support" && isBottomSheetVisible) {
                                     isBottomSheetVisible = false
                                 } else if (currentRoute?.destination?.route == "about") {
-                                    navController.navigate("map") {
-                                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                                    }
+                                    ensureMapRoute(navController)
                                 }
                             }
                         },
@@ -230,11 +225,7 @@ fun MainActivityScreen(
                                 if (currentRoute?.destination?.route == "support") {
                                     isBottomSheetVisible = true
                                 } else {
-                                    requestOpenGeneralSettingsOnMap(navController)
-                                    navController.navigate("map") {
-                                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                                        launchSingleTop = true
-                                    }
+                                    ensureMapRoute(navController)
                                     requestOpenGeneralSettingsOnMap(navController)
                                 }
                             }

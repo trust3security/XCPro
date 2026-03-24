@@ -10,6 +10,8 @@ interface MapCameraRuntimePort {
     val targetLatLng: StateFlow<MapPoint?>
     val targetZoom: StateFlow<Float?>
 
+    fun moveTo(target: MapPoint, zoom: Double? = null)
+
     fun applyAnimatedZoom(animatedZoom: Float, targetLatLng: MapPoint?)
 
     fun updateBearing(

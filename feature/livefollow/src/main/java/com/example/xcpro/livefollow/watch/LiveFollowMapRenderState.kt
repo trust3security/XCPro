@@ -2,9 +2,11 @@ package com.example.xcpro.livefollow.watch
 
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.example.xcpro.livefollow.state.LiveFollowSessionState
 
 enum class LiveFollowTaskRenderPolicy {
+    AVAILABLE,
     HIDDEN,
     READ_ONLY_UNAVAILABLE,
     BLOCKED_AMBIGUOUS
@@ -13,6 +15,7 @@ enum class LiveFollowTaskRenderPolicy {
 data class LiveFollowMapRenderState(
     val isVisible: Boolean = false,
     val sessionId: String? = null,
+    val shareCode: String? = null,
     val lifecycle: LiveFollowSessionLifecycle = LiveFollowSessionLifecycle.IDLE,
     val sourceState: LiveFollowSessionState = LiveFollowSessionState.STOPPED,
     val activeSource: LiveFollowSourceType? = null,
@@ -21,5 +24,6 @@ data class LiveFollowMapRenderState(
     val longitudeDeg: Double? = null,
     val trackDeg: Double? = null,
     val ageMs: Long? = null,
+    val taskSnapshot: LiveFollowTaskSnapshot? = null,
     val taskRenderPolicy: LiveFollowTaskRenderPolicy = LiveFollowTaskRenderPolicy.HIDDEN
 )

@@ -2,7 +2,7 @@ package com.example.xcpro.livefollow.friends
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.xcpro.livefollow.normalizeLiveFollowShareCode
+import com.example.xcpro.core.time.Clock
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -12,11 +12,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class FriendsFlyingViewModel @Inject constructor(
-    private val useCase: FriendsFlyingUseCase
+    private val useCase: FriendsFlyingUseCase,
+    private val clock: Clock
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(FriendsFlyingUiState())
     private val mutableEvents = MutableSharedFlow<FriendsFlyingEvent>(extraBufferCapacity = 1)
@@ -27,8 +29,19 @@ class FriendsFlyingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            useCase.state.collectLatest { snapshot ->
-                mutableUiState.value = buildFriendsFlyingUiState(snapshot)
+            combine(
+                useCase.publicState,
+                useCase.followingState,
+                useCase.accountState
+            ) { publicSnapshot, followingSnapshot, accountSnapshot ->
+                buildFriendsFlyingUiState(
+                    publicSnapshot = publicSnapshot,
+                    followingSnapshot = followingSnapshot,
+                    accountSnapshot = accountSnapshot,
+                    nowWallMs = clock.nowWallMs()
+                )
+            }.collectLatest { state ->
+                mutableUiState.value = state
             }
         }
     }
@@ -42,20 +55,18 @@ class FriendsFlyingViewModel @Inject constructor(
     fun refresh() {
         if (mutableUiState.value.isLoading) return
         viewModelScope.launch {
-            useCase.refresh()
+            useCase.refreshPublic()
+            useCase.refreshFollowing()
         }
     }
 
-    fun selectPilot(shareCode: String) {
-        val normalizedShareCode = normalizeLiveFollowShareCode(shareCode) ?: return
-        val isKnownPilot = useCase.state.value.items.any { it.shareCode == normalizedShareCode }
-        if (!isKnownPilot) return
-        mutableEvents.tryEmit(FriendsFlyingEvent.OpenWatch(normalizedShareCode))
+    fun selectPilot(pilot: FriendsFlyingPilotSelection) {
+        mutableEvents.tryEmit(FriendsFlyingEvent.OpenWatch(pilot))
     }
 }
 
 sealed interface FriendsFlyingEvent {
     data class OpenWatch(
-        val shareCode: String
+        val pilot: FriendsFlyingPilotSelection
     ) : FriendsFlyingEvent
 }

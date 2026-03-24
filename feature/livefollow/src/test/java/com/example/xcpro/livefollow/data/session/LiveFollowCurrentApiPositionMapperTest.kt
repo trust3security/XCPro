@@ -28,6 +28,7 @@ class LiveFollowCurrentApiPositionMapperTest {
 
         requireNotNull(request)
         assertEquals(495.0, request.altitudeMslMeters, 0.0)
+        assertEquals(45.0, requireNotNull(request.aglMeters), 0.0)
         assertEquals(12.5, request.groundSpeedMs, 0.0)
         assertEquals("2023-11-14T22:15:23Z", request.timestampIsoUtc)
     }
@@ -38,12 +39,14 @@ class LiveFollowCurrentApiPositionMapperTest {
             sessionId = "pilot-1",
             snapshot = ownshipSnapshot(
                 gpsAltitudeMslMeters = 500.0,
-                pressureAltitudeMslMeters = null
+                pressureAltitudeMslMeters = null,
+                aglMeters = null
             )
         )
 
         requireNotNull(request)
         assertEquals(500.0, request.altitudeMslMeters, 0.0)
+        assertNull(request.aglMeters)
     }
 
     @Test
@@ -63,6 +66,7 @@ class LiveFollowCurrentApiPositionMapperTest {
     private fun ownshipSnapshot(
         gpsAltitudeMslMeters: Double? = 500.0,
         pressureAltitudeMslMeters: Double? = 495.0,
+        aglMeters: Double? = 45.0,
         groundSpeedMs: Double? = 12.0,
         trackDeg: Double? = 180.0,
         fixWallMs: Long? = 20_000L
@@ -72,6 +76,7 @@ class LiveFollowCurrentApiPositionMapperTest {
             longitudeDeg = 151.2,
             gpsAltitudeMslMeters = gpsAltitudeMslMeters,
             pressureAltitudeMslMeters = pressureAltitudeMslMeters,
+            aglMeters = aglMeters,
             groundSpeedMs = groundSpeedMs,
             trackDeg = trackDeg,
             verticalSpeedMs = 1.2,

@@ -11,7 +11,8 @@ import com.example.xcpro.map.TrafficMapCoordinate
 internal fun rememberTrafficOverlayRenderState(
     traffic: MapTrafficUiBinding,
     locationForUi: com.example.xcpro.map.model.MapLocationUiModel?,
-    unitsPreferences: UnitsPreferences
+    unitsPreferences: UnitsPreferences,
+    renderLocalOwnship: Boolean
 ): MapTrafficOverlayRenderState = remember(
     traffic.ognTargets,
     traffic.ognOverlayEnabled,
@@ -26,6 +27,7 @@ internal fun rememberTrafficOverlayRenderState(
     traffic.ownshipAltitudeMeters,
     traffic.ognAltitudeUnit,
     unitsPreferences,
+    renderLocalOwnship,
     traffic.ognIconSizePx,
     traffic.adsbTargets,
     traffic.adsbOverlayEnabled,
@@ -33,20 +35,34 @@ internal fun rememberTrafficOverlayRenderState(
     traffic.adsbEmergencyFlashEnabled,
     traffic.adsbDefaultMediumUnknownIconEnabled
 ) {
-    MapTrafficOverlayRenderState(
+    buildTrafficOverlayRenderState(
+        traffic = traffic,
+        locationForUi = locationForUi,
+        unitsPreferences = unitsPreferences,
+        renderLocalOwnship = renderLocalOwnship
+    )
+}
+
+internal fun buildTrafficOverlayRenderState(
+    traffic: MapTrafficUiBinding,
+    locationForUi: com.example.xcpro.map.model.MapLocationUiModel?,
+    unitsPreferences: UnitsPreferences,
+    renderLocalOwnship: Boolean
+): MapTrafficOverlayRenderState {
+    return MapTrafficOverlayRenderState(
         ognTargets = traffic.ognTargets,
         ognOverlayEnabled = traffic.ognOverlayEnabled,
         ognThermalHotspots = traffic.ognThermalHotspots,
         showOgnSciaEnabled = traffic.showOgnSciaEnabled,
         ognTargetEnabled = traffic.ognTargetEnabled,
         ognResolvedTarget = traffic.ognResolvedTarget,
-        ownshipCoordinate = locationForUi?.let { location ->
+        ownshipCoordinate = locationForUi?.takeIf { renderLocalOwnship }?.let { location ->
             TrafficMapCoordinate(latitude = location.latitude, longitude = location.longitude)
         },
         showOgnThermalsEnabled = traffic.showOgnThermalsEnabled,
         ognDisplayUpdateMode = traffic.ognDisplayUpdateMode,
         ognGliderTrailSegments = traffic.ognGliderTrailSegments,
-        ownshipAltitudeMeters = traffic.ownshipAltitudeMeters,
+        ownshipAltitudeMeters = traffic.ownshipAltitudeMeters?.takeIf { renderLocalOwnship },
         ognAltitudeUnit = traffic.ognAltitudeUnit,
         unitsPreferences = unitsPreferences,
         ognIconSizePx = traffic.ognIconSizePx,

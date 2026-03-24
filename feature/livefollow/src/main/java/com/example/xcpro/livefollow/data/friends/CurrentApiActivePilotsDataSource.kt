@@ -49,7 +49,7 @@ class CurrentApiActivePilotsDataSource @Inject constructor(
 
                 val parsed = runCatching { parseCurrentApiActivePilotsResponse(responseBody) }
                     .getOrElse { cause ->
-                        val message = cause.message ?: "Malformed LiveFollow active-pilots payload"
+                        val message = activePilotsPayloadFailureMessage(cause)
                         return@withContext ActivePilotsFetchResult.Failure(
                             availability = liveFollowDegradedTransport(message),
                             message = message
@@ -93,6 +93,17 @@ class CurrentApiActivePilotsDataSource @Inject constructor(
         )
 
     private fun baseUrlBuilder() = LIVEFOLLOW_BASE_URL.toHttpUrl().newBuilder()
+
+    private fun activePilotsPayloadFailureMessage(cause: Throwable): String {
+        val message = cause.message?.trim()
+        return when {
+            message.isNullOrEmpty() -> "Malformed LiveFollow active-pilots payload"
+            message.equals("Invalid LiveFollow payload", ignoreCase = true) ->
+                "Malformed LiveFollow active-pilots payload"
+
+            else -> message
+        }
+    }
 
     private companion object {
         private const val LIVEFOLLOW_BASE_URL = "https://api.xcpro.com.au/"

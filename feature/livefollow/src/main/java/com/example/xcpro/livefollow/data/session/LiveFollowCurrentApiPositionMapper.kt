@@ -9,6 +9,7 @@ internal data class CurrentApiPositionUploadRequest(
     val latitudeDeg: Double,
     val longitudeDeg: Double,
     val altitudeMslMeters: Double,
+    val aglMeters: Double? = null,
     val groundSpeedMs: Double,
     val headingDeg: Double,
     val fixWallMs: Long
@@ -20,6 +21,7 @@ internal data class CurrentApiPositionUploadRequest(
         addProperty("lat", latitudeDeg)
         addProperty("lon", longitudeDeg)
         addProperty("alt", altitudeMslMeters)
+        aglMeters?.let { addProperty("agl_meters", it) }
         // AI-NOTE: The deployed LiveFollow contract does not label speed units.
         // This slice freezes the wire field to XCPro's canonical groundSpeedMs
         // value in m/s so we do not hide an implicit unit conversion.
@@ -41,6 +43,7 @@ internal object LiveFollowCurrentApiPositionMapper {
             snapshot.pressureAltitudeMslMeters.takeFiniteOrNull()
                 ?: snapshot.gpsAltitudeMslMeters.takeFiniteOrNull()
             ) ?: return null
+        val aglMeters = snapshot.aglMeters.takeFiniteOrNull()
         val groundSpeedMs = snapshot.groundSpeedMs.takeFiniteOrNull() ?: return null
         val headingDeg = snapshot.trackDeg.takeFiniteOrNull() ?: return null
         val fixWallMs = snapshot.fixWallMs?.takeIf { it > 0L } ?: return null
@@ -50,6 +53,7 @@ internal object LiveFollowCurrentApiPositionMapper {
             latitudeDeg = latitudeDeg,
             longitudeDeg = longitudeDeg,
             altitudeMslMeters = altitudeMslMeters,
+            aglMeters = aglMeters,
             groundSpeedMs = groundSpeedMs,
             headingDeg = headingDeg,
             fixWallMs = fixWallMs

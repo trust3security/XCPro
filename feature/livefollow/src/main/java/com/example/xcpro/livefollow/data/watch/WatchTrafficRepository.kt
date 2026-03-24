@@ -79,14 +79,23 @@ class WatchTrafficRepository(
                 sessionState,
                 ognTrafficRepository.targets,
                 directWatchTrafficSource.aircraft,
-                directWatchTrafficSource.transportAvailability,
-                monotonicTickFlow(evaluationIntervalMs)
-            ) { sessionSnapshot, ognTargets, directAircraft, directTransportAvailability, _ ->
-                evaluateWatchState(
+                directWatchTrafficSource.task,
+                directWatchTrafficSource.transportAvailability
+            ) { sessionSnapshot, ognTargets, directAircraft, directTask, directTransportAvailability ->
+                WatchEvaluationInputs(
                     sessionSnapshot = sessionSnapshot,
                     ognTargets = ognTargets,
                     directAircraft = directAircraft,
+                    directTask = directTask,
                     directTransportAvailability = directTransportAvailability
+                )
+            }.combine(monotonicTickFlow(evaluationIntervalMs)) { inputs, _ ->
+                evaluateWatchState(
+                    sessionSnapshot = inputs.sessionSnapshot,
+                    ognTargets = inputs.ognTargets,
+                    directAircraft = inputs.directAircraft,
+                    directTask = inputs.directTask,
+                    directTransportAvailability = inputs.directTransportAvailability
                 )
             }.collect { watchSnapshot ->
                 mutableState.value = watchSnapshot
@@ -98,6 +107,7 @@ class WatchTrafficRepository(
         sessionSnapshot: LiveFollowSessionSnapshot,
         ognTargets: List<OgnTrafficTarget>,
         directAircraft: DirectWatchAircraftSample?,
+        directTask: com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot?,
         directTransportAvailability: com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
     ): WatchTrafficSnapshot {
         val watcherActive = sessionSnapshot.role == LiveFollowSessionRole.WATCHER &&
@@ -142,6 +152,7 @@ class WatchTrafficRepository(
             identityResolution = ognResolution.identityResolution,
             ognAircraft = ognResolution.aircraft,
             directAircraft = directAircraft,
+            task = directTask,
             directTransportAvailability = directTransportAvailability
         )
     }
@@ -152,6 +163,7 @@ class WatchTrafficRepository(
         identityResolution: LiveFollowIdentityResolution?,
         ognAircraft: WatchAircraftSnapshot?,
         directAircraft: DirectWatchAircraftSample?,
+        task: com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot?,
         directTransportAvailability: com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
     ): WatchTrafficSnapshot {
         val aircraft = when (stateDecision.activeSource ?: stateDecision.lastLiveSource) {
@@ -167,7 +179,8 @@ class WatchTrafficRepository(
             ognEligibility = arbitrationDecision.ognEligibility,
             directEligibility = arbitrationDecision.directEligibility,
             directTransportAvailability = directTransportAvailability,
-            identityResolution = identityResolution
+            identityResolution = identityResolution,
+            task = task
         )
     }
 
@@ -268,6 +281,7 @@ class WatchTrafficRepository(
             latitudeDeg = latitude,
             longitudeDeg = longitude,
             altitudeMslMeters = altitudeMeters,
+            aglMeters = null,
             groundSpeedMs = groundSpeedMps,
             trackDeg = trackDegrees,
             verticalSpeedMs = verticalSpeedMps,
@@ -292,6 +306,7 @@ class WatchTrafficRepository(
             latitudeDeg = latitudeDeg,
             longitudeDeg = longitudeDeg,
             altitudeMslMeters = altitudeMslMeters,
+            aglMeters = aglMeters,
             groundSpeedMs = groundSpeedMs,
             trackDeg = trackDeg,
             verticalSpeedMs = verticalSpeedMs,
@@ -330,6 +345,14 @@ class WatchTrafficRepository(
         val identityResolution: LiveFollowIdentityResolution?,
         val sourceSample: LiveFollowSourceSample?,
         val aircraft: WatchAircraftSnapshot?
+    )
+
+    private data class WatchEvaluationInputs(
+        val sessionSnapshot: LiveFollowSessionSnapshot,
+        val ognTargets: List<OgnTrafficTarget>,
+        val directAircraft: DirectWatchAircraftSample?,
+        val directTask: com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot?,
+        val directTransportAvailability: com.example.xcpro.livefollow.model.LiveFollowTransportAvailability
     )
 
     private companion object {

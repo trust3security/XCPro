@@ -50,16 +50,21 @@ object MapComposeEffects {
         currentLocation: MapLocationUiModel?,
         orientationData: OrientationData,
         suppressLiveGps: Boolean = false,
-        allowSensorStart: Boolean = true
+        allowSensorStart: Boolean = true,
+        renderLocalOwnship: Boolean = true
     ) {
-        LaunchedEffect(allowSensorStart) {
-            if (allowSensorStart) {
+        LaunchedEffect(renderLocalOwnship) {
+            locationManager.setLocalOwnshipRenderEnabled(renderLocalOwnship)
+        }
+
+        LaunchedEffect(allowSensorStart, renderLocalOwnship) {
+            if (allowSensorStart && renderLocalOwnship) {
                 locationManager.requestLocationPermissions(locationPermissionRequester)
             }
         }
 
-        LaunchedEffect(currentLocation, suppressLiveGps) {
-            if (!suppressLiveGps) {
+        LaunchedEffect(currentLocation, suppressLiveGps, renderLocalOwnship) {
+            if (renderLocalOwnship && !suppressLiveGps) {
                 currentLocation?.let { location ->
                     locationManager.updateLocationFromGPS(
                         location,
@@ -130,10 +135,12 @@ object MapComposeEffects {
         locationManager: MapLocationRuntimePort,
         orientationData: OrientationData,
         orientationManager: MapOrientationManager,
-        suppressLiveGps: Boolean
+        suppressLiveGps: Boolean,
+        renderLocalOwnship: Boolean
     ) {
         val orientationState = rememberUpdatedState(orientationData)
         val suppressLiveGpsState = rememberUpdatedState(suppressLiveGps)
+        val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
 
         LaunchedEffect(Unit) {
             flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
@@ -143,7 +150,7 @@ object MapComposeEffects {
                     )
                     // AI-NOTE: Avoid stale captures in a long-lived collector; replay map updates
                     // must see the latest orientation and replay/live toggle values.
-                    if (suppressLiveGpsState.value) {
+                    if (renderLocalOwnshipState.value && suppressLiveGpsState.value) {
                         // Replay/IGC: use flight data for map updates when GPS is suppressed.
                         locationManager.updateLocationFromFlightData(
                             liveData,
@@ -160,7 +167,8 @@ object MapComposeEffects {
         locationManager: MapLocationRuntimePort,
         orientationData: OrientationData,
         replaySessionState: SessionState,
-        useRenderFrameSync: Boolean
+        useRenderFrameSync: Boolean,
+        renderLocalOwnship: Boolean
     ) {
         val replayState = rememberUpdatedState(replaySessionState)
 
@@ -172,7 +180,7 @@ object MapComposeEffects {
             locationManager.updateOrientation(orientationData)
         }
 
-        if (!shouldRunComposeDisplayPoseLoop(useRenderFrameSync)) {
+        if (!renderLocalOwnship || !shouldRunComposeDisplayPoseLoop(useRenderFrameSync)) {
             return
         }
 
@@ -238,7 +246,8 @@ object MapComposeEffects {
         replaySessionState: SessionState,
         useRenderFrameSync: Boolean,
         suppressLiveGps: Boolean = false,
-        allowSensorStart: Boolean = true
+        allowSensorStart: Boolean = true,
+        renderLocalOwnship: Boolean = true
     ) {
         val density = LocalDensity.current
 
@@ -248,7 +257,8 @@ object MapComposeEffects {
             currentLocation = currentLocation,
             orientationData = orientationData,
             suppressLiveGps = suppressLiveGps,
-            allowSensorStart = allowSensorStart
+            allowSensorStart = allowSensorStart,
+            renderLocalOwnship = renderLocalOwnship
         )
 
         ProfileAndConfigurationEffects(
@@ -270,14 +280,16 @@ object MapComposeEffects {
             locationManager = locationManager,
             orientationData = orientationData,
             orientationManager = orientationManager,
-            suppressLiveGps = suppressLiveGps
+            suppressLiveGps = suppressLiveGps,
+            renderLocalOwnship = renderLocalOwnship
         )
 
         DisplayPoseEffects(
             locationManager = locationManager,
             orientationData = orientationData,
             replaySessionState = replaySessionState,
-            useRenderFrameSync = useRenderFrameSync
+            useRenderFrameSync = useRenderFrameSync,
+            renderLocalOwnship = renderLocalOwnship
         )
 
         MapStyleAndConfigurationEffects(

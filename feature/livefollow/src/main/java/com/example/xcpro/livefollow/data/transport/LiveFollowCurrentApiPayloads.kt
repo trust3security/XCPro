@@ -1,5 +1,8 @@
 package com.example.xcpro.livefollow.data.transport
 
+import com.example.xcpro.livefollow.model.LiveFollowTaskPoint
+import com.example.xcpro.livefollow.model.LiveFollowTaskSnapshot
+import com.example.xcpro.livefollow.data.session.LiveFollowSessionVisibility
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -11,9 +14,19 @@ import java.time.ZoneOffset
 
 internal data class CurrentApiSessionStartResponse(
     val sessionId: String,
-    val shareCode: String,
+    val shareCode: String?,
     val status: String,
+    val ownerUserId: String?,
+    val visibility: LiveFollowSessionVisibility?,
     val writeToken: String
+)
+
+internal data class CurrentApiSessionVisibilityResponse(
+    val sessionId: String,
+    val shareCode: String?,
+    val status: String,
+    val ownerUserId: String?,
+    val visibility: LiveFollowSessionVisibility?
 )
 
 internal data class CurrentApiSessionEndResponse(
@@ -24,11 +37,13 @@ internal data class CurrentApiSessionEndResponse(
 
 internal data class CurrentApiLiveReadResponse(
     val sessionId: String,
+    val ownerUserId: String?,
     val shareCode: String?,
     val status: String,
+    val visibility: LiveFollowSessionVisibility?,
     val latest: CurrentApiLivePoint?,
     val positions: List<CurrentApiLivePoint>,
-    val hasTask: Boolean
+    val task: LiveFollowTaskSnapshot?
 )
 
 internal data class CurrentApiActivePilotsResponse(
@@ -45,12 +60,29 @@ internal data class CurrentApiActivePilotItem(
     val latest: CurrentApiLivePoint?
 )
 
+internal data class CurrentApiFollowingActivePilotsResponse(
+    val items: List<CurrentApiFollowingPilotItem>,
+    val generatedAtWallMs: Long?
+)
+
+internal data class CurrentApiFollowingPilotItem(
+    val sessionId: String,
+    val userId: String,
+    val visibility: LiveFollowSessionVisibility?,
+    val shareCode: String?,
+    val status: String,
+    val displayLabel: String?,
+    val lastPositionWallMs: Long?,
+    val latest: CurrentApiLivePoint?
+)
+
 internal data class CurrentApiLivePoint(
     val latitudeDeg: Double,
     val longitudeDeg: Double,
     val altitudeMslMeters: Double?,
     val groundSpeedMs: Double?,
     val headingDeg: Double?,
+    val aglMeters: Double? = null,
     val fixWallMs: Long?
 )
 
@@ -58,9 +90,24 @@ internal fun parseCurrentApiSessionStartResponse(body: String): CurrentApiSessio
     val root = parseCurrentApiRootObject(body)
     return CurrentApiSessionStartResponse(
         sessionId = root.requiredString("session_id"),
-        shareCode = root.requiredString("share_code"),
+        shareCode = root.optionalString("share_code"),
         status = root.requiredString("status"),
+        ownerUserId = root.optionalString("owner_user_id"),
+        visibility = LiveFollowSessionVisibility.fromWireValue(root.optionalString("visibility")),
         writeToken = root.requiredString("write_token")
+    )
+}
+
+internal fun parseCurrentApiSessionVisibilityResponse(
+    body: String
+): CurrentApiSessionVisibilityResponse {
+    val root = parseCurrentApiRootObject(body)
+    return CurrentApiSessionVisibilityResponse(
+        sessionId = root.requiredString("session_id"),
+        shareCode = root.optionalString("share_code"),
+        status = root.requiredString("status"),
+        ownerUserId = root.optionalString("owner_user_id"),
+        visibility = LiveFollowSessionVisibility.fromWireValue(root.optionalString("visibility"))
     )
 }
 
@@ -85,28 +132,57 @@ internal fun parseCurrentApiLiveReadResponse(body: String): CurrentApiLiveReadRe
 
     return CurrentApiLiveReadResponse(
         sessionId = root.requiredString("session"),
+        ownerUserId = root.optionalString("owner_user_id"),
         shareCode = root.optionalString("share_code"),
         status = root.requiredString("status"),
+        visibility = LiveFollowSessionVisibility.fromWireValue(root.optionalString("visibility")),
         latest = root.optionalObject("latest")?.let(::parseCurrentApiLivePoint),
         positions = positions,
-        hasTask = root.hasNonNull("task")
+        task = root.optionalObject("task")?.let { taskRoot ->
+            runCatching { parseCurrentApiLiveTask(taskRoot) }.getOrNull()
+        }
     )
 }
 
 internal fun parseCurrentApiActivePilotsResponse(body: String): CurrentApiActivePilotsResponse {
-    val root = parseCurrentApiRootObject(body)
+    val root = parseCurrentApiRootElement(body)
     val items = mutableListOf<CurrentApiActivePilotItem>()
-    val itemsJson = root.optionalArray("items")
-    if (itemsJson != null) {
-        for (itemJson in itemsJson) {
-            val itemObject = itemJson.asObjectOrNull() ?: continue
-            runCatching { parseCurrentApiActivePilotItem(itemObject) }
-                .getOrNull()
-                ?.let(items::add)
-        }
+    val itemsJson = when {
+        root.isJsonArray -> root.asJsonArray
+        root.isJsonObject -> root.asJsonObject.optionalArray("items")
+        else -> null
+    } ?: throw IllegalArgumentException("Invalid LiveFollow payload")
+    for (itemJson in itemsJson) {
+        val itemObject = itemJson.asObjectOrNull() ?: continue
+        runCatching { parseCurrentApiActivePilotItem(itemObject) }
+            .getOrNull()
+            ?.let(items::add)
     }
 
     return CurrentApiActivePilotsResponse(
+        items = items,
+        generatedAtWallMs = if (root.isJsonObject) {
+            parseCurrentApiWallMs(root.asJsonObject.optionalString("generated_at"))
+        } else {
+            null
+        }
+    )
+}
+
+internal fun parseCurrentApiFollowingActivePilotsResponse(
+    body: String
+): CurrentApiFollowingActivePilotsResponse {
+    val root = parseCurrentApiRootObject(body)
+    val itemsJson = root.optionalArray("items")
+        ?: throw IllegalArgumentException("Invalid LiveFollow payload")
+    val items = mutableListOf<CurrentApiFollowingPilotItem>()
+    for (itemJson in itemsJson) {
+        val itemObject = itemJson.asObjectOrNull() ?: continue
+        runCatching { parseCurrentApiFollowingPilotItem(itemObject) }
+            .getOrNull()
+            ?.let(items::add)
+    }
+    return CurrentApiFollowingActivePilotsResponse(
         items = items,
         generatedAtWallMs = parseCurrentApiWallMs(root.optionalString("generated_at"))
     )
@@ -150,7 +226,60 @@ private fun parseCurrentApiLivePoint(root: JsonObject): CurrentApiLivePoint {
         altitudeMslMeters = root.optionalFiniteDouble("alt"),
         groundSpeedMs = root.optionalFiniteDouble("speed"),
         headingDeg = root.optionalFiniteDouble("heading"),
+        aglMeters = root.optionalFiniteDouble("agl_meters"),
         fixWallMs = parseCurrentApiWallMs(root.optionalString("timestamp"))
+    )
+}
+
+private fun parseCurrentApiLiveTask(root: JsonObject): LiveFollowTaskSnapshot? {
+    val payload = root.optionalObject("payload") ?: return null
+    val taskObject = payload.optionalObject("task") ?: return null
+    val turnpointsJson = taskObject.optionalArray("turnpoints") ?: return null
+    val startMetadata = taskObject.optionalObject("start")
+    val finishMetadata = taskObject.optionalObject("finish")
+    val points = mutableListOf<LiveFollowTaskPoint>()
+    val lastIndex = turnpointsJson.size() - 1
+    for ((index, pointJson) in turnpointsJson.withIndex()) {
+        val pointObject = pointJson.asObjectOrNull() ?: continue
+        parseCurrentApiLiveTaskPoint(
+            root = pointObject,
+            order = index,
+            lastIndex = lastIndex,
+            startMetadata = startMetadata,
+            finishMetadata = finishMetadata
+        )?.let(points::add)
+    }
+    if (points.size < 2) {
+        return null
+    }
+    return LiveFollowTaskSnapshot(
+        taskName = payload.optionalString("task_name"),
+        points = points
+    )
+}
+
+private fun parseCurrentApiLiveTaskPoint(
+    root: JsonObject,
+    order: Int,
+    lastIndex: Int,
+    startMetadata: JsonObject?,
+    finishMetadata: JsonObject?
+): LiveFollowTaskPoint? {
+    val latitudeDeg = root.requiredDouble("lat")
+    val longitudeDeg = root.requiredDouble("lon")
+    val radiusMeters = root.optionalFiniteDouble("radius_m")
+        ?: when (order) {
+            0 -> startMetadata?.optionalFiniteDouble("radius_m")
+            lastIndex -> finishMetadata?.optionalFiniteDouble("radius_m")
+            else -> null
+        }
+    return LiveFollowTaskPoint(
+        order = order,
+        latitudeDeg = latitudeDeg,
+        longitudeDeg = longitudeDeg,
+        radiusMeters = radiusMeters,
+        name = root.optionalString("name"),
+        type = root.optionalString("type")
     )
 }
 
@@ -158,6 +287,19 @@ private fun parseCurrentApiActivePilotItem(root: JsonObject): CurrentApiActivePi
     return CurrentApiActivePilotItem(
         sessionId = root.optionalStringAny("session", "session_id"),
         shareCode = root.requiredString("share_code"),
+        status = root.requiredString("status"),
+        displayLabel = root.optionalString("display_label"),
+        lastPositionWallMs = parseCurrentApiWallMs(root.optionalString("last_position_at")),
+        latest = root.optionalObject("latest")?.let(::parseCurrentApiLivePoint)
+    )
+}
+
+private fun parseCurrentApiFollowingPilotItem(root: JsonObject): CurrentApiFollowingPilotItem {
+    return CurrentApiFollowingPilotItem(
+        sessionId = root.requiredString("session_id"),
+        userId = root.requiredString("user_id"),
+        visibility = LiveFollowSessionVisibility.fromWireValue(root.optionalString("visibility")),
+        shareCode = root.optionalString("share_code"),
         status = root.requiredString("status"),
         displayLabel = root.optionalString("display_label"),
         lastPositionWallMs = parseCurrentApiWallMs(root.optionalString("last_position_at")),
@@ -202,9 +344,6 @@ private fun JsonObject.optionalObject(key: String): JsonObject? =
 private fun JsonObject.optionalArray(key: String): JsonArray? =
     get(key)?.takeUnless(JsonElement::isJsonNull)?.asArrayOrNull()
 
-private fun JsonObject.hasNonNull(key: String): Boolean =
-    get(key)?.isJsonNull == false
-
 private fun JsonElement.asObjectOrNull(): JsonObject? = takeIf { isJsonObject }?.asJsonObject
 
 private fun JsonElement.asArrayOrNull(): JsonArray? = takeIf { isJsonArray }?.asJsonArray
@@ -212,10 +351,14 @@ private fun JsonElement.asArrayOrNull(): JsonArray? = takeIf { isJsonArray }?.as
 private fun JsonElement.asPrimitiveOrNull(): JsonPrimitive? =
     takeIf { it.isJsonPrimitive }?.asJsonPrimitive
 
-private fun parseCurrentApiRootObject(body: String): JsonObject {
-    val root = runCatching { JsonParser.parseString(body) }.getOrElse { cause ->
+private fun parseCurrentApiRootElement(body: String): JsonElement {
+    return runCatching { JsonParser.parseString(body) }.getOrElse { cause ->
         throw IllegalArgumentException("Invalid LiveFollow payload", cause)
     }
+}
+
+private fun parseCurrentApiRootObject(body: String): JsonObject {
+    val root = parseCurrentApiRootElement(body)
     return root.asObjectOrNull() ?: throw IllegalArgumentException("Invalid LiveFollow payload")
 }
 

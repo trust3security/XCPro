@@ -31,11 +31,12 @@ fun liveFollowTaskAttachmentMessage(
     taskRenderPolicy: LiveFollowTaskRenderPolicy
 ): String? {
     return when (taskRenderPolicy) {
+        LiveFollowTaskRenderPolicy.AVAILABLE -> null
         LiveFollowTaskRenderPolicy.BLOCKED_AMBIGUOUS ->
             "Task attach blocked while identity is ambiguous."
 
         LiveFollowTaskRenderPolicy.READ_ONLY_UNAVAILABLE ->
-            "Watched task metadata is unavailable in this transport-limited build."
+            "Watched pilot has no shared task right now."
 
         LiveFollowTaskRenderPolicy.HIDDEN -> null
     }

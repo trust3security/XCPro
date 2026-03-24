@@ -1,7 +1,6 @@
 package com.example.xcpro.livefollow.watch
 
 import com.example.xcpro.livefollow.formatAgeLabel
-import com.example.xcpro.livefollow.liveFollowTaskAttachmentMessage
 import com.example.xcpro.livefollow.liveFollowTransportLabel
 import com.example.xcpro.livefollow.toDisplayLabel
 import com.example.xcpro.livefollow.data.session.LiveFollowCommandResult
@@ -11,9 +10,18 @@ import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
 import com.example.xcpro.livefollow.data.watch.WatchTrafficSnapshot
 import com.example.xcpro.livefollow.model.LiveFollowSourceType
 import com.example.xcpro.livefollow.state.LiveFollowSessionState
+import kotlin.math.roundToInt
+
+enum class LiveFollowWatchPanelTone {
+    ACTIVE,
+    NEUTRAL,
+    WARNING
+}
 
 data class LiveFollowWatchUiState(
     val visible: Boolean = false,
+    val selectedShareCode: String? = null,
+    val selectedSessionId: String? = null,
     val sessionId: String? = null,
     val shareCode: String? = null,
     val lifecycleLabel: String = "Idle",
@@ -25,19 +33,36 @@ data class LiveFollowWatchUiState(
     val directTransportLabel: String = "Available",
     val aircraftLabel: String? = null,
     val aircraftIdentityLabel: String? = null,
+    val panelStatusLabel: String? = null,
+    val panelStatusTone: LiveFollowWatchPanelTone = LiveFollowWatchPanelTone.NEUTRAL,
+    val panelAltitudeLabel: String? = null,
+    val panelAglLabel: String? = null,
+    val panelSpeedLabel: String? = null,
+    val panelHeadingLabel: String? = null,
+    val panelFreshnessLabel: String? = null,
     val fixAgeLabel: String? = null,
     val feedbackMessage: String? = null,
     val directTransportMessage: String? = null,
-    val taskMessage: String? = null,
-    val canStopWatching: Boolean = false,
-    val canDismissMessage: Boolean = false,
     val isBusy: Boolean = false,
     val mapRenderState: LiveFollowMapRenderState = LiveFollowMapRenderState()
+)
+
+data class LiveFollowWatchSelectionHint(
+    val sessionId: String? = null,
+    val shareCode: String? = null,
+    val displayLabel: String,
+    val statusLabel: String,
+    val altitudeLabel: String?,
+    val speedLabel: String?,
+    val headingLabel: String?,
+    val recencyLabel: String?,
+    val isStale: Boolean
 )
 
 internal data class LiveFollowWatchRouteFeedback(
     val requestedSessionId: String? = null,
     val requestedShareCode: String? = null,
+    val selectedTarget: LiveFollowWatchSelectionHint? = null,
     val message: String? = null,
     val isBusy: Boolean = false
 )
@@ -55,15 +80,86 @@ internal fun buildLiveFollowWatchUiState(
         watchSnapshot = watchSnapshot
     )
     val feedbackMessage = feedback.message ?: session.lastError
-    val taskMessage = liveFollowTaskAttachmentMessage(mapRenderState.taskRenderPolicy)
+    val selectedSessionId = feedback.selectedTarget?.sessionId
+        ?: session.sessionId
+        ?: feedback.requestedSessionId
+    val selectedShareCode = feedback.selectedTarget?.shareCode
+        ?: session.shareCode
+        ?: feedback.requestedShareCode
+    val selectedTargetMatchesSession = when {
+        feedback.selectedTarget?.sessionId != null -> selectedSessionId == session.sessionId
+        feedback.selectedTarget?.shareCode != null -> selectedShareCode == session.shareCode
+        selectedSessionId != null -> selectedSessionId == session.sessionId
+        selectedShareCode != null -> selectedShareCode == session.shareCode
+        else -> false
+    }
+    val resolvedSelectedWatch = hasActiveWatch &&
+        selectedTargetMatchesSession &&
+        watchSnapshot.sourceState != LiveFollowSessionState.STOPPED
+    val liveAircraftLabel = watchSnapshot.aircraft?.displayLabel
+    val liveAltitudeLabel = watchSnapshot.aircraft?.altitudeMslMeters?.let { altitude ->
+        "${altitude.roundToInt()} m MSL"
+    }
+    val liveAglLabel = watchSnapshot.aircraft?.aglMeters?.let { agl ->
+        "${agl.roundToInt()} m"
+    }
+    val liveSpeedLabel = watchSnapshot.aircraft?.groundSpeedMs?.let { speed ->
+        "${speed.roundToInt()} m/s"
+    }
+    val liveHeadingLabel = watchSnapshot.aircraft?.trackDeg?.let { heading ->
+        "${heading.roundToInt()} deg"
+    }
+    val liveFreshnessLabel = formatAgeLabel(watchSnapshot.ageMs)?.let { age ->
+        "Updated $age ago"
+    }
+    val aircraftLabel = when {
+        selectedTargetMatchesSession && liveAircraftLabel != null -> liveAircraftLabel
+        feedback.selectedTarget != null -> feedback.selectedTarget.displayLabel
+        else -> liveAircraftLabel
+    }
+    val panelStatusLabel = when {
+        resolvedSelectedWatch ->
+            watchPanelStatusLabel(watchSnapshot.sourceState)
+        feedback.selectedTarget != null -> feedback.selectedTarget.statusLabel
+        else -> watchPanelStatusLabel(watchSnapshot.sourceState)
+    }
+    val panelStatusTone = when {
+        resolvedSelectedWatch ->
+            watchPanelStatusTone(watchSnapshot.sourceState)
+        feedback.selectedTarget != null -> selectionHintPanelTone(feedback.selectedTarget.isStale)
+        else -> watchPanelStatusTone(watchSnapshot.sourceState)
+    }
+    val panelAltitudeLabel = when {
+        resolvedSelectedWatch -> liveAltitudeLabel
+        feedback.selectedTarget?.altitudeLabel != null -> feedback.selectedTarget.altitudeLabel
+        else -> liveAltitudeLabel
+    }
+    val panelSpeedLabel = when {
+        resolvedSelectedWatch -> liveSpeedLabel
+        feedback.selectedTarget?.speedLabel != null -> feedback.selectedTarget.speedLabel
+        else -> liveSpeedLabel
+    }
+    val panelHeadingLabel = when {
+        resolvedSelectedWatch -> liveHeadingLabel
+        feedback.selectedTarget?.headingLabel != null -> feedback.selectedTarget.headingLabel
+        else -> liveHeadingLabel
+    }
+    val panelFreshnessLabel = when {
+        resolvedSelectedWatch -> liveFreshnessLabel
+        feedback.selectedTarget?.recencyLabel != null -> feedback.selectedTarget.recencyLabel
+        else -> liveFreshnessLabel
+    }
     val visible = hasActiveWatch ||
         feedback.requestedSessionId != null ||
         feedback.requestedShareCode != null ||
+        feedback.selectedTarget != null ||
         feedbackMessage != null
     return LiveFollowWatchUiState(
         visible = visible,
+        selectedShareCode = selectedShareCode,
+        selectedSessionId = selectedSessionId,
         sessionId = session.sessionId ?: feedback.requestedSessionId,
-        shareCode = session.shareCode ?: feedback.requestedShareCode,
+        shareCode = selectedShareCode,
         lifecycleLabel = session.lifecycle.name.toDisplayLabel(),
         sessionTransportLabel = liveFollowTransportLabel(session.transportAvailability),
         headline = watchHeadline(
@@ -83,9 +179,16 @@ internal fun buildLiveFollowWatchUiState(
         ),
         stateLabel = watchSnapshot.sourceState.name.toDisplayLabel(),
         directTransportLabel = liveFollowTransportLabel(watchSnapshot.directTransportAvailability),
-        aircraftLabel = watchSnapshot.aircraft?.displayLabel,
+        aircraftLabel = aircraftLabel,
         aircraftIdentityLabel = watchSnapshot.aircraft?.canonicalIdentity?.canonicalKey
             ?: session.watchIdentity?.canonicalIdentity?.canonicalKey,
+        panelStatusLabel = panelStatusLabel,
+        panelStatusTone = panelStatusTone,
+        panelAltitudeLabel = panelAltitudeLabel,
+        panelAglLabel = liveAglLabel,
+        panelSpeedLabel = panelSpeedLabel,
+        panelHeadingLabel = panelHeadingLabel,
+        panelFreshnessLabel = panelFreshnessLabel,
         fixAgeLabel = formatAgeLabel(watchSnapshot.ageMs),
         feedbackMessage = feedbackMessage,
         directTransportMessage = watchDirectTransportMessage(
@@ -95,12 +198,6 @@ internal fun buildLiveFollowWatchUiState(
             feedbackMessage = feedbackMessage,
             watchSnapshot = watchSnapshot
         ),
-        taskMessage = taskMessage,
-        canStopWatching = !feedback.isBusy &&
-            session.sideEffectsAllowed &&
-            session.role == LiveFollowSessionRole.WATCHER &&
-            session.sessionId != null,
-        canDismissMessage = !hasActiveWatch && feedbackMessage != null,
         isBusy = feedback.isBusy,
         mapRenderState = mapRenderState
     )
@@ -110,10 +207,14 @@ internal fun buildLiveFollowMapRenderState(
     session: LiveFollowSessionSnapshot,
     watchSnapshot: WatchTrafficSnapshot
 ): LiveFollowMapRenderState {
-    val taskRenderPolicy = when (watchSnapshot.sourceState) {
-        LiveFollowSessionState.AMBIGUOUS -> LiveFollowTaskRenderPolicy.BLOCKED_AMBIGUOUS
-        LiveFollowSessionState.WAITING,
-        LiveFollowSessionState.STOPPED -> LiveFollowTaskRenderPolicy.HIDDEN
+    val watchedTask = watchSnapshot.task?.takeIf { it.isRenderable() }
+    val taskRenderPolicy = when {
+        watchedTask != null -> LiveFollowTaskRenderPolicy.AVAILABLE
+        watchSnapshot.sourceState == LiveFollowSessionState.AMBIGUOUS ->
+            LiveFollowTaskRenderPolicy.BLOCKED_AMBIGUOUS
+        watchSnapshot.sourceState == LiveFollowSessionState.WAITING ||
+            watchSnapshot.sourceState == LiveFollowSessionState.STOPPED ->
+            LiveFollowTaskRenderPolicy.HIDDEN
         else -> LiveFollowTaskRenderPolicy.READ_ONLY_UNAVAILABLE
     }
     return LiveFollowMapRenderState(
@@ -121,6 +222,7 @@ internal fun buildLiveFollowMapRenderState(
             session.lifecycle == LiveFollowSessionLifecycle.JOINING ||
             session.lifecycle == LiveFollowSessionLifecycle.STOPPING,
         sessionId = session.sessionId,
+        shareCode = session.shareCode,
         lifecycle = session.lifecycle,
         sourceState = watchSnapshot.sourceState,
         activeSource = watchSnapshot.activeSource,
@@ -129,6 +231,7 @@ internal fun buildLiveFollowMapRenderState(
         longitudeDeg = watchSnapshot.aircraft?.longitudeDeg,
         trackDeg = watchSnapshot.aircraft?.trackDeg,
         ageMs = watchSnapshot.ageMs,
+        taskSnapshot = watchedTask,
         taskRenderPolicy = taskRenderPolicy
     )
 }
@@ -140,6 +243,44 @@ internal fun liveFollowWatchCommandMessage(
         LiveFollowCommandResult.Success -> "LiveFollow watch command completed."
         is LiveFollowCommandResult.Rejected -> result.reason.name.toDisplayLabel()
         is LiveFollowCommandResult.Failure -> result.message
+    }
+}
+
+private fun watchPanelStatusLabel(
+    state: LiveFollowSessionState
+): String? {
+    return when (state) {
+        LiveFollowSessionState.LIVE_OGN,
+        LiveFollowSessionState.LIVE_DIRECT -> "Active"
+        LiveFollowSessionState.STALE -> "Stale"
+        LiveFollowSessionState.WAITING -> "Waiting"
+        LiveFollowSessionState.AMBIGUOUS -> "Ambiguous"
+        LiveFollowSessionState.OFFLINE -> "Unavailable"
+        LiveFollowSessionState.STOPPED -> null
+    }
+}
+
+private fun watchPanelStatusTone(
+    state: LiveFollowSessionState
+): LiveFollowWatchPanelTone {
+    return when (state) {
+        LiveFollowSessionState.LIVE_OGN,
+        LiveFollowSessionState.LIVE_DIRECT -> LiveFollowWatchPanelTone.ACTIVE
+        LiveFollowSessionState.WAITING,
+        LiveFollowSessionState.STOPPED -> LiveFollowWatchPanelTone.NEUTRAL
+        LiveFollowSessionState.AMBIGUOUS,
+        LiveFollowSessionState.STALE,
+        LiveFollowSessionState.OFFLINE -> LiveFollowWatchPanelTone.WARNING
+    }
+}
+
+private fun selectionHintPanelTone(
+    isStale: Boolean
+): LiveFollowWatchPanelTone {
+    return if (isStale) {
+        LiveFollowWatchPanelTone.WARNING
+    } else {
+        LiveFollowWatchPanelTone.ACTIVE
     }
 }
 
@@ -156,8 +297,8 @@ private fun watchHeadline(
         LiveFollowSessionState.LIVE_OGN -> "Watching via OGN"
         LiveFollowSessionState.LIVE_DIRECT -> "Watching via direct source"
         LiveFollowSessionState.AMBIGUOUS -> "Identity is ambiguous"
-        LiveFollowSessionState.STALE -> "Watch data is stale"
-        LiveFollowSessionState.OFFLINE -> "Watch data is offline"
+        LiveFollowSessionState.STALE -> "Pilot is stale"
+        LiveFollowSessionState.OFFLINE -> "Pilot is unavailable"
         LiveFollowSessionState.STOPPED -> "No active watch session"
     }
 }
@@ -174,8 +315,8 @@ private fun watchDetail(
     return when (watchSnapshot.sourceState) {
         LiveFollowSessionState.WAITING -> "Session opened. Waiting for a confirmed traffic source."
         LiveFollowSessionState.AMBIGUOUS -> "Resolve identity ambiguity before trusting the watch target."
-        LiveFollowSessionState.STALE -> "The last confirmed watch fix is no longer fresh."
-        LiveFollowSessionState.OFFLINE -> "No usable watch source is currently delivering fixes."
+        LiveFollowSessionState.STALE -> "This pilot has not updated recently."
+        LiveFollowSessionState.OFFLINE -> "This pilot is no longer live right now."
         LiveFollowSessionState.STOPPED -> "Open a LiveFollow watch route to begin."
         LiveFollowSessionState.LIVE_OGN,
         LiveFollowSessionState.LIVE_DIRECT -> buildString {

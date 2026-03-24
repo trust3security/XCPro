@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,6 +17,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.xcpro.livefollow.watch.LiveFollowWatchViewModel
 import com.example.xcpro.map.MapSize
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
@@ -32,6 +35,7 @@ internal fun MapScreenRoot(
     mapStyleExpanded: MutableState<Boolean>,
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
+    allowFlightSensorStart: Boolean,
     onMapStyleSelected: (String) -> Unit = {},
     onOpenGeneralSettings: () -> Unit,
     mapViewModel: MapScreenViewModel
@@ -39,6 +43,13 @@ internal fun MapScreenRoot(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val liveFollowWatchViewModel: LiveFollowWatchViewModel = hiltViewModel()
+    val liveFollowWatchUiState by liveFollowWatchViewModel.uiState.collectAsStateWithLifecycle()
+    val renderLocalOwnship = shouldRenderLocalOwnship(
+        allowFlightSensorStart = allowFlightSensorStart,
+        watchMapRenderState = liveFollowWatchUiState.mapRenderState
+    )
+    val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
     val runtimeDependencies = mapViewModel.runtimeDependencies
     val flightDataManager = runtimeDependencies.flightDataManager
     val orientationManager = runtimeDependencies.orientationManager
@@ -98,7 +109,8 @@ internal fun MapScreenRoot(
         coroutineScope = coroutineScope,
         tasksUseCase = runtimeDependencies.tasksUseCase,
         airspaceUseCase = runtimeDependencies.airspaceUseCase,
-        waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase
+        waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase,
+        localOwnshipRenderEnabled = { renderLocalOwnshipState.value }
     )
     LaunchedEffect(profileLookAndFeelBinding.activeProfileId, managers.locationManager) {
         managers.locationManager.setActiveProfileId(profileLookAndFeelBinding.activeProfileId)
@@ -131,7 +143,8 @@ internal fun MapScreenRoot(
         overlayManager = managers.overlayManager,
         traffic = bindings.traffic,
         currentLocation = hotPathBindings.currentLocation,
-        unitsPreferences = rootUiBinding.mapUiState.unitsPreferences
+        unitsPreferences = rootUiBinding.mapUiState.unitsPreferences,
+        renderLocalOwnship = renderLocalOwnship
     )
     MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
 
@@ -184,7 +197,8 @@ internal fun MapScreenRoot(
         replaySessionState = sessionBindings.replaySession,
         useRenderFrameSync = runtimeDependencies.featureFlags.useRenderFrameSync,
         suppressLiveGps = sessionBindings.suppressLiveGps,
-        allowSensorStart = sessionBindings.allowSensorStart
+        allowSensorStart = sessionBindings.allowSensorStart && allowFlightSensorStart,
+        renderLocalOwnship = renderLocalOwnship
     )
 
     val widgetLayout = rememberMapScreenWidgetLayoutBinding(
@@ -216,6 +230,8 @@ internal fun MapScreenRoot(
         initialMapStyle = initialMapStyle,
         onMapStyleSelected = onMapStyleSelected,
         onOpenGeneralSettings = onOpenGeneralSettings,
+        allowFlightSensorStart = allowFlightSensorStart,
+        renderLocalOwnship = renderLocalOwnship,
         mapViewModel = mapViewModel,
         hotPathBindings = hotPathBindings,
         rootUiBinding = rootUiBinding,
