@@ -30,6 +30,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = mock(),
+            configuredDevBearerAuthEnabled = true,
             defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
         )
 
@@ -64,6 +65,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
+            configuredDevBearerAuthEnabled = true,
             defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
         )
 
@@ -107,6 +109,7 @@ class XcAccountRepositoryTest {
             ),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
+            configuredDevBearerAuthEnabled = true,
             defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
         )
         advanceUntilIdle()
@@ -148,6 +151,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
+            configuredDevBearerAuthEnabled = true,
             defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
         )
         advanceUntilIdle()
@@ -199,6 +203,7 @@ class XcAccountRepositoryTest {
                 )
             ),
             remoteDataSource = remoteDataSource,
+            configuredDevBearerAuthEnabled = true,
             defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
         )
 
@@ -207,6 +212,35 @@ class XcAccountRepositoryTest {
         assertTrue(repository.state.value.isSignedIn)
         assertEquals("fresh-google-token", sessionStore.savedSession?.accessToken)
         assertEquals("pilot-google", repository.state.value.profile?.userId)
+    }
+
+    @Test
+    fun init_withStoredConfiguredDevSessionWhenDisabled_clearsSessionAndSignsOut() = runTest {
+        val sessionStore = FakeSessionStore(
+            XcAccountSession(
+                accessToken = "stored-dev-token",
+                authMethod = XcAccountAuthMethod.CONFIGURED_DEV_TOKEN
+            )
+        )
+        val remoteDataSource: CurrentApiXcAccountDataSource = mock()
+        val repository = XcAccountRepository(
+            sessionStore = sessionStore,
+            authProvider = FakeAuthProvider(),
+            googleAuthGateway = FakeGoogleAuthGateway(),
+            remoteDataSource = remoteDataSource,
+            configuredDevBearerAuthEnabled = false,
+            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+        )
+
+        advanceUntilIdle()
+
+        assertFalse(repository.state.value.isSignedIn)
+        assertEquals(
+            "Configured dev bearer auth is unavailable in this build.",
+            repository.state.value.errorMessage
+        )
+        assertNull(sessionStore.savedSession)
+        verify(remoteDataSource, never()).fetchMe(any())
     }
 
     @Test
@@ -275,6 +309,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
+            configuredDevBearerAuthEnabled = true,
             defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
         )
         advanceUntilIdle()
@@ -331,6 +366,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
+            configuredDevBearerAuthEnabled = true,
             defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
         )
         advanceUntilIdle()

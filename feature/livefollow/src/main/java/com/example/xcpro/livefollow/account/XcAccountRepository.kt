@@ -1,6 +1,7 @@
 package com.example.xcpro.livefollow.account
 
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.livefollow.di.ConfiguredDevBearerAuthEnabled
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -19,6 +20,8 @@ class XcAccountRepository @Inject constructor(
     private val authProvider: XcAccountAuthProvider,
     private val googleAuthGateway: XcGoogleAuthGateway,
     private val remoteDataSource: CurrentApiXcAccountDataSource,
+    @ConfiguredDevBearerAuthEnabled
+    private val configuredDevBearerAuthEnabled: Boolean,
     @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
 ) {
     private val signInCapabilities = buildSignInCapabilities()
@@ -355,7 +358,18 @@ class XcAccountRepository @Inject constructor(
     ): XcAccountSession? {
         val authResult = when (session.authMethod) {
             XcAccountAuthMethod.GOOGLE -> googleAuthGateway.restoreSession(session)
-            else -> XcAccountAuthResult.Success(session)
+            XcAccountAuthMethod.CONFIGURED_DEV_TOKEN -> {
+                if (configuredDevBearerAuthEnabled) {
+                    XcAccountAuthResult.Success(session)
+                } else {
+                    XcAccountAuthResult.Unavailable(
+                        "Configured dev bearer auth is unavailable in this build."
+                    )
+                }
+            }
+            XcAccountAuthMethod.EMAIL_LINK -> XcAccountAuthResult.Unavailable(
+                "Email-link sign-in is not configured in this build."
+            )
         }
         return when (authResult) {
             is XcAccountAuthResult.Success -> {

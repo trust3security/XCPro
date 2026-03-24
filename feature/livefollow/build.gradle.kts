@@ -20,6 +20,9 @@ fun readSecretProperty(name: String): String {
     return localProperties.getProperty(name)?.trim().orEmpty()
 }
 
+val configuredDevBearerToken = readSecretProperty("XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN")
+val googleServerClientId = readSecretProperty("XCPRO_GOOGLE_SERVER_CLIENT_ID")
+
 android {
     namespace = "com.example.xcpro.livefollow"
     compileSdk = 35
@@ -27,15 +30,47 @@ android {
     defaultConfig {
         minSdk = 30
         buildConfigField(
+            "boolean",
+            "XCPRO_PRIVATE_FOLLOW_DEV_AUTH_ENABLED",
+            "false"
+        )
+        buildConfigField(
             "String",
             "XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN",
-            "\"${readSecretProperty("XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN")}\""
+            "\"\""
         )
         buildConfigField(
             "String",
             "XCPRO_GOOGLE_SERVER_CLIENT_ID",
-            "\"${readSecretProperty("XCPRO_GOOGLE_SERVER_CLIENT_ID")}\""
+            "\"$googleServerClientId\""
         )
+    }
+
+    buildTypes {
+        getByName("debug") {
+            buildConfigField(
+                "boolean",
+                "XCPRO_PRIVATE_FOLLOW_DEV_AUTH_ENABLED",
+                "true"
+            )
+            buildConfigField(
+                "String",
+                "XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN",
+                "\"$configuredDevBearerToken\""
+            )
+        }
+        getByName("release") {
+            buildConfigField(
+                "boolean",
+                "XCPRO_PRIVATE_FOLLOW_DEV_AUTH_ENABLED",
+                "false"
+            )
+            buildConfigField(
+                "String",
+                "XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN",
+                "\"\""
+            )
+        }
     }
 
     compileOptions {
