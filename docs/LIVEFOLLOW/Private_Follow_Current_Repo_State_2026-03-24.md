@@ -1,7 +1,7 @@
 # Private Follow Current Repo State
 
 Date: 2026-03-24
-Status: Current implemented repo state for the authenticated private-follow lane after Phase 3 live entitlement landed in repo
+Status: Current implemented repo state for the authenticated private-follow lane after Phase 3 live entitlement landed in repo and rollout blockers were hardened in repo
 
 ## Purpose
 
@@ -84,6 +84,15 @@ The authenticated private-follow lane now includes:
   `POST /api/v1/task/upsert`
 - the existing write-token upload path is still reused for
   `POST /api/v1/session/end`
+- fresh-db Alembic bootstrap now upgrades an empty DB through the current
+  private-follow chain without manual pre-seeding of the legacy public tables
+- release Android builds hard-disable the configured dev bearer sign-in seam
+- server-side static bearer auth now loads only when
+  `XCPRO_RUNTIME_ENV=dev` and `XCPRO_ALLOW_DEV_STATIC_BEARER_AUTH=1`
+- repo now includes a private-follow environment preflight script at
+  `XCPro_Server/scripts/private_follow_env_preflight.py`
+- repo now includes a staging smoke owner doc at
+  `XCPro_Private_Follow_Staging_Smoke_Guide_2026-03-24.md`
 
 ## Proposal Vs Implemented Differences
 
@@ -108,6 +117,23 @@ These behaviors remain out of scope or not yet implemented:
 - push notifications
 - requiring sign-in for the public watch lane
 - rollout sequencing between server migration/deploy and client rollout
+
+## Rollout Hardening Notes
+
+These rollout blockers are now fixed in repo:
+
+- fresh empty DB upgrade to head is bootstrap-safe in Alembic
+- release/prod app builds do not expose `Use configured dev account`
+- server-side static/dev bearer auth is fail-closed unless explicitly enabled
+  for local dev
+- release owners now have one preflight command and one staging smoke owner doc
+
+These steps still remain external/manual before rollout can proceed:
+
+- real Google OAuth client configuration
+- staging/prod env secrets
+- real-device Google sign-in verification
+- staging deployment and smoke execution
 
 ## Public LiveFollow Is Still Separate
 

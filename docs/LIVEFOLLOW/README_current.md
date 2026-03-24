@@ -41,6 +41,12 @@ The deployed public contract owner remains
 5. `Private_Follow_Google_Server_Exchange_Setup_2026-03-24.md`
    - current setup note for Google sign-in and XCPro-Server token exchange
 
+6. `XCPro_Private_Follow_Rollout_Release_Checklist_2026-03-24.md`
+   - rollout sequencing, validation, rollback, and release-owner checklist
+
+7. `XCPro_Private_Follow_Staging_Smoke_Guide_2026-03-24.md`
+   - staging smoke execution owner for the current private-follow rollout
+
 Private-follow proposal and plan docs do not automatically mean deployed
 behavior.
 `Private_Follow_Current_Repo_State_2026-03-24.md` is the current owner for

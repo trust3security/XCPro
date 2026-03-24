@@ -1,24 +1,28 @@
 package com.example.xcpro.livefollow.account
 
+import com.example.xcpro.livefollow.di.ConfiguredDevBearerAuthEnabled
 import com.example.xcpro.livefollow.di.ConfiguredDevBearerToken
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ConfiguredBuildTokenXcAccountAuthProvider @Inject constructor(
+    @ConfiguredDevBearerAuthEnabled
+    private val configuredDevBearerAuthEnabled: Boolean,
     @ConfiguredDevBearerToken
     private val configuredDevBearerToken: String
 ) : XcAccountAuthProvider {
 
     override fun signInCapabilities(): List<XcAccountSignInCapability> {
-        val configuredDevTokenAvailable = configuredDevBearerToken.isNotBlank()
+        val configuredDevTokenAvailable = configuredDevBearerAuthEnabled &&
+            configuredDevBearerToken.isNotBlank()
         return buildList {
             if (!configuredDevTokenAvailable) return@buildList
             add(
                 XcAccountSignInCapability(
                     method = XcAccountSignInMethod.CONFIGURED_DEV_TOKEN,
                     title = "Use configured dev account",
-                    description = "Bootstraps the private-follow account seam with a preconfigured bearer token.",
+                    description = "Debug-only private-follow auth seam with a preconfigured bearer token.",
                     isAvailable = true
                 )
             )
@@ -38,6 +42,11 @@ class ConfiguredBuildTokenXcAccountAuthProvider @Inject constructor(
             )
 
             XcAccountSignInMethod.CONFIGURED_DEV_TOKEN -> {
+                if (!configuredDevBearerAuthEnabled) {
+                    return XcAccountAuthResult.Unavailable(
+                        "Configured dev bearer auth is unavailable in this build."
+                    )
+                }
                 val token = configuredDevBearerToken.trim()
                 if (token.isBlank()) {
                     XcAccountAuthResult.Unavailable(

@@ -18,6 +18,10 @@ import javax.inject.Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class ConfiguredDevBearerToken
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ConfiguredDevBearerAuthEnabled
+
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class LiveFollowAccountBindingsModule {
@@ -39,9 +43,19 @@ abstract class LiveFollowAccountBindingsModule {
 
     companion object {
         @Provides
+        @ConfiguredDevBearerAuthEnabled
+        fun provideConfiguredDevBearerAuthEnabled(): Boolean {
+            return BuildConfig.XCPRO_PRIVATE_FOLLOW_DEV_AUTH_ENABLED
+        }
+
+        @Provides
         @ConfiguredDevBearerToken
         fun provideConfiguredDevBearerToken(): String {
-            return BuildConfig.XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN.trim()
+            return if (BuildConfig.XCPRO_PRIVATE_FOLLOW_DEV_AUTH_ENABLED) {
+                BuildConfig.XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN.trim()
+            } else {
+                ""
+            }
         }
     }
 }
