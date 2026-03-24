@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "706263540675",
+    "project_id": "xcpro-868cd",
+    "storage_bucket": "xcpro-868cd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706263540675:android:c1fa2846f6097dfb281376",
+        "android_client_info": {
+          "package_name": "com.trust3security.xcpro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvsZKjJejo-bl2xfbR9_5LdmUKAmqNHqc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

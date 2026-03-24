@@ -1,0 +1,11 @@
+Included files:
+- docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md
+- docs/LIVEFOLLOW/LiveFollow_Current_Deployed_API_Contract_v3.md
+- docs/LIVEFOLLOW/LiveFollow_Current_State_and_Next_Slice_2026-03-23.md
+- docs/LIVEFOLLOW/Private_Follow_Current_Repo_State_2026-03-24.md
+- docs/LIVEFOLLOW/Private_Follow_Google_Server_Exchange_Setup_2026-03-24.md
+- docs/LIVEFOLLOW/README_current.md
+- docs/LIVEFOLLOW/ServerInfo.md
+- docs/LIVEFOLLOW/archive/2026-03-private-follow-rollout-hardening/XCPro_Private_Follow_Rollout_Blocker_Remediation_Brief_2026-03-24.md
+- docs/LIVEFOLLOW/archive/2026-03-private-follow-rollout-hardening/XCPro_Private_Follow_Rollout_Blocker_Remediation_Checklist_v1.md
+- docs/LIVEFOLLOW/XCPro_Private_Follow_Rollout_Release_Checklist_2026-03-24.md

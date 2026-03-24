@@ -1,7 +1,7 @@
 # Private Follow Current Repo State
 
-Date: 2026-03-24  
-Status: Repo implementation and rollout hardening complete; rollout remains paused pending real staging/prod environment setup and verified staging execution.
+Date: 2026-03-24
+Status: Current implemented repo state for the authenticated private-follow lane after Phase 3 live entitlement landed in repo and rollout blockers were hardened in repo
 
 ## Purpose
 
@@ -16,98 +16,26 @@ It is separate from:
 Use it to answer:
 
 - what authenticated private-follow behavior is implemented in the repo now
-- what release candidates are currently frozen for rollout
-- what the next operator step is
-- what still remains manual/external before rollout can proceed
+- what still remains out of scope
 - which authenticated endpoints exist for the private-follow lane
 
-It does not replace the deployed public LiveFollow contract owner:  
+It does not replace the deployed public LiveFollow contract owner:
 `LiveFollow_Current_Deployed_API_Contract_v3.md`.
 
-## Current Rollout Status
-
-Private follow is now **repo-complete and rollout-hardening-complete**.
-
-What that means:
-
-- the app/server implementation is present in repo
-- repo-side rollout blockers were fixed
-- release candidates were pinned
-- fresh-db Alembic bootstrap is now safe in repo
-- dev/static bearer shortcuts are now hardened for release/prod safety
-
-What it does **not** mean yet:
-
-- staging/prod environment configuration has been proven
-- real-device Google sign-in and server token exchange have been proven
-- staging smoke execution has been completed
-- production rollout is approved
-
-So the current state is:
-
-- **repo readiness:** yes
-- **rollout approval:** not yet
-- **next mode of work:** operational staging execution, not new feature implementation
-
-## Current Pinned Release Candidates
-
-### Server RC
-- commit: `b696f039540480468195087fa3f44338338f6fba`
-- tag: `private-follow-rollout-rc-server-2026-03-24`
-- status: clean pinned server rollout candidate
-
-### App RC
-- commit: `c25d0f6520686643c2670502048fee3a83b91ca9`
-- tag: `private-follow-rollout-rc-app-2026-03-24`
-- clean frozen worktree: `C:/Users/Asus/AndroidStudioProjects/XCPro_private_follow_rollout_rc_app`
-- note: the main app worktree may still contain unrelated local files, but they are not part of the frozen RC
-
-## Next Operator Step
-
-Do this next, in order:
-
-1. set the real staging environment values
-2. deploy the pinned **server** RC to staging first
-3. apply migrations
-4. run the private-follow env preflight in staging
-5. install the pinned app RC on a real Android device
-6. prove Google sign-in and `POST /api/v2/auth/google/exchange`
-7. run the staging smoke matrix end to end
-8. make a `go / pause / fix specific blocker` rollout decision
-
-Do **not** resume feature work unless staging exposes a real blocker bug.
-
-## Current Operator Docs
-
-Use these docs for the next operational pass:
-
-- `Private_Follow_Google_Server_Exchange_Setup_2026-03-24.md`
-- `XCPro_Private_Follow_Rollout_Release_Checklist_2026-03-24.md`
-- `XCPro_Private_Follow_Staging_Smoke_Guide_2026-03-24.md`
-- `XCPro_Private_Follow_Staging_Execution_Brief_2026-03-24.md`
-
-Operator support docs:
-
-- `XCPro_Private_Follow_Staging_Operator_Inputs_Worksheet_2026-03-24.md`
-- `XCPro_Private_Follow_Staging_Smoke_Results_Template_2026-03-24.md`
-- `XCPro_Private_Follow_Operator_Handoff_Message_2026-03-24.md`
-
-Proposal/reference docs still relevant for later work:
+## Current Durable References
 
 - `XCPro_Private_Follow_Product_and_UX_Brief_2026-03-23.md`
 - `XCPro_Private_Follow_Proposed_API_Contract_v1.md`
 - `XCPro_Private_Follow_Change_Plan_2026-03-23.md`
+- `Private_Follow_Google_Server_Exchange_Setup_2026-03-24.md`
 - `docs/refactor/Private_Follow_Live_Entitlement_Phase3_Phased_IP_2026-03-24.md`
 - `docs/ARCHITECTURE/ADR_PRIVATE_FOLLOW_LIVE_LANE_SPLIT_2026-03-24.md`
 
 Keep the Google setup note active while it remains the owner for Google
-Credential Manager sign-in, XCPro-Server token exchange, staging/prod env rules,
-and required Android/server environment setup.
-
+Credential Manager sign-in, XCPro-Server token exchange, and required
+Android/server environment setup.
 Completed Phase 1 and Phase 3 execution briefs/checklists are historical and
 now live under `docs/LIVEFOLLOW/archive/2026-03-private-follow-doc-cleanup/`.
-Completed one-off cleanup/remediation briefs are historical and now live under
-`docs/LIVEFOLLOW/archive/2026-03-private-follow-rollout-hardening/`.
 
 ## Implemented In Repo Now
 
@@ -188,6 +116,7 @@ These behaviors remain out of scope or not yet implemented:
 - email-based discovery
 - push notifications
 - requiring sign-in for the public watch lane
+- rollout sequencing between server migration/deploy and client rollout
 
 ## Rollout Hardening Notes
 
@@ -197,22 +126,14 @@ These rollout blockers are now fixed in repo:
 - release/prod app builds do not expose `Use configured dev account`
 - server-side static/dev bearer auth is fail-closed unless explicitly enabled
   for local dev
-- release candidates are pinned for both server and app
 - release owners now have one preflight command and one staging smoke owner doc
 
 These steps still remain external/manual before rollout can proceed:
 
-- set real staging/prod server env, especially:
-  - `XCPRO_RUNTIME_ENV`
-  - `XCPRO_GOOGLE_SERVER_CLIENT_ID` or `XCPRO_GOOGLE_SERVER_CLIENT_IDS`
-  - `XCPRO_PRIVATE_FOLLOW_BEARER_SECRET`
-  - optional `XCPRO_PRIVATE_FOLLOW_BEARER_TTL_SECONDS`
-- verify Google OAuth audience configuration against a real device token exchange
-- run the env preflight successfully in the real staging environment
-- deploy the pinned server RC to staging and apply migrations
-- install/test the pinned app RC on a real Android device
-- run the staging smoke matrix
-- run production smoke after deploy if staging passes
+- real Google OAuth client configuration
+- staging/prod env secrets
+- real-device Google sign-in verification
+- staging deployment and smoke execution
 
 ## Public LiveFollow Is Still Separate
 
