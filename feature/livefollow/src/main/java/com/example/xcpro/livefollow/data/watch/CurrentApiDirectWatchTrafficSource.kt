@@ -8,7 +8,7 @@ import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
 import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
 import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookup
 import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookupType
-import com.example.xcpro.livefollow.data.session.liveFollowSessionIdLookup
+import com.example.xcpro.livefollow.data.session.deriveLiveFollowWatchLookup
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiErrorMessage
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiLiveReadResponse
 import com.example.xcpro.livefollow.data.transport.preferredCurrentApiLivePoint
@@ -231,10 +231,11 @@ private fun activeWatchLookup(
     if (snapshot.runtimeMode != LiveFollowRuntimeMode.LIVE) return null
     if (snapshot.role != LiveFollowSessionRole.WATCHER) return null
     if (snapshot.lifecycle != LiveFollowSessionLifecycle.ACTIVE) return null
-    return snapshot.watchLookup ?: snapshot.sessionId
-        ?.trim()
-        ?.takeIf { it.isNotEmpty() }
-        ?.let(::liveFollowSessionIdLookup)
+    return deriveLiveFollowWatchLookup(
+        explicitLookup = snapshot.watchLookup,
+        shareCode = snapshot.shareCode,
+        sessionId = snapshot.sessionId
+    )
 }
 
 private fun deriveLocalFixMonoMs(

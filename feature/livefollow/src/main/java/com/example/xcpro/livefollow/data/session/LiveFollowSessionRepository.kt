@@ -298,6 +298,10 @@ private fun sessionSnapshotFor(
         replayBlockReason = replayDecision.blockReason,
         lastError = gatewaySnapshot.lastError,
         shareCode = gatewaySnapshot.shareCode,
-        watchLookup = gatewaySnapshot.watchLookup
+        watchLookup = deriveLiveFollowWatchLookup(
+            explicitLookup = gatewaySnapshot.watchLookup,
+            shareCode = gatewaySnapshot.shareCode,
+            sessionId = gatewaySnapshot.sessionId
+        )
     )
 }

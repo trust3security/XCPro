@@ -142,6 +142,47 @@ class LiveFollowSessionRepositoryTest {
     }
 
     @Test
+    fun joinWatchSessionByShareCode_derivesShareCodeLookupWhenGatewayOmitsTypedLookup() = runTest {
+        val scope = repoScope()
+        try {
+        val ownshipSource = FakeOwnshipSnapshotSource()
+        val taskSource = FakeTaskSnapshotSource()
+        val gateway = FakeSessionGateway(
+            joinByShareCodeResult = LiveFollowSessionGatewayResult.Success(
+                snapshot = LiveFollowSessionGatewaySnapshot(
+                    sessionId = "watch-2",
+                    role = LiveFollowSessionRole.WATCHER,
+                    lifecycle = LiveFollowSessionLifecycle.ACTIVE,
+                    watchIdentity = null,
+                    directWatchAuthorized = true,
+                    transportAvailability = liveFollowAvailableTransport(),
+                    lastError = null,
+                    shareCode = "WATCH123"
+                )
+            )
+        )
+        val repository = LiveFollowSessionRepository(
+            scope = scope,
+            ownshipSnapshotSource = ownshipSource,
+            taskSnapshotSource = taskSource,
+            gateway = gateway
+        )
+        val result = repository.joinWatchSessionByShareCode("WATCH123")
+        advanceUntilIdle()
+        assertEquals(LiveFollowCommandResult.Success, result)
+        assertEquals(1, gateway.joinByShareCodeCalls)
+        assertEquals("WATCH123", repository.state.value.shareCode)
+        assertEquals(
+            LiveFollowWatchLookupType.SHARE_CODE,
+            repository.state.value.watchLookup?.type
+        )
+        assertEquals("WATCH123", repository.state.value.watchLookup?.value)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun replayMode_blocksGatewaySideEffects() = runTest {
         val scope = repoScope()
         try {

@@ -60,13 +60,9 @@ class CurrentApiDirectWatchTrafficSourceTest {
                 pollIntervalMs = 60_000L
             )
             runCurrent()
-
             assertEquals(0, requestCount.get())
             assertNull(source.aircraft.value)
-            assertEquals(
-                LiveFollowTransportState.AVAILABLE,
-                source.transportAvailability.value.state
-            )
+            assertEquals(LiveFollowTransportState.AVAILABLE, source.transportAvailability.value.state)
         } finally {
             scope.cancel()
         }
@@ -91,14 +87,12 @@ class CurrentApiDirectWatchTrafficSourceTest {
             runCurrent()
             assertEquals(1, requestCount.get())
             requireNotNull(source.aircraft.value)
-
             sessionState.value = activeWatchSession(
                 runtimeMode = LiveFollowRuntimeMode.REPLAY,
                 sideEffectsAllowed = false,
                 replayBlockReason = LiveFollowReplayBlockReason.REPLAY_MODE
             )
             runCurrent()
-
             assertNull(source.aircraft.value)
             advanceTimeBy(5_000L)
             runCurrent()
@@ -144,10 +138,7 @@ class CurrentApiDirectWatchTrafficSourceTest {
             assertEquals(3, task.points.size)
             assertEquals(10_000.0, requireNotNull(task.points.first().radiusMeters), 0.0)
             assertEquals(3_000.0, requireNotNull(task.points.last().radiusMeters), 0.0)
-            assertEquals(
-                LiveFollowTransportState.AVAILABLE,
-                source.transportAvailability.value.state
-            )
+            assertEquals(LiveFollowTransportState.AVAILABLE, source.transportAvailability.value.state)
         } finally {
             scope.cancel()
         }
@@ -157,8 +148,8 @@ class CurrentApiDirectWatchTrafficSourceTest {
     fun poll_shareCodeWatch_usesPublicShareEndpoint_andMapsPayload() = runTest {
         val scope = repoScope()
         try {
-            val clock = FakeClock(monoMs = 20_000L, wallMs = 1_000_000L)
-            val sessionState = MutableStateFlow(
+        val clock = FakeClock(monoMs = 20_000L, wallMs = 1_000_000L)
+        val sessionState = MutableStateFlow(
                 activeWatchSession(
                     sessionId = "watch-1",
                     shareCode = "WATCH123",
@@ -195,10 +186,50 @@ class CurrentApiDirectWatchTrafficSourceTest {
             assertEquals("spectator-task", source.task.value?.taskName)
             assertNull(sample.canonicalIdentity)
             assertNull(sample.verticalSpeedMs)
-            assertEquals(
-                LiveFollowTransportState.AVAILABLE,
-                source.transportAvailability.value.state
+            assertEquals(LiveFollowTransportState.AVAILABLE, source.transportAvailability.value.state)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun poll_shareCodeWatchWithoutExplicitLookup_stillUsesPublicShareEndpoint() = runTest {
+        val scope = repoScope()
+        try {
+            val clock = FakeClock(monoMs = 20_000L, wallMs = 1_000_000L)
+            val sessionState = MutableStateFlow(
+                activeWatchSession(
+                    sessionId = "watch-1",
+                    shareCode = "WATCH123"
+                )
             )
+            val requestedPath = AtomicReference<String>()
+            val source = CurrentApiDirectWatchTrafficSource(
+                scope = scope,
+                clock = clock,
+                sessionState = sessionState,
+                xcAccountRepository = mockXcAccountRepository(),
+                httpClient = OkHttpClient.Builder().addInterceptor(
+                    Interceptor { chain ->
+                        requestedPath.set(chain.request().url.encodedPath)
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(200)
+                            .message("OK")
+                            .body(sampleLivePayload().toResponseBody("application/json".toMediaType()))
+                            .build()
+                    }
+                ).build(),
+                ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+                pollIntervalMs = 60_000L
+            )
+            runCurrent()
+            val sample = source.aircraft.value
+            requireNotNull(sample)
+            assertEquals("/api/v1/live/share/WATCH123", requestedPath.get())
+            assertEquals("WATCH123", sample.displayLabel)
+            assertEquals("spectator-task", source.task.value?.taskName)
         } finally {
             scope.cancel()
         }
@@ -342,11 +373,7 @@ class CurrentApiDirectWatchTrafficSourceTest {
                 pollIntervalMs = 60_000L
             )
             runCurrent()
-
-            assertEquals(
-                LiveFollowTransportState.DEGRADED,
-                source.transportAvailability.value.state
-            )
+            assertEquals(LiveFollowTransportState.DEGRADED, source.transportAvailability.value.state)
             assertTrue(source.transportAvailability.value.message?.contains("poll unavailable") == true)
         } finally {
             scope.cancel()
