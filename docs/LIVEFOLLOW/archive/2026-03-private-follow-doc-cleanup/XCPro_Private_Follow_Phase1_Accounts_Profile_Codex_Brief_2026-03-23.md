@@ -383,7 +383,7 @@ Preferred approach:
 But do **not** present future `/api/v2` proposals as deployed unless they are actually implemented and tested.
 
 ### Also update if needed
-- `README_current.md` if the current LIVEFOLLOW canon changes
+- `README.md` if the current LIVEFOLLOW canon changes
 - private-follow proposal docs if implementation choices differ from the proposal
 
 ## Constraints

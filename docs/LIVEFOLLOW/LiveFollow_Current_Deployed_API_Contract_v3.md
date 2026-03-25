@@ -534,5 +534,5 @@ state.
 
 - `docs/LIVEFOLLOW/LiveFollow_Current_State_and_Next_Slice_2026-03-23.md`
 - `docs/LIVEFOLLOW/ServerInfo.md`
-- `docs/LIVEFOLLOW/README_current.md`
+- `docs/LIVEFOLLOW/README.md`
 - `docs/LIVEFOLLOW/LIVEFOLLOW_APP_SERVER_CONTRACT_CHECKLIST_v4.md`

@@ -22,20 +22,37 @@ Use it to answer:
 It does not replace the deployed public LiveFollow contract owner:
 `LiveFollow_Current_Deployed_API_Contract_v3.md`.
 
-## Current Durable References
+## Current Navigation
+
+### Current folder entrypoint
+
+- `README.md`
+
+### Current proposal owners
 
 - `XCPro_Private_Follow_Product_and_UX_Brief_2026-03-23.md`
 - `XCPro_Private_Follow_Proposed_API_Contract_v1.md`
 - `XCPro_Private_Follow_Change_Plan_2026-03-23.md`
+
+### Current setup owner
+
 - `Private_Follow_Google_Server_Exchange_Setup_2026-03-24.md`
+
+Keep the setup note active while it remains the owner for Google Credential
+Manager sign-in, XCPro-Server token exchange, and required Android/server
+environment setup that is still external to the repo code.
+
+### Related architecture / refactor docs
+
 - `docs/refactor/Private_Follow_Live_Entitlement_Phase3_Phased_IP_2026-03-24.md`
 - `docs/ARCHITECTURE/ADR_PRIVATE_FOLLOW_LIVE_LANE_SPLIT_2026-03-24.md`
 
-Keep the Google setup note active while it remains the owner for Google
-Credential Manager sign-in, XCPro-Server token exchange, and required
-Android/server environment setup.
+### Historical archive
+
+- `docs/LIVEFOLLOW/archive/2026-03-private-follow-doc-cleanup/`
+
 Completed Phase 1 and Phase 3 execution briefs/checklists are historical and
-now live under `docs/LIVEFOLLOW/archive/2026-03-private-follow-doc-cleanup/`.
+live under that archive folder.
 
 ## Implemented In Repo Now
 
@@ -108,6 +125,12 @@ These behaviors remain out of scope or not yet implemented:
 - push notifications
 - requiring sign-in for the public watch lane
 - rollout sequencing between server migration/deploy and client rollout
+
+## Archive Boundary
+
+Use the root docs above for current behavior, proposal intent, and setup.
+Use the archive only for completed execution briefs, review checklists, and
+historical cleanup context.
 
 ## Public LiveFollow Is Still Separate
 

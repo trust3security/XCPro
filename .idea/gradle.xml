@@ -21,6 +21,7 @@
             <option value="$PROJECT_DIR$/feature/flight-runtime" />
             <option value="$PROJECT_DIR$/feature/forecast" />
             <option value="$PROJECT_DIR$/feature/igc" />
+            <option value="$PROJECT_DIR$/feature/livefollow" />
             <option value="$PROJECT_DIR$/feature/map" />
             <option value="$PROJECT_DIR$/feature/map-runtime" />
             <option value="$PROJECT_DIR$/feature/profile" />

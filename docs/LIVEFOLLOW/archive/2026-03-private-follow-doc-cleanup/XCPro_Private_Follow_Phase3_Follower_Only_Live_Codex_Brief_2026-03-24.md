@@ -497,7 +497,7 @@ The current repo-state doc should say:
 
 ### Required README update
 Update:
-- `docs/LIVEFOLLOW/README_current.md`
+- `docs/LIVEFOLLOW/README.md`
 
 It should now clearly point readers to:
 1. public LiveFollow current canon

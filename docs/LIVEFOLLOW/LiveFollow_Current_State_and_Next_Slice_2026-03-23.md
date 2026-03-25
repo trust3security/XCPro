@@ -80,7 +80,7 @@ That slice should stay within the current spectator boundaries:
 
 Use these as the active LIVEFOLLOW canon:
 
-1. `docs/LIVEFOLLOW/README_current.md`
+1. `docs/LIVEFOLLOW/README.md`
    - entrypoint for current LIVEFOLLOW docs
 2. `docs/LIVEFOLLOW/LiveFollow_Current_State_and_Next_Slice_2026-03-23.md`
    - current product/status summary

@@ -201,7 +201,7 @@ And non-public sessions:
 ## L. Docs and archives
 ### Pass if
 - the current private-follow repo-state doc was updated or version-bumped
-- `README_current.md` was updated if the current doc canon changed
+- `README.md` was updated if the current doc canon changed
 - newly implemented repo behavior is documented without being mislabeled as deployed
 - completed phase-specific execution docs were archived
 - the report names the exact archive folder created

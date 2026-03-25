@@ -121,7 +121,7 @@ Before approving a contract change, confirm:
 1. Does the deployed contract doc reflect real current server behavior rather than planned behavior?
 2. If a separate side doc exists, does it still have a unique purpose and a non-conflicting owner?
 3. Are all new additive fields, endpoints, and nullability rules described in the contract owner?
-4. Did the current-state summary and `README_current.md` get updated if the active doc canon changed?
+4. Did the current-state summary and `README.md` get updated if the active doc canon changed?
 
 ---
 

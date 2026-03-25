@@ -163,6 +163,12 @@ class FlightCalculationHelpersTest {
                 "Timed out waiting for the coalesced second AGL request to finish.",
                 secondRequestProcessed.await(AGL_WORKER_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             )
+            waitForCondition(
+                timeoutSeconds = AGL_WORKER_TIMEOUT_SECONDS,
+                failureMessage = "Timed out waiting for the coalesced AGL result to be applied."
+            ) {
+                helpers.currentAGL == 1_100.0
+            }
 
             val requestedSnapshot = synchronized(requestedAltitudes) { requestedAltitudes.toList() }
             assertEquals(listOf(1_000.0, 1_200.0), requestedSnapshot)
@@ -432,5 +438,18 @@ class FlightCalculationHelpersTest {
                 override suspend fun getElevationMeters(lat: Double, lon: Double): Double? = null
             }
         )
+
+    private fun waitForCondition(
+        timeoutSeconds: Long,
+        failureMessage: String,
+        condition: () -> Boolean
+    ) {
+        val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
+        while (System.nanoTime() < deadlineNanos) {
+            if (condition()) return
+            Thread.sleep(10L)
+        }
+        throw AssertionError(failureMessage)
+    }
 }
 

@@ -164,7 +164,7 @@ These remain intact and unchanged in behavior unless explicitly intended and doc
 ### Pass if
 - newly deployed Phase 1 behavior is documented somewhere current
 - future proposal docs are not the only source of truth for newly deployed behavior
-- `README_current.md` was updated if the LIVEFOLLOW canon changed
+- `README.md` was updated if the LIVEFOLLOW canon changed
 - current docs still keep deployed reality separate from future proposals
 
 ### Fail if
