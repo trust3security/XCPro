@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.glide.FinalGlideUseCase
-import com.example.xcpro.glide.GlideTargetSnapshot
+import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.map.trail.TrailSettings
@@ -33,8 +32,7 @@ internal class FlightDataUiAdapter(
     containerReady: MutableStateFlow<Boolean>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
     igcReplayController: IgcReplayController,
-    glideTargetFlow: Flow<GlideTargetSnapshot>,
-    finalGlideUseCase: FinalGlideUseCase,
+    glideSolutionFlow: Flow<GlideSolution>,
     trailUpdates: MutableStateFlow<TrailUpdateResult?>
 ) {
     private val observers = MapScreenObservers(
@@ -50,8 +48,7 @@ internal class FlightDataUiAdapter(
         containerReady = containerReady,
         uiEffects = uiEffects,
         igcReplayController = igcReplayController,
-        glideTargetFlow = glideTargetFlow,
-        finalGlideUseCase = finalGlideUseCase,
+        glideSolutionFlow = glideSolutionFlow,
         trailProcessor = TrailProcessor(),
         trailUpdates = trailUpdates
     )

@@ -46,8 +46,7 @@ Sensors
   -> FlightDataUseCase
   -> MapScreenViewModel
      -> FlightDataUiAdapter (MapScreenObservers)
-        + GlideTargetRepository.finishTarget
-        + FinalGlideUseCase
+        + GlideComputationRepository.glide
         -> convertToRealTimeFlightData
         -> FlightDataManager
      -> mapLocation (GPS) for map UI
@@ -343,11 +342,8 @@ Rules:
 Use case:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
   - `FlightDataUseCase` exposes `FlightDataRepository.flightData`.
-  - `MapReplayUseCase` now also injects:
-    - `GlideTargetRepository`
-    - `FinalGlideUseCase`
-  - It passes `glideTargetRepository.finishTarget` plus `finalGlideUseCase` into
-    `FlightDataUiAdapter`.
+  - `MapReplayUseCase` now injects `GlideComputationRepository`.
+  - It passes `glideComputationRepository.glide` into `FlightDataUiAdapter`.
 
 ViewModel:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
@@ -416,11 +412,12 @@ ViewModel:
 
 Observers:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` (wrapped by `FlightDataUiAdapter`)
-  - Combines flight data + wind + flying state + racing finish-glide target.
+  - Combines flight data + wind + flying state + upstream glide solution.
   - Projects replay session state through a semantic selection-presence gate
     (`mapReplaySelectionActive()` -> `distinctUntilChanged`) before joining
     the main observer combine path.
-  - Solves task-finish glide through `FinalGlideUseCase` before mapping.
+  - Consumes `GlideComputationRepository.glide`; it no longer solves glide in
+    the observer layer.
   - Converts `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
   - Pushes to `FlightDataManager` and the `feature:map-runtime` trail
     processor.
@@ -445,15 +442,27 @@ Final glide runtime contract:
     `TaskManagerCoordinator.taskSnapshotFlow` plus
     `TaskNavigationController.racingState`.
   - `feature/map/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt`
-    currently solves from fused `CompleteFlightData`, `WindState`, and
+    previously solved from fused `CompleteFlightData`, `WindState`, and
     `GlideTargetSnapshot`.
   - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
-    currently invokes `FinalGlideUseCase`, then maps
+    previously invoked `FinalGlideUseCase`, then mapped
     `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
-  - Current remaining-route construction is still waypoint-center based through
-    `GlideRoutePoint` / `remainingWaypointsFrom(...)`; treat this as a
-    transitional implementation rather than the approved canonical route
-    boundary.
+  - Current map glide consumers on `main` still build a waypoint-center-based
+    remaining route through `GlideRoutePoint` / `remainingWaypointsFrom(...)`.
+- Current local branch implementation (`final-glide-route-runtime-migration`, Phase 2, 2026-03-25):
+  - `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt`
+    is the canonical remaining-route seam and now supplies the route points used
+    for glide.
+  - `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideComputationRepository.kt`
+    combines `FlightDataRepository.flightData`, `WindSensorFusionRepository.windState`,
+    `TaskManagerCoordinator.taskSnapshotFlow`, and `NavigationRouteRepository.route`.
+  - `feature/map-runtime/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt`
+    now owns final-glide math/policy in the non-UI runtime layer.
+  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+    now consumes upstream `GlideSolution` values only.
+  - `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`
+    remains only as a temporary compatibility shim and is no longer the active
+    map glide consumer path.
 - Approved migration target (tracked in
   `docs/ARCHITECTURE/ADR_FINAL_GLIDE_RUNTIME_BOUNDARY_2026-03-25.md` and
   `docs/ARCHITECTURE/CHANGE_PLAN_FINAL_GLIDE_ROUTE_AND_RUNTIME_MIGRATION_2026-03-25.md`):
@@ -823,8 +832,8 @@ Cards do not read sensors directly. They consume `RealTimeFlightData` produced b
 
 Current wiring:
 - `FlightDataRepository`
+  -> `GlideComputationRepository`
   -> `FlightDataUiAdapter` / `MapScreenObservers`
-  -> `FinalGlideUseCase` using `GlideTargetRepository.finishTarget`
   -> `convertToRealTimeFlightData(...)`
   -> `FlightDataManager.cardFlightDataFlow`
   -> `CardIngestionCoordinator`
@@ -956,6 +965,15 @@ Task UI (Compose)
 
 Authoritative ownership:
 - Cross-feature task definition and active leg: `TaskManagerCoordinator.taskSnapshotFlow`.
+- Current final-glide route seam (Phase 2 local branch, 2026-03-25):
+  `feature:tasks` now also exposes
+  `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt`
+  as an additive remaining-route read seam derived from
+  `TaskManagerCoordinator.taskSnapshotFlow` plus
+  `TaskNavigationController.racingState`.
+  `feature:map-runtime` now consumes that boundary-aware route seam for glide
+  computation. `GlideTargetRepository` remains only as a temporary compatibility
+  bridge and is no longer the active map glide consumer path.
 - Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskRepository.state` is not the cross-feature runtime authority.
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).
@@ -1238,4 +1256,3 @@ Replay:
 - `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
 - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
 - `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`
-

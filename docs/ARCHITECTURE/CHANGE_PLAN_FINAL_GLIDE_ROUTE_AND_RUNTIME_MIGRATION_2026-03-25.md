@@ -40,6 +40,40 @@ Recommended discipline:
 - optional local checkpoint tag after each completed phase
 - no GitHub branch or PR until phase 4 exit criteria are met
 
+### Phase 0 baseline inventory
+
+- Current task runtime owner:
+  - `TaskManagerCoordinator.taskSnapshotFlow`
+- Current glide target owner:
+  - `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`
+- Current final-glide solve owner:
+  - `feature/map/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt`
+  - invoked from `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+- Current known route limitation:
+  - remaining-route projection is waypoint-center based and is not yet
+    boundary-aware
+
+### Current local implementation status
+
+- Phase 0:
+  - complete locally
+- Phase 1A:
+  - complete locally; `feature:tasks` owns an additive route seam via
+    `NavigationRouteRepository`
+- Phase 1B:
+  - complete locally; the new task-owned route seam now projects
+    boundary-aware racing touchpoints while current map glide consumers still
+    read the legacy `GlideTargetRepository` path
+- Phase 2:
+  - complete locally; `feature:map-runtime` now owns
+    `GlideComputationRepository.glide`, `FinalGlideUseCase` has moved upstream,
+    and `MapScreenObservers` now consumes `GlideSolution` instead of solving
+    directly
+  - `GlideTargetRepository` remains only as a temporary compatibility shim for
+    legacy callers/tests and is no longer the active map glide consumer path
+- Phase 3+:
+  - not started
+
 ## 1) Scope
 
 - Problem statement:
@@ -82,8 +116,8 @@ Recommended discipline:
 | Latest fused flight sample | `FlightDataRepository` | `flightData` | task-owned or UI-owned copies |
 | Active task definition + active leg | `TaskManagerCoordinator` | `taskSnapshotFlow` | `TaskRepository` as runtime authority |
 | Racing nav runtime state | `TaskNavigationController` | `racingState` | map/card-local nav truth |
-| Canonical remaining racing route | new `NavigationRouteRepository` in `feature:tasks` | `route: StateFlow<NavigationRouteSnapshot>` | waypoint-center route derived in `feature:map` |
-| Derived final glide result | new `GlideComputationRepository` in `feature:map-runtime` | `glide: StateFlow<GlideSolution>` | direct `finalGlideUseCase.solve(...)` in observers/UI |
+| Canonical remaining racing route | new `NavigationRouteRepository` in `feature:tasks` | `route: Flow<NavigationRouteSnapshot>` | waypoint-center route derived in `feature:map` |
+| Derived final glide result | `GlideComputationRepository` in `feature:map-runtime` | `glide: Flow<GlideSolution>` | direct `finalGlideUseCase.solve(...)` in observers/UI |
 | UI card projection | existing map adapter path | `RealTimeFlightData` | task/glide math in cards/formatters |
 
 ### 2.1A State Contract
@@ -93,8 +127,8 @@ Recommended discipline:
 | `CompleteFlightData` | `FlightDataRepository` | fusion/live/replay pipeline only | map/runtime consumers | sensor fusion | none | source switch / clear | live monotonic + replay sample time | existing flight runtime tests |
 | `TaskRuntimeSnapshot` | `TaskManagerCoordinator` | task managers / coordinator only | cross-feature runtime reads | task runtime | task persistence path | task load/clear/switch | runtime event time | existing task tests |
 | `RacingNavigationState` | `TaskNavigationController` | racing nav engine only | cross-feature runtime reads | nav fixes + task runtime | none | task-type switch/reset | runtime fix time | existing navigation tests |
-| `NavigationRouteSnapshot` | new `NavigationRouteRepository` (`feature:tasks`) | repository/projector only | `feature:map-runtime` and tests | `taskSnapshotFlow` + `racingState` + boundary helpers | none | no task / task-type switch / finished / invalid route | task/nav runtime time | new parity + boundary tests |
-| `GlideSolution` | new `GlideComputationRepository` (`feature:map-runtime`) | repository/use-case only | `feature:map` adapter path | `CompleteFlightData` + `WindState` + `NavigationRouteSnapshot` + polar | none | no task / invalid inputs / source clear | live/replay fused sample time | new repository tests + existing solver tests |
+| `NavigationRouteSnapshot` | new `NavigationRouteRepository` (`feature:tasks`) | repository/projector only | future glide/runtime consumers and tests | `taskSnapshotFlow` + `racingState` + boundary helpers | none | no task / task-type switch / finished / invalid route | task/nav runtime time | new parity + boundary tests |
+| `GlideSolution` | `GlideComputationRepository` (`feature:map-runtime`) | repository/use-case only | `feature:map` adapter path | `CompleteFlightData` + `WindState` + `TaskManagerCoordinator.taskSnapshotFlow` + `NavigationRouteSnapshot` + polar | none | no task / invalid inputs / source clear | live/replay fused sample time | new repository tests + existing solver tests |
 | `RealTimeFlightData` | map adapter path | adapter only | cards / overlays | `CompleteFlightData` + `GlideSolution` | none | sample clear | fused sample time | existing conversion tests |
 
 ### 2.2 Dependency Direction
@@ -131,7 +165,7 @@ Confirmed target dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `MapScreenObservers` | direct `finalGlideUseCase.solve(...)` | consume `glide: Flow<GlideSolution>` from `GlideComputationRepository` | 3 |
+| `MapScreenObservers` | direct `finalGlideUseCase.solve(...)` | consume `glide: Flow<GlideSolution>` from `GlideComputationRepository` | 2 |
 | `GlideTargetRepository.remainingWaypointsFrom(...)` | waypoint-center remaining route | task-owned `NavigationRouteSnapshot` | 1 / 2 |
 | `FinalGlideUseCase.buildRoute(...)` | builds route from `GlideRoutePoint` centers | consume canonical route legs from `NavigationRouteSnapshot` | 3 |
 
@@ -141,6 +175,8 @@ Confirmed target dependency flow remains:
 |---|---|---|---|---|---|
 | `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteSnapshot.kt` | New | cross-feature route model | task runtime contract | route is task-owned, not map-owned | no |
 | `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt` | New | route projector / read-only flow owner | near task runtime + boundary helpers | avoids map-layer route ownership | maybe split projector helper if file grows |
+| `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteProjector.kt` | New | pure parity projector for Phase 1A | isolates route derivation logic from the flow owner | avoids mixed responsibility in repository | no |
+| `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteGeometryResolver.kt` | New | boundary-aware racing touchpoint resolver for Phase 1B | keeps route geometry with task/runtime owners | avoids boundary math in map/UI or a mixed repository file | no |
 | `feature/tasks/src/test/java/com/example/xcpro/tasks/navigation/NavigationRouteRepositoryTest.kt` | New | parity + boundary route tests | route owner tests | keeps route correctness near owner | no |
 | `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideComputationRepository.kt` | New | derived glide flow owner | non-UI runtime layer already depends on tasks + flight-runtime | avoids solve ownership in map shell | no |
 | `feature/map-runtime/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt` | Existing/moved | final-glide policy + math | solver belongs with derived runtime owner | not task-owned because it combines flight + wind + route + polar | maybe helper split later only if needed |
@@ -153,7 +189,7 @@ Confirmed target dependency flow remains:
 | Contract / API | Owner | Consumers | Visibility | Why Needed | Compatibility / Removal Plan |
 |---|---|---|---|---|---|
 | `NavigationRouteSnapshot` | `feature:tasks` | `feature:map-runtime`, tests | public/internal-to-consumers as needed | canonical remaining-route contract | durable |
-| `NavigationRouteRepository.route` | `feature:tasks` | `feature:map-runtime` | injected read-only flow | upstream route owner | durable |
+| `NavigationRouteRepository.route` | `feature:tasks` | future glide/runtime consumers | injected read-only flow | upstream route owner | durable |
 | `GlideComputationRepository.glide` | `feature:map-runtime` | `feature:map` | injected read-only flow | observer consumes result instead of solving | durable |
 | relocated `FinalGlideUseCase` | `feature:map-runtime` | `GlideComputationRepository`, tests | internal/public as needed | keep solver math in non-UI runtime | durable |
 | temporary `GlideTargetRepository` bridge | `feature:map` | legacy tests/callers during migration | internal | phase safety only | remove in phase 4 |
@@ -288,7 +324,7 @@ MapScreenObservers
   - branch created
   - no push yet
 
-### Phase 1 — add task-owned route contract with behavior parity
+### Phase 1A - add task-owned route contract with behavior parity
 
 - Goal:
   - introduce `NavigationRouteSnapshot` and `NavigationRouteRepository` in
@@ -313,14 +349,15 @@ Recommended local proof:
 ./gradlew :feature:tasks:testDebugUnitTest
 ```
 
-### Phase 2 — switch route projection to canonical boundary-aware geometry
+### Phase 1B - switch route projection to canonical boundary-aware geometry
 
 - Goal:
   - make `NavigationRouteRepository` compute the real remaining racing route
     using existing boundary helpers
 - Files to change:
   - `feature/tasks/.../navigation/NavigationRouteRepository.kt`
-  - new or existing helper near `feature/tasks/.../racing/boundary/*`
+  - `feature/tasks/.../navigation/NavigationRouteProjector.kt`
+  - new `feature/tasks/.../navigation/NavigationRouteGeometryResolver.kt`
   - new boundary regression tests
 - Ownership/file split changes in this phase:
   - route correctness is fixed while the old consumer path still exists
@@ -334,6 +371,11 @@ Recommended local proof:
     racing boundaries
   - regression tests pass
   - no glide-owner move yet
+- Local status:
+  - complete on the local branch
+  - focused tests now lock finish cylinder, finish line, FAI quadrant, and
+    finished/prestart route behavior
+  - map glide consumers still remain on `GlideTargetRepository` until Phase 2
 
 Recommended local proof:
 
@@ -342,7 +384,7 @@ Recommended local proof:
 ./gradlew enforceRules
 ```
 
-### Phase 3 — move derived glide computation to `feature:map-runtime`
+### Phase 2 - move derived glide computation to `feature:map-runtime`
 
 - Goal:
   - move the solve/orchestration owner out of `MapScreenObservers`
@@ -364,6 +406,14 @@ Recommended local proof:
   - `MapScreenObservers` consumes upstream glide results
   - direct observer-owned solve is removed
   - compile passes across `feature:tasks`, `feature:map-runtime`, and `feature:map`
+- Local status:
+  - complete on the local branch
+  - `GlideComputationRepository` now combines fused flight data, wind state,
+    task runtime, and the task-owned route seam in `feature:map-runtime`
+  - `FinalGlideUseCase` now lives in `feature:map-runtime`
+  - `MapScreenObservers` now consumes upstream `GlideSolution` values only
+  - `GlideTargetRepository` remains as a compatibility shim and is no longer
+    the active map glide consumer path
 
 Recommended local proof:
 
@@ -373,10 +423,34 @@ Recommended local proof:
 ./gradlew enforceRules
 ```
 
-### Phase 4 — remove compatibility glue and finish local proof
+### Phase 3 - glide policy cleanup
 
 - Goal:
-  - delete or quarantine legacy map-owned route glue
+  - clean up duplicated or transitional glide-policy/status handling after the
+    non-UI glide owner is in place
+- Files to change:
+  - route/glide status models and compatibility helpers only as needed
+  - focused tests covering degraded-state handling and remaining policy drift
+- Ownership/file split changes in this phase:
+  - no new owner move; policy duplication is reduced
+- Tests to add/update:
+  - degraded/invalid state coverage that becomes clearer after Phase 2
+- Exit criteria:
+  - no duplicated glide-policy logic remains across map/runtime callsites
+  - policy owner is explicit and tested
+
+Recommended local proof:
+
+```bash
+./gradlew :feature:map-runtime:testDebugUnitTest
+./gradlew enforceRules
+```
+
+### Phase 4 - target generalization + doc cleanup + final validation
+
+- Goal:
+  - remove compatibility glue
+  - generalize targets only if still needed after the runtime-owner move
   - make docs truthful about final mainline wiring
   - run full proof before any GitHub update
 - Files to change:
@@ -440,7 +514,23 @@ Change-type coverage matrix:
 | Legacy glue lingers after owner move | low/medium | phase 4 explicitly deletes or time-boxes leftover bridge | XCPro Team |
 | Replay behavior regresses | high | keep time base unchanged and add deterministic repository tests | XCPro Team |
 
-## 6A) ADR / Durable Decision Record
+## 6A) Stop-and-fix rule
+
+Stop immediately and fix before continuing if any of these occur:
+
+- local `main` is dirty before branch setup
+- the requested local branch does not match the current local `main` baseline
+- Phase 1A requires boundary-aware geometry or glide-math behavior changes to
+  compile
+- a change would add task-route or glide-derived fields to `CompleteFlightData`
+- a change would move business logic into `feature:map`, `MapScreenObservers`,
+  cards, Composables, or formatting layers
+- `./gradlew enforceRules` or targeted Phase 1A tests fail
+
+Do not continue to the next phase with a known failing gate unless an explicit,
+approved deviation exists. None is planned for this migration.
+
+## 6B) ADR / Durable Decision Record
 
 - ADR required: Yes
 - ADR file:
@@ -451,6 +541,10 @@ Change-type coverage matrix:
   - `feature:map` is consumer/adapter only
 - Why this belongs in an ADR instead of plan notes:
   - owner boundaries and durable cross-module seams must outlive the rollout plan
+- Current ADR note:
+  - the ADR records the target direction before Phase 2 lands
+  - after Phase 2 or Phase 4, revisit the ADR wording so it matches the actual
+    landed steady-state rather than the pre-implementation target
 
 ## 7) Acceptance Gates
 
@@ -463,6 +557,19 @@ Change-type coverage matrix:
 - Full local proof passes before the first GitHub update
 - `KNOWN_DEVIATIONS.md` updated only if an explicit temporary exception is
   approved with issue, owner, and expiry
+
+## 7A) Acceptance criteria for Phase 0 + Phase 1A
+
+- local branch exists and no remote action was performed
+- change plan reflects phases 0, 1A, 1B, 2, 3, and 4
+- `NavigationRouteSnapshot` and its owner exist outside UI
+- route state is derived from `TaskManagerCoordinator.taskSnapshotFlow` plus
+  `TaskNavigationController.racingState`
+- behavior parity is preserved in 1A; no boundary-aware geometry switch yet
+- `CompleteFlightData` remains unchanged
+- no glide math moved into UI
+- targeted tests for the new route seam exist and pass
+- the smallest relevant validation passes for this slice
 
 ## 8) Rollback Plan
 

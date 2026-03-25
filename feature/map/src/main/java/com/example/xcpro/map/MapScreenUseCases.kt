@@ -16,8 +16,7 @@ import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.map.config.MapFeatureFlags
-import com.example.xcpro.glide.FinalGlideUseCase
-import com.example.xcpro.glide.GlideTargetRepository
+import com.example.xcpro.glide.GlideComputationRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.replay.IgcReplayController
@@ -171,8 +170,7 @@ class MapOrientationSettingsUseCase @Inject constructor(
 class MapReplayUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator,
     private val taskNavigationController: TaskNavigationController,
-    private val glideTargetRepository: GlideTargetRepository,
-    private val finalGlideUseCase: FinalGlideUseCase,
+    private val glideComputationRepository: GlideComputationRepository,
     private val controller: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder
 ) {
@@ -210,8 +208,7 @@ class MapReplayUseCase @Inject constructor(
         containerReady = containerReady,
         uiEffects = uiEffects,
         igcReplayController = controller,
-        glideTargetFlow = glideTargetRepository.finishTarget,
-        finalGlideUseCase = finalGlideUseCase,
+        glideSolutionFlow = glideComputationRepository.glide,
         trailUpdates = trailUpdates
     )
 

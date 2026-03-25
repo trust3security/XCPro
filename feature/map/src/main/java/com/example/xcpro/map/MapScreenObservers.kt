@@ -3,8 +3,7 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertToRealTimeFlightData
-import com.example.xcpro.glide.FinalGlideUseCase
-import com.example.xcpro.glide.GlideTargetSnapshot
+import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.trail.TrailLength
 import com.example.xcpro.map.trail.domain.TrailProcessor
@@ -44,8 +43,7 @@ internal class MapScreenObservers(
     private val containerReady: MutableStateFlow<Boolean>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
     private val igcReplayController: IgcReplayController,
-    private val glideTargetFlow: Flow<GlideTargetSnapshot>,
-    private val finalGlideUseCase: FinalGlideUseCase,
+    private val glideSolutionFlow: Flow<GlideSolution>,
     private val trailProcessor: TrailProcessor,
     private val trailUpdates: MutableStateFlow<TrailUpdateResult?>
 ) {
@@ -71,14 +69,14 @@ internal class MapScreenObservers(
             igcReplayController.session.mapReplaySelectionActive()
         ) { data, wind, flightState, hawkState, isReplay ->
             Quintuple(data, wind, flightState, hawkState, isReplay)
-        }.combine(glideTargetFlow) { tuple, glideTarget ->
+        }.combine(glideSolutionFlow) { tuple, glideSolution ->
             Sextuple(
                 tuple.first,
                 tuple.second,
                 tuple.third,
                 tuple.fourth,
                 tuple.fifth,
-                glideTarget
+                glideSolution
             )
         }.combine(trailSettingsFlow.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->
             Septuple(
@@ -91,7 +89,7 @@ internal class MapScreenObservers(
                 trailEnabled
             )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay, glideTarget, trailEnabled) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, trailEnabled) ->
                 if (data != null) {
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -108,11 +106,6 @@ internal class MapScreenObservers(
                     val formattedFlightTime = "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 
                     val hawkUiState = if (isReplay) HawkVarioUiState() else hawkState
-                    val glideSolution = finalGlideUseCase.solve(
-                        completeData = data,
-                        windState = wind,
-                        target = glideTarget
-                    )
                     val liveData = convertToRealTimeFlightData(
                         completeData = data,
                         windState = wind,
