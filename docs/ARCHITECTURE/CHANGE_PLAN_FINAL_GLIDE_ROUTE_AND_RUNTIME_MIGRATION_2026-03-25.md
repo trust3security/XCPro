@@ -18,8 +18,8 @@ Read first:
 - Title: Final glide route/runtime migration
 - Owner: XCPro Team
 - Date: 2026-03-25
-- Issue/PR: local branch only until phase 4 is complete
-- Status: Approved for local implementation
+- Issue/PR: local branch only; Phase 4 complete and ready for the first GitHub update
+- Status: Implemented locally through Phase 4; full local proof passed
 - ADR:
   - `docs/ARCHITECTURE/ADR_FINAL_GLIDE_RUNTIME_BOUNDARY_2026-03-25.md`
 
@@ -77,14 +77,16 @@ Recommended discipline:
 - Phase 3:
   - complete locally; duplicated glide-policy/status projection has been
     collapsed into `GlideTargetProjector` in `feature:map-runtime`
-  - `GlideTargetRepository` now delegates to `NavigationRouteRepository` plus
-    `GlideTargetProjector` instead of maintaining separate waypoint-center
-    route/policy logic
   - `FinalGlideUseCase` now consumes canonical `NavigationRoutePoint` values
     from the task-owned route seam instead of a duplicated map-runtime route
     point model
 - Phase 4:
-  - not started
+  - complete locally; the remaining `GlideTargetRepository` compatibility shim
+    and its dedicated shim test are removed from the branch
+  - final owner docs now describe the post-shim durable boundary
+  - required full local proof passed:
+    `./gradlew enforceRules`, `./gradlew testDebugUnitTest`,
+    `./gradlew assembleDebug`
 
 ## 1) Scope
 
@@ -178,7 +180,7 @@ Confirmed target dependency flow remains:
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
 | `MapScreenObservers` | direct `finalGlideUseCase.solve(...)` | consume `glide: Flow<GlideSolution>` from `GlideComputationRepository` | 2 |
-| `GlideTargetRepository.finishTarget` | compatibility shim used its own waypoint-center route + status projection | delegate to `NavigationRouteRepository` + shared `GlideTargetProjector` | 3 |
+| `GlideTargetRepository.finishTarget` | compatibility shim used its own waypoint-center route + status projection | delegate to `NavigationRouteRepository` + shared `GlideTargetProjector`, then delete the shim | 3-4 |
 | `FinalGlideUseCase.buildRoute(...)` | builds route from duplicated `GlideRoutePoint` centers | consume canonical `NavigationRoutePoint` values from `NavigationRouteSnapshot` | 3 |
 
 ### 2.2D File Ownership Plan
@@ -195,7 +197,7 @@ Confirmed target dependency flow remains:
 | `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideTargetProjector.kt` | New in phase 3 | explicit glide-policy/status projection owner | shared policy mapping used by runtime and compatibility shim | keeps status/finish-rule mapping out of UI and out of duplicate shims | no |
 | `feature/map-runtime/src/test/java/com/example/xcpro/glide/GlideComputationRepositoryTest.kt` | New | repository wiring tests | owner-local proof | keeps new behavior testable without map shell | no |
 | `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` | Existing | adapter only | consumer of upstream glide result | must stop owning solve orchestration | no |
-| `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | Existing | temporary compatibility bridge or deletion target | minimize risk during phases 1-3 | removed in phase 4 | no |
+| `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | Deleted in phase 4 | retired compatibility bridge | Phase 4 removes the dead map shim after the authoritative path is fully upstream | no durable owner remains | no |
 
 ### 2.2E Module and API Surface
 
@@ -205,7 +207,7 @@ Confirmed target dependency flow remains:
 | `NavigationRouteRepository.route` | `feature:tasks` | future glide/runtime consumers | injected read-only flow | upstream route owner | durable |
 | `GlideComputationRepository.glide` | `feature:map-runtime` | `feature:map` | injected read-only flow | observer consumes result instead of solving | durable |
 | relocated `FinalGlideUseCase` | `feature:map-runtime` | `GlideComputationRepository`, tests | internal/public as needed | keep solver math in non-UI runtime | durable |
-| temporary `GlideTargetRepository` bridge | `feature:map` | legacy tests/callers during migration | internal | phase safety only | remove in phase 4 |
+| none remaining after phase 4 | n/a | compatibility cleanup complete on the branch | n/a | n/a | covered by compile + full proof |
 
 ### 2.2F Transitional Task Runtime Read
 
@@ -215,9 +217,9 @@ Confirmed target dependency flow remains:
 - It must not derive remaining-route geometry or become a second route owner;
   boundary-aware route geometry/status remain authoritative in
   `NavigationRouteSnapshot` from `feature:tasks`.
-- `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`
-  may only delegate to this projector plus the task-owned route seam while it
-  exists as compatibility glue.
+- Phase 4 removes the old `feature:map` compatibility shim entirely; no
+  `GlideTargetRepository` bridge remains on the authoritative or fallback
+  production path.
 - If finish-rule mapping grows beyond this narrow policy owner, replace it with
   a task-owned finish-constraint seam instead of expanding map-runtime task
   policy in this migration slice.
@@ -233,7 +235,7 @@ Confirmed target dependency flow remains:
 
 | Shim / Bridge | Owner | Reason | Target Replacement | Removal Trigger | Test Coverage |
 |---|---|---|---|---|---|
-| `GlideTargetRepository` | `feature:map` | keep legacy callers stable while route/computation owners land | direct `NavigationRouteRepository` + `GlideComputationRepository` consumption | phase 4 cleanup | existing glide target tests + compile path |
+| none remaining after phase 4 | n/a | compatibility cleanup complete on the branch | n/a | n/a | compile + full local proof |
 | old solver import path | `feature:map` / `feature:map-runtime` | low-risk move with minimal callsite churn | single runtime-owned use-case file | phase 3 complete | solver tests |
 
 ### 2.2I Canonical Formula / Policy Owner
@@ -322,6 +324,7 @@ TaskManagerCoordinator.taskSnapshotFlow
 
 FlightDataRepository.flightData
   + WindState
+  + TaskManagerCoordinator.taskSnapshotFlow
   + NavigationRouteRepository.route
   -> GlideComputationRepository (feature:map-runtime)
   -> GlideSolution
@@ -484,25 +487,31 @@ Recommended local proof:
 ./gradlew enforceRules
 ```
 
-### Phase 4 - target generalization + doc cleanup + final validation
+### Phase 4 - compatibility removal + doc cleanup + final validation
 
 - Goal:
   - remove compatibility glue
-  - generalize targets only if still needed after the runtime-owner move
   - make docs truthful about final mainline wiring
   - run full proof before any GitHub update
 - Files to change:
-  - remove/trim `feature/map/.../GlideTargetRepository.kt` if no longer needed
+  - remove `feature/map/.../GlideTargetRepository.kt`
+  - remove `feature/map/.../GlideTargetRepositoryTest.kt`
   - final doc sync in `PIPELINE.md`
+  - final ADR/change-plan sync for the post-shim durable boundary
   - cleanup imports/tests
 - Ownership/file split changes in this phase:
   - no legacy map-owned canonical route or glide solve path remains
 - Tests to add/update:
   - final path tests only
 - Exit criteria:
-  - compatibility glue removed or clearly isolated with an issue/expiry
+  - compatibility glue removed
   - full local proof passes
   - branch is ready for first GitHub update
+- Local status:
+  - complete on the local branch
+  - `GlideTargetRepository` and `GlideTargetRepositoryTest` are deleted
+  - migration docs now describe the durable post-shim owner split
+  - required full local proof passed on 2026-03-25
 
 Required full local proof:
 
@@ -581,9 +590,8 @@ approved deviation exists. None is planned for this migration.
 - Why this belongs in an ADR instead of plan notes:
   - owner boundaries and durable cross-module seams must outlive the rollout plan
 - Current ADR note:
-  - the ADR records the target direction before Phase 2 lands
-  - after Phase 2 or Phase 4, revisit the ADR wording so it matches the actual
-    landed steady-state rather than the pre-implementation target
+  - the ADR must match the actual post-phase-4 branch state before the first
+    GitHub update
 
 ## 7) Acceptance Gates
 

@@ -449,7 +449,7 @@ Final glide runtime contract:
     `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
   - Current map glide consumers on `main` still build a waypoint-center-based
     remaining route through `GlideRoutePoint` / `remainingWaypointsFrom(...)`.
-- Current local branch implementation (`final-glide-route-runtime-migration`, Phase 3, 2026-03-25):
+- Current local branch implementation (`final-glide-route-runtime-migration`, Phase 4, 2026-03-25):
   - `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt`
     is the canonical remaining-route seam and now supplies the route points used
     for glide.
@@ -463,10 +463,7 @@ Final glide runtime contract:
     canonical task route points directly.
   - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
     now consumes upstream `GlideSolution` values only.
-  - `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`
-    remains only as a temporary compatibility shim and now delegates to the
-    shared projector plus the canonical task-owned route seam.
-- Approved migration target (tracked in
+- Durable post-migration branch boundary (tracked in
   `docs/ARCHITECTURE/ADR_FINAL_GLIDE_RUNTIME_BOUNDARY_2026-03-25.md` and
   `docs/ARCHITECTURE/CHANGE_PLAN_FINAL_GLIDE_ROUTE_AND_RUNTIME_MIGRATION_2026-03-25.md`):
   - `feature:tasks` becomes the canonical owner of remaining racing-task route
@@ -968,7 +965,7 @@ Task UI (Compose)
 
 Authoritative ownership:
 - Cross-feature task definition and active leg: `TaskManagerCoordinator.taskSnapshotFlow`.
-- Current final-glide route seam (Phase 3 local branch, 2026-03-25):
+- Current final-glide route seam (Phase 4 local branch, 2026-03-25):
   `feature:tasks` now also exposes
   `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt`
   as an additive remaining-route read seam derived from
@@ -976,11 +973,9 @@ Authoritative ownership:
   `TaskNavigationController.racingState`.
   `feature:map-runtime` now consumes that boundary-aware route seam for glide
   computation. `GlideTargetProjector` is the explicit runtime owner of the
-  current racing finish-rule and glide-status projection. The remaining
-  compatibility shim in `feature:map`
-  (`feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`)
-  only delegates to that shared projector plus the canonical task route seam;
-  it is no longer an authoritative route or glide-policy owner.
+  current racing finish-rule and glide-status projection. No `feature:map`
+  compatibility shim remains in the production path; `GlideComputationRepository`
+  is the only active glide owner consumed by the map shell.
 - Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskRepository.state` is not the cross-feature runtime authority.
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).
