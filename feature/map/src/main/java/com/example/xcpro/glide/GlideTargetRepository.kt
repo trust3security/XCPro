@@ -3,7 +3,6 @@ package com.example.xcpro.glide
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskRuntimeSnapshot
-import com.example.xcpro.tasks.core.RacingAltitudeReference
 import com.example.xcpro.tasks.core.RacingFinishCustomParams
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -15,43 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-internal enum class GlideTargetKind {
-    TASK_FINISH
-}
-
-internal enum class GlideInvalidReason {
-    NO_TASK,
-    PRESTART,
-    NO_FINISH_ALTITUDE,
-    NO_POSITION,
-    NO_ALTITUDE,
-    NO_POLAR,
-    INVALID_ROUTE,
-    INVALID_SPEED,
-    FINISHED,
-    INVALID
-}
-
-internal data class GlideRoutePoint(
-    val lat: Double,
-    val lon: Double,
-    val label: String
-)
-
-internal data class GlideFinishConstraint(
-    val requiredAltitudeMeters: Double,
-    val altitudeReference: RacingAltitudeReference
-)
-
-internal data class GlideTargetSnapshot(
-    val kind: GlideTargetKind? = null,
-    val label: String = "",
-    val remainingWaypoints: List<GlideRoutePoint> = emptyList(),
-    val finishConstraint: GlideFinishConstraint? = null,
-    val valid: Boolean = false,
-    val invalidReason: GlideInvalidReason = GlideInvalidReason.NO_TASK
-)
-
+// Compatibility shim: legacy map-owned waypoint-center target projection remains only
+// until Phase 4 cleanup. Current map glide consumers should use GlideComputationRepository.
 @ViewModelScoped
 class GlideTargetRepository @Inject constructor(
     taskManager: TaskManagerCoordinator,
@@ -149,9 +113,5 @@ private fun List<TaskWaypoint>.remainingWaypointsFrom(currentLegIndex: Int): Lis
 }
 
 private fun RacingFinishCustomParams.toConstraintOrNull(): GlideFinishConstraint? {
-    val requiredAltitudeMeters = minAltitudeMeters?.takeIf { it.isFinite() } ?: return null
-    return GlideFinishConstraint(
-        requiredAltitudeMeters = requiredAltitudeMeters,
-        altitudeReference = altitudeReference
-    )
+    return toGlideFinishConstraintOrNull()
 }

@@ -9,27 +9,10 @@ import com.example.xcpro.weather.wind.model.WindState
 import javax.inject.Inject
 import kotlin.math.cos
 
-internal data class GlideSolution(
-    val valid: Boolean,
-    val invalidReason: GlideInvalidReason? = null,
-    val requiredGlideRatio: Double = Double.NaN,
-    val arrivalHeightMeters: Double = Double.NaN,
-    val requiredAltitudeMeters: Double = Double.NaN,
-    val arrivalHeightMc0Meters: Double = Double.NaN,
-    val distanceRemainingMeters: Double = Double.NaN
-) {
-    companion object {
-        fun invalid(reason: GlideInvalidReason): GlideSolution = GlideSolution(
-            valid = false,
-            invalidReason = reason
-        )
-    }
-}
-
 class FinalGlideUseCase @Inject constructor(
     private val sinkProvider: StillAirSinkProvider
 ) {
-    internal fun solve(
+    fun solve(
         completeData: CompleteFlightData,
         windState: WindState?,
         target: GlideTargetSnapshot,

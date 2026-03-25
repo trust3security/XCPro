@@ -27,8 +27,9 @@ import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.glider.GliderRepository
+import com.example.xcpro.glide.GlideComputationRepository
 import com.example.xcpro.glide.FinalGlideUseCase
-import com.example.xcpro.glide.GlideTargetRepository
+import com.example.xcpro.tasks.navigation.NavigationRouteRepository
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.qnh.QnhRepository
@@ -342,20 +343,25 @@ abstract class MapScreenViewModelTestBase {
         val mapReplayUseCase = MapReplayUseCase(
             taskManager = localTaskManager,
             taskNavigationController = localTaskNavigationController,
-            glideTargetRepository = GlideTargetRepository(
+            glideComputationRepository = GlideComputationRepository(
+                flightDataRepository = flightDataRepository,
+                windSensorFusionRepository = windRepository,
                 taskManager = localTaskManager,
-                taskNavigationController = localTaskNavigationController
-            ),
-            finalGlideUseCase = FinalGlideUseCase(
-                sinkProvider = object : StillAirSinkProvider {
-                    override fun sinkAtSpeed(airspeedMs: Double): Double {
-                        val centered = airspeedMs - 17.0
-                        return 0.55 + (centered * centered * 0.01)
-                    }
+                navigationRouteRepository = NavigationRouteRepository(
+                    taskManager = localTaskManager,
+                    taskNavigationController = localTaskNavigationController
+                ),
+                finalGlideUseCase = FinalGlideUseCase(
+                    sinkProvider = object : StillAirSinkProvider {
+                        override fun sinkAtSpeed(airspeedMs: Double): Double {
+                            val centered = airspeedMs - 17.0
+                            return 0.55 + (centered * centered * 0.01)
+                        }
 
-                    override fun iasBoundsMs(): SpeedBoundsMs =
-                        SpeedBoundsMs(minMs = 12.0, maxMs = 25.0)
-                }
+                        override fun iasBoundsMs(): SpeedBoundsMs =
+                            SpeedBoundsMs(minMs = 12.0, maxMs = 25.0)
+                    }
+                )
             ),
             controller = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder()
