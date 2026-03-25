@@ -4,7 +4,7 @@
 
 - Title: Final glide uses fused flight SSOT, task-owned canonical route, and a non-UI glide runtime owner
 - Date: 2026-03-25
-- Status: Accepted (implementation pending via phased rollout)
+- Status: Accepted; implemented locally through Phase 3, compatibility removal pending
 - Owner: XCPro Team
 - Reviewers: XCPro Team
 - Related issue/PR: TBD
@@ -49,6 +49,29 @@
   - `docs/ARCHITECTURE/ADR_TASK_RUNTIME_AUTHORITY_2026-03-15.md`
   - `docs/ARCHITECTURE/ADR_FLIGHT_RUNTIME_BOUNDARY_2026-03-15.md`
 
+## Implementation State
+
+- Historical mainline implementation on `main`:
+  - `GlideTargetRepository` derives the finish target in `feature:map`.
+  - `MapScreenObservers` invokes `FinalGlideUseCase` from the map shell.
+  - Remaining-route projection falls back to waypoint centers.
+- Current local branch state (`final-glide-route-runtime-migration`, Phase 3, 2026-03-25):
+  - `NavigationRouteRepository` in `feature:tasks` owns the boundary-aware
+    remaining-route seam.
+  - `GlideComputationRepository`, `GlideTargetProjector`, and
+    `FinalGlideUseCase` in `feature:map-runtime` own final-glide computation
+    and glide-policy projection.
+  - `feature:map` is consumer/adapter only for active glide output.
+  - `GlideTargetRepository` remains temporary compatibility glue only and now
+    delegates to the shared projector plus the canonical task route seam; it is
+    not the durable or authoritative glide owner.
+- Durable target after cleanup:
+  - the local Phase 3 owner set remains the durable boundary
+  - compatibility glue is removed once no callers depend on it
+  - if finish-rule export needs to grow beyond the current narrow adapter, that
+    growth must happen as a task-owned contract rather than by expanding
+    map-runtime into a second route owner
+
 ## Decision
 
 Final glide remains a derived runtime projection assembled from the existing
@@ -81,6 +104,11 @@ Required durable boundary:
   - `feature:map` remains a consumer/adapter only. It may map derived glide
     outputs into `RealTimeFlightData`, but it must not remain the long-term
     owner of canonical route derivation or glide orchestration.
+  - `GlideTargetProjector` is the explicit runtime owner of current
+    finish-rule and glide-status projection.
+  - It may read `TaskRuntimeSnapshot` only for the current racing finish rule
+    and fallback finish label; it must not derive remaining-route geometry or
+    expand into general task policy ownership.
 - migration discipline:
   - Existing `feature:map` glide classes may remain temporarily as compatibility
     glue during phased rollout, but they are not the durable target owner set.

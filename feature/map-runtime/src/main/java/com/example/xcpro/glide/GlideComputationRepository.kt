@@ -20,6 +20,7 @@ class GlideComputationRepository internal constructor(
     windStateFlow: Flow<WindState>,
     taskSnapshotFlow: Flow<TaskRuntimeSnapshot>,
     routeFlow: Flow<NavigationRouteSnapshot>,
+    private val glideTargetProjector: GlideTargetProjector,
     private val finalGlideUseCase: FinalGlideUseCase
 ) {
     @Inject
@@ -28,12 +29,14 @@ class GlideComputationRepository internal constructor(
         windSensorFusionRepository: WindSensorFusionRepository,
         taskManager: TaskManagerCoordinator,
         navigationRouteRepository: NavigationRouteRepository,
+        glideTargetProjector: GlideTargetProjector,
         finalGlideUseCase: FinalGlideUseCase
     ) : this(
         flightDataFlow = flightDataRepository.flightData,
         windStateFlow = windSensorFusionRepository.windState,
         taskSnapshotFlow = taskManager.taskSnapshotFlow,
         routeFlow = navigationRouteRepository.route,
+        glideTargetProjector = glideTargetProjector,
         finalGlideUseCase = finalGlideUseCase
     )
 
@@ -52,7 +55,7 @@ class GlideComputationRepository internal constructor(
         route: NavigationRouteSnapshot
     ): GlideSolution {
         val data = completeData ?: return GlideSolution.invalid(GlideInvalidReason.NO_POSITION)
-        val target = projectGlideTarget(taskSnapshot, route)
+        val target = glideTargetProjector.project(taskSnapshot, route)
         return finalGlideUseCase.solve(
             completeData = data,
             windState = windState,

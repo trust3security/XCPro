@@ -4,6 +4,7 @@ import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.tasks.core.RacingAltitudeReference
+import com.example.xcpro.tasks.navigation.NavigationRoutePoint
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.weather.wind.model.WindState
 import javax.inject.Inject
@@ -78,7 +79,7 @@ class FinalGlideUseCase @Inject constructor(
     private fun buildRoute(
         currentLat: Double,
         currentLon: Double,
-        remainingWaypoints: List<GlideRoutePoint>
+        remainingWaypoints: List<NavigationRoutePoint>
     ): List<RouteLeg>? {
         if (remainingWaypoints.isEmpty()) return null
         val route = mutableListOf<RouteLeg>()
