@@ -67,6 +67,28 @@ Implementation expectations:
   file will own.
 - After editing, summarize file ownership so review can confirm boundaries.
 
+## Final Glide Guardrails
+
+- `FlightDataRepository` is the fused-flight-data SSOT; keep
+  `CompleteFlightData` flight-data only.
+- `TaskManagerCoordinator` owns cross-feature task runtime state;
+  `taskSnapshotFlow` is the authoritative cross-feature read seam.
+- `TaskRepository` is UI projection only; do not use it as cross-feature
+  runtime authority.
+- Glide policy/math belongs in dedicated domain/use-case owners. UI adapters,
+  cards, Composables, and formatting layers may render glide outputs but must
+  not compute or own glide rules.
+- Final glide consumers derive from fused runtime samples plus task/runtime
+  seams; do not add task-route or glide-derived fields to `CompleteFlightData`.
+- Canonical remaining task-route geometry belongs with task-runtime/boundary
+  owners; do not approximate racing observation-zone routing by waypoint centers
+  in `feature:map`, cards, or UI adapters when a boundary-aware touchpoint is
+  available.
+- Prefer additive glide/runtime migrations: add the new upstream owner, rewire
+  consumers, then remove compatibility glue.
+- Preserve replay determinism; use fused runtime samples and injected or replay
+  time sources only.
+
 ## Task Execution Template (Per-Change)
 
 For autonomous feature/refactor work, start from:
