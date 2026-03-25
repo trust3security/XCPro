@@ -11,6 +11,7 @@ import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.tasks.core.RacingAltitudeReference
+import com.example.xcpro.tasks.navigation.NavigationRoutePoint
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weather.wind.model.WindVector
@@ -85,7 +86,7 @@ class FinalGlideUseCaseTest {
         kind = GlideTargetKind.TASK_FINISH,
         label = "Finish",
         remainingWaypoints = listOf(
-            GlideRoutePoint(lat = 0.0, lon = 0.1, label = "Finish")
+            NavigationRoutePoint(lat = 0.0, lon = 0.1, label = "Finish")
         ),
         finishConstraint = GlideFinishConstraint(
             requiredAltitudeMeters = 900.0,

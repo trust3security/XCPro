@@ -28,6 +28,7 @@ import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.glide.GlideComputationRepository
+import com.example.xcpro.glide.GlideTargetProjector
 import com.example.xcpro.glide.FinalGlideUseCase
 import com.example.xcpro.tasks.navigation.NavigationRouteRepository
 import com.example.xcpro.qnh.CalibrateQnhUseCase
@@ -351,6 +352,7 @@ abstract class MapScreenViewModelTestBase {
                     taskManager = localTaskManager,
                     taskNavigationController = localTaskNavigationController
                 ),
+                glideTargetProjector = GlideTargetProjector(),
                 finalGlideUseCase = FinalGlideUseCase(
                     sinkProvider = object : StillAirSinkProvider {
                         override fun sinkAtSpeed(airspeedMs: Double): Double {

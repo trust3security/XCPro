@@ -47,6 +47,7 @@ class GlideComputationRepositoryTest {
                     valid = true
                 )
             ),
+            glideTargetProjector = GlideTargetProjector(),
             finalGlideUseCase = FinalGlideUseCase(fakePolarSinkProvider())
         )
 
@@ -86,6 +87,7 @@ class GlideComputationRepositoryTest {
                     invalidReason = NavigationRouteInvalidReason.PRESTART
                 )
             ),
+            glideTargetProjector = GlideTargetProjector(),
             finalGlideUseCase = FinalGlideUseCase(fakePolarSinkProvider())
         )
 
@@ -111,6 +113,7 @@ class GlideComputationRepositoryTest {
                     valid = true
                 )
             ),
+            glideTargetProjector = GlideTargetProjector(),
             finalGlideUseCase = FinalGlideUseCase(fakePolarSinkProvider())
         )
 
@@ -136,6 +139,7 @@ class GlideComputationRepositoryTest {
                     valid = true
                 )
             ),
+            glideTargetProjector = GlideTargetProjector(),
             finalGlideUseCase = FinalGlideUseCase(fakePolarSinkProvider())
         )
         val secondRepository = GlideComputationRepository(
@@ -152,6 +156,7 @@ class GlideComputationRepositoryTest {
                     valid = true
                 )
             ),
+            glideTargetProjector = GlideTargetProjector(),
             finalGlideUseCase = FinalGlideUseCase(fakePolarSinkProvider())
         )
 

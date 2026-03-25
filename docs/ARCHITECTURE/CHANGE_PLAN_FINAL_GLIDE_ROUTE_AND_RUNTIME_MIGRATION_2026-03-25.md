@@ -71,7 +71,19 @@ Recommended discipline:
     directly
   - `GlideTargetRepository` remains only as a temporary compatibility shim for
     legacy callers/tests and is no longer the active map glide consumer path
-- Phase 3+:
+  - `GlideTargetProjector` is the shared runtime glide-policy owner for the
+    current racing finish rule and glide-status mapping; remaining-route
+    geometry/status stay authoritative in `NavigationRouteRepository`
+- Phase 3:
+  - complete locally; duplicated glide-policy/status projection has been
+    collapsed into `GlideTargetProjector` in `feature:map-runtime`
+  - `GlideTargetRepository` now delegates to `NavigationRouteRepository` plus
+    `GlideTargetProjector` instead of maintaining separate waypoint-center
+    route/policy logic
+  - `FinalGlideUseCase` now consumes canonical `NavigationRoutePoint` values
+    from the task-owned route seam instead of a duplicated map-runtime route
+    point model
+- Phase 4:
   - not started
 
 ## 1) Scope
@@ -166,8 +178,8 @@ Confirmed target dependency flow remains:
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
 | `MapScreenObservers` | direct `finalGlideUseCase.solve(...)` | consume `glide: Flow<GlideSolution>` from `GlideComputationRepository` | 2 |
-| `GlideTargetRepository.remainingWaypointsFrom(...)` | waypoint-center remaining route | task-owned `NavigationRouteSnapshot` | 1 / 2 |
-| `FinalGlideUseCase.buildRoute(...)` | builds route from `GlideRoutePoint` centers | consume canonical route legs from `NavigationRouteSnapshot` | 3 |
+| `GlideTargetRepository.finishTarget` | compatibility shim used its own waypoint-center route + status projection | delegate to `NavigationRouteRepository` + shared `GlideTargetProjector` | 3 |
+| `FinalGlideUseCase.buildRoute(...)` | builds route from duplicated `GlideRoutePoint` centers | consume canonical `NavigationRoutePoint` values from `NavigationRouteSnapshot` | 3 |
 
 ### 2.2D File Ownership Plan
 
@@ -179,7 +191,8 @@ Confirmed target dependency flow remains:
 | `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteGeometryResolver.kt` | New | boundary-aware racing touchpoint resolver for Phase 1B | keeps route geometry with task/runtime owners | avoids boundary math in map/UI or a mixed repository file | no |
 | `feature/tasks/src/test/java/com/example/xcpro/tasks/navigation/NavigationRouteRepositoryTest.kt` | New | parity + boundary route tests | route owner tests | keeps route correctness near owner | no |
 | `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideComputationRepository.kt` | New | derived glide flow owner | non-UI runtime layer already depends on tasks + flight-runtime | avoids solve ownership in map shell | no |
-| `feature/map-runtime/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt` | Existing/moved | final-glide policy + math | solver belongs with derived runtime owner | not task-owned because it combines flight + wind + route + polar | maybe helper split later only if needed |
+| `feature/map-runtime/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt` | Existing/moved | final-glide math + runtime route-leg solving | solver belongs with derived runtime owner | not task-owned because it combines flight + wind + route + polar | maybe helper split later only if needed |
+| `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideTargetProjector.kt` | New in phase 3 | explicit glide-policy/status projection owner | shared policy mapping used by runtime and compatibility shim | keeps status/finish-rule mapping out of UI and out of duplicate shims | no |
 | `feature/map-runtime/src/test/java/com/example/xcpro/glide/GlideComputationRepositoryTest.kt` | New | repository wiring tests | owner-local proof | keeps new behavior testable without map shell | no |
 | `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` | Existing | adapter only | consumer of upstream glide result | must stop owning solve orchestration | no |
 | `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | Existing | temporary compatibility bridge or deletion target | minimize risk during phases 1-3 | removed in phase 4 | no |
@@ -194,21 +207,36 @@ Confirmed target dependency flow remains:
 | relocated `FinalGlideUseCase` | `feature:map-runtime` | `GlideComputationRepository`, tests | internal/public as needed | keep solver math in non-UI runtime | durable |
 | temporary `GlideTargetRepository` bridge | `feature:map` | legacy tests/callers during migration | internal | phase safety only | remove in phase 4 |
 
-### 2.2F Scope Ownership and Lifetime
+### 2.2F Transitional Task Runtime Read
+
+- `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideTargetProjector.kt`
+  may read `TaskRuntimeSnapshot` only to map the current racing finish rule and
+  fallback finish label into `GlideTargetSnapshot`.
+- It must not derive remaining-route geometry or become a second route owner;
+  boundary-aware route geometry/status remain authoritative in
+  `NavigationRouteSnapshot` from `feature:tasks`.
+- `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`
+  may only delegate to this projector plus the task-owned route seam while it
+  exists as compatibility glue.
+- If finish-rule mapping grows beyond this narrow policy owner, replace it with
+  a task-owned finish-constraint seam instead of expanding map-runtime task
+  policy in this migration slice.
+
+### 2.2G Scope Ownership and Lifetime
 
 | Scope / Owner | Why It Exists | Dispatcher | Cancellation Trigger | Why Not Caller-Owned / Existing Scope |
 |---|---|---|---|---|
 | `NavigationRouteRepository` flow scope | mirror current viewmodel/screen lifetime | existing injected scope / viewmodel scope | screen/viewmodel teardown | matches existing final-glide consumer lifetime without creating app-global state |
 | `GlideComputationRepository` flow scope | derived combine owner | existing injected scope / viewmodel scope | screen/viewmodel teardown | keeps hot flow near consumer lifetime and avoids a new singleton cache |
 
-### 2.2G Compatibility Shim Inventory
+### 2.2H Compatibility Shim Inventory
 
 | Shim / Bridge | Owner | Reason | Target Replacement | Removal Trigger | Test Coverage |
 |---|---|---|---|---|---|
 | `GlideTargetRepository` | `feature:map` | keep legacy callers stable while route/computation owners land | direct `NavigationRouteRepository` + `GlideComputationRepository` consumption | phase 4 cleanup | existing glide target tests + compile path |
 | old solver import path | `feature:map` / `feature:map-runtime` | low-risk move with minimal callsite churn | single runtime-owned use-case file | phase 3 complete | solver tests |
 
-### 2.2H Canonical Formula / Policy Owner
+### 2.2I Canonical Formula / Policy Owner
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
@@ -438,6 +466,16 @@ Recommended local proof:
 - Exit criteria:
   - no duplicated glide-policy logic remains across map/runtime callsites
   - policy owner is explicit and tested
+- Local status:
+  - complete on the local branch
+  - `GlideTargetProjector` now owns finish-rule and glide-status projection in
+    `feature:map-runtime`
+  - `GlideTargetRepository` now delegates to the canonical task route seam plus
+    the shared projector and no longer maintains a separate waypoint-center
+    route/policy path
+  - `FinalGlideUseCase` now consumes canonical task route points directly
+  - focused tests now lock shared projector policy cases and compatibility-shim
+    delegation
 
 Recommended local proof:
 
@@ -480,6 +518,7 @@ Required full local proof:
   - `NavigationRouteRepositoryTest`
   - boundary route regression tests
   - `FinalGlideUseCaseTest` moved/updated with canonical route input
+  - `GlideTargetProjectorTest`
   - `GlideComputationRepositoryTest`
   - updated map observer/adapter tests as needed
 - Replay/regression tests:

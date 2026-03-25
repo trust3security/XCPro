@@ -1,5 +1,6 @@
 package com.example.xcpro.glide
 
+import com.example.xcpro.tasks.navigation.NavigationRoutePoint
 import com.example.xcpro.tasks.core.RacingAltitudeReference
 
 enum class GlideTargetKind {
@@ -19,12 +20,6 @@ enum class GlideInvalidReason {
     INVALID
 }
 
-data class GlideRoutePoint(
-    val lat: Double,
-    val lon: Double,
-    val label: String
-)
-
 data class GlideFinishConstraint(
     val requiredAltitudeMeters: Double,
     val altitudeReference: RacingAltitudeReference
@@ -33,7 +28,7 @@ data class GlideFinishConstraint(
 data class GlideTargetSnapshot(
     val kind: GlideTargetKind? = null,
     val label: String = "",
-    val remainingWaypoints: List<GlideRoutePoint> = emptyList(),
+    val remainingWaypoints: List<NavigationRoutePoint> = emptyList(),
     val finishConstraint: GlideFinishConstraint? = null,
     val valid: Boolean = false,
     val invalidReason: GlideInvalidReason = GlideInvalidReason.NO_TASK
