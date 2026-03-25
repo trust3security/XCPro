@@ -155,7 +155,7 @@ Metrics use case:
   - Owns deterministic windows and is testable without Android.
 
 Mapping to SSOT model:
-- `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
   - maps domain metrics + sensors to `CompleteFlightData`.
 - `feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt`
   - defines `CompleteFlightData` (SSOT for calculated flight data).
@@ -175,7 +175,7 @@ QNH terrain calibration:
   - blocks calibration in replay mode before any terrain read so replay determinism remains outside the terrain repository.
 
 SSOT:
-- `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
   - Holds the latest `CompleteFlightData`.
   - `Source` gate prevents live sensors from overriding replay.
 
@@ -189,7 +189,7 @@ Live forwarder:
     - TE compensation enabled flag
 
 Flight-state detector feed:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
+- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
   - Live mode consumes stabilized airspeed fields from `CompleteFlightData` (`trueAirspeed`, `airspeedSource`, `tasValid`).
   - "Real airspeed" classification is fail-safe and trust-list based:
     only `WIND` and `SENSOR` source labels are treated as non-GPS real-airspeed inputs.
@@ -425,6 +425,48 @@ Observers:
   - Pushes to `FlightDataManager` and the `feature:map-runtime` trail
     processor.
   - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
+
+Final glide runtime contract:
+- Durable invariants:
+  - `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
+    remains the fused-flight-data SSOT.
+  - `CompleteFlightData` stays limited to fused flight/runtime sample fields and
+    must not absorb task-route or glide-derived state.
+  - `TaskManagerCoordinator.taskSnapshotFlow` plus
+    `TaskNavigationController.racingState` remain the authoritative task-runtime
+    input seams for racing final glide.
+  - `TaskRepository` remains task-sheet/UI projection only and is not a
+    cross-feature runtime authority.
+  - cards, formatters, and Composables may render glide outputs but must not own
+    canonical route derivation or glide math.
+- Current mainline implementation on `main` (2026-03-25):
+  - `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`
+    currently derives a finish-target snapshot in `feature:map` from
+    `TaskManagerCoordinator.taskSnapshotFlow` plus
+    `TaskNavigationController.racingState`.
+  - `feature/map/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt`
+    currently solves from fused `CompleteFlightData`, `WindState`, and
+    `GlideTargetSnapshot`.
+  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+    currently invokes `FinalGlideUseCase`, then maps
+    `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
+  - Current remaining-route construction is still waypoint-center based through
+    `GlideRoutePoint` / `remainingWaypointsFrom(...)`; treat this as a
+    transitional implementation rather than the approved canonical route
+    boundary.
+- Approved migration target (tracked in
+  `docs/ARCHITECTURE/ADR_FINAL_GLIDE_RUNTIME_BOUNDARY_2026-03-25.md` and
+  `docs/ARCHITECTURE/CHANGE_PLAN_FINAL_GLIDE_ROUTE_AND_RUNTIME_MIGRATION_2026-03-25.md`):
+  - `feature:tasks` becomes the canonical owner of remaining racing-task route
+    geometry via a `NavigationRouteSnapshot` / projector path that reuses the
+    existing boundary planners and task runtime seams.
+  - `feature:map-runtime` becomes the non-UI owner of derived final-glide
+    computation, reusing existing solver math where practical.
+  - `feature:map` remains a consumer/adapter only.
+- Replay/live determinism:
+  - live glide uses fused live samples from `FlightDataRepository`
+  - replay glide uses replay-published fused samples through the same
+    repository/source gate; no wall-clock-only or live-only inputs are allowed
 
 Mapping for cards:
 - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
