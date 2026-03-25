@@ -4,7 +4,7 @@
 
 - Title: Final glide uses fused flight SSOT, task-owned canonical route, and a non-UI glide runtime owner
 - Date: 2026-03-25
-- Status: Accepted; implemented locally through Phase 3, compatibility removal pending
+- Status: Accepted; implemented locally through Phase 4 and full local proof passed
 - Owner: XCPro Team
 - Reviewers: XCPro Team
 - Related issue/PR: TBD
@@ -55,19 +55,16 @@
   - `GlideTargetRepository` derives the finish target in `feature:map`.
   - `MapScreenObservers` invokes `FinalGlideUseCase` from the map shell.
   - Remaining-route projection falls back to waypoint centers.
-- Current local branch state (`final-glide-route-runtime-migration`, Phase 3, 2026-03-25):
+- Current local branch state (`final-glide-route-runtime-migration`, Phase 4, 2026-03-25):
   - `NavigationRouteRepository` in `feature:tasks` owns the boundary-aware
     remaining-route seam.
   - `GlideComputationRepository`, `GlideTargetProjector`, and
     `FinalGlideUseCase` in `feature:map-runtime` own final-glide computation
     and glide-policy projection.
   - `feature:map` is consumer/adapter only for active glide output.
-  - `GlideTargetRepository` remains temporary compatibility glue only and now
-    delegates to the shared projector plus the canonical task route seam; it is
-    not the durable or authoritative glide owner.
 - Durable target after cleanup:
-  - the local Phase 3 owner set remains the durable boundary
-  - compatibility glue is removed once no callers depend on it
+  - the local Phase 4 owner set now matches the durable boundary
+  - `GlideTargetRepository` is removed; no map-owned compatibility glide owner remains
   - if finish-rule export needs to grow beyond the current narrow adapter, that
     growth must happen as a task-owned contract rather than by expanding
     map-runtime into a second route owner
@@ -110,8 +107,9 @@ Required durable boundary:
     and fallback finish label; it must not derive remaining-route geometry or
     expand into general task policy ownership.
 - migration discipline:
-  - Existing `feature:map` glide classes may remain temporarily as compatibility
-    glue during phased rollout, but they are not the durable target owner set.
+  - Existing `feature:map` glide classes were allowed temporarily as
+    compatibility glue during phased rollout, but they are not part of the
+    durable target owner set and the Phase 4 branch state removes that shim.
   - The rollout must be additive and phased:
     1. extract route contract with behavior parity
     2. switch route projection to boundary-aware canonical geometry
@@ -151,7 +149,8 @@ Required durable boundary:
 - Replay continues to use the same fused/runtime seams as live.
 
 ### Costs
-- Migration is multi-phase and temporarily keeps compatibility glue.
+- Migration is multi-phase and temporarily kept compatibility glue during
+  rollout before the final cleanup step.
 - Some tests will move from `feature:map` to `feature:tasks` /
   `feature:map-runtime` as ownership changes.
 - The call graph becomes more explicit, which means more types and adapters.
@@ -189,7 +188,7 @@ Required durable boundary:
 - `AGENTS.md`:
   - keep guardrails short and durable
 - `PIPELINE.md`:
-  - document current mainline wiring versus approved migration target
+  - document current mainline wiring versus the post-phase-4 branch boundary
 - `CHANGE_PLAN_FINAL_GLIDE_ROUTE_AND_RUNTIME_MIGRATION_2026-03-25.md`:
   - track phased rollout, acceptance gates, and cleanup order
 - `KNOWN_DEVIATIONS.md`:
