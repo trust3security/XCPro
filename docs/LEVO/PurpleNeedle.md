@@ -4,13 +4,13 @@
 ## Summary
 - The purple needle is a visual of the **audio input vario**, not the sound output.
 - It shows the same vertical-speed value that is **fed into the audio engine**.
-- It does **not** reflect audio deadband, beep/silence mode, or frequency mapping.
+- It does **not** reflect audio start-threshold gating, beep/silence mode, or frequency mapping.
 
 ## Data Flow (Source of Truth)
 1) Sensor fusion computes vario + TE vario
    `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
 2) Audio input selection chooses **TE vario if valid**, else **raw vario**
-   `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioController.kt`
+   `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioController.kt`
 3) Selected value is stored as `latestAudioVario`
    `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
 4) That value is emitted into flight data and mapped to `audioVario`
@@ -40,14 +40,14 @@
 
 **Is Not**
 - The audio engine's **output** (beep vs silence, frequency, duty cycle).
-- A deadbanded or clamped signal (audio engine applies those internally).
+- A threshold-gated or clamped signal (audio engine applies those internally).
 
 ## Audio Output Behavior (Separate Path)
-- Audio mapping uses deadband + thresholds and clamps to +/-5 m/s.
-  `feature/map/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt`
-- Default deadband: -0.3 to +0.1 m/s
-- Default lift threshold: +0.1 m/s
-- Default sink silence threshold: 0.0 m/s
+- Audio mapping applies canonical lift/sink start-threshold semantics and clamps to +/-5 m/s.
+  `feature/variometer/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt`
+- Default effective lift start threshold: +0.1 m/s
+- Default effective sink start threshold: -0.3 m/s
+- Legacy raw threshold values are accepted only as import/read compatibility inputs and are converted to the canonical lift/sink start thresholds.
 
 This means the purple needle can move even when the audio is silent.
 
@@ -59,5 +59,5 @@ This means the purple needle can move even when the audio is silent.
 Options:
 1) Ensure TE vario is valid more often (airspeed sensor or reliable wind estimation).
 2) Drive the purple needle from a different input (ex: netto vario or a filtered signal).
-3) Apply the same audio deadband + clamp to the needle so it visually matches output behavior.
+3) Apply the same audio start-threshold gating + clamp to the needle so it visually matches output behavior.
 

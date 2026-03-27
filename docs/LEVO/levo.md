@@ -35,7 +35,7 @@ Levo Vario includes:
 - Replay mode (IGC playback) and live/replay switching
 - Audio mapping and playback
 - UI display (variometer widget overlay and cards)
-- Settings (MacCready, audio thresholds) and diagnostics
+- Settings (MacCready, canonical audio start thresholds) and diagnostics
 
 This doc focuses on the Levo pipeline, not the entire app. It assumes the
 core architecture rules described in ARCHITECTURE.md.
@@ -392,18 +392,24 @@ File references:
 - feature/variometer/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt
 - feature/variometer/src/main/java/com/example/xcpro/audio/VarioBeepController.kt
 - feature/variometer/src/main/java/com/example/xcpro/audio/VarioToneGenerator.kt
+- feature/flight-runtime/src/main/java/com/example/xcpro/audio/VarioAudioThresholdSemantics.kt
 
 Behavior:
 - TE vario is preferred when valid; otherwise raw vario.
 - If no valid vario, engine is forced to silence.
-- FrequencyMapper maps vertical speed to tone params.
+- FrequencyMapper applies effective lift/sink start thresholds and maps vertical speed to tone params.
 - BeepController smooths transitions and handles duty cycle.
 - ToneGenerator uses AudioTrack with low latency.
 
 Audio settings flow:
 - VarioAudioEngine stores settings as StateFlow.
-- LevoVarioSettingsViewModel updates settings via
-  VarioServiceManager.sensorFusionRepository.updateAudioSettings(...)
+- LevoVarioSettingsViewModel updates canonical `Lift Start` / `Sink Start`
+  thresholds through `LevoVarioSettingsUseCase` ->
+  `LevoVarioPreferencesRepository.updateAudioSettings(...)`.
+- `LevoVarioPreferencesRepository` persists canonical lift/sink start
+  thresholds.
+- Legacy DataStore values and legacy profile imports are converted to the same
+  canonical thresholds on read.
 
 ------------------------------------------------------------------------------
 UI PIPELINE (VARIO DISPLAY)
@@ -468,17 +474,27 @@ SETTINGS AND PREFERENCES
 ------------------------------------------------------------------------------
 Levo settings UI:
 - LevoVarioSettingsScreen and LevoVarioSettingsViewModel
-  feature/map/src/main/java/com/example/xcpro/screens/navdrawer/
+  feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/
 
 MacCready preferences:
 - LevoVarioPreferencesRepository (DataStore)
-  feature/map/src/main/java/com/example/xcpro/vario/LevoVarioPreferencesRepository.kt
+  feature/profile/src/main/java/com/example/xcpro/vario/LevoVarioPreferencesRepository.kt
 - VarioServiceManager listens to config and updates the fusion engine
   (MacCready, auto-MC, TE enable, audio settings).
 
 Audio preferences:
-- Stored in VarioAudioEngine settings StateFlow.
-- Updated via LevoVarioSettingsViewModel.
+- Shared settings model:
+  `feature/flight-runtime/src/main/java/com/example/xcpro/audio/VarioAudioSettings.kt`
+- Canonical threshold semantics:
+  `feature/flight-runtime/src/main/java/com/example/xcpro/audio/VarioAudioThresholdSemantics.kt`
+- Runtime consumer:
+  `feature/variometer/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt`
+- The UI exposes one positive `Lift Start` threshold and one negative
+  `Sink Start` threshold.
+- DataStore and profile snapshots now store only canonical lift/sink start
+  thresholds.
+- Legacy raw threshold fields are accepted only as import/read compatibility
+  inputs.
 
 ------------------------------------------------------------------------------
 DI AND SOURCE SWITCHING

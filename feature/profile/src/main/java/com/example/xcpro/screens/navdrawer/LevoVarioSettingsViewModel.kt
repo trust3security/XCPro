@@ -2,6 +2,10 @@ package com.example.xcpro.screens.navdrawer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.xcpro.audio.effectiveLiftStartThreshold
+import com.example.xcpro.audio.effectiveSinkStartThreshold
+import com.example.xcpro.audio.withEffectiveLiftStartThreshold
+import com.example.xcpro.audio.withEffectiveSinkStartThreshold
 import com.example.xcpro.audio.VarioAudioSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -17,6 +21,8 @@ data class LevoVarioUiState(
     val autoMcEnabled: Boolean = true,
     val teCompensationEnabled: Boolean = true,
     val showWindSpeedOnVario: Boolean = true,
+    val liftStartThreshold: Float = VarioAudioSettings().effectiveLiftStartThreshold().toFloat(),
+    val sinkStartThreshold: Float = VarioAudioSettings().effectiveSinkStartThreshold().toFloat(),
     val audioSettings: VarioAudioSettings = VarioAudioSettings()
 )
 
@@ -34,6 +40,8 @@ class LevoVarioSettingsViewModel @Inject constructor(
             autoMcEnabled = config.autoMcEnabled,
             teCompensationEnabled = config.teCompensationEnabled,
             showWindSpeedOnVario = config.showWindSpeedOnVario,
+            liftStartThreshold = config.audioSettings.liftStartThreshold.toFloat(),
+            sinkStartThreshold = config.audioSettings.sinkStartThreshold.toFloat(),
             audioSettings = config.audioSettings
         )
     }
@@ -84,21 +92,13 @@ class LevoVarioSettingsViewModel @Inject constructor(
     fun setAudioVolume(volume: Float) =
         updateAudioSettings { it.copy(volume = volume.coerceIn(0f, 1f)) }
 
-    fun setLiftThreshold(value: Float) =
-        updateAudioSettings { it.copy(liftThreshold = value.toDouble()) }
-
-    fun setDeadbandMin(value: Float) =
+    fun setLiftStartThreshold(value: Float) =
         updateAudioSettings {
-            val clamped = value.coerceAtMost((it.deadbandMax - 0.05).toFloat())
-            it.copy(deadbandMin = clamped.toDouble())
+            it.withEffectiveLiftStartThreshold(value.toDouble())
         }
 
-    fun setDeadbandMax(value: Float) =
+    fun setSinkStartThreshold(value: Float) =
         updateAudioSettings {
-            val clamped = value.coerceAtLeast((it.deadbandMin + 0.05).toFloat())
-            it.copy(deadbandMax = clamped.toDouble())
+            it.withEffectiveSinkStartThreshold(value.toDouble())
         }
-
-    fun setSinkThreshold(value: Float) =
-        updateAudioSettings { it.copy(sinkSilenceThreshold = value.toDouble()) }
 }

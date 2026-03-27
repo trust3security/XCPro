@@ -10,9 +10,7 @@ package com.example.xcpro.audio
 data class VarioAudioSettings(
     val enabled: Boolean = true,
     val volume: Float = 0.8f,
-    val liftThreshold: Double = 0.1,
-    val sinkSilenceThreshold: Double = 0.0,
+    val liftStartThreshold: Double = 0.1,
+    val sinkStartThreshold: Double = -0.3,
     val dutyCycle: Double = 2.0 / 3.0,
-    val deadbandMin: Double = -0.3,
-    val deadbandMax: Double = 0.1
 )

@@ -1136,8 +1136,10 @@ Engine:
   - Tone generation + beep controller, responds to vertical speed updates.
 
 Settings:
-- `feature/map/src/main/java/com/example/xcpro/vario/LevoVarioPreferencesRepository.kt`
+- `feature/profile/src/main/java/com/example/xcpro/vario/LevoVarioPreferencesRepository.kt`
   - Provides `VarioAudioSettings` to both live and replay pipelines.
+  - Stores canonical lift/sink start thresholds and converts legacy raw keys
+    only on read/import.
 
 ## 7) Parallel Pipelines (Wind + Flight State)
 

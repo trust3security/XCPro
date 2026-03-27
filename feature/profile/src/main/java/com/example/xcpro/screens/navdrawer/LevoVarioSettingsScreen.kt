@@ -146,18 +146,12 @@ fun LevoVarioSettingsScreen(
             )
 
             VarioAudioThresholdCard(
-                liftThreshold = audioSettings.liftThreshold.toFloat(),
-                onLiftChange = viewModel::setLiftThreshold,
-                onLiftChangeFinished = {},
-                deadbandMin = audioSettings.deadbandMin.toFloat(),
-                onDeadbandMinChange = viewModel::setDeadbandMin,
-                onDeadbandMinChangeFinished = {},
-                deadbandMax = audioSettings.deadbandMax.toFloat(),
-                onDeadbandMaxChange = viewModel::setDeadbandMax,
-                onDeadbandMaxChangeFinished = {},
-                sinkThreshold = audioSettings.sinkSilenceThreshold.toFloat(),
-                onSinkChange = viewModel::setSinkThreshold,
-                onSinkChangeFinished = {}
+                liftStartThreshold = uiState.liftStartThreshold,
+                onLiftStartChange = viewModel::setLiftStartThreshold,
+                onLiftStartChangeFinished = {},
+                sinkStartThreshold = uiState.sinkStartThreshold,
+                onSinkStartChange = viewModel::setSinkStartThreshold,
+                onSinkStartChangeFinished = {}
             )
         }
     }
