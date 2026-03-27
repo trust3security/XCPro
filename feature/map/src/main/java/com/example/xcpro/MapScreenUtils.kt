@@ -10,6 +10,7 @@ import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.hawk.HawkVarioUiState
+import com.example.xcpro.navigation.WaypointNavigationSnapshot
 import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.HeadingResolverInput
 import com.example.xcpro.sensors.CompleteFlightData
@@ -60,6 +61,7 @@ internal fun convertToRealTimeFlightData(
     windState: WindState?,
     isFlying: Boolean,
     glideSolution: GlideSolution? = null,
+    waypointNavigation: WaypointNavigationSnapshot? = null,
     hawkVarioUiState: HawkVarioUiState = HawkVarioUiState(),
     flightTime: String = "00:00",
     lastUpdateTimeMillis: Long = completeData.timestamp
@@ -206,6 +208,14 @@ internal fun convertToRealTimeFlightData(
         taskFinishDistanceRemainingM = glideSolution?.distanceRemainingMeters ?: Double.NaN,
         glideSolutionValid = glideSolution?.valid ?: false,
         glideInvalidReason = glideSolution?.invalidReason?.name.orEmpty(),
+        waypointDistanceMeters = waypointNavigation?.distanceMeters ?: Double.NaN,
+        waypointValid = waypointNavigation?.valid ?: false,
+        waypointBearingTrueDegrees = waypointNavigation?.bearingTrueDegrees ?: Double.NaN,
+        waypointInvalidReason = waypointNavigation?.invalidReason?.name.orEmpty(),
+        waypointEtaEpochMillis = waypointNavigation?.etaEpochMillis ?: 0L,
+        waypointEtaValid = waypointNavigation?.etaValid ?: false,
+        waypointEtaSource = waypointNavigation?.etaSource?.name.orEmpty(),
+        waypointEtaInvalidReason = waypointNavigation?.etaInvalidReason?.name.orEmpty(),
         hawkVarioSmoothedMps = hawkVarioUiState.varioSmoothedMps?.toDouble(),
         hawkVarioRawMps = hawkVarioUiState.varioRawMps?.toDouble(),
         hawkAccelOk = hawkVarioUiState.accelOk,

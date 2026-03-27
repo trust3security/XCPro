@@ -10,6 +10,7 @@ import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateInput
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.navigation.WaypointNavigationSnapshot
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.sensors.CompleteFlightData
@@ -44,6 +45,7 @@ internal class MapScreenObservers(
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
     private val igcReplayController: IgcReplayController,
     private val glideSolutionFlow: Flow<GlideSolution>,
+    private val waypointNavigationFlow: Flow<WaypointNavigationSnapshot>,
     private val trailProcessor: TrailProcessor,
     private val trailUpdates: MutableStateFlow<TrailUpdateResult?>
 ) {
@@ -78,7 +80,7 @@ internal class MapScreenObservers(
                 tuple.fifth,
                 glideSolution
             )
-        }.combine(trailSettingsFlow.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->
+        }.combine(waypointNavigationFlow) { tuple, waypointNavigation ->
             Septuple(
                 tuple.first,
                 tuple.second,
@@ -86,10 +88,21 @@ internal class MapScreenObservers(
                 tuple.fourth,
                 tuple.fifth,
                 tuple.sixth,
+                waypointNavigation
+            )
+        }.combine(trailSettingsFlow.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->
+            Octuple(
+                tuple.first,
+                tuple.second,
+                tuple.third,
+                tuple.fourth,
+                tuple.fifth,
+                tuple.sixth,
+                tuple.seventh,
                 trailEnabled
             )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, trailEnabled) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, trailEnabled) ->
                 if (data != null) {
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -111,6 +124,7 @@ internal class MapScreenObservers(
                         windState = wind,
                         isFlying = flightState.isFlying,
                         glideSolution = glideSolution,
+                        waypointNavigation = waypointNavigation,
                         hawkVarioUiState = hawkUiState,
                         flightTime = formattedFlightTime,
                         lastUpdateTimeMillis = sampleClockMillis
@@ -255,4 +269,15 @@ private data class Septuple<A, B, C, D, E, F, G>(
     val fifth: E,
     val sixth: F,
     val seventh: G
+)
+
+private data class Octuple<A, B, C, D, E, F, G, H>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+    val sixth: F,
+    val seventh: G,
+    val eighth: H
 )

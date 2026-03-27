@@ -178,6 +178,19 @@ internal fun glideInvalidLabel(reason: String, strings: CardStrings): String {
     }
 }
 
+internal fun waypointInvalidLabel(reason: String, strings: CardStrings): String {
+    return when (reason) {
+        "PRESTART" -> strings.prestart
+        "NO_POSITION",
+        "NO_TIME" -> strings.noData
+        "STATIC" -> strings.static
+        "FINISHED",
+        "INVALID_ROUTE",
+        "INVALID" -> strings.invalid
+        else -> strings.noWpt
+    }
+}
+
 internal fun RealTimeFlightData.primaryVarioValue(): Double {
     val finiteDisplay = displayVario.takeIf { it.isFinite() }
     if (varioValid && finiteDisplay != null) return finiteDisplay

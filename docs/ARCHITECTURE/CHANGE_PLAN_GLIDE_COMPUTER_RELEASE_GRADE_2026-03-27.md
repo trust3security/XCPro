@@ -204,9 +204,19 @@ Inputs:
 - ETA must be based on an explicit ground-speed/availability contract and validity rules
 - no UI-local calculations
 
+### Frozen Phase 2 semantics
+- `WPT DIST` = distance from current GPS position to `NavigationRouteRepository.route.remainingWaypoints.first()`. This is boundary-aware because the task-owned route seam already resolves the current target point.
+- `WPT BRG` = true bearing from current GPS position to that same authoritative route target.
+- `WPT ETA` = local ETA clock time computed from the replay-safe sample wall timestamp plus `WPT DIST / current GPS ground speed`.
+- `WPT DIST` and `WPT BRG` are valid only when the route seam is valid and the fused flight sample contains a finite GPS position.
+- `WPT ETA` is valid only when `WPT DIST` is valid, the current GPS ground speed is finite and greater than `2.0 m/s`, and the fused/replay-safe sample wall timestamp is present.
+- `WPT ETA` source is `GPS` ground speed in this phase. Wind-based ETA is explicitly deferred.
+- `FINAL DIST` remains deferred to a later phase.
+
 ### Acceptance criteria
 - `WPT DIST`, `WPT BRG`, and `WPT ETA` render real values in-card
 - values derive from the canonical route seam, not duplicated route math
+- production selection re-enables only the implemented waypoint cards
 - tests cover:
   - no-task / invalid
   - active waypoint on a simple point
@@ -218,6 +228,12 @@ Inputs:
 - touched map formatter tests
 - `./gradlew enforceRules`
 - compile touched modules
+
+### Phase 2 local branch status (2026-03-27)
+- `WaypointNavigationRepository` in `feature:map-runtime` owns `WPT DIST`, `WPT BRG`, and `WPT ETA`.
+- It consumes `FlightDataRepository.flightData` and the task-owned `NavigationRouteRepository.route` seam without reclaiming route ownership.
+- `feature:map` and `dfcards-library` remain pass-through/formatting consumers only.
+- Task-performance metrics stay deferred to Phase 3.
 
 ## Phase 3 — task performance runtime seam
 

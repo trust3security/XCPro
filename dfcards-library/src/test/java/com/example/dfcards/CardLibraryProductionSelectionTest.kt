@@ -7,9 +7,9 @@ import org.junit.Test
 class CardLibraryProductionSelectionTest {
 
     @Test
-    fun navigation_selection_hides_placeholder_waypoint_cards_but_keeps_implemented_glide_cards() {
+    fun navigation_selection_restores_authoritative_waypoint_cards_and_keeps_glide_cards() {
         assertEquals(
-            listOf("track", "final_gld", "arr_alt", "req_alt", "arr_mc0"),
+            listOf("track", "wpt_dist", "wpt_brg", "final_gld", "arr_alt", "req_alt", "arr_mc0", "wpt_eta"),
             CardLibrary.getCardsByCategory(CardCategory.NAVIGATION).map { it.id }
         )
     }
@@ -23,9 +23,9 @@ class CardLibraryProductionSelectionTest {
     }
 
     @Test
-    fun search_does_not_offer_hidden_placeholder_cards() {
+    fun search_offers_only_authoritative_waypoint_cards() {
         assertEquals(
-            emptyList<String>(),
+            listOf("wpt_dist", "wpt_brg", "wpt_eta"),
             CardLibrary.searchCards("waypoint").map { it.id }
         )
         assertEquals(

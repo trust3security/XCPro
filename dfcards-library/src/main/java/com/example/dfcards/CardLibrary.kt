@@ -10,9 +10,6 @@ object CardLibrary {
     // persisted layouts can still resolve them, but do not offer them in production selection
     // until an authoritative runtime seam exists.
     private val productionHiddenPlaceholderCardIds: Set<String> = setOf(
-        CardId.WPT_DIST,
-        CardId.WPT_BRG,
-        CardId.WPT_ETA,
         CardId.TASK_SPD,
         CardId.TASK_DIST,
         CardId.START_ALT

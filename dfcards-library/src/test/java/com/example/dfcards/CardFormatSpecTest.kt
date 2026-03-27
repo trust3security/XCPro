@@ -1,5 +1,7 @@
 package com.example.dfcards
 
+import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -132,6 +134,81 @@ class CardFormatSpecTest {
 
         assertEquals("--:1", primary)
         assertEquals(strings.noData, secondary)
+    }
+
+    @Test
+    fun wptDist_formats_authoritative_distance_when_waypoint_is_valid() {
+        val liveData = RealTimeFlightData(
+            waypointDistanceMeters = 12_345.0,
+            waypointValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_DIST]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals(UnitsFormatter.distance(DistanceM(12_345.0), units).text, primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun wptBrg_uses_explicit_waypoint_validity() {
+        val validLiveData = RealTimeFlightData(
+            waypointBearingTrueDegrees = 87.4,
+            waypointValid = true
+        )
+        val invalidLiveData = RealTimeFlightData(
+            waypointBearingTrueDegrees = 87.4,
+            waypointValid = false,
+            waypointInvalidReason = "PRESTART"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_BRG]
+        assertNotNull(spec)
+
+        assertEquals("87deg", spec!!.format(validLiveData, units, strings, formatter).first)
+        assertEquals(strings.live, spec.format(validLiveData, units, strings, formatter).second)
+        assertEquals("---deg", spec.format(invalidLiveData, units, strings, formatter).first)
+        assertEquals(strings.prestart, spec.format(invalidLiveData, units, strings, formatter).second)
+    }
+
+    @Test
+    fun wptEta_formats_explicit_eta_epoch_and_source() {
+        val liveData = RealTimeFlightData(
+            waypointEtaEpochMillis = 9_999L,
+            waypointEtaValid = true,
+            waypointEtaSource = "GROUND_SPEED"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_ETA]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals(9_999L, formatter.lastEpoch)
+        assertEquals("12:34", primary)
+        assertEquals(strings.gps, secondary)
+    }
+
+    @Test
+    fun wptEta_uses_explicit_static_invalid_reason() {
+        val liveData = RealTimeFlightData(
+            waypointEtaValid = false,
+            waypointEtaInvalidReason = "STATIC"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_ETA]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("--:--", primary)
+        assertEquals(strings.static, secondary)
     }
 
     @Test

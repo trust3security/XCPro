@@ -162,8 +162,22 @@ internal object CardFormatSpecs {
                 }
             }
 
-            KnownCardId.WPT_DIST -> Pair(placeholderFor(cardId, units, strings), strings.noWpt)
-            KnownCardId.WPT_BRG -> Pair("---|", strings.noWpt)
+            KnownCardId.WPT_DIST -> {
+                if (liveData.waypointValid) {
+                    val formatted = UnitsFormatter.distance(DistanceM(liveData.waypointDistanceMeters), units)
+                    Pair(formatted.text, strings.live)
+                } else {
+                    Pair(placeholderFor(cardId, units, strings), waypointInvalidLabel(liveData.waypointInvalidReason, strings))
+                }
+            }
+            KnownCardId.WPT_BRG -> {
+                if (liveData.waypointValid) {
+                    val bearingDeg = ((liveData.waypointBearingTrueDegrees.roundToInt() % 360) + 360) % 360
+                    Pair("$bearingDeg${strings.degUnit}", strings.live)
+                } else {
+                    Pair("---${strings.degUnit}", waypointInvalidLabel(liveData.waypointInvalidReason, strings))
+                }
+            }
             KnownCardId.FINAL_GLD -> {
                 when {
                     !liveData.glideSolutionValid -> Pair("--:1", glideInvalidLabel(liveData.glideInvalidReason, strings))
@@ -217,7 +231,14 @@ internal object CardFormatSpecs {
                     else -> Pair(placeholderFor(cardId, units, strings), strings.invalid)
                 }
             }
-            KnownCardId.WPT_ETA -> Pair("--:--", strings.noWpt)
+            KnownCardId.WPT_ETA -> {
+                if (liveData.waypointEtaValid) {
+                    val (time, _) = timeFormatter.formatLocalTime(liveData.waypointEtaEpochMillis)
+                    Pair(time, waypointEtaSubtitle(liveData.waypointEtaSource, strings))
+                } else {
+                    Pair("--:--", waypointInvalidLabel(liveData.waypointEtaInvalidReason, strings))
+                }
+            }
 
             KnownCardId.LD_CURR -> {
                 if (liveData.currentLDValid) {
@@ -431,6 +452,13 @@ internal object CardFormatSpecs {
         return when (sourceLabel) {
             "SENSOR", "WIND" -> strings.est
             else -> strings.gps
+        }
+    }
+
+    private fun waypointEtaSubtitle(sourceLabel: String, strings: CardStrings): String {
+        return when (sourceLabel) {
+            "GROUND_SPEED" -> strings.gps
+            else -> strings.noWpt
         }
     }
 }

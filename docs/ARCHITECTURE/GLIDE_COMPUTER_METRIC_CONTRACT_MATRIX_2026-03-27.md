@@ -38,9 +38,9 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 
 | Metric | Release meaning | Status | Authoritative owner | Notes |
 |---|---|---|---|---|
-| WPT DIST | distance from current position to the active target point on the canonical route; boundary-aware when the route seam supplies a touch point / target point | NEW | `WaypointNavigationRepository` | Never compute in formatter |
-| WPT BRG | bearing from current position to the active target point on the canonical route | NEW | `WaypointNavigationRepository` | Same target definition as WPT DIST |
-| WPT ETA | estimated time of arrival at the active target point using explicit speed/availability rules | NEW | `WaypointNavigationRepository` | Validity must be explicit |
+| WPT DIST | distance from current GPS position to the active target point on the canonical route; boundary-aware when the route seam supplies a touch point / target point | IMPLEMENTED | `WaypointNavigationRepository` consuming `NavigationRouteRepository.route` | Valid only when the route seam is valid and a fused GPS position exists |
+| WPT BRG | true bearing from current GPS position to the active target point on the canonical route | IMPLEMENTED | `WaypointNavigationRepository` consuming `NavigationRouteRepository.route` | Same target definition and base validity as WPT DIST |
+| WPT ETA | local ETA clock time for the active target point using current GPS ground speed and replay-safe sample wall time | IMPLEMENTED | `WaypointNavigationRepository` consuming `NavigationRouteRepository.route` | Valid only when WPT DIST is valid, speed is > 2.0 m/s, and sample wall time exists |
 
 ## Task-performance metrics
 

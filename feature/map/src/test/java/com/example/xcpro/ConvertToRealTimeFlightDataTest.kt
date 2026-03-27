@@ -8,6 +8,9 @@ import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.glide.GlideSolution
+import com.example.xcpro.navigation.WaypointEtaSource
+import com.example.xcpro.navigation.WaypointNavigationInvalidReason
+import com.example.xcpro.navigation.WaypointNavigationSnapshot
 import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.CompleteFlightData
@@ -232,5 +235,65 @@ class ConvertToRealTimeFlightDataTest {
         )
 
         assertEquals("TRACK", result.headingSource)
+    }
+
+    @Test
+    fun maps_waypoint_navigation_fields_from_runtime_owner() {
+        val gps = GPSData(
+            position = GeoPoint(latitude = 37.5, longitude = -122.4),
+            altitude = AltitudeM(1000.0),
+            speed = SpeedMs(20.0),
+            bearing = 100.0,
+            accuracy = 5f,
+            timestamp = 2_000L,
+            monotonicTimestampMillis = 2_000L
+        )
+        val complete = CompleteFlightData(
+            gps = gps,
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(1200.0),
+            qnh = PressureHpa(1015.0),
+            isQNHCalibrated = true,
+            verticalSpeed = VerticalSpeedMs(0.8),
+            bruttoVario = VerticalSpeedMs(0.8),
+            pressureAltitude = AltitudeM(1100.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.MEDIUM,
+            qnhCalibrationAgeSeconds = 5L,
+            agl = AltitudeM(100.0),
+            thermalAverage = VerticalSpeedMs(0.0),
+            currentLD = 20f,
+            netto = VerticalSpeedMs(0.0),
+            timestamp = 2_000L,
+            dataQuality = "GPS",
+            thermalAverageValid = false
+        )
+
+        val result = convertToRealTimeFlightData(
+            completeData = complete,
+            windState = null,
+            isFlying = true,
+            waypointNavigation = WaypointNavigationSnapshot(
+                targetLabel = "Boundary TP",
+                distanceMeters = 12_345.0,
+                bearingTrueDegrees = 87.4,
+                valid = true,
+                invalidReason = WaypointNavigationInvalidReason.NONE,
+                etaEpochMillis = 9_999L,
+                etaValid = true,
+                etaSource = WaypointEtaSource.GROUND_SPEED,
+                etaInvalidReason = WaypointNavigationInvalidReason.NONE
+            )
+        )
+
+        assertEquals(12_345.0, result.waypointDistanceMeters, 1e-6)
+        assertEquals(true, result.waypointValid)
+        assertEquals(87.4, result.waypointBearingTrueDegrees, 1e-6)
+        assertEquals("NONE", result.waypointInvalidReason)
+        assertEquals(9_999L, result.waypointEtaEpochMillis)
+        assertEquals(true, result.waypointEtaValid)
+        assertEquals("GROUND_SPEED", result.waypointEtaSource)
+        assertEquals("NONE", result.waypointEtaInvalidReason)
     }
 }

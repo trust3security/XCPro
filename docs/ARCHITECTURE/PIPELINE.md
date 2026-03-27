@@ -47,6 +47,7 @@ Sensors
   -> MapScreenViewModel
      -> FlightDataUiAdapter (MapScreenObservers)
         + GlideComputationRepository.glide
+        + WaypointNavigationRepository.waypointNavigation
         -> convertToRealTimeFlightData
         -> FlightDataManager
      -> mapLocation (GPS) for map UI
@@ -412,13 +413,17 @@ ViewModel:
 
 Observers:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` (wrapped by `FlightDataUiAdapter`)
-  - Combines flight data + wind + flying state + upstream glide solution.
+  - Combines flight data + wind + flying state + upstream glide solution +
+    upstream waypoint navigation snapshot.
   - Projects replay session state through a semantic selection-presence gate
     (`mapReplaySelectionActive()` -> `distinctUntilChanged`) before joining
     the main observer combine path.
   - Consumes `GlideComputationRepository.glide`; it no longer solves glide in
     the observer layer.
-  - Converts `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
+  - Consumes `WaypointNavigationRepository.waypointNavigation`; it does not
+    compute waypoint route math in the observer layer.
+  - Converts `CompleteFlightData` + upstream runtime snapshots to
+    `RealTimeFlightData`.
   - Pushes to `FlightDataManager` and the `feature:map-runtime` trail
     processor.
   - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
@@ -846,10 +851,11 @@ Current finish-glide card scope:
   - `arr_alt`
   - `req_alt`
   - `arr_mc0`
-- still placeholder-only:
+- waypoint navigation now live:
   - `wpt_dist`
   - `wpt_brg`
   - `wpt_eta`
+- still placeholder-only:
   - `task_spd`
   - `task_dist`
   - `start_alt`
