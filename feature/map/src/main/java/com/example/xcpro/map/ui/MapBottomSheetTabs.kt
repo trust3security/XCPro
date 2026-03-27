@@ -1,39 +1,24 @@
 package com.example.xcpro.map.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.xcpro.forecast.ForecastOverlayUiState
@@ -109,22 +94,27 @@ internal fun MapBottomTabsLayer(
         )
     }
 ) {
+    val map4Enabled = adsbTrafficEnabled || showOgnThermalsEnabled || showDistanceCircles
+    val navigationItems = mapBottomNavigationItems(
+        weatherEnabled = weatherEnabled,
+        skySightEnabled = skySightUiState.enabled,
+        map4Enabled = map4Enabled
+    )
+
     if (!isSheetVisible && !isTaskPanelVisible) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(65f)
         ) {
-            BottomFloatingStrip(
-                onTabSelected = onTabSelected,
+            MapBottomNavigationBar(
                 selectedTab = selectedTab,
-                weatherEnabled = weatherEnabled,
-                skySightEnabled = skySightUiState.enabled,
-                map4Enabled = adsbTrafficEnabled || showOgnThermalsEnabled || showDistanceCircles,
-                satelliteViewEnabled = skySightSatViewEnabled,
+                items = navigationItems,
+                onTabSelected = onTabSelected,
+                shape = RoundedCornerShape(topStart = FLOATING_TAB_STRIP_TOP_RADIUS, topEnd = FLOATING_TAB_STRIP_TOP_RADIUS),
                 modifier = Modifier
+                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = FLOATING_TAB_STRIP_BOTTOM_PADDING)
             )
         }
     }
@@ -216,13 +206,11 @@ internal fun MapBottomTabsLayer(
                     )
                 )
 
-                BottomTabStrip(
-                    onTabSelected = onTabSelected,
+                MapBottomNavigationBar(
                     selectedTab = selectedTab,
-                    weatherEnabled = weatherEnabled,
-                    skySightEnabled = skySightUiState.enabled,
-                    map4Enabled = adsbTrafficEnabled || showOgnThermalsEnabled || showDistanceCircles,
-                    satelliteViewEnabled = skySightSatViewEnabled,
+                    items = navigationItems,
+                    onTabSelected = onTabSelected,
+                    showLabels = false,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = SHEET_TAB_STRIP_BOTTOM_PADDING)
@@ -233,109 +221,34 @@ internal fun MapBottomTabsLayer(
 }
 
 @Composable
-private fun BottomFloatingStrip(
-    onTabSelected: (MapBottomTab) -> Unit,
-    selectedTab: MapBottomTab,
+private fun mapBottomNavigationItems(
     weatherEnabled: Boolean,
     skySightEnabled: Boolean,
     map4Enabled: Boolean,
-    satelliteViewEnabled: Boolean,
-    modifier: Modifier = Modifier
-) {
-    BottomTabStrip(
-        onTabSelected = onTabSelected,
-        selectedTab = selectedTab,
-        weatherEnabled = weatherEnabled,
-        skySightEnabled = skySightEnabled,
-        map4Enabled = map4Enabled,
-        satelliteViewEnabled = satelliteViewEnabled,
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun BottomTabStrip(
-    onTabSelected: (MapBottomTab) -> Unit,
-    selectedTab: MapBottomTab,
-    weatherEnabled: Boolean,
-    skySightEnabled: Boolean,
-    map4Enabled: Boolean,
-    satelliteViewEnabled: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .selectableGroup()
-            .testTag(MAP_BOTTOM_TAB_STRIP_TAG),
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
-    ) {
-        val defaultBorderColor = MaterialTheme.colorScheme.outlineVariant
-        val selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = SELECTED_TAB_BORDER_ALPHA)
-        MapBottomTab.entries.forEach { tab ->
-            val isSelected = tab == selectedTab
-            val isFeatureEnabled = isTabFeatureEnabled(
+): List<MapBottomNavigationItemSpec> {
+    return MapBottomTab.entries.map { tab ->
+        MapBottomNavigationItemSpec(
+            tab = tab,
+            label = stringResource(tab.labelResId),
+            testTag = tab.chipTestTag,
+            icon = defaultMapBottomNavigationIcon(tab),
+            isFeatureEnabled = isTabFeatureEnabled(
                 tab = tab,
                 weatherEnabled = weatherEnabled,
                 skySightEnabled = skySightEnabled,
                 map4Enabled = map4Enabled
             )
-            val borderColor = resolveTabBorderColor(
-                isSelected = isSelected,
-                isFeatureEnabled = isFeatureEnabled,
-                defaultBorderColor = defaultBorderColor,
-                selectedBorderColor = selectedBorderColor,
-                enabledBorderColor = TAB_ENABLED_BORDER_COLOR
-            )
-            AssistChip(
-                modifier = Modifier
-                    .width(TAB_CHIP_WIDTH)
-                    .testTag(tab.chipTestTag)
-                    .semantics {
-                        selected = isSelected
-                        role = Role.Tab
-                    },
-                onClick = { onTabSelected(tab) },
-                border = BorderStroke(TAB_CHIP_BORDER_WIDTH, borderColor),
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = resolveTabContainerColor(
-                        isSelected = isSelected,
-                        primaryColor = MaterialTheme.colorScheme.primary
-                    ),
-                    labelColor = resolveTabLabelColor(
-                        isSelected = isSelected,
-                        satelliteViewEnabled = satelliteViewEnabled,
-                        primaryColor = MaterialTheme.colorScheme.primary,
-                        onSurfaceColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ),
-                label = {
-                    Text(
-                        text = stringResource(tab.labelResId),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            )
-        }
+        )
     }
 }
 
-private val FLOATING_TAB_STRIP_BOTTOM_PADDING = 6.dp
 private val SHEET_CONTENT_HORIZONTAL_PADDING = 16.dp
 private val SHEET_CONTENT_TOP_PADDING = 8.dp
 private val SHEET_CONTENT_BOTTOM_PADDING = 0.dp
 private val SHEET_DIVIDER_TOP_PADDING = 4.dp
 private val SHEET_DIVIDER_BOTTOM_PADDING = 1.dp
-private val SHEET_TAB_STRIP_BOTTOM_PADDING = 0.dp
-private val TAB_CHIP_WIDTH = 96.dp
-private val TAB_CHIP_BORDER_WIDTH = 1.dp
-private const val SELECTED_TAB_FILL_ALPHA = 0.28f
-private const val UNSELECTED_TAB_FILL_ALPHA = 0.14f
-private const val SELECTED_TAB_BORDER_ALPHA = 0.55f
-internal val TAB_ENABLED_BORDER_COLOR = Color(0xFF16A34A)
-internal const val MAP_BOTTOM_TAB_STRIP_TAG = "map_bottom_tab_strip"
+private val SHEET_TAB_STRIP_BOTTOM_PADDING = 4.dp
+private val FLOATING_TAB_STRIP_TOP_RADIUS = 28.dp
 
 internal fun isTabFeatureEnabled(
     tab: MapBottomTab,
@@ -348,44 +261,5 @@ internal fun isTabFeatureEnabled(
         MapBottomTab.SKYSIGHT -> skySightEnabled
         MapBottomTab.MAP4 -> map4Enabled
         MapBottomTab.OGN -> false
-    }
-}
-
-internal fun resolveTabBorderColor(
-    isSelected: Boolean,
-    isFeatureEnabled: Boolean,
-    defaultBorderColor: Color,
-    selectedBorderColor: Color,
-    enabledBorderColor: Color
-): Color {
-    return when {
-        isFeatureEnabled -> enabledBorderColor
-        isSelected -> selectedBorderColor
-        else -> defaultBorderColor
-    }
-}
-
-internal fun resolveTabContainerColor(
-    isSelected: Boolean,
-    primaryColor: Color
-): Color {
-    return if (isSelected) {
-        primaryColor.copy(alpha = SELECTED_TAB_FILL_ALPHA)
-    } else {
-        primaryColor.copy(alpha = UNSELECTED_TAB_FILL_ALPHA)
-    }
-}
-
-internal fun resolveTabLabelColor(
-    isSelected: Boolean,
-    satelliteViewEnabled: Boolean,
-    primaryColor: Color,
-    onSurfaceColor: Color
-): Color {
-    if (satelliteViewEnabled) return Color.White
-    return if (isSelected) {
-        primaryColor
-    } else {
-        onSurfaceColor
     }
 }

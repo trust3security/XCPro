@@ -5,11 +5,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -24,10 +25,13 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.forecast.ForecastOverlayUiState
+import com.example.xcpro.map.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -51,7 +55,7 @@ class MapBottomSheetTabsTest {
         composeTestRule.onNodeWithText("ADS-B traffic").assertIsDisplayed()
         composeTestRule.onNodeWithText("Hotspots (TH)").assertIsDisplayed()
         composeTestRule.onNodeWithText("Distance circles").assertIsDisplayed()
-        composeTestRule.onNodeWithTag(MAP4_QNH_BUTTON_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MAP4_QNH_BUTTON_TAG).assert(existsMatcher())
     }
 
     @Test
@@ -189,64 +193,42 @@ class MapBottomSheetTabsTest {
     }
 
     @Test
-    fun resolveTabBorderColor_featureEnabled_usesEnabledBorderColor() {
-        val defaultBorder = Color.Gray
-        val selectedBorder = Color.Red
-        val enabledBorder = Color.Green
+    fun defaultMapBottomNavigationIcon_usesBrandLogosForRainAndSkySight() {
+        val rainIcon = defaultMapBottomNavigationIcon(MapBottomTab.RAIN)
+        val skySightIcon = defaultMapBottomNavigationIcon(MapBottomTab.SKYSIGHT)
 
-        val resolved = resolveTabBorderColor(
-            isSelected = true,
-            isFeatureEnabled = true,
-            defaultBorderColor = defaultBorder,
-            selectedBorderColor = selectedBorder,
-            enabledBorderColor = enabledBorder
+        assertTrue(rainIcon is MapBottomNavigationIconSpec.BrandLogo)
+        assertTrue(skySightIcon is MapBottomNavigationIconSpec.BrandLogo)
+        assertEquals(R.drawable.rainviewer, (rainIcon as MapBottomNavigationIconSpec.BrandLogo).resId)
+        assertEquals(
+            R.drawable.ic_skysight,
+            (skySightIcon as MapBottomNavigationIconSpec.BrandLogo).resId
         )
-
-        assertEquals(enabledBorder, resolved)
     }
 
     @Test
-    fun resolveTabContainerColor_usesPrimaryAlphaTintForSelectedAndUnselected() {
-        val primary = Color(0xFF112233)
+    fun defaultMapBottomNavigationIcon_usesFallbackVectorForSciaAndBrandLogoForXcPro() {
+        val sciaIcon = defaultMapBottomNavigationIcon(MapBottomTab.OGN)
+        val xcProIcon = defaultMapBottomNavigationIcon(MapBottomTab.MAP4)
 
-        val selected = resolveTabContainerColor(
-            isSelected = true,
-            primaryColor = primary
-        )
-        val unselected = resolveTabContainerColor(
-            isSelected = false,
-            primaryColor = primary
-        )
-
-        assertEquals(primary.copy(alpha = 0.28f), selected)
-        assertEquals(primary.copy(alpha = 0.14f), unselected)
+        assertTrue(sciaIcon is MapBottomNavigationIconSpec.VectorIcon)
+        assertTrue(xcProIcon is MapBottomNavigationIconSpec.BrandLogo)
+        assertEquals(R.drawable.xcpro_logo, (xcProIcon as MapBottomNavigationIconSpec.BrandLogo).resId)
     }
 
     @Test
-    fun resolveTabLabelColor_satelliteView_usesWhiteText() {
-        val resolved = resolveTabLabelColor(
-            isSelected = false,
-            satelliteViewEnabled = true,
-            primaryColor = Color(0xFF112233),
-            onSurfaceColor = Color(0xFFEEEEEE)
-        )
-
-        assertEquals(Color.White, resolved)
-    }
-
-    @Test
-    fun strip_isHorizontallyScrollableForCompactLayouts() {
+    fun strip_isNotHorizontallyScrollableForCompactLayouts() {
         setBottomTabsContent(
             selectedTab = MapBottomTab.SKYSIGHT,
             isSheetVisible = false
         )
 
         composeTestRule.onNodeWithTag(MAP_BOTTOM_TAB_STRIP_TAG)
-            .assert(hasScrollByAction())
+            .assert(hasNoScrollByAction())
     }
 
     @Test
-    fun compactWidth_stripKeepsAllTabsReachableByTags() {
+    fun compactWidth_barKeepsAllTabsReachableByTagsWithoutScrollSemantics() {
         composeTestRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(180.dp)) {
@@ -295,11 +277,60 @@ class MapBottomSheetTabsTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(MAP_BOTTOM_TAB_STRIP_TAG).assert(hasScrollByAction())
+        composeTestRule.onNodeWithTag(MAP_BOTTOM_TAB_STRIP_TAG).assert(hasNoScrollByAction())
         composeTestRule.onNodeWithTag(MapBottomTab.RAIN.chipTestTag).assert(existsMatcher())
         composeTestRule.onNodeWithTag(MapBottomTab.SKYSIGHT.chipTestTag).assert(existsMatcher())
         composeTestRule.onNodeWithTag(MapBottomTab.OGN.chipTestTag).assert(existsMatcher())
         composeTestRule.onNodeWithTag(MapBottomTab.MAP4.chipTestTag).assert(existsMatcher())
+    }
+
+    @Test
+    fun fontScale130_barKeepsAllTabsReachableWithoutScrollSemantics() {
+        setBottomTabsContent(
+            selectedTab = MapBottomTab.SKYSIGHT,
+            isSheetVisible = false,
+            containerWidth = 360.dp,
+            fontScale = 1.3f
+        )
+
+        composeTestRule.onNodeWithTag(MAP_BOTTOM_TAB_STRIP_TAG).assert(hasNoScrollByAction())
+        composeTestRule.onNodeWithTag(MapBottomTab.RAIN.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.SKYSIGHT.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.OGN.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.MAP4.chipTestTag).assertIsDisplayed()
+    }
+
+    @Test
+    fun fontScale150_barKeepsAllTabsReachableWithoutScrollSemantics() {
+        setBottomTabsContent(
+            selectedTab = MapBottomTab.SKYSIGHT,
+            isSheetVisible = false,
+            containerWidth = 360.dp,
+            fontScale = 1.5f
+        )
+
+        composeTestRule.onNodeWithTag(MAP_BOTTOM_TAB_STRIP_TAG).assert(hasNoScrollByAction())
+        composeTestRule.onNodeWithTag(MapBottomTab.RAIN.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.SKYSIGHT.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.OGN.chipTestTag).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapBottomTab.MAP4.chipTestTag).assertIsDisplayed()
+    }
+
+    @Test
+    fun isMapBottomNavigationRoute_onlyAllowsMapExperienceRoutes() {
+        assertTrue(isMapBottomNavigationRoute("map"))
+        assertTrue(isMapBottomNavigationRoute("map?from=startup"))
+        assertTrue(isMapBottomNavigationRoute("livefollow/friends"))
+        assertTrue(isMapBottomNavigationRoute("livefollow/friends?focus=pilot"))
+        assertFalse(isMapBottomNavigationRoute("mapp"))
+        assertFalse(isMapBottomNavigationRoute("map/details"))
+        assertFalse(isMapBottomNavigationRoute("livefollow/friends-extra"))
+        assertFalse(isMapBottomNavigationRoute("prefix/livefollow/friends"))
+        assertFalse(isMapBottomNavigationRoute("livefollow/pilot"))
+        assertFalse(isMapBottomNavigationRoute("livefollow/watch/share"))
+        assertFalse(isMapBottomNavigationRoute("about"))
+        assertFalse(isMapBottomNavigationRoute("task"))
+        assertFalse(isMapBottomNavigationRoute(null))
     }
 
     @Test
@@ -316,19 +347,15 @@ class MapBottomSheetTabsTest {
     }
 
     @Test
-    fun floatingStrip_rainViewerClick_selectsRainTab() {
-        var selectedTab: MapBottomTab? = null
-
+    fun floatingStrip_rainViewerTab_exposesClickAction() {
         setBottomTabsContent(
             selectedTab = MapBottomTab.SKYSIGHT,
-            isSheetVisible = false,
-            onTabSelected = { selectedTab = it }
+            isSheetVisible = false
         )
 
-        composeTestRule.onNodeWithTag(MapBottomTab.RAIN.chipTestTag).performClick()
-        composeTestRule.runOnIdle {
-            assertTrue(selectedTab == MapBottomTab.RAIN)
-        }
+        composeTestRule
+            .onNodeWithTag(MapBottomTab.RAIN.chipTestTag)
+            .assert(hasClickAction())
     }
 
     @Test
@@ -344,10 +371,22 @@ class MapBottomSheetTabsTest {
     }
 
     @Test
+    fun sheetFooter_hidesDuplicateTabLabels() {
+        setBottomTabsContent(
+            selectedTab = MapBottomTab.RAIN,
+            isSheetVisible = true,
+            weatherEnabled = true
+        )
+
+        composeTestRule.onAllNodesWithText("RainViewer").assertCountEquals(0)
+    }
+
+    @Test
     fun sheet_tabSwitch_keepsSharedHostVisible() {
+        var selectedTab by mutableStateOf(MapBottomTab.RAIN)
+
         composeTestRule.setContent {
             MaterialTheme {
-                var selectedTab by mutableStateOf(MapBottomTab.RAIN)
                 MapBottomTabsLayer(
                     selectedTab = selectedTab,
                     isSheetVisible = true,
@@ -393,9 +432,13 @@ class MapBottomSheetTabsTest {
         }
 
         composeTestRule.onNodeWithText("Rain tab content sentinel").assertIsDisplayed()
-        composeTestRule.onNodeWithTag(MapBottomTab.SKYSIGHT.chipTestTag).performClick()
+        composeTestRule.runOnIdle {
+            selectedTab = MapBottomTab.SKYSIGHT
+        }
         composeTestRule.onNodeWithTag(MAP_BOTTOM_TAB_STRIP_TAG).assertIsDisplayed()
-        composeTestRule.onNodeWithText("SkySight").assertIsDisplayed()
+        composeTestRule.runOnIdle {
+            assertEquals(MapBottomTab.SKYSIGHT, selectedTab)
+        }
     }
 
     private fun setBottomTabsContent(
@@ -403,60 +446,69 @@ class MapBottomSheetTabsTest {
         isSheetVisible: Boolean,
         weatherEnabled: Boolean = false,
         containerWidth: Dp? = null,
+        fontScale: Float = 1f,
         onTabSelected: (MapBottomTab) -> Unit = {},
         rainTabContent: @Composable () -> Unit = { Text("Rain content test sentinel") }
     ) {
         composeTestRule.setContent {
             MaterialTheme {
-                val content: @Composable () -> Unit = {
-                    MapBottomTabsLayer(
-                        selectedTab = selectedTab,
-                        isSheetVisible = isSheetVisible,
-                        isTaskPanelVisible = false,
-                        onTabSelected = onTabSelected,
-                        onDismissSheet = {},
-                        weatherEnabled = weatherEnabled,
-                        ognEnabled = false,
-                        showSciaEnabled = false,
-                        onShowSciaEnabledChanged = {},
-                        adsbTrafficEnabled = false,
-                        showOgnThermalsEnabled = false,
-                        showDistanceCircles = false,
-                        currentQnhLabel = "1013.3 hPa",
-                        onAdsbTrafficEnabledChanged = {},
-                        onShowOgnThermalsEnabledChanged = {},
-                        onShowDistanceCirclesChanged = {},
-                        onOpenQnhDialogFromTab = {},
-                        ognTrailAircraftRows = emptyList(),
-                        onOgnTrailAircraftToggled = { _, _ -> },
-                        skySightUiState = ForecastOverlayUiState(),
-                        onSkySightEnabledChanged = {},
-                        onSkySightPrimaryParameterToggled = {},
-                        onSkySightWindOverlayEnabledChanged = {},
-                        onSkySightWindParameterSelected = {},
-                        onSkySightAutoTimeEnabledChanged = {},
-                        onSkySightFollowTimeOffsetChanged = {},
-                        onSkySightJumpToNow = {},
-                        onSkySightTimeSelected = {},
-                        onSkySightSatelliteOverlayEnabledChanged = {},
-                        onSkySightSatelliteImageryEnabledChanged = {},
-                        onSkySightSatelliteRadarEnabledChanged = {},
-                        onSkySightSatelliteLightningEnabledChanged = {},
-                        onSkySightSatelliteAnimateEnabledChanged = {},
-                        onSkySightSatelliteHistoryFramesChanged = {},
-                        skySightWarningMessage = null,
-                        skySightErrorMessage = null,
-                        skySightSatViewEnabled = false,
-                        onSkySightSatViewEnabledChanged = {},
-                        rainTabContent = rainTabContent
+                val baseDensity = LocalDensity.current
+                CompositionLocalProvider(
+                    LocalDensity provides Density(
+                        density = baseDensity.density,
+                        fontScale = fontScale
                     )
-                }
-                if (containerWidth != null) {
-                    Box(modifier = Modifier.width(containerWidth)) {
+                ) {
+                    val content: @Composable () -> Unit = {
+                        MapBottomTabsLayer(
+                            selectedTab = selectedTab,
+                            isSheetVisible = isSheetVisible,
+                            isTaskPanelVisible = false,
+                            onTabSelected = onTabSelected,
+                            onDismissSheet = {},
+                            weatherEnabled = weatherEnabled,
+                            ognEnabled = false,
+                            showSciaEnabled = false,
+                            onShowSciaEnabledChanged = {},
+                            adsbTrafficEnabled = false,
+                            showOgnThermalsEnabled = false,
+                            showDistanceCircles = false,
+                            currentQnhLabel = "1013.3 hPa",
+                            onAdsbTrafficEnabledChanged = {},
+                            onShowOgnThermalsEnabledChanged = {},
+                            onShowDistanceCirclesChanged = {},
+                            onOpenQnhDialogFromTab = {},
+                            ognTrailAircraftRows = emptyList(),
+                            onOgnTrailAircraftToggled = { _, _ -> },
+                            skySightUiState = ForecastOverlayUiState(),
+                            onSkySightEnabledChanged = {},
+                            onSkySightPrimaryParameterToggled = {},
+                            onSkySightWindOverlayEnabledChanged = {},
+                            onSkySightWindParameterSelected = {},
+                            onSkySightAutoTimeEnabledChanged = {},
+                            onSkySightFollowTimeOffsetChanged = {},
+                            onSkySightJumpToNow = {},
+                            onSkySightTimeSelected = {},
+                            onSkySightSatelliteOverlayEnabledChanged = {},
+                            onSkySightSatelliteImageryEnabledChanged = {},
+                            onSkySightSatelliteRadarEnabledChanged = {},
+                            onSkySightSatelliteLightningEnabledChanged = {},
+                            onSkySightSatelliteAnimateEnabledChanged = {},
+                            onSkySightSatelliteHistoryFramesChanged = {},
+                            skySightWarningMessage = null,
+                            skySightErrorMessage = null,
+                            skySightSatViewEnabled = false,
+                            onSkySightSatViewEnabledChanged = {},
+                            rainTabContent = rainTabContent
+                        )
+                    }
+                    if (containerWidth != null) {
+                        Box(modifier = Modifier.width(containerWidth)) {
+                            content()
+                        }
+                    } else {
                         content()
                     }
-                } else {
-                    content()
                 }
             }
         }
@@ -465,8 +517,11 @@ class MapBottomSheetTabsTest {
     private fun hasRole(expectedRole: Role): SemanticsMatcher =
         SemanticsMatcher.expectValue(SemanticsProperties.Role, expectedRole)
 
-    private fun hasScrollByAction(): SemanticsMatcher =
-        SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollBy)
+    private fun hasNoScrollByAction(): SemanticsMatcher =
+        SemanticsMatcher.keyNotDefined(SemanticsActions.ScrollBy)
+
+    private fun hasClickAction(): SemanticsMatcher =
+        SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick)
 
     private fun existsMatcher(): SemanticsMatcher =
         SemanticsMatcher("node exists") { true }

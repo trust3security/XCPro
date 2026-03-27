@@ -83,6 +83,7 @@ internal fun MapScreenContent(
     val currentZoom by mapInputs.currentZoom.collectAsStateWithLifecycle()
     val currentLocation by mapInputs.currentLocation.collectAsStateWithLifecycle()
 
+    val showMapBottomNavigation = overlayInputs.showMapBottomNavigation
     val renderLocalOwnship = overlayInputs.renderLocalOwnship
     val showRecenterButton = overlayInputs.showRecenterButton
     val showReturnButton = overlayInputs.showReturnButton
@@ -359,6 +360,7 @@ internal fun MapScreenContent(
         )
 
         MapBottomTabsSection(
+            showMapBottomNavigation = showMapBottomNavigation,
             selectedBottomTab = bottomTabsUiState.selectedBottomTab,
             isBottomTabsSheetVisible = bottomTabsUiState.isBottomTabsSheetVisible,
             isTaskPanelVisible = bottomTabsUiState.isTaskPanelVisible,
