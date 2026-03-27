@@ -214,18 +214,20 @@ class MapOverlayManagerOgnLifecycleTest {
         val trafficOverlay: OgnTrafficOverlayHandle = mock()
         val targetRingOverlay: OgnTargetRingOverlayHandle = mock()
         val targetLineOverlay: OgnTargetLineOverlayHandle = mock()
+        val ownshipBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle = mock()
         val fixture = createFixture(
             scope = this,
             ognTrafficOverlayFactory = { _, _, _, _ -> trafficOverlay },
             ognTargetRingOverlayFactory = { _, _ -> targetRingOverlay },
             ognTargetLineOverlayFactory = { _ -> targetLineOverlay },
+            ognOwnshipTargetBadgeOverlayFactory = { _ -> ownshipBadgeOverlay },
             ognThermalOverlayFactory = { _ -> mock<OgnThermalOverlayHandle>() },
             ognGliderTrailOverlayFactory = { _ -> mock<OgnGliderTrailOverlayHandle>() },
             adsbTrafficOverlayFactory = { _, _, _ -> mock<AdsbTrafficOverlayHandle>() }
         )
         fixture.mapState.mapLibreMap = map
         fixture.manager.initializeTrafficOverlays(map)
-        clearInvocations(trafficOverlay, targetRingOverlay, targetLineOverlay)
+        clearInvocations(trafficOverlay, targetRingOverlay, targetLineOverlay, ownshipBadgeOverlay)
 
         val ownship = MapLocationUiModel(
             latitude = -35.2,
@@ -241,6 +243,9 @@ class MapOverlayManagerOgnLifecycleTest {
             enabled = true,
             resolvedTarget = target,
             ownshipLocation = ownship,
+            ownshipAltitudeMeters = 820.0,
+            altitudeUnit = AltitudeUnit.FEET,
+            unitsPreferences = UnitsPreferences(),
             forceImmediate = true
         )
 
@@ -250,6 +255,14 @@ class MapOverlayManagerOgnLifecycleTest {
             ownshipLocation = eq(OverlayCoordinate(ownship.latitude, ownship.longitude)),
             target = eq(target)
         )
+        verify(ownshipBadgeOverlay, times(1)).render(
+            enabled = eq(true),
+            ownshipLocation = eq(OverlayCoordinate(ownship.latitude, ownship.longitude)),
+            target = eq(target),
+            ownshipAltitudeMeters = eq(820.0),
+            altitudeUnit = eq(AltitudeUnit.FEET),
+            unitsPreferences = eq(UnitsPreferences())
+        )
         verifyNoInteractions(trafficOverlay)
     }
 
@@ -258,6 +271,8 @@ class MapOverlayManagerOgnLifecycleTest {
         ognTrafficOverlayFactory: OgnTrafficOverlayFactory,
         ognTargetRingOverlayFactory: OgnTargetRingOverlayFactory = { _, _ -> mock<OgnTargetRingOverlayHandle>() },
         ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory = { _ -> mock<OgnTargetLineOverlayHandle>() },
+        ognOwnshipTargetBadgeOverlayFactory: OgnOwnshipTargetBadgeOverlayFactory =
+            { _ -> mock<OgnOwnshipTargetBadgeOverlayHandle>() },
         ognThermalOverlayFactory: OgnThermalOverlayFactory,
         ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory,
         adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory
@@ -278,6 +293,7 @@ class MapOverlayManagerOgnLifecycleTest {
             ognTrafficOverlayFactory = ognTrafficOverlayFactory,
             ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
             ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
+            ognOwnshipTargetBadgeOverlayFactory = ognOwnshipTargetBadgeOverlayFactory,
             ognThermalOverlayFactory = ognThermalOverlayFactory,
             ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
             adsbTrafficOverlayFactory = adsbTrafficOverlayFactory

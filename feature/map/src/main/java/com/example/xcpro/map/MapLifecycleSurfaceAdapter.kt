@@ -67,6 +67,8 @@ class MapLifecycleSurfaceAdapter(
         mapState.ognTargetRingOverlay = null
         mapState.ognTargetLineOverlay?.cleanup()
         mapState.ognTargetLineOverlay = null
+        mapState.ognOwnshipTargetBadgeOverlay?.cleanup()
+        mapState.ognOwnshipTargetBadgeOverlay = null
         mapState.ognTrafficOverlay?.cleanup()
         mapState.ognTrafficOverlay = null
         mapState.ognThermalOverlay?.cleanup()

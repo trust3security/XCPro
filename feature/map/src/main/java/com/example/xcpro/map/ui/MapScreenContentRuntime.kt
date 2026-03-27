@@ -397,6 +397,7 @@ internal fun MapScreenContent(
         MapTrafficRuntimeLayer(
             traffic = trafficBinding,
             runtimeState = trafficRuntimeState,
+            reserveTopEndPrimarySlot = showPilotStatusIndicator,
             ownshipCoordinate = visibleCurrentLocation?.let { location ->
                 TrafficMapCoordinate(
                     latitude = location.latitude,

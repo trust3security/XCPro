@@ -135,12 +135,18 @@ internal fun createTrafficOverlayRenderPort(
     override fun updateOgnTargetVisuals(
         enabled: Boolean,
         resolvedTarget: com.example.xcpro.map.OgnTrafficTarget?,
-        ownshipCoordinate: TrafficMapCoordinate?
+        ownshipCoordinate: TrafficMapCoordinate?,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: com.example.xcpro.common.units.AltitudeUnit,
+        unitsPreferences: UnitsPreferences
     ) {
         overlayManager.updateOgnTargetVisuals(
             enabled = enabled,
             resolvedTarget = resolvedTarget,
-            ownshipCoordinate = ownshipCoordinate
+            ownshipCoordinate = ownshipCoordinate,
+            ownshipAltitudeMeters = ownshipAltitudeMeters,
+            altitudeUnit = altitudeUnit,
+            unitsPreferences = unitsPreferences
         )
     }
 

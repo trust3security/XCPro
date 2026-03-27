@@ -19,6 +19,7 @@ interface TrafficOverlayRuntimeState {
     var ognTrafficOverlay: OgnTrafficOverlayHandle?
     var ognTargetRingOverlay: OgnTargetRingOverlayHandle?
     var ognTargetLineOverlay: OgnTargetLineOverlayHandle?
+    var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle?
     var ognThermalOverlay: OgnThermalOverlayHandle?
     var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle?
     var adsbTrafficOverlay: AdsbTrafficOverlayHandle?
@@ -77,6 +78,20 @@ interface OgnTargetLineOverlayHandle {
     fun bringToFront()
 }
 
+interface OgnOwnshipTargetBadgeOverlayHandle {
+    fun initialize()
+    fun render(
+        enabled: Boolean,
+        ownshipLocation: OverlayCoordinate?,
+        target: OgnTrafficTarget?,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: AltitudeUnit,
+        unitsPreferences: UnitsPreferences
+    )
+    fun cleanup()
+    fun bringToFront()
+}
+
 interface OgnThermalOverlayHandle {
     fun initialize()
     fun render(hotspots: List<OgnThermalHotspot>)
@@ -94,6 +109,7 @@ typealias AdsbTrafficOverlayFactory = (Context, MapLibreMap, Int) -> AdsbTraffic
 typealias OgnTrafficOverlayFactory = (Context, MapLibreMap, Int, Boolean) -> OgnTrafficOverlayHandle
 typealias OgnTargetRingOverlayFactory = (MapLibreMap, Int) -> OgnTargetRingOverlayHandle
 typealias OgnTargetLineOverlayFactory = (MapLibreMap) -> OgnTargetLineOverlayHandle
+typealias OgnOwnshipTargetBadgeOverlayFactory = (MapLibreMap) -> OgnOwnshipTargetBadgeOverlayHandle
 typealias OgnThermalOverlayFactory = (MapLibreMap) -> OgnThermalOverlayHandle
 typealias OgnGliderTrailOverlayFactory = (MapLibreMap) -> OgnGliderTrailOverlayHandle
 
@@ -131,6 +147,9 @@ object TrafficOverlayFactories {
 
     fun createOgnTargetLineOverlay(map: MapLibreMap): OgnTargetLineOverlayHandle =
         OgnTargetLineOverlay(map = map)
+
+    fun createOgnOwnshipTargetBadgeOverlay(map: MapLibreMap): OgnOwnshipTargetBadgeOverlayHandle =
+        OgnOwnshipTargetBadgeOverlay(map = map)
 
     fun createOgnThermalOverlay(map: MapLibreMap): OgnThermalOverlayHandle =
         OgnThermalOverlay(map = map)

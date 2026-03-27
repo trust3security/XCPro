@@ -16,16 +16,20 @@ class MapLifecycleManagerOgnTargetCleanupTest {
         val mapState = MapScreenState()
         val targetRingOverlay: OgnTargetRingOverlay = mock()
         val targetLineOverlay: OgnTargetLineOverlay = mock()
+        val targetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle = mock()
         mapState.ognTargetRingOverlay = targetRingOverlay
         mapState.ognTargetLineOverlay = targetLineOverlay
+        mapState.ognOwnshipTargetBadgeOverlay = targetBadgeOverlay
         val manager = createLifecycleManager(mapState)
 
         manager.cleanup()
 
         verify(targetRingOverlay, times(1)).cleanup()
         verify(targetLineOverlay, times(1)).cleanup()
+        verify(targetBadgeOverlay, times(1)).cleanup()
         assertNull(mapState.ognTargetRingOverlay)
         assertNull(mapState.ognTargetLineOverlay)
+        assertNull(mapState.ognOwnshipTargetBadgeOverlay)
     }
 
     @Test
@@ -33,16 +37,20 @@ class MapLifecycleManagerOgnTargetCleanupTest {
         val mapState = MapScreenState()
         val targetRingOverlay: OgnTargetRingOverlay = mock()
         val targetLineOverlay: OgnTargetLineOverlay = mock()
+        val targetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle = mock()
         mapState.ognTargetRingOverlay = targetRingOverlay
         mapState.ognTargetLineOverlay = targetLineOverlay
+        mapState.ognOwnshipTargetBadgeOverlay = targetBadgeOverlay
         val manager = createLifecycleManager(mapState)
 
         manager.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
 
         verify(targetRingOverlay, times(1)).cleanup()
         verify(targetLineOverlay, times(1)).cleanup()
+        verify(targetBadgeOverlay, times(1)).cleanup()
         assertNull(mapState.ognTargetRingOverlay)
         assertNull(mapState.ognTargetLineOverlay)
+        assertNull(mapState.ognOwnshipTargetBadgeOverlay)
     }
 
     private fun createLifecycleManager(mapState: MapScreenState): MapLifecycleManager {

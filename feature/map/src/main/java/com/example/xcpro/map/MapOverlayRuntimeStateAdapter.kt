@@ -33,6 +33,12 @@ internal class MapOverlayRuntimeStateAdapter(
             mapState.ognTargetLineOverlay = value
         }
 
+    override var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle?
+        get() = mapState.ognOwnshipTargetBadgeOverlay
+        set(value) {
+            mapState.ognOwnshipTargetBadgeOverlay = value
+        }
+
     override var ognThermalOverlay: OgnThermalOverlayHandle?
         get() = mapState.ognThermalOverlay
         set(value) {
