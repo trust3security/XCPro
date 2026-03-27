@@ -22,6 +22,7 @@ internal class FusionBlackboard {
     private var lastThermalState = false
 
     private var lastNettoValue = Double.NaN
+    private var lastValidNettoSampleTime = -1L
 
     private var lastQnh: Double? = null
     private var lastCalibrationTime: Long = 0L
@@ -36,6 +37,7 @@ internal class FusionBlackboard {
         val bruttoAverage30s: Double,
         val bruttoAverage30sValid: Boolean,
         val nettoAverage30s: Double,
+        val nettoAverage30sValid: Boolean,
         val displayNettoRaw: Double
     )
 
@@ -92,7 +94,7 @@ internal class FusionBlackboard {
         val timeWentBack = tc30TimeMillis < lastBruttoSampleTime || tc30TimeMillis < lastNettoSampleTime
         val thermalToggled = thermalActive != lastThermalState
         if (timeWentBack || thermalToggled) {
-            resetAverageWindows(safeBruttoSample, safeNettoSample, tc30TimeMillis)
+            resetAverageWindows(safeBruttoSample, safeNettoSample, tc30TimeMillis, nettoValid)
         } else {
             // Keep the window moving even when samples are non-finite.
             lastBruttoSampleTime = addSamplesForElapsedSeconds(
@@ -108,6 +110,9 @@ internal class FusionBlackboard {
                 sampleValue = safeNettoSample
             )
         }
+        if (nettoValid) {
+            lastValidNettoSampleTime = tc30TimeMillis
+        }
         lastThermalState = thermalActive
 
         if (nettoValid) {
@@ -120,6 +125,9 @@ internal class FusionBlackboard {
         val bruttoAverage30s = bruttoAverageWindow.average()
         val bruttoAverage30sValid = bruttoAverage30s.isFinite()
         val nettoAverage30s = nettoAverageWindow.average()
+        val nettoAverage30sValid = nettoAverage30s.isFinite() &&
+            lastValidNettoSampleTime >= 0L &&
+            (tc30TimeMillis - lastValidNettoSampleTime) in 0..(FlightMetricsConstants.AVERAGE_WINDOW_SECONDS * 1_000L)
         val rawDisplayNetto = if (!nettoDisplayWindow.isEmpty()) {
             nettoDisplayWindow.average()
         } else {
@@ -130,17 +138,24 @@ internal class FusionBlackboard {
             bruttoAverage30s = bruttoAverage30s,
             bruttoAverage30sValid = bruttoAverage30sValid,
             nettoAverage30s = nettoAverage30s,
+            nettoAverage30sValid = nettoAverage30sValid,
             displayNettoRaw = rawDisplayNetto
         )
     }
 
-    private fun resetAverageWindows(bruttoSample: Double, nettoSample: Double, timestamp: Long) {
+    private fun resetAverageWindows(
+        bruttoSample: Double,
+        nettoSample: Double,
+        timestamp: Long,
+        nettoValid: Boolean
+    ) {
         bruttoAverageWindow.clear()
         nettoAverageWindow.clear()
         bruttoAverageWindow.addSample(bruttoSample)
         nettoAverageWindow.addSample(nettoSample)
         lastBruttoSampleTime = timestamp
         lastNettoSampleTime = timestamp
+        lastValidNettoSampleTime = if (nettoValid) timestamp else -1L
     }
 
     fun resetAll() {
@@ -151,6 +166,7 @@ internal class FusionBlackboard {
         lastNettoSampleTime = -1L
         lastThermalState = false
         lastNettoValue = Double.NaN
+        lastValidNettoSampleTime = -1L
         lastIndicatedMs = Double.NaN
         lastTrueMs = Double.NaN
         lastAirspeedSource = AirspeedSource.GPS_GROUND

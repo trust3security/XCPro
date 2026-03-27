@@ -146,14 +146,15 @@ internal class CalculateFlightMetricsRuntime(
         }
         flightHelpers.recordLocationSample(gps, sampleTimeMillis)
         val calculatedLD = flightHelpers.calculateCurrentLD(gps, baroAltitude, sampleTimeMillis)
-        val polarLdCurrentSpeed = sinkProvider.ldAtSpeed(indicatedAirspeedMs)
-            ?.toFloat()
-            ?.takeIf { it.isFinite() && it > 0f }
-            ?: 0f
-        val polarBestLd = sinkProvider.bestLd()
-            ?.toFloat()
-            ?.takeIf { it.isFinite() && it > 0f }
-            ?: 0f
+        // AI-NOTE: currentLD uses 0f as the helper's bootstrap/reset sentinel, so validity must
+        // originate upstream from that owner contract rather than from formatter thresholds.
+        val currentLDValid = calculatedLD.isFinite() && calculatedLD > 0f
+        val polarLdCurrentSpeedRaw = sinkProvider.ldAtSpeed(indicatedAirspeedMs)?.toFloat()
+        val polarLdCurrentSpeedValid = polarLdCurrentSpeedRaw?.let { it.isFinite() && it > 0f } == true
+        val polarLdCurrentSpeed = polarLdCurrentSpeedRaw?.takeIf { polarLdCurrentSpeedValid } ?: 0f
+        val polarBestLdRaw = sinkProvider.bestLd()?.toFloat()
+        val polarBestLdValid = polarBestLdRaw?.let { it.isFinite() && it > 0f } == true
+        val polarBestLd = polarBestLdRaw?.takeIf { polarBestLdValid } ?: 0f
 
         val nettoResult = flightHelpers.calculateNetto(
             currentVerticalSpeed = bruttoVario,
@@ -185,6 +186,7 @@ internal class CalculateFlightMetricsRuntime(
         val bruttoAverage30s = averages.bruttoAverage30s
         val bruttoAverage30sValid = averages.bruttoAverage30sValid
         val nettoAverage30s = averages.nettoAverage30s
+        val nettoAverage30sValid = averages.nettoAverage30sValid
         val displayOutputs = displayRuntime.update(
             bruttoVario = bruttoVario,
             varioValid = varioValid,
@@ -290,6 +292,7 @@ internal class CalculateFlightMetricsRuntime(
             bruttoAverage30s = bruttoAverage30s,
             nettoAverage30s = nettoAverage30s,
             bruttoAverage30sValid = bruttoAverage30sValid,
+            nettoAverage30sValid = nettoAverage30sValid,
             displayVario = displayOutputs.displayVario,
             displayNeedleVario = displayOutputs.displayNeedleVario,
             displayNeedleVarioFast = displayOutputs.displayNeedleVarioFast,
@@ -311,8 +314,11 @@ internal class CalculateFlightMetricsRuntime(
             currentThermalLiftRate = currentThermalLift,
             currentThermalValid = currentThermalValid,
             calculatedLD = calculatedLD,
+            currentLDValid = currentLDValid,
             polarLdCurrentSpeed = polarLdCurrentSpeed,
+            polarLdCurrentSpeedValid = polarLdCurrentSpeedValid,
             polarBestLd = polarBestLd,
+            polarBestLdValid = polarBestLdValid,
             teAltitude = teAltitude,
             isCircling = isCircling,
             thermalAverage30sValid = thermalAvg30sValid,

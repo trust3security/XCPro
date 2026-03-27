@@ -129,7 +129,7 @@ internal object CardFormatSpecs {
                 val indicatedMs = liveData.indicatedAirspeed.takeIf { it.isFinite() && it > 0.1 }
                 if (indicatedMs != null) {
                     val formatted = UnitsFormatter.speed(SpeedMs(indicatedMs), units)
-                    val label = if (liveData.tasValid) strings.est else strings.gps
+                    val label = airspeedSubtitle(liveData.airspeedSource, strings)
                     Pair(formatted.text, label)
                 } else {
                     Pair(placeholderFor(cardId, units, strings), strings.noData)
@@ -140,7 +140,7 @@ internal object CardFormatSpecs {
                 val tasMs = liveData.trueAirspeed.takeIf { it.isFinite() && it > 0.1 }
                 if (tasMs != null) {
                     val formatted = UnitsFormatter.speed(SpeedMs(tasMs), units)
-                    val label = if (liveData.tasValid) strings.est else strings.gps
+                    val label = airspeedSubtitle(liveData.airspeedSource, strings)
                     Pair(formatted.text, label)
                 } else {
                     Pair(placeholderFor(cardId, units, strings), strings.noData)
@@ -220,7 +220,7 @@ internal object CardFormatSpecs {
             KnownCardId.WPT_ETA -> Pair("--:--", strings.noWpt)
 
             KnownCardId.LD_CURR -> {
-                if (liveData.currentLD > 1f) {
+                if (liveData.currentLDValid) {
                     Pair("${liveData.currentLD.roundToInt()}:1", strings.live)
                 } else {
                     Pair("--:1", strings.noData)
@@ -228,7 +228,7 @@ internal object CardFormatSpecs {
             }
 
             KnownCardId.POLAR_LD -> {
-                if (liveData.polarLdCurrentSpeed > 1f) {
+                if (liveData.polarLdCurrentSpeedValid) {
                     Pair("${liveData.polarLdCurrentSpeed.roundToInt()}:1", strings.live)
                 } else {
                     Pair("--:1", strings.noPolar)
@@ -236,7 +236,7 @@ internal object CardFormatSpecs {
             }
 
             KnownCardId.BEST_LD -> {
-                if (liveData.polarBestLd > 1f) {
+                if (liveData.polarBestLdValid) {
                     Pair("${liveData.polarBestLd.roundToInt()}:1", strings.calc)
                 } else {
                     Pair("--:1", strings.noPolar)
@@ -336,11 +336,15 @@ internal object CardFormatSpecs {
             }
 
             KnownCardId.NETTO_AVG30 -> {
-                val formatted = UnitsFormatter.verticalSpeed(
-                    VerticalSpeedMs(liveData.nettoAverage30s),
-                    units
-                )
-                Pair(formatted.text, strings.netto)
+                if (liveData.nettoAverage30sValid) {
+                    val formatted = UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(liveData.nettoAverage30s),
+                        units
+                    )
+                    Pair(formatted.text, strings.netto)
+                } else {
+                    Pair(placeholderFor(cardId, units, strings), strings.noData)
+                }
             }
 
             KnownCardId.MC_SPEED -> {
@@ -420,6 +424,13 @@ internal object CardFormatSpecs {
                 val formatted = UnitsFormatter.distance(DistanceM(accM), units)
                 Pair(formatted.text, quality)
             }
+        }
+    }
+
+    private fun airspeedSubtitle(sourceLabel: String, strings: CardStrings): String {
+        return when (sourceLabel) {
+            "SENSOR", "WIND" -> strings.est
+            else -> strings.gps
         }
     }
 }

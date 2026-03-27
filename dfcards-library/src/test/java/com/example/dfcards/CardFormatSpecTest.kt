@@ -32,7 +32,8 @@ class CardFormatSpecTest {
     @Test
     fun nettoAvg30_formats_value_and_label() {
         val liveData = RealTimeFlightData(
-            nettoAverage30s = -0.6
+            nettoAverage30s = -0.6,
+            nettoAverage30sValid = true
         )
         val formatter = StubTimeFormatter()
 
@@ -43,6 +44,23 @@ class CardFormatSpecTest {
 
         assertEquals("-0.6 m/s", primary)
         assertEquals(strings.netto, secondary)
+    }
+
+    @Test
+    fun nettoAvg30_requires_explicit_valid_flag() {
+        val liveData = RealTimeFlightData(
+            nettoAverage30s = -0.6,
+            nettoAverage30sValid = false
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.NETTO_AVG30]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("-- m/s", primary)
+        assertEquals(strings.noData, secondary)
     }
 
     @Test
@@ -68,7 +86,8 @@ class CardFormatSpecTest {
     @Test
     fun polarLd_formats_live_value() {
         val liveData = RealTimeFlightData(
-            polarLdCurrentSpeed = 37f
+            polarLdCurrentSpeed = 37f,
+            polarLdCurrentSpeedValid = true
         )
         val formatter = StubTimeFormatter()
 
@@ -84,7 +103,8 @@ class CardFormatSpecTest {
     @Test
     fun bestLd_formats_calculated_value() {
         val liveData = RealTimeFlightData(
-            polarBestLd = 44f
+            polarBestLd = 44f,
+            polarBestLdValid = true
         )
         val formatter = StubTimeFormatter()
 
@@ -95,6 +115,23 @@ class CardFormatSpecTest {
 
         assertEquals("44:1", primary)
         assertEquals(strings.calc, secondary)
+    }
+
+    @Test
+    fun ldCurr_requires_explicit_valid_flag() {
+        val liveData = RealTimeFlightData(
+            currentLD = 35f,
+            currentLDValid = false
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_CURR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("--:1", primary)
+        assertEquals(strings.noData, secondary)
     }
 
     @Test

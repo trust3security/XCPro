@@ -144,23 +144,31 @@ class CardDataFormatterTest {
     }
 
     @Test
-    fun iasLabel_usesStringsEstOrGps() {
+    fun airspeed_labels_use_airspeed_source_instead_of_tas_valid() {
         val strings = TestCardStrings(est = "ESTX", gps = "GPSX")
-        val estResult = CardDataFormatter.mapLiveDataToCard(
+        val windResult = CardDataFormatter.mapLiveDataToCard(
             cardId = "ias",
-            liveData = RealTimeFlightData(indicatedAirspeed = 10.0, tasValid = true),
+            liveData = RealTimeFlightData(indicatedAirspeed = 10.0, airspeedSource = "WIND", tasValid = false),
             units = UnitsPreferences(),
             strings = strings
         )
-        assertEquals("ESTX", estResult.second)
+        assertEquals("ESTX", windResult.second)
 
         val gpsResult = CardDataFormatter.mapLiveDataToCard(
             cardId = "ias",
-            liveData = RealTimeFlightData(indicatedAirspeed = 10.0, tasValid = false),
+            liveData = RealTimeFlightData(indicatedAirspeed = 10.0, airspeedSource = "GPS", tasValid = true),
             units = UnitsPreferences(),
             strings = strings
         )
         assertEquals("GPSX", gpsResult.second)
+
+        val sensorTasResult = CardDataFormatter.mapLiveDataToCard(
+            cardId = "tas",
+            liveData = RealTimeFlightData(trueAirspeed = 10.0, airspeedSource = "SENSOR", tasValid = false),
+            units = UnitsPreferences(),
+            strings = strings
+        )
+        assertEquals("ESTX", sensorTasResult.second)
     }
 
     @Test

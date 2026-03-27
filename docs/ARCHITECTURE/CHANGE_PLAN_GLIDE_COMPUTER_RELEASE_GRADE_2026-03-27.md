@@ -125,6 +125,11 @@ This is the safest low-risk phase and prevents release confusion immediately.
 - `./gradlew enforceRules`
 - relevant module unit tests for touched files
 
+### Phase 0 local branch status (2026-03-27)
+- Production card selection hides `WPT DIST`, `WPT BRG`, `WPT ETA`, `TASK SPD`, `TASK DIST`, and `START ALT` until authoritative runtime seams exist.
+- `TASK REMAIN DIST` and `TASK REMAIN TIME` are not currently cataloged.
+- No runtime owner changes are part of this phase.
+
 ## Phase 1 — source/validity hardening + low-risk wins
 
 ### Goal
@@ -132,31 +137,41 @@ Make currently implemented cards explicit and trustworthy.
 
 ### Scope
 - add explicit validity/source fields instead of heuristic formatter guesses
-- wire IAS/TAS source labels from the real source field
+- wire IAS/TAS subtitle mapping from the authoritative `airspeedSource` field
 - add `nettoAverage30sValid`
 - add explicit validity for L/D fields
-- optionally expose a low-risk `FINAL DIST` / `TASK FINISH DIST` card from already-available finish-distance data
+- explicitly defer `FINAL DIST` / `TASK FINISH DIST` to a later phase
 
 ### In scope
-- `RealTimeFlightData`
+- `feature:flight-runtime` owner path for validity/source truth
+- `FlightDisplayMapper`
+- `CompleteFlightData` / `RealTimeFlightData` pass-through only
 - `convertToRealTimeFlightData(...)`
-- card formatter / card specs
+- card formatter / card specs as consumers only
 - tests for source/validity behavior
 
 ### Out of scope
 - waypoint metrics
 - task performance metrics
 - general target-kind expansion
+- `FINAL DIST`
+
+### Frozen Phase 1 semantics
+- `nettoAverage30sValid` = true only when the current 30-second averaging window still contains at least one authoritative valid netto sample from the owner path; finite or zero-filled averages alone do not make it valid.
+- `currentLDValid` = true only after the measured L/D owner path has produced a non-zero glide ratio since the current runtime reset; the held value remains valid between recompute intervals and resets false when the helper resets.
+- `polarLdCurrentSpeedValid` = true only when the active polar owner returns a finite positive still-air L/D at the current IAS sample.
+- `polarBestLdValid` = true only when the active polar owner returns a finite positive best-L/D value.
+- IAS/TAS subtitle mapping remains formatter-owned display logic, but it must derive from `airspeedSource`: `SENSOR` and `WIND` map to `EST`; `GPS` and unknown labels map to `GPS`.
 
 ### Acceptance criteria
 - cards no longer infer validity with brittle heuristics like `> 1`
-- IAS/TAS source/quality labels use the actual airspeed source contract
+- IAS/TAS subtitle mapping uses the actual airspeed source contract, not `tasValid`
 - `NETTO 30S` has an explicit validity path
-- if `FINAL DIST` is shipped, it is backed by existing authoritative data only
+- `FINAL DIST` is not part of this phase
 - UI remains formatting only
 
 ### Validation
-- focused map/map-runtime/unit tests
+- focused flight-runtime/map/dfcards unit tests
 - `./gradlew enforceRules`
 - compile touched modules
 

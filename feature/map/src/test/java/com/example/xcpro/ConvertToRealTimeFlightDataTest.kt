@@ -61,6 +61,7 @@ class ConvertToRealTimeFlightDataTest {
             bruttoAverage30s = VerticalSpeedMs(1.0),
             bruttoAverage30sValid = true,
             nettoAverage30s = VerticalSpeedMs(0.9),
+            nettoAverage30sValid = true,
             varioSource = "TE",
             varioValid = true,
             pressureAltitude = AltitudeM(1100.0),
@@ -77,8 +78,11 @@ class ConvertToRealTimeFlightDataTest {
             currentThermalLiftRate = VerticalSpeedMs(1.3),
             currentThermalValid = true,
             currentLD = 35f,
+            currentLDValid = true,
             polarLdCurrentSpeed = 38f,
+            polarLdCurrentSpeedValid = true,
             polarBestLd = 44f,
+            polarBestLdValid = true,
             netto = VerticalSpeedMs(-0.5),
             displayNetto = VerticalSpeedMs(-0.4),
             nettoValid = true,
@@ -115,8 +119,12 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(1190.0, result.navAltitude, 1e-6)
         assertEquals(2.5f, result.thermalAverage, 1e-6f)
         assertEquals(0.9, result.nettoAverage30s, 1e-6)
+        assertEquals(true, result.nettoAverage30sValid)
+        assertEquals(true, result.currentLDValid)
         assertEquals(38f, result.polarLdCurrentSpeed, 1e-6f)
+        assertEquals(true, result.polarLdCurrentSpeedValid)
         assertEquals(44f, result.polarBestLd, 1e-6f)
+        assertEquals(true, result.polarBestLdValid)
         assertEquals(28.4, result.requiredGlideRatio, 1e-6)
         assertEquals(130.0, result.arrivalHeightM, 1e-6)
         assertEquals(1_070.0, result.requiredAltitudeM, 1e-6)

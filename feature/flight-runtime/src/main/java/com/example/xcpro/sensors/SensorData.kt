@@ -134,6 +134,7 @@ data class CompleteFlightData(
     val bruttoAverage30s: VerticalSpeedMs = VerticalSpeedMs(0.0),
     val bruttoAverage30sValid: Boolean = false,
     val nettoAverage30s: VerticalSpeedMs = VerticalSpeedMs(0.0),
+    val nettoAverage30sValid: Boolean = false,
     val varioSource: String = "UNKNOWN",
     val varioValid: Boolean = false,
     val pressureAltitude: AltitudeM, // meters (QNH 1013.25 reference)
@@ -157,8 +158,11 @@ data class CompleteFlightData(
 
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)
+    val currentLDValid: Boolean = false,
     val polarLdCurrentSpeed: Float = 0f,
+    val polarLdCurrentSpeedValid: Boolean = false,
     val polarBestLd: Float = 0f,
+    val polarBestLdValid: Boolean = false,
 
     // Calculated netto variometer
     val netto: VerticalSpeedMs,           // m/s (variometer + sink rate compensation)
