@@ -38,12 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.ui1.UIVariometer
-import com.example.ui1.VarioDialConfig
-import com.example.ui1.VarioDialLabel
+import com.example.ui1.buildVarioDialConfig
+import com.example.ui1.stripUnit
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.hawk.HawkConfidence
 import com.example.xcpro.hawk.HawkVarioUiState
 import kotlinx.coroutines.launch
@@ -185,9 +184,6 @@ internal fun HawkLiveDataCard(state: HawkVarioUiState) {
     }
 }
 
-internal fun stripUnit(formatted: UnitsFormatter.FormattedValue): String =
-    formatted.text.replace(formatted.unitLabel, "").trim()
-
 internal fun formatHawkValue(value: Float?): String {
     if (value == null || !value.isFinite()) return "--.- m/s"
     val clamped = if (abs(value) < 0.05f) 0f else value
@@ -198,33 +194,3 @@ internal fun formatOptional(value: Float?, format: String): String {
     if (value == null || !value.isFinite()) return "--"
     return String.format(Locale.US, format, value)
 }
-
-internal fun buildVarioDialConfig(unitsPreferences: UnitsPreferences): VarioDialConfig {
-    val maxSi = 5f
-    val unit = unitsPreferences.verticalSpeed
-    val stepUser = when (unit) {
-        VerticalSpeedUnit.METERS_PER_SECOND -> 1.0
-        VerticalSpeedUnit.KNOTS -> 2.0
-        VerticalSpeedUnit.FEET_PER_MINUTE -> 200.0
-    }
-    val maxUserRaw = unit.fromSi(VerticalSpeedMs(maxSi.toDouble()))
-    val maxUserRounded = when (unit) {
-        VerticalSpeedUnit.METERS_PER_SECOND -> maxUserRaw
-        else -> kotlin.math.round(maxUserRaw / stepUser) * stepUser
-    }.coerceAtLeast(stepUser)
-    val labels = buildList {
-        var value = -maxUserRounded
-        while (value <= maxUserRounded + 1e-6) {
-            val valueSi = unit.toSi(value).value.toFloat().coerceIn(-maxSi, maxSi)
-            add(VarioDialLabel(valueSi, formatVarioLabel(value)))
-            value += stepUser
-        }
-    }
-    return VarioDialConfig(
-        maxValueSi = maxSi,
-        labelValues = labels
-    )
-}
-
-internal fun formatVarioLabel(value: Double): String =
-    kotlin.math.round(value).toInt().toString()

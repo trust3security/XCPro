@@ -7,11 +7,11 @@ import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.sensors.domain.FlyingStateDetector
+import com.example.xcpro.sensors.domain.pressureToAltitudeMeters
 import com.example.xcpro.weather.wind.data.AirspeedDataSource
 import com.example.xcpro.weather.wind.model.AirspeedSample
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.pow
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -183,13 +183,7 @@ class FlightStateRepository @Inject constructor(
         return baroAltitude ?: gpsAltitude
     }
 
-    private fun pressureToAltitudeMeters(pressureHpa: Double): Double {
-        if (!pressureHpa.isFinite() || pressureHpa <= 0.0) return Double.NaN
-        return 44330.0 * (1.0 - (pressureHpa / SEA_LEVEL_PRESSURE_HPA).pow(0.1903))
-    }
-
     private companion object {
-        private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
         private const val AGL_STALE_AFTER_MS = 15_000L
         private const val GPS_STATE_GRACE_MS = 20_000L
     }

@@ -4,6 +4,7 @@ package com.example.xcpro.map.trail
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.xcpro.core.common.profiles.ProfileSettingsProfileIds
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,7 +49,7 @@ class MapTrailPreferences @Inject constructor(
     }.distinctUntilChanged()
 
     fun setActiveProfileId(profileId: String) {
-        val resolved = resolveProfileId(profileId)
+        val resolved = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         if (activeProfileId.value != resolved) {
             activeProfileId.value = resolved
         }
@@ -56,7 +57,8 @@ class MapTrailPreferences @Inject constructor(
 
     fun getSettings(): TrailSettings = readSettings(activeProfileId.value)
 
-    fun readProfileSettings(profileId: String): TrailSettings = readSettings(resolveProfileId(profileId))
+    fun readProfileSettings(profileId: String): TrailSettings =
+        readSettings(ProfileSettingsProfileIds.canonicalOrDefault(profileId))
 
     fun setTrailLength(length: TrailLength) {
         val profileId = activeProfileId.value
@@ -111,7 +113,7 @@ class MapTrailPreferences @Inject constructor(
     }
 
     fun writeProfileSettings(profileId: String, settings: TrailSettings) {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         prefs.edit()
             .putString(scopedKey(resolvedProfileId, KEY_LENGTH), settings.length.name)
             .putString(scopedKey(resolvedProfileId, KEY_TYPE), settings.type.name)
@@ -133,7 +135,7 @@ class MapTrailPreferences @Inject constructor(
     }
 
     fun clearProfile(profileId: String) {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         prefs.edit()
             .remove(scopedKey(resolvedProfileId, KEY_LENGTH))
             .remove(scopedKey(resolvedProfileId, KEY_TYPE))
@@ -207,18 +209,7 @@ class MapTrailPreferences @Inject constructor(
     }
 
     private fun scopedKey(profileId: String, key: String): String =
-        "profile_${resolveProfileId(profileId)}_$key"
-
-    private fun resolveProfileId(profileId: String?): String {
-        val normalized = profileId?.trim().orEmpty()
-        if (normalized.isBlank()) return DEFAULT_PROFILE_ID
-        return when (normalized) {
-            DEFAULT_PROFILE_ID,
-            LEGACY_DEFAULT_ALIAS,
-            LEGACY_DF_ALIAS -> DEFAULT_PROFILE_ID
-            else -> normalized
-        }
-    }
+        "profile_${ProfileSettingsProfileIds.canonicalOrDefault(profileId)}_$key"
 
     private fun isLegacyFallbackEligible(profileId: String): Boolean {
         return profileId == DEFAULT_PROFILE_ID
@@ -230,9 +221,7 @@ class MapTrailPreferences @Inject constructor(
         private const val KEY_TYPE = "trail_type"
         private const val KEY_WIND_DRIFT = "trail_wind_drift_enabled"
         private const val KEY_SCALING = "trail_scaling_enabled"
-        private const val DEFAULT_PROFILE_ID = "default-profile"
-        private const val LEGACY_DEFAULT_ALIAS = "default"
-        private const val LEGACY_DF_ALIAS = "__default_profile__"
+        private val DEFAULT_PROFILE_ID = ProfileSettingsProfileIds.CANONICAL_DEFAULT_PROFILE_ID
 
         private val DEFAULT_LENGTH = TrailLength.LONG
         private val DEFAULT_TYPE = TrailType.VARIO_1

@@ -2,9 +2,8 @@ package com.example.xcpro.replay
 
 import android.util.Log
 import com.example.xcpro.sensors.SensorFusionRepository
-import com.example.xcpro.sensors.domain.FlightMetricsConstants
+import com.example.xcpro.sensors.domain.computeDensityRatio
 import com.example.xcpro.weather.wind.data.ReplayAirspeedRepository
-import kotlin.math.pow
 import kotlin.math.sqrt
 
 internal class ReplaySampleEmitter(
@@ -143,19 +142,6 @@ internal class ReplaySampleEmitter(
     }
 
     private fun kmhToMs(valueKmh: Double): Double = valueKmh * KMH_TO_MS
-
-    private fun computeDensityRatio(altitudeMeters: Double, qnhHpa: Double): Double {
-        val tempSeaLevelK = FlightMetricsConstants.SEA_LEVEL_TEMP_CELSIUS + 273.15
-        val theta = 1.0 + (FlightMetricsConstants.TEMP_LAPSE_RATE_C_PER_M * altitudeMeters) / tempSeaLevelK
-        if (theta <= 0.0) return 0.0
-        val exponent = (-FlightMetricsConstants.GRAVITY /
-            (FlightMetricsConstants.GAS_CONSTANT * FlightMetricsConstants.TEMP_LAPSE_RATE_C_PER_M)) - 1.0
-        val standardDensityRatio = theta.pow(exponent)
-        val qnhRatio = (qnhHpa / FlightMetricsConstants.SEA_LEVEL_PRESSURE_HPA)
-            .takeIf { it.isFinite() && it > 0.0 }
-            ?: 1.0
-        return standardDensityRatio * qnhRatio
-    }
 
     companion object {
         private const val TAG = "ReplaySampleEmitter"

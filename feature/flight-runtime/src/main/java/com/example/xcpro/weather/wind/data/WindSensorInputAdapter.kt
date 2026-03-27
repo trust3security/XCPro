@@ -2,6 +2,7 @@ package com.example.xcpro.weather.wind.data
 
 import android.hardware.SensorManager
 import com.example.xcpro.sensors.SensorDataSource
+import com.example.xcpro.sensors.domain.pressureToAltitudeMeters
 import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.weather.wind.model.GLoadSample
 import com.example.xcpro.weather.wind.model.GpsSample
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
-import kotlin.math.pow
 import kotlin.math.sqrt
 
 class WindSensorInputAdapter @Inject constructor() {
@@ -88,12 +88,6 @@ class WindSensorInputAdapter @Inject constructor() {
         )
     }
 
-    private fun pressureToAltitudeMeters(pressureHpa: Double): Double {
-        if (!pressureHpa.isFinite() || pressureHpa <= 0.0) return Double.NaN
-        // AI-NOTE: Standard-atmosphere approximation (QNH 1013.25) for pressure altitude.
-        return 44330.0 * (1.0 - (pressureHpa / SEA_LEVEL_PRESSURE_HPA).pow(0.1903))
-    }
-
     private fun toGLoadSample(raw: com.example.xcpro.sensors.RawAccelData): GLoadSample? {
         val magnitude = sqrt(raw.x * raw.x + raw.y * raw.y + raw.z * raw.z)
         if (!magnitude.isFinite()) return null
@@ -122,7 +116,6 @@ class WindSensorInputAdapter @Inject constructor() {
     }
 
     private companion object {
-        private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
         private const val GRAVITY_MS2 = 9.80665
         private const val GLOAD_SMOOTH_TAU_MS = 200.0
         private const val MAX_SMOOTH_GAP_MS = 1_000L

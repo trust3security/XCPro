@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.common.units.UnitsConverter
+import com.example.xcpro.core.common.profiles.ProfileSettingsProfileIds
 import kotlin.math.abs
 
 class MapOrientationPreferences(context: Context) {
@@ -41,19 +42,10 @@ class MapOrientationPreferences(context: Context) {
         private const val DEFAULT_BEARING_SMOOTHING = true
         private const val DEFAULT_MAP_SHIFT_BIAS_MODE = "NONE"
         private const val DEFAULT_MAP_SHIFT_BIAS_STRENGTH = 1.0
-        internal const val DEFAULT_PROFILE_ID = "default-profile"
-        private const val LEGACY_DEFAULT_ALIAS = "default"
-        private const val LEGACY_DF_ALIAS = "__default_profile__"
+        internal val DEFAULT_PROFILE_ID = ProfileSettingsProfileIds.CANONICAL_DEFAULT_PROFILE_ID
 
         internal fun resolveProfileId(profileId: String?): String {
-            val normalized = profileId?.trim().orEmpty()
-            if (normalized.isBlank()) return DEFAULT_PROFILE_ID
-            return when (normalized) {
-                DEFAULT_PROFILE_ID,
-                LEGACY_DEFAULT_ALIAS,
-                LEGACY_DF_ALIAS -> DEFAULT_PROFILE_ID
-                else -> normalized
-            }
+            return ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         }
     }
 

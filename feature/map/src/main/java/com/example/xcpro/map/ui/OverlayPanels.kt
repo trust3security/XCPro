@@ -21,25 +21,24 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
 import android.util.Log
 import androidx.compose.material3.MaterialTheme
+import com.example.ui1.buildVarioDialConfig
+import com.example.ui1.stripUnit
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.map.DistanceCirclesCanvas
 import com.example.xcpro.map.FlightDataManager
-import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.MapScreenState
+import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
+import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgets
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.variometer.layout.VariometerUiState
-import com.example.xcpro.map.model.MapLocationUiModel
-import com.example.ui1.VarioDialConfig
-import com.example.ui1.VarioDialLabel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -229,39 +228,6 @@ internal fun VariometerPanel(
         onEditFinished = onVariometerEditFinished
     )
 }
-
-private fun stripUnit(formatted: UnitsFormatter.FormattedValue): String =
-    formatted.text.replace(formatted.unitLabel, "").trim()
-
-private fun buildVarioDialConfig(unitsPreferences: com.example.xcpro.common.units.UnitsPreferences): VarioDialConfig {
-    val maxSi = 5f
-    val unit = unitsPreferences.verticalSpeed
-    val stepUser = when (unit) {
-        VerticalSpeedUnit.METERS_PER_SECOND -> 1.0
-        VerticalSpeedUnit.KNOTS -> 2.0
-        VerticalSpeedUnit.FEET_PER_MINUTE -> 200.0
-    }
-    val maxUserRaw = unit.fromSi(VerticalSpeedMs(maxSi.toDouble()))
-    val maxUserRounded = when (unit) {
-        VerticalSpeedUnit.METERS_PER_SECOND -> maxUserRaw
-        else -> kotlin.math.round(maxUserRaw / stepUser) * stepUser
-    }.coerceAtLeast(stepUser)
-    val labels = buildList {
-        var value = -maxUserRounded
-        while (value <= maxUserRounded + 1e-6) {
-            val valueSi = unit.toSi(value).value.toFloat().coerceIn(-maxSi, maxSi)
-            add(VarioDialLabel(valueSi, formatVarioLabel(value)))
-            value += stepUser
-        }
-    }
-    return VarioDialConfig(
-        maxValueSi = maxSi,
-        labelValues = labels
-    )
-}
-
-private fun formatVarioLabel(value: Double): String =
-    kotlin.math.round(value).toInt().toString()
 
 @Composable
 internal fun DistanceCirclesLayer(
