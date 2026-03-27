@@ -1,5 +1,11 @@
 package com.example.xcpro.profiles
 
+import com.example.xcpro.audio.LEGACY_DEFAULT_DEADBAND_MAX
+import com.example.xcpro.audio.LEGACY_DEFAULT_DEADBAND_MIN
+import com.example.xcpro.audio.LEGACY_DEFAULT_LIFT_THRESHOLD
+import com.example.xcpro.audio.LEGACY_DEFAULT_SINK_SILENCE_THRESHOLD
+import com.example.xcpro.audio.legacyEffectiveLiftStartThreshold
+import com.example.xcpro.audio.legacyEffectiveSinkStartThreshold
 import com.example.xcpro.core.common.profiles.ProfileSettingsApplyContributor
 import com.example.xcpro.core.common.profiles.ProfileSettingsCaptureContributor
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
@@ -35,11 +41,9 @@ class LevoVarioProfileSettingsContributor @Inject constructor(
                 enableHawkUi = config.enableHawkUi,
                 audioEnabled = config.audioSettings.enabled,
                 audioVolume = config.audioSettings.volume,
-                audioLiftThreshold = config.audioSettings.liftThreshold,
-                audioSinkSilenceThreshold = config.audioSettings.sinkSilenceThreshold,
+                audioLiftStartThreshold = config.audioSettings.liftStartThreshold,
+                audioSinkStartThreshold = config.audioSettings.sinkStartThreshold,
                 audioDutyCycle = config.audioSettings.dutyCycle,
-                audioDeadbandMin = config.audioSettings.deadbandMin,
-                audioDeadbandMax = config.audioSettings.deadbandMax,
                 hawkNeedleOmegaMinHz = config.hawkNeedleOmegaMinHz,
                 hawkNeedleOmegaMaxHz = config.hawkNeedleOmegaMaxHz,
                 hawkNeedleTargetTauSec = config.hawkNeedleTargetTauSec,
@@ -55,7 +59,8 @@ class LevoVarioProfileSettingsContributor @Inject constructor(
         importedProfileIdMap: Map<String, String>
     ) {
         if (sectionId != ProfileSettingsSectionIds.LEVO_VARIO_PREFERENCES) return
-        val section = gson.fromJson(payload, LevoVarioSectionSnapshot::class.java)
+        val section = gson.fromJson(payload, SerializedLevoVarioSectionSnapshot::class.java)
+            .toCanonicalSnapshot()
         levoVarioPreferencesRepository.setMacCready(section.macCready)
         levoVarioPreferencesRepository.setMacCreadyRisk(section.macCreadyRisk)
         levoVarioPreferencesRepository.setAutoMcEnabled(section.autoMcEnabled)
@@ -67,11 +72,9 @@ class LevoVarioProfileSettingsContributor @Inject constructor(
             existing.copy(
                 enabled = section.audioEnabled,
                 volume = section.audioVolume,
-                liftThreshold = section.audioLiftThreshold,
-                sinkSilenceThreshold = section.audioSinkSilenceThreshold,
-                dutyCycle = section.audioDutyCycle,
-                deadbandMin = section.audioDeadbandMin,
-                deadbandMax = section.audioDeadbandMax
+                liftStartThreshold = section.audioLiftStartThreshold,
+                sinkStartThreshold = section.audioSinkStartThreshold,
+                dutyCycle = section.audioDutyCycle
             )
         }
         levoVarioPreferencesRepository.setHawkNeedleOmegaMinHz(section.hawkNeedleOmegaMinHz)
@@ -79,5 +82,62 @@ class LevoVarioProfileSettingsContributor @Inject constructor(
         levoVarioPreferencesRepository.setHawkNeedleTargetTauSec(section.hawkNeedleTargetTauSec)
         levoVarioPreferencesRepository.setHawkNeedleDriftTauMinSec(section.hawkNeedleDriftTauMinSec)
         levoVarioPreferencesRepository.setHawkNeedleDriftTauMaxSec(section.hawkNeedleDriftTauMaxSec)
+    }
+}
+
+private data class SerializedLevoVarioSectionSnapshot(
+    val macCready: Double,
+    val macCreadyRisk: Double,
+    val autoMcEnabled: Boolean,
+    val teCompensationEnabled: Boolean,
+    val showWindSpeedOnVario: Boolean,
+    val showHawkCard: Boolean,
+    val enableHawkUi: Boolean,
+    val audioEnabled: Boolean,
+    val audioVolume: Float,
+    val audioLiftStartThreshold: Double? = null,
+    val audioSinkStartThreshold: Double? = null,
+    val audioDutyCycle: Double,
+    val audioLiftThreshold: Double? = null,
+    val audioSinkSilenceThreshold: Double? = null,
+    val audioDeadbandMin: Double? = null,
+    val audioDeadbandMax: Double? = null,
+    val hawkNeedleOmegaMinHz: Double,
+    val hawkNeedleOmegaMaxHz: Double,
+    val hawkNeedleTargetTauSec: Double,
+    val hawkNeedleDriftTauMinSec: Double,
+    val hawkNeedleDriftTauMaxSec: Double
+) {
+    fun toCanonicalSnapshot(): LevoVarioSectionSnapshot {
+        val legacyDeadbandMin = audioDeadbandMin ?: LEGACY_DEFAULT_DEADBAND_MIN
+        return LevoVarioSectionSnapshot(
+            macCready = macCready,
+            macCreadyRisk = macCreadyRisk,
+            autoMcEnabled = autoMcEnabled,
+            teCompensationEnabled = teCompensationEnabled,
+            showWindSpeedOnVario = showWindSpeedOnVario,
+            showHawkCard = showHawkCard,
+            enableHawkUi = enableHawkUi,
+            audioEnabled = audioEnabled,
+            audioVolume = audioVolume,
+            audioLiftStartThreshold = audioLiftStartThreshold
+                ?: legacyEffectiveLiftStartThreshold(
+                    liftThreshold = audioLiftThreshold ?: LEGACY_DEFAULT_LIFT_THRESHOLD,
+                    deadbandMin = legacyDeadbandMin,
+                    deadbandMax = audioDeadbandMax ?: LEGACY_DEFAULT_DEADBAND_MAX
+                ),
+            audioSinkStartThreshold = audioSinkStartThreshold
+                ?: legacyEffectiveSinkStartThreshold(
+                    sinkSilenceThreshold = audioSinkSilenceThreshold
+                        ?: LEGACY_DEFAULT_SINK_SILENCE_THRESHOLD,
+                    deadbandMin = legacyDeadbandMin
+                ),
+            audioDutyCycle = audioDutyCycle,
+            hawkNeedleOmegaMinHz = hawkNeedleOmegaMinHz,
+            hawkNeedleOmegaMaxHz = hawkNeedleOmegaMaxHz,
+            hawkNeedleTargetTauSec = hawkNeedleTargetTauSec,
+            hawkNeedleDriftTauMinSec = hawkNeedleDriftTauMinSec,
+            hawkNeedleDriftTauMaxSec = hawkNeedleDriftTauMaxSec
+        )
     }
 }

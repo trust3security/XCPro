@@ -92,18 +92,12 @@ internal fun VarioAudioVolumeCard(
 
 @Composable
 internal fun VarioAudioThresholdCard(
-    liftThreshold: Float,
-    onLiftChange: (Float) -> Unit,
-    onLiftChangeFinished: () -> Unit,
-    deadbandMin: Float,
-    onDeadbandMinChange: (Float) -> Unit,
-    onDeadbandMinChangeFinished: () -> Unit,
-    deadbandMax: Float,
-    onDeadbandMaxChange: (Float) -> Unit,
-    onDeadbandMaxChangeFinished: () -> Unit,
-    sinkThreshold: Float,
-    onSinkChange: (Float) -> Unit,
-    onSinkChangeFinished: () -> Unit
+    liftStartThreshold: Float,
+    onLiftStartChange: (Float) -> Unit,
+    onLiftStartChangeFinished: () -> Unit,
+    sinkStartThreshold: Float,
+    onSinkStartChange: (Float) -> Unit,
+    onSinkStartChangeFinished: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -123,82 +117,38 @@ internal fun VarioAudioThresholdCard(
             )
 
             Text(
-                text = "Lift Threshold: ${String.format("%.1f", liftThreshold)} m/s",
+                text = "Lift Start: ${String.format("%.1f", liftStartThreshold)} m/s",
                 style = MaterialTheme.typography.bodyMedium
             )
             Slider(
-                value = liftThreshold,
-                onValueChange = onLiftChange,
-                onValueChangeFinished = onLiftChangeFinished,
+                value = liftStartThreshold,
+                onValueChange = onLiftStartChange,
+                onValueChangeFinished = onLiftStartChangeFinished,
                 valueRange = 0.1f..1.0f,
                 steps = 8,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Minimum lift for audio alert",
+                text = "Start climb beeps once audio vario reaches this value.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Text(
-                text = "Deadband Min: ${String.format("%.1f", deadbandMin)} m/s",
+                text = "Sink Start: ${String.format("%.1f", sinkStartThreshold)} m/s",
                 style = MaterialTheme.typography.bodyMedium
             )
             Slider(
-                value = deadbandMin,
-                onValueChange = {
-                    val newValue = it.coerceAtMost(deadbandMax - 0.05f)
-                    onDeadbandMinChange(newValue)
-                },
-                onValueChangeFinished = onDeadbandMinChangeFinished,
-                valueRange = -1.0f..0.0f,
-                steps = 9,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "Silence starts below this vario (default -0.3 m/s).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Text(
-                text = "Deadband Max: ${String.format("%.1f", deadbandMax)} m/s",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Slider(
-                value = deadbandMax,
-                onValueChange = {
-                    val newValue = it.coerceAtLeast(deadbandMin + 0.05f)
-                    onDeadbandMaxChange(newValue)
-                },
-                onValueChangeFinished = onDeadbandMaxChangeFinished,
-                valueRange = 0.0f..0.5f,
-                steps = 9,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "Climb beeps begin once vario exceeds this value (default +0.1 m/s).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Text(
-                text = "Sink Silence Threshold: ${String.format("%.1f", sinkThreshold)} m/s",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Slider(
-                value = sinkThreshold,
-                onValueChange = onSinkChange,
-                onValueChangeFinished = onSinkChangeFinished,
+                value = sinkStartThreshold,
+                onValueChange = onSinkStartChange,
+                onValueChangeFinished = onSinkStartChangeFinished,
                 valueRange = -5.0f..0.0f,
                 steps = 10,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "Set to 0.0 m/s for full sink tone. Lower values mute weak sink.",
+                text = "Set to 0.0 m/s for immediate sink tone. Lower values wait for stronger sink.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

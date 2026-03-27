@@ -8,7 +8,13 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.xcpro.audio.LEGACY_DEFAULT_DEADBAND_MAX
+import com.example.xcpro.audio.LEGACY_DEFAULT_DEADBAND_MIN
+import com.example.xcpro.audio.LEGACY_DEFAULT_LIFT_THRESHOLD
+import com.example.xcpro.audio.LEGACY_DEFAULT_SINK_SILENCE_THRESHOLD
 import com.example.xcpro.audio.VarioAudioSettings
+import com.example.xcpro.audio.legacyEffectiveLiftStartThreshold
+import com.example.xcpro.audio.legacyEffectiveSinkStartThreshold
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,11 +32,13 @@ private val KEY_SHOW_HAWK_CARD = booleanPreferencesKey("show_hawk_card")
 private val KEY_ENABLE_HAWK_UI = booleanPreferencesKey("enable_hawk_ui")
 private val KEY_AUDIO_ENABLED = booleanPreferencesKey("audio_enabled")
 private val KEY_AUDIO_VOLUME = floatPreferencesKey("audio_volume")
-private val KEY_AUDIO_LIFT_THRESHOLD = doublePreferencesKey("audio_lift_threshold")
-private val KEY_AUDIO_SINK_SILENCE_THRESHOLD = doublePreferencesKey("audio_sink_silence_threshold")
+private val KEY_AUDIO_LIFT_START_THRESHOLD = doublePreferencesKey("audio_lift_start_threshold")
+private val KEY_AUDIO_SINK_START_THRESHOLD = doublePreferencesKey("audio_sink_start_threshold")
 private val KEY_AUDIO_DUTY_CYCLE = doublePreferencesKey("audio_duty_cycle")
-private val KEY_AUDIO_DEADBAND_MIN = doublePreferencesKey("audio_deadband_min")
-private val KEY_AUDIO_DEADBAND_MAX = doublePreferencesKey("audio_deadband_max")
+private val LEGACY_KEY_AUDIO_LIFT_THRESHOLD = doublePreferencesKey("audio_lift_threshold")
+private val LEGACY_KEY_AUDIO_SINK_SILENCE_THRESHOLD = doublePreferencesKey("audio_sink_silence_threshold")
+private val LEGACY_KEY_AUDIO_DEADBAND_MIN = doublePreferencesKey("audio_deadband_min")
+private val LEGACY_KEY_AUDIO_DEADBAND_MAX = doublePreferencesKey("audio_deadband_max")
 private val KEY_HAWK_NEEDLE_OMEGA_MIN_HZ = doublePreferencesKey("hawk_needle_omega_min_hz")
 private val KEY_HAWK_NEEDLE_OMEGA_MAX_HZ = doublePreferencesKey("hawk_needle_omega_max_hz")
 private val KEY_HAWK_NEEDLE_TARGET_TAU_SEC = doublePreferencesKey("hawk_needle_target_tau_sec")
@@ -54,10 +62,15 @@ data class LevoVarioConfig(
 )
 
 @Singleton
-class LevoVarioPreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+class LevoVarioPreferencesRepository private constructor(
+    private val dataStore: DataStore<Preferences>
 ) {
-    val config: Flow<LevoVarioConfig> = context.levoVarioDataStore.data.map { prefs ->
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context.levoVarioDataStore)
+
+    internal constructor(dataStore: DataStore<Preferences>, unused: Unit = Unit) : this(dataStore)
+
+    val config: Flow<LevoVarioConfig> = dataStore.data.map { prefs ->
         val mac = prefs[KEY_MACCREADY] ?: 0.0
         val audioSettings = readAudioSettings(prefs)
         LevoVarioConfig(
@@ -78,101 +91,114 @@ class LevoVarioPreferencesRepository @Inject constructor(
     }
 
     suspend fun setMacCready(value: Double) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_MACCREADY] = value
         }
     }
 
     suspend fun setMacCreadyRisk(value: Double) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_MACCREADY_RISK] = value
         }
     }
 
     suspend fun setAutoMcEnabled(enabled: Boolean) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_AUTO_MC_ENABLED] = enabled
         }
     }
 
     suspend fun setTeCompensationEnabled(enabled: Boolean) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_TE_COMPENSATION_ENABLED] = enabled
         }
     }
 
     suspend fun setShowWindSpeedOnVario(enabled: Boolean) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_SHOW_WIND_SPEED_ON_VARIO] = enabled
         }
     }
 
     suspend fun setShowHawkCard(enabled: Boolean) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_SHOW_HAWK_CARD] = enabled
         }
     }
 
     suspend fun setEnableHawkUi(enabled: Boolean) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ENABLE_HAWK_UI] = enabled
         }
     }
 
     suspend fun updateAudioSettings(transform: (VarioAudioSettings) -> VarioAudioSettings) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             val current = readAudioSettings(prefs)
             val updated = transform(current)
             prefs[KEY_AUDIO_ENABLED] = updated.enabled
             prefs[KEY_AUDIO_VOLUME] = updated.volume
-            prefs[KEY_AUDIO_LIFT_THRESHOLD] = updated.liftThreshold
-            prefs[KEY_AUDIO_SINK_SILENCE_THRESHOLD] = updated.sinkSilenceThreshold
+            prefs[KEY_AUDIO_LIFT_START_THRESHOLD] = updated.liftStartThreshold
+            prefs[KEY_AUDIO_SINK_START_THRESHOLD] = updated.sinkStartThreshold
             prefs[KEY_AUDIO_DUTY_CYCLE] = updated.dutyCycle
-            prefs[KEY_AUDIO_DEADBAND_MIN] = updated.deadbandMin
-            prefs[KEY_AUDIO_DEADBAND_MAX] = updated.deadbandMax
+            prefs.remove(LEGACY_KEY_AUDIO_LIFT_THRESHOLD)
+            prefs.remove(LEGACY_KEY_AUDIO_SINK_SILENCE_THRESHOLD)
+            prefs.remove(LEGACY_KEY_AUDIO_DEADBAND_MIN)
+            prefs.remove(LEGACY_KEY_AUDIO_DEADBAND_MAX)
         }
     }
 
     suspend fun setHawkNeedleOmegaMinHz(value: Double) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_HAWK_NEEDLE_OMEGA_MIN_HZ] = value
         }
     }
 
     suspend fun setHawkNeedleOmegaMaxHz(value: Double) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_HAWK_NEEDLE_OMEGA_MAX_HZ] = value
         }
     }
 
     suspend fun setHawkNeedleTargetTauSec(value: Double) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_HAWK_NEEDLE_TARGET_TAU_SEC] = value
         }
     }
 
     suspend fun setHawkNeedleDriftTauMinSec(value: Double) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_HAWK_NEEDLE_DRIFT_TAU_MIN_SEC] = value
         }
     }
 
     suspend fun setHawkNeedleDriftTauMaxSec(value: Double) {
-        context.levoVarioDataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_HAWK_NEEDLE_DRIFT_TAU_MAX_SEC] = value
         }
     }
 
     private fun readAudioSettings(prefs: Preferences): VarioAudioSettings {
         val defaults = VarioAudioSettings()
+        val legacyDeadbandMin = prefs[LEGACY_KEY_AUDIO_DEADBAND_MIN] ?: LEGACY_DEFAULT_DEADBAND_MIN
         return VarioAudioSettings(
             enabled = prefs[KEY_AUDIO_ENABLED] ?: defaults.enabled,
             volume = prefs[KEY_AUDIO_VOLUME] ?: defaults.volume,
-            liftThreshold = prefs[KEY_AUDIO_LIFT_THRESHOLD] ?: defaults.liftThreshold,
-            sinkSilenceThreshold = prefs[KEY_AUDIO_SINK_SILENCE_THRESHOLD] ?: defaults.sinkSilenceThreshold,
+            liftStartThreshold = prefs[KEY_AUDIO_LIFT_START_THRESHOLD]
+                ?: legacyEffectiveLiftStartThreshold(
+                    liftThreshold = prefs[LEGACY_KEY_AUDIO_LIFT_THRESHOLD]
+                        ?: LEGACY_DEFAULT_LIFT_THRESHOLD,
+                    deadbandMin = legacyDeadbandMin,
+                    deadbandMax = prefs[LEGACY_KEY_AUDIO_DEADBAND_MAX]
+                        ?: LEGACY_DEFAULT_DEADBAND_MAX
+                ),
+            sinkStartThreshold = prefs[KEY_AUDIO_SINK_START_THRESHOLD]
+                ?: legacyEffectiveSinkStartThreshold(
+                    sinkSilenceThreshold = prefs[LEGACY_KEY_AUDIO_SINK_SILENCE_THRESHOLD]
+                        ?: LEGACY_DEFAULT_SINK_SILENCE_THRESHOLD,
+                    deadbandMin = legacyDeadbandMin
+                ),
             dutyCycle = prefs[KEY_AUDIO_DUTY_CYCLE] ?: defaults.dutyCycle,
-            deadbandMin = prefs[KEY_AUDIO_DEADBAND_MIN] ?: defaults.deadbandMin,
-            deadbandMax = prefs[KEY_AUDIO_DEADBAND_MAX] ?: defaults.deadbandMax
         )
     }
 }

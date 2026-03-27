@@ -44,7 +44,7 @@ class VarioFrequencyMapper(
     }
 
     private fun mapLift(vs: Double): AudioParams {
-        if (vs < maxOf(settings.liftThreshold, effectiveDeadbandMax())) {
+        if (vs < settings.liftStartThreshold) {
             return AudioParams(0.0, 0.0, 0.0, AudioMode.SILENCE)
         }
         val frequency = varioToFrequency(vs)
@@ -53,7 +53,7 @@ class VarioFrequencyMapper(
     }
 
     private fun mapSink(vs: Double): AudioParams {
-        val effectiveThreshold = minOf(settings.sinkSilenceThreshold, settings.deadbandMin)
+        val effectiveThreshold = settings.sinkStartThreshold
         val startThreshold = effectiveThreshold - SINK_HYSTERESIS_MS
         val stopThreshold = effectiveThreshold + SINK_HYSTERESIS_MS
         sinkActive = when {
@@ -68,15 +68,6 @@ class VarioFrequencyMapper(
         val frequency = varioToFrequency(vs)
         return AudioParams(frequency, 0.0, 1.0, AudioMode.CONTINUOUS)
     }
-
-    private fun inDeadband(vs: Double): Boolean {
-        val min = minOf(settings.deadbandMin, settings.deadbandMax - 0.01)
-        val max = maxOf(settings.deadbandMin + 0.01, settings.deadbandMax)
-        return vs in min..max
-    }
-
-    private fun effectiveDeadbandMax(): Double =
-        maxOf(settings.deadbandMax, settings.deadbandMin)
 
     private fun varioToFrequency(vario: Double): Double {
         val clamped = vario.coerceIn(MIN_VARIO, MAX_VARIO)

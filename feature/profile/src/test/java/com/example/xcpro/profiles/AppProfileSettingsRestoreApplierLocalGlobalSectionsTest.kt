@@ -1,11 +1,12 @@
 package com.example.xcpro.profiles
 
+import com.example.xcpro.audio.VarioAudioSettings
 import com.google.gson.Gson
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.verify
 
 class AppProfileSettingsRestoreApplierLocalGlobalSectionsTest {
@@ -25,11 +26,9 @@ class AppProfileSettingsRestoreApplierLocalGlobalSectionsTest {
             enableHawkUi = true,
             audioEnabled = false,
             audioVolume = 0.33f,
-            audioLiftThreshold = 0.8,
-            audioSinkSilenceThreshold = -1.5,
+            audioLiftStartThreshold = 0.8,
+            audioSinkStartThreshold = -1.5,
             audioDutyCycle = 0.55,
-            audioDeadbandMin = -0.1,
-            audioDeadbandMax = 0.2,
             hawkNeedleOmegaMinHz = 1.1,
             hawkNeedleOmegaMaxHz = 2.4,
             hawkNeedleTargetTauSec = 0.9,
@@ -98,7 +97,11 @@ class AppProfileSettingsRestoreApplierLocalGlobalSectionsTest {
             .setHawkNeedleDriftTauMinSec(levoSnapshot.hawkNeedleDriftTauMinSec)
         verify(harness.levoVarioPreferencesRepository)
             .setHawkNeedleDriftTauMaxSec(levoSnapshot.hawkNeedleDriftTauMaxSec)
-        verify(harness.levoVarioPreferencesRepository).updateAudioSettings(any())
+        val transformCaptor = argumentCaptor<(VarioAudioSettings) -> VarioAudioSettings>()
+        verify(harness.levoVarioPreferencesRepository).updateAudioSettings(transformCaptor.capture())
+        val normalizedAudio = transformCaptor.firstValue(VarioAudioSettings())
+        assertEquals(levoSnapshot.audioLiftStartThreshold, normalizedAudio.liftStartThreshold, 0.0)
+        assertEquals(levoSnapshot.audioSinkStartThreshold, normalizedAudio.sinkStartThreshold, 0.0)
 
         verify(harness.thermallingModePreferencesRepository).setEnabled(thermallingSnapshot.enabled)
         verify(harness.thermallingModePreferencesRepository)
