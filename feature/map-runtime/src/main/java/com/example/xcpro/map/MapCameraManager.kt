@@ -3,6 +3,8 @@ package com.example.xcpro.map
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.orientation.normalizeBearing
+import com.example.xcpro.orientation.shortestDeltaDegrees
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.abs
 import kotlin.math.sign
@@ -304,16 +306,16 @@ internal fun resolveCameraBearingUpdate(
     maxBearingStepDeg: Double,
     minBearingChangeDeg: Double = 2.0
 ): Double? {
-    val normalizedCurrent = normalizeBearingDegrees(currentBearing)
+    val normalizedCurrent = normalizeBearing(currentBearing)
     val targetBearing = if (orientationMode == MapOrientationMode.NORTH_UP) {
         0.0
     } else {
         requestedBearing
     }
-    val normalizedTarget = normalizeBearingDegrees(targetBearing)
+    val normalizedTarget = normalizeBearing(targetBearing)
     val delta = shortestDeltaDegrees(normalizedCurrent, normalizedTarget)
     val limitedBearing = if (abs(delta) > maxBearingStepDeg) {
-        normalizeBearingDegrees(normalizedCurrent + sign(delta) * maxBearingStepDeg)
+        normalizeBearing(normalizedCurrent + sign(delta) * maxBearingStepDeg)
     } else {
         normalizedTarget
     }
@@ -322,19 +324,4 @@ internal fun resolveCameraBearingUpdate(
     } else {
         null
     }
-}
-
-private fun normalizeBearingDegrees(bearing: Double): Double {
-    var normalized = bearing % 360.0
-    if (normalized < 0.0) {
-        normalized += 360.0
-    }
-    return normalized
-}
-
-private fun shortestDeltaDegrees(from: Double, to: Double): Double {
-    var delta = (to - from) % 360.0
-    if (delta > 180.0) delta -= 360.0
-    if (delta < -180.0) delta += 360.0
-    return delta
 }

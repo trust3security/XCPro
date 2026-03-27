@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.xcpro.core.common.profiles.ProfileSettingsProfileIds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -25,9 +26,7 @@ private val Context.unitsDataStore: DataStore<Preferences> by preferencesDataSto
 class UnitsRepository(private val context: Context) {
 
     private companion object {
-        private const val DEFAULT_PROFILE_ID = "default-profile"
-        private const val LEGACY_DEFAULT_ALIAS = "default"
-        private const val LEGACY_DF_ALIAS = "__default_profile__"
+        private val DEFAULT_PROFILE_ID = ProfileSettingsProfileIds.CANONICAL_DEFAULT_PROFILE_ID
     }
 
     private object LegacyKeys {
@@ -62,7 +61,7 @@ class UnitsRepository(private val context: Context) {
     }.distinctUntilChanged()
 
     fun setActiveProfileId(profileId: String) {
-        val resolved = resolveProfileId(profileId)
+        val resolved = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         if (activeProfileId.value != resolved) {
             activeProfileId.value = resolved
         }
@@ -80,13 +79,13 @@ class UnitsRepository(private val context: Context) {
     }
 
     suspend fun readProfileUnits(profileId: String): UnitsPreferences {
-        val resolved = resolveProfileId(profileId)
+        val resolved = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         val preferences = context.unitsDataStore.data.first()
         return readUnits(preferences = preferences, profileId = resolved)
     }
 
     suspend fun writeProfileUnits(profileId: String, preferences: UnitsPreferences) {
-        val resolved = resolveProfileId(profileId)
+        val resolved = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         context.unitsDataStore.edit { store ->
             writeUnits(
                 store = store,
@@ -97,7 +96,7 @@ class UnitsRepository(private val context: Context) {
     }
 
     suspend fun clearProfile(profileId: String) {
-        val resolved = resolveProfileId(profileId)
+        val resolved = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         context.unitsDataStore.edit { store ->
             removeScopedUnits(store, resolved)
             if (resolved == DEFAULT_PROFILE_ID) {
@@ -133,19 +132,8 @@ class UnitsRepository(private val context: Context) {
         }
     }
 
-    private fun resolveProfileId(profileId: String?): String {
-        val normalized = profileId?.trim().orEmpty()
-        if (normalized.isBlank()) return DEFAULT_PROFILE_ID
-        return when (normalized) {
-            DEFAULT_PROFILE_ID,
-            LEGACY_DEFAULT_ALIAS,
-            LEGACY_DF_ALIAS -> DEFAULT_PROFILE_ID
-            else -> normalized
-        }
-    }
-
     private fun scopedKey(profileId: String, keySuffix: String): Preferences.Key<String> =
-        stringPreferencesKey("profile.${resolveProfileId(profileId)}.$keySuffix")
+        stringPreferencesKey("profile.${ProfileSettingsProfileIds.canonicalOrDefault(profileId)}.$keySuffix")
 
     private fun readUnits(
         preferences: Preferences,

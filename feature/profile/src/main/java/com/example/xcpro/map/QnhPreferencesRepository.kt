@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.xcpro.core.common.profiles.ProfileSettingsProfileIds
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -50,7 +51,7 @@ class QnhPreferencesRepository @Inject constructor(
     }.distinctUntilChanged()
 
     fun setActiveProfileId(profileId: String) {
-        val resolved = resolveProfileId(profileId)
+        val resolved = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         if (activeProfileId.value != resolved) {
             activeProfileId.value = resolved
         }
@@ -79,7 +80,7 @@ class QnhPreferencesRepository @Inject constructor(
         capturedAtWallMs: Long?,
         source: String?
     ) {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         context.qnhDataStore.edit { preferences ->
             val qnhKey = scopedDoubleKey(resolvedProfileId, KEY_QNH_HPA.name)
             val capturedAtKey = scopedLongKey(resolvedProfileId, KEY_QNH_CAPTURED_AT_WALL_MS.name)
@@ -126,7 +127,7 @@ class QnhPreferencesRepository @Inject constructor(
     }
 
     suspend fun readProfileManualQnh(profileId: String): QnhManualPreference? {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         val preferences = context.qnhDataStore.data.first()
         return readProfileManualQnh(resolvedProfileId, preferences)
     }
@@ -137,7 +138,7 @@ class QnhPreferencesRepository @Inject constructor(
     }
 
     suspend fun clearProfile(profileId: String) {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         context.qnhDataStore.edit { preferences ->
             clearProfileFromStore(preferences, resolvedProfileId)
         }
@@ -161,7 +162,7 @@ class QnhPreferencesRepository @Inject constructor(
         profileId: String,
         preferences: Preferences
     ): QnhManualPreference? {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         val scopedQnh = preferences[scopedDoubleKey(resolvedProfileId, KEY_QNH_HPA.name)]
         val qnh = scopedQnh ?: if (isLegacyFallbackEligible(resolvedProfileId)) {
             preferences[KEY_QNH_HPA]
@@ -188,33 +189,20 @@ class QnhPreferencesRepository @Inject constructor(
         )
     }
 
-    private fun resolveProfileId(profileId: String?): String {
-        val normalized = profileId?.trim().orEmpty()
-        if (normalized.isBlank()) return DEFAULT_PROFILE_ID
-        return when (normalized) {
-            DEFAULT_PROFILE_ID,
-            LEGACY_DEFAULT_ALIAS,
-            LEGACY_DF_ALIAS -> DEFAULT_PROFILE_ID
-            else -> normalized
-        }
-    }
-
     private fun isLegacyFallbackEligible(profileId: String): Boolean {
         return profileId == DEFAULT_PROFILE_ID
     }
 
     private fun scopedDoubleKey(profileId: String, suffix: String): Preferences.Key<Double> =
-        doublePreferencesKey("profile.${resolveProfileId(profileId)}.$suffix")
+        doublePreferencesKey("profile.${ProfileSettingsProfileIds.canonicalOrDefault(profileId)}.$suffix")
 
     private fun scopedLongKey(profileId: String, suffix: String): Preferences.Key<Long> =
-        longPreferencesKey("profile.${resolveProfileId(profileId)}.$suffix")
+        longPreferencesKey("profile.${ProfileSettingsProfileIds.canonicalOrDefault(profileId)}.$suffix")
 
     private fun scopedStringKey(profileId: String, suffix: String): Preferences.Key<String> =
-        stringPreferencesKey("profile.${resolveProfileId(profileId)}.$suffix")
+        stringPreferencesKey("profile.${ProfileSettingsProfileIds.canonicalOrDefault(profileId)}.$suffix")
 
     private companion object {
-        private const val DEFAULT_PROFILE_ID = "default-profile"
-        private const val LEGACY_DEFAULT_ALIAS = "default"
-        private const val LEGACY_DF_ALIAS = "__default_profile__"
+        private val DEFAULT_PROFILE_ID = ProfileSettingsProfileIds.CANONICAL_DEFAULT_PROFILE_ID
     }
 }

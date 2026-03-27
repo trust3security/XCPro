@@ -1,8 +1,8 @@
 package com.example.xcpro.hawk
 
+import com.example.xcpro.sensors.domain.pressureToAltitudeMeters
 import javax.inject.Inject
 import kotlin.math.abs
-import kotlin.math.pow
 
 class HawkVarioEngine @Inject constructor() {
     private var baroQc = BaroQc(
@@ -259,13 +259,4 @@ class HawkVarioEngine @Inject constructor() {
         baroRejectionRate = baroRejectionRate,
         lastBaroVarioMps = lastBaroVarioMps
     )
-
-    private fun pressureToAltitudeMeters(pressureHpa: Double): Double {
-        if (!pressureHpa.isFinite() || pressureHpa <= 0.0) return Double.NaN
-        return 44330.0 * (1.0 - (pressureHpa / SEA_LEVEL_PRESSURE_HPA).pow(0.1903))
-    }
-
-    private companion object {
-        private const val SEA_LEVEL_PRESSURE_HPA = 1013.25
-    }
 }

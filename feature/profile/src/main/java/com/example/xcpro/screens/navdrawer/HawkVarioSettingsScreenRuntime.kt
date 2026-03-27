@@ -38,12 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.ui1.UIVariometer
-import com.example.ui1.VarioDialConfig
-import com.example.ui1.VarioDialLabel
+import com.example.ui1.buildVarioDialConfig
+import com.example.ui1.stripUnit
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.hawk.HawkConfidence
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.profiles.ProfileIdResolver

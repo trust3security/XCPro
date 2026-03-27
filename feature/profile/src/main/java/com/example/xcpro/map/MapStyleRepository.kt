@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.ConfigurationRepository
+import com.example.xcpro.core.common.profiles.ProfileSettingsProfileIds
 import javax.inject.Inject
 import javax.inject.Singleton
 import org.json.JSONObject
@@ -12,7 +13,7 @@ class MapStyleRepository @Inject constructor(
     private var activeProfileId: String = DEFAULT_PROFILE_ID
 
     fun setActiveProfileId(profileId: String) {
-        activeProfileId = resolveProfileId(profileId)
+        activeProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
     }
 
     fun initialStyle(): String {
@@ -21,7 +22,7 @@ class MapStyleRepository @Inject constructor(
 
     fun readProfileStyle(profileId: String): String {
         val defaultStyle = "Topo"
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         val cached = configurationRepository.getCachedConfig()
         val app = cached?.optJSONObject("app")
         val scopedStyle = app
@@ -45,7 +46,7 @@ class MapStyleRepository @Inject constructor(
     }
 
     suspend fun writeProfileStyle(profileId: String, style: String) {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         configurationRepository.updateConfig { json ->
             val appObject = json.optJSONObject("app") ?: JSONObject()
             val byProfile = appObject.optJSONObject(KEY_MAP_STYLE_BY_PROFILE) ?: JSONObject()
@@ -59,7 +60,7 @@ class MapStyleRepository @Inject constructor(
     }
 
     suspend fun clearProfile(profileId: String) {
-        val resolvedProfileId = resolveProfileId(profileId)
+        val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         configurationRepository.updateConfig { json ->
             val appObject = json.optJSONObject("app") ?: return@updateConfig
             val byProfile = appObject.optJSONObject(KEY_MAP_STYLE_BY_PROFILE)
@@ -78,25 +79,12 @@ class MapStyleRepository @Inject constructor(
         }
     }
 
-    private fun resolveProfileId(profileId: String?): String {
-        val normalized = profileId?.trim().orEmpty()
-        if (normalized.isBlank()) return DEFAULT_PROFILE_ID
-        return when (normalized) {
-            DEFAULT_PROFILE_ID,
-            LEGACY_DEFAULT_ALIAS,
-            LEGACY_DF_ALIAS -> DEFAULT_PROFILE_ID
-            else -> normalized
-        }
-    }
-
     private fun isLegacyFallbackEligible(profileId: String): Boolean {
         return profileId == DEFAULT_PROFILE_ID
     }
 
     private companion object {
-        private const val DEFAULT_PROFILE_ID = "default-profile"
-        private const val LEGACY_DEFAULT_ALIAS = "default"
-        private const val LEGACY_DF_ALIAS = "__default_profile__"
+        private val DEFAULT_PROFILE_ID = ProfileSettingsProfileIds.CANONICAL_DEFAULT_PROFILE_ID
         private const val KEY_LEGACY_MAP_STYLE = "mapStyle"
         private const val KEY_MAP_STYLE_BY_PROFILE = "mapStyleByProfile"
     }

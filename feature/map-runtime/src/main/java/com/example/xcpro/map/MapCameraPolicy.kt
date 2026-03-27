@@ -7,6 +7,7 @@ import com.example.xcpro.map.domain.MapShiftBiasConfig
 import com.example.xcpro.map.domain.MapShiftBiasInput
 import com.example.xcpro.map.domain.MapShiftBiasMode
 import com.example.xcpro.map.domain.ScreenOffset
+import com.example.xcpro.orientation.shortestDeltaDegrees
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -140,12 +141,5 @@ class MapCameraPolicy(
 
         val positionMoved = positionMovedProvider()
         return bearingMoved || (timeDue && positionMoved)
-    }
-
-    private fun shortestDeltaDegrees(from: Double, to: Double): Double {
-        var delta = (to - from) % 360.0
-        if (delta > 180.0) delta -= 360.0
-        if (delta < -180.0) delta += 360.0
-        return delta
     }
 }

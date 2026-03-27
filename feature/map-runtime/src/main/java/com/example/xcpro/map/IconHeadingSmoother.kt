@@ -1,6 +1,8 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.common.orientation.MapOrientationMode
+import com.example.xcpro.orientation.normalizeBearing
+import com.example.xcpro.orientation.shortestDeltaDegrees
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -67,7 +69,7 @@ class IconHeadingSmoother(
             input = input
         )
 
-        val desired = normalize(targetHeading)
+        val desired = normalizeBearing(targetHeading)
         val previousUpdateMs = lastUpdateMs
         val dtMs = previousUpdateMs?.let { (input.nowMs - it).coerceAtLeast(0L) } ?: 0L
         lastUpdateMs = input.nowMs
@@ -122,7 +124,7 @@ class IconHeadingSmoother(
             delta
         }
 
-        val next = normalize(lastOutputDeg!! + limitedDelta)
+        val next = normalizeBearing(lastOutputDeg!! + limitedDelta)
         lastOutputDeg = next
         return next
     }
@@ -158,20 +160,6 @@ class IconHeadingSmoother(
                 }
             }
         }
-    }
-
-    private fun normalize(value: Double): Double {
-        if (!value.isFinite()) return 0.0
-        var result = value % 360.0
-        if (result < 0.0) result += 360.0
-        return result
-    }
-
-    private fun shortestDeltaDegrees(from: Double, to: Double): Double {
-        var delta = (to - from) % 360.0
-        if (delta > 180.0) delta -= 360.0
-        if (delta < -180.0) delta += 360.0
-        return delta
     }
 
     private companion object {
