@@ -28,6 +28,8 @@ class MapOverlayManager(
         TrafficOverlayFactories::createOgnTargetRingOverlay,
     ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory =
         TrafficOverlayFactories::createOgnTargetLineOverlay,
+    ognOwnshipTargetBadgeOverlayFactory: OgnOwnshipTargetBadgeOverlayFactory =
+        TrafficOverlayFactories::createOgnOwnshipTargetBadgeOverlay,
     ognThermalOverlayFactory: OgnThermalOverlayFactory =
         TrafficOverlayFactories::createOgnThermalOverlay,
     ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory =
@@ -44,6 +46,7 @@ class MapOverlayManager(
     ognTrafficOverlayFactory = ognTrafficOverlayFactory,
     ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
     ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
+    ognOwnshipTargetBadgeOverlayFactory = ognOwnshipTargetBadgeOverlayFactory,
     ognThermalOverlayFactory = ognThermalOverlayFactory,
     ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
     adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,

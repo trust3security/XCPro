@@ -42,10 +42,15 @@ fun rememberMapTrafficRuntimeState(
 fun BoxScope.MapTrafficRuntimeLayer(
     traffic: MapTrafficUiBinding,
     runtimeState: MapTrafficRuntimeState,
+    reserveTopEndPrimarySlot: Boolean,
     ownshipCoordinate: TrafficMapCoordinate?,
     unitsPreferences: UnitsPreferences,
     trafficActions: MapTrafficUiActions
 ) {
+    MapTrafficConnectionIndicatorsHost(
+        indicators = runtimeState.contentUiState.connectionIndicators,
+        reserveTopEndPrimarySlot = reserveTopEndPrimarySlot
+    )
     MapTrafficPanelsAndSheetsLayer(
         traffic = traffic,
         uiState = runtimeState.contentUiState,

@@ -17,6 +17,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private val ognTrafficOverlayFactory: OgnTrafficOverlayFactory,
     private val ognTargetRingOverlayFactory: OgnTargetRingOverlayFactory,
     private val ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory,
+    private val ognOwnshipTargetBadgeOverlayFactory: OgnOwnshipTargetBadgeOverlayFactory,
     private val ognThermalOverlayFactory: OgnThermalOverlayFactory,
     private val ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory,
     private val bringTrafficOverlaysToFront: () -> Unit,
@@ -34,6 +35,9 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private var latestTargetEnabled: Boolean = false
     private var latestResolvedTarget: OgnTrafficTarget? = null
     private var latestOwnshipLocation: OverlayCoordinate? = null
+    private var latestTargetOwnshipAltitudeMeters: Double? = null
+    private var latestTargetAltitudeUnit: AltitudeUnit = AltitudeUnit.METERS
+    private var latestTargetUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var ognIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
     private var ognDisplayUpdateMode: OgnDisplayUpdateMode = OgnDisplayUpdateMode.DEFAULT
     private val ognTrafficRenderState = OgnRenderThrottleState()
@@ -45,6 +49,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     fun initializeTrafficOverlays(map: MapLibreMap?) {
         if (map == null) return
         cancelPendingRenders()
+        runtimeState.ognOwnshipTargetBadgeOverlay?.cleanup()
         runtimeState.ognTargetLineOverlay?.cleanup()
         runtimeState.ognTargetRingOverlay?.cleanup()
         runtimeState.ognTrafficOverlay?.cleanup()
@@ -69,6 +74,16 @@ class MapOverlayManagerRuntimeOgnDelegate(
             enabled = latestTargetEnabled,
             ownshipLocation = latestOwnshipLocation,
             target = latestResolvedTarget
+        )
+        runtimeState.ognOwnshipTargetBadgeOverlay = ognOwnshipTargetBadgeOverlayFactory(map)
+        runtimeState.ognOwnshipTargetBadgeOverlay?.initialize()
+        runtimeState.ognOwnshipTargetBadgeOverlay?.render(
+            enabled = latestTargetEnabled,
+            ownshipLocation = latestOwnshipLocation,
+            target = latestResolvedTarget,
+            ownshipAltitudeMeters = latestTargetOwnshipAltitudeMeters,
+            altitudeUnit = latestTargetAltitudeUnit,
+            unitsPreferences = latestTargetUnitsPreferences
         )
 
         runtimeState.ognThermalOverlay?.cleanup()
@@ -150,24 +165,38 @@ class MapOverlayManagerRuntimeOgnDelegate(
         enabled: Boolean,
         resolvedTarget: OgnTrafficTarget?,
         ownshipLocation: OverlayCoordinate?,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: AltitudeUnit,
+        unitsPreferences: UnitsPreferences,
         forceImmediate: Boolean = false
     ) {
         val sameEnabled = latestTargetEnabled == enabled
         val sameResolvedTarget = latestResolvedTarget == resolvedTarget
         val sameOwnshipLocation = latestOwnshipLocation == ownshipLocation
+        val normalizedOwnshipAltitude = normalizeOwnshipAltitudeForRender(ownshipAltitudeMeters)
+        val sameOwnshipAltitude = latestTargetOwnshipAltitudeMeters == normalizedOwnshipAltitude
+        val sameAltitudeUnit = latestTargetAltitudeUnit == altitudeUnit
+        val sameUnitsPreferences = latestTargetUnitsPreferences == unitsPreferences
         if (
             sameEnabled &&
             sameResolvedTarget &&
             sameOwnshipLocation &&
+            sameOwnshipAltitude &&
+            sameAltitudeUnit &&
+            sameUnitsPreferences &&
             !forceImmediate &&
             runtimeState.ognTargetRingOverlay != null &&
-            runtimeState.ognTargetLineOverlay != null
+            runtimeState.ognTargetLineOverlay != null &&
+            runtimeState.ognOwnshipTargetBadgeOverlay != null
         ) {
             return
         }
         latestTargetEnabled = enabled
         latestResolvedTarget = resolvedTarget
         latestOwnshipLocation = ownshipLocation
+        latestTargetOwnshipAltitudeMeters = normalizedOwnshipAltitude
+        latestTargetAltitudeUnit = altitudeUnit
+        latestTargetUnitsPreferences = unitsPreferences
         scheduleRender(
             state = ognTargetVisualsRenderState,
             forceImmediate = forceImmediate || !enabled || resolvedTarget == null || ownshipLocation == null
@@ -223,6 +252,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         runtimeState.ognTargetLineOverlay?.bringToFront()
         runtimeState.ognTrafficOverlay?.bringToFront()
         runtimeState.ognTargetRingOverlay?.bringToFront()
+        runtimeState.ognOwnshipTargetBadgeOverlay?.bringToFront()
     }
 
     fun applySatelliteContrastIcons(enabled: Boolean) {
@@ -310,6 +340,10 @@ class MapOverlayManagerRuntimeOgnDelegate(
             runtimeState.ognTargetLineOverlay = ognTargetLineOverlayFactory(map)
             runtimeState.ognTargetLineOverlay?.initialize()
         }
+        if (runtimeState.ognOwnshipTargetBadgeOverlay == null) {
+            runtimeState.ognOwnshipTargetBadgeOverlay = ognOwnshipTargetBadgeOverlayFactory(map)
+            runtimeState.ognOwnshipTargetBadgeOverlay?.initialize()
+        }
         runCatching {
             runtimeState.ognTargetRingOverlay?.render(
                 enabled = latestTargetEnabled,
@@ -319,6 +353,14 @@ class MapOverlayManagerRuntimeOgnDelegate(
                 enabled = latestTargetEnabled,
                 ownshipLocation = latestOwnshipLocation,
                 target = latestResolvedTarget
+            )
+            runtimeState.ognOwnshipTargetBadgeOverlay?.render(
+                enabled = latestTargetEnabled,
+                ownshipLocation = latestOwnshipLocation,
+                target = latestResolvedTarget,
+                ownshipAltitudeMeters = latestTargetOwnshipAltitudeMeters,
+                altitudeUnit = latestTargetAltitudeUnit,
+                unitsPreferences = latestTargetUnitsPreferences
             )
         }.onFailure { throwable ->
             Log.e(TAG, "Failed to render OGN target visuals: ${throwable.message}", throwable)

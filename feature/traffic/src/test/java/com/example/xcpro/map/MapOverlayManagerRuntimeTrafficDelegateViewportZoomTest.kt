@@ -170,6 +170,7 @@ class MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest {
         override var ognTrafficOverlay: OgnTrafficOverlayHandle? = null
         override var ognTargetRingOverlay: OgnTargetRingOverlayHandle? = null
         override var ognTargetLineOverlay: OgnTargetLineOverlayHandle? = null
+        override var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle? = null
         override var ognThermalOverlay: OgnThermalOverlayHandle? = null
         override var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle? = null
         override var adsbTrafficOverlay: AdsbTrafficOverlayHandle? = null

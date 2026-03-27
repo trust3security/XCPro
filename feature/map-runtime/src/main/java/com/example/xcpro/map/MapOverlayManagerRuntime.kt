@@ -27,6 +27,8 @@ open class MapOverlayManagerRuntime(
         TrafficOverlayFactories::createOgnTargetRingOverlay,
     private val ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory =
         TrafficOverlayFactories::createOgnTargetLineOverlay,
+    private val ognOwnshipTargetBadgeOverlayFactory: OgnOwnshipTargetBadgeOverlayFactory =
+        TrafficOverlayFactories::createOgnOwnshipTargetBadgeOverlay,
     private val ognThermalOverlayFactory: OgnThermalOverlayFactory =
         TrafficOverlayFactories::createOgnThermalOverlay,
     private val ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory =
@@ -59,6 +61,7 @@ open class MapOverlayManagerRuntime(
         ognTrafficOverlayFactory = ognTrafficOverlayFactory,
         ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
         ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
+        ognOwnshipTargetBadgeOverlayFactory = ognOwnshipTargetBadgeOverlayFactory,
         ognThermalOverlayFactory = ognThermalOverlayFactory,
         ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
         bringTrafficOverlaysToFront = { trafficDelegate.bringTrafficOverlaysToFront() },
@@ -165,6 +168,9 @@ open class MapOverlayManagerRuntime(
         enabled: Boolean,
         resolvedTarget: OgnTrafficTarget?,
         ownshipLocation: MapLocationUiModel?,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: AltitudeUnit,
+        unitsPreferences: UnitsPreferences,
         forceImmediate: Boolean = false
     ) = ognDelegate.updateTargetVisuals(
         enabled = enabled,
@@ -172,6 +178,9 @@ open class MapOverlayManagerRuntime(
         ownshipLocation = ownshipLocation?.run {
             OverlayCoordinate(latitude = latitude, longitude = longitude)
         },
+        ownshipAltitudeMeters = ownshipAltitudeMeters,
+        altitudeUnit = altitudeUnit,
+        unitsPreferences = unitsPreferences,
         forceImmediate = forceImmediate
     )
 
@@ -179,6 +188,9 @@ open class MapOverlayManagerRuntime(
         enabled: Boolean,
         resolvedTarget: OgnTrafficTarget?,
         ownshipCoordinate: TrafficMapCoordinate?,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: AltitudeUnit,
+        unitsPreferences: UnitsPreferences,
         forceImmediate: Boolean = false
     ) = ognDelegate.updateTargetVisuals(
         enabled = enabled,
@@ -186,6 +198,9 @@ open class MapOverlayManagerRuntime(
         ownshipLocation = ownshipCoordinate?.run {
             OverlayCoordinate(latitude = latitude, longitude = longitude)
         },
+        ownshipAltitudeMeters = ownshipAltitudeMeters,
+        altitudeUnit = altitudeUnit,
+        unitsPreferences = unitsPreferences,
         forceImmediate = forceImmediate
     )
 
