@@ -10,6 +10,7 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 - HARDEN = implemented but needs source/validity/semantic cleanup
 - NEW = needs a new runtime seam before release
 - HIDE = do not expose in production until implemented
+- DEFER = stored for future work but intentionally not part of the active release contract
 
 ## Core air-data / glide metrics
 
@@ -18,21 +19,21 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 | IAS | indicated airspeed from authoritative flight runtime sample | HARDEN | `FlightDataRepository` -> adapter | Card labels must use actual airspeed source/validity |
 | TAS | true airspeed from authoritative flight runtime sample or explicit derived estimate | HARDEN | `FlightDataRepository` -> adapter | Must not be mislabeled from TAS-valid heuristics |
 | GS | ground speed over ground from fused runtime sample | IMPLEMENTED | `FlightDataRepository` -> adapter | Straightforward |
-| current L/D | recent measured glide ratio from runtime flight metrics, not final glide and not polar best L/D | HARDEN | `FlightDataRepository` -> adapter | Needs explicit validity, not formatter heuristics |
-| polar L/D | theoretical L/D at current speed from active polar | HARDEN | polar owner path -> adapter | Needs explicit validity |
-| best L/D | best still-air L/D from active polar | HARDEN | polar owner path -> adapter | Needs explicit validity |
-| netto | compensated air-mass vertical speed from runtime flight metrics | HARDEN | flight runtime -> adapter | Must keep explicit validity |
-| netto 30s | 30-second averaged netto using the same authoritative netto source/contract | HARDEN | flight runtime -> adapter | Add explicit validity |
+| current L/D | recent measured glide ratio from runtime flight metrics, not final glide and not polar best L/D | IMPLEMENTED | `FlightDataRepository` -> adapter | Explicit valid/invalid only; no degraded state in the active contract |
+| polar L/D | theoretical still-air L/D at the current IAS sample from the active polar path | IMPLEMENTED | polar owner path -> adapter | Explicit valid/invalid only; no degraded state in the active contract |
+| best L/D | best still-air L/D from the active polar path across the active IAS bounds | IMPLEMENTED | polar owner path -> adapter | Explicit valid/invalid only; no degraded state in the active contract |
+| netto | compensated air-mass vertical speed from runtime flight metrics | IMPLEMENTED | flight runtime -> adapter | Explicit valid/invalid only; no degraded state in the active contract |
+| netto 30s | 30-second averaged netto using the same authoritative netto source/contract | IMPLEMENTED | flight runtime -> adapter | Explicit valid/invalid only; no degraded state in the active contract |
 
 ## Finish-glide metrics
 
 | Metric | Release meaning | Status | Authoritative owner | Notes |
 |---|---|---|---|---|
-| final glide / required L/D | glide ratio required from current position to the active finish target using canonical route + active policy | IMPLEMENTED | `GlideComputationRepository` | Finish-only today |
-| arrival altitude | predicted finish altitude surplus/deficit using active MC and current policy | IMPLEMENTED | `GlideComputationRepository` | Keep explicit solve state |
-| required altitude | altitude required now to complete the active finish route | IMPLEMENTED | `GlideComputationRepository` | Keep explicit solve state |
-| arrival altitude MC0 | same as arrival altitude but with MC forced to zero | IMPLEMENTED | `GlideComputationRepository` | Keep explicit solve state |
-| final distance | canonical remaining distance to finish target | HARDEN | `GlideComputationRepository` / route seam | Cheap add if data already present |
+| final glide / required L/D | glide ratio required from current position to the active finish target using canonical route + active policy | IMPLEMENTED | `GlideComputationRepository` | Explicit valid/degraded/invalid state; degraded = still-air assumption when no usable wind exists |
+| arrival altitude | predicted finish altitude surplus/deficit using active MC and current policy | IMPLEMENTED | `GlideComputationRepository` | Shares the same explicit solve state as final glide |
+| required altitude | altitude required now to complete the active finish route | IMPLEMENTED | `GlideComputationRepository` | Shares the same explicit solve state as final glide |
+| arrival altitude MC0 | same as arrival altitude but with MC forced to zero | IMPLEMENTED | `GlideComputationRepository` | Shares the same explicit solve state as final glide |
+| final distance | canonical remaining distance to finish target | IMPLEMENTED | `GlideComputationRepository` / route seam | Shares the same explicit solve state as final glide |
 
 ## Waypoint navigation metrics
 
@@ -56,10 +57,10 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 
 | Field / concept | Release meaning | Status | Owner | Notes |
 |---|---|---|---|---|
-| 3-point manual polar | authoritative user-supplied polar curve used by sink/LD/final-glide path | IMPLEMENTED | `GliderRepository -> PolarStillAirSinkProvider` | Must stay authoritative |
-| reference weight | explicit weight reference affecting authoritative polar math, if exposed in UI | NEW/HARDEN | profile/polar path | Either wire it or do not expose as supported |
-| user coefficients | explicit polynomial/coefficients affecting authoritative polar math, if exposed in UI | NEW/HARDEN | profile/polar path | Either wire it or do not expose as supported |
-| bugs / ballast | explicit effect on authoritative polar math | HARDEN | profile/polar path | Current behavior is simplified; document or improve |
+| 3-point manual polar | authoritative user-supplied polar curve used by the IAS-based sink/LD/final-glide path | IMPLEMENTED | `GliderRepository -> PolarStillAirSinkProvider` | Highest-priority polar source on the active runtime path |
+| reference weight | historical/stored configuration only; not part of authoritative runtime math in the release contract | DEFER | profile/polar path | Hidden from the active release UI until a tested runtime math contract exists |
+| user coefficients | historical/stored configuration only; not part of authoritative runtime math in the release contract | DEFER | profile/polar path | Not exposed as a supported control in the active release contract |
+| bugs / ballast | simplified authoritative sink modifiers applied on top of the active polar path | IMPLEMENTED | profile/polar path | `bugsPercent` scales sink; `waterBallastKg` affects wing-loading interpolation and adds the current ballast penalty |
 
 ## Non-negotiable architectural rules
 

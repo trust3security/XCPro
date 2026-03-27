@@ -376,9 +376,13 @@ ViewModel:
     settings-side `GliderViewModel` / `GliderUseCase`.
 - `feature/flight-runtime/src/main/java/com/example/xcpro/glider/StillAirSinkProvider.kt`
   - Shared runtime sink/bounds port used by flight metrics and glide runtime.
+  - Phase 4 contract: the port is IAS-based on the active release path.
 - `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt`
   - Profile-owned implementation of the shared sink port backed by the glider
     repository and polar settings state.
+  - Active release math honors the selected model polar or manual 3-point polar,
+    plus the current bugs/ballast adjustments only; reference weight and user
+    coefficients remain stored-only.
 - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/Layout.kt`
   - Profile owns the layout settings route shell plus the settings-side
     `LayoutViewModel` / `LayoutPreferencesUseCase` that wrap canonical
@@ -501,10 +505,14 @@ Mapping for cards:
     - `arrivalHeightMc0M`
     - `taskFinishDistanceRemainingM`
     - `glideSolutionValid`
+    - `glideDegraded`
+    - `glideDegradedReason`
     - `glideInvalidReason`
   - Semantics:
     - `ld_curr`, `polar_ld`, `best_ld` remain flight-only
     - `final_gld`, `arr_alt`, `req_alt`, `arr_mc0` are racing-task finish cards
+    - glide outputs are `VALID`, `DEGRADED` (still-air assumption because no
+      usable wind exists), or `INVALID`
 
 UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`

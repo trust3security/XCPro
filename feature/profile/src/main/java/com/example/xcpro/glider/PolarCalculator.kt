@@ -9,8 +9,14 @@ import kotlin.math.max
 
 object PolarCalculator {
     /**
-     * Computes still-air sink rate (m/s) for a given indicated airspeed (m/s).
-     * Uses parabolic coefficients when available. Applies simple bug/ballast adjustments (placeholder).
+     * Computes still-air sink rate (m/s) for a given indicated airspeed (IAS).
+     *
+     * Phase 4 release contract:
+     * - manual three-point polar is authoritative when present
+     * - otherwise the selected glider model polar is authoritative
+     * - bugs and water ballast are the only active General Polar modifiers
+     * - reference weight and user coefficients remain stored-only and do not
+     *   affect authoritative runtime math
      */
     fun sinkMs(airspeedMs: Double, model: GliderModel, config: GliderConfig): Double {
         val v = max(airspeedMs, 0.0)

@@ -294,6 +294,17 @@ Close the correctness gaps that undermine release trust even if the cards exist.
   - or remove/hide/document them as unsupported
 - tighten finish/glide policy ownership if needed
 
+### Implemented Phase 4 decisions
+- `StillAirSinkProvider` is now explicitly IAS-based for the active release path; flight metrics and final glide consume the same IAS contract.
+- `threePointPolar` remains the authoritative manual override for sink, polar L/D, best L/D, and final-glide solves because those paths all consume the same upstream sink provider.
+- `bugsPercent` and `waterBallastKg` remain the only active General Polar modifiers in authoritative runtime math for this release slice.
+- `referenceWeightKg` and `userCoefficients` remain stored for future work only; they are explicitly deferred from the active release contract instead of being presented as authoritative controls.
+- final-glide outputs now distinguish:
+  - `INVALID` when the route/altitude/polar solve cannot be trusted
+  - `DEGRADED` when the solve falls back to a still-air assumption because no usable wind vector exists
+  - `VALID` when the solve runs with a usable wind vector
+- `currentLD`, `polarLdCurrentSpeed`, `polarBestLd`, `netto`, and `nettoAverage30s` keep explicit valid/invalid owner semantics only; this phase does not invent a degraded state for those flight-runtime outputs.
+
 ### Acceptance criteria
 - no ambiguity around IAS vs TAS at sink/polar/final-glide seams
 - degraded vs invalid states are explicit

@@ -140,6 +140,8 @@ data class RealTimeFlightData(
     val arrivalHeightMc0M: Double = Double.NaN,
     val taskFinishDistanceRemainingM: Double = Double.NaN,
     val glideSolutionValid: Boolean = false,
+    val glideDegraded: Boolean = false,
+    val glideDegradedReason: String = "",
     val glideInvalidReason: String = "",
     val waypointDistanceMeters: Double = Double.NaN,
     val waypointValid: Boolean = false,

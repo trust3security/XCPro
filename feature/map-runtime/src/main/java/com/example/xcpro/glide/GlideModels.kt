@@ -20,6 +20,10 @@ enum class GlideInvalidReason {
     INVALID
 }
 
+enum class GlideDegradedReason {
+    STILL_AIR_ASSUMED
+}
+
 data class GlideFinishConstraint(
     val requiredAltitudeMeters: Double,
     val altitudeReference: RacingAltitudeReference
@@ -36,6 +40,8 @@ data class GlideTargetSnapshot(
 
 data class GlideSolution(
     val valid: Boolean,
+    val degraded: Boolean = false,
+    val degradedReason: GlideDegradedReason? = null,
     val invalidReason: GlideInvalidReason? = null,
     val requiredGlideRatio: Double = Double.NaN,
     val arrivalHeightMeters: Double = Double.NaN,
@@ -47,6 +53,24 @@ data class GlideSolution(
         fun invalid(reason: GlideInvalidReason): GlideSolution = GlideSolution(
             valid = false,
             invalidReason = reason
+        )
+
+        fun degraded(
+            reason: GlideDegradedReason,
+            requiredGlideRatio: Double,
+            arrivalHeightMeters: Double,
+            requiredAltitudeMeters: Double,
+            arrivalHeightMc0Meters: Double,
+            distanceRemainingMeters: Double
+        ): GlideSolution = GlideSolution(
+            valid = true,
+            degraded = true,
+            degradedReason = reason,
+            requiredGlideRatio = requiredGlideRatio,
+            arrivalHeightMeters = arrivalHeightMeters,
+            requiredAltitudeMeters = requiredAltitudeMeters,
+            arrivalHeightMc0Meters = arrivalHeightMc0Meters,
+            distanceRemainingMeters = distanceRemainingMeters
         )
     }
 }

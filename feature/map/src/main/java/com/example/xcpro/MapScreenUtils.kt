@@ -209,6 +209,8 @@ internal fun convertToRealTimeFlightData(
         arrivalHeightMc0M = glideSolution?.arrivalHeightMc0Meters ?: Double.NaN,
         taskFinishDistanceRemainingM = glideSolution?.distanceRemainingMeters ?: Double.NaN,
         glideSolutionValid = glideSolution?.valid ?: false,
+        glideDegraded = glideSolution?.degraded ?: false,
+        glideDegradedReason = glideSolution?.degradedReason?.name.orEmpty(),
         glideInvalidReason = glideSolution?.invalidReason?.name.orEmpty(),
         waypointDistanceMeters = waypointNavigation?.distanceMeters ?: Double.NaN,
         waypointValid = waypointNavigation?.valid ?: false,

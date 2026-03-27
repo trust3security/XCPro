@@ -231,6 +231,50 @@ class CardFormatSpecTest {
     }
 
     @Test
+    fun finalGld_distinguishes_degraded_valid_and_invalid_states() {
+        val formatter = StubTimeFormatter()
+        val spec = CardFormatSpecs.specs[KnownCardId.FINAL_GLD]
+        assertNotNull(spec)
+
+        val valid = spec!!.format(
+            RealTimeFlightData(
+                glideSolutionValid = true,
+                requiredGlideRatio = 34.7
+            ),
+            units,
+            strings,
+            formatter
+        )
+        val degraded = spec.format(
+            RealTimeFlightData(
+                glideSolutionValid = true,
+                glideDegraded = true,
+                glideDegradedReason = "STILL_AIR_ASSUMED",
+                requiredGlideRatio = 34.7
+            ),
+            units,
+            strings,
+            formatter
+        )
+        val invalid = spec.format(
+            RealTimeFlightData(
+                glideSolutionValid = false,
+                glideInvalidReason = "PRESTART"
+            ),
+            units,
+            strings,
+            formatter
+        )
+
+        assertEquals("35:1", valid.first)
+        assertEquals(strings.calc, valid.second)
+        assertEquals("35:1", degraded.first)
+        assertEquals(strings.noWind, degraded.second)
+        assertEquals("--:1", invalid.first)
+        assertEquals(strings.prestart, invalid.second)
+    }
+
+    @Test
     fun arrivalCards_format_signed_altitude_outputs() {
         val liveData = RealTimeFlightData(
             glideSolutionValid = true,
@@ -250,6 +294,32 @@ class CardFormatSpecTest {
         assertEquals("1050 m", reqAlt.format(liveData, units, strings, formatter).first)
         assertEquals("+150 m", reqAlt.format(liveData, units, strings, formatter).second)
         assertEquals("+165 m", arrMc0.format(liveData, units, strings, formatter).first)
+    }
+
+    @Test
+    fun arrivalCards_append_degraded_reason_without_looking_invalid() {
+        val liveData = RealTimeFlightData(
+            glideSolutionValid = true,
+            glideDegraded = true,
+            glideDegradedReason = "STILL_AIR_ASSUMED",
+            navAltitude = 1_200.0,
+            arrivalHeightM = 120.0,
+            requiredAltitudeM = 1_050.0,
+            arrivalHeightMc0M = 165.0,
+            macCready = 2.0
+        )
+        val formatter = StubTimeFormatter()
+
+        val arrAlt = CardFormatSpecs.specs[KnownCardId.ARR_ALT]!!.format(liveData, units, strings, formatter)
+        val reqAlt = CardFormatSpecs.specs[KnownCardId.REQ_ALT]!!.format(liveData, units, strings, formatter)
+        val arrMc0 = CardFormatSpecs.specs[KnownCardId.ARR_MC0]!!.format(liveData, units, strings, formatter)
+
+        assertEquals("+120 m", arrAlt.first)
+        assertEquals("MC 2 NO WIND", arrAlt.second)
+        assertEquals("1050 m", reqAlt.first)
+        assertEquals("+150 m NO WIND", reqAlt.second)
+        assertEquals("+165 m", arrMc0.first)
+        assertEquals("MC0 NO WIND", arrMc0.second)
     }
 
     @Test

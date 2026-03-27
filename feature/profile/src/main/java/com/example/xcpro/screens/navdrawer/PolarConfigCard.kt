@@ -48,9 +48,6 @@ fun ConfigCard() {
             if (cfg.ballastDrainMinutes == 0.0) "" else cfg.ballastDrainMinutes.toString().trimEnd('0').trimEnd('.')
         )
     }
-    var refWeightInput by remember(cfg.referenceWeightKg) {
-        mutableStateOf(cfg.referenceWeightKg?.toInt()?.toString() ?: "")
-    }
     var iasMinInput by remember(cfg.iasMinKmh) {
         mutableStateOf(cfg.iasMinKmh?.toInt()?.toString() ?: "")
     }
@@ -148,24 +145,6 @@ fun ConfigCard() {
                     keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal)
                 )
             }
-            OutlinedTextField(
-                value = refWeightInput,
-                onValueChange = { text ->
-                    val sanitized = text.filter { it.isDigit() }
-                    refWeightInput = sanitized
-                    when {
-                        sanitized.isBlank() -> viewModel.setReferenceWeightKg(null)
-                        else -> sanitized.toIntOrNull()?.let { value ->
-                            viewModel.setReferenceWeightKg(value.toDouble())
-                        }
-                    }
-                },
-                label = { Text("Reference Weight (kg)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
-            )
-
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = iasMinInput,

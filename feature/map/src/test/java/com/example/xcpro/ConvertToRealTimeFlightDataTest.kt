@@ -7,6 +7,7 @@ import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.glide.GlideDegradedReason
 import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.navigation.WaypointEtaSource
 import com.example.xcpro.navigation.WaypointNavigationInvalidReason
@@ -107,6 +108,8 @@ class ConvertToRealTimeFlightDataTest {
             isFlying = true,
             glideSolution = GlideSolution(
                 valid = true,
+                degraded = true,
+                degradedReason = GlideDegradedReason.STILL_AIR_ASSUMED,
                 requiredGlideRatio = 28.4,
                 arrivalHeightMeters = 130.0,
                 requiredAltitudeMeters = 1_070.0,
@@ -135,6 +138,8 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(130.0, result.arrivalHeightM, 1e-6)
         assertEquals(1_070.0, result.requiredAltitudeM, 1e-6)
         assertEquals(170.0, result.arrivalHeightMc0M, 1e-6)
+        assertEquals(true, result.glideDegraded)
+        assertEquals("STILL_AIR_ASSUMED", result.glideDegradedReason)
         assertEquals("12:34", result.flightTime)
         assertEquals(12_345L, result.timestamp)
         assertEquals(9_999L, result.lastUpdateTime)

@@ -180,6 +180,29 @@ internal fun glideInvalidLabel(reason: String, strings: CardStrings): String {
     }
 }
 
+internal fun glideDegradedLabel(reason: String, strings: CardStrings): String {
+    return when (reason) {
+        "STILL_AIR_ASSUMED" -> strings.noWind
+        else -> strings.est
+    }
+}
+
+internal fun glideStatusLabel(
+    liveData: RealTimeFlightData,
+    strings: CardStrings,
+    base: String? = null
+): String {
+    val validLabel = base ?: strings.calc
+    if (!liveData.glideDegraded) return validLabel
+
+    val degradedLabel = glideDegradedLabel(liveData.glideDegradedReason, strings)
+    return if (base.isNullOrBlank()) {
+        degradedLabel
+    } else {
+        "$base $degradedLabel"
+    }
+}
+
 internal fun waypointInvalidLabel(reason: String, strings: CardStrings): String {
     return when (reason) {
         "PRESTART" -> strings.prestart
