@@ -6,14 +6,9 @@ object CardLibrary {
     val allCards: List<CardDefinition> = allCardDefinitions
     private val defaultTimeFormatter = SystemCardTimeFormatter()
     private val defaultStrings = DefaultCardStrings()
-    // AI-NOTE: Keep unsupported placeholder cards in the known-definition registry so
-    // persisted layouts can still resolve them, but do not offer them in production selection
-    // until an authoritative runtime seam exists.
-    private val productionHiddenPlaceholderCardIds: Set<String> = setOf(
-        CardId.TASK_SPD,
-        CardId.TASK_DIST,
-        CardId.START_ALT
-    )
+    // AI-NOTE: All currently cataloged cards are backed by an authoritative runtime seam.
+    // Unsupported metrics must stay uncataloged rather than silently hidden here.
+    private val productionHiddenPlaceholderCardIds: Set<String> = emptySet()
 
     fun getCardsByCategory(category: CardCategory, hiddenCardIds: Set<String> = emptySet()): List<CardDefinition> {
         val cards = cardsByCategory[category].orEmpty()

@@ -400,9 +400,71 @@ internal object CardFormatSpecs {
                 Pair(time, seconds)
             }
 
-            KnownCardId.TASK_SPD -> Pair(placeholderFor(cardId, units, strings), strings.noTask)
-            KnownCardId.TASK_DIST -> Pair(placeholderFor(cardId, units, strings), strings.noTask)
-            KnownCardId.START_ALT -> Pair(placeholderFor(cardId, units, strings), strings.noStart)
+            KnownCardId.TASK_SPD -> {
+                if (liveData.taskSpeedValid) {
+                    Pair(
+                        UnitsFormatter.speed(SpeedMs(liveData.taskSpeedMs), units).text,
+                        strings.calc
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskSpeedInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.TASK_DIST -> {
+                if (liveData.taskDistanceValid) {
+                    Pair(
+                        UnitsFormatter.distance(DistanceM(liveData.taskDistanceMeters), units).text,
+                        strings.live
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskDistanceInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.TASK_REMAIN_DIST -> {
+                if (liveData.taskRemainingDistanceValid) {
+                    Pair(
+                        UnitsFormatter.distance(DistanceM(liveData.taskRemainingDistanceMeters), units).text,
+                        strings.live
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskRemainingDistanceInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.TASK_REMAIN_TIME -> {
+                if (liveData.taskRemainingTimeValid) {
+                    Pair(
+                        formatDurationClock(liveData.taskRemainingTimeMillis),
+                        taskRemainingTimeBasisLabel(liveData.taskRemainingTimeBasis, strings)
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskRemainingTimeInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.START_ALT -> {
+                if (liveData.startAltitudeValid) {
+                    Pair(
+                        UnitsFormatter.altitude(AltitudeM(liveData.startAltitudeMeters), units).text,
+                        strings.calc
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.startAltitudeInvalidReason, strings)
+                    )
+                }
+            }
 
             KnownCardId.G_FORCE -> Pair("-- G", strings.noAccel)
             KnownCardId.FLARM -> Pair(strings.noFlarm, "---")

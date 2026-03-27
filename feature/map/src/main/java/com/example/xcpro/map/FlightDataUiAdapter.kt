@@ -8,6 +8,7 @@ import com.example.xcpro.navigation.WaypointNavigationSnapshot
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.domain.FlyingState
+import com.example.xcpro.taskperformance.TaskPerformanceSnapshot
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.hawk.HawkVarioUiState
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +36,7 @@ internal class FlightDataUiAdapter(
     igcReplayController: IgcReplayController,
     glideSolutionFlow: Flow<GlideSolution>,
     waypointNavigationFlow: Flow<WaypointNavigationSnapshot>,
+    taskPerformanceFlow: Flow<TaskPerformanceSnapshot>,
     trailUpdates: MutableStateFlow<TrailUpdateResult?>
 ) {
     private val observers = MapScreenObservers(
@@ -52,6 +54,7 @@ internal class FlightDataUiAdapter(
         igcReplayController = igcReplayController,
         glideSolutionFlow = glideSolutionFlow,
         waypointNavigationFlow = waypointNavigationFlow,
+        taskPerformanceFlow = taskPerformanceFlow,
         trailProcessor = TrailProcessor(),
         trailUpdates = trailUpdates
     )

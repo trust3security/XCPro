@@ -1,6 +1,8 @@
 package com.example.dfcards
 
+import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import org.junit.Assert.assertEquals
@@ -265,6 +267,68 @@ class CardFormatSpecTest {
 
         assertEquals("--:1", primary)
         assertEquals(strings.prestart, secondary)
+    }
+
+    @Test
+    fun taskMetrics_format_authoritative_values_when_runtime_owner_marks_them_valid() {
+        val liveData = RealTimeFlightData(
+            taskSpeedMs = 25.0,
+            taskSpeedValid = true,
+            taskDistanceMeters = 12_345.0,
+            taskDistanceValid = true,
+            taskRemainingDistanceMeters = 23_456.0,
+            taskRemainingDistanceValid = true,
+            taskRemainingTimeMillis = 5_400_000L,
+            taskRemainingTimeValid = true,
+            taskRemainingTimeBasis = "ACHIEVED_TASK_SPEED",
+            startAltitudeMeters = 1_234.0,
+            startAltitudeValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val taskSpeed = CardFormatSpecs.specs[KnownCardId.TASK_SPD]!!.format(liveData, units, strings, formatter)
+        val taskDistance = CardFormatSpecs.specs[KnownCardId.TASK_DIST]!!.format(liveData, units, strings, formatter)
+        val taskRemainingDistance =
+            CardFormatSpecs.specs[KnownCardId.TASK_REMAIN_DIST]!!.format(liveData, units, strings, formatter)
+        val taskRemainingTime =
+            CardFormatSpecs.specs[KnownCardId.TASK_REMAIN_TIME]!!.format(liveData, units, strings, formatter)
+        val startAlt = CardFormatSpecs.specs[KnownCardId.START_ALT]!!.format(liveData, units, strings, formatter)
+
+        assertEquals(UnitsFormatter.speed(SpeedMs(25.0), units).text, taskSpeed.first)
+        assertEquals(strings.calc, taskSpeed.second)
+        assertEquals(UnitsFormatter.distance(DistanceM(12_345.0), units).text, taskDistance.first)
+        assertEquals(strings.live, taskDistance.second)
+        assertEquals(UnitsFormatter.distance(DistanceM(23_456.0), units).text, taskRemainingDistance.first)
+        assertEquals(strings.live, taskRemainingDistance.second)
+        assertEquals("1:30", taskRemainingTime.first)
+        assertEquals(strings.calc, taskRemainingTime.second)
+        assertEquals(UnitsFormatter.altitude(AltitudeM(1_234.0), units).text, startAlt.first)
+        assertEquals(strings.calc, startAlt.second)
+    }
+
+    @Test
+    fun taskMetrics_use_upstream_invalid_reasons_without_local_heuristics() {
+        val liveData = RealTimeFlightData(
+            taskSpeedValid = false,
+            taskSpeedInvalidReason = "PRESTART",
+            taskRemainingTimeValid = false,
+            taskRemainingTimeInvalidReason = "STATIC",
+            startAltitudeValid = false,
+            startAltitudeInvalidReason = "NO_START"
+        )
+        val formatter = StubTimeFormatter()
+
+        val taskSpeed = CardFormatSpecs.specs[KnownCardId.TASK_SPD]!!.format(liveData, units, strings, formatter)
+        val taskRemainingTime =
+            CardFormatSpecs.specs[KnownCardId.TASK_REMAIN_TIME]!!.format(liveData, units, strings, formatter)
+        val startAlt = CardFormatSpecs.specs[KnownCardId.START_ALT]!!.format(liveData, units, strings, formatter)
+
+        assertEquals(placeholderFor(KnownCardId.TASK_SPD, units, strings), taskSpeed.first)
+        assertEquals(strings.prestart, taskSpeed.second)
+        assertEquals("--:--", taskRemainingTime.first)
+        assertEquals(strings.static, taskRemainingTime.second)
+        assertEquals(placeholderFor(KnownCardId.START_ALT, units, strings), startAlt.first)
+        assertEquals(strings.noStart, startAlt.second)
     }
 
     private class StubTimeFormatter : CardTimeFormatter {

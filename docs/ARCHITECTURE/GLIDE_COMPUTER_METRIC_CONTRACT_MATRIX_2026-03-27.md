@@ -46,11 +46,11 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 
 | Metric | Release meaning | Status | Authoritative owner | Notes |
 |---|---|---|---|---|
-| TASK SPD | achieved task speed since accepted task start | NEW | `TaskPerformanceRepository` | Must freeze semantics; no ambiguity |
-| TASK DIST | covered task distance since accepted task start | NEW | `TaskPerformanceRepository` | Use canonical task-distance semantics |
-| TASK REMAIN DIST | remaining task distance from canonical route seam | NEW | `TaskPerformanceRepository` or route seam projection | More useful than TASK DIST alone |
-| TASK REMAIN TIME | estimated remaining task time using explicit policy | NEW | `TaskPerformanceRepository` | Document the speed basis |
-| START ALT | nav altitude captured at accepted task start crossing | NEW | `TaskPerformanceRepository` | Must document altitude reference |
+| TASK SPD | achieved average task speed since the accepted task start crossing, using accepted start timestamp to current task sample time; after finish, use finish crossing time instead of live wall time | IMPLEMENTED | `TaskPerformanceRepository` consuming `TaskNavigationController.racingState` | Invalid before start or when accepted start truth is missing |
+| TASK DIST | covered task distance since accepted task start, computed as accepted-start reference route distance minus authoritative remaining route distance | IMPLEMENTED | `TaskPerformanceRepository` consuming `NavigationRouteRepository.route` plus task-owned start projection | Invalid before start or when accepted start truth is missing |
+| TASK REMAIN DIST | canonical remaining task distance from current GPS position across the authoritative remaining route seam | IMPLEMENTED | `TaskPerformanceRepository` consuming `NavigationRouteRepository.route` | Invalid before start or when route or GPS truth is unavailable; zero after finish |
+| TASK REMAIN TIME | remaining task time = `TASK REMAIN DIST / TASK SPD`, using achieved average task speed only when it is finite and `> 2.0 m/s` | IMPLEMENTED | `TaskPerformanceRepository` | Invalid before start, when remaining distance is invalid, or when achieved task speed is unavailable or non-credible |
+| START ALT | accepted task-start altitude from the authoritative accepted start sample using the task start altitude reference; `QNH` falls back to same-sample `MSL` only when QNH altitude is absent | IMPLEMENTED | `TaskPerformanceRepository` consuming `TaskNavigationController.racingState` | Invalid before start, when accepted start sample is missing, or when the required altitude sample is unavailable |
 
 ## General Polar contract
 

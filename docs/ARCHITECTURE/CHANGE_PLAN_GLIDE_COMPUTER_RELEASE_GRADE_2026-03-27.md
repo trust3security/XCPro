@@ -256,11 +256,11 @@ Create a dedicated upstream runtime seam for:
 - `TaskPerformanceRepository` or equivalent
 
 ### Required semantics to freeze
-- `TASK SPD` = achieved task speed since valid task start, using accepted task runtime start event and elapsed task time
-- `TASK DIST` = task distance covered since start, based on canonical task distance semantics
-- `TASK REMAIN DIST` = remaining task distance from the canonical route seam
-- `TASK REMAIN TIME` = remaining time estimate using explicit speed policy (for example achieved task speed or current expected task speed; decide and document)
-- `START ALT` = navigation altitude captured at accepted start crossing, with explicit altitude reference semantics
+- `TASK SPD` = achieved average task speed since accepted task start, using `TaskNavigationController.racingState.acceptedStartTimestampMillis` and the current task sample time; after finish it freezes on the finish crossing time.
+- `TASK DIST` = covered task distance since accepted task start, computed as accepted-start reference route distance minus the authoritative current remaining route distance, clamped into `[0, start-reference-distance]`.
+- `TASK REMAIN DIST` = authoritative remaining task distance from the canonical route seam.
+- `TASK REMAIN TIME` = authoritative remaining task distance divided by achieved task speed, valid only when achieved task speed is finite and greater than `2.0 m/s`.
+- `START ALT` = altitude from the authoritative accepted start sample using the task start altitude reference; `QNH` falls back to same-sample `MSL` only if the accepted start sample has no QNH altitude.
 
 ### Acceptance criteria
 - all listed metrics are computed upstream and mapped by the adapter only
@@ -274,6 +274,12 @@ Create a dedicated upstream runtime seam for:
 - task/runtime integration tests where available
 - `./gradlew enforceRules`
 - compile touched modules
+
+### Phase 3 local branch status (2026-03-27)
+- `TaskPerformanceRepository` in `feature:map-runtime` now owns `TASK SPD`, `TASK DIST`, `TASK REMAIN DIST`, `TASK REMAIN TIME`, and `START ALT`.
+- It consumes `FlightDataRepository.flightData`, `TaskManagerCoordinator.taskSnapshotFlow`, `NavigationRouteRepository.route`, and `TaskNavigationController.racingState` without reclaiming route ownership.
+- `feature:map` remains adapter-only and `dfcards-library` remains formatting-only.
+- Competition cards are re-enabled only for these five authoritative task-performance metrics.
 
 ## Phase 4 — glide/polar contract hardening
 

@@ -15,9 +15,9 @@ class CardLibraryProductionSelectionTest {
     }
 
     @Test
-    fun competition_selection_hides_placeholder_cards_until_runtime_authority_exists() {
+    fun competition_selection_restores_authoritative_task_cards() {
         assertEquals(
-            emptyList<String>(),
+            listOf("task_spd", "task_dist", "task_remain_dist", "task_remain_time", "start_alt"),
             CardLibrary.getCardsByCategory(CardCategory.COMPETITION).map { it.id }
         )
     }
@@ -43,6 +43,8 @@ class CardLibraryProductionSelectionTest {
         assertTrue(CardId.WPT_ETA in knownIds)
         assertTrue(CardId.TASK_SPD in knownIds)
         assertTrue(CardId.TASK_DIST in knownIds)
+        assertTrue(CardId.TASK_REMAIN_DIST in knownIds)
+        assertTrue(CardId.TASK_REMAIN_TIME in knownIds)
         assertTrue(CardId.START_ALT in knownIds)
     }
 }

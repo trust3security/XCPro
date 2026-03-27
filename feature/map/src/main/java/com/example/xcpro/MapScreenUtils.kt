@@ -15,6 +15,7 @@ import com.example.xcpro.orientation.HeadingResolver
 import com.example.xcpro.orientation.HeadingResolverInput
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.domain.LiveWindValidityPolicy
+import com.example.xcpro.taskperformance.TaskPerformanceSnapshot
 import com.example.xcpro.weather.wind.model.WindState
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -62,6 +63,7 @@ internal fun convertToRealTimeFlightData(
     isFlying: Boolean,
     glideSolution: GlideSolution? = null,
     waypointNavigation: WaypointNavigationSnapshot? = null,
+    taskPerformance: TaskPerformanceSnapshot? = null,
     hawkVarioUiState: HawkVarioUiState = HawkVarioUiState(),
     flightTime: String = "00:00",
     lastUpdateTimeMillis: Long = completeData.timestamp
@@ -216,6 +218,22 @@ internal fun convertToRealTimeFlightData(
         waypointEtaValid = waypointNavigation?.etaValid ?: false,
         waypointEtaSource = waypointNavigation?.etaSource?.name.orEmpty(),
         waypointEtaInvalidReason = waypointNavigation?.etaInvalidReason?.name.orEmpty(),
+        taskSpeedMs = taskPerformance?.taskSpeedMs ?: Double.NaN,
+        taskSpeedValid = taskPerformance?.taskSpeedValid ?: false,
+        taskSpeedInvalidReason = taskPerformance?.taskSpeedInvalidReason?.name.orEmpty(),
+        taskDistanceMeters = taskPerformance?.taskDistanceMeters ?: Double.NaN,
+        taskDistanceValid = taskPerformance?.taskDistanceValid ?: false,
+        taskDistanceInvalidReason = taskPerformance?.taskDistanceInvalidReason?.name.orEmpty(),
+        taskRemainingDistanceMeters = taskPerformance?.taskRemainingDistanceMeters ?: Double.NaN,
+        taskRemainingDistanceValid = taskPerformance?.taskRemainingDistanceValid ?: false,
+        taskRemainingDistanceInvalidReason = taskPerformance?.taskRemainingDistanceInvalidReason?.name.orEmpty(),
+        taskRemainingTimeMillis = taskPerformance?.taskRemainingTimeMillis ?: 0L,
+        taskRemainingTimeValid = taskPerformance?.taskRemainingTimeValid ?: false,
+        taskRemainingTimeBasis = taskPerformance?.taskRemainingTimeBasis?.name.orEmpty(),
+        taskRemainingTimeInvalidReason = taskPerformance?.taskRemainingTimeInvalidReason?.name.orEmpty(),
+        startAltitudeMeters = taskPerformance?.startAltitudeMeters ?: Double.NaN,
+        startAltitudeValid = taskPerformance?.startAltitudeValid ?: false,
+        startAltitudeInvalidReason = taskPerformance?.startAltitudeInvalidReason?.name.orEmpty(),
         hawkVarioSmoothedMps = hawkVarioUiState.varioSmoothedMps?.toDouble(),
         hawkVarioRawMps = hawkVarioUiState.varioRawMps?.toDouble(),
         hawkAccelOk = hawkVarioUiState.accelOk,

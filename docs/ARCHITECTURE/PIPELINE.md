@@ -48,6 +48,7 @@ Sensors
      -> FlightDataUiAdapter (MapScreenObservers)
         + GlideComputationRepository.glide
         + WaypointNavigationRepository.waypointNavigation
+        + TaskPerformanceRepository.taskPerformance
         -> convertToRealTimeFlightData
         -> FlightDataManager
      -> mapLocation (GPS) for map UI
@@ -982,6 +983,16 @@ Authoritative ownership:
   current racing finish-rule and glide-status projection. No `feature:map`
   compatibility shim remains in the production path; `GlideComputationRepository`
   is the only active glide owner consumed by the map shell.
+- Current task-performance seam (Phase 3 local branch, 2026-03-27):
+  `feature:map-runtime` now also exposes
+  `feature/map-runtime/src/main/java/com/example/xcpro/taskperformance/TaskPerformanceRepository.kt`
+  as the non-UI task-performance owner. It consumes
+  `FlightDataRepository.flightData`,
+  `TaskManagerCoordinator.taskSnapshotFlow`,
+  task-owned `NavigationRouteRepository.route`, and
+  `TaskNavigationController.racingState`.
+  It feeds the map/cards adapter path only; it does not reclaim route ownership
+  and it does not expand `CompleteFlightData`.
 - Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskRepository.state` is not the cross-feature runtime authority.
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).

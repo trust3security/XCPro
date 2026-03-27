@@ -90,7 +90,7 @@ class CardIdCoverageTest {
             cardsByCategory.getValue(CardCategory.TIME_WEATHER).map { it.id }
         )
         assertEquals(
-            listOf("task_spd", "task_dist", "start_alt"),
+            listOf("task_spd", "task_dist", "task_remain_dist", "task_remain_time", "start_alt"),
             cardsByCategory.getValue(CardCategory.COMPETITION).map { it.id }
         )
         assertEquals(
