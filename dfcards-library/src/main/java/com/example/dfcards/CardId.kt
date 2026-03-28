@@ -64,6 +64,8 @@ internal value class CardId(val raw: String) {
 
         const val TASK_SPD = "task_spd"
         const val TASK_DIST = "task_dist"
+        const val TASK_REMAIN_DIST = "task_remain_dist"
+        const val TASK_REMAIN_TIME = "task_remain_time"
         const val START_ALT = "start_alt"
 
         const val G_FORCE = "g_force"
@@ -114,6 +116,8 @@ internal value class CardId(val raw: String) {
             FLIGHT_TIME,
             TASK_SPD,
             TASK_DIST,
+            TASK_REMAIN_DIST,
+            TASK_REMAIN_TIME,
             START_ALT,
             G_FORCE,
             FLARM,

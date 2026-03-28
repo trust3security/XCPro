@@ -168,7 +168,10 @@ private fun applyStartCandidate(
         status = RacingNavigationStatus.STARTED,
         currentLegIndex = nextIndex,
         lastTransitionTimeMillis = selectedCandidate.timestampMillis,
-        selectedStartCandidateIndex = selectedIndex
+        selectedStartCandidateIndex = selectedIndex,
+        acceptedStartTimestampMillis = selectedCandidate.timestampMillis,
+        acceptedStartFix = selectedCandidate.sampleFix,
+        acceptedStartAltitudeReference = selectedCandidate.altitudeReference
     )
     val event = RacingNavigationEvent(
         type = RacingNavigationEventType.START,

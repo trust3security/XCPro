@@ -20,6 +20,7 @@ import kotlin.math.roundToInt
 
 @Composable
 internal fun MapBottomTabsSection(
+    showMapBottomNavigation: Boolean,
     selectedBottomTab: MapBottomTab,
     isBottomTabsSheetVisible: Boolean,
     isTaskPanelVisible: Boolean,
@@ -53,6 +54,8 @@ internal fun MapBottomTabsSection(
     setLastNonSatelliteMapStyleName: (String?) -> Unit,
     onTransientMapStyleSelected: (String) -> Unit
 ) {
+    if (!showMapBottomNavigation) return
+
     MapBottomTabsLayer(
         selectedTab = selectedBottomTab,
         isSheetVisible = isBottomTabsSheetVisible,

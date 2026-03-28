@@ -129,7 +129,7 @@ internal object CardFormatSpecs {
                 val indicatedMs = liveData.indicatedAirspeed.takeIf { it.isFinite() && it > 0.1 }
                 if (indicatedMs != null) {
                     val formatted = UnitsFormatter.speed(SpeedMs(indicatedMs), units)
-                    val label = if (liveData.tasValid) strings.est else strings.gps
+                    val label = airspeedSubtitle(liveData.airspeedSource, strings)
                     Pair(formatted.text, label)
                 } else {
                     Pair(placeholderFor(cardId, units, strings), strings.noData)
@@ -140,7 +140,7 @@ internal object CardFormatSpecs {
                 val tasMs = liveData.trueAirspeed.takeIf { it.isFinite() && it > 0.1 }
                 if (tasMs != null) {
                     val formatted = UnitsFormatter.speed(SpeedMs(tasMs), units)
-                    val label = if (liveData.tasValid) strings.est else strings.gps
+                    val label = airspeedSubtitle(liveData.airspeedSource, strings)
                     Pair(formatted.text, label)
                 } else {
                     Pair(placeholderFor(cardId, units, strings), strings.noData)
@@ -162,14 +162,31 @@ internal object CardFormatSpecs {
                 }
             }
 
-            KnownCardId.WPT_DIST -> Pair(placeholderFor(cardId, units, strings), strings.noWpt)
-            KnownCardId.WPT_BRG -> Pair("---|", strings.noWpt)
+            KnownCardId.WPT_DIST -> {
+                if (liveData.waypointValid) {
+                    val formatted = UnitsFormatter.distance(DistanceM(liveData.waypointDistanceMeters), units)
+                    Pair(formatted.text, strings.live)
+                } else {
+                    Pair(placeholderFor(cardId, units, strings), waypointInvalidLabel(liveData.waypointInvalidReason, strings))
+                }
+            }
+            KnownCardId.WPT_BRG -> {
+                if (liveData.waypointValid) {
+                    val bearingDeg = ((liveData.waypointBearingTrueDegrees.roundToInt() % 360) + 360) % 360
+                    Pair("$bearingDeg${strings.degUnit}", strings.live)
+                } else {
+                    Pair("---${strings.degUnit}", waypointInvalidLabel(liveData.waypointInvalidReason, strings))
+                }
+            }
             KnownCardId.FINAL_GLD -> {
                 when {
                     !liveData.glideSolutionValid -> Pair("--:1", glideInvalidLabel(liveData.glideInvalidReason, strings))
                     liveData.requiredGlideRatio.isInfinite() -> Pair("IMP", strings.noAlt)
                     liveData.requiredGlideRatio.isFinite() && liveData.requiredGlideRatio > 1.0 -> {
-                        Pair("${liveData.requiredGlideRatio.roundToInt()}:1", strings.calc)
+                        Pair(
+                            "${liveData.requiredGlideRatio.roundToInt()}:1",
+                            glideStatusLabel(liveData, strings)
+                        )
                     }
                     else -> Pair("--:1", strings.invalid)
                 }
@@ -183,7 +200,7 @@ internal object CardFormatSpecs {
                     liveData.arrivalHeightM.isFinite() -> {
                         Pair(
                             formatSignedAltitudeValue(liveData.arrivalHeightM, units),
-                            "MC ${liveData.macCready.roundToInt()}"
+                            glideStatusLabel(liveData, strings, "MC ${liveData.macCready.roundToInt()}")
                         )
                     }
                     else -> Pair(placeholderFor(cardId, units, strings), strings.invalid)
@@ -199,7 +216,7 @@ internal object CardFormatSpecs {
                         val margin = liveData.navAltitude - liveData.requiredAltitudeM
                         Pair(
                             formatAltitudeValue(liveData.requiredAltitudeM, units),
-                            formatSignedAltitudeValue(margin, units)
+                            glideStatusLabel(liveData, strings, formatSignedAltitudeValue(margin, units))
                         )
                     }
                     else -> Pair(placeholderFor(cardId, units, strings), strings.invalid)
@@ -212,15 +229,25 @@ internal object CardFormatSpecs {
                         glideInvalidLabel(liveData.glideInvalidReason, strings)
                     )
                     liveData.arrivalHeightMc0M.isFinite() -> {
-                        Pair(formatSignedAltitudeValue(liveData.arrivalHeightMc0M, units), "MC0")
+                        Pair(
+                            formatSignedAltitudeValue(liveData.arrivalHeightMc0M, units),
+                            glideStatusLabel(liveData, strings, "MC0")
+                        )
                     }
                     else -> Pair(placeholderFor(cardId, units, strings), strings.invalid)
                 }
             }
-            KnownCardId.WPT_ETA -> Pair("--:--", strings.noWpt)
+            KnownCardId.WPT_ETA -> {
+                if (liveData.waypointEtaValid) {
+                    val (time, _) = timeFormatter.formatLocalTime(liveData.waypointEtaEpochMillis)
+                    Pair(time, waypointEtaSubtitle(liveData.waypointEtaSource, strings))
+                } else {
+                    Pair("--:--", waypointInvalidLabel(liveData.waypointEtaInvalidReason, strings))
+                }
+            }
 
             KnownCardId.LD_CURR -> {
-                if (liveData.currentLD > 1f) {
+                if (liveData.currentLDValid) {
                     Pair("${liveData.currentLD.roundToInt()}:1", strings.live)
                 } else {
                     Pair("--:1", strings.noData)
@@ -228,7 +255,7 @@ internal object CardFormatSpecs {
             }
 
             KnownCardId.POLAR_LD -> {
-                if (liveData.polarLdCurrentSpeed > 1f) {
+                if (liveData.polarLdCurrentSpeedValid) {
                     Pair("${liveData.polarLdCurrentSpeed.roundToInt()}:1", strings.live)
                 } else {
                     Pair("--:1", strings.noPolar)
@@ -236,7 +263,7 @@ internal object CardFormatSpecs {
             }
 
             KnownCardId.BEST_LD -> {
-                if (liveData.polarBestLd > 1f) {
+                if (liveData.polarBestLdValid) {
                     Pair("${liveData.polarBestLd.roundToInt()}:1", strings.calc)
                 } else {
                     Pair("--:1", strings.noPolar)
@@ -336,11 +363,15 @@ internal object CardFormatSpecs {
             }
 
             KnownCardId.NETTO_AVG30 -> {
-                val formatted = UnitsFormatter.verticalSpeed(
-                    VerticalSpeedMs(liveData.nettoAverage30s),
-                    units
-                )
-                Pair(formatted.text, strings.netto)
+                if (liveData.nettoAverage30sValid) {
+                    val formatted = UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(liveData.nettoAverage30s),
+                        units
+                    )
+                    Pair(formatted.text, strings.netto)
+                } else {
+                    Pair(placeholderFor(cardId, units, strings), strings.noData)
+                }
             }
 
             KnownCardId.MC_SPEED -> {
@@ -375,9 +406,71 @@ internal object CardFormatSpecs {
                 Pair(time, seconds)
             }
 
-            KnownCardId.TASK_SPD -> Pair(placeholderFor(cardId, units, strings), strings.noTask)
-            KnownCardId.TASK_DIST -> Pair(placeholderFor(cardId, units, strings), strings.noTask)
-            KnownCardId.START_ALT -> Pair(placeholderFor(cardId, units, strings), strings.noStart)
+            KnownCardId.TASK_SPD -> {
+                if (liveData.taskSpeedValid) {
+                    Pair(
+                        UnitsFormatter.speed(SpeedMs(liveData.taskSpeedMs), units).text,
+                        strings.calc
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskSpeedInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.TASK_DIST -> {
+                if (liveData.taskDistanceValid) {
+                    Pair(
+                        UnitsFormatter.distance(DistanceM(liveData.taskDistanceMeters), units).text,
+                        strings.live
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskDistanceInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.TASK_REMAIN_DIST -> {
+                if (liveData.taskRemainingDistanceValid) {
+                    Pair(
+                        UnitsFormatter.distance(DistanceM(liveData.taskRemainingDistanceMeters), units).text,
+                        strings.live
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskRemainingDistanceInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.TASK_REMAIN_TIME -> {
+                if (liveData.taskRemainingTimeValid) {
+                    Pair(
+                        formatDurationClock(liveData.taskRemainingTimeMillis),
+                        taskRemainingTimeBasisLabel(liveData.taskRemainingTimeBasis, strings)
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.taskRemainingTimeInvalidReason, strings)
+                    )
+                }
+            }
+            KnownCardId.START_ALT -> {
+                if (liveData.startAltitudeValid) {
+                    Pair(
+                        UnitsFormatter.altitude(AltitudeM(liveData.startAltitudeMeters), units).text,
+                        strings.calc
+                    )
+                } else {
+                    Pair(
+                        placeholderFor(cardId, units, strings),
+                        taskPerformanceInvalidLabel(liveData.startAltitudeInvalidReason, strings)
+                    )
+                }
+            }
 
             KnownCardId.G_FORCE -> Pair("-- G", strings.noAccel)
             KnownCardId.FLARM -> Pair(strings.noFlarm, "---")
@@ -420,6 +513,20 @@ internal object CardFormatSpecs {
                 val formatted = UnitsFormatter.distance(DistanceM(accM), units)
                 Pair(formatted.text, quality)
             }
+        }
+    }
+
+    private fun airspeedSubtitle(sourceLabel: String, strings: CardStrings): String {
+        return when (sourceLabel) {
+            "SENSOR", "WIND" -> strings.est
+            else -> strings.gps
+        }
+    }
+
+    private fun waypointEtaSubtitle(sourceLabel: String, strings: CardStrings): String {
+        return when (sourceLabel) {
+            "GROUND_SPEED" -> strings.gps
+            else -> strings.noWpt
         }
     }
 }

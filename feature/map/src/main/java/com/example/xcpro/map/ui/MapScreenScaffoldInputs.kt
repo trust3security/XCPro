@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.xcpro.livefollow.LiveFollowRoutes
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapPoint
 import com.example.xcpro.map.MapScreenState
@@ -57,6 +59,10 @@ internal fun rememberMapScreenScaffoldInputs(
     screenHeightPx: Float = widgetLayout.screenHeightPx
 ): MapScreenScaffoldInputs {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val showMapBottomNavigation = remember(navBackStackEntry?.destination?.route) {
+        isMapBottomNavigationRoute(navBackStackEntry?.destination?.route)
+    }
     var watchedPilotFocusEpoch by remember { mutableIntStateOf(0) }
     val mapBindings = bindings.map
     val taskBindings = bindings.task
@@ -142,6 +148,7 @@ internal fun rememberMapScreenScaffoldInputs(
                 currentLocation = hotPathBindings.currentLocation
             ),
             overlays = MapScreenOverlayContentInputs(
+                showMapBottomNavigation = showMapBottomNavigation,
                 renderLocalOwnship = renderLocalOwnship,
                 showRecenterButton = mapBindings.showRecenterButton,
                 showReturnButton = mapBindings.showReturnButton,
@@ -257,3 +264,13 @@ private fun targetMatchesWatchFocusTarget(
     return abs(target.latitude - latitudeDeg) <= epsilonDeg &&
         abs(target.longitude - longitudeDeg) <= epsilonDeg
 }
+
+internal fun isMapBottomNavigationRoute(route: String?): Boolean {
+    val normalizedRoute = route?.substringBefore("?")
+    return normalizedRoute in MAP_BOTTOM_NAVIGATION_ROUTES
+}
+
+private val MAP_BOTTOM_NAVIGATION_ROUTES = setOf(
+    LiveFollowRoutes.MAP_ROUTE,
+    LiveFollowRoutes.FRIENDS_FLYING
+)

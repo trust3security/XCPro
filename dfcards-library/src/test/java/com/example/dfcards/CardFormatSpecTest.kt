@@ -1,5 +1,9 @@
 package com.example.dfcards
 
+import com.example.xcpro.common.units.AltitudeM
+import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -32,7 +36,8 @@ class CardFormatSpecTest {
     @Test
     fun nettoAvg30_formats_value_and_label() {
         val liveData = RealTimeFlightData(
-            nettoAverage30s = -0.6
+            nettoAverage30s = -0.6,
+            nettoAverage30sValid = true
         )
         val formatter = StubTimeFormatter()
 
@@ -43,6 +48,23 @@ class CardFormatSpecTest {
 
         assertEquals("-0.6 m/s", primary)
         assertEquals(strings.netto, secondary)
+    }
+
+    @Test
+    fun nettoAvg30_requires_explicit_valid_flag() {
+        val liveData = RealTimeFlightData(
+            nettoAverage30s = -0.6,
+            nettoAverage30sValid = false
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.NETTO_AVG30]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("-- m/s", primary)
+        assertEquals(strings.noData, secondary)
     }
 
     @Test
@@ -68,7 +90,8 @@ class CardFormatSpecTest {
     @Test
     fun polarLd_formats_live_value() {
         val liveData = RealTimeFlightData(
-            polarLdCurrentSpeed = 37f
+            polarLdCurrentSpeed = 37f,
+            polarLdCurrentSpeedValid = true
         )
         val formatter = StubTimeFormatter()
 
@@ -84,7 +107,8 @@ class CardFormatSpecTest {
     @Test
     fun bestLd_formats_calculated_value() {
         val liveData = RealTimeFlightData(
-            polarBestLd = 44f
+            polarBestLd = 44f,
+            polarBestLdValid = true
         )
         val formatter = StubTimeFormatter()
 
@@ -95,6 +119,98 @@ class CardFormatSpecTest {
 
         assertEquals("44:1", primary)
         assertEquals(strings.calc, secondary)
+    }
+
+    @Test
+    fun ldCurr_requires_explicit_valid_flag() {
+        val liveData = RealTimeFlightData(
+            currentLD = 35f,
+            currentLDValid = false
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_CURR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("--:1", primary)
+        assertEquals(strings.noData, secondary)
+    }
+
+    @Test
+    fun wptDist_formats_authoritative_distance_when_waypoint_is_valid() {
+        val liveData = RealTimeFlightData(
+            waypointDistanceMeters = 12_345.0,
+            waypointValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_DIST]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals(UnitsFormatter.distance(DistanceM(12_345.0), units).text, primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun wptBrg_uses_explicit_waypoint_validity() {
+        val validLiveData = RealTimeFlightData(
+            waypointBearingTrueDegrees = 87.4,
+            waypointValid = true
+        )
+        val invalidLiveData = RealTimeFlightData(
+            waypointBearingTrueDegrees = 87.4,
+            waypointValid = false,
+            waypointInvalidReason = "PRESTART"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_BRG]
+        assertNotNull(spec)
+
+        assertEquals("87deg", spec!!.format(validLiveData, units, strings, formatter).first)
+        assertEquals(strings.live, spec.format(validLiveData, units, strings, formatter).second)
+        assertEquals("---deg", spec.format(invalidLiveData, units, strings, formatter).first)
+        assertEquals(strings.prestart, spec.format(invalidLiveData, units, strings, formatter).second)
+    }
+
+    @Test
+    fun wptEta_formats_explicit_eta_epoch_and_source() {
+        val liveData = RealTimeFlightData(
+            waypointEtaEpochMillis = 9_999L,
+            waypointEtaValid = true,
+            waypointEtaSource = "GROUND_SPEED"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_ETA]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals(9_999L, formatter.lastEpoch)
+        assertEquals("12:34", primary)
+        assertEquals(strings.gps, secondary)
+    }
+
+    @Test
+    fun wptEta_uses_explicit_static_invalid_reason() {
+        val liveData = RealTimeFlightData(
+            waypointEtaValid = false,
+            waypointEtaInvalidReason = "STATIC"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.WPT_ETA]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("--:--", primary)
+        assertEquals(strings.static, secondary)
     }
 
     @Test
@@ -112,6 +228,50 @@ class CardFormatSpecTest {
 
         assertEquals("35:1", primary)
         assertEquals(strings.calc, secondary)
+    }
+
+    @Test
+    fun finalGld_distinguishes_degraded_valid_and_invalid_states() {
+        val formatter = StubTimeFormatter()
+        val spec = CardFormatSpecs.specs[KnownCardId.FINAL_GLD]
+        assertNotNull(spec)
+
+        val valid = spec!!.format(
+            RealTimeFlightData(
+                glideSolutionValid = true,
+                requiredGlideRatio = 34.7
+            ),
+            units,
+            strings,
+            formatter
+        )
+        val degraded = spec.format(
+            RealTimeFlightData(
+                glideSolutionValid = true,
+                glideDegraded = true,
+                glideDegradedReason = "STILL_AIR_ASSUMED",
+                requiredGlideRatio = 34.7
+            ),
+            units,
+            strings,
+            formatter
+        )
+        val invalid = spec.format(
+            RealTimeFlightData(
+                glideSolutionValid = false,
+                glideInvalidReason = "PRESTART"
+            ),
+            units,
+            strings,
+            formatter
+        )
+
+        assertEquals("35:1", valid.first)
+        assertEquals(strings.calc, valid.second)
+        assertEquals("35:1", degraded.first)
+        assertEquals(strings.noWind, degraded.second)
+        assertEquals("--:1", invalid.first)
+        assertEquals(strings.prestart, invalid.second)
     }
 
     @Test
@@ -137,6 +297,32 @@ class CardFormatSpecTest {
     }
 
     @Test
+    fun arrivalCards_append_degraded_reason_without_looking_invalid() {
+        val liveData = RealTimeFlightData(
+            glideSolutionValid = true,
+            glideDegraded = true,
+            glideDegradedReason = "STILL_AIR_ASSUMED",
+            navAltitude = 1_200.0,
+            arrivalHeightM = 120.0,
+            requiredAltitudeM = 1_050.0,
+            arrivalHeightMc0M = 165.0,
+            macCready = 2.0
+        )
+        val formatter = StubTimeFormatter()
+
+        val arrAlt = CardFormatSpecs.specs[KnownCardId.ARR_ALT]!!.format(liveData, units, strings, formatter)
+        val reqAlt = CardFormatSpecs.specs[KnownCardId.REQ_ALT]!!.format(liveData, units, strings, formatter)
+        val arrMc0 = CardFormatSpecs.specs[KnownCardId.ARR_MC0]!!.format(liveData, units, strings, formatter)
+
+        assertEquals("+120 m", arrAlt.first)
+        assertEquals("MC 2 NO WIND", arrAlt.second)
+        assertEquals("1050 m", reqAlt.first)
+        assertEquals("+150 m NO WIND", reqAlt.second)
+        assertEquals("+165 m", arrMc0.first)
+        assertEquals("MC0 NO WIND", arrMc0.second)
+    }
+
+    @Test
     fun finalGld_uses_invalid_reason_secondary_when_solution_is_invalid() {
         val liveData = RealTimeFlightData(
             glideSolutionValid = false,
@@ -151,6 +337,68 @@ class CardFormatSpecTest {
 
         assertEquals("--:1", primary)
         assertEquals(strings.prestart, secondary)
+    }
+
+    @Test
+    fun taskMetrics_format_authoritative_values_when_runtime_owner_marks_them_valid() {
+        val liveData = RealTimeFlightData(
+            taskSpeedMs = 25.0,
+            taskSpeedValid = true,
+            taskDistanceMeters = 12_345.0,
+            taskDistanceValid = true,
+            taskRemainingDistanceMeters = 23_456.0,
+            taskRemainingDistanceValid = true,
+            taskRemainingTimeMillis = 5_400_000L,
+            taskRemainingTimeValid = true,
+            taskRemainingTimeBasis = "ACHIEVED_TASK_SPEED",
+            startAltitudeMeters = 1_234.0,
+            startAltitudeValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val taskSpeed = CardFormatSpecs.specs[KnownCardId.TASK_SPD]!!.format(liveData, units, strings, formatter)
+        val taskDistance = CardFormatSpecs.specs[KnownCardId.TASK_DIST]!!.format(liveData, units, strings, formatter)
+        val taskRemainingDistance =
+            CardFormatSpecs.specs[KnownCardId.TASK_REMAIN_DIST]!!.format(liveData, units, strings, formatter)
+        val taskRemainingTime =
+            CardFormatSpecs.specs[KnownCardId.TASK_REMAIN_TIME]!!.format(liveData, units, strings, formatter)
+        val startAlt = CardFormatSpecs.specs[KnownCardId.START_ALT]!!.format(liveData, units, strings, formatter)
+
+        assertEquals(UnitsFormatter.speed(SpeedMs(25.0), units).text, taskSpeed.first)
+        assertEquals(strings.calc, taskSpeed.second)
+        assertEquals(UnitsFormatter.distance(DistanceM(12_345.0), units).text, taskDistance.first)
+        assertEquals(strings.live, taskDistance.second)
+        assertEquals(UnitsFormatter.distance(DistanceM(23_456.0), units).text, taskRemainingDistance.first)
+        assertEquals(strings.live, taskRemainingDistance.second)
+        assertEquals("1:30", taskRemainingTime.first)
+        assertEquals(strings.calc, taskRemainingTime.second)
+        assertEquals(UnitsFormatter.altitude(AltitudeM(1_234.0), units).text, startAlt.first)
+        assertEquals(strings.calc, startAlt.second)
+    }
+
+    @Test
+    fun taskMetrics_use_upstream_invalid_reasons_without_local_heuristics() {
+        val liveData = RealTimeFlightData(
+            taskSpeedValid = false,
+            taskSpeedInvalidReason = "PRESTART",
+            taskRemainingTimeValid = false,
+            taskRemainingTimeInvalidReason = "STATIC",
+            startAltitudeValid = false,
+            startAltitudeInvalidReason = "NO_START"
+        )
+        val formatter = StubTimeFormatter()
+
+        val taskSpeed = CardFormatSpecs.specs[KnownCardId.TASK_SPD]!!.format(liveData, units, strings, formatter)
+        val taskRemainingTime =
+            CardFormatSpecs.specs[KnownCardId.TASK_REMAIN_TIME]!!.format(liveData, units, strings, formatter)
+        val startAlt = CardFormatSpecs.specs[KnownCardId.START_ALT]!!.format(liveData, units, strings, formatter)
+
+        assertEquals(placeholderFor(KnownCardId.TASK_SPD, units, strings), taskSpeed.first)
+        assertEquals(strings.prestart, taskSpeed.second)
+        assertEquals("--:--", taskRemainingTime.first)
+        assertEquals(strings.static, taskRemainingTime.second)
+        assertEquals(placeholderFor(KnownCardId.START_ALT, units, strings), startAlt.first)
+        assertEquals(strings.noStart, startAlt.second)
     }
 
     private class StubTimeFormatter : CardTimeFormatter {

@@ -66,14 +66,30 @@ class FinalGlideUseCase @Inject constructor(
             Double.POSITIVE_INFINITY
         }
 
-        return GlideSolution(
-            valid = true,
-            requiredGlideRatio = requiredGlideRatio,
-            arrivalHeightMeters = navAltitudeMeters - finishRequiredAltitudeMeters - activeMcResult.altitudeLossMeters,
-            requiredAltitudeMeters = finishRequiredAltitudeMeters + activeMcResult.altitudeLossMeters,
-            arrivalHeightMc0Meters = navAltitudeMeters - finishRequiredAltitudeMeters - mc0Result.altitudeLossMeters,
-            distanceRemainingMeters = distanceRemainingMeters
-        )
+        val arrivalHeightMeters = navAltitudeMeters - finishRequiredAltitudeMeters - activeMcResult.altitudeLossMeters
+        val requiredAltitudeMeters = finishRequiredAltitudeMeters + activeMcResult.altitudeLossMeters
+        val arrivalHeightMc0Meters = navAltitudeMeters - finishRequiredAltitudeMeters - mc0Result.altitudeLossMeters
+        val degradedReason = if (windState?.isAvailable == true) null else GlideDegradedReason.STILL_AIR_ASSUMED
+
+        return if (degradedReason != null) {
+            GlideSolution.degraded(
+                reason = degradedReason,
+                requiredGlideRatio = requiredGlideRatio,
+                arrivalHeightMeters = arrivalHeightMeters,
+                requiredAltitudeMeters = requiredAltitudeMeters,
+                arrivalHeightMc0Meters = arrivalHeightMc0Meters,
+                distanceRemainingMeters = distanceRemainingMeters
+            )
+        } else {
+            GlideSolution(
+                valid = true,
+                requiredGlideRatio = requiredGlideRatio,
+                arrivalHeightMeters = arrivalHeightMeters,
+                requiredAltitudeMeters = requiredAltitudeMeters,
+                arrivalHeightMc0Meters = arrivalHeightMc0Meters,
+                distanceRemainingMeters = distanceRemainingMeters
+            )
+        }
     }
 
     private fun buildRoute(
@@ -168,7 +184,7 @@ class FinalGlideUseCase @Inject constructor(
         windState: WindState?,
         courseBearingDeg: Double
     ): Double {
-        val vector = windState?.vector ?: return 0.0
+        val vector = windState?.takeIf { it.isAvailable }?.vector ?: return 0.0
         val relativeWindRad = Math.toRadians(normalizeBearing(vector.directionFromDeg - courseBearingDeg))
         return vector.speed * cos(relativeWindRad)
     }

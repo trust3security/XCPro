@@ -1,5 +1,4 @@
 package com.example.xcpro.map
-
 import android.content.Context
 import android.os.Looper
 import androidx.datastore.core.DataStore
@@ -30,7 +29,10 @@ import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.glide.GlideComputationRepository
 import com.example.xcpro.glide.GlideTargetProjector
 import com.example.xcpro.glide.FinalGlideUseCase
+import com.example.xcpro.navigation.WaypointNavigationRepository
+import com.example.xcpro.taskperformance.TaskPerformanceRepository
 import com.example.xcpro.tasks.navigation.NavigationRouteRepository
+import com.example.xcpro.tasks.navigation.TaskPerformanceDistanceProjector
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.qnh.QnhRepository
@@ -135,13 +137,10 @@ import org.mockito.Mockito
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class MapScreenViewModelTestBase {
-
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
-
     protected val context: Context = ApplicationProvider.getApplicationContext()
     protected val testClock = FakeClock(monoMs = 0L, wallMs = 0L)
     protected val orientationClock = object : OrientationClock {
@@ -238,29 +237,18 @@ abstract class MapScreenViewModelTestBase {
         // Avoid per-test DataStore writes here because they can stall Robolectric workers on Windows.
     }
 
-
-    protected class SuccessfulWaypointLoader(
-        private val waypoints: List<WaypointData>
-    ) : WaypointLoader {
+    protected class SuccessfulWaypointLoader(private val waypoints: List<WaypointData>) : WaypointLoader {
         override suspend fun load(): List<WaypointData> = waypoints
     }
-
-    protected class FailingWaypointLoader(
-        private val throwable: Throwable
-    ) : WaypointLoader {
+    protected class FailingWaypointLoader(private val throwable: Throwable) : WaypointLoader {
         override suspend fun load(): List<WaypointData> = throw throwable
     }
-
 
     protected fun drainMain() {
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         shadowOf(Looper.getMainLooper()).idle()
     }
-
-    protected suspend fun resetOgnTrafficTogglePreferences() {
-        // No-op: tests now use isolated per-view-model DataStores.
-    }
-
+    protected suspend fun resetOgnTrafficTogglePreferences() = Unit
     protected fun ensureAdsbOverlayDisabled(viewModel: MapScreenViewModel) {
         drainMain()
         if (viewModel.adsbOverlayEnabled.value) {
@@ -282,10 +270,7 @@ abstract class MapScreenViewModelTestBase {
         drainMain()
     }
 
-    protected fun awaitCondition(
-        maxIterations: Int = 500,
-        condition: () -> Boolean
-    ) {
+    protected fun awaitCondition(maxIterations: Int = 500, condition: () -> Boolean) {
         repeat(maxIterations) {
             drainMain()
             if (condition()) return
@@ -297,9 +282,7 @@ abstract class MapScreenViewModelTestBase {
     protected fun newTestPreferencesDataStore(prefix: String): DataStore<Preferences> {
         val uniqueId = testPrefsCounter.incrementAndGet()
         val backingFile = File(context.cacheDir, "${prefix}_${uniqueId}.preferences_pb")
-        if (backingFile.exists()) {
-            backingFile.delete()
-        }
+        if (backingFile.exists()) backingFile.delete()
         return PreferenceDataStoreFactory.create(
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             produceFile = { backingFile }
@@ -329,13 +312,13 @@ abstract class MapScreenViewModelTestBase {
             engine = RacingNavigationEngine(),
             featureFlags = localTaskFeatureFlags
         )
+        val localNavigationRouteRepository =
+            NavigationRouteRepository(taskManager = localTaskManager, taskNavigationController = localTaskNavigationController)
         val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
         val mapAirspaceUseCase = Mockito.mock(AirspaceUseCase::class.java)
         val mapWaypointFilesUseCase = Mockito.mock(WaypointFilesUseCase::class.java)
         val mapSensorsUseCase = MapSensorsUseCase(varioServiceManager)
-        val orientationSettingsUseCase = MapOrientationSettingsUseCase(
-            orientationSettingsRepository
-        )
+        val orientationSettingsUseCase = MapOrientationSettingsUseCase(orientationSettingsRepository)
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
             orientationManagerFactory = orientationManagerFactory,
@@ -348,10 +331,7 @@ abstract class MapScreenViewModelTestBase {
                 flightDataRepository = flightDataRepository,
                 windSensorFusionRepository = windRepository,
                 taskManager = localTaskManager,
-                navigationRouteRepository = NavigationRouteRepository(
-                    taskManager = localTaskManager,
-                    taskNavigationController = localTaskNavigationController
-                ),
+                navigationRouteRepository = localNavigationRouteRepository,
                 glideTargetProjector = GlideTargetProjector(),
                 finalGlideUseCase = FinalGlideUseCase(
                     sinkProvider = object : StillAirSinkProvider {
@@ -365,6 +345,17 @@ abstract class MapScreenViewModelTestBase {
                     }
                 )
             ),
+            waypointNavigationRepository = WaypointNavigationRepository(
+                flightDataRepository = flightDataRepository,
+                navigationRouteRepository = localNavigationRouteRepository
+            ),
+            taskPerformanceRepository = TaskPerformanceRepository(
+                flightDataRepository = flightDataRepository,
+                taskManager = localTaskManager,
+                navigationRouteRepository = localNavigationRouteRepository,
+                taskNavigationController = localTaskNavigationController,
+                distanceProjector = TaskPerformanceDistanceProjector()
+            ),
             controller = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder()
         )
@@ -373,9 +364,8 @@ abstract class MapScreenViewModelTestBase {
         val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
         val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)
         val mapVarioPreferencesUseCase = MapVarioPreferencesUseCase(levoVarioPreferencesRepository)
-        val thermallingPreferencesRepository = ThermallingModePreferencesRepository(
-            newTestPreferencesDataStore("thermalling_mode")
-        )
+        val thermallingPreferencesRepository =
+            ThermallingModePreferencesRepository(newTestPreferencesDataStore("thermalling_mode"))
         val thermallingModeUseCase = ThermallingModeRuntimeUseCase(
             preferencesRepository = thermallingPreferencesRepository,
             coordinator = ThermallingModeCoordinator(testClock)
@@ -415,15 +405,12 @@ abstract class MapScreenViewModelTestBase {
                 )
             )
             override val isEnabled = MutableStateFlow(false)
-
             override fun setEnabled(enabled: Boolean) {
                 isEnabled.value = enabled
             }
-
             override fun clearTargets() {
                 targets.value = emptyList()
             }
-
             override fun updateCenter(latitude: Double, longitude: Double) = Unit
             override fun updateOwnshipOrigin(latitude: Double, longitude: Double) = Unit
             override fun updateOwnshipMotion(trackDeg: Double?, speedMps: Double?) = Unit
@@ -439,36 +426,20 @@ abstract class MapScreenViewModelTestBase {
                 verticalBelowMeters: Double
             ) = Unit
             override fun reconnectNow() = Unit
-
-            override fun start() {
-                setEnabled(true)
-            }
-
-            override fun stop() {
-                setEnabled(false)
-            }
+            override fun start() = setEnabled(true)
+            override fun stop() = setEnabled(false)
         }
         val adsbTrafficPreferencesRepository = adsbPreferencesRepositoryOverride
             ?: AdsbTrafficPreferencesRepository(newTestPreferencesDataStore("adsb_traffic"))
         val metadataRepository = object : AircraftMetadataRepository {
             override val metadataRevision = MutableStateFlow(0L)
             override val lookupProgressRevision = MutableStateFlow(0L)
-
-            override suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata> {
-                return emptyMap()
-            }
+            override suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata> = emptyMap()
         }
         val metadataSyncRepository = object : AircraftMetadataSyncRepository {
             override val syncState = MutableStateFlow<MetadataSyncState>(metadataSyncStateIdle())
-
-            override suspend fun onScheduled() {
-                syncState.value = metadataSyncStateScheduled()
-            }
-
-            override suspend fun onPausedByUser() {
-                syncState.value = metadataSyncStatePausedByUser(lastSuccessWallMs = null)
-            }
-
+            override suspend fun onScheduled() { syncState.value = metadataSyncStateScheduled() }
+            override suspend fun onPausedByUser() { syncState.value = metadataSyncStatePausedByUser(lastSuccessWallMs = null) }
             override suspend fun runSyncNow(): MetadataSyncRunResult = metadataSyncRunResultSkipped()
         }
         val metadataSyncScheduler = object : AircraftMetadataSyncScheduler {
@@ -495,7 +466,6 @@ abstract class MapScreenViewModelTestBase {
             trailSettingsUseCase = trailSettingsUseCase,
             qnhUseCase = qnhUseCase
         )
-
         return MapScreenViewModel(
             profileSessionDependencies = profileSessionDependencies,
             mapWaypointsUseCase = mapWaypointsUseCase,
@@ -516,13 +486,8 @@ abstract class MapScreenViewModelTestBase {
             adsbTrafficFacade = adsbTrafficFacade,
             adsbMetadataEnrichmentUseCase = adsbMetadataEnrichmentUseCase,
             thermallingModeUseCase = thermallingModeUseCase,
-            weGlidePromptBridge = MapScreenWeGlidePromptBridge(
-                promptCoordinator = null,
-                enqueueUseCase = null,
-                notificationController = null
-            )
+            weGlidePromptBridge = MapScreenWeGlidePromptBridge(promptCoordinator = null, enqueueUseCase = null, notificationController = null)
         )
     }
-
 }
 

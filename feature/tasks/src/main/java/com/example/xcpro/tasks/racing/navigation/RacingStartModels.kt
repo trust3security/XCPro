@@ -1,5 +1,7 @@
 package com.example.xcpro.tasks.racing.navigation
 
+import com.example.xcpro.tasks.core.RacingAltitudeReference
+
 enum class RacingStartCandidateType {
     STRICT,
     TOLERANCE
@@ -26,7 +28,9 @@ data class RacingStartCandidate(
     val candidateType: RacingStartCandidateType,
     val isValid: Boolean,
     val rejectionReason: RacingStartRejectionReason? = null,
-    val penaltyFlags: Set<RacingStartPenaltyFlag> = emptySet()
+    val penaltyFlags: Set<RacingStartPenaltyFlag> = emptySet(),
+    val sampleFix: RacingNavigationFix? = null,
+    val altitudeReference: RacingAltitudeReference? = null
 ) {
     val hasPenalty: Boolean
         get() = penaltyFlags.isNotEmpty()

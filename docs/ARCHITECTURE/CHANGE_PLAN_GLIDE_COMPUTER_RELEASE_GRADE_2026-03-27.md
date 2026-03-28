@@ -125,6 +125,11 @@ This is the safest low-risk phase and prevents release confusion immediately.
 - `./gradlew enforceRules`
 - relevant module unit tests for touched files
 
+### Phase 0 local branch status (2026-03-27)
+- Production card selection hides `WPT DIST`, `WPT BRG`, `WPT ETA`, `TASK SPD`, `TASK DIST`, and `START ALT` until authoritative runtime seams exist.
+- `TASK REMAIN DIST` and `TASK REMAIN TIME` are not currently cataloged.
+- No runtime owner changes are part of this phase.
+
 ## Phase 1 — source/validity hardening + low-risk wins
 
 ### Goal
@@ -132,31 +137,41 @@ Make currently implemented cards explicit and trustworthy.
 
 ### Scope
 - add explicit validity/source fields instead of heuristic formatter guesses
-- wire IAS/TAS source labels from the real source field
+- wire IAS/TAS subtitle mapping from the authoritative `airspeedSource` field
 - add `nettoAverage30sValid`
 - add explicit validity for L/D fields
-- optionally expose a low-risk `FINAL DIST` / `TASK FINISH DIST` card from already-available finish-distance data
+- explicitly defer `FINAL DIST` / `TASK FINISH DIST` to a later phase
 
 ### In scope
-- `RealTimeFlightData`
+- `feature:flight-runtime` owner path for validity/source truth
+- `FlightDisplayMapper`
+- `CompleteFlightData` / `RealTimeFlightData` pass-through only
 - `convertToRealTimeFlightData(...)`
-- card formatter / card specs
+- card formatter / card specs as consumers only
 - tests for source/validity behavior
 
 ### Out of scope
 - waypoint metrics
 - task performance metrics
 - general target-kind expansion
+- `FINAL DIST`
+
+### Frozen Phase 1 semantics
+- `nettoAverage30sValid` = true only when the current 30-second averaging window still contains at least one authoritative valid netto sample from the owner path; finite or zero-filled averages alone do not make it valid.
+- `currentLDValid` = true only after the measured L/D owner path has produced a non-zero glide ratio since the current runtime reset; the held value remains valid between recompute intervals and resets false when the helper resets.
+- `polarLdCurrentSpeedValid` = true only when the active polar owner returns a finite positive still-air L/D at the current IAS sample.
+- `polarBestLdValid` = true only when the active polar owner returns a finite positive best-L/D value.
+- IAS/TAS subtitle mapping remains formatter-owned display logic, but it must derive from `airspeedSource`: `SENSOR` and `WIND` map to `EST`; `GPS` and unknown labels map to `GPS`.
 
 ### Acceptance criteria
 - cards no longer infer validity with brittle heuristics like `> 1`
-- IAS/TAS source/quality labels use the actual airspeed source contract
+- IAS/TAS subtitle mapping uses the actual airspeed source contract, not `tasValid`
 - `NETTO 30S` has an explicit validity path
-- if `FINAL DIST` is shipped, it is backed by existing authoritative data only
+- `FINAL DIST` is not part of this phase
 - UI remains formatting only
 
 ### Validation
-- focused map/map-runtime/unit tests
+- focused flight-runtime/map/dfcards unit tests
 - `./gradlew enforceRules`
 - compile touched modules
 
@@ -189,9 +204,19 @@ Inputs:
 - ETA must be based on an explicit ground-speed/availability contract and validity rules
 - no UI-local calculations
 
+### Frozen Phase 2 semantics
+- `WPT DIST` = distance from current GPS position to `NavigationRouteRepository.route.remainingWaypoints.first()`. This is boundary-aware because the task-owned route seam already resolves the current target point.
+- `WPT BRG` = true bearing from current GPS position to that same authoritative route target.
+- `WPT ETA` = local ETA clock time computed from the replay-safe sample wall timestamp plus `WPT DIST / current GPS ground speed`.
+- `WPT DIST` and `WPT BRG` are valid only when the route seam is valid and the fused flight sample contains a finite GPS position.
+- `WPT ETA` is valid only when `WPT DIST` is valid, the current GPS ground speed is finite and greater than `2.0 m/s`, and the fused/replay-safe sample wall timestamp is present.
+- `WPT ETA` source is `GPS` ground speed in this phase. Wind-based ETA is explicitly deferred.
+- `FINAL DIST` remains deferred to a later phase.
+
 ### Acceptance criteria
 - `WPT DIST`, `WPT BRG`, and `WPT ETA` render real values in-card
 - values derive from the canonical route seam, not duplicated route math
+- production selection re-enables only the implemented waypoint cards
 - tests cover:
   - no-task / invalid
   - active waypoint on a simple point
@@ -203,6 +228,12 @@ Inputs:
 - touched map formatter tests
 - `./gradlew enforceRules`
 - compile touched modules
+
+### Phase 2 local branch status (2026-03-27)
+- `WaypointNavigationRepository` in `feature:map-runtime` owns `WPT DIST`, `WPT BRG`, and `WPT ETA`.
+- It consumes `FlightDataRepository.flightData` and the task-owned `NavigationRouteRepository.route` seam without reclaiming route ownership.
+- `feature:map` and `dfcards-library` remain pass-through/formatting consumers only.
+- Task-performance metrics stay deferred to Phase 3.
 
 ## Phase 3 — task performance runtime seam
 
@@ -225,11 +256,11 @@ Create a dedicated upstream runtime seam for:
 - `TaskPerformanceRepository` or equivalent
 
 ### Required semantics to freeze
-- `TASK SPD` = achieved task speed since valid task start, using accepted task runtime start event and elapsed task time
-- `TASK DIST` = task distance covered since start, based on canonical task distance semantics
-- `TASK REMAIN DIST` = remaining task distance from the canonical route seam
-- `TASK REMAIN TIME` = remaining time estimate using explicit speed policy (for example achieved task speed or current expected task speed; decide and document)
-- `START ALT` = navigation altitude captured at accepted start crossing, with explicit altitude reference semantics
+- `TASK SPD` = achieved average task speed since accepted task start, using `TaskNavigationController.racingState.acceptedStartTimestampMillis` and the current task sample time; after finish it freezes on the finish crossing time.
+- `TASK DIST` = covered task distance since accepted task start, computed as accepted-start reference route distance minus the authoritative current remaining route distance, clamped into `[0, start-reference-distance]`.
+- `TASK REMAIN DIST` = authoritative remaining task distance from the canonical route seam.
+- `TASK REMAIN TIME` = authoritative remaining task distance divided by achieved task speed, valid only when achieved task speed is finite and greater than `2.0 m/s`.
+- `START ALT` = altitude from the authoritative accepted start sample using the task start altitude reference; `QNH` falls back to same-sample `MSL` only if the accepted start sample has no QNH altitude.
 
 ### Acceptance criteria
 - all listed metrics are computed upstream and mapped by the adapter only
@@ -244,6 +275,12 @@ Create a dedicated upstream runtime seam for:
 - `./gradlew enforceRules`
 - compile touched modules
 
+### Phase 3 local branch status (2026-03-27)
+- `TaskPerformanceRepository` in `feature:map-runtime` now owns `TASK SPD`, `TASK DIST`, `TASK REMAIN DIST`, `TASK REMAIN TIME`, and `START ALT`.
+- It consumes `FlightDataRepository.flightData`, `TaskManagerCoordinator.taskSnapshotFlow`, `NavigationRouteRepository.route`, and `TaskNavigationController.racingState` without reclaiming route ownership.
+- `feature:map` remains adapter-only and `dfcards-library` remains formatting-only.
+- Competition cards are re-enabled only for these five authoritative task-performance metrics.
+
 ## Phase 4 — glide/polar contract hardening
 
 ### Goal
@@ -256,6 +293,17 @@ Close the correctness gaps that undermine release trust even if the cards exist.
   - either wire them into the authoritative solver path
   - or remove/hide/document them as unsupported
 - tighten finish/glide policy ownership if needed
+
+### Implemented Phase 4 decisions
+- `StillAirSinkProvider` is now explicitly IAS-based for the active release path; flight metrics and final glide consume the same IAS contract.
+- `threePointPolar` remains the authoritative manual override for sink, polar L/D, best L/D, and final-glide solves because those paths all consume the same upstream sink provider.
+- `bugsPercent` and `waterBallastKg` remain the only active General Polar modifiers in authoritative runtime math for this release slice.
+- `referenceWeightKg` and `userCoefficients` remain stored for future work only; they are explicitly deferred from the active release contract instead of being presented as authoritative controls.
+- final-glide outputs now distinguish:
+  - `INVALID` when the route/altitude/polar solve cannot be trusted
+  - `DEGRADED` when the solve falls back to a still-air assumption because no usable wind vector exists
+  - `VALID` when the solve runs with a usable wind vector
+- `currentLD`, `polarLdCurrentSpeed`, `polarBestLd`, `netto`, and `nettoAverage30s` keep explicit valid/invalid owner semantics only; this phase does not invent a degraded state for those flight-runtime outputs.
 
 ### Acceptance criteria
 - no ambiguity around IAS vs TAS at sink/polar/final-glide seams
@@ -274,12 +322,22 @@ Close the correctness gaps that undermine release trust even if the cards exist.
 ## Phase 5 — release proof + doc finalization
 
 ### Goal
-Finish with a release-grade proof bundle.
+Finish with a release-grade proof bundle and final branch-truth docs.
 
 ### Scope
 - final docs sync
 - full local proof
-- add or update golden/replay-style tests for risky semantics
+- confirm every shipped glide-computer card is either implemented with an authoritative contract or intentionally absent from production selection
+- keep unsupported future metrics uncataloged instead of relying on placeholder filters
+
+### Implemented Phase 5 decisions
+- production glide-computer cards now ship only when the authoritative runtime path and validity/source semantics exist end to end:
+  - core glide/performance: `ias`, `tas`, `ground_speed`, `ld_curr`, `polar_ld`, `best_ld`, `netto`, `netto_avg30`, `mc_speed`
+  - finish/arrival + waypoint navigation: `final_gld`, `arr_alt`, `req_alt`, `arr_mc0`, `wpt_dist`, `wpt_brg`, `wpt_eta`
+  - task performance: `task_spd`, `task_dist`, `task_remain_dist`, `task_remain_time`, `start_alt`
+- unsupported or deferred glide-computer metrics stay uncataloged instead of being exposed behind placeholder cards or a production hidden-card filter.
+- `FINAL DIST` remains authoritative runtime data only in this plan; no standalone production card ships for it.
+- route authority remains in `feature:tasks`; glide, waypoint-navigation, and task-performance owners remain upstream and non-UI; `feature:map` remains consumer-only.
 
 ### Minimum proof
 - `./gradlew enforceRules`
@@ -297,9 +355,9 @@ Finish with a release-grade proof bundle.
   - manual polar change affecting glide outputs
 
 ### Acceptance criteria
-- all shipped cards are either implemented with explicit validity contracts or absent from production selection
+- every shipped glide-computer card is implemented with authoritative runtime data and explicit validity/source semantics or is intentionally absent from production selection
 - docs reflect the final durable architecture and metric semantics
-- full proof passes on the committed branch state
+- full proof passes on the current branch state
 
 ## Useful extras you should include if time allows
 
@@ -307,8 +365,6 @@ These are not scope creep; they materially improve the product.
 
 ### High-value additions
 - `FINAL DIST` card from existing finish-distance data
-- `WPT BRG` and `WPT ETA` alongside `WPT DIST` (distance alone is weak)
-- `TASK REMAIN DIST` and `TASK REMAIN TIME`, not just `TASK DIST`
 - source/quality badges for TAS, wind, netto, and glide validity
 - golden tests using known reference logs
 

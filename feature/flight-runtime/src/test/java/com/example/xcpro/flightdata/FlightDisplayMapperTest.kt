@@ -22,6 +22,7 @@ class FlightDisplayMapperTest {
             displayNetto = 0.8,
             displayBaselineVario = 0.6,
             navAltitude = 1325.0,
+            nettoAverage30sValid = true,
             levoNettoMs = 0.55,
             autoMcMs = 1.7,
             autoMcValid = true,
@@ -30,8 +31,12 @@ class FlightDisplayMapperTest {
             speedToFlyValid = true,
             speedToFlyMcSourceAuto = true,
             speedToFlyHasPolar = true,
+            calculatedLD = 31f,
+            currentLDValid = true,
             polarLdCurrentSpeed = 27.5f,
-            polarBestLd = 41.5f
+            polarLdCurrentSpeedValid = true,
+            polarBestLd = 41.5f,
+            polarBestLdValid = true
         )
 
         val snapshot = FlightDisplaySnapshot(
@@ -74,6 +79,7 @@ class FlightDisplayMapperTest {
         assertEquals(metrics.speedToFlyValid, mapped.speedToFlyValid)
         assertEquals(metrics.speedToFlyMcSourceAuto, mapped.speedToFlyMcSourceAuto)
         assertEquals(metrics.speedToFlyHasPolar, mapped.speedToFlyHasPolar)
+        assertEquals(metrics.nettoAverage30sValid, mapped.nettoAverage30sValid)
         assertEquals(1.75, mapped.audioVario.value, 1e-6)
         assertEquals(2.25, mapped.realIgcVario!!.value, 1e-6)
         assertEquals(1.1, mapped.varioOptimized.value, 1e-6)
@@ -85,8 +91,12 @@ class FlightDisplayMapperTest {
         assertEquals(9_876L, mapped.aglTimestampMonoMs)
         assertEquals(1.5, mapped.macCready, 1e-6)
         assertEquals(0.25, mapped.macCreadyRisk, 1e-6)
+        assertEquals(metrics.calculatedLD, mapped.currentLD, 1e-6f)
+        assertEquals(metrics.currentLDValid, mapped.currentLDValid)
         assertEquals(metrics.polarLdCurrentSpeed, mapped.polarLdCurrentSpeed, 1e-6f)
+        assertEquals(metrics.polarLdCurrentSpeedValid, mapped.polarLdCurrentSpeedValid)
         assertEquals(metrics.polarBestLd, mapped.polarBestLd, 1e-6f)
+        assertEquals(metrics.polarBestLdValid, mapped.polarBestLdValid)
         assertEquals(12_345L, mapped.timestamp)
         assertEquals("TEST", mapped.dataQuality)
     }
@@ -131,6 +141,7 @@ class FlightDisplayMapperTest {
         displayNetto: Double = verticalSpeed,
         displayBaselineVario: Double = 0.0,
         navAltitude: Double = 1100.0,
+        nettoAverage30sValid: Boolean = false,
         levoNettoMs: Double = 0.0,
         autoMcMs: Double = 0.0,
         autoMcValid: Boolean = false,
@@ -139,8 +150,12 @@ class FlightDisplayMapperTest {
         speedToFlyValid: Boolean = false,
         speedToFlyMcSourceAuto: Boolean = false,
         speedToFlyHasPolar: Boolean = false,
+        calculatedLD: Float = 0f,
+        currentLDValid: Boolean = false,
         polarLdCurrentSpeed: Float = 0f,
-        polarBestLd: Float = 0f
+        polarLdCurrentSpeedValid: Boolean = false,
+        polarBestLd: Float = 0f,
+        polarBestLdValid: Boolean = false
     ): FlightMetricsResult = FlightMetricsResult(
         baroAltitude = 1000.0,
         qnh = 1013.25,
@@ -158,6 +173,7 @@ class FlightDisplayMapperTest {
         bruttoAverage30s = verticalSpeed,
         bruttoAverage30sValid = true,
         nettoAverage30s = verticalSpeed,
+        nettoAverage30sValid = nettoAverage30sValid,
         displayVario = displayVario,
         displayNeedleVario = displayNeedleVario,
         displayNeedleVarioFast = displayNeedleVarioFast,
@@ -178,9 +194,12 @@ class FlightDisplayMapperTest {
         thermalGainValid = false,
         currentThermalLiftRate = 0.0,
         currentThermalValid = false,
-        calculatedLD = 0f,
+        calculatedLD = calculatedLD,
+        currentLDValid = currentLDValid,
         polarLdCurrentSpeed = polarLdCurrentSpeed,
+        polarLdCurrentSpeedValid = polarLdCurrentSpeedValid,
         polarBestLd = polarBestLd,
+        polarBestLdValid = polarBestLdValid,
         teAltitude = 0.0,
         isCircling = false,
         thermalAverage30sValid = false,

@@ -64,6 +64,7 @@ internal data class MapScreenMapContentInputs(
 )
 
 internal data class MapScreenOverlayContentInputs(
+    val showMapBottomNavigation: Boolean,
     val renderLocalOwnship: Boolean,
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,

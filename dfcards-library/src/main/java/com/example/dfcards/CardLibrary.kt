@@ -6,10 +6,13 @@ object CardLibrary {
     val allCards: List<CardDefinition> = allCardDefinitions
     private val defaultTimeFormatter = SystemCardTimeFormatter()
     private val defaultStrings = DefaultCardStrings()
+    // AI-NOTE: All currently cataloged cards are backed by an authoritative runtime seam.
+    // Unsupported metrics must stay uncataloged rather than silently hidden here.
+    private val productionHiddenPlaceholderCardIds: Set<String> = emptySet()
 
     fun getCardsByCategory(category: CardCategory, hiddenCardIds: Set<String> = emptySet()): List<CardDefinition> {
         val cards = cardsByCategory[category].orEmpty()
-        return if (hiddenCardIds.isEmpty()) cards else cards.filterNot { it.id in hiddenCardIds }
+        return cards.filterForProductionSelection(hiddenCardIds)
     }
 
     fun searchCards(query: String, hiddenCardIds: Set<String> = emptySet()): List<CardDefinition> {
@@ -17,7 +20,7 @@ object CardLibrary {
             definition.title.contains(query, ignoreCase = true) ||
                 definition.description.contains(query, ignoreCase = true)
         }
-        return if (hiddenCardIds.isEmpty()) results else results.filterNot { it.id in hiddenCardIds }
+        return results.filterForProductionSelection(hiddenCardIds)
     }
 
     fun mapLiveDataToCard(
@@ -28,4 +31,9 @@ object CardLibrary {
         timeFormatter: CardTimeFormatter = defaultTimeFormatter
     ): Pair<String, String?> =
         CardDataFormatter.mapLiveDataToCard(CardId.fromRaw(cardId), liveData, units, strings, timeFormatter)
+
+    private fun List<CardDefinition>.filterForProductionSelection(hiddenCardIds: Set<String>): List<CardDefinition> {
+        val hiddenIds = hiddenCardIds + productionHiddenPlaceholderCardIds
+        return if (hiddenIds.isEmpty()) this else filterNot { it.id in hiddenIds }
+    }
 }

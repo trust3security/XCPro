@@ -42,6 +42,10 @@ class RacingNavigationEngineStartPolicyTest {
         )
         assertEquals(2, startedDecision.state.startCandidates.size)
         assertEquals(1, startedDecision.state.selectedStartCandidateIndex)
+        assertEquals(startedDecision.event?.timestampMillis, startedDecision.state.acceptedStartTimestampMillis)
+        assertEquals(toleranceFix.lat, startedDecision.state.acceptedStartFix?.lat ?: Double.NaN, 1e-9)
+        assertEquals(toleranceFix.lon, startedDecision.state.acceptedStartFix?.lon ?: Double.NaN, 1e-9)
+        assertEquals(rules.altitudeReference, startedDecision.state.acceptedStartAltitudeReference)
     }
 
     @Test
