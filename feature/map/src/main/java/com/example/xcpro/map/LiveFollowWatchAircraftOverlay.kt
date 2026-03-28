@@ -89,11 +89,22 @@ internal class LiveFollowWatchAircraftOverlay(
         val normalizedZoom = zoomLevel.takeIf { it.isFinite() } ?: return
         currentViewportZoom = normalizedZoom
         val resolvedScale = resolveLiveFollowWatchAircraftScale(normalizedZoom)
-        if (resolvedScale == currentIconScale) {
+        if (resolvedScale == currentIconScale && boundStyle === map.style) {
             return
         }
         currentIconScale = resolvedScale
         applyIconScaleToStyle()
+    }
+
+    fun reapplyCurrentStyle() {
+        val style = map.style ?: return
+        ensureRuntimeObjects(style)
+        val state = lastRenderedState
+        if (state != null) {
+            render(state)
+            return
+        }
+        setVisible(false)
     }
 
     fun cleanup() {
@@ -148,6 +159,7 @@ internal class LiveFollowWatchAircraftOverlay(
 
     private fun applyIconScaleToStyle() {
         val style = map.style ?: return
+        ensureRuntimeObjects(style)
         val layer = style.getLayerAs<SymbolLayer>(LAYER_ID) ?: return
         layer.setProperties(iconSize(currentIconScale))
         boundStyle = style

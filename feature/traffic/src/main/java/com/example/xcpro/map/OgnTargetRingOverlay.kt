@@ -59,7 +59,7 @@ class OgnTargetRingOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
     }
 
-    override fun findHitAt(tap: LatLng): OgnTrafficHitResult? {
+    override fun findTargetAt(tap: LatLng): String? {
         val style = map.style ?: return null
         if (style.getSource(SOURCE_ID) == null || style.getLayer(LAYER_ID) == null) return null
         val screenPoint = map.projection.toScreenLocation(tap)
@@ -67,8 +67,8 @@ class OgnTargetRingOverlay(
             map.queryRenderedFeatures(screenPoint, LAYER_ID)
         }.getOrNull().orEmpty()
         for (feature in features) {
-            val hitResult = resolveOgnTrafficHitResult(feature)
-            if (hitResult != null) return hitResult
+            val targetKey = resolveOgnTrafficTargetKey(feature)
+            if (targetKey != null) return targetKey
         }
         return null
     }

@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import org.maplibre.android.geometry.LatLngBounds
@@ -24,8 +23,6 @@ import org.maplibre.android.style.layers.PropertyFactory.textAnchor
 import org.maplibre.android.style.layers.PropertyFactory.textColor
 import org.maplibre.android.style.layers.PropertyFactory.textField
 import org.maplibre.android.style.layers.PropertyFactory.textFont
-import org.maplibre.android.style.layers.PropertyFactory.textHaloColor
-import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
 import org.maplibre.android.style.layers.PropertyFactory.textIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.textOffset
 import org.maplibre.android.style.layers.PropertyFactory.textOpacity
@@ -42,7 +39,6 @@ internal fun ensureOgnStyleImages(context: Context, style: Style) {
     }
     ensureOgnSatelliteGliderStyleImage(style, context)
     ensureOgnRelativeGliderStyleImages(style, context)
-    ensureOgnClusterStyleImage(style)
 }
 
 internal fun createOgnIconLayer(renderedIconSizePx: Int): SymbolLayer =
@@ -87,22 +83,6 @@ internal fun createOgnTopLabelLayer(
             visibility(if (labelsVisible) "visible" else "none")
         )
 
-internal fun createOgnClusterCountLayer(renderedIconSizePx: Int): SymbolLayer =
-    SymbolLayer(CLUSTER_COUNT_LAYER_ID, SOURCE_ID)
-        .withProperties(
-            textField(Expression.get(PROP_CLUSTER_COUNT_LABEL)),
-            textFont(LABEL_FONT_STACK),
-            textSize(ognClusterCountTextSizeForPx(renderedIconSizePx)),
-            textColor(CLUSTER_COUNT_TEXT_COLOR),
-            textHaloColor(CLUSTER_COUNT_TEXT_HALO_COLOR),
-            textHaloWidth(CLUSTER_COUNT_TEXT_HALO_WIDTH_DP),
-            textOffset(ognClusterCountOffsetForPx(renderedIconSizePx)),
-            textAnchor("center"),
-            textAllowOverlap(true),
-            textIgnorePlacement(true),
-            textOpacity(Expression.get(PROP_ALPHA))
-        )
-
 internal fun createOgnBottomLabelLayer(
     renderedIconSizePx: Int,
     labelsVisible: Boolean
@@ -128,8 +108,8 @@ internal fun ensureOgnLayerOrder(
 ) {
     val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
     if (style.getLayer(anchorId) == null) return
-    if (style.getLayer(ICON_LAYER_ID) == null ||
-        style.getLayer(CLUSTER_COUNT_LAYER_ID) == null ||
+    if (
+        style.getLayer(ICON_LAYER_ID) == null ||
         style.getLayer(TOP_LABEL_LAYER_ID) == null ||
         style.getLayer(BOTTOM_LABEL_LAYER_ID) == null
     ) {
@@ -139,31 +119,25 @@ internal fun ensureOgnLayerOrder(
     val layerIds = style.layers.map { it.id }
     val anchorIndex = layerIds.indexOf(anchorId)
     val iconIndex = layerIds.indexOf(ICON_LAYER_ID)
-    val clusterCountIndex = layerIds.indexOf(CLUSTER_COUNT_LAYER_ID)
     val topIndex = layerIds.indexOf(TOP_LABEL_LAYER_ID)
     val bottomIndex = layerIds.indexOf(BOTTOM_LABEL_LAYER_ID)
-    if (anchorIndex < 0 || iconIndex < 0 || clusterCountIndex < 0 || topIndex < 0 || bottomIndex < 0) {
-        return
-    }
+    if (anchorIndex < 0 || iconIndex < 0 || topIndex < 0 || bottomIndex < 0) return
 
     val iconNeedsMove = iconIndex <= anchorIndex
-    val clusterCountNeedsMove = clusterCountIndex <= iconIndex
-    val topNeedsMove = topIndex <= clusterCountIndex
+    val topNeedsMove = topIndex <= iconIndex
     val bottomNeedsMove = bottomIndex <= topIndex
-    if (!iconNeedsMove && !clusterCountNeedsMove && !topNeedsMove && !bottomNeedsMove) return
+    if (!iconNeedsMove && !topNeedsMove && !bottomNeedsMove) return
 
     style.removeLayer(BOTTOM_LABEL_LAYER_ID)
     style.removeLayer(TOP_LABEL_LAYER_ID)
-    style.removeLayer(CLUSTER_COUNT_LAYER_ID)
     style.removeLayer(ICON_LAYER_ID)
     style.addLayerAbove(createOgnIconLayer(renderedIconSizePx), anchorId)
-    style.addLayerAbove(createOgnClusterCountLayer(renderedIconSizePx), ICON_LAYER_ID)
     style.addLayerAbove(
         createOgnTopLabelLayer(
             renderedIconSizePx = renderedIconSizePx,
             labelsVisible = labelsVisible
         ),
-        CLUSTER_COUNT_LAYER_ID
+        ICON_LAYER_ID
     )
     style.addLayerAbove(
         createOgnBottomLabelLayer(
@@ -181,12 +155,6 @@ internal fun applyOgnViewportPolicyToStyle(
 ) {
     val iconLayer = style.getLayer(ICON_LAYER_ID) as? SymbolLayer
     iconLayer?.setProperties(iconSize(ognIconScaleForPx(renderedIconSizePx)))
-
-    val clusterCountLayer = style.getLayer(CLUSTER_COUNT_LAYER_ID) as? SymbolLayer
-    clusterCountLayer?.setProperties(
-        textSize(ognClusterCountTextSizeForPx(renderedIconSizePx)),
-        textOffset(ognClusterCountOffsetForPx(renderedIconSizePx))
-    )
 
     val labelSize = ognLabelTextSizeForPx(renderedIconSizePx)
     val topLabelLayer = style.getLayer(TOP_LABEL_LAYER_ID) as? SymbolLayer
@@ -304,52 +272,12 @@ private fun ensureOgnSatelliteGliderStyleImage(style: Style, context: Context) {
     style.addImage(SATELLITE_GLIDER_ICON_IMAGE_ID, bitmap)
 }
 
-private fun ensureOgnClusterStyleImage(style: Style) {
-    val existing = runCatching { style.getImage(CLUSTER_ICON_IMAGE_ID) }.getOrNull()
-    if (existing != null) return
-    style.addImage(CLUSTER_ICON_IMAGE_ID, createOgnClusterBitmap())
-}
-
-private fun createOgnClusterBitmap(): Bitmap {
-    val bitmap = Bitmap.createBitmap(
-        ICON_BITMAP_BASE_SIZE_PX,
-        ICON_BITMAP_BASE_SIZE_PX,
-        Bitmap.Config.ARGB_8888
-    )
-    val canvas = Canvas(bitmap)
-    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FFF4C95D")
-        style = Paint.Style.FILL
-    }
-    val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#202020")
-        style = Paint.Style.STROKE
-        strokeWidth = (ICON_BITMAP_BASE_SIZE_PX / 14f).coerceAtLeast(4f)
-    }
-    val center = ICON_BITMAP_BASE_SIZE_PX / 2f
-    val radius = ICON_BITMAP_BASE_SIZE_PX * 0.34f
-    canvas.drawCircle(center, center, radius, fillPaint)
-    canvas.drawCircle(center, center, radius, strokePaint)
-    return bitmap
-}
-
 internal fun ognIconScaleForPx(iconSizePx: Int): Float =
     iconSizePx.toFloat() / ICON_BITMAP_BASE_SIZE_PX.toFloat()
 
 internal fun ognLabelTextSizeForPx(iconSizePx: Int): Float {
     val scaled = LABEL_TEXT_SIZE_BASE_SP * ognIconScaleForPx(iconSizePx)
     return scaled.coerceIn(MIN_LABEL_TEXT_SIZE_SP, MAX_LABEL_TEXT_SIZE_SP)
-}
-
-internal fun ognClusterCountTextSizeForPx(iconSizePx: Int): Float {
-    val scaled = (LABEL_TEXT_SIZE_BASE_SP * 0.9f) * ognIconScaleForPx(iconSizePx)
-    return scaled.coerceIn(10f, 16f)
-}
-
-internal fun ognClusterCountOffsetForPx(iconSizePx: Int): Array<Float> {
-    val scale = ognIconScaleForPx(iconSizePx)
-    val offset = 0.6f + (0.45f * scale)
-    return arrayOf(offset, -offset)
 }
 
 internal fun ognTopLabelOffsetYForPx(iconSizePx: Int): Float =

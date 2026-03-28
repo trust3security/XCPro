@@ -9,6 +9,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -52,6 +61,23 @@ class LiveFollowWatchAircraftOverlayTest {
             0f
         )
     }
+
+    @Test
+    fun reapplyCurrentStyle_rerendersLastKnownStateAfterStyleSwap() {
+        val fixture = createRuntimeFixture()
+        val state = LiveFollowWatchAircraftOverlayState(
+            shareCode = "TEST1",
+            latitudeDeg = -35.0,
+            longitudeDeg = 149.0,
+            trackDeg = 95.0
+        )
+
+        fixture.overlay.render(state)
+        fixture.currentStyle = fixture.secondStyle
+        fixture.overlay.reapplyCurrentStyle()
+
+        verify(fixture.secondSource).setGeoJson(any<org.maplibre.geojson.Feature>())
+    }
 }
 
 private fun renderDrawableBitmap(
@@ -66,4 +92,52 @@ private fun renderDrawableBitmap(
     drawable.setBounds(0, 0, iconSizePx, iconSizePx)
     drawable.draw(canvas)
     return bitmap
+}
+
+private fun createRuntimeFixture(): RuntimeFixture {
+    val context: Context = mock()
+    val map: MapLibreMap = mock()
+    val firstStyle: Style = mock()
+    val secondStyle: Style = mock()
+    val firstSource: GeoJsonSource = mock()
+    val secondSource: GeoJsonSource = mock()
+    val firstLayer: SymbolLayer = mock()
+    val secondLayer: SymbolLayer = mock()
+    val bitmap: Bitmap = mock()
+    var currentStyle: Style = firstStyle
+
+    whenever(map.cameraPosition).thenReturn(
+        CameraPosition.Builder()
+            .zoom(10.5)
+            .build()
+    )
+    whenever(map.style).thenAnswer { currentStyle }
+    whenever(firstStyle.getImage(any<String>())).thenReturn(bitmap)
+    whenever(secondStyle.getImage(any<String>())).thenReturn(bitmap)
+    whenever(firstStyle.getSourceAs<GeoJsonSource>(any())).thenReturn(firstSource)
+    whenever(secondStyle.getSourceAs<GeoJsonSource>(any())).thenReturn(secondSource)
+    whenever(firstStyle.getLayerAs<SymbolLayer>(any())).thenReturn(firstLayer)
+    whenever(secondStyle.getLayerAs<SymbolLayer>(any())).thenReturn(secondLayer)
+
+    return RuntimeFixture(
+        overlay = LiveFollowWatchAircraftOverlay(map = map, context = context),
+        secondStyle = secondStyle,
+        secondSource = secondSource,
+        currentStyleSetter = { style -> currentStyle = style },
+        currentStyleGetter = { currentStyle }
+    )
+}
+
+private data class RuntimeFixture(
+    val overlay: LiveFollowWatchAircraftOverlay,
+    val secondStyle: Style,
+    val secondSource: GeoJsonSource,
+    val currentStyleSetter: (Style) -> Unit,
+    val currentStyleGetter: () -> Style
+) {
+    var currentStyle: Style
+        get() = currentStyleGetter()
+        set(value) {
+            currentStyleSetter(value)
+        }
 }

@@ -60,7 +60,7 @@ interface OgnTrafficOverlayHandle {
     )
     fun cleanup()
     fun bringToFront()
-    fun findHitAt(tap: LatLng): OgnTrafficHitResult?
+    fun findTargetAt(tap: LatLng): String?
 }
 
 interface OgnTargetRingOverlayHandle {
@@ -69,7 +69,7 @@ interface OgnTargetRingOverlayHandle {
     fun render(enabled: Boolean, target: OgnTrafficTarget?)
     fun cleanup()
     fun bringToFront()
-    fun findHitAt(tap: LatLng): OgnTrafficHitResult?
+    fun findTargetAt(tap: LatLng): String?
 }
 
 interface OgnTargetLineOverlayHandle {

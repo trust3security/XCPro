@@ -2,353 +2,369 @@
 
 ## Title
 
-Phase 1 - re-based plan for OGN label gating and Live Follow watch-aircraft zoom scaling
+Phase A corrective plan for true Phase 1 OGN declutter and Live Follow watch-aircraft scaling
 
-## Status against current `main`
+## Status against current HEAD
 
-This brief is intentionally re-based against the current codebase.
+This brief is re-based against the current `fix/aircraft-clutter` branch state,
+not the earlier pre-implementation plan.
 
-The original phase-1 write-up is partially stale. The following already exist on
-`main` and should not be re-implemented:
+Current branch reality:
 
-- OGN viewport zoom plumbing from `MapInitializer` into `MapOverlayManagerRuntime`
-- `MapOverlayManagerRuntimeOgnDelegate` cached zoom ownership
-- OGN rendered icon-size scaling from base size plus viewport context
-- startup application of cached OGN zoom before overlay creation
-- OGN target-ring sizing derived from the same effective rendered icon size
+- OGN zoom-band icon sizing is implemented through:
+  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
+  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt`
+  - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- OGN immediate label visibility is implemented through style restyling in:
+  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+- Live Follow watch-aircraft zoom scaling is implemented in:
+  - `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
 
-Primary files proving that current baseline:
+Current branch regressions that block release-grade readiness:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt`
+1. A new OGN cluster/screen-declutter path was added on top of Phase 1.
+2. OGN tap behavior changed from direct target selection to cluster expand-on-tap.
+3. The watched-aircraft overlay still has a style-recreation hole when zoom/state
+   stay unchanged.
 
-## Outcome
+Verdict:
 
-Ship the actual remaining phase-1 win without rewriting the traffic runtime:
+`Ready with corrections`
 
-- OGN icon scaling continues to use the existing base-size-plus-viewport path.
-- OGN top/bottom traffic labels become a viewport-policy decision, not a side
-  effect of rendered icon size or user preference size.
-- OGN label visibility updates immediately on zoom-policy changes through style
-  layer visibility, instead of waiting for the next traffic source rebuild.
-- Live Follow watched-aircraft icon scales with zoom through its actual owner
-  path in the map UI runtime layer.
-- Existing OGN zoom plumbing, target-ring sizing, and startup zoom caching are
-  preserved.
+Phase A should correct those regressions without widening scope.
 
-## Why this phase exists
+## Requested Phase A outcome
 
-The codebase already moved further than the original brief assumed:
+Restore the branch to the actual Phase 1 contract:
 
-- OGN viewport zoom is already pushed from `MapInitializer`.
-- OGN effective icon size is already derived in `MapOverlayManagerRuntimeOgnDelegate`.
-- OGN still has one major phase-1 gap:
-  normal top/bottom label behavior is still coupled to rendered icon size and
-  GeoJson feature content, so zoom-only changes do not immediately update labels.
-- Live Follow watch-aircraft overlay still uses a fixed symbol scale and is not
-  wired to map zoom.
+- OGN traffic icons scale by the existing four zoom bands.
+- OGN top/bottom labels are gated by zoom through style visibility only.
+- The user OGN icon-size preference remains the base size input.
+- Live Follow watched-aircraft scale remains zoom-aware.
+- OGN target tap behavior stays direct and predictable.
+- No new cluster, regroup, or expand-on-tap behavior ships in this phase.
+- Watched-aircraft survives map style recreation even when zoom and watched
+  state do not change.
 
-So the real phase-1 work is now:
+## Why Phase A exists
 
-1. make OGN label behavior explicitly viewport-driven and immediate
-2. keep the existing OGN sizing owner instead of duplicating it
-3. add watched-aircraft zoom scaling in the UI runtime seam that already owns it
+The current branch already landed most of the intended user-visible Phase 1
+value, but it also crossed into Phase 2 behavior.
 
-## In scope
+The cluster path is not a harmless refactor:
 
-1. Keep the existing OGN viewport zoom and rendered-size owner path.
-2. Rework OGN phase-1 viewport policy so label visibility is independent of the
-   user icon-size preference.
-3. Apply OGN label gating through style layer visibility for the top and bottom
-   traffic label layers.
-4. Preserve cluster-count rendering in phase 1 unless QA shows it is still too
-   noisy at wide zoom.
-5. Keep target-ring sizing aligned with the effective OGN rendered icon size.
-6. Add zoom-aware scaling to the Live Follow watched-aircraft overlay.
-7. Feed current map zoom into `MapLiveFollowRuntimeLayer` from the existing
-   `currentZoom` hot-path flow.
-8. Rebase unit tests so they lock the new ownership and behavior instead of the
-   stale behavior now encoded in tests.
+- it adds new feature-generation ownership
+- it adds new runtime hit/result types
+- it changes tap semantics in the map gesture layer
+- it makes cluster topology depend on rendered icon size
+- it does not recompute topology on zoom-only restyles
 
-## Out of scope
+That violates the intended Phase 1 rule:
 
-Do not do these in phase 1:
+- zoom changes should restyle OGN layers only
+- Phase 1 should not redesign clustering or tap-selection behavior
 
-- shared OGN + ADS-B declutter policy extraction
-- priority-vs-normal traffic layer split
-- target ranking changes before truncation
-- dynamic OGN target caps
-- clustering / spiderfy / expand-on-tap redesign
-- changing OGN icon overlap flags for normal traffic
-- density-aware OGN label rules beyond the simple phase-1 gate
-- any ViewModel, repository, or persistence ownership change
+So Phase A is a corrective cut-back, not a new feature.
 
-Those remain phase-2 or later work.
+## Pipeline and owner path
+
+Relevant pipeline anchors from `docs/ARCHITECTURE/PIPELINE.md`:
+
+- `MapInitializer.setupInitialPosition(...)` and camera-idle callbacks are the
+  viewport-zoom producers for traffic declutter.
+- `MapOverlayManagerRuntimeOgnDelegate` is the OGN traffic runtime owner.
+- `MapLiveFollowRuntimeLayer` is the owner seam for watched-aircraft runtime
+  rendering.
+- `LiveFollowWatchAircraftOverlay` is render-only MapLibre layer ownership, not
+  repository or ViewModel ownership.
+
+No repository, ViewModel, or persistence owner changes are required in Phase A.
 
 ## Reference patterns reviewed
 
-Primary reference paths:
+Reference files reviewed:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
+- `origin/main:feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+- `origin/main:feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+- `origin/main:feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+- current `HEAD` versions of those same files plus:
+  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
+
+Pattern/structure to reuse:
+
+- keep viewport zoom and rendered icon-size ownership in
+  `MapOverlayManagerRuntimeOgnDelegate`
+- keep OGN overlay behavior as one traffic overlay source/layer owner
+- keep zoom-only behavior as style restyling, not source rebuild
+- keep watched-aircraft ownership in `MapLiveFollowRuntimeLayer` ->
+  `LiveFollowWatchAircraftOverlay`
+
+Intentional deviation from current branch:
+
+- remove branch-added OGN cluster/tap flow entirely from Phase A
+- keep only the narrow viewport scaling and label-visibility slice
+
+## Seam findings from the narrow code pass
+
+### 1) The new OGN cluster path is branch-only scope expansion
+
+The cluster path was introduced through these files:
+
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterModels.kt`
 - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt`
 
-Pattern to reuse:
+`origin/main` did not have cluster feature generation, cluster hit results, or
+cluster expand-on-tap.
 
-- traffic runtime delegate owns cached viewport inputs and forwards render-only
-  state into overlay handles
-- overlay classes own MapLibre layer/source/style mutation only
-- Compose runtime layer owns Live Follow watched-aircraft rendering and should
-  receive zoom through the existing `currentZoom` UI runtime flow
+### 2) The cluster path is inconsistent with Phase 1 zoom semantics
 
-Intentional deviation from ADS-B:
+Current cluster membership is computed from rendered icon size in:
 
-- do not move OGN viewport-policy ownership fully into `OgnTrafficOverlay`
-  because `MapOverlayManagerRuntimeOgnDelegate` already owns the effective icon
-  size that must stay shared with `OgnTargetRingOverlay`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
 
-## Critical seam findings from the code pass
+But zoom changes only restyle OGN layers through:
 
-1. OGN zoom plumbing already exists.
-   Re-adding `setOgnViewportZoom(...)` work would be duplicate churn.
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
 
-2. Current OGN label gating is coupled to rendered icon size and happens during
-   feature building.
-   That means user base size can affect label visibility, and zoom-only changes
-   do not update labels until the next OGN render.
+That leaves cluster topology stale until the next traffic render.
 
-3. Current OGN screen declutter/clustering also depends on rendered icon size.
-   Phase 1 should keep that behavior as-is unless QA shows regroup lag is too
-   visible after zoom changes.
+Conclusion:
 
-4. Live Follow watched-aircraft overlay is not owned by
-   `MapOverlayManagerRuntime`.
-   It is created in `MapLiveFollowRuntimeLayer`, so zoom must be fed there.
+The cluster path should not remain in Phase A.
 
-5. Existing tests lock stale behavior:
-   - `OgnTrafficLabelDeclutterPolicyTest`
-   - `OgnTrafficOverlayFeatureLabelDeclutterTest`
-   - `LiveFollowWatchAircraftOverlayTest`
+### 3) The watched-aircraft seam is correct, but the overlay reapply is incomplete
 
-## Implementation decisions
+The correct owner path is already in place:
 
-### 1) Keep the existing OGN viewport sizing owner
+- `MapScreenContentRuntime.currentZoom`
+- `MapLiveFollowRuntimeLayer(currentZoom = ...)`
+- `LiveFollowWatchAircraftOverlay.setViewportZoom(...)`
 
-Do not add a new parallel `OgnTrafficViewportDeclutterPolicy.kt` as the phase-1
-owner.
+But `LiveFollowWatchAircraftOverlay.setViewportZoom(...)` currently returns
+early when the resolved scale is unchanged, so style recreation at unchanged
+zoom/state can leave the overlay absent until another trigger arrives.
 
-Use the existing `OgnTrafficViewportSizing.kt` seam as the canonical phase-1
-owner and evolve it so one owner resolves:
+Conclusion:
 
-- rendered icon size
-- icon scale multiplier
-- top/bottom traffic labels visible or hidden
+Keep the current owner seam and fix the style-reapply behavior inside
+`LiveFollowWatchAircraftOverlay`.
 
-The owner stays in `feature:traffic`.
+### 4) OGN viewport policy ownership is already correct enough for Phase A
 
-### 2) Keep `MapOverlayManagerRuntimeOgnDelegate` as the effective viewport-policy owner
+The branch now has one explicit OGN zoom-band owner:
 
-`MapOverlayManagerRuntimeOgnDelegate` already owns:
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
 
-- base OGN icon size preference
-- cached viewport zoom
-- effective rendered OGN icon size used by both traffic and target-ring paths
+And one rendered-size owner:
 
-Keep that ownership.
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt`
 
-Recommended addition:
+That ownership is acceptable for Phase A and should stay.
 
-- resolve one OGN phase-1 viewport policy object in the delegate
-- forward that policy to the OGN traffic overlay
-- continue forwarding only rendered icon size to the target-ring overlay
+## Phase A scope
 
-This avoids duplicating viewport-policy math in multiple runtime owners.
+### In scope
 
-### 3) Separate OGN label visibility from user icon size
+1. Keep OGN viewport zoom-band icon scaling.
+2. Keep OGN immediate top/bottom label visibility restyling.
+3. Remove all branch-added OGN cluster/screen-declutter/render-hit behavior.
+4. Restore direct OGN target tap behavior.
+5. Keep watched-aircraft zoom scaling.
+6. Fix watched-aircraft style recreation with unchanged zoom/state.
+7. Rebase tests to the corrected Phase A seam.
 
-The user icon-size preference remains the base input for icon rendering only.
+### Out of scope
 
-Top/bottom label visibility must not be decided from the rendered icon-size
-thresholds alone, because that couples label behavior to the user preference.
+Do not do these in Phase A:
 
-Phase-1 rule:
+- any OGN clustering or regrouping
+- cluster count labels
+- expand-on-tap camera behavior
+- spiderfy
+- ranking changes
+- `MAX_TARGETS` changes
+- overlap-flag redesign
+- shared ADS-B/OGN declutter extraction
+- repository, ViewModel, or persistence refactors
 
-- close zoom: top and bottom traffic label layers visible
-- below close zoom threshold: top and bottom traffic label layers hidden
+Those remain Phase 2 or later.
 
-Cluster-count rendering stays visible in phase 1 unless QA rejects it.
+## SSOT ownership and dependency direction
 
-### 4) Apply OGN label gating through style layer visibility
-
-Do not blank label text in GeoJson as the primary phase-1 mechanism.
-
-Use style `visibility("visible" | "none")` for:
-
-- `TOP_LABEL_LAYER_ID`
-- `BOTTOM_LABEL_LAYER_ID`
-
-Why:
-
-- immediate zoom response without waiting for next target refresh
-- lower churn than regenerating source data just to hide/show labels
-- simpler startup behavior with less label flash risk
-
-### 5) Preserve current OGN icon scaling unless QA requires retuning
-
-The current OGN size path already exists and is covered by tests.
-
-Phase 1 should not spend scope retuning OGN icon bands unless QA rejects the
-current curve.
-
-If a later tuning pass is needed, do it as a separate change from the label
-visibility ownership fix.
-
-### 6) Watch-aircraft zoom scaling is UI-runtime-owned
-
-`LiveFollowWatchAircraftOverlay` is a render-only runtime object created by
-`MapLiveFollowRuntimeLayer`.
-
-So the phase-1 seam is:
-
-`MapScreenContentRuntime.currentZoom`
--> `MapLiveFollowRuntimeLayer(currentZoom = ...)`
--> `LiveFollowWatchAircraftOverlay.setViewportZoom(...)`
-
-Do not route this through `MapOverlayManagerRuntime`.
-
-### 7) Cache watch-aircraft zoom inside the overlay
-
-`LiveFollowWatchAircraftOverlay` should cache:
-
-- current viewport zoom
-- current resolved icon scale
-
-That cached zoom must be applied:
-
-- when zoom changes
-- when the symbol layer is first created
-- after style recreation
-
-This preserves correct first-frame behavior at wide or close startup zoom.
-
-## Ownership and boundaries
-
-### SSOT / runtime ownership
+### SSOT ownership
 
 - OGN base icon size preference
   - authoritative owner: existing traffic settings/repository path
-  - read path here: `MapOverlayManagerRuntimeOgnDelegate.setIconSizePx(...)`
-  - forbidden duplicate: new overlay-owned preference state
+  - read seam here: `MapOverlayManagerRuntimeOgnDelegate.setIconSizePx(...)`
+  - forbidden duplicate: overlay-owned preference state
 
-- OGN cached viewport zoom
+- OGN viewport zoom
   - authoritative owner: `MapOverlayManagerRuntimeOgnDelegate`
-  - exposed as: delegate-local runtime state only
-  - forbidden duplicate: second zoom owner inside OGN traffic overlay
+  - exposed as: runtime-only forwarded value into `OgnTrafficOverlay`
+  - forbidden duplicate: second viewport authority in support/helpers
 
-- OGN effective phase-1 viewport policy
-  - authoritative owner: `MapOverlayManagerRuntimeOgnDelegate`
-  - exposed as: render-only policy forwarded to `OgnTrafficOverlay`
-  - forbidden duplicate: separate label-policy owner in `OgnTrafficOverlaySupport`
+- OGN label visibility
+  - authoritative owner: `OgnTrafficViewportDeclutterPolicy`
+  - applied by: `OgnTrafficOverlay` plus `OgnTrafficOverlaySupport`
+  - forbidden duplicate: feature-generation label blanking as an independent
+    authority
 
-- OGN top/bottom label visibility
-  - authoritative owner: OGN phase-1 viewport policy
-  - applied by: `OgnTrafficOverlay` / `OgnTrafficOverlaySupport`
-  - forbidden duplicate: GeoJson-only label hiding path as the active phase-1 authority
+- OGN target hit resolution
+  - authoritative owner: rendered OGN target features in `OgnTrafficOverlay`
+  - forbidden duplicate: parallel cluster-hit model in Phase A
 
-- watched-aircraft viewport zoom
-  - authoritative owner: `MapLiveFollowRuntimeLayer` input from existing map zoom flow
+- watched-aircraft zoom
+  - authoritative owner: `MapLiveFollowRuntimeLayer` input from existing map
+    zoom flow
   - applied by: `LiveFollowWatchAircraftOverlay`
-  - forbidden duplicate: ViewModel or repository mirror
+  - forbidden duplicate: ViewModel/repository mirror
 
 ### Dependency direction
 
 Remains:
 
-`UI runtime -> traffic/map runtime render objects`
+`UI runtime -> map runtime render objects`
 
-No new repository, ViewModel, or domain bypasses are introduced.
+No new domain, repository, or Android boundary adapter is needed.
 
-### Boundary adapters
+## File ownership plan
 
-No new persistence, sensor, network, file-I/O, or device-boundary adapter is
-required for this phase.
+| File | New / Existing | Owner / Responsibility | Why this file owns it | Why not another layer/file |
+|---|---|---|---|---|
+| `docs/ZOOM/xcpro-phase-1-implementation-brief.md` | Existing | Phase A corrective plan | This is the active implementation brief | Do not spread phase ownership across chat history |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt` | Existing | Canonical OGN zoom-band policy | It already owns the four zoom bands | Do not move policy into UI or runtime helpers |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt` | Existing | Base-size to rendered-size resolution | It already owns rendered icon-size resolution | Keep one rendered-size owner |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt` | Existing | OGN overlay runtime layer/source behavior | Overlay owns MapLibre source and style mutation | Delegate should not own feature generation |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt` | Existing | OGN layer construction and style property helpers | This is the existing OGN style helper seam | Keep style helpers out of the delegate |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt` | Existing | Branch-only cluster feature path | This file is only needed because the cluster path was added | Delete or retire in Phase A because cluster behavior is out of scope |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | Existing | Branch-only screen clustering policy | This file exists solely for cluster grouping | Delete or retire in Phase A |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterModels.kt` | Existing | Branch-only cluster hit/render models | This file exists solely for cluster behavior | Delete or retire in Phase A |
+| `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt` | Existing | OGN runtime handle contract | This is the runtime seam between map shell and traffic overlay handles | Do not hide contract changes in callers |
+| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | Cached OGN viewport input and rendered-size forwarding | It is the runtime owner already wired from `MapInitializer` | Do not duplicate runtime state in overlay helpers |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | Public map-runtime API surface | This is the shell-facing runtime contract owner | Keep shell APIs centralized |
+| `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` | Existing | Map tap routing | The gesture layer owns user tap behavior | Do not hide tap semantics inside the delegate |
+| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt` | Existing | Ring overlay rendering and hit resolution | It owns the target-ring runtime seam | Keep ring hit behavior local to the ring overlay |
+| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | Watched-aircraft overlay lifecycle and zoom forwarding | This is the actual UI-runtime owner seam | Do not route through unrelated runtime managers |
+| `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | Existing | Watched-aircraft scale/style application | It owns the MapLibre layer/source for the watched aircraft | The composable should not own style mutation details |
 
-## File plan
+## Phase A file change plan
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt`
-  - existing
-  - owns the canonical phase-1 OGN viewport policy
-  - why here: existing OGN size policy already lives here; avoid duplicate policy owners
-
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
-  - existing
-  - owns the OGN traffic overlay handle contract update needed to forward the viewport policy
-  - why here: this is the cross-runtime seam already used by the delegate
-
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-  - existing
-  - owns cached OGN viewport inputs and forwarding of resolved render-only policy
-  - why here: delegate already owns effective rendered icon size shared with target ring
+### Production files expected to change
 
 - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - existing
-  - owns live OGN style updates and any immediate style-only response to viewport-policy changes
-  - why here: overlay owns MapLibre source/layer state
+  - remove `resolveRenderItems(...)`
+  - remove cluster-aware hit path
+  - keep viewport zoom state and style-only label gating
+  - restore direct target feature rendering
 
 - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
-  - existing
-  - owns label-layer visibility and style property helpers
-  - why here: all OGN symbol-layer construction and property updates already live here
+  - keep icon-size and label-visibility restyling
+  - remove branch-added cluster layer/style behavior
+  - retain top/bottom label visibility toggles
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt`
-  - existing
-  - remove or retire from the top/bottom label path
-  - why here: keeping it active would leave duplicate label-policy ownership
+- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
+  - keep `setViewportZoom(...)`
+  - revert OGN hit APIs from `findHitAt(...)` to direct `findTargetAt(...)`
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - existing
-  - owns forwarding current map zoom into the live-follow runtime layer
-  - why here: `currentZoom` is already collected here
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+  - keep rendered-size ownership and viewport zoom caching
+  - remove cluster hit / expand APIs
+  - restore direct target lookup
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
-  - existing
-  - owns feeding `currentZoom` into the watched-aircraft overlay
-  - why here: this composable already owns the overlay lifecycle
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+  - keep `setOgnViewportZoom(...)`
+  - remove public cluster hit / expand APIs
+  - keep direct `findOgnTargetAt(...)`
+
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+  - restore direct OGN target tap path
+  - remove cluster expand-on-tap behavior
+
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt`
+  - keep rendered-size ring behavior if it is already part of the viewport-sized
+    Phase 1 path
+  - revert hit API to direct target key return
 
 - `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
-  - existing
-  - owns watched-aircraft scale resolution and style application
-  - why here: render-only MapLibre layer owner for this overlay
+  - keep zoom-band scaling
+  - fix style recreation so runtime objects are reapplied even when the
+    resolved scale is unchanged
 
-- tests to update
-  - `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficViewportSizingTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficLabelDeclutterPolicyTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficOverlayFeatureLabelDeclutterTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlayTest.kt`
+### Files expected to be deleted or retired from the production path
+
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterModels.kt`
+
+If any helper from those files remains useful after cluster removal, move only
+the non-cluster logic into the canonical OGN overlay/support files and delete
+the cluster-only artifacts.
+
+## Test plan for Phase A
+
+### Tests to delete or rewrite
+
+- `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateClusterTapTest.kt`
+- `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficOverlayFeatureScreenDeclutterTest.kt`
+
+Those tests lock Phase 2 behavior and should not stay attached to Phase 1.
+
+### Tests to keep and adjust
+
+- `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
+  - keep viewport sizing expectations
+  - remove cluster-specific API expectations
+
+- `feature/map/src/test/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlayTest.kt`
+  - keep zoom-band scale expectations
+  - add style-recreation regression coverage
+
+### Tests to add
+
+1. OGN direct target hit regression
+   - close-zoom taps still resolve a target key
+   - no cluster hit type remains in the Phase A path
+
+2. Watched-aircraft style recreation regression
+   - unchanged zoom and unchanged watched state still recreate/apply the layer
+     correctly after style replacement
+
+3. OGN zoom restyle regression
+   - zoom changes still restyle icon size and top/bottom label visibility
+   - no zoom-only source rebuild requirement is introduced by Phase A
 
 ## Time base declaration
 
-Phase-1 changes are render-only runtime behavior.
+Phase A remains render-only runtime work.
 
-Time-dependent values touched by this phase:
+Newly introduced time-dependent values:
 
-- none newly introduced in domain or fusion logic
+- none
 
-Existing time use that remains unchanged:
+Existing unchanged time usage:
 
 - OGN stale/live alpha rendering continues to use existing monotonic runtime
-  behavior inside the overlay render path
+  behavior in overlay render code
 
 Forbidden:
 
-- no wall-time use in domain/fusion
-- no replay-time mixing with runtime zoom decisions
+- no wall/system time added in domain or fusion
+- no replay/live divergence introduced by the corrective cut-back
 
 ## Replay determinism
 
@@ -356,78 +372,61 @@ Forbidden:
 - Randomness used: none
 - Replay/live divergence rule: none added
 
-Reasoning:
+Reason:
 
-- OGN and Live Follow changes remain render-only map runtime behavior
-- zoom input comes from existing map UI runtime state
-- no network, persistence, or random source is added
+Phase A only removes cluster behavior from render/tap flow and fixes a render
+ reapply hole in the watched-aircraft overlay.
 
 ## Delivery order
 
-1. Re-base the OGN phase-1 policy owner in `OgnTrafficViewportSizing.kt`.
-2. Update the OGN overlay handle seam so the delegate can forward the resolved
-   viewport policy.
-3. Apply immediate OGN label visibility through style layer visibility in
-   `OgnTrafficOverlay` / `OgnTrafficOverlaySupport`.
-4. Retire the old top/bottom label declutter path and update affected tests.
-5. Thread `currentZoom` into `MapLiveFollowRuntimeLayer`.
-6. Add cached zoom-aware watch-aircraft scaling in `LiveFollowWatchAircraftOverlay`.
-7. Run unit tests and required repo gates.
-8. Capture map evidence for the impacted SLOs.
+1. Remove the branch-added OGN cluster screen-declutter models and policy.
+2. Restore direct OGN feature rendering and target hit resolution.
+3. Restore direct OGN tap routing in the map gesture layer.
+4. Keep OGN viewport zoom sizing and immediate label gating intact.
+5. Fix watched-aircraft style recreation in `LiveFollowWatchAircraftOverlay`.
+6. Rebase tests from cluster behavior back to true Phase 1 behavior.
+7. Run focused tests, then required repo gates, then manual map QA.
 
 ## Acceptance criteria
 
 ### Functional
 
-- OGN icons continue to scale from the existing base-size-plus-viewport path.
-- OGN top/bottom labels are hidden below the chosen zoom threshold regardless
-  of user base icon size.
-- OGN top/bottom label visibility updates immediately when zoom policy changes.
-- Live Follow watched aircraft visibly shrinks at wider zoom and returns to its
-  larger close-zoom scale.
-- No crash on style recreation or when zoom arrives before overlays are created.
-
-### UX
-
-- At wide zoom, OGN normal labels no longer linger because the user picked a
-  larger icon-size preference.
-- At close zoom, OGN labels return immediately and consistently.
-- Watched aircraft remains easy to spot without dominating wide-zoom views.
+- OGN icons still scale by the existing four zoom bands.
+- OGN top/bottom labels are visible only in the close zoom band.
+- OGN zoom changes restyle the overlay without needing a zoom-only source
+  rebuild.
+- OGN tap selection resolves aircraft directly again.
+- Live Follow watched-aircraft still scales across all four bands.
+- Live Follow watched-aircraft survives style recreation without waiting for a
+  new zoom or watched-state change.
 
 ### Technical
 
 - no new SSOT owner
 - no ViewModel or repository changes
 - no new timebase risk
-- no duplicate OGN viewport-policy owner
+- no cluster path remains in Phase A production code
 
 ## QA checklist
 
-1. Dense OGN traffic, zoom from close to wide and back.
-   - confirm labels hide/show immediately on zoom-policy changes
-   - confirm label behavior is the same at different user icon-size settings
+1. Dense OGN traffic at close zoom
+   - confirm direct aircraft tap selection still works
 
-2. Fresh app launch at a wide zoom.
-   - confirm OGN starts with wide-zoom label state
-   - confirm watched aircraft starts at the reduced wide-zoom scale
+2. Dense OGN traffic across zoom bands
+   - confirm icon scaling and top/bottom label gating still work
 
-3. Fresh app launch at a close zoom.
-   - confirm OGN labels are visible immediately
-   - confirm watched aircraft starts at the close-zoom scale
+3. Wide-zoom startup
+   - confirm OGN starts reduced and labels stay hidden
 
-4. Change OGN icon size in settings.
-   - confirm icon scale still follows the new base size
-   - confirm label visibility does not drift with the setting change
+4. Close-zoom startup
+   - confirm OGN starts at base size with labels visible
 
-5. Enable watched aircraft overlay and zoom across bands.
-   - confirm scale changes on zoom updates
-   - confirm style recreation does not lose the cached scale
+5. Change OGN icon size in settings
+   - confirm all bands still scale from the new base size
 
-6. OGN tap selection at close zoom.
-   - confirm selection still works
-
-7. Satellite / contrast icon mode if available.
-   - confirm icon scaling still applies correctly
+6. Watched aircraft across zoom bands and after style swap
+   - confirm scale changes immediately
+   - confirm overlay remains visible after style recreation
 
 ## Verification
 
@@ -437,10 +436,15 @@ Required repo gates:
 - `./gradlew testDebugUnitTest`
 - `./gradlew assembleDebug`
 
+Focused tests expected during Phase A:
+
+- OGN viewport sizing/policy tests
+- OGN overlay direct target-hit regression
+- Live Follow watched-aircraft scaling and style recreation tests
+
 Map/runtime evidence obligations:
 
-- declare impacted SLOs before coding
-- minimum expected set for this phase:
+- impacted SLOs remain:
   - `MS-UX-01`
   - `MS-UX-03`
   - `MS-UX-04`
@@ -448,21 +452,26 @@ Map/runtime evidence obligations:
   - `MS-ENG-01`
   - `MS-ENG-02`
 
-Run connected tests when runtime/device behavior needs confirmation.
+Manual map QA is still required before marking the PR ready.
 
-## Docs and governance
+## Rollback note
 
-- Update this phase brief when implementation lands if any seam/name changes.
-- `PIPELINE.md` does not need an update if ownership stays within the existing
-  traffic runtime and live-follow runtime paths.
-- No ADR is expected if this stays a narrow runtime implementation change.
-- Add a `KNOWN_DEVIATIONS.md` entry only if SLO evidence misses mandatory
-  thresholds or an explicit temporary rule exception is introduced.
+If Phase A goes wrong, rollback should target only the corrective commit and not
+reintroduce the cluster path as part of the fix.
+
+Phase A rollback intent:
+
+- preserve current viewport zoom sizing owner
+- preserve current label visibility owner
+- preserve watched-aircraft scaling owner
+- do not reopen cluster/tap redesign in the rollback
 
 ## Recommended next step
 
-Implement the re-based phase-1 scope from this brief instead of the stale
-original version:
+Implement Phase A exactly as a corrective cut-back:
 
-1. OGN immediate zoom-policy label gating with one canonical owner
-2. watched-aircraft zoom scaling through the UI runtime seam
+1. keep viewport sizing and label gating
+2. remove the cluster/tap expansion path
+3. fix watched-aircraft style recreation
+
+That yields the smallest release-grade Phase 1 slice from the current branch.

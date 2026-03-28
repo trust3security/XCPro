@@ -7,11 +7,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -20,14 +18,13 @@ import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-class MapOverlayManagerRuntimeOgnDelegateClusterTapTest {
+class MapOverlayManagerRuntimeOgnDelegateTargetTapTest {
 
     @Test
-    fun findHitAt_prefersRingHitBeforeTrafficOverlay() = runTest {
-        val ringHit = OgnTrafficHitResult.Target(targetKey = "ring")
+    fun findTargetAt_prefersRingTargetBeforeTrafficOverlay() = runTest {
         val ringOverlay: OgnTargetRingOverlayHandle = mock()
         val trafficOverlay: OgnTrafficOverlayHandle = mock()
-        whenever(ringOverlay.findHitAt(any())).thenReturn(ringHit)
+        whenever(ringOverlay.findTargetAt(any())).thenReturn("ring")
 
         val fixture = createFixture(
             scope = this,
@@ -35,20 +32,19 @@ class MapOverlayManagerRuntimeOgnDelegateClusterTapTest {
             ognTrafficOverlay = trafficOverlay
         )
 
-        val hit = fixture.delegate.findHitAt(LatLng(-35.0, 149.0))
+        val targetKey = fixture.delegate.findTargetAt(LatLng(-35.0, 149.0))
 
-        assertEquals(ringHit, hit)
-        verify(ringOverlay).findHitAt(any())
+        assertEquals("ring", targetKey)
+        verify(ringOverlay).findTargetAt(any())
         verifyNoInteractions(trafficOverlay)
     }
 
     @Test
-    fun findHitAt_fallsBackToTrafficOverlayWhenRingMisses() = runTest {
+    fun findTargetAt_fallsBackToTrafficOverlayWhenRingMisses() = runTest {
         val ringOverlay: OgnTargetRingOverlayHandle = mock()
         val trafficOverlay: OgnTrafficOverlayHandle = mock()
-        val trafficHit = OgnTrafficHitResult.Target(targetKey = "traffic")
-        whenever(ringOverlay.findHitAt(any())).thenReturn(null)
-        whenever(trafficOverlay.findHitAt(any())).thenReturn(trafficHit)
+        whenever(ringOverlay.findTargetAt(any())).thenReturn(null)
+        whenever(trafficOverlay.findTargetAt(any())).thenReturn("traffic")
 
         val fixture = createFixture(
             scope = this,
@@ -56,39 +52,11 @@ class MapOverlayManagerRuntimeOgnDelegateClusterTapTest {
             ognTrafficOverlay = trafficOverlay
         )
 
-        val hit = fixture.delegate.findHitAt(LatLng(-35.0, 149.0))
+        val targetKey = fixture.delegate.findTargetAt(LatLng(-35.0, 149.0))
 
-        assertEquals(trafficHit, hit)
-        verify(ringOverlay).findHitAt(any())
-        verify(trafficOverlay).findHitAt(any())
-    }
-
-    @Test
-    fun expandCluster_animatesCameraUpdate() = runTest {
-        val map: MapLibreMap = mock()
-        whenever(map.cameraPosition).thenReturn(
-            CameraPosition.Builder()
-                .target(LatLng(-35.0, 149.0))
-                .zoom(9.0)
-                .bearing(14.0)
-                .tilt(8.0)
-                .build()
-        )
-        val fixture = createFixture(
-            scope = this,
-            map = map
-        )
-
-        fixture.delegate.expandCluster(
-            OgnTrafficHitResult.Cluster(
-                clusterKey = "cluster:FLARM:A|FLARM:B",
-                centerLatitude = -35.2,
-                centerLongitude = 149.3,
-                memberCount = 2
-            )
-        )
-
-        verify(map).animateCamera(any(), eq(320))
+        assertEquals("traffic", targetKey)
+        verify(ringOverlay).findTargetAt(any())
+        verify(trafficOverlay).findTargetAt(any())
     }
 
     private fun createFixture(

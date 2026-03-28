@@ -1,0 +1,32 @@
+﻿{
+    "package_id":  "pkg-e1",
+    "phase":  "phase3",
+    "work_package":  "WP-08",
+    "mapscreen_items":  [
+                            "MAPSCREEN-006",
+                            "MAPSCREEN-007"
+                        ],
+    "generated_at":  "2026-03-28T15:15:18.9131118+11:00",
+    "commit_sha":  "a1a6bdf412929b69d224b1016269ee3976434ba9",
+    "branch":  "fix/aircraft-clutter",
+    "dirty_worktree":  true,
+    "build_variant":  "debug",
+    "scenario_ids":  [
+                         "scenario-8-mixed-load-stress",
+                         "scenario-3-panzoom-ogn-adsb-rain",
+                         "scenario-4-aat-edit-drag"
+                     ],
+    "device_tiers":  [
+                         "tier_a",
+                         "tier_b"
+                     ],
+    "run_count":  {
+                      "unit":  1,
+                      "integration":  1,
+                      "perf":  0
+                  },
+    "focused_tests":  [
+                          "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
+                          "com.example.xcpro.map.TaskRenderSyncCoordinatorTest"
+                      ]
+}

@@ -419,6 +419,7 @@ internal fun MapScreenContent(
             taskRenderSnapshotProvider = taskRenderSnapshotProvider,
             watchedPilotFocusEpoch = watchedPilotFocusEpoch,
             mapLibreMapProvider = mapLibreMapProvider,
+            mapViewProvider = { mapState.mapView },
             onFocusWatchedPilot = onFocusWatchedPilot
         )
     }

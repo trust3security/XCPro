@@ -1,0 +1,47 @@
+﻿{
+    "package_id":  "pkg-e1",
+    "phase":  "phase3",
+    "generated_at":  "2026-03-28T15:15:18.9131118+11:00",
+    "command_gates":  [
+                          {
+                              "label":  "enforceRules",
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "testDebugUnitTest",
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "assembleDebug",
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "connected_app_tests",
+                              "command":  ".\\gradlew.bat :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true",
+                              "status":  "pass",
+                              "exit_code":  0
+                          }
+                      ],
+    "slo_gates":  [
+                      {
+                          "slo_id":  "MS-UX-01",
+                          "status":  "not_evaluated",
+                          "reason":  "missing_device_perf_capture"
+                      }
+                  ],
+    "promotion_decision":  "blocked_pending_perf_evidence",
+    "rollback_recommendation":  "Do not promote until tier_a/tier_b perf evidence is captured and attached.",
+    "determinism_gates":  [
+                              {
+                                  "det_id":  "DET-04",
+                                  "status":  "pass",
+                                  "evidence":  "MapLifecycleManagerResumeSyncTest"
+                              }
+                          ]
+}

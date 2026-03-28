@@ -293,12 +293,7 @@ open class MapOverlayManagerRuntime(
     fun setOgnIconSizePx(iconSizePx: Int) = ognDelegate.setIconSizePx(iconSizePx)
 
     fun findAdsbTargetAt(tap: LatLng): Icao24? = trafficDelegate.findAdsbTargetAt(tap)
-    fun findOgnHitAt(tap: LatLng): OgnTrafficHitResult? = ognDelegate.findHitAt(tap)
-    fun expandOgnCluster(cluster: OgnTrafficHitResult.Cluster) = ognDelegate.expandCluster(cluster)
-    fun findOgnTargetAt(tap: LatLng): String? = when (val hit = findOgnHitAt(tap)) {
-        is OgnTrafficHitResult.Target -> hit.targetKey
-        else -> null
-    }
+    fun findOgnTargetAt(tap: LatLng): String? = ognDelegate.findTargetAt(tap)
     fun findOgnThermalHotspotAt(tap: LatLng): String? =
         ognDelegate.findThermalHotspotAt(tap)
 

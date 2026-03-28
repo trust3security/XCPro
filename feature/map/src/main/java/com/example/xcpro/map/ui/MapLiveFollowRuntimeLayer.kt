@@ -25,6 +25,7 @@ import com.example.xcpro.map.LiveFollowWatchTaskOverlay
 import com.example.xcpro.map.LiveFollowWatchTaskOverlayState
 import com.example.xcpro.map.TaskRenderSnapshot
 import java.util.Locale
+import org.maplibre.android.maps.MapView
 
 internal data class MapLiveFollowTaskAttachmentState(
     val attachTask: Boolean,
@@ -135,6 +136,7 @@ internal fun BoxScope.MapLiveFollowRuntimeLayer(
     taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
     watchedPilotFocusEpoch: Int,
     mapLibreMapProvider: () -> org.maplibre.android.maps.MapLibreMap?,
+    mapViewProvider: () -> MapView?,
     onFocusWatchedPilot: (Double, Double) -> Boolean
 ) {
     val watchViewModel: LiveFollowWatchViewModel = hiltViewModel()
@@ -150,6 +152,7 @@ internal fun BoxScope.MapLiveFollowRuntimeLayer(
         resolveMapLiveFollowWatchOverlayState(uiState)
     }
     val mapLibreMap = mapLibreMapProvider()
+    val mapView = mapViewProvider()
     val appContext = LocalContext.current.applicationContext
     val watchAircraftOverlay = remember(mapLibreMap, appContext) {
         mapLibreMap?.let { LiveFollowWatchAircraftOverlay(map = it, context = appContext) }
@@ -174,6 +177,22 @@ internal fun BoxScope.MapLiveFollowRuntimeLayer(
     }
     LaunchedEffect(watchAircraftOverlay, watchedPilotOverlayState) {
         watchAircraftOverlay?.render(watchedPilotOverlayState)
+    }
+    DisposableEffect(mapView, watchAircraftOverlay, watchedPilotOverlayState, currentZoom) {
+        val currentMapView = mapView
+        val currentOverlay = watchAircraftOverlay
+        if (currentMapView == null || currentOverlay == null) {
+            onDispose {}
+        } else {
+            val listener = MapView.OnDidFinishLoadingStyleListener {
+                currentOverlay.setViewportZoom(currentZoom)
+                currentOverlay.reapplyCurrentStyle()
+            }
+            currentMapView.addOnDidFinishLoadingStyleListener(listener)
+            onDispose {
+                currentMapView.removeOnDidFinishLoadingStyleListener(listener)
+            }
+        }
     }
     LaunchedEffect(watchTaskOverlay, taskAttachmentState.overlayState) {
         watchTaskOverlay?.render(taskAttachmentState.overlayState)

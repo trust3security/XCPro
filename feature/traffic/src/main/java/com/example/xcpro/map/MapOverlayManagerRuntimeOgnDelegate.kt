@@ -7,8 +7,6 @@ import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.maplibre.android.camera.CameraPosition
-import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 
@@ -254,25 +252,10 @@ class MapOverlayManagerRuntimeOgnDelegate(
         applyResolvedIconSizeToLiveOverlays()
     }
 
-    fun findHitAt(tap: LatLng): OgnTrafficHitResult? =
-        runtimeState.ognTargetRingOverlay?.findHitAt(tap)
-            ?: runtimeState.ognTrafficOverlay?.findHitAt(tap)
-
-    fun expandCluster(cluster: OgnTrafficHitResult.Cluster) {
-        val map = runtimeState.mapLibreMap ?: return
-        val currentCamera = map.cameraPosition ?: return
-        val nextZoom = (currentCamera.zoom + OGN_CLUSTER_TAP_ZOOM_DELTA)
-            .coerceAtMost(OGN_CLUSTER_TAP_MAX_ZOOM)
-        val cameraPosition = CameraPosition.Builder()
-            .target(LatLng(cluster.centerLatitude, cluster.centerLongitude))
-            .zoom(nextZoom)
-            .bearing(currentCamera.bearing)
-            .tilt(currentCamera.tilt)
-            .build()
-        map.animateCamera(
-            CameraUpdateFactory.newCameraPosition(cameraPosition),
-            OGN_CLUSTER_TAP_ANIMATION_MS
-        )
+    fun findTargetAt(tap: LatLng): String? {
+        val ringTarget = runtimeState.ognTargetRingOverlay?.findTargetAt(tap)
+        if (!ringTarget.isNullOrBlank()) return ringTarget
+        return runtimeState.ognTrafficOverlay?.findTargetAt(tap)
     }
 
     fun findThermalHotspotAt(tap: LatLng): String? = runtimeState.ognThermalOverlay?.findTargetAt(tap)
@@ -489,8 +472,5 @@ class MapOverlayManagerRuntimeOgnDelegate(
 
     private companion object {
         private const val TAG = "MapOverlayManager"
-        private const val OGN_CLUSTER_TAP_ZOOM_DELTA = 1.35
-        private const val OGN_CLUSTER_TAP_MAX_ZOOM = 15.5
-        private const val OGN_CLUSTER_TAP_ANIMATION_MS = 320
     }
 }

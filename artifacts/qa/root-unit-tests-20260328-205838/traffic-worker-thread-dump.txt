@@ -1,0 +1,462 @@
+﻿14400:
+2026-03-28 21:02:30
+Full thread dump OpenJDK 64-Bit Server VM (21.0.8+-14018985-b1038.68 mixed mode):
+
+Threads class SMR info:
+_java_thread_list=0x000002edea6328e0, length=33, elements={
+0x000002edc2a673b0, 0x000002eddd0dd140, 0x000002eddd0debb0, 0x000002eddd0f4c00,
+0x000002eddd101760, 0x000002eddd10bdd0, 0x000002eddd10c830, 0x000002eddd10da30,
+0x000002eddd10e5c0, 0x000002eddd121820, 0x000002eddd35ea70, 0x000002edddfb2010,
+0x000002edde4e60b0, 0x000002edde4f08e0, 0x000002eddecaa610, 0x000002ede18f8db0,
+0x000002ede52ed760, 0x000002ede52ee480, 0x000002ede52eeb10, 0x000002ede52efec0,
+0x000002ede52eca40, 0x000002ede52f0550, 0x000002ede52ef1a0, 0x000002ede52ed0d0,
+0x000002ede52f0be0, 0x000002ede52f39d0, 0x000002ede52f1270, 0x000002ede52f2620,
+0x000002ede52f2cb0, 0x000002ede52e4600, 0x000002ede52e3f70, 0x000002ede52e4c90,
+0x000002ede52e3250
+}
+
+"Test worker @coroutine#1731" #1 [30308] prio=5 os_prio=0 cpu=212953.12ms elapsed=228.82s tid=0x000002edc2a673b0 nid=30308 runnable  [0x000000fae8ffd000]
+   java.lang.Thread.State: RUNNABLE
+	at java.lang.Thread.setNativeName(java.base@21.0.8/Native Method)
+	at java.lang.Thread.setName(java.base@21.0.8/Unknown Source)
+	- locked <0x00000000e0e352f0> (a java.lang.Thread)
+	at kotlinx.coroutines.CoroutineId.restoreThreadContext(CoroutineContext.kt:307)
+	at kotlinx.coroutines.CoroutineId.restoreThreadContext(CoroutineContext.kt:280)
+	at kotlinx.coroutines.internal.ThreadContextKt.restoreThreadContext(ThreadContext.kt:90)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:235)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.test.TestDispatcher.processEvent$kotlinx_coroutines_test(TestDispatcher.kt:24)
+	at kotlinx.coroutines.test.TestCoroutineScheduler.tryRunNextTaskUnless$kotlinx_coroutines_test(TestCoroutineScheduler.kt:99)
+	at kotlinx.coroutines.test.TestCoroutineScheduler.advanceUntilIdleOr$kotlinx_coroutines_test(TestCoroutineScheduler.kt:118)
+	at kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1.invokeSuspend(TestBuilders.kt:368)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:28)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:99)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:277)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source)
+	at kotlinx.coroutines.test.TestBuildersJvmKt.createTestResult(TestBuildersJvm.kt:10)
+	at kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:310)
+	at kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(Unknown Source)
+	at kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:168)
+	at kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(Unknown Source)
+	at kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0$default(TestBuilders.kt:160)
+	at kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0$default(Unknown Source)
+	at com.example.xcpro.adsb.AdsbTrafficRepositoryResilienceTest.unexpectedLoopException_recoversAndContinuesPolling(AdsbTrafficRepositoryResilienceTest.kt:307)
+	at java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial(java.base@21.0.8/DirectMethodHandle$Holder)
+	at java.lang.invoke.LambdaForm$MH/0x0000000100201000.invoke(java.base@21.0.8/LambdaForm$MH)
+	at java.lang.invoke.Invokers$Holder.invokeExact_MT(java.base@21.0.8/Invokers$Holder)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(java.base@21.0.8/Unknown Source)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(java.base@21.0.8/Unknown Source)
+	at java.lang.reflect.Method.invoke(java.base@21.0.8/Unknown Source)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestClassExecutor.runTestClass(JUnitTestClassExecutor.java:112)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestClassExecutor.execute(JUnitTestClassExecutor.java:58)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestClassExecutor.execute(JUnitTestClassExecutor.java:40)
+	at org.gradle.api.internal.tasks.testing.junit.AbstractJUnitTestClassProcessor.processTestClass(AbstractJUnitTestClassProcessor.java:54)
+	at org.gradle.api.internal.tasks.testing.SuiteTestClassProcessor.processTestClass(SuiteTestClassProcessor.java:53)
+	at java.lang.invoke.LambdaForm$DMH/0x00000001000c3400.invokeInterface(java.base@21.0.8/LambdaForm$DMH)
+	at java.lang.invoke.LambdaForm$MH/0x00000001000dbc00.invoke(java.base@21.0.8/LambdaForm$MH)
+	at java.lang.invoke.Invokers$Holder.invokeExact_MT(java.base@21.0.8/Invokers$Holder)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(java.base@21.0.8/Unknown Source)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(java.base@21.0.8/Unknown Source)
+	at java.lang.reflect.Method.invoke(java.base@21.0.8/Unknown Source)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24)
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:92)
+	at jdk.proxy1.$Proxy4.processTestClass(jdk.proxy1/Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$2.run(TestWorker.java:183)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:132)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63)
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:121)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:71)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+
+"Common-Cleaner" #9 [31352] daemon prio=8 os_prio=1 cpu=0.00ms elapsed=228.79s tid=0x000002eddd0dd140 nid=31352 waiting on condition  [0x000000fae97ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	- parking to wait for  <0x00000000e0e35028> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.ReferenceQueue.await(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.ReferenceQueue.remove(java.base@21.0.8/Unknown Source)
+	at jdk.internal.ref.CleanerImpl.run(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.run(java.base@21.0.8/Unknown Source)
+	at jdk.internal.misc.InnocuousThread.run(java.base@21.0.8/Unknown Source)
+
+"Reference Handler" #10 [36100] daemon prio=10 os_prio=2 cpu=0.00ms elapsed=228.79s tid=0x000002eddd0debb0 nid=36100 waiting on condition  [0x000000fae98ff000]
+   java.lang.Thread.State: RUNNABLE
+	at java.lang.ref.Reference.waitForReferencePendingList(java.base@21.0.8/Native Method)
+	at java.lang.ref.Reference.processPendingReferences(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.Reference$ReferenceHandler.run(java.base@21.0.8/Unknown Source)
+
+"Finalizer" #11 [34636] daemon prio=8 os_prio=1 cpu=15.62ms elapsed=228.79s tid=0x000002eddd0f4c00 nid=34636 in Object.wait()  [0x000000fae99fe000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.8/Native Method)
+	- waiting on <0x00000000e0e60540> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.Object.wait(java.base@21.0.8/Unknown Source)
+	at java.lang.Object.wait(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.NativeReferenceQueue.await(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.NativeReferenceQueue.remove(java.base@21.0.8/Unknown Source)
+	- locked <0x00000000e0e60540> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.ref.Finalizer$FinalizerThread.run(java.base@21.0.8/Unknown Source)
+
+"Signal Dispatcher" #12 [22016] daemon prio=9 os_prio=2 cpu=0.00ms elapsed=228.79s tid=0x000002eddd101760 nid=22016 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Attach Listener" #13 [36296] daemon prio=5 os_prio=2 cpu=15.62ms elapsed=228.79s tid=0x000002eddd10bdd0 nid=36296 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Service Thread" #14 [12732] daemon prio=9 os_prio=0 cpu=78.12ms elapsed=228.79s tid=0x000002eddd10c830 nid=12732 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Monitor Deflation Thread" #15 [11452] daemon prio=9 os_prio=0 cpu=31.25ms elapsed=228.79s tid=0x000002eddd10da30 nid=11452 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"C2 CompilerThread0" #16 [27828] daemon prio=9 os_prio=2 cpu=4687.50ms elapsed=228.79s tid=0x000002eddd10e5c0 nid=27828 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"C1 CompilerThread0" #24 [6016] daemon prio=9 os_prio=2 cpu=1109.38ms elapsed=228.79s tid=0x000002eddd121820 nid=6016 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"Notification Thread" #28 [10232] daemon prio=9 os_prio=0 cpu=0.00ms elapsed=228.59s tid=0x000002eddd35ea70 nid=10232 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"/127.0.0.1:51860 to /127.0.0.1:51859 workers" #37 [28824] prio=5 os_prio=0 cpu=15.62ms elapsed=228.24s tid=0x000002edddfb2010 nid=28824 waiting on condition  [0x000000faeaefe000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	- parking to wait for  <0x00000000e08a2d48> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ArrayBlockingQueue.put(java.base@21.0.8/Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.submitToRun(TestWorker.java:214)
+	- locked <0x00000000e0ee3cb0> (a org.gradle.api.internal.tasks.testing.worker.TestWorker)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.processTestClass(TestWorker.java:176)
+	at java.lang.invoke.LambdaForm$DMH/0x00000001000c3400.invokeInterface(java.base@21.0.8/LambdaForm$DMH)
+	at java.lang.invoke.LambdaForm$MH/0x00000001000dbc00.invoke(java.base@21.0.8/LambdaForm$MH)
+	at java.lang.invoke.Invokers$Holder.invokeExact_MT(java.base@21.0.8/Invokers$Holder)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(java.base@21.0.8/Unknown Source)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(java.base@21.0.8/Unknown Source)
+	at java.lang.reflect.Method.invoke(java.base@21.0.8/Unknown Source)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24)
+	at org.gradle.internal.remote.internal.hub.MessageHubBackedObjectConnection$DispatchWrapper.dispatch(MessageHubBackedObjectConnection.java:182)
+	at org.gradle.internal.remote.internal.hub.MessageHubBackedObjectConnection$DispatchWrapper.dispatch(MessageHubBackedObjectConnection.java:164)
+	at org.gradle.internal.remote.internal.hub.MessageHub$Handler.run(MessageHub.java:414)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.run(java.base@21.0.8/Unknown Source)
+
+"/127.0.0.1:51860 to /127.0.0.1:51859 workers Thread 2" #40 [29372] prio=5 os_prio=0 cpu=93.75ms elapsed=227.90s tid=0x000002edde4e60b0 nid=29372 waiting on condition  [0x000000faeb3fe000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	- parking to wait for  <0x00000000e16088e0> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.8/Unknown Source)
+	at org.gradle.internal.remote.internal.hub.queue.EndPointQueue.take(EndPointQueue.java:49)
+	at org.gradle.internal.remote.internal.hub.MessageHub$ConnectionDispatch.run(MessageHub.java:322)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.run(java.base@21.0.8/Unknown Source)
+
+"/127.0.0.1:51860 to /127.0.0.1:51859 workers Thread 3" #41 [32024] prio=5 os_prio=0 cpu=0.00ms elapsed=227.90s tid=0x000002edde4f08e0 nid=32024 runnable  [0x000000faeb4fe000]
+   java.lang.Thread.State: RUNNABLE
+	at sun.nio.ch.WEPoll.wait(java.base@21.0.8/Native Method)
+	at sun.nio.ch.WEPollSelectorImpl.doSelect(java.base@21.0.8/Unknown Source)
+	at sun.nio.ch.SelectorImpl.lockAndDoSelect(java.base@21.0.8/Unknown Source)
+	- locked <0x00000000e1605cf0> (a sun.nio.ch.Util$2)
+	- locked <0x00000000e1605c90> (a sun.nio.ch.WEPollSelectorImpl)
+	at sun.nio.ch.SelectorImpl.select(java.base@21.0.8/Unknown Source)
+	at org.gradle.internal.remote.internal.inet.SocketConnection$SocketInputStream.read(SocketConnection.java:187)
+	at com.esotericsoftware.kryo.io.Input.fill(Input.java:146)
+	at com.esotericsoftware.kryo.io.Input.require(Input.java:178)
+	at com.esotericsoftware.kryo.io.Input.readByte(Input.java:295)
+	at org.gradle.internal.serialize.kryo.KryoBackedDecoder.readByte(KryoBackedDecoder.java:88)
+	at org.gradle.internal.remote.internal.hub.InterHubMessageSerializer$MessageReader.read(InterHubMessageSerializer.java:64)
+	at org.gradle.internal.remote.internal.hub.InterHubMessageSerializer$MessageReader.read(InterHubMessageSerializer.java:52)
+	at org.gradle.internal.remote.internal.inet.SocketConnection.receive(SocketConnection.java:83)
+	at org.gradle.internal.remote.internal.hub.MessageHub$ConnectionReceive.run(MessageHub.java:270)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.run(java.base@21.0.8/Unknown Source)
+
+"SDK 30 Main Thread" #47 [29280] prio=5 os_prio=0 cpu=4890.62ms elapsed=227.48s tid=0x000002eddecaa610 nid=29280 waiting on condition  [0x000000faebafe000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	- parking to wait for  <0x00000000e264cf10> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.LinkedBlockingQueue.take(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.run(java.base@21.0.8/Unknown Source)
+
+"Cleaner-0" #50 [15588] daemon prio=8 os_prio=1 cpu=0.00ms elapsed=223.84s tid=0x000002ede18f8db0 nid=15588 waiting on condition  [0x000000faea4fe000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	- parking to wait for  <0x00000000e7cd6908> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.ReferenceQueue.await(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.8/Unknown Source)
+	at java.lang.ref.ReferenceQueue.remove(java.base@21.0.8/Unknown Source)
+	at jdk.internal.ref.CleanerImpl.run(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.run(java.base@21.0.8/Unknown Source)
+	at jdk.internal.misc.InnocuousThread.run(java.base@21.0.8/Unknown Source)
+
+"SDK 33 Main Thread" #52 [6540] prio=5 os_prio=0 cpu=2250.00ms elapsed=221.24s tid=0x000002ede52ed760 nid=6540 waiting on condition  [0x000000faeb0ff000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	- parking to wait for  <0x00000000e5eef2f0> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.LinkedBlockingQueue.take(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.8/Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.8/Unknown Source)
+	at java.lang.Thread.run(java.base@21.0.8/Unknown Source)
+
+"DefaultDispatcher-worker-1" #53 [36344] daemon prio=5 os_prio=0 cpu=62.50ms elapsed=219.08s tid=0x000002ede52ee480 nid=36344 waiting on condition  [0x000000faea5fe000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-2" #54 [3036] daemon prio=5 os_prio=0 cpu=15.62ms elapsed=219.08s tid=0x000002ede52eeb10 nid=3036 waiting on condition  [0x000000faebbff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-3" #55 [31536] daemon prio=5 os_prio=0 cpu=140.62ms elapsed=219.08s tid=0x000002ede52efec0 nid=31536 waiting on condition  [0x000000faebcff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-4" #56 [16012] daemon prio=5 os_prio=0 cpu=31.25ms elapsed=218.94s tid=0x000002ede52eca40 nid=16012 waiting on condition  [0x000000faebdff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-5" #57 [32468] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=218.93s tid=0x000002ede52f0550 nid=32468 waiting on condition  [0x000000faebeff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-6" #58 [31288] daemon prio=5 os_prio=0 cpu=31.25ms elapsed=218.92s tid=0x000002ede52ef1a0 nid=31288 waiting on condition  [0x000000faebffe000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-7" #59 [34848] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=218.92s tid=0x000002ede52ed0d0 nid=34848 waiting on condition  [0x000000faec0ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-8" #60 [25892] daemon prio=5 os_prio=0 cpu=15.62ms elapsed=218.92s tid=0x000002ede52f0be0 nid=25892 waiting on condition  [0x000000faec1ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-9" #61 [36392] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=218.92s tid=0x000002ede52f39d0 nid=36392 waiting on condition  [0x000000faec2ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-10" #63 [36540] daemon prio=5 os_prio=0 cpu=31.25ms elapsed=218.53s tid=0x000002ede52f1270 nid=36540 waiting on condition  [0x000000faea3ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-12" #65 [35864] daemon prio=5 os_prio=0 cpu=46.88ms elapsed=218.53s tid=0x000002ede52f2620 nid=35864 waiting on condition  [0x000000faec6ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-14" #67 [33136] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=218.53s tid=0x000002ede52f2cb0 nid=33136 waiting on condition  [0x000000faec8ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-15" #68 [21404] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=218.53s tid=0x000002ede52e4600 nid=21404 waiting on condition  [0x000000faec9ff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-16" #69 [24324] daemon prio=5 os_prio=0 cpu=15.62ms elapsed=218.53s tid=0x000002ede52e3f70 nid=24324 waiting on condition  [0x000000faecaff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-13" #70 [11168] daemon prio=5 os_prio=0 cpu=0.00ms elapsed=218.38s tid=0x000002ede52e4c90 nid=11168 waiting on condition  [0x000000faecbfe000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"DefaultDispatcher-worker-11" #71 [29592] daemon prio=5 os_prio=0 cpu=15.62ms elapsed=218.38s tid=0x000002ede52e3250 nid=29592 waiting on condition  [0x000000faeccff000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.8/Native Method)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.8/Unknown Source)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.park(CoroutineScheduler.kt:856)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.tryPark(CoroutineScheduler.kt:801)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:749)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+"G1 Conc#2" os_prio=2 cpu=25734.38ms elapsed=227.75s tid=0x000002edde7cb280 nid=30532 runnable  
+
+"G1 Conc#1" os_prio=2 cpu=25765.62ms elapsed=227.75s tid=0x000002edde7cb620 nid=12200 runnable  
+
+"GC Thread#12" os_prio=2 cpu=1562.50ms elapsed=227.75s tid=0x000002edde7ca7a0 nid=36456 runnable  
+
+"GC Thread#11" os_prio=2 cpu=1468.75ms elapsed=227.75s tid=0x000002edde7cbd60 nid=33832 runnable  
+
+"GC Thread#10" os_prio=2 cpu=1593.75ms elapsed=227.75s tid=0x000002edde7ca400 nid=18076 runnable  
+
+"GC Thread#9" os_prio=2 cpu=1625.00ms elapsed=228.10s tid=0x000002edde0e4340 nid=7560 runnable  
+
+"GC Thread#8" os_prio=2 cpu=1500.00ms elapsed=228.10s tid=0x000002edde78b6a0 nid=10340 runnable  
+
+"GC Thread#7" os_prio=2 cpu=1468.75ms elapsed=228.24s tid=0x000002edde0da740 nid=36596 runnable  
+
+"GC Thread#6" os_prio=2 cpu=1437.50ms elapsed=228.24s tid=0x000002edde0da3a0 nid=29580 runnable  
+
+"GC Thread#5" os_prio=2 cpu=1453.12ms elapsed=228.24s tid=0x000002edddeb0a90 nid=22860 runnable  
+
+"GC Thread#4" os_prio=2 cpu=1312.50ms elapsed=228.24s tid=0x000002edde0c84b0 nid=31116 runnable  
+
+"GC Thread#3" os_prio=2 cpu=1531.25ms elapsed=228.24s tid=0x000002edde0c8110 nid=35844 runnable  
+
+"GC Thread#2" os_prio=2 cpu=1406.25ms elapsed=228.24s tid=0x000002edddd517b0 nid=23364 runnable  
+
+"GC Thread#1" os_prio=2 cpu=1437.50ms elapsed=228.24s tid=0x000002edddd51410 nid=1324 runnable  
+
+"VM Thread" os_prio=2 cpu=2609.38ms elapsed=228.80s tid=0x000002eddd0416b0 nid=36512 runnable  
+
+"VM Periodic Task Thread" os_prio=2 cpu=15.62ms elapsed=228.82s tid=0x000002edd8e142d0 nid=34568 waiting on condition  
+
+"G1 Service" os_prio=2 cpu=15.62ms elapsed=228.82s tid=0x000002edd8ce3ed0 nid=34524 runnable  
+
+"G1 Refine#0" os_prio=2 cpu=78.12ms elapsed=228.82s tid=0x000002edd8ce36b0 nid=36348 runnable  
+
+"G1 Conc#0" os_prio=2 cpu=25593.75ms elapsed=228.82s tid=0x000002edc2a9c860 nid=2276 runnable  
+
+"G1 Main Marker" os_prio=2 cpu=562.50ms elapsed=228.82s tid=0x000002edc2a97a20 nid=28260 runnable  
+
+"GC Thread#0" os_prio=2 cpu=1375.00ms elapsed=228.82s tid=0x000002edc2a928d0 nid=21640 runnable  
+
+JNI global refs: 39, weak refs: 0
+
+JNI global refs memory usage: 835, weak refs: 201
+

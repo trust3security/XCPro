@@ -38,11 +38,13 @@ class OgnTrafficOverlayFeatureLabelsTest {
         target: OgnTrafficTarget
     ) = buildOgnTrafficOverlayFeatures(
         nowMonoMs = 10_000L,
-        renderItems = listOf(OgnTrafficRenderItem.Single(target)),
+        targets = listOf(target),
         ownshipAltitudeMeters = 1_000.0,
+        visibleBounds = null,
         altitudeUnit = AltitudeUnit.METERS,
         useSatelliteContrastIcons = false,
         unitsPreferences = UnitsPreferences(),
+        maxTargets = MAX_TARGETS,
         staleVisualAfterMs = 5_000L,
         liveAlpha = 1.0,
         staleAlpha = 0.5
