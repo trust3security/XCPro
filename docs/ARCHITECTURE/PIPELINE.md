@@ -854,21 +854,36 @@ Current wiring:
   -> `dfcards` `FlightDataViewModel.updateCardsWithLiveData(...)`
   -> `CardLibrary` / `CardContainer` / `EnhancedFlightDataCard`
 
-Current finish-glide card scope:
-- live now:
+Current glide-computer production card scope:
+- finish/arrival cards live now:
   - `final_gld`
   - `arr_alt`
   - `req_alt`
   - `arr_mc0`
-- waypoint navigation now live:
+- waypoint navigation cards live now:
   - `wpt_dist`
   - `wpt_brg`
   - `wpt_eta`
-- still placeholder-only:
+- task-performance cards live now:
   - `task_spd`
   - `task_dist`
+  - `task_remain_dist`
+  - `task_remain_time`
   - `start_alt`
-- current MVP limitation:
+- core glide/performance cards live now:
+  - `ias`
+  - `tas`
+  - `ground_speed`
+  - `ld_curr`
+  - `polar_ld`
+  - `best_ld`
+  - `netto`
+  - `netto_avg30`
+  - `mc_speed`
+- intentionally absent from the production catalogs:
+  - standalone `final distance`
+  - unsupported future target-kind / AAT glide cards
+- current release limitation:
   - finish-glide validity currently requires a racing finish altitude rule
     (`RacingFinishCustomParams.minAltitudeMeters`)
 
@@ -980,7 +995,7 @@ Task UI (Compose)
 
 Authoritative ownership:
 - Cross-feature task definition and active leg: `TaskManagerCoordinator.taskSnapshotFlow`.
-- Current final-glide route seam (Phase 4 local branch, 2026-03-25):
+- Current final-glide route seam:
   `feature:tasks` now also exposes
   `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt`
   as an additive remaining-route read seam derived from
@@ -991,7 +1006,7 @@ Authoritative ownership:
   current racing finish-rule and glide-status projection. No `feature:map`
   compatibility shim remains in the production path; `GlideComputationRepository`
   is the only active glide owner consumed by the map shell.
-- Current task-performance seam (Phase 3 local branch, 2026-03-27):
+- Current task-performance seam:
   `feature:map-runtime` now also exposes
   `feature/map-runtime/src/main/java/com/example/xcpro/taskperformance/TaskPerformanceRepository.kt`
   as the non-UI task-performance owner. It consumes

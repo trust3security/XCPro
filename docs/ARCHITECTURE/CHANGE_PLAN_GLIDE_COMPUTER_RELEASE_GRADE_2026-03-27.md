@@ -322,12 +322,22 @@ Close the correctness gaps that undermine release trust even if the cards exist.
 ## Phase 5 — release proof + doc finalization
 
 ### Goal
-Finish with a release-grade proof bundle.
+Finish with a release-grade proof bundle and final branch-truth docs.
 
 ### Scope
 - final docs sync
 - full local proof
-- add or update golden/replay-style tests for risky semantics
+- confirm every shipped glide-computer card is either implemented with an authoritative contract or intentionally absent from production selection
+- keep unsupported future metrics uncataloged instead of relying on placeholder filters
+
+### Implemented Phase 5 decisions
+- production glide-computer cards now ship only when the authoritative runtime path and validity/source semantics exist end to end:
+  - core glide/performance: `ias`, `tas`, `ground_speed`, `ld_curr`, `polar_ld`, `best_ld`, `netto`, `netto_avg30`, `mc_speed`
+  - finish/arrival + waypoint navigation: `final_gld`, `arr_alt`, `req_alt`, `arr_mc0`, `wpt_dist`, `wpt_brg`, `wpt_eta`
+  - task performance: `task_spd`, `task_dist`, `task_remain_dist`, `task_remain_time`, `start_alt`
+- unsupported or deferred glide-computer metrics stay uncataloged instead of being exposed behind placeholder cards or a production hidden-card filter.
+- `FINAL DIST` remains authoritative runtime data only in this plan; no standalone production card ships for it.
+- route authority remains in `feature:tasks`; glide, waypoint-navigation, and task-performance owners remain upstream and non-UI; `feature:map` remains consumer-only.
 
 ### Minimum proof
 - `./gradlew enforceRules`
@@ -345,9 +355,9 @@ Finish with a release-grade proof bundle.
   - manual polar change affecting glide outputs
 
 ### Acceptance criteria
-- all shipped cards are either implemented with explicit validity contracts or absent from production selection
+- every shipped glide-computer card is implemented with authoritative runtime data and explicit validity/source semantics or is intentionally absent from production selection
 - docs reflect the final durable architecture and metric semantics
-- full proof passes on the committed branch state
+- full proof passes on the current branch state
 
 ## Useful extras you should include if time allows
 
@@ -355,8 +365,6 @@ These are not scope creep; they materially improve the product.
 
 ### High-value additions
 - `FINAL DIST` card from existing finish-distance data
-- `WPT BRG` and `WPT ETA` alongside `WPT DIST` (distance alone is weak)
-- `TASK REMAIN DIST` and `TASK REMAIN TIME`, not just `TASK DIST`
 - source/quality badges for TAS, wind, netto, and glide validity
 - golden tests using known reference logs
 

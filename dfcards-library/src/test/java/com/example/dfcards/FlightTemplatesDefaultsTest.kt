@@ -36,10 +36,16 @@ class FlightTemplatesDefaultsTest {
     }
 
     @Test
-    fun builtInTemplates_do_not_ship_placeholder_only_glide_or_task_cards() {
-        val placeholderOnly = setOf("task_spd", "task_dist", "start_alt")
+    fun builtInTemplates_do_not_preload_competition_glide_cards_by_default() {
+        val competitionGlideCards = setOf(
+            "task_spd",
+            "task_dist",
+            "task_remain_dist",
+            "task_remain_time",
+            "start_alt"
+        )
         val allDefaultCardIds = FlightTemplates.getDefaultTemplates().flatMap { it.cardIds }.toSet()
 
-        assertEquals(emptySet<String>(), allDefaultCardIds.intersect(placeholderOnly))
+        assertEquals(emptySet<String>(), allDefaultCardIds.intersect(competitionGlideCards))
     }
 }

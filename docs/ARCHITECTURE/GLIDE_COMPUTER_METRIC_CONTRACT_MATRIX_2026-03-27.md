@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Freeze the semantics of the pilot-facing glide-computer metrics before implementation.
-This is the contract Codex should follow unless a later accepted doc deliberately changes it.
+Record the final release semantics of the pilot-facing glide-computer metrics.
+This is the shipped contract unless a later accepted doc deliberately changes it.
 
 ## Status legend
 - IMPLEMENTED = already backed by authoritative runtime data
@@ -16,8 +16,8 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 
 | Metric | Release meaning | Status | Authoritative owner | Notes |
 |---|---|---|---|---|
-| IAS | indicated airspeed from authoritative flight runtime sample | HARDEN | `FlightDataRepository` -> adapter | Card labels must use actual airspeed source/validity |
-| TAS | true airspeed from authoritative flight runtime sample or explicit derived estimate | HARDEN | `FlightDataRepository` -> adapter | Must not be mislabeled from TAS-valid heuristics |
+| IAS | indicated airspeed from authoritative flight runtime sample | IMPLEMENTED | `FlightDataRepository` -> adapter | Card labels use the actual airspeed source/validity contract |
+| TAS | true airspeed from authoritative flight runtime sample or explicit derived estimate | IMPLEMENTED | `FlightDataRepository` -> adapter | Labels and validity use the actual TAS source contract, not heuristics |
 | GS | ground speed over ground from fused runtime sample | IMPLEMENTED | `FlightDataRepository` -> adapter | Straightforward |
 | current L/D | recent measured glide ratio from runtime flight metrics, not final glide and not polar best L/D | IMPLEMENTED | `FlightDataRepository` -> adapter | Explicit valid/invalid only; no degraded state in the active contract |
 | polar L/D | theoretical still-air L/D at the current IAS sample from the active polar path | IMPLEMENTED | polar owner path -> adapter | Explicit valid/invalid only; no degraded state in the active contract |
@@ -33,7 +33,7 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 | arrival altitude | predicted finish altitude surplus/deficit using active MC and current policy | IMPLEMENTED | `GlideComputationRepository` | Shares the same explicit solve state as final glide |
 | required altitude | altitude required now to complete the active finish route | IMPLEMENTED | `GlideComputationRepository` | Shares the same explicit solve state as final glide |
 | arrival altitude MC0 | same as arrival altitude but with MC forced to zero | IMPLEMENTED | `GlideComputationRepository` | Shares the same explicit solve state as final glide |
-| final distance | canonical remaining distance to finish target | IMPLEMENTED | `GlideComputationRepository` / route seam | Shares the same explicit solve state as final glide |
+| final distance | canonical remaining distance to finish target | IMPLEMENTED | `GlideComputationRepository` / route seam | Authoritative runtime metric exists, but no standalone production card ships in this plan |
 
 ## Waypoint navigation metrics
 
@@ -72,8 +72,8 @@ This is the contract Codex should follow unless a later accepted doc deliberatel
 
 ## UI policy
 
-Any card in the catalogs must satisfy one of these:
+Any pilot-facing glide-computer metric must satisfy one of these:
 1. it is fully implemented with authoritative runtime data and explicit validity
-2. it is hidden from production selection
+2. it is intentionally kept out of the production catalogs / production selection
 
-No release should expose placeholder nav/task cards as if they are working instruments.
+No release should expose placeholder nav/task/glide cards as if they are working instruments.
