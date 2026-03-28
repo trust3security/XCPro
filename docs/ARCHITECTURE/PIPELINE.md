@@ -645,6 +645,15 @@ OGN lifecycle/position semantics:
   - OGN glider-trail overlay renders `emptyList()` unless
     `ognOverlayEnabled && showSciaEnabled`; per-aircraft filtering is applied
     from selected OGN aircraft keys.
+- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayEffects.kt`
+  - Forwards selected OGN target render inputs, including ownship coordinate,
+    quantized ownship altitude, altitude unit, and units preferences, into the
+    map runtime target-visual path.
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+  - Keeps OGN target visuals render-only and runtime-owned.
+  - Renders the existing target ring + target line, and additionally renders an
+    ownship-adjacent badge only when the selected OGN target is outside the
+    current visible map bounds.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
   - Renders selected OGN target details in a `ModalBottomSheet`.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`

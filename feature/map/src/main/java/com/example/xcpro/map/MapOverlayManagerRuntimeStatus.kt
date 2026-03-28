@@ -43,6 +43,11 @@ internal fun buildMapOverlayManagerStatus(
             }\n"
         )
         append(
+            "- OGN Ownship Target Badge Overlay: ${
+                if (mapState.ognOwnshipTargetBadgeOverlay != null) "Initialized" else "Not Initialized"
+            }\n"
+        )
+        append(
             "- OGN Thermal Overlay: ${
                 if (mapState.ognThermalOverlay != null) "Initialized" else "Not Initialized"
             }\n"

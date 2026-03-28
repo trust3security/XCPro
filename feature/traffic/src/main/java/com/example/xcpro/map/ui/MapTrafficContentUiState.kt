@@ -6,18 +6,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.xcpro.map.AdsbAuthMode
-import com.example.xcpro.map.AdsbConnectionState
 import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.map.OgnSelectionLookup
 import com.example.xcpro.map.OgnThermalHotspot
 import com.example.xcpro.map.OgnTrafficSnapshot
 import com.example.xcpro.map.OgnTrafficTarget
-import com.example.xcpro.map.backoffRetryAfterSec
 import com.example.xcpro.map.buildOgnSelectionLookup
 import com.example.xcpro.map.haversineMeters
-import com.example.xcpro.map.isActive
 import com.example.xcpro.map.isBackingOff
-import com.example.xcpro.map.isDisabled
 import com.example.xcpro.map.isError
 import com.example.xcpro.map.normalizeOgnAircraftKey
 import com.example.xcpro.map.selectionLookupContainsOgnKey
@@ -45,6 +41,7 @@ data class MapTrafficContentUiState(
     val selectedOgnTargetSciaEnabled: Boolean,
     val selectedOgnTargetTargetEnabled: Boolean,
     val selectedOgnTargetTargetToggleEnabled: Boolean,
+    val connectionIndicators: TrafficConnectionIndicatorsUiState,
     val panelVisibility: TrafficDebugPanelVisibility
 )
 
@@ -92,6 +89,19 @@ fun rememberMapTrafficContentUiState(
             traffic.selectedOgnTarget?.identity?.aircraftTypeCode
         )
     }
+    val connectionIndicators = remember(
+        traffic.ognOverlayEnabled,
+        traffic.ognSnapshot,
+        traffic.adsbOverlayEnabled,
+        traffic.adsbSnapshot
+    ) {
+        MapTrafficConnectionIndicatorModelBuilder.build(
+            ognOverlayEnabled = traffic.ognOverlayEnabled,
+            ognSnapshot = traffic.ognSnapshot,
+            adsbOverlayEnabled = traffic.adsbOverlayEnabled,
+            adsbSnapshot = traffic.adsbSnapshot
+        )
+    }
     val panelVisibility = rememberTrafficDebugPanelVisibility(
         debugPanelsEnabled = debugPanelsEnabled,
         adsbOverlayEnabled = traffic.adsbOverlayEnabled,
@@ -105,6 +115,7 @@ fun rememberMapTrafficContentUiState(
         selectedOgnTargetSciaEnabled = selectedOgnTargetSciaEnabled,
         selectedOgnTargetTargetEnabled = selectedOgnTargetTargetEnabled,
         selectedOgnTargetTargetToggleEnabled = selectedOgnTargetTargetToggleEnabled,
+        connectionIndicators = connectionIndicators,
         panelVisibility = panelVisibility
     )
 }

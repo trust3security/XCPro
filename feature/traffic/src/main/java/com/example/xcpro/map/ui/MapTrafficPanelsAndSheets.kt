@@ -1,6 +1,5 @@
 package com.example.xcpro.map.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -8,7 +7,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -32,30 +30,6 @@ fun BoxScope.MapTrafficPanelsAndSheetsLayer(
     onTrailAircraftSelectionChanged: (String, Boolean) -> Unit,
     trafficActions: MapTrafficUiActions
 ) {
-    Column(
-        modifier = Modifier
-            .align(Alignment.BottomStart)
-            .padding(start = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        AdsbPersistentStatusBadge(
-            visible = uiState.panelVisibility.showAdsbPersistentStatus,
-            snapshot = traffic.adsbSnapshot
-        )
-        AdsbIssueFlashBadge(
-            visible = uiState.panelVisibility.showAdsbIssueFlash,
-            snapshot = traffic.adsbSnapshot
-        )
-        OgnDebugPanel(
-            visible = uiState.panelVisibility.showOgnDebugPanel,
-            snapshot = traffic.ognSnapshot
-        )
-        AdsbDebugPanel(
-            visible = uiState.panelVisibility.showAdsbDebugPanel,
-            snapshot = traffic.adsbSnapshot
-        )
-    }
-
     when {
         traffic.selectedOgnTarget != null -> {
             OgnMarkerDetailsSheet(

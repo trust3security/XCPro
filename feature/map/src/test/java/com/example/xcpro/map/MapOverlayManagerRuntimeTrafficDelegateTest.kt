@@ -271,6 +271,12 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
                 state.ognTargetLineOverlay = value
             }
 
+        override var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle?
+            get() = state.ognOwnshipTargetBadgeOverlay
+            set(value) {
+                state.ognOwnshipTargetBadgeOverlay = value
+            }
+
         override var ognThermalOverlay: OgnThermalOverlayHandle?
             get() = state.ognThermalOverlay
             set(value) {

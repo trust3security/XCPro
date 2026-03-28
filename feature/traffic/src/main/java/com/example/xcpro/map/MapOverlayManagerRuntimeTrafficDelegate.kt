@@ -252,6 +252,9 @@ class MapOverlayManagerRuntimeTrafficDelegate(
             ognOverlayId = runtimeState.ognTrafficOverlay?.let { System.identityHashCode(it) } ?: 0,
             ognTargetRingOverlayId = runtimeState.ognTargetRingOverlay?.let { System.identityHashCode(it) } ?: 0,
             ognTargetLineOverlayId = runtimeState.ognTargetLineOverlay?.let { System.identityHashCode(it) } ?: 0,
+            ognOwnshipTargetBadgeOverlayId = runtimeState.ognOwnshipTargetBadgeOverlay
+                ?.let { System.identityHashCode(it) }
+                ?: 0,
             adsbOverlayId = runtimeState.adsbTrafficOverlay?.let { System.identityHashCode(it) } ?: 0
         )
     }

@@ -27,7 +27,10 @@ interface TrafficOverlayRenderPort {
     fun updateOgnTargetVisuals(
         enabled: Boolean,
         resolvedTarget: OgnTrafficTarget?,
-        ownshipCoordinate: TrafficMapCoordinate?
+        ownshipCoordinate: TrafficMapCoordinate?,
+        ownshipAltitudeMeters: Double?,
+        altitudeUnit: AltitudeUnit,
+        unitsPreferences: UnitsPreferences
     )
 
     fun setOgnIconSizePx(iconSizePx: Int)
@@ -128,11 +131,21 @@ fun MapTrafficOverlayEffects(
     LaunchedEffect(renderedOgnTrails) {
         port.updateOgnGliderTrailSegments(renderedOgnTrails)
     }
-    LaunchedEffect(renderOgnTargetEnabled, renderedOgnTarget, renderState.ownshipCoordinate) {
+    LaunchedEffect(
+        renderOgnTargetEnabled,
+        renderedOgnTarget,
+        renderState.ownshipCoordinate,
+        overlayOwnshipAltitudeMeters,
+        renderState.ognAltitudeUnit,
+        renderState.unitsPreferences
+    ) {
         port.updateOgnTargetVisuals(
             enabled = renderOgnTargetEnabled,
             resolvedTarget = renderedOgnTarget,
-            ownshipCoordinate = renderState.ownshipCoordinate
+            ownshipCoordinate = renderState.ownshipCoordinate,
+            ownshipAltitudeMeters = overlayOwnshipAltitudeMeters,
+            altitudeUnit = renderState.ognAltitudeUnit,
+            unitsPreferences = renderState.unitsPreferences
         )
     }
     LaunchedEffect(renderState.ognIconSizePx) {

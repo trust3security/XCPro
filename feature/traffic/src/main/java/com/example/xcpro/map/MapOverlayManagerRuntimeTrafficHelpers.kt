@@ -21,6 +21,7 @@ data class OverlayFrontOrderSignature(
     val ognOverlayId: Int,
     val ognTargetRingOverlayId: Int,
     val ognTargetLineOverlayId: Int,
+    val ognOwnshipTargetBadgeOverlayId: Int,
     val adsbOverlayId: Int
 )
 
