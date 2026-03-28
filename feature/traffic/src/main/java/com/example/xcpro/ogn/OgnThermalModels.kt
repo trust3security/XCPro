@@ -24,3 +24,9 @@ data class OgnThermalHotspot(
     val snailColorIndex: Int,
     val state: OgnThermalHotspotState
 )
+
+internal fun OgnThermalHotspot.displayClimbRateMps(): Double? {
+    return averageBottomToTopClimbRateMps
+        ?.takeIf { it.isFinite() }
+        ?: averageClimbRateMps?.takeIf { it.isFinite() }
+}

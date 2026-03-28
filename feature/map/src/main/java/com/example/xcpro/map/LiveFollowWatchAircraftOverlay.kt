@@ -45,6 +45,9 @@ internal class LiveFollowWatchAircraftOverlay(
     private var lastRenderedState: LiveFollowWatchAircraftOverlayState? = null
     private var lastRenderedRotation: Float? = null
     private var lastRenderedVisible: Boolean? = null
+    private var currentViewportZoom: Float =
+        map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() } ?: LIVE_FOLLOW_WATCH_AIRCRAFT_CLOSE_ZOOM_THRESHOLD
+    private var currentIconScale: Float = resolveLiveFollowWatchAircraftScale(currentViewportZoom)
 
     fun render(state: LiveFollowWatchAircraftOverlayState?) {
         if (state == null) {
@@ -80,6 +83,17 @@ internal class LiveFollowWatchAircraftOverlay(
 
         applyVisibility(layer, visible = true)
         boundStyle = style
+    }
+
+    fun setViewportZoom(zoomLevel: Float) {
+        val normalizedZoom = zoomLevel.takeIf { it.isFinite() } ?: return
+        currentViewportZoom = normalizedZoom
+        val resolvedScale = resolveLiveFollowWatchAircraftScale(normalizedZoom)
+        if (resolvedScale == currentIconScale) {
+            return
+        }
+        currentIconScale = resolvedScale
+        applyIconScaleToStyle()
     }
 
     fun cleanup() {
@@ -132,6 +146,13 @@ internal class LiveFollowWatchAircraftOverlay(
         lastRenderedVisible = visible
     }
 
+    private fun applyIconScaleToStyle() {
+        val style = map.style ?: return
+        val layer = style.getLayerAs<SymbolLayer>(LAYER_ID) ?: return
+        layer.setProperties(iconSize(currentIconScale))
+        boundStyle = style
+    }
+
     private fun ensureRuntimeObjects(style: Style) {
         val hasIcon = runCatching { style.getImage(ICON_ID) }.getOrNull() != null
         if (!hasIcon) {
@@ -144,7 +165,7 @@ internal class LiveFollowWatchAircraftOverlay(
             val layer = SymbolLayer(LAYER_ID, SOURCE_ID)
                 .withProperties(
                     iconImage(ICON_ID),
-                    iconSize(LIVE_FOLLOW_WATCH_AIRCRAFT_ICON_SCALE),
+                    iconSize(currentIconScale),
                     iconRotate(0f),
                     iconAllowOverlap(true),
                     iconIgnorePlacement(true),
@@ -170,7 +191,8 @@ internal class LiveFollowWatchAircraftOverlay(
 internal val LIVE_FOLLOW_WATCH_AIRCRAFT_DRAWABLE_RES_ID: Int = R.drawable.ic_adsb_glider
 internal const val LIVE_FOLLOW_WATCH_AIRCRAFT_LAYER_ID = "livefollow-watch-aircraft-layer"
 internal const val LIVE_FOLLOW_WATCH_AIRCRAFT_ICON_SIZE_PX: Int = 120
-internal const val LIVE_FOLLOW_WATCH_AIRCRAFT_ICON_SCALE: Float = 2.0f
+internal const val LIVE_FOLLOW_WATCH_AIRCRAFT_CLOSE_ZOOM_THRESHOLD: Float = 10.5f
+internal const val LIVE_FOLLOW_WATCH_AIRCRAFT_CLOSE_ICON_SCALE: Float = 1.60f
 
 internal fun createLiveFollowWatchAircraftBitmap(
     context: Context,
@@ -192,4 +214,14 @@ internal fun resolveLiveFollowWatchAircraftRotation(trackDeg: Double?): Float {
         normalized += 360.0
     }
     return normalized.toFloat()
+}
+
+internal fun resolveLiveFollowWatchAircraftScale(zoomLevel: Float): Float {
+    val zoom = zoomLevel.takeIf { it.isFinite() } ?: LIVE_FOLLOW_WATCH_AIRCRAFT_CLOSE_ZOOM_THRESHOLD
+    return when {
+        zoom >= LIVE_FOLLOW_WATCH_AIRCRAFT_CLOSE_ZOOM_THRESHOLD -> 1.60f
+        zoom >= 9.25f -> 1.30f
+        zoom >= 8.25f -> 1.00f
+        else -> 0.80f
+    }
 }

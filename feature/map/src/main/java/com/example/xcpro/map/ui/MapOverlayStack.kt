@@ -30,6 +30,7 @@ import com.example.xcpro.map.MapModalUI
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapOverlayGestureTarget
 import com.example.xcpro.map.MapScreenState
+import com.example.xcpro.map.OgnTrafficHitResult
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -183,10 +184,18 @@ internal fun MapOverlayStack(
                 onMapTap = { tap ->
                     // OGN layers render above ADS-B layers; resolve traffic tap in layer order.
                     if (ognOverlayEnabled) {
-                        val tappedOgnId = overlayManager.findOgnTargetAt(tap)
-                        if (tappedOgnId != null) {
-                            onOgnTargetSelected(tappedOgnId)
-                            return@GestureHandlerOverlay
+                        when (val ognHit = overlayManager.findOgnHitAt(tap)) {
+                            is OgnTrafficHitResult.Target -> {
+                                onOgnTargetSelected(ognHit.targetKey)
+                                return@GestureHandlerOverlay
+                            }
+
+                            is OgnTrafficHitResult.Cluster -> {
+                                overlayManager.expandOgnCluster(ognHit)
+                                return@GestureHandlerOverlay
+                            }
+
+                            null -> Unit
                         }
                     }
 

@@ -221,12 +221,20 @@ internal class OgnThermalRepositoryRuntime(
         tracker.sourceLabel = target.displayLabel.ifBlank { target.callsign }
         tracker.addPositionSample(target.latitude, target.longitude)
         tracker.addTrackSample(target.trackDegrees)
+        tracker.captureAverageMetricStartIfNeeded(
+            nowMonoMs = nowMonoMs,
+            altitudeMeters = altitudeMeters
+        )
 
         val hasClimbSample = climbRateMps != null
         if (hasClimbSample) {
             tracker.sampleCount += 1
             tracker.climbSumMps += climbRateMps
             tracker.maxClimbRateMps = max(tracker.maxClimbRateMps, climbRateMps)
+            tracker.addAverageMetricSampleIfReady(
+                nowMonoMs = nowMonoMs,
+                climbRateMps = climbRateMps
+            )
             if (climbRateMps >= CONTINUE_CLIMB_THRESHOLD_MPS) {
                 tracker.lastStrongClimbMonoMs = nowMonoMs
             }

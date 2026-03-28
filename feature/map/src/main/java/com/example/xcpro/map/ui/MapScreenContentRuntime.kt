@@ -196,6 +196,9 @@ internal fun MapScreenContent(
         debugPanelsEnabled = BuildConfig.DEBUG
     )
     val trafficContentUiState = trafficRuntimeState.contentUiState
+    val topEndPilotStatusOffset = remember(trafficContentUiState.connectionIndicators) {
+        trafficContentUiState.connectionIndicators.followingIndicatorTopOffset()
+    }
     val bottomTabsUiState = rememberMapScreenBottomTabsUiState(
         taskScreenManager = taskScreenManager,
         hasTrafficDetailsOpen = trafficContentUiState.hasTrafficDetailsOpen,
@@ -399,7 +402,7 @@ internal fun MapScreenContent(
         MapTrafficRuntimeLayer(
             traffic = trafficBinding,
             runtimeState = trafficRuntimeState,
-            reserveTopEndPrimarySlot = showPilotStatusIndicator,
+            reserveTopEndPrimarySlot = false,
             ownshipCoordinate = visibleCurrentLocation?.let { location ->
                 TrafficMapCoordinate(
                     latitude = location.latitude,
@@ -411,6 +414,8 @@ internal fun MapScreenContent(
         )
         MapLiveFollowRuntimeLayer(
             showPilotStatusIndicator = showPilotStatusIndicator,
+            topEndAdditionalOffset = topEndPilotStatusOffset,
+            currentZoom = currentZoom,
             taskRenderSnapshotProvider = taskRenderSnapshotProvider,
             watchedPilotFocusEpoch = watchedPilotFocusEpoch,
             mapLibreMapProvider = mapLibreMapProvider,

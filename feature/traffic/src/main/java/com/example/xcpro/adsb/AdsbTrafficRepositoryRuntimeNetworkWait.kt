@@ -23,7 +23,7 @@ internal suspend fun AdsbTrafficRepositoryRuntime.waitForCenter():
 
 internal suspend fun AdsbTrafficRepositoryRuntime.awaitNetworkOnline(): Boolean {
     if (!_isEnabled.value) return false
-    if (networkAvailabilityPort.isOnline.value) return true
+    if (currentNetworkOnlineState()) return true
     connectionState = AdsbConnectionState.Error(ADSB_ERROR_OFFLINE)
     lastHttpStatus = null
     lastError = ADSB_ERROR_OFFLINE
@@ -34,9 +34,10 @@ internal suspend fun AdsbTrafficRepositoryRuntime.awaitNetworkOnline(): Boolean 
     while (_isEnabled.value) {
         val waitResult = withTimeoutOrNull(NETWORK_WAIT_HOUSEKEEPING_TICK_MS) {
             combine(_isEnabled, networkAvailabilityPort.isOnline) { enabled, isOnline ->
+                val resolvedOnline = isOnline || currentNetworkOnlineState()
                 when {
                     !enabled -> NetworkWaitState.Disabled
-                    isOnline -> NetworkWaitState.Online
+                    resolvedOnline -> NetworkWaitState.Online
                     else -> NetworkWaitState.Offline
                 }
             }.first { it != NetworkWaitState.Offline }
@@ -46,6 +47,7 @@ internal suspend fun AdsbTrafficRepositoryRuntime.awaitNetworkOnline(): Boolean 
             NetworkWaitState.Online -> return true
             NetworkWaitState.Offline,
             null -> {
+                if (currentNetworkOnlineState()) return true
                 runHousekeepingTick()
             }
         }
@@ -64,7 +66,7 @@ internal fun AdsbTrafficRepositoryRuntime.runHousekeepingTick(nowMonoMs: Long = 
 
 internal suspend fun AdsbTrafficRepositoryRuntime.delayForNextAttempt(waitMs: Long): Boolean {
     if (!_isEnabled.value) return false
-    if (!networkAvailabilityPort.isOnline.value) {
+    if (!currentNetworkOnlineState()) {
         pollingHealthPolicy.clearNextRetry()
         return awaitNetworkOnline()
     }
@@ -76,9 +78,10 @@ internal suspend fun AdsbTrafficRepositoryRuntime.delayForNextAttempt(waitMs: Lo
     publishSnapshot()
     val interrupted = withTimeoutOrNull(normalizedWaitMs) {
         combine(_isEnabled, networkAvailabilityPort.isOnline) { enabled, isOnline ->
+            val resolvedOnline = isOnline || currentNetworkOnlineState()
             when {
                 !enabled -> NetworkWaitState.Disabled
-                !isOnline -> NetworkWaitState.Offline
+                !resolvedOnline -> NetworkWaitState.Offline
                 else -> NetworkWaitState.Online
             }
         }.first { it != NetworkWaitState.Online }
@@ -88,7 +91,9 @@ internal suspend fun AdsbTrafficRepositoryRuntime.delayForNextAttempt(waitMs: Lo
     return when (interrupted) {
         null -> _isEnabled.value
         NetworkWaitState.Disabled -> false
-        NetworkWaitState.Offline -> awaitNetworkOnline()
+        NetworkWaitState.Offline -> {
+            if (currentNetworkOnlineState()) _isEnabled.value else awaitNetworkOnline()
+        }
         NetworkWaitState.Online -> _isEnabled.value
     }
 }
@@ -111,3 +116,6 @@ internal suspend fun AdsbTrafficRepositoryRuntime.awaitCircuitBreakerReady(): Bo
     publishSnapshot()
     return _isEnabled.value
 }
+
+internal fun AdsbTrafficRepositoryRuntime.currentNetworkOnlineState(): Boolean =
+    runCatching { networkAvailabilityPort.currentOnlineState() }.getOrDefault(networkOnline)

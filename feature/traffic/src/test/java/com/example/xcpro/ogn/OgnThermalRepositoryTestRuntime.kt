@@ -287,6 +287,47 @@ class OgnThermalRepositoryTest {
     }
 
     @Test
+    fun averageClimbMetricsExcludeInitialFullTurn() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val trafficRepository = FakeOgnTrafficRepository()
+        val thermalRetentionHoursFlow = MutableStateFlow(OGN_THERMAL_RETENTION_DEFAULT_HOURS)
+        val repository = OgnThermalRepositoryImpl(
+            ognTrafficRepository = trafficRepository,
+            clock = clock,
+            thermalRetentionHoursFlow = thermalRetentionHoursFlow,
+            localZoneId = ZoneId.of("UTC"),
+            dispatcher = dispatcher
+        )
+
+        val samples = listOf(
+            sampleTarget(climbMps = 0.8, altitudeMeters = 1000.0, timestampMs = 0L, trackDegrees = 0.0),
+            sampleTarget(climbMps = 0.8, altitudeMeters = 1008.0, timestampMs = 10_000L, trackDegrees = 180.0),
+            sampleTarget(climbMps = 0.8, altitudeMeters = 1016.0, timestampMs = 20_000L, trackDegrees = 0.0),
+            sampleTarget(climbMps = 2.4, altitudeMeters = 1040.0, timestampMs = 30_000L, trackDegrees = 180.0),
+            sampleTarget(climbMps = 2.4, altitudeMeters = 1064.0, timestampMs = 40_000L, trackDegrees = 0.0),
+            sampleTarget(climbMps = 2.4, altitudeMeters = 1088.0, timestampMs = 50_000L, trackDegrees = 180.0)
+        )
+        for (target in samples) {
+            clock.setMonoMs(target.lastSeenMillis)
+            clock.setWallMs(target.lastSeenMillis)
+            trafficRepository.targets.value = listOf(target)
+            runCurrent()
+        }
+
+        val hotspot = repository.hotspots.value.singleOrNull()
+        assertEquals(2.4, hotspot?.averageClimbRateMps ?: Double.NaN, 1e-6)
+        assertEquals(2.4, hotspot?.averageBottomToTopClimbRateMps ?: Double.NaN, 1e-6)
+        assertEquals(
+            climbRateToSnailColorIndex(2.4),
+            hotspot?.snailColorIndex ?: -1
+        )
+
+        shutdownRepository(trafficRepository)
+        runCurrent()
+    }
+
+    @Test
     fun retentionOneHourPrunesOldHotspots() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val clock = FakeClock(monoMs = 0L, wallMs = 0L)

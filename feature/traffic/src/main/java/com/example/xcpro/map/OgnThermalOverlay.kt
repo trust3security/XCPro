@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import android.graphics.Color
 import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.ogn.displayClimbRateMps
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.expressions.Expression
@@ -70,7 +71,7 @@ class OgnThermalOverlay(
             )
             feature.addStringProperty(PROP_HOTSPOT_ID, hotspot.id)
             feature.addNumberProperty(PROP_COLOR_INDEX, hotspot.snailColorIndex)
-            feature.addStringProperty(PROP_LABEL, buildLabel(hotspot))
+            feature.addStringProperty(PROP_LABEL, thermalHotspotOverlayLabel(hotspot))
             feature.addNumberProperty(PROP_ACTIVE, if (hotspot.state == OgnThermalHotspotState.ACTIVE) 1 else 0)
             features.add(feature)
         }
@@ -162,13 +163,6 @@ class OgnThermalOverlay(
                 textIgnorePlacement(true)
             )
 
-    private fun buildLabel(hotspot: OgnThermalHotspot): String {
-        val climb = hotspot.maxClimbRateMps
-        if (!climb.isFinite()) return hotspot.sourceLabel
-        val signed = if (climb >= 0.0) "+" else ""
-        return "${signed}${String.format(java.util.Locale.US, "%.1f", climb)}"
-    }
-
     private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
         return latitude.isFinite() &&
             longitude.isFinite() &&
@@ -202,4 +196,8 @@ class OgnThermalOverlay(
     }
 }
 
-
+internal fun thermalHotspotOverlayLabel(hotspot: OgnThermalHotspot): String {
+    val climb = hotspot.displayClimbRateMps() ?: return hotspot.sourceLabel
+    val signed = if (climb >= 0.0) "+" else ""
+    return "${signed}${String.format(java.util.Locale.US, "%.1f", climb)}"
+}

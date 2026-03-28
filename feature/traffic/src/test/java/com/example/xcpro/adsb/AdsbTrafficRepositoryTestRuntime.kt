@@ -405,6 +405,8 @@ abstract class AdsbTrafficRepositoryTestBase {
                 }
                 return delegate
             }
+
+        override fun currentOnlineState(): Boolean = true
     }
 
     protected class DelayedSuccessProvider(

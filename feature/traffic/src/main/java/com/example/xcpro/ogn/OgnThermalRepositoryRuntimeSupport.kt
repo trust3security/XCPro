@@ -36,6 +36,10 @@ internal data class ThermalTracker(
     var maxClimbRateMps: Double,
     var previousTrackDegrees: Double?,
     var accumulatedTurnDegrees: Double,
+    var averageMetricStartMonoMs: Long?,
+    var averageMetricStartAltitudeMeters: Double?,
+    var averageMetricSampleCount: Int,
+    var averageMetricClimbSumMps: Double,
     var centroidLatitudeSum: Double,
     var centroidLongitudeSum: Double,
     var centroidSampleCount: Int,
@@ -49,14 +53,19 @@ internal data class ThermalTracker(
         get() = centroidLongitudeSum / centroidSampleCount.toDouble()
 
     val averageClimbRateMps: Double?
-        get() = if (sampleCount > 0) climbSumMps / sampleCount.toDouble() else null
+        get() = if (averageMetricSampleCount > 0) {
+            averageMetricClimbSumMps / averageMetricSampleCount.toDouble()
+        } else {
+            null
+        }
 
     val averageBottomToTopClimbRateMps: Double?
         get() {
-            val startAltitude = startAltitudeMeters ?: return null
+            val startAltitude = averageMetricStartAltitudeMeters ?: return null
             val maxAltitude = maxAltitudeMeters ?: return null
+            val startMonoMs = averageMetricStartMonoMs ?: return null
             val maxAltitudeMs = maxAltitudeAtMonoMs ?: return null
-            val elapsedSeconds = (maxAltitudeMs - startedAtMonoMs) / 1000.0
+            val elapsedSeconds = (maxAltitudeMs - startMonoMs) / 1000.0
             if (!elapsedSeconds.isFinite() || elapsedSeconds <= 0.0) return null
             return (maxAltitude - startAltitude) / elapsedSeconds
         }
@@ -76,13 +85,28 @@ internal data class ThermalTracker(
         previousTrackDegrees = normalizedTrackDegrees
     }
 
+    fun captureAverageMetricStartIfNeeded(nowMonoMs: Long, altitudeMeters: Double?) {
+        if (accumulatedTurnDegrees < AVERAGE_METRIC_INITIAL_TURN_EXCLUSION_DEGREES) return
+        if (averageMetricStartMonoMs == null || averageMetricStartAltitudeMeters == null) {
+            averageMetricStartMonoMs = nowMonoMs
+            averageMetricStartAltitudeMeters = altitudeMeters
+        }
+    }
+
+    fun addAverageMetricSampleIfReady(nowMonoMs: Long, climbRateMps: Double) {
+        val startMonoMs = averageMetricStartMonoMs ?: return
+        if (nowMonoMs <= startMonoMs) return
+        averageMetricSampleCount += 1
+        averageMetricClimbSumMps += climbRateMps
+    }
+
     fun toHotspot(
         stableId: String,
         nowMonoMs: Long,
         nowWallMs: Long,
         state: OgnThermalHotspotState
     ): OgnThermalHotspot {
-        return OgnThermalHotspot(
+        val hotspot = OgnThermalHotspot(
             id = stableId,
             sourceTargetId = sourceTargetId,
             sourceLabel = sourceLabel,
@@ -98,8 +122,11 @@ internal data class ThermalTracker(
             maxClimbRateMps = maxClimbRateMps,
             averageClimbRateMps = averageClimbRateMps,
             averageBottomToTopClimbRateMps = averageBottomToTopClimbRateMps,
-            snailColorIndex = climbRateToSnailColorIndex(maxClimbRateMps),
+            snailColorIndex = 0,
             state = state
+        )
+        return hotspot.copy(
+            snailColorIndex = climbRateToSnailColorIndex(hotspot.displayClimbRateMps() ?: Double.NaN)
         )
     }
 
@@ -127,6 +154,10 @@ internal data class ThermalTracker(
                 maxClimbRateMps = climbRateMps,
                 previousTrackDegrees = normalizeTrackDegreesOrNullInternal(target.trackDegrees),
                 accumulatedTurnDegrees = 0.0,
+                averageMetricStartMonoMs = null,
+                averageMetricStartAltitudeMeters = null,
+                averageMetricSampleCount = 0,
+                averageMetricClimbSumMps = 0.0,
                 centroidLatitudeSum = target.latitude,
                 centroidLongitudeSum = target.longitude,
                 centroidSampleCount = 1,
@@ -144,6 +175,10 @@ internal data class ThermalTracker(
             val delta = ((to - from + 540.0) % 360.0) - 180.0
             return abs(delta)
         }
+
+        // Average-climb presentation intentionally starts after the opening full turn.
+        // Thermal confirmation continues to use the full accumulated turn budget.
+        private const val AVERAGE_METRIC_INITIAL_TURN_EXCLUSION_DEGREES = 360.0
     }
 }
 

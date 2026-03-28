@@ -37,8 +37,20 @@ class LiveFollowWatchAircraftOverlayTest {
     }
 
     @Test
-    fun watchedAircraftMarker_usesTwoTimesScaleForFriendsFlying() {
-        assertEquals(2.0f, LIVE_FOLLOW_WATCH_AIRCRAFT_ICON_SCALE, 0f)
+    fun resolveLiveFollowWatchAircraftScale_usesRequestedZoomBands() {
+        assertEquals(1.60f, resolveLiveFollowWatchAircraftScale(10.5f), 0f)
+        assertEquals(1.30f, resolveLiveFollowWatchAircraftScale(9.25f), 0f)
+        assertEquals(1.00f, resolveLiveFollowWatchAircraftScale(8.25f), 0f)
+        assertEquals(0.80f, resolveLiveFollowWatchAircraftScale(7.0f), 0f)
+    }
+
+    @Test
+    fun closeZoomScale_matchesDefaultCloseZoomConstant() {
+        assertEquals(
+            LIVE_FOLLOW_WATCH_AIRCRAFT_CLOSE_ICON_SCALE,
+            resolveLiveFollowWatchAircraftScale(10.5f),
+            0f
+        )
     }
 }
 

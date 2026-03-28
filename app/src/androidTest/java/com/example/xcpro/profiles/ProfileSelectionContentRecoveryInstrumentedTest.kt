@@ -48,7 +48,7 @@ class ProfileSelectionContentRecoveryInstrumentedTest {
         setRecoveryContent()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Recover Default").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("Import Backup").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Load Profile File").assertIsDisplayed().performClick()
         composeRule.onNodeWithTag("recover-count").assertTextEquals("recover_count:1")
         composeRule.onNodeWithTag("import-count").assertTextEquals("import_count:1")
         composeRule.onNodeWithTag("last-action").assertTextEquals("last_action:import")
@@ -59,7 +59,7 @@ class ProfileSelectionContentRecoveryInstrumentedTest {
         setRecoveryContent(error = "Failed to recover with default profile: denied")
         composeRule.waitForIdle()
         composeRule.onAllNodesWithText("Recover Default").assertCountEquals(0)
-        composeRule.onAllNodesWithText("Import Backup").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Load Profile File").assertCountEquals(0)
     }
 
     @Test
@@ -67,7 +67,7 @@ class ProfileSelectionContentRecoveryInstrumentedTest {
         setRecoveryContent(isLoading = true)
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Recover Default").assertIsNotEnabled()
-        composeRule.onNodeWithText("Import Backup").assertIsNotEnabled()
+        composeRule.onNodeWithText("Load Profile File").assertIsNotEnabled()
     }
 
     private fun setRecoveryContent(
@@ -93,7 +93,9 @@ class ProfileSelectionContentRecoveryInstrumentedTest {
                             UserProfile(
                                 id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
                                 name = "Default",
-                                aircraftType = AircraftType.PARAGLIDER
+                                aircraftType = AircraftType.PARAGLIDER,
+                                createdAt = 1L,
+                                lastUsed = 1L
                             )
                         ),
                         activeProfile = null,

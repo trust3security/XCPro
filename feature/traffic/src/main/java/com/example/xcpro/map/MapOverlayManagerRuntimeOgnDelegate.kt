@@ -7,6 +7,8 @@ import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 
@@ -39,6 +41,8 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private var latestTargetAltitudeUnit: AltitudeUnit = AltitudeUnit.METERS
     private var latestTargetUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var ognIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
+    private var ognViewportZoom: Float? = null
+    private var renderedOgnIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
     private var ognDisplayUpdateMode: OgnDisplayUpdateMode = OgnDisplayUpdateMode.DEFAULT
     private val ognTrafficRenderState = OgnRenderThrottleState()
     private val ognTargetVisualsRenderState = OgnRenderThrottleState()
@@ -49,6 +53,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     fun initializeTrafficOverlays(map: MapLibreMap?) {
         if (map == null) return
         cancelPendingRenders()
+        renderedOgnIconSizePx = resolveRenderedOgnIconSizePx()
         runtimeState.ognOwnshipTargetBadgeOverlay?.cleanup()
         runtimeState.ognTargetLineOverlay?.cleanup()
         runtimeState.ognTargetRingOverlay?.cleanup()
@@ -61,7 +66,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             altitudeUnit = latestOgnAltitudeUnit,
             unitsPreferences = latestOgnUnitsPreferences
         )
-        runtimeState.ognTargetRingOverlay = ognTargetRingOverlayFactory(map, ognIconSizePx)
+        runtimeState.ognTargetRingOverlay = createTargetRingOverlay(map)
         runtimeState.ognTargetRingOverlay?.initialize()
         runtimeState.ognTargetRingOverlay?.render(
             enabled = latestTargetEnabled,
@@ -235,15 +240,39 @@ class MapOverlayManagerRuntimeOgnDelegate(
 
     fun setIconSizePx(iconSizePx: Int) {
         val clamped = clampOgnIconSizePx(iconSizePx)
+        val sizeChanged = ognIconSizePx != clamped
         ognIconSizePx = clamped
-        runtimeState.ognTrafficOverlay?.setIconSizePx(clamped)
-        runtimeState.ognTargetRingOverlay?.setIconSizePx(clamped)
+        if (!sizeChanged && renderedOgnIconSizePx == resolveRenderedOgnIconSizePx()) return
+        applyResolvedIconSizeToLiveOverlays()
     }
 
-    fun findTargetAt(tap: LatLng): String? {
-        val ringTarget = runtimeState.ognTargetRingOverlay?.findTargetAt(tap)
-        if (!ringTarget.isNullOrBlank()) return ringTarget
-        return runtimeState.ognTrafficOverlay?.findTargetAt(tap)
+    fun setViewportZoom(zoomLevel: Float) {
+        val normalizedZoom = zoomLevel.takeIf { it.isFinite() } ?: return
+        if (ognViewportZoom == normalizedZoom) return
+        ognViewportZoom = normalizedZoom
+        runtimeState.ognTrafficOverlay?.setViewportZoom(normalizedZoom)
+        applyResolvedIconSizeToLiveOverlays()
+    }
+
+    fun findHitAt(tap: LatLng): OgnTrafficHitResult? =
+        runtimeState.ognTargetRingOverlay?.findHitAt(tap)
+            ?: runtimeState.ognTrafficOverlay?.findHitAt(tap)
+
+    fun expandCluster(cluster: OgnTrafficHitResult.Cluster) {
+        val map = runtimeState.mapLibreMap ?: return
+        val currentCamera = map.cameraPosition ?: return
+        val nextZoom = (currentCamera.zoom + OGN_CLUSTER_TAP_ZOOM_DELTA)
+            .coerceAtMost(OGN_CLUSTER_TAP_MAX_ZOOM)
+        val cameraPosition = CameraPosition.Builder()
+            .target(LatLng(cluster.centerLatitude, cluster.centerLongitude))
+            .zoom(nextZoom)
+            .bearing(currentCamera.bearing)
+            .tilt(currentCamera.tilt)
+            .build()
+        map.animateCamera(
+            CameraUpdateFactory.newCameraPosition(cameraPosition),
+            OGN_CLUSTER_TAP_ANIMATION_MS
+        )
     }
 
     fun findThermalHotspotAt(tap: LatLng): String? = runtimeState.ognThermalOverlay?.findTargetAt(tap)
@@ -270,6 +299,8 @@ class MapOverlayManagerRuntimeOgnDelegate(
 
     fun onMapDetached() {
         mapInteractionActive = false
+        ognViewportZoom = null
+        renderedOgnIconSizePx = ognIconSizePx
         cancelPendingRenders()
     }
 
@@ -286,13 +317,19 @@ class MapOverlayManagerRuntimeOgnDelegate(
         ognTrafficOverlayFactory(
             context,
             map,
-            ognIconSizePx,
+            renderedOgnIconSizePx,
             satelliteContrastIconsEnabled()
-        )
+        ).also { overlay ->
+            ognViewportZoom?.let(overlay::setViewportZoom)
+        }
+
+    private fun createTargetRingOverlay(map: MapLibreMap): OgnTargetRingOverlayHandle =
+        ognTargetRingOverlayFactory(map, renderedOgnIconSizePx)
 
     private fun renderTargetsNow() {
         val map = runtimeState.mapLibreMap ?: return
         if (runtimeState.ognTrafficOverlay == null) {
+            renderedOgnIconSizePx = resolveRenderedOgnIconSizePx()
             runtimeState.ognTrafficOverlay = createOgnTrafficOverlay(map)
             runtimeState.ognTrafficOverlay?.initialize()
         }
@@ -333,7 +370,8 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private fun renderTargetVisualsNow() {
         val map = runtimeState.mapLibreMap ?: return
         if (runtimeState.ognTargetRingOverlay == null) {
-            runtimeState.ognTargetRingOverlay = ognTargetRingOverlayFactory(map, ognIconSizePx)
+            renderedOgnIconSizePx = resolveRenderedOgnIconSizePx()
+            runtimeState.ognTargetRingOverlay = createTargetRingOverlay(map)
             runtimeState.ognTargetRingOverlay?.initialize()
         }
         if (runtimeState.ognTargetLineOverlay == null) {
@@ -366,6 +404,20 @@ class MapOverlayManagerRuntimeOgnDelegate(
             Log.e(TAG, "Failed to render OGN target visuals: ${throwable.message}", throwable)
         }
     }
+
+    private fun applyResolvedIconSizeToLiveOverlays() {
+        val resolvedSizePx = resolveRenderedOgnIconSizePx()
+        if (renderedOgnIconSizePx == resolvedSizePx) return
+        renderedOgnIconSizePx = resolvedSizePx
+        runtimeState.ognTrafficOverlay?.setIconSizePx(resolvedSizePx)
+        runtimeState.ognTargetRingOverlay?.setIconSizePx(resolvedSizePx)
+    }
+
+    private fun resolveRenderedOgnIconSizePx(): Int =
+        resolveOgnTrafficViewportSizing(
+            baseIconSizePx = ognIconSizePx,
+            zoomLevel = ognViewportZoom
+        ).renderedIconSizePx
 
     private fun scheduleRender(
         state: OgnRenderThrottleState,
@@ -437,5 +489,8 @@ class MapOverlayManagerRuntimeOgnDelegate(
 
     private companion object {
         private const val TAG = "MapOverlayManager"
+        private const val OGN_CLUSTER_TAP_ZOOM_DELTA = 1.35
+        private const val OGN_CLUSTER_TAP_MAX_ZOOM = 15.5
+        private const val OGN_CLUSTER_TAP_ANIMATION_MS = 320
     }
 }

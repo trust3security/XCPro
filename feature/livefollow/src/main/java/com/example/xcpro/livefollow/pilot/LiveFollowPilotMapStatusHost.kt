@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -37,15 +38,19 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 
 private val LiveFollowPilotIndicatorGreen = Color(0xFF16A34A)
 private val LiveFollowPilotIndicatorRed = Color(0xFFDC2626)
+private val LiveFollowIndicatorPadding = 0.9.dp
+private val LiveFollowIndicatorDotSize = 10.8.dp
 
 @Composable
 fun BoxScope.LiveFollowPilotMapStatusHost(
     visible: Boolean,
+    topEndAdditionalOffset: Dp = 0.dp,
     uiState: LiveFollowPilotUiState,
     onStartSharing: () -> Unit,
     onStopSharing: () -> Unit
@@ -95,7 +100,9 @@ fun BoxScope.LiveFollowPilotMapStatusHost(
         modifier = Modifier
             .align(Alignment.TopEnd)
             .padding(
-                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp,
+                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
+                    12.dp +
+                    topEndAdditionalOffset,
                 end = 16.dp
             )
     ) {
@@ -111,7 +118,7 @@ fun BoxScope.LiveFollowPilotMapStatusHost(
                 shadowElevation = 4.dp
             ) {
                 Box(
-                    modifier = Modifier.padding(10.dp),
+                    modifier = Modifier.padding(LiveFollowIndicatorPadding),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -119,6 +126,7 @@ fun BoxScope.LiveFollowPilotMapStatusHost(
                         contentDescription = visuals.contentDescription,
                         tint = visuals.color,
                         modifier = Modifier
+                            .size(LiveFollowIndicatorDotSize)
                             .scale(iconScale)
                             .alpha(iconAlpha)
                     )

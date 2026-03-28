@@ -187,7 +187,7 @@ internal fun AdsbTrafficRepositoryRuntime.applyEmergencyAudioRollbackLatchIfNeed
 
 internal fun AdsbTrafficRepositoryRuntime.updateNetworkTransitionTelemetry(nowMonoMs: Long) {
     if (connectionState is AdsbConnectionState.Disabled) return
-    val currentOnline = runCatching { networkAvailabilityPort.isOnline.value }.getOrDefault(networkOnline)
+    val currentOnline = currentNetworkOnlineState()
     if (currentOnline == networkOnline) return
     networkOnline = currentOnline
     lastNetworkTransitionMonoMs = nowMonoMs

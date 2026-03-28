@@ -20,7 +20,7 @@ class OgnTargetRingOverlay(
     private val map: MapLibreMap,
     initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX
 ) : OgnTargetRingOverlayHandle {
-    private var currentIconSizePx: Int = clampOgnIconSizePx(initialIconSizePx)
+    private var currentIconSizePx: Int = clampOgnRenderedIconSizePx(initialIconSizePx)
 
     override fun initialize() {
         val style = map.style ?: return
@@ -38,7 +38,7 @@ class OgnTargetRingOverlay(
     }
 
     override fun setIconSizePx(iconSizePx: Int) {
-        val clamped = clampOgnIconSizePx(iconSizePx)
+        val clamped = clampOgnRenderedIconSizePx(iconSizePx)
         if (currentIconSizePx == clamped) return
         currentIconSizePx = clamped
         applyRingSizeToStyle()
@@ -59,7 +59,7 @@ class OgnTargetRingOverlay(
         source.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
     }
 
-    override fun findTargetAt(tap: LatLng): String? {
+    override fun findHitAt(tap: LatLng): OgnTrafficHitResult? {
         val style = map.style ?: return null
         if (style.getSource(SOURCE_ID) == null || style.getLayer(LAYER_ID) == null) return null
         val screenPoint = map.projection.toScreenLocation(tap)
@@ -67,17 +67,8 @@ class OgnTargetRingOverlay(
             map.queryRenderedFeatures(screenPoint, LAYER_ID)
         }.getOrNull().orEmpty()
         for (feature in features) {
-            val key = when {
-                feature.hasProperty(PROP_TARGET_KEY) ->
-                    runCatching { feature.getStringProperty(PROP_TARGET_KEY) }.getOrNull()
-
-                feature.hasProperty(PROP_TARGET_ID) ->
-                    runCatching { feature.getStringProperty(PROP_TARGET_ID) }.getOrNull()
-
-                else -> null
-            }
-            val normalized = key?.trim().orEmpty()
-            if (normalized.isNotEmpty()) return normalized
+            val hitResult = resolveOgnTrafficHitResult(feature)
+            if (hitResult != null) return hitResult
         }
         return null
     }

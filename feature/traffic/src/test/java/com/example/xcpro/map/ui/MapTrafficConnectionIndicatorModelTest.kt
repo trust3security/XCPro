@@ -1,6 +1,8 @@
 package com.example.xcpro.map.ui
 
+import com.example.xcpro.adsb.ADSB_ERROR_OFFLINE
 import com.example.xcpro.map.AdsbAuthMode
+import com.example.xcpro.map.AdsbNetworkFailureKind
 import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.map.OgnConnectionState
 import com.example.xcpro.map.OgnTrafficSnapshot
@@ -9,31 +11,38 @@ import com.example.xcpro.map.adsbConnectionStateBackingOff
 import com.example.xcpro.map.adsbConnectionStateDisabled
 import com.example.xcpro.map.adsbConnectionStateError
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class MapTrafficConnectionIndicatorModelTest {
 
     @Test
-    fun build_returnsGreenOgnIndicator_whenOgnIsConnected() {
+    fun build_returnsGreenOgnDot_whenOgnIsConnected() {
         val state = buildState(
             ognOverlayEnabled = true,
             ognSnapshot = ognSnapshot(connectionState = OgnConnectionState.CONNECTED)
         )
 
-        assertEquals("OGN", state.ogn?.sourceLabel)
-        assertEquals(TrafficConnectionIndicatorTone.GREEN, state.ogn?.tone)
+        assertDot(
+            indicator = state.ogn,
+            sourceLabel = "OGN",
+            tone = TrafficConnectionIndicatorTone.GREEN
+        )
     }
 
     @Test
-    fun build_returnsRedOgnIndicator_whenOgnIsInError() {
+    fun build_returnsOgnLostCard_whenOgnIsInError() {
         val state = buildState(
             ognOverlayEnabled = true,
             ognSnapshot = ognSnapshot(connectionState = OgnConnectionState.ERROR)
         )
 
-        assertEquals("OGN", state.ogn?.sourceLabel)
-        assertEquals(TrafficConnectionIndicatorTone.RED, state.ogn?.tone)
+        assertLostCard(
+            indicator = state.ogn,
+            sourceLabel = "OGN",
+            message = "OGN connection lost"
+        )
     }
 
     @Test
@@ -52,7 +61,7 @@ class MapTrafficConnectionIndicatorModelTest {
     }
 
     @Test
-    fun build_returnsGreenAdsbIndicator_whenAdsbIsActiveAndAuthHealthy() {
+    fun build_returnsGreenAdsbDot_whenAdsbIsActiveAndAuthHealthy() {
         val state = buildState(
             adsbOverlayEnabled = true,
             adsbSnapshot = adsbSnapshot(
@@ -61,27 +70,50 @@ class MapTrafficConnectionIndicatorModelTest {
             )
         )
 
-        assertEquals("ADS-B", state.adsb?.sourceLabel)
-        assertEquals(TrafficConnectionIndicatorTone.GREEN, state.adsb?.tone)
+        assertDot(
+            indicator = state.adsb,
+            sourceLabel = "ADS-B",
+            tone = TrafficConnectionIndicatorTone.GREEN
+        )
     }
 
     @Test
-    fun build_returnsRedAdsbIndicator_whenAdsbIsBackingOffOrInError() {
-        val backingOff = buildState(
+    fun build_returnsAdsbLostCard_whenAdsbIsOfflineInError() {
+        val state = buildState(
             adsbOverlayEnabled = true,
-            adsbSnapshot = adsbSnapshot(connectionState = adsbConnectionStateBackingOff(15))
-        )
-        val inError = buildState(
-            adsbOverlayEnabled = true,
-            adsbSnapshot = adsbSnapshot(connectionState = adsbConnectionStateError("offline"))
+            adsbSnapshot = adsbSnapshot(
+                connectionState = adsbConnectionStateError(ADSB_ERROR_OFFLINE),
+                lastError = ADSB_ERROR_OFFLINE,
+                networkOnline = false
+            )
         )
 
-        assertEquals(TrafficConnectionIndicatorTone.RED, backingOff.adsb?.tone)
-        assertEquals(TrafficConnectionIndicatorTone.RED, inError.adsb?.tone)
+        assertLostCard(
+            indicator = state.adsb,
+            sourceLabel = "ADS-B",
+            message = "ADS-B signal lost"
+        )
     }
 
     @Test
-    fun build_returnsRedAdsbIndicator_whenAuthFailedEvenIfConnectionIsActive() {
+    fun build_returnsAdsbLostCard_whenAdsbIsBackingOffAfterTransportFailure() {
+        val state = buildState(
+            adsbOverlayEnabled = true,
+            adsbSnapshot = adsbSnapshot(
+                connectionState = adsbConnectionStateBackingOff(15),
+                lastNetworkFailureKind = AdsbNetworkFailureKind.TIMEOUT
+            )
+        )
+
+        assertLostCard(
+            indicator = state.adsb,
+            sourceLabel = "ADS-B",
+            message = "ADS-B signal lost"
+        )
+    }
+
+    @Test
+    fun build_returnsCompactRedAdsbDot_whenAuthFailedEvenIfConnectionIsActive() {
         val state = buildState(
             adsbOverlayEnabled = true,
             adsbSnapshot = adsbSnapshot(
@@ -90,8 +122,28 @@ class MapTrafficConnectionIndicatorModelTest {
             )
         )
 
-        assertEquals("ADS-B", state.adsb?.sourceLabel)
-        assertEquals(TrafficConnectionIndicatorTone.RED, state.adsb?.tone)
+        assertDot(
+            indicator = state.adsb,
+            sourceLabel = "ADS-B",
+            tone = TrafficConnectionIndicatorTone.RED
+        )
+    }
+
+    @Test
+    fun build_returnsCompactRedAdsbDot_whenAdsbBackoffIsRateLimitedNotSignalLost() {
+        val state = buildState(
+            adsbOverlayEnabled = true,
+            adsbSnapshot = adsbSnapshot(
+                connectionState = adsbConnectionStateBackingOff(30),
+                lastHttpStatus = 429
+            )
+        )
+
+        assertDot(
+            indicator = state.adsb,
+            sourceLabel = "ADS-B",
+            tone = TrafficConnectionIndicatorTone.RED
+        )
     }
 
     @Test
@@ -107,6 +159,49 @@ class MapTrafficConnectionIndicatorModelTest {
 
         assertNull(disabled.adsb)
         assertNull(overlayDisabled.adsb)
+    }
+
+    @Test
+    fun followingIndicatorTopOffset_matchesVisibleIndicatorModes() {
+        val none = TrafficConnectionIndicatorsUiState(
+            ogn = null,
+            adsb = null
+        )
+        val one = TrafficConnectionIndicatorsUiState(
+            ogn = TrafficConnectionIndicatorUiModel(
+                sourceLabel = "OGN",
+                tone = TrafficConnectionIndicatorTone.GREEN
+            ),
+            adsb = null
+        )
+        val twoDots = TrafficConnectionIndicatorsUiState(
+            ogn = TrafficConnectionIndicatorUiModel(
+                sourceLabel = "OGN",
+                tone = TrafficConnectionIndicatorTone.GREEN
+            ),
+            adsb = TrafficConnectionIndicatorUiModel(
+                sourceLabel = "ADS-B",
+                tone = TrafficConnectionIndicatorTone.RED
+            )
+        )
+        val dotAndLostCard = TrafficConnectionIndicatorsUiState(
+            ogn = TrafficConnectionIndicatorUiModel(
+                sourceLabel = "OGN",
+                tone = TrafficConnectionIndicatorTone.GREEN
+            ),
+            adsb = TrafficConnectionIndicatorUiModel(
+                sourceLabel = "ADS-B",
+                tone = TrafficConnectionIndicatorTone.RED,
+                presentation = TrafficConnectionIndicatorPresentation.LostCard(
+                    message = "ADS-B signal lost"
+                )
+            )
+        )
+
+        assertEquals(0f, none.followingIndicatorTopOffset().value, 0.001f)
+        assertEquals(24.6f, one.followingIndicatorTopOffset().value, 0.001f)
+        assertEquals(49.2f, twoDots.followingIndicatorTopOffset().value, 0.001f)
+        assertEquals(54.6f, dotAndLostCard.followingIndicatorTopOffset().value, 0.001f)
     }
 
     private fun buildState(
@@ -137,7 +232,11 @@ class MapTrafficConnectionIndicatorModelTest {
 
     private fun adsbSnapshot(
         connectionState: com.example.xcpro.map.AdsbConnectionState,
-        authMode: AdsbAuthMode = AdsbAuthMode.Anonymous
+        authMode: AdsbAuthMode = AdsbAuthMode.Anonymous,
+        lastHttpStatus: Int? = null,
+        lastError: String? = null,
+        lastNetworkFailureKind: AdsbNetworkFailureKind? = null,
+        networkOnline: Boolean = true
     ): AdsbTrafficSnapshot = AdsbTrafficSnapshot(
         targets = emptyList(),
         connectionState = connectionState,
@@ -148,10 +247,37 @@ class MapTrafficConnectionIndicatorModelTest {
         fetchedCount = 0,
         withinRadiusCount = 0,
         displayedCount = 0,
-        lastHttpStatus = null,
+        lastHttpStatus = lastHttpStatus,
         remainingCredits = null,
         lastPollMonoMs = null,
         lastSuccessMonoMs = null,
-        lastError = null
+        lastError = lastError,
+        lastNetworkFailureKind = lastNetworkFailureKind,
+        networkOnline = networkOnline
     )
+
+    private fun assertDot(
+        indicator: TrafficConnectionIndicatorUiModel?,
+        sourceLabel: String,
+        tone: TrafficConnectionIndicatorTone
+    ) {
+        assertNotNull(indicator)
+        assertEquals(sourceLabel, indicator?.sourceLabel)
+        assertEquals(tone, indicator?.tone)
+        assertEquals(TrafficConnectionIndicatorPresentation.Dot, indicator?.presentation)
+    }
+
+    private fun assertLostCard(
+        indicator: TrafficConnectionIndicatorUiModel?,
+        sourceLabel: String,
+        message: String
+    ) {
+        assertNotNull(indicator)
+        assertEquals(sourceLabel, indicator?.sourceLabel)
+        assertEquals(TrafficConnectionIndicatorTone.RED, indicator?.tone)
+        assertEquals(
+            TrafficConnectionIndicatorPresentation.LostCard(message = message),
+            indicator?.presentation
+        )
+    }
 }

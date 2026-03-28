@@ -50,6 +50,7 @@ interface AdsbTrafficOverlayHandle {
 interface OgnTrafficOverlayHandle {
     fun initialize()
     fun setIconSizePx(iconSizePx: Int)
+    fun setViewportZoom(zoomLevel: Float)
     fun setUseSatelliteContrastIcons(enabled: Boolean)
     fun render(
         targets: List<OgnTrafficTarget>,
@@ -59,7 +60,7 @@ interface OgnTrafficOverlayHandle {
     )
     fun cleanup()
     fun bringToFront()
-    fun findTargetAt(tap: LatLng): String?
+    fun findHitAt(tap: LatLng): OgnTrafficHitResult?
 }
 
 interface OgnTargetRingOverlayHandle {
@@ -68,7 +69,7 @@ interface OgnTargetRingOverlayHandle {
     fun render(enabled: Boolean, target: OgnTrafficTarget?)
     fun cleanup()
     fun bringToFront()
-    fun findTargetAt(tap: LatLng): String?
+    fun findHitAt(tap: LatLng): OgnTrafficHitResult?
 }
 
 interface OgnTargetLineOverlayHandle {

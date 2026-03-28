@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.livefollow.pilot.LiveFollowPilotMapStatusHost
@@ -129,6 +130,8 @@ internal fun resolveMapLiveFollowWatchTaskOverlayState(
 @Composable
 internal fun BoxScope.MapLiveFollowRuntimeLayer(
     showPilotStatusIndicator: Boolean,
+    topEndAdditionalOffset: Dp,
+    currentZoom: Float,
     taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
     watchedPilotFocusEpoch: Int,
     mapLibreMapProvider: () -> org.maplibre.android.maps.MapLibreMap?,
@@ -165,6 +168,9 @@ internal fun BoxScope.MapLiveFollowRuntimeLayer(
         onDispose {
             watchTaskOverlay?.cleanup()
         }
+    }
+    LaunchedEffect(watchAircraftOverlay, currentZoom) {
+        watchAircraftOverlay?.setViewportZoom(currentZoom)
     }
     LaunchedEffect(watchAircraftOverlay, watchedPilotOverlayState) {
         watchAircraftOverlay?.render(watchedPilotOverlayState)
@@ -205,6 +211,7 @@ internal fun BoxScope.MapLiveFollowRuntimeLayer(
         val pilotUiState by pilotViewModel.uiState.collectAsStateWithLifecycle()
         LiveFollowPilotMapStatusHost(
             visible = true,
+            topEndAdditionalOffset = topEndAdditionalOffset,
             uiState = pilotUiState,
             onStartSharing = pilotViewModel::startSharing,
             onStopSharing = pilotViewModel::stopSharing

@@ -45,6 +45,22 @@ Implementation progress (2026-03-01):
 - Remaining for final gate:
   1) Repeated instrumentation stability evidence (Phase 4 thresholds).
 
+Implementation update (2026-03-28):
+- Fixed a field-reported recovery bug where ADS-B could stay red until process
+  restart after connectivity had already returned.
+- Root cause: the runtime offline/retry wait path trusted the callback-backed
+  `isOnline` flow only; if that flow stayed stale-false after recovery, ADS-B
+  never resumed polling.
+- Fix:
+  - `AdsbNetworkAvailabilityPort` now exposes `currentOnlineState()`.
+  - the Android adapter provides a fresh `ConnectivityManager` snapshot.
+  - ADS-B wait/retry paths now re-check that fresh snapshot before remaining
+    offline.
+- Regression added:
+  - `staleOfflineFlow_recoversFromFreshNetworkSnapshotWithoutRestart()`
+- Detailed note:
+  - `docs/ADS-b/CHANGE_NOTE_ADSB_STALE_OFFLINE_RECOVERY_2026-03-28.md`
+
 ## 1) Scope
 
 - Problem statement:

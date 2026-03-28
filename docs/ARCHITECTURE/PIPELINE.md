@@ -528,7 +528,8 @@ UI effects:
 Map bindings:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
   - Binds `mapLocation` into UI state.
-  - Binds `ognIconSizePx` and `adsbIconSizePx` from settings for runtime overlay sizing.
+  - Binds `ognIconSizePx` and `adsbIconSizePx` from settings as base runtime overlay size inputs.
+  - Does not own viewport zoom; OGN zoom declutter remains runtime-derived from map camera callbacks.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
   - Hydrates and persists draggable map widget offsets via `MapWidgetLayoutViewModel`
     (`SIDE_HAMBURGER`, `FLIGHT_MODE`, `SETTINGS_SHORTCUT`, `BALLAST`).
@@ -585,11 +586,18 @@ OGN settings path:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - Pushes OGN overlay targets, thermal hotspots, and OGN trail segments into runtime overlay manager.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - Applies icon size for OGN traffic overlays and owns OGN thermal + OGN glider-trail overlay runtime lifecycle.
+  - Owns OGN thermal + OGN glider-trail overlay runtime lifecycle.
+  - Owns zoom-aware OGN rendered icon sizing by combining base icon-size preference with runtime viewport zoom in the OGN delegate.
   - Applies display-update mode (`real_time` / `balanced` / `battery`) as map-render throttling only for OGN traffic/thermal/trail overlays (ingest is unchanged).
   - Owns OGN/ADS-b traffic overlay creation on startup/style recreation (MapInitializer delegates traffic overlay construction to this runtime owner).
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
+  - Resolves wide-zoom label declutter from the current rendered icon size and
+    applies it when authoring OGN top/bottom text feature properties.
+  - Projects visible OGN targets to screen space and groups very close targets
+    into render-only micro-cluster items before feature authoring.
+  - Returns typed OGN hit results so grouped markers can zoom to expand instead
+    of selecting a wrong aircraft.
 - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
   - Derives thermal hotspots from OGN targets and applies retention policy from
     `thermalRetentionHours` (`1h..23h` rolling window, `all day` until local midnight).
@@ -1118,6 +1126,9 @@ Task map rendering bridge (2026-02-12):
   - `MapInitializerDataLoader` (airspace/waypoint bootstrap and refresh)
   - `MapStyleUrlResolver` (canonical style-name -> URL resolution for runtime style paths)
   - `MapOverlayManager` (traffic overlay creation owner for OGN/ADS-b on startup and style transitions)
+- `MapInitializer.setupInitialPosition(...)` and camera-idle callbacks are the startup/runtime viewport-zoom producers for traffic declutter:
+  - ADS-B receives viewport zoom through `setAdsbViewportZoom(...)`.
+  - OGN receives viewport zoom through `setOgnViewportZoom(...)`, and OGN effective icon size remains delegate-owned render-only state.
 - `MapInitializer.setupMapStyle(...)` uses bounded style-load wait with fallback init to avoid startup hangs.
 - `MapRuntimeController` applies style commands with map-generation/request-token guards so stale callbacks do not mutate active overlays.
 - Parent Phase 3 visual/runtime primitive ownership now also lives in

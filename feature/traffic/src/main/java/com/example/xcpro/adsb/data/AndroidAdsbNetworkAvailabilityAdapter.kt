@@ -38,6 +38,8 @@ class AndroidAdsbNetworkAvailabilityAdapter @Inject constructor(
         }
     }
 
+    override fun currentOnlineState(): Boolean = readCurrentOnlineState()
+
     init {
         val manager = connectivityManager
         if (manager == null) {
@@ -53,7 +55,7 @@ class AndroidAdsbNetworkAvailabilityAdapter @Inject constructor(
         }
     }
 
-    private fun currentOnlineState(): Boolean {
+    private fun readCurrentOnlineState(): Boolean {
         val manager = connectivityManager ?: return true
         val activeNetwork = manager.activeNetwork ?: return false
         val capabilities = manager.getNetworkCapabilities(activeNetwork) ?: return false

@@ -1,7 +1,10 @@
 package com.example.xcpro.adsb
 
+import com.example.xcpro.adsb.domain.AdsbNetworkAvailabilityPort
 import com.example.xcpro.core.time.FakeClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -417,6 +420,63 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
         assertEquals(4, provider.callCount)
         assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
         repository.stop()
+    }
+
+    @Test
+    fun staleOfflineFlow_recoversFromFreshNetworkSnapshotWithoutRestart() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = SplitBrainNetworkAvailabilityPort(flowOnline = false, currentOnline = false)
+        val provider = SequenceProvider(
+            listOf(
+                ProviderResult.Success(
+                    response = OpenSkyResponse(timeSec = 1_710_000_000L, states = emptyList()),
+                    httpCode = 200,
+                    remainingCredits = null
+                )
+            )
+        )
+        val repository = AdsbTrafficRepositoryImpl(
+            providerClient = provider,
+            tokenRepository = FakeTokenRepository(),
+            clock = FakeClock(monoMs = 0L, wallMs = 0L),
+            dispatcher = dispatcher,
+            networkAvailabilityPort = network
+        )
+
+        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+        repository.setEnabled(true)
+        runCurrent()
+        assertEquals(0, provider.callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Error)
+
+        network.setCurrentOnline(true)
+        advanceTimeBy(1_100L)
+        runCurrent()
+
+        assertEquals(1, provider.callCount)
+        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        assertTrue(repository.snapshot.value.networkOnline)
+        repository.stop()
+    }
+
+    private class SplitBrainNetworkAvailabilityPort(
+        flowOnline: Boolean,
+        currentOnline: Boolean
+    ) : AdsbNetworkAvailabilityPort {
+        private val _isOnline = MutableStateFlow(flowOnline)
+        private var currentOnlineState = currentOnline
+
+        override val isOnline: StateFlow<Boolean> = _isOnline
+
+        override fun currentOnlineState(): Boolean = currentOnlineState
+
+        fun setFlowOnline(online: Boolean) {
+            _isOnline.value = online
+        }
+
+        fun setCurrentOnline(online: Boolean) {
+            currentOnlineState = online
+        }
     }
 
 }

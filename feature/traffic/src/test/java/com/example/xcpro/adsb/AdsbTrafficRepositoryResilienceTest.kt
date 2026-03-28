@@ -323,16 +323,20 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
             networkAvailabilityPort = ThrowingOnceNetworkAvailabilityPort()
         )
 
-        repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
-        repository.setEnabled(true)
-        runCurrent()
-        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Error)
+        try {
+            repository.updateCenter(latitude = -33.8688, longitude = 151.2093)
+            repository.setEnabled(true)
+            runCurrent()
+            assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Error)
 
-        advanceTimeBy(10_000L)
-        runCurrent()
-        assertTrue(provider.callCount >= 1)
-        assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
-        repository.stop()
+            advanceTimeBy(10_000L)
+            runCurrent()
+            assertTrue(provider.callCount >= 1)
+            assertTrue(repository.snapshot.value.connectionState is AdsbConnectionState.Active)
+        } finally {
+            repository.stop()
+            runCurrent()
+        }
     }
 
     @Test
