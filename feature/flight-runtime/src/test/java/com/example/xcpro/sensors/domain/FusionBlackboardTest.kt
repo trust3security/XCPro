@@ -1,6 +1,7 @@
 package com.example.xcpro.sensors.domain
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -64,6 +65,33 @@ class FusionBlackboardTest {
         )
         val resolved = bb.resolveNettoSampleValue(rawNetto = Double.NaN, nettoValid = false)
         assertEquals(1.0, resolved, 0.001)
+    }
+
+    @Test
+    fun netto_average_validity_requires_a_recent_valid_sample_in_window() {
+        val bb = FusionBlackboard()
+
+        var outputs = bb.updateAveragesAndDisplay(
+            currentTime = 0L,
+            tc30TimeMillis = 0L,
+            bruttoSample = 0.0,
+            nettoSample = 1.0,
+            thermalActive = false,
+            nettoValue = 1.0,
+            nettoValid = true
+        )
+        assertTrue(outputs.nettoAverage30sValid)
+
+        outputs = bb.updateAveragesAndDisplay(
+            currentTime = 31_000L,
+            tc30TimeMillis = 31_000L,
+            bruttoSample = 0.0,
+            nettoSample = 0.0,
+            thermalActive = false,
+            nettoValue = 0.0,
+            nettoValid = false
+        )
+        assertFalse(outputs.nettoAverage30sValid)
     }
 
     @Test

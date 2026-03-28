@@ -18,11 +18,11 @@ class PolarStillAirSinkProvider @Inject constructor(
     private var bestLdCacheKey: CacheKey? = null
     private var bestLdCacheValue: Double? = null
 
-    override fun sinkAtSpeed(airspeedMs: Double): Double? {
+    override fun sinkAtSpeed(indicatedAirspeedMs: Double): Double? {
         val model: GliderModel = gliderRepository.effectiveModel.value
         val config: GliderConfig = gliderRepository.config.value
         if (!GliderSpeedBoundsResolver.hasPolar(model, config)) return null
-        return runCatching { PolarCalculator.sinkMs(airspeedMs, model, config) }
+        return runCatching { PolarCalculator.sinkMs(indicatedAirspeedMs, model, config) }
             .getOrNull()
             ?.takeIf { it.isFinite() }
     }
@@ -33,11 +33,11 @@ class PolarStillAirSinkProvider @Inject constructor(
         return GliderSpeedBoundsResolver.resolveIasBoundsMs(model, config)
     }
 
-    override fun ldAtSpeed(airspeedMs: Double): Double? {
+    override fun ldAtSpeed(indicatedAirspeedMs: Double): Double? {
         val model: GliderModel = gliderRepository.effectiveModel.value
         val config: GliderConfig = gliderRepository.config.value
         if (!GliderSpeedBoundsResolver.hasPolar(model, config)) return null
-        return runCatching { GlidePolarMetricsResolver.ldAtSpeed(airspeedMs, model, config) }
+        return runCatching { GlidePolarMetricsResolver.ldAtSpeed(indicatedAirspeedMs, model, config) }
             .getOrNull()
             ?.takeIf { it.isFinite() && it > 0.0 }
     }

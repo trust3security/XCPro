@@ -32,11 +32,32 @@ class FinalGlideUseCaseTest {
         )
 
         assertTrue(solution.valid)
+        assertTrue(solution.degraded)
+        assertEquals(GlideDegradedReason.STILL_AIR_ASSUMED, solution.degradedReason)
         assertTrue(solution.requiredGlideRatio.isFinite())
         assertTrue(solution.requiredGlideRatio > 0.0)
         assertTrue(solution.requiredAltitudeMeters > 900.0)
         assertTrue(solution.arrivalHeightMc0Meters >= solution.arrivalHeightMeters)
         assertTrue(solution.distanceRemainingMeters > 0.0)
+    }
+
+    @Test
+    fun solve_keeps_finish_glide_non_degraded_when_wind_is_available() {
+        val useCase = FinalGlideUseCase(fakePolarSinkProvider())
+        val solution = useCase.solve(
+            completeData = completeFlightData(navAltitudeMeters = 1_250.0, macCready = 2.0),
+            windState = WindState(
+                vector = WindVector(east = -3.0, north = 0.0),
+                source = WindSource.MANUAL,
+                quality = 5,
+                confidence = 1.0
+            ),
+            target = validFinishTarget()
+        )
+
+        assertTrue(solution.valid)
+        assertFalse(solution.degraded)
+        assertEquals(null, solution.degradedReason)
     }
 
     @Test

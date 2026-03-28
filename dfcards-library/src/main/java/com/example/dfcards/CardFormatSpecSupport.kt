@@ -61,8 +61,10 @@ internal fun placeholderFor(
             "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
         KnownCardId.WIND_DIR -> "-- ${strings.degUnit}"
         KnownCardId.WPT_DIST,
-        KnownCardId.TASK_DIST ->
+        KnownCardId.TASK_DIST,
+        KnownCardId.TASK_REMAIN_DIST ->
             "-- ${UnitsFormatter.distance(DistanceM(0.0), units).unitLabel}"
+        KnownCardId.TASK_REMAIN_TIME -> "--:--"
         else -> "--"
     }
 }
@@ -176,6 +178,69 @@ internal fun glideInvalidLabel(reason: String, strings: CardStrings): String {
         "INVALID" -> strings.invalid
         else -> strings.noTask
     }
+}
+
+internal fun glideDegradedLabel(reason: String, strings: CardStrings): String {
+    return when (reason) {
+        "STILL_AIR_ASSUMED" -> strings.noWind
+        else -> strings.est
+    }
+}
+
+internal fun glideStatusLabel(
+    liveData: RealTimeFlightData,
+    strings: CardStrings,
+    base: String? = null
+): String {
+    val validLabel = base ?: strings.calc
+    if (!liveData.glideDegraded) return validLabel
+
+    val degradedLabel = glideDegradedLabel(liveData.glideDegradedReason, strings)
+    return if (base.isNullOrBlank()) {
+        degradedLabel
+    } else {
+        "$base $degradedLabel"
+    }
+}
+
+internal fun waypointInvalidLabel(reason: String, strings: CardStrings): String {
+    return when (reason) {
+        "PRESTART" -> strings.prestart
+        "NO_POSITION",
+        "NO_TIME" -> strings.noData
+        "STATIC" -> strings.static
+        "FINISHED",
+        "INVALID_ROUTE",
+        "INVALID" -> strings.invalid
+        else -> strings.noWpt
+    }
+}
+
+internal fun taskPerformanceInvalidLabel(reason: String, strings: CardStrings): String {
+    return when (reason) {
+        "PRESTART" -> strings.prestart
+        "NO_POSITION" -> strings.noData
+        "NO_START" -> strings.noStart
+        "NO_ALTITUDE" -> strings.noAlt
+        "STATIC" -> strings.static
+        "INVALID_ROUTE",
+        "INVALID" -> strings.invalid
+        else -> strings.noTask
+    }
+}
+
+internal fun taskRemainingTimeBasisLabel(basis: String, strings: CardStrings): String {
+    return when (basis) {
+        "ACHIEVED_TASK_SPEED" -> strings.calc
+        else -> strings.calc
+    }
+}
+
+internal fun formatDurationClock(durationMillis: Long): String {
+    val totalMinutes = durationMillis.coerceAtLeast(0L) / 60_000L
+    val hours = totalMinutes / 60L
+    val minutes = totalMinutes % 60L
+    return String.format(Locale.US, "%d:%02d", hours, minutes)
 }
 
 internal fun RealTimeFlightData.primaryVarioValue(): Double {

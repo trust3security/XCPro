@@ -24,7 +24,7 @@ class GlidePolarMetricsResolverTest {
         )
 
         val ld = GlidePolarMetricsResolver.ldAtSpeed(
-            airspeedMs = UnitsConverter.kmhToMs(110.0),
+            indicatedAirspeedMs = UnitsConverter.kmhToMs(110.0),
             model = model,
             config = GliderConfig()
         )

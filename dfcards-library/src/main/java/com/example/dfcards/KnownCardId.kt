@@ -47,6 +47,8 @@ internal enum class KnownCardId(val raw: String) {
     FLIGHT_TIME("flight_time"),
     TASK_SPD("task_spd"),
     TASK_DIST("task_dist"),
+    TASK_REMAIN_DIST("task_remain_dist"),
+    TASK_REMAIN_TIME("task_remain_time"),
     START_ALT("start_alt"),
     G_FORCE("g_force"),
     FLARM("flarm"),

@@ -7,11 +7,18 @@ import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.glide.GlideDegradedReason
 import com.example.xcpro.glide.GlideSolution
+import com.example.xcpro.navigation.WaypointEtaSource
+import com.example.xcpro.navigation.WaypointNavigationInvalidReason
+import com.example.xcpro.navigation.WaypointNavigationSnapshot
 import com.example.xcpro.sensors.BaroData
 import com.example.xcpro.sensors.CompassData
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.GPSData
+import com.example.xcpro.taskperformance.TaskPerformanceInvalidReason
+import com.example.xcpro.taskperformance.TaskPerformanceSnapshot
+import com.example.xcpro.taskperformance.TaskRemainingTimeBasis
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weather.wind.model.WindVector
@@ -61,6 +68,7 @@ class ConvertToRealTimeFlightDataTest {
             bruttoAverage30s = VerticalSpeedMs(1.0),
             bruttoAverage30sValid = true,
             nettoAverage30s = VerticalSpeedMs(0.9),
+            nettoAverage30sValid = true,
             varioSource = "TE",
             varioValid = true,
             pressureAltitude = AltitudeM(1100.0),
@@ -77,8 +85,11 @@ class ConvertToRealTimeFlightDataTest {
             currentThermalLiftRate = VerticalSpeedMs(1.3),
             currentThermalValid = true,
             currentLD = 35f,
+            currentLDValid = true,
             polarLdCurrentSpeed = 38f,
+            polarLdCurrentSpeedValid = true,
             polarBestLd = 44f,
+            polarBestLdValid = true,
             netto = VerticalSpeedMs(-0.5),
             displayNetto = VerticalSpeedMs(-0.4),
             nettoValid = true,
@@ -97,6 +108,8 @@ class ConvertToRealTimeFlightDataTest {
             isFlying = true,
             glideSolution = GlideSolution(
                 valid = true,
+                degraded = true,
+                degradedReason = GlideDegradedReason.STILL_AIR_ASSUMED,
                 requiredGlideRatio = 28.4,
                 arrivalHeightMeters = 130.0,
                 requiredAltitudeMeters = 1_070.0,
@@ -115,12 +128,18 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(1190.0, result.navAltitude, 1e-6)
         assertEquals(2.5f, result.thermalAverage, 1e-6f)
         assertEquals(0.9, result.nettoAverage30s, 1e-6)
+        assertEquals(true, result.nettoAverage30sValid)
+        assertEquals(true, result.currentLDValid)
         assertEquals(38f, result.polarLdCurrentSpeed, 1e-6f)
+        assertEquals(true, result.polarLdCurrentSpeedValid)
         assertEquals(44f, result.polarBestLd, 1e-6f)
+        assertEquals(true, result.polarBestLdValid)
         assertEquals(28.4, result.requiredGlideRatio, 1e-6)
         assertEquals(130.0, result.arrivalHeightM, 1e-6)
         assertEquals(1_070.0, result.requiredAltitudeM, 1e-6)
         assertEquals(170.0, result.arrivalHeightMc0M, 1e-6)
+        assertEquals(true, result.glideDegraded)
+        assertEquals("STILL_AIR_ASSUMED", result.glideDegradedReason)
         assertEquals("12:34", result.flightTime)
         assertEquals(12_345L, result.timestamp)
         assertEquals(9_999L, result.lastUpdateTime)
@@ -224,5 +243,140 @@ class ConvertToRealTimeFlightDataTest {
         )
 
         assertEquals("TRACK", result.headingSource)
+    }
+
+    @Test
+    fun maps_waypoint_navigation_fields_from_runtime_owner() {
+        val gps = GPSData(
+            position = GeoPoint(latitude = 37.5, longitude = -122.4),
+            altitude = AltitudeM(1000.0),
+            speed = SpeedMs(20.0),
+            bearing = 100.0,
+            accuracy = 5f,
+            timestamp = 2_000L,
+            monotonicTimestampMillis = 2_000L
+        )
+        val complete = CompleteFlightData(
+            gps = gps,
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(1200.0),
+            qnh = PressureHpa(1015.0),
+            isQNHCalibrated = true,
+            verticalSpeed = VerticalSpeedMs(0.8),
+            bruttoVario = VerticalSpeedMs(0.8),
+            pressureAltitude = AltitudeM(1100.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.MEDIUM,
+            qnhCalibrationAgeSeconds = 5L,
+            agl = AltitudeM(100.0),
+            thermalAverage = VerticalSpeedMs(0.0),
+            currentLD = 20f,
+            netto = VerticalSpeedMs(0.0),
+            timestamp = 2_000L,
+            dataQuality = "GPS",
+            thermalAverageValid = false
+        )
+
+        val result = convertToRealTimeFlightData(
+            completeData = complete,
+            windState = null,
+            isFlying = true,
+            waypointNavigation = WaypointNavigationSnapshot(
+                targetLabel = "Boundary TP",
+                distanceMeters = 12_345.0,
+                bearingTrueDegrees = 87.4,
+                valid = true,
+                invalidReason = WaypointNavigationInvalidReason.NONE,
+                etaEpochMillis = 9_999L,
+                etaValid = true,
+                etaSource = WaypointEtaSource.GROUND_SPEED,
+                etaInvalidReason = WaypointNavigationInvalidReason.NONE
+            )
+        )
+
+        assertEquals(12_345.0, result.waypointDistanceMeters, 1e-6)
+        assertEquals(true, result.waypointValid)
+        assertEquals(87.4, result.waypointBearingTrueDegrees, 1e-6)
+        assertEquals("NONE", result.waypointInvalidReason)
+        assertEquals(9_999L, result.waypointEtaEpochMillis)
+        assertEquals(true, result.waypointEtaValid)
+        assertEquals("GROUND_SPEED", result.waypointEtaSource)
+        assertEquals("NONE", result.waypointEtaInvalidReason)
+    }
+
+    @Test
+    fun maps_task_performance_fields_from_runtime_owner() {
+        val gps = GPSData(
+            position = GeoPoint(latitude = 37.5, longitude = -122.4),
+            altitude = AltitudeM(1000.0),
+            speed = SpeedMs(20.0),
+            bearing = 100.0,
+            accuracy = 5f,
+            timestamp = 2_000L,
+            monotonicTimestampMillis = 2_000L
+        )
+        val complete = CompleteFlightData(
+            gps = gps,
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(1200.0),
+            qnh = PressureHpa(1015.0),
+            isQNHCalibrated = true,
+            verticalSpeed = VerticalSpeedMs(0.8),
+            bruttoVario = VerticalSpeedMs(0.8),
+            pressureAltitude = AltitudeM(1100.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.MEDIUM,
+            qnhCalibrationAgeSeconds = 5L,
+            agl = AltitudeM(100.0),
+            thermalAverage = VerticalSpeedMs(0.0),
+            currentLD = 20f,
+            netto = VerticalSpeedMs(0.0),
+            timestamp = 2_000L,
+            dataQuality = "GPS",
+            thermalAverageValid = false
+        )
+
+        val result = convertToRealTimeFlightData(
+            completeData = complete,
+            windState = null,
+            isFlying = true,
+            taskPerformance = TaskPerformanceSnapshot(
+                taskSpeedMs = 27.5,
+                taskSpeedValid = true,
+                taskSpeedInvalidReason = TaskPerformanceInvalidReason.NONE,
+                taskDistanceMeters = 12_345.0,
+                taskDistanceValid = true,
+                taskDistanceInvalidReason = TaskPerformanceInvalidReason.NONE,
+                taskRemainingDistanceMeters = 23_456.0,
+                taskRemainingDistanceValid = true,
+                taskRemainingDistanceInvalidReason = TaskPerformanceInvalidReason.NONE,
+                taskRemainingTimeMillis = 3_600_000L,
+                taskRemainingTimeValid = true,
+                taskRemainingTimeBasis = TaskRemainingTimeBasis.ACHIEVED_TASK_SPEED,
+                taskRemainingTimeInvalidReason = TaskPerformanceInvalidReason.NONE,
+                startAltitudeMeters = 1_150.0,
+                startAltitudeValid = true,
+                startAltitudeInvalidReason = TaskPerformanceInvalidReason.NONE
+            )
+        )
+
+        assertEquals(27.5, result.taskSpeedMs, 1e-6)
+        assertEquals(true, result.taskSpeedValid)
+        assertEquals("NONE", result.taskSpeedInvalidReason)
+        assertEquals(12_345.0, result.taskDistanceMeters, 1e-6)
+        assertEquals(true, result.taskDistanceValid)
+        assertEquals("NONE", result.taskDistanceInvalidReason)
+        assertEquals(23_456.0, result.taskRemainingDistanceMeters, 1e-6)
+        assertEquals(true, result.taskRemainingDistanceValid)
+        assertEquals("NONE", result.taskRemainingDistanceInvalidReason)
+        assertEquals(3_600_000L, result.taskRemainingTimeMillis)
+        assertEquals(true, result.taskRemainingTimeValid)
+        assertEquals("ACHIEVED_TASK_SPEED", result.taskRemainingTimeBasis)
+        assertEquals("NONE", result.taskRemainingTimeInvalidReason)
+        assertEquals(1_150.0, result.startAltitudeMeters, 1e-6)
+        assertEquals(true, result.startAltitudeValid)
+        assertEquals("NONE", result.startAltitudeInvalidReason)
     }
 }

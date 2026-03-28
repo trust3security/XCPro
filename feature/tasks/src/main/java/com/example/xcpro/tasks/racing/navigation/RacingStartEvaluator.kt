@@ -83,7 +83,9 @@ internal class RacingStartEvaluator {
                 timestampMillis = normalizedTimestamp,
                 candidateType = candidateType,
                 isValid = false,
-                rejectionReason = RacingStartRejectionReason.GATE_NOT_OPEN
+                rejectionReason = RacingStartRejectionReason.GATE_NOT_OPEN,
+                sampleFix = fix,
+                altitudeReference = rules.altitudeReference
             )
         }
         if (rules.gateCloseTimeMillis != null && normalizedTimestamp > rules.gateCloseTimeMillis) {
@@ -91,7 +93,9 @@ internal class RacingStartEvaluator {
                 timestampMillis = normalizedTimestamp,
                 candidateType = candidateType,
                 isValid = false,
-                rejectionReason = RacingStartRejectionReason.GATE_CLOSED
+                rejectionReason = RacingStartRejectionReason.GATE_CLOSED,
+                sampleFix = fix,
+                altitudeReference = rules.altitudeReference
             )
         }
 
@@ -131,7 +135,9 @@ internal class RacingStartEvaluator {
             timestampMillis = normalizedTimestamp,
             candidateType = candidateType,
             isValid = true,
-            penaltyFlags = penalties
+            penaltyFlags = penalties,
+            sampleFix = fix,
+            altitudeReference = rules.altitudeReference
         )
     }
 

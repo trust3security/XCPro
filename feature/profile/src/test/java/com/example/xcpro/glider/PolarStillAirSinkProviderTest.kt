@@ -2,10 +2,12 @@ package com.example.xcpro.glider
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.xcpro.common.glider.ThreePointPolar
 import com.example.xcpro.common.glider.UserPolarCoefficients
 import com.example.xcpro.common.units.UnitsConverter
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -29,7 +31,56 @@ class PolarStillAirSinkProviderTest {
     }
 
     @Test
-    fun referenceWeightAndUserCoefficients_areStoredButDoNotChangeCurrentSinkPath() {
+    fun manualThreePointPolar_changes_authoritative_sink_and_bestLd() {
+        val repository = GliderRepository(appContext)
+        repository.selectModelById("js1c-18")
+        val provider = PolarStillAirSinkProvider(repository)
+        val speedMs = UnitsConverter.kmhToMs(100.0)
+
+        val sinkBefore = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
+        val bestLdBefore = provider.bestLd() ?: error("expected best L/D")
+
+        repository.setThreePointPolar(
+            ThreePointPolar.fromKmh(
+                lowKmh = 85.0,
+                lowSinkMs = 0.62,
+                midKmh = 110.0,
+                midSinkMs = 0.74,
+                highKmh = 150.0,
+                highSinkMs = 1.32
+            )
+        )
+
+        val sinkAfter = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
+        val bestLdAfter = provider.bestLd() ?: error("expected best L/D")
+
+        assertNotEquals(sinkBefore, sinkAfter)
+        assertNotEquals(bestLdBefore, bestLdAfter)
+    }
+
+    @Test
+    fun bugsAndBallast_change_authoritative_sink_path() {
+        val repository = GliderRepository(appContext)
+        repository.selectModelById("js1c-18")
+        val provider = PolarStillAirSinkProvider(repository)
+        val speedMs = UnitsConverter.kmhToMs(100.0)
+
+        val sinkBefore = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
+
+        repository.updateConfig {
+            it.copy(
+                bugsPercent = 12,
+                waterBallastKg = 20.0
+            )
+        }
+
+        val sinkAfter = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
+
+        assertTrue(sinkAfter > sinkBefore)
+    }
+
+    @Test
+    fun referenceWeightAndUserCoefficients_areStoredButDeferredFromCurrentSinkPath() {
         val repository = GliderRepository(appContext)
         repository.selectModelById("js1c-18")
         val provider = PolarStillAirSinkProvider(repository)

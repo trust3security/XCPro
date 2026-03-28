@@ -47,6 +47,8 @@ Sensors
   -> MapScreenViewModel
      -> FlightDataUiAdapter (MapScreenObservers)
         + GlideComputationRepository.glide
+        + WaypointNavigationRepository.waypointNavigation
+        + TaskPerformanceRepository.taskPerformance
         -> convertToRealTimeFlightData
         -> FlightDataManager
      -> mapLocation (GPS) for map UI
@@ -374,9 +376,13 @@ ViewModel:
     settings-side `GliderViewModel` / `GliderUseCase`.
 - `feature/flight-runtime/src/main/java/com/example/xcpro/glider/StillAirSinkProvider.kt`
   - Shared runtime sink/bounds port used by flight metrics and glide runtime.
+  - Phase 4 contract: the port is IAS-based on the active release path.
 - `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt`
   - Profile-owned implementation of the shared sink port backed by the glider
     repository and polar settings state.
+  - Active release math honors the selected model polar or manual 3-point polar,
+    plus the current bugs/ballast adjustments only; reference weight and user
+    coefficients remain stored-only.
 - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/Layout.kt`
   - Profile owns the layout settings route shell plus the settings-side
     `LayoutViewModel` / `LayoutPreferencesUseCase` that wrap canonical
@@ -412,13 +418,17 @@ ViewModel:
 
 Observers:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` (wrapped by `FlightDataUiAdapter`)
-  - Combines flight data + wind + flying state + upstream glide solution.
+  - Combines flight data + wind + flying state + upstream glide solution +
+    upstream waypoint navigation snapshot.
   - Projects replay session state through a semantic selection-presence gate
     (`mapReplaySelectionActive()` -> `distinctUntilChanged`) before joining
     the main observer combine path.
   - Consumes `GlideComputationRepository.glide`; it no longer solves glide in
     the observer layer.
-  - Converts `CompleteFlightData` + `GlideSolution` to `RealTimeFlightData`.
+  - Consumes `WaypointNavigationRepository.waypointNavigation`; it does not
+    compute waypoint route math in the observer layer.
+  - Converts `CompleteFlightData` + upstream runtime snapshots to
+    `RealTimeFlightData`.
   - Pushes to `FlightDataManager` and the `feature:map-runtime` trail
     processor.
   - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
@@ -495,10 +505,14 @@ Mapping for cards:
     - `arrivalHeightMc0M`
     - `taskFinishDistanceRemainingM`
     - `glideSolutionValid`
+    - `glideDegraded`
+    - `glideDegradedReason`
     - `glideInvalidReason`
   - Semantics:
     - `ld_curr`, `polar_ld`, `best_ld` remain flight-only
     - `final_gld`, `arr_alt`, `req_alt`, `arr_mc0` are racing-task finish cards
+    - glide outputs are `VALID`, `DEGRADED` (still-air assumption because no
+      usable wind exists), or `INVALID`
 
 UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
@@ -840,20 +854,36 @@ Current wiring:
   -> `dfcards` `FlightDataViewModel.updateCardsWithLiveData(...)`
   -> `CardLibrary` / `CardContainer` / `EnhancedFlightDataCard`
 
-Current finish-glide card scope:
-- live now:
+Current glide-computer production card scope:
+- finish/arrival cards live now:
   - `final_gld`
   - `arr_alt`
   - `req_alt`
   - `arr_mc0`
-- still placeholder-only:
+- waypoint navigation cards live now:
   - `wpt_dist`
   - `wpt_brg`
   - `wpt_eta`
+- task-performance cards live now:
   - `task_spd`
   - `task_dist`
+  - `task_remain_dist`
+  - `task_remain_time`
   - `start_alt`
-- current MVP limitation:
+- core glide/performance cards live now:
+  - `ias`
+  - `tas`
+  - `ground_speed`
+  - `ld_curr`
+  - `polar_ld`
+  - `best_ld`
+  - `netto`
+  - `netto_avg30`
+  - `mc_speed`
+- intentionally absent from the production catalogs:
+  - standalone `final distance`
+  - unsupported future target-kind / AAT glide cards
+- current release limitation:
   - finish-glide validity currently requires a racing finish altitude rule
     (`RacingFinishCustomParams.minAltitudeMeters`)
 
@@ -965,7 +995,7 @@ Task UI (Compose)
 
 Authoritative ownership:
 - Cross-feature task definition and active leg: `TaskManagerCoordinator.taskSnapshotFlow`.
-- Current final-glide route seam (Phase 4 local branch, 2026-03-25):
+- Current final-glide route seam:
   `feature:tasks` now also exposes
   `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt`
   as an additive remaining-route read seam derived from
@@ -976,6 +1006,16 @@ Authoritative ownership:
   current racing finish-rule and glide-status projection. No `feature:map`
   compatibility shim remains in the production path; `GlideComputationRepository`
   is the only active glide owner consumed by the map shell.
+- Current task-performance seam:
+  `feature:map-runtime` now also exposes
+  `feature/map-runtime/src/main/java/com/example/xcpro/taskperformance/TaskPerformanceRepository.kt`
+  as the non-UI task-performance owner. It consumes
+  `FlightDataRepository.flightData`,
+  `TaskManagerCoordinator.taskSnapshotFlow`,
+  task-owned `NavigationRouteRepository.route`, and
+  `TaskNavigationController.racingState`.
+  It feeds the map/cards adapter path only; it does not reclaim route ownership
+  and it does not expand `CompleteFlightData`.
 - Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskRepository.state` is not the cross-feature runtime authority.
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).

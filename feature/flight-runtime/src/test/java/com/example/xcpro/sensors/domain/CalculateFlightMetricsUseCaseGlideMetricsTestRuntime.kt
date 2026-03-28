@@ -2,12 +2,18 @@ package com.example.xcpro.sensors.domain
 
 import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
+import com.example.xcpro.sensors.FlightCalculationHelpers
 import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weather.wind.model.WindVector
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class CalculateFlightMetricsUseCaseGlideMetricsTest {
 
@@ -97,5 +103,94 @@ class CalculateFlightMetricsUseCaseGlideMetricsTest {
         assertTrue(fresh.autoMcValid)
 
         assertEquals(fresh.autoMcMs, afterReset.autoMcMs, 0.05)
+    }
+
+    @Test
+    fun owner_path_marks_glide_metrics_valid_when_runtime_has_real_values() {
+        val useCase = newUseCaseForMetricValidity(
+            currentLd = 32f,
+            polarLdCurrentSpeed = 37.0,
+            polarBestLd = 44.0
+        )
+
+        val result = executeMetricsRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            deltaTimeSeconds = 1.0,
+            varioMs = 1.0,
+            altitude = 1_000.0,
+            externalAirspeedSample = airspeedSample(
+                trueMs = 27.0,
+                indicatedMs = 25.0,
+                clockMillis = 1_000L
+            )
+        )
+
+        assertTrue(result.currentLDValid)
+        assertTrue(result.polarLdCurrentSpeedValid)
+        assertTrue(result.polarBestLdValid)
+        assertEquals(32f, result.calculatedLD, 1e-6f)
+        assertEquals(37f, result.polarLdCurrentSpeed, 1e-6f)
+        assertEquals(44f, result.polarBestLd, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_glide_metrics_invalid_when_runtime_has_no_authoritative_value() {
+        val useCase = newUseCaseForMetricValidity(
+            currentLd = 0f,
+            polarLdCurrentSpeed = null,
+            polarBestLd = null
+        )
+
+        val result = executeMetricsRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            deltaTimeSeconds = 1.0,
+            varioMs = 1.0,
+            altitude = 1_000.0
+        )
+
+        assertFalse(result.currentLDValid)
+        assertFalse(result.polarLdCurrentSpeedValid)
+        assertFalse(result.polarBestLdValid)
+        assertEquals(0f, result.calculatedLD, 1e-6f)
+        assertEquals(0f, result.polarLdCurrentSpeed, 1e-6f)
+        assertEquals(0f, result.polarBestLd, 1e-6f)
+    }
+
+    private fun newUseCaseForMetricValidity(
+        currentLd: Float,
+        polarLdCurrentSpeed: Double?,
+        polarBestLd: Double?
+    ): CalculateFlightMetricsUseCase {
+        val sinkProvider = object : StillAirSinkProvider {
+            override fun sinkAtSpeed(airspeedMs: Double): Double? = 0.0
+            override fun iasBoundsMs(): SpeedBoundsMs? = null
+            override fun ldAtSpeed(airspeedMs: Double): Double? = polarLdCurrentSpeed
+            override fun bestLd(): Double? = polarBestLd
+        }
+        val helpers = mock<FlightCalculationHelpers>()
+        whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
+            FlightCalculationHelpers.NettoComputation(0.0, true)
+        )
+        whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer { invocation ->
+            invocation.getArgument<Double>(0)
+        }
+        whenever(helpers.calculateCurrentLD(any(), any(), any())).thenReturn(currentLd)
+        whenever(helpers.updateThermalState(any(), any(), any(), any(), any())).thenAnswer { }
+        whenever(helpers.updateAGL(any(), any(), any())).thenAnswer { }
+        whenever(helpers.recordLocationSample(any(), any())).thenAnswer { }
+        whenever(helpers.thermalAverageCurrent).thenReturn(0f)
+        whenever(helpers.thermalAverageTotal).thenReturn(0f)
+        whenever(helpers.thermalGainCurrent).thenReturn(0.0)
+        whenever(helpers.thermalGainValid).thenReturn(false)
+        whenever(helpers.currentThermalLiftRate).thenReturn(0.0)
+        whenever(helpers.currentThermalValid).thenReturn(false)
+
+        return CalculateFlightMetricsUseCase(
+            flightHelpers = helpers,
+            sinkProvider = sinkProvider,
+            windEstimator = WindEstimator()
+        )
     }
 }

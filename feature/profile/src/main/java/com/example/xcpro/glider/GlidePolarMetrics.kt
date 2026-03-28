@@ -14,12 +14,12 @@ internal object GlidePolarMetricsResolver {
     private const val TARGET_SCAN_SAMPLES = 240.0
 
     fun ldAtSpeed(
-        airspeedMs: Double,
+        indicatedAirspeedMs: Double,
         model: GliderModel,
         config: GliderConfig
     ): Double? {
         val bounds = GliderSpeedBoundsResolver.resolveIasBoundsMs(model, config) ?: return null
-        val clampedSpeed = bounds.clamp(airspeedMs)
+        val clampedSpeed = bounds.clamp(indicatedAirspeedMs)
         if (!clampedSpeed.isFinite() || clampedSpeed <= 0.0) return null
         val sink = PolarCalculator.sinkMs(clampedSpeed, model, config)
         return ldFrom(clampedSpeed, sink)
