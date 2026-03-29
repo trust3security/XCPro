@@ -4,6 +4,7 @@ import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
 import com.example.xcpro.tasks.aat.AATTaskManager
@@ -110,6 +111,51 @@ class TaskNavigationControllerTest {
         val snapshot = controller.snapshot()
         assertEquals(true, snapshot.isArmed)
         assertEquals(0, controller.racingState.value.currentLegIndex)
+    }
+
+    @Test
+    fun restoreReplaySnapshot_restores_selected_leg_nav_state_and_advance_phase() = runTest {
+        val coordinator = createCoordinator()
+        coordinator.initializeTask(sampleWaypoints())
+        val controller = createController(coordinator)
+        val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 1)
+        val job = controller.bind(fixes, this)
+
+        try {
+            advanceUntilIdle()
+
+            val restoredState = RacingNavigationState(
+                status = RacingNavigationStatus.IN_PROGRESS,
+                currentLegIndex = 1,
+                lastFix = RacingNavigationFix(
+                    lat = 0.0,
+                    lon = 0.1,
+                    timestampMillis = 12_345L
+                ),
+                lastTransitionTimeMillis = 12_345L,
+                taskSignature = "replay-restore",
+                acceptedStartTimestampMillis = 10_000L,
+                preStartAltitudeSatisfied = true
+            )
+            val restoredAdvance = RacingAdvanceState.Snapshot(
+                mode = RacingAdvanceState.Mode.MANUAL,
+                armState = RacingAdvanceState.ArmState.TURN_ARMED,
+                isArmed = true
+            )
+
+            controller.restoreReplaySnapshot(
+                selectedLeg = 1,
+                navigationState = restoredState,
+                advanceSnapshot = restoredAdvance
+            )
+            advanceUntilIdle()
+
+            assertEquals(1, coordinator.currentLeg)
+            assertEquals(restoredState, controller.racingState.value)
+            assertEquals(restoredAdvance, controller.snapshot())
+        } finally {
+            job.cancel()
+        }
     }
 
     private fun sampleWaypoints(): List<SearchWaypoint> = listOf(

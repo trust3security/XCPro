@@ -108,6 +108,8 @@ internal fun IgcReplayControllerRuntime.setReplayModeRuntime(mode: ReplayMode, r
     AppLogger.i(IgcReplayControllerRuntime.TAG, "Replay mode set to ${mode.name} (resetAfterSession=$resetAfterSession)")
 }
 
+internal fun IgcReplayControllerRuntime.getReplayModeRuntime(): ReplayMode = simConfig.mode
+
 internal fun IgcReplayControllerRuntime.getReplayCadenceRuntime(): ReplayCadenceProfile = ReplayCadenceProfile(
     referenceStepMs = simConfig.referenceStepMs,
     gpsStepMs = simConfig.gpsStepMs
@@ -206,6 +208,8 @@ internal fun IgcReplayControllerRuntime.setReplayInterpolationRuntime(interpolat
 internal fun IgcReplayControllerRuntime.setAutoStopAfterFinishRuntime(enabled: Boolean) {
     autoStopAfterFinish = enabled
 }
+
+internal fun IgcReplayControllerRuntime.isAutoStopAfterFinishEnabledRuntime(): Boolean = autoStopAfterFinish
 
 internal fun IgcReplayControllerRuntime.getInterpolatedReplayHeadingDegRuntime(timestampMs: Long): Double? {
     if (simConfig.interpolation != ReplayInterpolation.CATMULL_ROM_RUNTIME) return null

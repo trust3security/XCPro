@@ -24,6 +24,10 @@ class RacingNavigationStateStore(
         }
     }
 
+    fun restore(state: RacingNavigationState) {
+        _state.value = state
+    }
+
     fun reset(taskSignature: String = "") {
         _state.value = RacingNavigationState(taskSignature = taskSignature)
     }

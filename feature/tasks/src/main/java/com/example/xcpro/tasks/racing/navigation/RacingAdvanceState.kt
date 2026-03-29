@@ -60,6 +60,12 @@ class RacingAdvanceState {
 
     fun snapshot(): Snapshot = Snapshot(mode, armState, armed)
 
+    fun restore(snapshot: Snapshot) {
+        mode = snapshot.mode
+        armState = snapshot.armState
+        armed = snapshot.isArmed
+    }
+
     private fun updateArmState() {
         armState = if (armed) {
             when (armState) {

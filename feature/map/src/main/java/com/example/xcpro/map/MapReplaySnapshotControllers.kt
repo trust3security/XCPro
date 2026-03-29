@@ -4,45 +4,83 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayCadenceProfile
 import com.example.xcpro.replay.ReplayInterpolation
+import com.example.xcpro.replay.ReplayMode
 import com.example.xcpro.replay.ReplayNoiseProfile
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
 import kotlinx.coroutines.flow.StateFlow
 
 internal class RacingReplaySnapshotController(
+    private val taskManager: TaskManagerCoordinator,
     private val taskNavigationController: TaskNavigationController,
     private val igcReplayController: IgcReplayController,
-    private val replaySessionState: StateFlow<SessionState>
+    private val replaySessionState: StateFlow<SessionState>,
+    private val mapStateStore: MapStateStore,
+    private val mapStateActions: MapStateActions
 ) {
-    private var advanceSnapshot: RacingAdvanceState.Snapshot? = null
-    private var speedSnapshot: Double? = null
-    private var cadenceSnapshot: ReplayCadenceProfile? = null
+    private var snapshot: RacingReplaySnapshot? = null
+
+    val hasSnapshot: Boolean
+        get() = snapshot != null
 
     fun captureIfNeeded() {
-        if (advanceSnapshot == null) {
-            advanceSnapshot = taskNavigationController.snapshot()
-        }
-        if (speedSnapshot == null) {
-            speedSnapshot = replaySessionState.value.speedMultiplier
-        }
-        if (cadenceSnapshot == null) {
-            cadenceSnapshot = igcReplayController.getReplayCadence()
-        }
+        if (snapshot != null) return
+        snapshot = RacingReplaySnapshot(
+            selectedLeg = taskManager.currentLeg,
+            navigationState = taskNavigationController.racingState.value,
+            advanceSnapshot = taskNavigationController.snapshot(),
+            replayMode = igcReplayController.getReplayMode(),
+            replayCadence = igcReplayController.getReplayCadence(),
+            replaySpeed = replaySessionState.value.speedMultiplier,
+            autoStopAfterFinish = igcReplayController.isAutoStopAfterFinishEnabled(),
+            mapShellSnapshot = RacingReplayMapShellSnapshot(
+                isTrackingLocation = mapStateStore.isTrackingLocation.value,
+                showReturnButton = mapStateStore.showReturnButton.value,
+                showRecenterButton = mapStateStore.showRecenterButton.value,
+                hasInitiallyCentered = mapStateStore.hasInitiallyCentered.value
+            )
+        )
     }
 
-    fun restore() {
-        val capturedAdvance = advanceSnapshot
-        if (capturedAdvance != null) {
-            taskNavigationController.setAdvanceMode(capturedAdvance.mode)
-            taskNavigationController.setAdvanceArmed(capturedAdvance.isArmed)
-        }
-        speedSnapshot?.let(igcReplayController::setSpeed)
-        cadenceSnapshot?.let(igcReplayController::setReplayCadence)
-        advanceSnapshot = null
-        speedSnapshot = null
-        cadenceSnapshot = null
+    fun restoreIfCaptured(): Boolean {
+        val captured = snapshot ?: return false
+        taskNavigationController.restoreReplaySnapshot(
+            selectedLeg = captured.selectedLeg,
+            navigationState = captured.navigationState,
+            advanceSnapshot = captured.advanceSnapshot
+        )
+        igcReplayController.setReplayMode(captured.replayMode, resetAfterSession = false)
+        igcReplayController.setReplayCadence(captured.replayCadence)
+        igcReplayController.setSpeed(captured.replaySpeed)
+        igcReplayController.setAutoStopAfterFinish(captured.autoStopAfterFinish)
+        mapStateActions.setTrackingLocation(captured.mapShellSnapshot.isTrackingLocation)
+        mapStateActions.setShowReturnButton(captured.mapShellSnapshot.showReturnButton)
+        mapStateActions.setShowRecenterButton(captured.mapShellSnapshot.showRecenterButton)
+        mapStateActions.setHasInitiallyCentered(captured.mapShellSnapshot.hasInitiallyCentered)
+        snapshot = null
+        return true
     }
+
+    private data class RacingReplaySnapshot(
+        val selectedLeg: Int,
+        val navigationState: RacingNavigationState,
+        val advanceSnapshot: RacingAdvanceState.Snapshot,
+        val replayMode: ReplayMode,
+        val replayCadence: ReplayCadenceProfile,
+        val replaySpeed: Double,
+        val autoStopAfterFinish: Boolean,
+        val mapShellSnapshot: RacingReplayMapShellSnapshot
+    )
+
+    private data class RacingReplayMapShellSnapshot(
+        val isTrackingLocation: Boolean,
+        val showReturnButton: Boolean,
+        val showRecenterButton: Boolean,
+        val hasInitiallyCentered: Boolean
+    )
 }
 
 internal class DemoReplaySnapshotController(

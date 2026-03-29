@@ -144,6 +144,31 @@ class TaskNavigationController(
 
     fun snapshot(): RacingAdvanceState.Snapshot = advanceState.snapshot()
 
+    fun restoreReplaySnapshot(
+        selectedLeg: Int,
+        navigationState: RacingNavigationState,
+        advanceSnapshot: RacingAdvanceState.Snapshot
+    ) {
+        if (taskManager.taskType != TaskType.RACING) {
+            return
+        }
+        val maxIndex = taskManager.currentTask.waypoints.lastIndex
+        val clampedSelectedLeg = if (maxIndex >= 0) {
+            selectedLeg.coerceIn(0, maxIndex)
+        } else {
+            0
+        }
+
+        suppressManualDisarm = true
+        try {
+            taskManager.setActiveLeg(clampedSelectedLeg)
+            advanceState.restore(advanceSnapshot)
+            stateStore.restore(navigationState)
+        } finally {
+            suppressManualDisarm = false
+        }
+    }
+
     private fun ensureLegChangeListener() {
         if (legChangeListener != null) {
             return

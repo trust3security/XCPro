@@ -41,13 +41,13 @@ internal suspend fun IgcReplayControllerRuntime.finishReplay() {
     flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
     resumeSensors()
     currentIndex = points.size
-    _events.emit(ReplayEvent.Completed(points.size))
     if (autoStopAfterFinish) {
         autoStopAfterFinish = false
         resetReplayAfterFinish()
     } else {
         resetReplayModeIfNeeded()
     }
+    _events.emit(ReplayEvent.Completed(points.size))
 }
 
 internal fun IgcReplayControllerRuntime.resetReplayAfterFinish() {

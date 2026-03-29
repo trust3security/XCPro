@@ -1181,6 +1181,20 @@ Task navigation/replay bridge (2026-02-11):
   navigation/replay inputs.
 - Navigation/replay code paths do not read `RacingTaskManager.currentRacingTask`
   directly.
+- Racing replay restore completeness is owned by
+  `feature/map/src/main/java/com/example/xcpro/map/MapReplaySnapshotControllers.kt`:
+  the racing replay bundle now captures/restores coordinator selected leg,
+  full `RacingNavigationState`, full `RacingAdvanceState.Snapshot`, replay
+  mode/cadence/speed/`autoStopAfterFinish`, and racing replay map-shell
+  overrides.
+- `TaskNavigationController.restoreReplaySnapshot(...)` is the atomic
+  task-runtime restore entrypoint for racing replay. Replay restore must not be
+  reconstructed by separately mutating coordinator leg, advance mode/armed
+  state, and nav state from the map layer.
+- `MapScreenReplayCoordinator` fences racing-fix ingress during replay
+  start/terminal restore and restores the captured racing replay bundle once on
+  start failure or terminal replay completion/cancel/failure after replay
+  cleanup.
 
 Non-negotiable boundaries:
 - Composables do not call task managers/coordinators directly for mutation or business queries.
