@@ -1,11 +1,13 @@
 
 # Task Type Separation - Complete Guide
 
-**Last Updated:** 2025-01-08
-**Status:** ... Current - Single Source of Truth
+**Last Updated:** 2026-03-29
+**Status:** ... Current - Task separation policy
 **Priority:** "' CRITICAL - Read before ANY task-related development
 
 > **  ABSOLUTE REQUIREMENT:** Racing and AAT task types MUST maintain ZERO cross-contamination. This is a **safety-critical** architectural requirement.
+>
+> **Scope note (2026-03-29):** This file owns the Racing/AAT separation rule itself. Current runtime/module wiring lives in `../ARCHITECTURE/PIPELINE.md`.
 
 ---
 
@@ -235,47 +237,43 @@ class TaskManagerCoordinator {
 ### Enforced File Organization
 
 ```
-app/src/main/java/.../tasks/
-"
-""" TaskManagerCoordinator.kt    * ROUTER ONLY (no calculation logic)
-"
-""" racing/                      * RACING MODULE (100% autonomous)
-"   """ RacingTaskManager.kt
-"   """ RacingTaskCalculator.kt
-"   """ RacingTaskDisplay.kt
-"   """ RacingTaskValidator.kt
-"   """ models/
-"   "   """ RacingWaypoint.kt
-"   "   """ RacingCylinder.kt
-"   "   """" RacingTask.kt
-"   """ calculations/
-"   "   """" RacingMathUtils.kt
-"   """" turnpoints/
-"       """ CylinderCalculator.kt
-"       """ FAIQuadrantCalculator.kt
-"       """" KeyholeCalculator.kt
-"
-"""" aat/                         * AAT MODULE (100% autonomous)
-    """ AATTaskManager.kt
-    """ AATTaskCalculator.kt
-    """ AATTaskDisplay.kt
-    """ AATTaskValidator.kt
-    """ models/
-    "   """ AATWaypoint.kt
-    "   """ AATArea.kt
-    "   """" AATTask.kt
-    """ calculations/
-    "   """" AATMathUtils.kt
-    """" areas/
-        """ CircleAreaCalculator.kt
-        """" SectorAreaCalculator.kt
+feature/tasks/src/main/java/.../tasks/
+  TaskManagerCoordinator.kt      * ROUTER ONLY (no calculation logic)
+  racing/                        * RACING TASK OWNERS (100% autonomous)
+    RacingTaskManager.kt
+    RacingTaskCalculator.kt
+    RacingTaskValidator.kt
+    models/
+    calculations/
+    boundary/
+    navigation/
+    turnpoints/
+    ui/
+  aat/                           * AAT TASK OWNERS (100% autonomous)
+    AATTaskManager.kt
+    AATTaskCalculator.kt
+    AATTaskValidator.kt
+    models/
+    calculations/
+    areas/
+    interaction/
+    map/
+    ui/
+    validation/
+
+feature/map/src/main/java/.../tasks/
+  racing/                        * draw-only map wrappers/renderers
+  aat/                           * draw-only map wrappers/renderers
+
+feature/map-runtime/src/main/java/.../tasks/
+  aat/                           * runtime gesture/coordinate helpers
 ```
 
 **Critical Rules:**
-- oe NO files in `tasks/shared/`
-- oe NO imports from `racing/` in `aat/` files
-- oe NO imports from `aat/` in `racing/` files
-- ... Each module is completely self-contained
+- oe NO files in `feature/tasks/.../tasks/shared/`
+- oe NO imports from `racing/` in `aat/` task-owned files
+- oe NO imports from `aat/` in `racing/` task-owned files
+- ... Task ownership stays in `feature:tasks`; `feature:map` and `feature:map-runtime` may render or route but must not centralize mixed task logic
 
 ---
 
@@ -284,17 +282,17 @@ app/src/main/java/.../tasks/
 ### Before Every Commit - Run These Checks
 
 ```bash
-# 1. Check for Racing imports in AAT code (should return ZERO)
-grep -r "import.*racing" app/src/main/java/.../tasks/aat --include="*.kt"
+# 1. Check for Racing imports in AAT task-owned code (should return ZERO)
+rg -n "import.*racing" feature/tasks/src/main/java/com/example/xcpro/tasks/aat
 
-# 2. Check for AAT imports in Racing code (should return ZERO)
-grep -r "import.*aat" app/src/main/java/.../tasks/racing --include="*.kt"
+# 2. Check for AAT imports in Racing task-owned code (should return ZERO)
+rg -n "import.*aat" feature/tasks/src/main/java/com/example/xcpro/tasks/racing
 
 # 3. Check for shared directories (should return ZERO)
-find app/src/main/java/.../tasks -name "shared" -type d
+rg --files feature/tasks/src/main/java/com/example/xcpro/tasks | rg "/shared/|\\\\shared\\\\"
 
 # 4. Verify no task type switching in calculation files
-grep -r "when.*taskType" app/src/main/java/.../tasks/racing app/src/main/java/.../tasks/aat --include="*Calculator.kt"
+rg -n "when.*taskType" feature/tasks/src/main/java/com/example/xcpro/tasks/racing feature/tasks/src/main/java/com/example/xcpro/tasks/aat
 ```
 
 ### Automated CI Check
@@ -312,13 +310,13 @@ jobs:
       - uses: actions/checkout@v2
       - name: Check Racing imports in AAT
         run: |
-          if grep -r "import.*racing" app/src/main/java/.../tasks/aat --include="*.kt"; then
+          if rg -n "import.*racing" feature/tasks/src/main/java/com/example/xcpro/tasks/aat; then
             echo "ERROR: Found Racing imports in AAT code!"
             exit 1
           fi
       - name: Check AAT imports in Racing
         run: |
-          if grep -r "import.*aat" app/src/main/java/.../tasks/racing --include="*.kt"; then
+          if rg -n "import.*aat" feature/tasks/src/main/java/com/example/xcpro/tasks/racing; then
             echo "ERROR: Found AAT imports in Racing code!"
             exit 1
           fi
@@ -484,8 +482,9 @@ fun calculateBearing(...) { ... }  // AAT's own copy
 ## " Related Documentation
 
 - [Quick_Reference.md](./Quick_Reference.md) - Daily cheat sheet
-- [Racing_Tasks.md](../02_Tasks/Racing_Tasks.md) - Racing implementation
-- [AAT_Tasks.md](../02_Tasks/AAT_Tasks.md) - AAT implementation
+- [Racing_Tasks.md](./Racing_Tasks.md) - Racing implementation
+- [AAT_Tasks.md](./AAT_Tasks.md) - AAT implementation
+- [PIPELINE.md](../ARCHITECTURE/PIPELINE.md) - Current task/runtime module split
 - [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) - AAT module structure
 - [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) - Racing module structure
 

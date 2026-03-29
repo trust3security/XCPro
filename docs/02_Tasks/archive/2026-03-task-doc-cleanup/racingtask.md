@@ -137,7 +137,7 @@ XCSoar uses transition-based task logic. We will mirror that:
 
 This is the minimal behavior we need for: "start when crossing start line, then advance on each turnpoint entry".
 
-Details: `docs/02_Tasks/Racing_XCSoar_Navigation.md`
+Details: `./Racing_XCSoar_Navigation.md`
 
 ---
 
