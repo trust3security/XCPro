@@ -167,6 +167,7 @@ internal fun rememberMapScreenScaffoldInputs(
                 overlayManager = managers.overlayManager,
                 modalManager = managers.modalManager,
                 taskScreenManager = managers.taskScreenManager,
+                taskFlightSurfaceUiState = taskBindings.taskFlightSurfaceUiState,
                 taskRenderSnapshotProvider = mapViewModel.runtimeDependencies.tasksUseCase::taskRenderSnapshot,
                 watchedPilotFocusEpoch = watchedPilotFocusEpoch,
                 mapLibreMapProvider = { mapState.mapLibreMap },

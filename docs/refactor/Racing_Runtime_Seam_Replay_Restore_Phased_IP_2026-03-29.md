@@ -31,6 +31,7 @@
   - A naive restore through `TaskManagerCoordinator.setActiveLeg(...)` can trip the controller's manual-leg listener and overwrite/disarm restored navigation state unless restore is atomic.
   - A valid start can advance `racingState.currentLegIndex` while `TaskManagerCoordinator.taskSnapshotFlow.activeLeg` stays unchanged when auto-advance is disabled or start advance is not armed.
   - Some task UI surfaces currently render "current waypoint" from `activeLeg` only, even though the racing navigation seam may already be on the next leg.
+  - `TaskSheetUseCase` and `TaskSheetViewModel` currently use `TaskUiState.stats.activeIndex` as the selected-leg/editor index for proximity and distance helpers, so Phase 2 must not silently redefine that field as the universal in-flight nav leg.
   - Racing replay also forces map shell state (`trackingLocation`, return-button visibility, initial-centering), but unlike demo replay it does not currently restore that shell state.
 - Why now:
   - The replay gap is correctness-sensitive and can overwrite in-memory user progress.
@@ -81,6 +82,18 @@
 | replay session mode / `autoStopAfterFinish` override state | replay snapshot helper + replay controller runtime | replay coordinator + replay runtime only | replay start/terminal cleanup path | replay-controller config state | none | replay stop/reset/terminal restore | N/A | replay snapshot/controller tests |
 | racing replay map shell state (`isTrackingLocation`, return/recenter button state, initial center, saved camera`) | replay snapshot helper | replay coordinator only | map replay flow only | map shell state before replay start | none | replay terminal restore | N/A | replay coordinator tests |
 | Racing task UI model for in-flight current-leg display | task UI use-case/projector layer | none outside projector recompute | task UI only | `TaskRuntimeSnapshot` plus racing runtime seam when needed | none | follows source seams | N/A | UI/use-case tests |
+
+### 2.1B Phase 2 Surface Contract
+
+| Surface | User Concept Shown | Source Seam | Why | Must Not Happen |
+|---|---|---|---|---|
+| Expanded task sheet / manage tabs / task editor | selected task leg for editing and task mutation | `TaskManagerCoordinator.taskSnapshotFlow.activeLeg` through `TaskSheetCoordinatorUseCase` -> `TaskSheetUseCase` -> `TaskRepository` | this is an editor/selection surface | do not reinterpret editor selection as live nav progress |
+| `TaskSheetViewModel.onLocationUpdate(...)` and `distanceToActiveWaypointMeters(...)` | selected task leg used by the sheet's current helpers | `TaskUiState.stats.activeIndex` derived from coordinator selected leg | these helpers are already coupled to sheet semantics | do not switch these helpers to `racingState.currentLegIndex` as a side effect of fixing the map indicator |
+| Top-of-map minimized indicator for racing tasks (`MapTaskScreenUi.TaskMinimizedIndicatorOverlay`) | current navigation leg in flight | dedicated racing flight-surface projector combining `TaskRuntimeSnapshot` plus `TaskNavigationController.racingState` | this is the pilot-facing in-flight task surface the user expects to auto-move after valid start/turnpoint events | do not read `TaskUiState.stats.activeIndex` directly for racing in-flight display |
+| Top-of-map minimized indicator for non-racing / AAT tasks | selected task leg | existing coordinator/task-sheet projection | no separate racing nav seam applies | do not invent a fake second owner for non-racing |
+| Minimized-indicator prev/next taps | explicit manual leg change | existing `TaskManagerCoordinator.setActiveLeg(...)` mutation path | manual leg selection already has explicit coordinator/controller behavior | do not move manual mutation policy into the Composable |
+| Route / glide / task-performance consumers | in-flight task progress and route state | unchanged dual-seam combine (`taskSnapshotFlow` + `racingState`) | these are already runtime surfaces with the correct owners | Phase 2 is not a route/glide rewrite |
+| IGC declaration / LiveFollow / task export paths | selected task leg in the task snapshot | `TaskManagerCoordinator.taskSnapshotFlow` | these are task-definition/export surfaces, not cockpit status widgets | do not switch cross-feature exporters to racing nav state |
 
 ### 2.2 Dependency Direction
 
@@ -142,8 +155,10 @@ Confirm dependency flow remains:
 | `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | Existing | racing navigation snapshot/restore API and fix-driven orchestration | already owns `racingState` and advance state | not a map concern, not UI | No |
 | `feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationStateStore.kt` | Existing | storage/reset/restore of racing navigation state | state store should own state replacement mechanics | not coordinator-owned task snapshot | No |
 | `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` | Existing | selected task leg restore target only; task-runtime authority remains unchanged | coordinator already owns `TaskRuntimeSnapshot` | should not absorb nav-only runtime | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt` | Existing | coordinator/task-sheet read seam; may widen to expose racing runtime projection input | task sheet should consume use-case outputs, not raw controller | not in Composable or ViewModel | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetUseCase.kt` | Existing | task-sheet projection policy for selected leg vs nav leg | UI-facing policy belongs in task use-case/projector layer | not in repository-only if dual-seam combine is needed | Maybe, if racing-only projection makes file mixed-purpose |
+| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt` | Existing | coordinator/task-sheet read seam; may expose racing runtime input to a separate flight-surface projector | task sheet should consume use-case outputs, not raw controller | not in Composable or ViewModel | No |
+| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetUseCase.kt` | Existing | selected-leg editor/task-sheet projection only | task-sheet/editor semantics already live here | not the place to redefine all task UI state as in-flight nav status | No |
+| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceUseCase.kt` | New | racing flight-surface projector for the minimized/top-map indicator | Phase 2 needs a dedicated projector that can combine coordinator snapshot and racing nav state without mutating sheet/editor semantics | not in `TaskRepository`, not in Composables, not in replay/map orchestration code | No |
+| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceViewModel.kt` | New or existing split if needed | exposes the minimized-indicator UI model to map UI | keeps map UI from reading raw seams or overloading `TaskSheetViewModel.uiState` | not in `MapTaskScreenUi`, and not by broadening `TaskSheetViewModel` if that makes it mixed-responsibility | Maybe |
 | `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt` | Existing | rendering only | must consume a clarified UI model, not decide seam policy itself | not a domain/projector owner | No |
 | `feature/tasks/src/test/java/com/example/xcpro/tasks/TaskNavigationControllerTest.kt` | Existing | controller snapshot/restore and seam regression tests | controller behavior belongs here | not a map test | No |
 | `feature/map/src/test/java/com/example/xcpro/map/MapScreenReplayCoordinatorTest.kt` | New | replay start/terminal restore behavior | map replay orchestration needs direct tests | no existing file covers it | No |
@@ -425,19 +440,23 @@ Route / glide / task performance
   - keep editor/selection semantics separate from in-flight nav-progress semantics
 - Files to change:
   - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetUseCase.kt`
+  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceUseCase.kt` (new)
+  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceViewModel.kt` (new or split from existing VM if the final shape stays clean)
   - `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
   - `feature/map/src/test/java/com/example/xcpro/map/ui/task/MapTaskScreenUiTest.kt`
-  - task-sheet tests under `feature/tasks/src/test/java/com/example/xcpro/tasks/*`
+  - task-flight-surface / task-sheet tests under `feature/tasks/src/test/java/com/example/xcpro/tasks/*`
 - Ownership/file split changes in this phase:
-  - task UI projection becomes explicit about which seam it is rendering
+  - `TaskUiState.stats.activeIndex` stays the selected-leg/editor contract
+  - a dedicated racing flight-surface projector becomes the owner of minimized-indicator "current TP in flight" semantics
   - Composables still render only; they must not choose authority at the UI layer
 - Tests to add/update:
-  - racing task UI renders selected leg when acting as editor/selection view
-  - racing in-flight indicator renders nav leg when that is the intended surface contract
+  - task sheet/editor surfaces still render selected leg from coordinator state
+  - racing minimized indicator renders nav leg from the dedicated flight-surface projector
+  - manual prev/next taps on the minimized indicator remain explicit leg mutations
   - non-racing/AAT paths remain unchanged
 - Exit criteria:
   - no UI surface is implicitly using `activeLeg` as if it were universal in-flight nav progress
+  - the top-of-map racing indicator advances with the nav seam without redefining editor selection semantics
 
 ### Phase 3 - Docs Sync and Hardening
 
@@ -502,9 +521,7 @@ Route / glide / task performance
   - do not collapse task snapshot and racing nav state into one owner in this change
 - Phase 1 is larger than originally stated:
   - it is a replay-session correctness slice, not just a task/nav snapshot slice
-- Main design decision still needing explicit confirmation during implementation:
-  - for each racing UI surface, decide whether it is showing:
-    - selected task leg
-    - current navigation leg in flight
-    - or both
-  - write that choice into the projector/use-case contract, not the Composable
+- 2026-03-29 targeted seam/code-pass result for Phase 2:
+  - `TaskSheetUseCase` / `TaskSheetViewModel` currently use `TaskUiState.stats.activeIndex` as the selected-leg/editor index; repurposing that field globally would couple the map indicator fix to editor/proximity behavior and is not the smallest safe change.
+  - The best Phase 2 shape is a dedicated racing flight-surface projector for the top-of-map minimized indicator, while task sheet/editor surfaces keep coordinator-selected-leg semantics.
+  - Write that choice into the projector/use-case contract, not the Composable.

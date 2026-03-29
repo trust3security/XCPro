@@ -27,6 +27,7 @@ import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.tasks.TaskFlightSurfaceUiState
 import com.example.xcpro.screens.navdrawer.lookandfeel.CardStyle
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
@@ -81,6 +82,7 @@ internal data class MapScreenOverlayContentInputs(
     val overlayManager: MapOverlayManager,
     val modalManager: MapModalManager,
     val taskScreenManager: MapTaskScreenManager,
+    val taskFlightSurfaceUiState: TaskFlightSurfaceUiState,
     val taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
     val watchedPilotFocusEpoch: Int,
     val mapLibreMapProvider: () -> org.maplibre.android.maps.MapLibreMap?,

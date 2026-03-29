@@ -1033,7 +1033,8 @@ Authoritative ownership:
   `TaskNavigationController.racingState`.
   It feeds the map/cards adapter path only; it does not reclaim route ownership
   and it does not expand `CompleteFlightData`.
-- Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskRepository.state` is not the cross-feature runtime authority.
+- Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskUiState.stats.activeIndex` remains the selected-leg/editor seam, not the universal racing in-flight leg. `TaskRepository.state` is not the cross-feature runtime authority.
+- Racing minimized top-of-map task surface: `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceUseCase.kt` is the dedicated in-flight projector for the minimized indicator path. It combines `TaskManagerCoordinator.taskSnapshotFlow` plus `TaskNavigationController.racingState`; racing tasks render nav-leg progress there, while task sheet/editor surfaces keep coordinator selected-leg semantics.
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).
 - Map drawing side effects: runtime controllers invoked by use-case/viewmodel orchestration, not direct Composable manager calls.

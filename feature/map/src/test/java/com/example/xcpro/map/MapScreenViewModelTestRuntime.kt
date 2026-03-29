@@ -75,6 +75,7 @@ import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.trail.MapTrailPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.tasks.TaskFeatureFlags
+import com.example.xcpro.tasks.TaskFlightSurfaceUseCase
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.racing.RacingTaskManager
@@ -312,6 +313,10 @@ abstract class MapScreenViewModelTestBase {
             engine = RacingNavigationEngine(),
             featureFlags = localTaskFeatureFlags
         )
+        val taskFlightSurfaceUseCase = TaskFlightSurfaceUseCase(
+            taskManager = localTaskManager,
+            taskNavigationController = localTaskNavigationController
+        )
         val localNavigationRouteRepository =
             NavigationRouteRepository(taskManager = localTaskManager, taskNavigationController = localTaskNavigationController)
         val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
@@ -477,6 +482,7 @@ abstract class MapScreenViewModelTestBase {
             windStateUseCase = windStateUseCase,
             mapReplayUseCase = mapReplayUseCase,
             mapTasksUseCase = mapTasksUseCase,
+            taskFlightSurfaceUseCase = taskFlightSurfaceUseCase,
             mapFeatureFlagsUseCase = mapFeatureFlagsUseCase,
             mapCardPreferencesUseCase = mapCardPreferencesUseCase,
             calibrateQnhUseCase = calibrateQnhUseCase,

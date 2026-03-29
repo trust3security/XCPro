@@ -11,6 +11,7 @@ import com.example.xcpro.map.components.MapActionButtons
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.ui.task.MapTaskScreenUi
 import com.example.xcpro.qnh.QnhCalibrationState
+import com.example.xcpro.tasks.TaskFlightSurfaceUiState
 
 @Composable
 internal fun MapTaskManagerLayer(
@@ -18,14 +19,16 @@ internal fun MapTaskManagerLayer(
     waypointData: List<WaypointData>,
     unitsPreferences: UnitsPreferences,
     currentLocation: MapLocationUiModel?,
-    currentQnh: String
+    currentQnh: String,
+    taskFlightSurfaceUiState: TaskFlightSurfaceUiState
 ) {
     MapTaskScreenUi.AllTaskScreenComponents(
         taskScreenManager = taskScreenManager,
         allWaypoints = waypointData,
         unitsPreferences = unitsPreferences,
         currentQNH = currentQnh,
-        currentLocation = currentLocation
+        currentLocation = currentLocation,
+        taskFlightSurfaceUiState = taskFlightSurfaceUiState
     )
 }
 
