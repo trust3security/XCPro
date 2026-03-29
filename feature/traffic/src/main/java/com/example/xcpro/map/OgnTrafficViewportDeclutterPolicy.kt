@@ -36,6 +36,14 @@ internal fun resolveOgnTrafficViewportDeclutterPolicy(
     }
 }
 
+internal fun resolveOgnTrafficScreenDeclutterStrength(
+    zoomLevel: Float
+): Float = resolveTrafficDeclutterStrengthMultiplier(
+    zoomLevel = zoomLevel,
+    fullStrengthAtOrBelowZoom = OGN_TRAFFIC_WIDE_ZOOM_THRESHOLD,
+    zeroStrengthAtOrAboveZoom = OGN_TRAFFIC_CLOSE_ZOOM_THRESHOLD
+)
+
 internal const val OGN_TRAFFIC_CLOSE_ZOOM_THRESHOLD = 10.5f
 private const val OGN_TRAFFIC_MID_ZOOM_THRESHOLD = 9.25f
-private const val OGN_TRAFFIC_WIDE_ZOOM_THRESHOLD = 8.25f
+internal const val OGN_TRAFFIC_WIDE_ZOOM_THRESHOLD = 8.25f

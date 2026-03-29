@@ -89,6 +89,63 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
     }
 
     @Test
+    fun projectionInvalidation_whileInteracting_respectsCadenceWindow() = runTest {
+        var nowMonoMs = 0L
+        val overlay: AdsbTrafficOverlayHandle = mock()
+        val map: MapLibreMap = mock()
+        val fixture = createFixture(
+            scope = this,
+            nowMonoMsProvider = { nowMonoMs },
+            interactionActiveProvider = { true },
+            overlay = overlay
+        )
+        fixture.mapState.mapLibreMap = map
+
+        fixture.delegate.updateAdsbTrafficTargets(
+            targets = listOf(target(icao24 = "abc123", category = 0)),
+            ownshipAltitudeMeters = 1_200.0,
+            unitsPreferences = UnitsPreferences(),
+            normalizeOwnshipAltitudeForRender = { it }
+        )
+        runCurrent()
+        verify(overlay, times(1)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
+
+        nowMonoMs = 30L
+        fixture.delegate.invalidateProjection()
+        runCurrent()
+        verify(overlay, times(1)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
+
+        advanceTimeBy(89L)
+        runCurrent()
+        verify(overlay, times(1)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
+
+        nowMonoMs = 120L
+        advanceTimeBy(1L)
+        runCurrent()
+        verify(overlay, times(2)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
+    }
+
+    @Test
     fun stickyProjection_appliesPriorStrongFixedWingStyleWithinTtl() = runTest {
         var nowMonoMs = 1_000L
         val overlay: AdsbTrafficOverlayHandle = mock()

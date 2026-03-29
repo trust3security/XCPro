@@ -1130,6 +1130,10 @@ Task map rendering bridge (2026-02-12):
 - `MapInitializer.setupInitialPosition(...)` and camera-idle callbacks are the startup/runtime viewport-zoom producers for traffic declutter:
   - ADS-B receives viewport zoom through `setAdsbViewportZoom(...)`.
   - OGN receives viewport zoom through `setOgnViewportZoom(...)`, and OGN effective icon size remains delegate-owned render-only state.
+- `MapInitializer.setupInitialPosition(...)`, camera-move callbacks, and camera-idle callbacks are also the viewport-projection invalidation producers for display-only traffic declutter:
+  - `MapOverlayManagerRuntime.invalidateTrafficProjection(...)` fans out to the OGN and ADS-B runtime delegates.
+  - Those delegates recompute screen-space display offsets locally in `feature:traffic`; authoritative aircraft lat/lon stay unchanged in repositories/ViewModels.
+  - Projection-only rerenders reuse the interaction-aware throttle path so crowded traffic stays aligned during pan/rotate without turning repositories or ViewModels into display-state owners.
 - `MapInitializer.setupOverlays(...)` and camera-idle callbacks also push the blue ownship overlay viewport snapshot:
   - `BlueLocationOverlay` receives `MapCameraViewportMetrics` plus the current map `distancePerPixel` snapshot.
   - `BlueLocationOverlay` remains the sole owner of visible-radius band resolution and rendered ownship icon size.

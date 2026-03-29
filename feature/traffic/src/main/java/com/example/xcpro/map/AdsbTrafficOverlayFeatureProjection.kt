@@ -10,6 +10,7 @@ internal fun buildAdsbTrafficOverlayFeatures(
     ownshipAltitudeMeters: Double?,
     unitsPreferences: UnitsPreferences,
     iconStyleIdOverrides: Map<String, String>,
+    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate>,
     emergencyFlashEnabled: Boolean,
     maxTargets: Int,
     liveAlpha: Double,
@@ -18,11 +19,12 @@ internal fun buildAdsbTrafficOverlayFeatures(
     val features = ArrayList<Feature>(maxTargets)
     for (target in targets) {
         if (features.size >= maxTargets) break
-        val feature = AdsbGeoJsonMapper.toFeature(
+        val feature = AdsbGeoJsonMapper.toFeatureInternal(
             target = target,
             ownshipAltitudeMeters = ownshipAltitudeMeters,
             unitsPreferences = unitsPreferences,
-            iconStyleIdOverride = iconStyleIdOverrides[target.id.raw]
+            iconStyleIdOverride = iconStyleIdOverrides[target.id.raw],
+            displayCoordinate = displayCoordinatesByKey[target.id.raw]
         ) ?: continue
         feature.addNumberProperty(
             AdsbGeoJsonMapper.PROP_ALPHA,

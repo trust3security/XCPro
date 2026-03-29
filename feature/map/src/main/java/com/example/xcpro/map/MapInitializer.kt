@@ -153,6 +153,7 @@ class MapInitializer(
         )
         overlayManager.setOgnViewportZoom(zoomToUse.toFloat())
         overlayManager.setAdsbViewportZoom(zoomToUse.toFloat())
+        overlayManager.invalidateTrafficProjection(forceImmediate = true)
     }
 
     private fun setupOverlays(map: MapLibreMap) {
@@ -218,6 +219,10 @@ class MapInitializer(
             }
         })
 
+        map.addOnCameraMoveListener {
+            overlayManager.invalidateTrafficProjection()
+        }
+
         // Camera change listener for zoom-adaptive distance circles
         map.addOnCameraIdleListener {
             try {
@@ -228,6 +233,7 @@ class MapInitializer(
                 stateActions.updateCurrentZoom(currentZoom.toFloat())
                 overlayManager.setOgnViewportZoom(currentZoom.toFloat())
                 overlayManager.setAdsbViewportZoom(currentZoom.toFloat())
+                overlayManager.invalidateTrafficProjection(forceImmediate = true)
                 updateBlueLocationViewportMetrics()
                 val target = cameraPosition.target
                 if (target != null) {

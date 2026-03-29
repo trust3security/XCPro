@@ -10,11 +10,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.maplibre.android.maps.MapLibreMap
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -160,10 +164,89 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         verify(secondTargetRingOverlay, times(1)).initialize()
     }
 
+    @Test
+    fun selectedTargetPinChange_updatesPinnedKeyAndRerendersTraffic() = runTest {
+        var nowMonoMs = 0L
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
+        val fixture = createFixture(
+            scope = this,
+            trafficOverlays = listOf(trafficOverlay),
+            nowMonoMsProvider = { nowMonoMs }
+        )
+
+        fixture.delegate.updateTrafficTargets(
+            targets = listOf(target("T1")),
+            ownshipAltitudeMeters = 1_200.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+        reset(trafficOverlay)
+
+        nowMonoMs = 25L
+        fixture.delegate.updateTargetVisuals(
+            enabled = true,
+            resolvedTarget = target("T1"),
+            ownshipLocation = OverlayCoordinate(-35.2, 149.2),
+            ownshipAltitudeMeters = 900.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+
+        verify(trafficOverlay, atLeastOnce()).setPinnedTargetKey("FLARM:T1")
+        verify(trafficOverlay, times(1)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            altitudeUnit = any(),
+            unitsPreferences = any()
+        )
+    }
+
+    @Test
+    fun projectionInvalidation_syncsLiveMapZoomBeforeRender() = runTest {
+        var nowMonoMs = 0L
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
+        val map: MapLibreMap = mock()
+        whenever(map.cameraPosition).thenReturn(
+            org.maplibre.android.camera.CameraPosition.Builder()
+                .zoom(7.8)
+                .build()
+        )
+        val fixture = createFixture(
+            scope = this,
+            trafficOverlays = listOf(trafficOverlay),
+            nowMonoMsProvider = { nowMonoMs }
+        )
+        fixture.runtimeState.map = map
+
+        fixture.delegate.updateTrafficTargets(
+            targets = listOf(target("T1")),
+            ownshipAltitudeMeters = 1_200.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+        reset(trafficOverlay)
+
+        nowMonoMs = 125L
+        fixture.delegate.invalidateProjection()
+        runCurrent()
+
+        verify(trafficOverlay).setViewportZoom(7.8f)
+        verify(trafficOverlay, times(1)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            altitudeUnit = any(),
+            unitsPreferences = any()
+        )
+    }
+
     private fun createFixture(
         scope: TestScope,
         trafficOverlays: List<OgnTrafficOverlayHandle> = listOf(mock()),
-        targetRingOverlays: List<OgnTargetRingOverlayHandle> = listOf(mock())
+        targetRingOverlays: List<OgnTargetRingOverlayHandle> = listOf(mock()),
+        nowMonoMsProvider: () -> Long = { 0L }
     ): Fixture {
         val runtimeState = TestTrafficOverlayRuntimeState(map = mock())
         val createdTrafficOverlayIconSizes = mutableListOf<Int>()
@@ -189,7 +272,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
             bringTrafficOverlaysToFront = {},
             satelliteContrastIconsEnabled = { false },
             normalizeOwnshipAltitudeForRender = { it },
-            nowMonoMs = { 0L }
+            nowMonoMs = nowMonoMsProvider
         )
         return Fixture(
             runtimeState = runtimeState,
@@ -209,7 +292,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         trackDegrees = 90.0,
         groundSpeedMps = 35.0,
         verticalSpeedMps = 1.2,
-        deviceIdHex = "ABC123",
+        deviceIdHex = id,
         signalDb = -12.0,
         displayLabel = id,
         identity = null,
@@ -218,8 +301,8 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         timestampMillis = 1_000L,
         lastSeenMillis = 1_000L,
         addressType = OgnAddressType.FLARM,
-        addressHex = "ABC123",
-        canonicalKey = "FLARM:ABC123"
+        addressHex = id,
+        canonicalKey = "FLARM:$id"
     )
 
     private data class Fixture(
@@ -230,7 +313,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
     )
 
     private class TestTrafficOverlayRuntimeState(
-        val map: MapLibreMap
+        var map: MapLibreMap
     ) : TrafficOverlayRuntimeState {
         override val mapLibreMap: MapLibreMap?
             get() = map

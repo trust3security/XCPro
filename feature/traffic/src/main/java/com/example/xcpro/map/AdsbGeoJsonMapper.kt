@@ -34,10 +34,26 @@ object AdsbGeoJsonMapper {
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences,
         iconStyleIdOverride: String? = null
+    ): Feature? = toFeatureInternal(
+        target = target,
+        ownshipAltitudeMeters = ownshipAltitudeMeters,
+        unitsPreferences = unitsPreferences,
+        iconStyleIdOverride = iconStyleIdOverride
+    )
+
+    internal fun toFeatureInternal(
+        target: AdsbTrafficUiModel,
+        ownshipAltitudeMeters: Double?,
+        unitsPreferences: UnitsPreferences,
+        iconStyleIdOverride: String? = null,
+        displayCoordinate: TrafficDisplayCoordinate? = null
     ): Feature? {
         if (!target.lat.isFinite() || !target.lon.isFinite()) return null
         val feature = Feature.fromGeometry(
-            Point.fromLngLat(target.lon, target.lat),
+            Point.fromLngLat(
+                displayCoordinate?.longitude ?: target.lon,
+                displayCoordinate?.latitude ?: target.lat
+            ),
             JsonObject(),
             target.id.raw
         )

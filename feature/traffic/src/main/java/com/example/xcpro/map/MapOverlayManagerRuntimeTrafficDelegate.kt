@@ -36,6 +36,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
     fun initializeAdsbTrafficOverlay(map: MapLibreMap?) {
         adsbRenderState.pendingJob?.cancel()
         adsbRenderState.pendingJob = null
+        adsbRenderState.pendingDueMonoMs = Long.MAX_VALUE
         runtimeState.adsbTrafficOverlay?.cleanup()
         if (map == null) return
         runtimeState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
@@ -93,6 +94,15 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         }
     }
 
+    fun invalidateProjection(forceImmediate: Boolean = false) {
+        if (latestAdsbTargets.isEmpty()) return
+        syncViewportZoomFromMapIfAvailable()
+        scheduleAdsbRender(
+            forceImmediate = forceImmediate,
+            intervalMsOverride = TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS
+        )
+    }
+
     fun setAdsbEmergencyFlashEnabled(enabled: Boolean) {
         adsbEmergencyFlashEnabled = enabled
         runtimeState.adsbTrafficOverlay?.setEmergencyFlashEnabled(enabled)
@@ -128,6 +138,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
     fun onMapDetached() {
         adsbRenderState.pendingJob?.cancel()
         adsbRenderState.pendingJob = null
+        adsbRenderState.pendingDueMonoMs = Long.MAX_VALUE
         lastOverlayFrontOrderSignature = null
         lastOverlayFrontOrderApplyMonoMs = 0L
         adsbIconTelemetryTracker.onMapDetached()
@@ -162,13 +173,17 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         val pending = adsbRenderState.pendingJob ?: return
         pending.cancel()
         adsbRenderState.pendingJob = null
+        adsbRenderState.pendingDueMonoMs = Long.MAX_VALUE
         val map = runtimeState.mapLibreMap ?: return
         renderAdsbNow(map)
     }
 
-    private fun scheduleAdsbRender(forceImmediate: Boolean) {
+    private fun scheduleAdsbRender(
+        forceImmediate: Boolean,
+        intervalMsOverride: Long? = null
+    ) {
         val map = runtimeState.mapLibreMap ?: return
-        val intervalMs = resolveInteractionAwareIntervalMs(
+        val intervalMs = intervalMsOverride ?: resolveInteractionAwareIntervalMs(
             baseIntervalMs = 0L,
             interactionActive = interactionActiveProvider(),
             interactionFloorMs = ADSB_INTERACTION_MIN_RENDER_INTERVAL_MS
@@ -177,6 +192,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         if (forceImmediate || intervalMs <= 0L) {
             adsbRenderState.pendingJob?.cancel()
             adsbRenderState.pendingJob = null
+            adsbRenderState.pendingDueMonoMs = Long.MAX_VALUE
             renderAdsbNow(map)
             return
         }
@@ -188,16 +204,22 @@ class MapOverlayManagerRuntimeTrafficDelegate(
             return
         }
 
-        if (adsbRenderState.pendingJob != null) return
-
         val remainingMs = (intervalMs - elapsedMs).coerceAtLeast(0L)
+        val scheduledDueMonoMs = nowMs + remainingMs
+        if (adsbRenderState.pendingJob != null && adsbRenderState.pendingDueMonoMs <= scheduledDueMonoMs) {
+            return
+        }
+
+        adsbRenderState.pendingJob?.cancel()
         adsbRenderState.pendingJob = coroutineScope.launch {
             delay(remainingMs)
             adsbRenderState.pendingJob = null
+            adsbRenderState.pendingDueMonoMs = Long.MAX_VALUE
             val currentMap = runtimeState.mapLibreMap
             if (currentMap == null || currentMap !== map) return@launch
             renderAdsbNow(currentMap)
         }
+        adsbRenderState.pendingDueMonoMs = scheduledDueMonoMs
     }
 
     private fun renderAdsbNow(map: MapLibreMap) {
@@ -232,6 +254,15 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         adsbViewportZoom
             ?: map.cameraPosition?.zoom?.toFloat()?.takeIf { it.isFinite() }
             ?: ADSB_VIEWPORT_ZOOM_FALLBACK
+
+    private fun syncViewportZoomFromMapIfAvailable() {
+        val liveZoom = runtimeState.mapLibreMap?.cameraPosition?.zoom?.toFloat()
+            ?.takeIf { it.isFinite() }
+            ?: return
+        if (adsbViewportZoom == liveZoom) return
+        adsbViewportZoom = liveZoom
+        runtimeState.adsbTrafficOverlay?.setViewportZoom(liveZoom)
+    }
 
     private fun projectedAdsbStyleIds(renderMonoMs: Long): Map<String, String> =
         stickyIconProjectionCache.projectStyleImageIds(

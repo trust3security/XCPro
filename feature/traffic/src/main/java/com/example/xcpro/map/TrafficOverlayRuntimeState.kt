@@ -51,6 +51,7 @@ interface OgnTrafficOverlayHandle {
     fun initialize()
     fun setIconSizePx(iconSizePx: Int)
     fun setViewportZoom(zoomLevel: Float)
+    fun setPinnedTargetKey(targetKey: String?)
     fun setUseSatelliteContrastIcons(enabled: Boolean)
     fun render(
         targets: List<OgnTrafficTarget>,

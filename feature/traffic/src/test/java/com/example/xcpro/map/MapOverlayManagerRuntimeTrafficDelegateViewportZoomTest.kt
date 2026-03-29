@@ -16,6 +16,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -114,6 +115,37 @@ class MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest {
 
         verify(overlay).initialize()
         verify(overlay).setViewportZoom(10.0f)
+    }
+
+    @Test
+    fun projectionInvalidation_syncsLiveMapZoomBeforeRender() = runTest {
+        val overlay: AdsbTrafficOverlayHandle = mock()
+        val fixture = createFixture(scope = this, overlay = overlay)
+        whenever(fixture.runtimeState.map.cameraPosition).thenReturn(
+            org.maplibre.android.camera.CameraPosition.Builder()
+                .zoom(8.2)
+                .build()
+        )
+
+        fixture.delegate.updateAdsbTrafficTargets(
+            targets = listOf(target("abc123")),
+            ownshipAltitudeMeters = 1_200.0,
+            unitsPreferences = UnitsPreferences(),
+            normalizeOwnshipAltitudeForRender = { it }
+        )
+        runCurrent()
+        reset(overlay)
+
+        fixture.delegate.invalidateProjection(forceImmediate = true)
+        runCurrent()
+
+        verify(overlay).setViewportZoom(8.2f)
+        verify(overlay, times(1)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
     }
 
     private fun createFixture(

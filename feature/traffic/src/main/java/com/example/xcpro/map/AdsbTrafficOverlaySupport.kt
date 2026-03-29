@@ -273,6 +273,7 @@ internal fun renderAdsbTrafficFrame(
     ownshipAltitudeMeters: Double?,
     unitsPreferences: UnitsPreferences,
     iconStyleIdOverrides: Map<String, String>,
+    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate>,
     emergencyFlashEnabled: Boolean,
     maxTargets: Int
 ) {
@@ -284,6 +285,7 @@ internal fun renderAdsbTrafficFrame(
                 ownshipAltitudeMeters = ownshipAltitudeMeters,
                 unitsPreferences = unitsPreferences,
                 iconStyleIdOverrides = iconStyleIdOverrides,
+                displayCoordinatesByKey = displayCoordinatesByKey,
                 emergencyFlashEnabled = emergencyFlashEnabled,
                 maxTargets = maxTargets,
                 liveAlpha = ADSB_TRAFFIC_LIVE_ALPHA,

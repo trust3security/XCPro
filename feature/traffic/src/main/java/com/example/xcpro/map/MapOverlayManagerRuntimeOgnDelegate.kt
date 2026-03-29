@@ -34,6 +34,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private var latestOgnGliderTrailSignature: Int = gliderTrailSegmentIdentitySignature(emptyList())
     private var latestTargetEnabled: Boolean = false
     private var latestResolvedTarget: OgnTrafficTarget? = null
+    private var latestPinnedTargetKey: String? = null
     private var latestOwnshipLocation: OverlayCoordinate? = null
     private var latestTargetOwnshipAltitudeMeters: Double? = null
     private var latestTargetAltitudeUnit: AltitudeUnit = AltitudeUnit.METERS
@@ -58,6 +59,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         runtimeState.ognTrafficOverlay?.cleanup()
         runtimeState.ognTrafficOverlay = createOgnTrafficOverlay(map)
         runtimeState.ognTrafficOverlay?.initialize()
+        runtimeState.ognTrafficOverlay?.setPinnedTargetKey(latestPinnedTargetKey)
         runtimeState.ognTrafficOverlay?.render(
             targets = latestOgnTargets,
             ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
@@ -175,6 +177,8 @@ class MapOverlayManagerRuntimeOgnDelegate(
     ) {
         val sameEnabled = latestTargetEnabled == enabled
         val sameResolvedTarget = latestResolvedTarget == resolvedTarget
+        val newPinnedTargetKey = resolvedTarget?.canonicalKey?.takeIf { enabled }
+        val pinnedTargetChanged = latestPinnedTargetKey != newPinnedTargetKey
         val sameOwnshipLocation = latestOwnshipLocation == ownshipLocation
         val normalizedOwnshipAltitude = normalizeOwnshipAltitudeForRender(ownshipAltitudeMeters)
         val sameOwnshipAltitude = latestTargetOwnshipAltitudeMeters == normalizedOwnshipAltitude
@@ -187,6 +191,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             sameOwnshipAltitude &&
             sameAltitudeUnit &&
             sameUnitsPreferences &&
+            !pinnedTargetChanged &&
             !forceImmediate &&
             runtimeState.ognTargetRingOverlay != null &&
             runtimeState.ognTargetLineOverlay != null &&
@@ -200,11 +205,16 @@ class MapOverlayManagerRuntimeOgnDelegate(
         latestTargetOwnshipAltitudeMeters = normalizedOwnshipAltitude
         latestTargetAltitudeUnit = altitudeUnit
         latestTargetUnitsPreferences = unitsPreferences
+        latestPinnedTargetKey = newPinnedTargetKey
+        runtimeState.ognTrafficOverlay?.setPinnedTargetKey(latestPinnedTargetKey)
         scheduleRender(
             state = ognTargetVisualsRenderState,
             forceImmediate = forceImmediate || !enabled || resolvedTarget == null || ownshipLocation == null
         ) {
             renderTargetVisualsNow()
+        }
+        if (pinnedTargetChanged && latestOgnTargets.isNotEmpty()) {
+            invalidateProjection(forceImmediate = true)
         }
     }
 
@@ -250,6 +260,17 @@ class MapOverlayManagerRuntimeOgnDelegate(
         ognViewportZoom = normalizedZoom
         runtimeState.ognTrafficOverlay?.setViewportZoom(normalizedZoom)
         applyResolvedIconSizeToLiveOverlays()
+    }
+
+    fun invalidateProjection(forceImmediate: Boolean = false) {
+        if (latestOgnTargets.isEmpty()) return
+        syncViewportZoomFromMapIfAvailable()
+        scheduleRender(
+            state = ognTrafficRenderState,
+            forceImmediate = forceImmediate,
+            intervalMsOverride = TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS,
+            renderNow = ::renderTargetsNow
+        )
     }
 
     fun findTargetAt(tap: LatLng): String? {
@@ -304,6 +325,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             satelliteContrastIconsEnabled()
         ).also { overlay ->
             ognViewportZoom?.let(overlay::setViewportZoom)
+            overlay.setPinnedTargetKey(latestPinnedTargetKey)
         }
 
     private fun createTargetRingOverlay(map: MapLibreMap): OgnTargetRingOverlayHandle =
@@ -316,6 +338,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             runtimeState.ognTrafficOverlay = createOgnTrafficOverlay(map)
             runtimeState.ognTrafficOverlay?.initialize()
         }
+        runtimeState.ognTrafficOverlay?.setPinnedTargetKey(latestPinnedTargetKey)
         runtimeState.ognTrafficOverlay?.render(
             targets = latestOgnTargets,
             ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
@@ -396,6 +419,13 @@ class MapOverlayManagerRuntimeOgnDelegate(
         runtimeState.ognTargetRingOverlay?.setIconSizePx(resolvedSizePx)
     }
 
+    private fun syncViewportZoomFromMapIfAvailable() {
+        val liveZoom = runtimeState.mapLibreMap?.cameraPosition?.zoom?.toFloat()
+            ?.takeIf { it.isFinite() }
+            ?: return
+        setViewportZoom(liveZoom)
+    }
+
     private fun resolveRenderedOgnIconSizePx(): Int =
         resolveOgnTrafficViewportSizing(
             baseIconSizePx = ognIconSizePx,
@@ -405,10 +435,11 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private fun scheduleRender(
         state: OgnRenderThrottleState,
         forceImmediate: Boolean,
+        intervalMsOverride: Long? = null,
         renderNow: () -> Unit
     ) {
         val map = runtimeState.mapLibreMap ?: return
-        val intervalMs = resolveInteractionAwareIntervalMs(
+        val intervalMs = intervalMsOverride ?: resolveInteractionAwareIntervalMs(
             baseIntervalMs = ognDisplayUpdateMode.renderIntervalMs,
             interactionActive = mapInteractionActive,
             interactionFloorMs = OGN_INTERACTION_MIN_RENDER_INTERVAL_MS
@@ -417,6 +448,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         if (forceImmediate || intervalMs <= 0L) {
             state.pendingJob?.cancel()
             state.pendingJob = null
+            state.pendingDueMonoMs = Long.MAX_VALUE
             renderNow()
             state.lastRenderMonoMs = nowMonoMs()
             return
@@ -430,16 +462,19 @@ class MapOverlayManagerRuntimeOgnDelegate(
             return
         }
 
-        if (state.pendingJob != null) return
-
         val remainingMs = (intervalMs - elapsedMs).coerceAtLeast(0L)
+        val scheduledDueMonoMs = nowMonoMs + remainingMs
+        if (state.pendingJob != null && state.pendingDueMonoMs <= scheduledDueMonoMs) return
+        state.pendingJob?.cancel()
         state.pendingJob = coroutineScope.launch {
             delay(remainingMs)
             state.pendingJob = null
+            state.pendingDueMonoMs = Long.MAX_VALUE
             if (runtimeState.mapLibreMap != map || runtimeState.mapLibreMap == null) return@launch
             renderNow()
             state.lastRenderMonoMs = nowMonoMs()
         }
+        state.pendingDueMonoMs = scheduledDueMonoMs
     }
 
     private fun flushDeferredRenders() {
@@ -454,6 +489,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             val pending = state.pendingJob ?: return@forEach
             pending.cancel()
             state.pendingJob = null
+            state.pendingDueMonoMs = Long.MAX_VALUE
             renderNow()
             state.lastRenderMonoMs = nowMonoMs
         }
@@ -462,12 +498,16 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private fun cancelPendingRenders() {
         ognTrafficRenderState.pendingJob?.cancel()
         ognTrafficRenderState.pendingJob = null
+        ognTrafficRenderState.pendingDueMonoMs = Long.MAX_VALUE
         ognTargetVisualsRenderState.pendingJob?.cancel()
         ognTargetVisualsRenderState.pendingJob = null
+        ognTargetVisualsRenderState.pendingDueMonoMs = Long.MAX_VALUE
         ognThermalRenderState.pendingJob?.cancel()
         ognThermalRenderState.pendingJob = null
+        ognThermalRenderState.pendingDueMonoMs = Long.MAX_VALUE
         ognTrailRenderState.pendingJob?.cancel()
         ognTrailRenderState.pendingJob = null
+        ognTrailRenderState.pendingDueMonoMs = Long.MAX_VALUE
     }
 
     private companion object {

@@ -37,6 +37,7 @@ class MapInitializerOgnViewportZoomTest {
         )
 
         verify(fixture.overlayManager, times(1)).setOgnViewportZoom(8.0f)
+        verify(fixture.overlayManager, times(1)).invalidateTrafficProjection(true)
     }
 
     @Test
@@ -64,6 +65,27 @@ class MapInitializerOgnViewportZoomTest {
         cameraIdleListeners.single().onCameraIdle()
 
         verify(fixture.overlayManager, times(1)).setOgnViewportZoom(9.4f)
+        verify(fixture.overlayManager, times(1)).invalidateTrafficProjection(true)
+    }
+
+    @Test
+    fun cameraMoveListener_invalidatesTrafficProjection() = runTest {
+        val fixture = createFixture(scope = this)
+        val cameraMoveListeners = mutableListOf<MapLibreMap.OnCameraMoveListener>()
+        doAnswer { invocation ->
+            cameraMoveListeners += invocation.getArgument<MapLibreMap.OnCameraMoveListener>(0)
+            null
+        }.whenever(fixture.map).addOnCameraMoveListener(any<MapLibreMap.OnCameraMoveListener>())
+
+        invokePrivateMethod(
+            target = fixture.initializer,
+            name = "setupListeners",
+            parameterTypes = arrayOf(MapLibreMap::class.java),
+            args = arrayOf(fixture.map)
+        )
+        cameraMoveListeners.single().onCameraMove()
+
+        verify(fixture.overlayManager, times(1)).invalidateTrafficProjection(false)
     }
 
     private fun createFixture(scope: kotlinx.coroutines.test.TestScope): Fixture {
