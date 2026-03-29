@@ -6,7 +6,7 @@
 - Owner: XCPro Team
 - Date: 2026-03-29
 - Issue/PR: TBD
-- Status: Draft
+- Status: Completed
 - Execution rules:
   - Keep the declared authority split from the existing ADRs.
   - `TaskManagerCoordinator.taskSnapshotFlow` remains the authoritative cross-feature task-runtime seam.
@@ -336,6 +336,9 @@ Route / glide / task performance
 
 ### Phase 0 - Baseline and Contract Lock
 
+- Status update:
+  - Completed on 2026-03-29.
+  - Focused replay/controller regression tests were added to lock the pre-fix failure modes before the restore implementation landed.
 - Goal:
   - Lock current intended authority split before changing code.
   - Add or update tests that reproduce the replay restore gap, the replay failure/cleanup gap, the live-fix race windows, and the allowed disabled/manual divergence.
@@ -358,6 +361,9 @@ Route / glide / task performance
 
 ### Phase 1 - Replay Snapshot and Restore Correctness
 
+- Status update:
+  - Completed on 2026-03-29.
+  - The replay/runtime fix landed in commit `3a33121` together with the Phase 0 replay/controller regression coverage.
 - Goal:
   - make racing replay capture and restore the full pre-replay runtime state
   - preserve coordinator `activeLeg`, full `RacingNavigationState`, full advance snapshot, replay mode, `autoStopAfterFinish`, and racing replay shell overrides
@@ -435,6 +441,9 @@ Route / glide / task performance
 
 ### Phase 2 - Consumer Policy Cleanup
 
+- Status update:
+  - Completed on 2026-03-29 in commit `61f5ac4`.
+  - The minimized top-of-map racing indicator now uses an explicit flight-surface projector while task sheet/editor semantics remain on coordinator-selected leg.
 - Goal:
   - remove ambiguous UI assumptions about `activeLeg` vs racing nav leg
   - keep editor/selection semantics separate from in-flight nav-progress semantics
@@ -460,6 +469,10 @@ Route / glide / task performance
 
 ### Phase 3 - Docs Sync and Hardening
 
+- Status update:
+  - Completed on 2026-03-29.
+  - `docs/ARCHITECTURE/PIPELINE.md` now documents the repaired replay restore contract and the dedicated racing flight-surface seam.
+  - PR-ready verification passed via `scripts/qa/run_change_verification.bat -Profile pr-ready`.
 - Goal:
   - align architecture-facing docs and lock verification expectations
 - Files to change:
@@ -506,6 +519,11 @@ Route / glide / task performance
   - `./gradlew enforceRules`
   - `./gradlew testDebugUnitTest`
   - `./gradlew assembleDebug`
+- Recorded execution:
+  - 2026-03-29: `scripts/qa/run_change_verification.bat -Profile pr-ready` passed
+  - 2026-03-29: `./gradlew :feature:tasks:testDebugUnitTest` passed
+  - 2026-03-29: `./gradlew :feature:map:testDebugUnitTest` passed
+  - 2026-03-29: `./gradlew enforceRules` passed in earlier focused Phase 1/2 verification as well as the final `pr-ready` sweep
 - If replay/UI behavior changes are substantial on device:
   - run the smallest relevant connected test lane or manual replay smoke with evidence
 
