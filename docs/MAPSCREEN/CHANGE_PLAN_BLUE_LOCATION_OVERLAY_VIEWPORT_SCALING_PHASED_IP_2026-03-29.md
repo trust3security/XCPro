@@ -6,7 +6,7 @@
 - Owner: XCPro Team
 - Date: 2026-03-29
 - Issue/PR: TBD
-- Status: Draft
+- Status: In Progress - Phase 1 through Phase 3 code paths implemented; verification/manual QA pending
 
 Required pre-read order:
 1. `docs/ARCHITECTURE/ARCHITECTURE.md`
@@ -35,7 +35,7 @@ Required pre-read order:
   - Use visible radius around ownship as the policy metric.
   - Define visible radius as the nearest screen-edge radius from the ownship screen point, converted with map distance-per-pixel.
   - Keep current icon artwork, rotation, overlap behavior, and z-order behavior.
-  - Apply scaling on first render, camera idle, and style recreation.
+  - Apply scaling on first render, ownship position updates, viewport-metric updates, and style recreation.
 - Out of scope:
   - No shared cross-overlay viewport policy framework.
   - No changes to ownship location source, smoothing, tracking, or camera-follow behavior.
@@ -44,7 +44,7 @@ Required pre-read order:
   - No bitmap redesign in `SailplaneIconBitmapFactory.kt`.
 - User-visible impact:
   - Ownship triangle remains current size at close radius.
-  - Ownship triangle becomes smaller in three steps as visible radius widens.
+  - Ownship triangle uses one reduced size for all wider visible radii.
 - Rule class touched: Default
 
 ## 2) Architecture Contract
@@ -56,7 +56,7 @@ Required pre-read order:
 | ownship geographic position / heading | existing map position pipeline owners | current `updateLocation(...)` inputs into `BlueLocationOverlay` | new ViewModel or repository mirror for visual size |
 | blue ownship rendered icon scale | `BlueLocationOverlay` runtime owner | internal overlay cached render state | persisted setting, `MapStateStore` field, or UI-local mirror |
 | visible-radius scale thresholds | dedicated viewport policy file | pure function(s) | inline constants duplicated across initializer/tests/overlay |
-| viewport metrics snapshot for ownship scaling | `BlueLocationOverlay` runtime owner | internal cached metrics snapshot using `MapCameraViewportMetrics` | raw `MapView` handle retained as policy state |
+| viewport metrics + current distance-per-pixel snapshot for ownship scaling | `BlueLocationOverlay` runtime owner | internal cached viewport snapshot using `MapCameraViewportMetrics` plus current map scale | raw `MapView` handle retained as policy state |
 
 ### 2.1A State Contract
 
@@ -64,7 +64,7 @@ Required pre-read order:
 |---|---|---|---|---|---|---|---|---|
 | blue ownship current icon scale multiplier | `BlueLocationOverlay` | overlay initialization, viewport refresh hook, style reapply path | internal layer styling only | visible radius around ownship + policy thresholds | none | overlay cleanup, overlay recreation | none | overlay runtime tests |
 | visible radius around ownship | `BlueLocationOverlay` or focused helper owned by its policy seam | recomputed on demand from cached viewport metrics | internal policy resolution only | ownship screen point + nearest viewport edge + distance per pixel | none | each recompute | none | policy and overlay tests |
-| viewport metrics snapshot for ownship scaling | `BlueLocationOverlay` | startup hook, camera-idle hook, style reapply path | internal scale refresh only | `MapView` width/height/pixel ratio projected into `MapCameraViewportMetrics` | none | overlay cleanup, overlay recreation | none | overlay tests |
+| viewport metrics + current distance-per-pixel snapshot for ownship scaling | `BlueLocationOverlay` | startup hook, camera-idle hook, style reapply path | internal scale refresh only | `MapView` width/height/pixel ratio plus current map scale projected into a cached runtime snapshot | none | overlay cleanup, overlay recreation | none | overlay tests |
 
 ### 2.2 Dependency Direction
 
@@ -80,7 +80,8 @@ Modules/files touched:
 Boundary risk:
 - do not move viewport policy into `MapInitializer`
 - do not add ViewModel-owned or store-owned visual scale state
-- do not widen the boundary by passing `MapView` into policy logic; prefer `MapCameraViewportMetrics`
+- do not widen the boundary by passing `MapView` into policy logic; prefer a narrow viewport snapshot plus current map scale
+- do not widen `MapLocationOverlayPort`; the existing ownship update port should remain unchanged
 - do not add a shared cross-feature viewport abstraction unless a later ADR explicitly chooses that path
 
 ### 2.2A Reference Pattern Check
@@ -88,16 +89,20 @@ Boundary risk:
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
 | `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt` | current ownship overlay owner | keep visual state local to the runtime overlay and restyle the existing layer | add viewport-aware scale state and reapply path |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlayViewportSupport.kt` | extracted viewport math helper for the ownship overlay | keep screen-point and distance-per-pixel helpers out of the overlay body | extracted only to stay under enforced hotspot limits |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlayRuntimeSupport.kt` | extracted runtime/helper seam for the ownship overlay | keep runtime object and small geometry helpers out of the overlay body | extracted only to stay under enforced hotspot limits |
 | `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | runtime-owned aircraft icon scaling with style reapply | overlay caches current scale and reapplies it on style/runtime recovery | blue ownship uses visible-radius metric instead of raw zoom bands |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapScaleBarController.kt` | existing map scale owner already computes viewport distance-per-pixel from map + viewport | reuse the same meters-per-pixel family and viewport metric inputs | ownship policy uses ownship screen point to nearest edge, not scale-bar max width |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapScaleBarController.kt` | existing map scale owner already computes viewport distance-per-pixel from map + viewport | reuse the same meters-per-pixel family and runtime-produced scale snapshot | ownship policy uses ownship screen point to nearest edge, not scale-bar max width |
 | `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt` | viewport-range math already exists in traffic overlays | reuse the pattern of deriving a viewport metric from geometry rather than persisting visual state | ownship policy uses ownship-centered visible radius instead of camera-center range |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapPositionController.kt` | ownship location updates already flow through one port into the overlay | keep the location-update seam unchanged and let the overlay react locally | scale recompute occurs inside the overlay on location updates instead of adding a new port method |
 
 ### 2.2B Boundary Moves
 
 | Responsibility | Old Owner | New Owner | Why | Validation |
 |---|---|---|---|---|
 | blue ownship icon scale policy | fixed inline `iconSize(1.0f)` inside `BlueLocationOverlay` | dedicated blue viewport policy file + `BlueLocationOverlay` cache | keep thresholds canonical and keep overlay runtime-focused | policy tests + overlay tests |
-| viewport metrics snapshot for ownship sizing | none | `MapInitializer` startup/camera-idle runtime hook passing `MapCameraViewportMetrics` | reuse existing overlay-runtime update trigger path without leaking `MapView` | initializer tests + manual zoom QA |
+| viewport snapshot for ownship sizing | none | `MapInitializer` startup/camera-idle runtime hook passing `MapCameraViewportMetrics` plus current distance-per-pixel | reuse existing overlay-runtime update trigger path without leaking `MapView` | initializer tests + manual zoom QA |
+| ownship-on-screen radius recompute on accepted location updates | implicit fixed-size behavior inside `updateLocation(...)` | `BlueLocationOverlay` local runtime logic | ownship-centered metric must react when ownship moves on screen even without camera movement | overlay tests |
 
 ### 2.2C Bypass Removal Plan
 
@@ -105,16 +110,19 @@ Boundary risk:
 |---|---|---|---|
 | `BlueLocationOverlay.createLocationLayer()` | hard-coded fixed `iconSize(1.0f)` with no viewport policy owner | layer size derived from `currentIconScale` resolved through a dedicated policy seam | Phase 1 |
 | `MapInitializer` ownship setup path | overlay is initialized with no viewport-aware size application | explicit metrics snapshot push after initialization and on camera idle | Phase 2 |
+| ownship location update path in `BlueLocationOverlay.updateLocation(...)` | location updates only change source point and rotation | location updates also recompute size band using cached viewport metrics when ownship screen radius changes | Phase 2 |
 
 ### 2.2D File Ownership Plan
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_OVERLAY_VIEWPORT_SCALING_PHASED_IP_2026-03-29.md` | New | change contract for this slice | feature behavior plan belongs in docs, not code comments | not an ADR because no durable boundary move is planned | No |
+| `docs/ARCHITECTURE/PIPELINE.md` | Existing | pipeline note for the new viewport snapshot feed into `BlueLocationOverlay` | pipeline wiring changed and must be documented | not a code comment because this is runtime wiring documentation | No |
 | `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationViewportScalePolicy.kt` | New | canonical visible-radius thresholds and pure scale-resolution helper | policy/math belongs outside the overlay body | not `MapInitializer`; not ViewModel; not a shared traffic file | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt` | Existing | ownship overlay runtime state, style restyle, style recovery, current scale cache | this file already owns ownship layer/image/source lifecycle | not `MapStateStore`, not UI, not repository | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` | Existing | startup and camera-idle trigger for ownship viewport refresh | current camera-driven overlay update seam already lives here | not ViewModel; not overlay manager, because blue ownship is not routed through traffic delegates | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt` | Existing | style-change recreation seam if constructor or refresh call contract changes | this file recreates `BlueLocationOverlay` on style changes today | not `MapInitializer`, because style changes also arrive later in runtime lifecycle | No |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt` | Existing | ownship overlay runtime state, style restyle, style recovery, cached viewport snapshot, current scale cache | this file already owns ownship layer/image/source lifecycle | not `MapStateStore`, not UI, not repository | No |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlayViewportSupport.kt` | New | focused helpers for distance-per-pixel and ownship screen-point resolution | keeps overlay/runtime logic split narrow under hotspot cap | not a shared map utility because the behavior is still blue-ownship-specific | No |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlayRuntimeSupport.kt` | New | focused helpers for runtime object recovery and small geometry comparisons | keeps `BlueLocationOverlay.kt` under the enforced hotspot budget | not a generic runtime service because it is overlay-specific | No |
+| `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` | Existing | startup and camera-idle production of viewport metrics plus current map scale for ownship refresh | current camera-driven overlay update seam already lives here | not ViewModel; not overlay manager, because blue ownship is not routed through traffic delegates | No |
 | `feature/map/src/test/java/com/example/xcpro/map/BlueLocationOverlayTest.kt` | Existing | runtime behavior regression tests | existing test owner for this overlay | not traffic tests; not generic map tests | No |
 | `feature/map-runtime/src/test/java/com/example/xcpro/map/BlueLocationViewportScalePolicyTest.kt` | New | pure policy threshold tests | policy file lives in `feature:map-runtime` and should stay `internal` there | not `feature:map` because that would force wider visibility or boundary drift | No |
 
@@ -122,7 +130,7 @@ Boundary risk:
 
 | Contract / API | Owner | Consumers | Visibility | Why Needed | Compatibility / Removal Plan |
 |---|---|---|---|---|---|
-| blue ownship viewport metrics update method on `BlueLocationOverlay` | `feature:map-runtime` | `MapInitializer`, possibly `MapOverlayRuntimeMapLifecycleDelegate` | public cross-module, narrow consumer set | `feature:map` needs to pass viewport metrics after init and on camera idle without exposing `MapView` | keep narrow; no compatibility shim planned |
+| blue ownship viewport snapshot update method on `BlueLocationOverlay` | `feature:map-runtime` | `MapInitializer` | public cross-module, narrow consumer set | `feature:map` needs to pass viewport metrics plus current map scale after init and on camera idle without exposing `MapView` | keep narrow; no compatibility shim planned |
 
 ### 2.2F Scope Ownership and Lifetime
 
@@ -136,8 +144,8 @@ No compatibility shim is planned.
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| ownship visible-radius bands `<5km`, `>=5km`, `>=10km`, `>=20km` | `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationViewportScalePolicy.kt` | `BlueLocationOverlay` and policy tests | this is a single-feature visual policy with no broader consumer set | No |
-| ownship scale multipliers `1.00`, `0.75`, `0.50`, `0.25` | `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationViewportScalePolicy.kt` | `BlueLocationOverlay` and policy tests | same rationale as above | No |
+| ownship visible-radius bands `<5km`, `>=5km` | `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationViewportScalePolicy.kt` | `BlueLocationOverlay` and policy tests | this is a single-feature visual policy with no broader consumer set | No |
+| ownship scale multipliers `1.00`, `0.75` | `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationViewportScalePolicy.kt` | `BlueLocationOverlay` and policy tests | same rationale as above | No |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -232,10 +240,13 @@ After:
 ```text
 MapInitializer startup / camera idle
   -> BlueLocationOverlay.setViewportMetrics(...)
+  -> BlueLocationOverlay caches viewport metrics + current distance-per-pixel
+BlueLocationOverlay.updateLocation(...)
+  -> map projection converts ownship to screen point
   -> BlueLocationViewportScalePolicy.resolve(...)
   -> BlueLocationOverlay caches currentIconScale
   -> SymbolLayer iconSize(...) restyled only when band changes
-  -> updateLocation() continues to own position/rotation only
+  -> updateLocation() updates position/rotation and recomputes size when ownship moves on screen
 ```
 
 ## 4) Implementation Phases
@@ -252,7 +263,7 @@ MapInitializer startup / camera idle
   - none
 - Exit criteria:
   - metric is locked to visible radius around ownship
-  - thresholds are locked
+  - thresholds are locked to the two-size rule
   - file plan is agreed
 
 ### Phase 1 - Pure policy owner
@@ -278,14 +289,16 @@ MapInitializer startup / camera idle
   - Make `BlueLocationOverlay` apply viewport-aware `iconSize(...)` while preserving current rotation and visibility behavior.
 - Files to change:
   - `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt` if constructor or style-reapply contract needs it
+  - `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlayViewportSupport.kt` if hotspot split is needed
+  - `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlayRuntimeSupport.kt` if hotspot split is needed
   - `feature/map/src/test/java/com/example/xcpro/map/BlueLocationOverlayTest.kt`
 - Ownership/file split changes in this phase:
-  - `BlueLocationOverlay` owns current scale cache and style reapply behavior
+  - `BlueLocationOverlay` owns current scale cache, cached viewport snapshot, ownship-on-screen radius recompute, and style reapply behavior
 - Tests to add/update:
   - initial scale application
   - same-band no-op
   - band crossing updates
+  - ownship movement across screen can change the band without a camera-idle event
   - style recreation retains scale
   - `bringToFront()` retains scale
   - cached viewport metrics are reused on style reapply
@@ -293,24 +306,38 @@ MapInitializer startup / camera idle
   - ownship size changes only through the overlay owner
   - no bitmap regeneration on zoom/camera idle
   - no behavior regression in rotation/visibility
+  - no `MapLocationOverlayPort` widening is needed
 
 ### Phase 3 - Runtime wiring and verification
 
 - Goal:
-  - Trigger ownship viewport refresh at the correct runtime points and validate release-grade behavior.
+  - Keep viewport metrics current at the correct runtime points and validate release-grade behavior.
 - Files to change:
   - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+  - `docs/ARCHITECTURE/PIPELINE.md` if runtime wiring changed
   - any narrow lifecycle test file required by the chosen hook
 - Ownership/file split changes in this phase:
-  - initializer remains trigger-only; policy stays out of it
+  - initializer remains viewport-snapshot producer only; policy stays out of it
+  - `MapOverlayRuntimeMapLifecycleDelegate.kt` stays unchanged unless a future implementation stops reusing the current `BlueLocationOverlay` instance on style change
 - Tests to add/update:
   - startup applies correct band
   - camera idle applies new band
   - no crash before first ownship update or style-ready path
 - Exit criteria:
   - first render applies the expected ownship size
-  - camera idle updates size correctly
+  - viewport metrics updates keep size logic current
   - style recreation and startup do not flash the wrong size
+  - remaining work is verification/manual QA, not further ownership changes
+
+### Phase 3A - Post-implementation seam pass update
+
+- Outcome from current seam/code pass:
+  - `MapInitializer` is the only runtime producer needed for viewport snapshots in the current implementation
+  - `MapLocationOverlayAdapter` and `MapLocationOverlayPort` remain unchanged, which matches the intended boundary
+  - `MapOverlayRuntimeMapLifecycleDelegate` does not need a change because style changes currently reuse the same `BlueLocationOverlay` instance and call `initialize()`
+- Remaining verification-only risk:
+  - viewport size/layout changes without a camera-idle event may temporarily keep the previous scale band
+  - do not add a new layout listener unless manual QA proves this is a real user-facing regression
 
 ## 5) Test Plan
 
@@ -352,17 +379,19 @@ Optional when relevant:
 ```
 
 Manual QA required before merge:
-- zoom out until visible radius crosses 5 km, 10 km, and 20 km, confirm stepped size reductions
+- zoom out until visible radius crosses 5 km and confirm the triangle moves to the reduced size
 - zoom back in and confirm the triangle returns to current size below 5 km
 - start MapScreen at wide radius and confirm reduced size applies immediately
+- with tracking off, let ownship move across the screen and confirm size can update correctly without a camera move
 - trigger map style change and confirm no ownship size flash
+- resize/rotate the viewport if practical and confirm the size band refreshes as expected after the next camera-idle event
 - confirm ownship rotation and z-order remain unchanged
 
 ## 6) Risks and Mitigations
 
 | Risk | Impact | Mitigation | Owner |
 |---|---|---|---|
-| threshold interpretation feels wrong in practice | visual mismatch with pilot expectation | lock metric now and verify on device before merge | XCPro Team |
+| two-size interpretation feels wrong in practice | visual mismatch with pilot expectation | lock the two-size rule now and verify on device before merge | XCPro Team |
 | off-center ownship radius calculation is too coarse | size changes earlier/later than expected when panned | prefer ownship-based visible radius and test panned-map scenarios | XCPro Team |
 | style recreation resets size | visible flash/regression | overlay caches current scale and tests style recovery explicitly | XCPro Team |
 | bitmap is regenerated on every refresh | runtime overhead and avoidable churn | restyle layer size only; keep bitmap factory unchanged | XCPro Team |

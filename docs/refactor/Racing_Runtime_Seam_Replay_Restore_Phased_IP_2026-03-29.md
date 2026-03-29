@@ -373,6 +373,51 @@ Route / glide / task performance
   - racing replay terminal paths converge to one live-ready post-session state
   - no new task-runtime owner is introduced
 
+### Phase 1A - 5-Minute Implementation Note
+
+- Scope lock:
+  - Racing replay map-shell restore stays in Phase 1 because `MapScreenReplayCoordinator` already forces tracking/return-button/initial-centering state on replay start, and Phase 1 is the replay-session correctness slice.
+  - Phase 1 does not change task UI seam policy; that remains Phase 2.
+- Preferred owner shape:
+  - `RacingReplaySnapshotController` owns one full in-memory racing replay bundle:
+    - selected task leg
+    - full `RacingNavigationState`
+    - full `RacingAdvanceState.Snapshot`
+    - replay mode, cadence, speed, and `autoStopAfterFinish`
+    - racing replay map-shell overrides
+  - `MapScreenReplayCoordinator` owns replay lifecycle sequencing only.
+  - `TaskNavigationController` owns atomic restore of nav state plus advance snapshot; it must not push replay-restore policy up into UI/task-sheet layers.
+- Preferred restore shape:
+  - Add one explicit replay-restore entrypoint on `TaskNavigationController` that restores:
+    - full `RacingNavigationState`
+    - full `RacingAdvanceState.Snapshot`
+    - coordinator selected leg under restore suppression
+  - Do not restore by separately calling `setAdvanceMode(...)`, `setAdvanceArmed(...)`, and `TaskManagerCoordinator.setActiveLeg(...)` from the map layer without a suppression guard.
+  - The restore path must suppress the manual-leg listener while replay restore reapplies the selected leg.
+- Preferred replay lifecycle ordering:
+  1. capture the full racing replay bundle once
+  2. stop/cleanup any prior replay session without leaving racing replay in a partially reset live state
+  3. reset racing nav/task state for the replay session and apply replay overrides
+  4. run replay
+  5. on `Completed` / `Cancelled` / `Failed`, perform replay controller cleanup fence first
+  6. restore replay config + map shell + task/nav bundle exactly once
+  7. clear the captured bundle and drop `racingReplayActive`
+  - No live-fix-driven racing-state mutation is allowed in the gap between steps 3 and 4 or between steps 5 and 6.
+- Test ownership lock:
+  - `TaskNavigationControllerTest`:
+    - full `RacingAdvanceState.Snapshot` restore
+    - replay restore does not trigger false manual-leg sync/disarm
+  - `RacingReplaySnapshotControllerTest`:
+    - capture/restore of the full racing replay bundle
+    - restore-once / clear-after-restore semantics
+  - `MapScreenReplayCoordinatorTest`:
+    - start failure restores pre-replay state
+    - complete/cancel/failure converge to one live-ready post-session state
+    - replay cleanup fence runs before final racing restore
+    - no uncontrolled live-fix ingress around replay start/terminal restore
+- Coding stop condition:
+  - If Phase 1 cannot keep replay cleanup fencing inside replay/runtime owners without leaking replay policy into task UI or task-sheet projection, stop and update the plan before coding further.
+
 ### Phase 2 - Consumer Policy Cleanup
 
 - Goal:

@@ -162,6 +162,7 @@ class MapInitializer(
             mapState.blueLocationOverlay = BlueLocationOverlay(context, map)
             mapState.blueLocationOverlay?.initialize()
             mapState.blueLocationOverlay?.setVisible(localOwnshipRenderEnabledProvider())
+            updateBlueLocationViewportMetrics()
             overlayManager.initializeTrafficOverlays(map)
             overlayManager.reapplyForecastOverlay()
             overlayManager.reapplySkySightSatelliteOverlay()
@@ -227,6 +228,7 @@ class MapInitializer(
                 stateActions.updateCurrentZoom(currentZoom.toFloat())
                 overlayManager.setOgnViewportZoom(currentZoom.toFloat())
                 overlayManager.setAdsbViewportZoom(currentZoom.toFloat())
+                updateBlueLocationViewportMetrics()
                 val target = cameraPosition.target
                 if (target != null) {
                     stateActions.updateCameraSnapshot(
@@ -282,6 +284,39 @@ class MapInitializer(
         if (interactionGestureDepth == 0) {
             overlayManager.setMapInteractionActive(false)
         }
+    }
+
+    private fun updateBlueLocationViewportMetrics() {
+        mapState.blueLocationOverlay?.setViewportMetrics(
+            metrics = resolveCurrentViewportMetrics(),
+            distancePerPixelMeters = resolveCurrentBlueLocationDistancePerPixelMeters()
+        )
+    }
+
+    private fun resolveCurrentViewportMetrics(): MapCameraViewportMetrics? {
+        val mapView = mapState.mapView ?: return null
+        return MapCameraViewportMetrics(
+            widthPx = mapView.width,
+            heightPx = mapView.height,
+            pixelRatio = mapView.pixelRatio
+        )
+    }
+
+    private fun resolveCurrentBlueLocationDistancePerPixelMeters(): Double? {
+        val map = mapState.mapLibreMap ?: return null
+        val mapView = mapState.mapView ?: return null
+        val pixelRatio = mapView.pixelRatio
+        if (!pixelRatio.isFinite() || pixelRatio <= 0f) {
+            return null
+        }
+        val latitude = map.cameraPosition.target?.latitude ?: 0.0
+        val metersPerPixel = runCatching {
+            map.projection.getMetersPerPixelAtLatitude(latitude)
+        }.getOrNull() ?: return null
+        if (!metersPerPixel.isFinite() || metersPerPixel <= 0.0) {
+            return null
+        }
+        return metersPerPixel / pixelRatio
     }
 
 }

@@ -1129,6 +1129,9 @@ Task map rendering bridge (2026-02-12):
 - `MapInitializer.setupInitialPosition(...)` and camera-idle callbacks are the startup/runtime viewport-zoom producers for traffic declutter:
   - ADS-B receives viewport zoom through `setAdsbViewportZoom(...)`.
   - OGN receives viewport zoom through `setOgnViewportZoom(...)`, and OGN effective icon size remains delegate-owned render-only state.
+- `MapInitializer.setupOverlays(...)` and camera-idle callbacks also push the blue ownship overlay viewport snapshot:
+  - `BlueLocationOverlay` receives `MapCameraViewportMetrics` plus the current map `distancePerPixel` snapshot.
+  - `BlueLocationOverlay` remains the sole owner of visible-radius band resolution and rendered ownship icon size.
 - `MapInitializer.setupMapStyle(...)` uses bounded style-load wait with fallback init to avoid startup hangs.
 - `MapRuntimeController` applies style commands with map-generation/request-token guards so stale callbacks do not mutate active overlays.
 - Parent Phase 3 visual/runtime primitive ownership now also lives in
