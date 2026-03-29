@@ -20,6 +20,7 @@ import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.tasks.TaskFlightSurfaceUiState
 import com.example.xcpro.tasks.core.TaskType
 
 internal data class MapScreenMapBindings(
@@ -42,6 +43,7 @@ internal data class MapScreenSessionBindings(
 internal data class MapScreenTaskBindings(
     val isAATEditMode: Boolean,
     val taskType: TaskType,
+    val taskFlightSurfaceUiState: TaskFlightSurfaceUiState,
     val savedLocation: MapPoint?,
     val savedZoom: Double?,
     val savedBearing: Double?,
@@ -96,6 +98,7 @@ internal fun rememberMapScreenTaskBindings(
 ): MapScreenTaskBindings {
     val isAATEditMode by mapViewModel.isAATEditMode.collectAsStateWithLifecycle()
     val taskType by mapViewModel.taskType.collectAsStateWithLifecycle()
+    val taskFlightSurfaceUiState by mapViewModel.taskFlightSurfaceUiState.collectAsStateWithLifecycle()
     val savedLocation by mapStateReader.savedLocation.collectAsStateWithLifecycle()
     val savedZoom by mapStateReader.savedZoom.collectAsStateWithLifecycle()
     val savedBearing by mapStateReader.savedBearing.collectAsStateWithLifecycle()
@@ -104,6 +107,7 @@ internal fun rememberMapScreenTaskBindings(
     return MapScreenTaskBindings(
         isAATEditMode = isAATEditMode,
         taskType = taskType,
+        taskFlightSurfaceUiState = taskFlightSurfaceUiState,
         savedLocation = savedLocation,
         savedZoom = savedZoom,
         savedBearing = savedBearing,

@@ -91,6 +91,8 @@ open class IgcReplayControllerRuntime(
     fun setReplayMode(mode: ReplayMode, resetAfterSession: Boolean = false) =
         setReplayModeRuntime(mode, resetAfterSession)
 
+    fun getReplayMode(): ReplayMode = getReplayModeRuntime()
+
     fun getReplayCadence(): ReplayCadenceProfile = getReplayCadenceRuntime()
 
     fun getReplayBaroStepMs(): Long = getReplayBaroStepMsRuntime()
@@ -113,6 +115,8 @@ open class IgcReplayControllerRuntime(
         setReplayInterpolationRuntime(interpolation)
 
     fun setAutoStopAfterFinish(enabled: Boolean) = setAutoStopAfterFinishRuntime(enabled)
+
+    fun isAutoStopAfterFinishEnabled(): Boolean = isAutoStopAfterFinishEnabledRuntime()
 
     fun getInterpolatedReplayHeadingDeg(timestampMs: Long): Double? =
         getInterpolatedReplayHeadingDegRuntime(timestampMs)

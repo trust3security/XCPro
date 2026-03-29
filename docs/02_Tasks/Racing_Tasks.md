@@ -1,11 +1,11 @@
 
 # Racing Tasks - Complete Guide
 
-**Last Updated:** 2026-01-15
+**Last Updated:** 2026-03-29
 **Status:** ... Current - Consolidated from multiple sources
-**Module:** `app/src/main/java/.../tasks/racing/`
+**Module:** task logic in `feature/tasks/src/main/java/.../tasks/racing/`; rendering/edit surfaces in `feature/map`
 
-> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Task Summary](./racingtask.md) | [XCSoar-Style Navigation](./Racing_XCSoar_Navigation.md)
+> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Rules Package](../RACING_TASK/README.md) | [Validation Algorithms](../RACING_TASK/validation_algorithms.md)
 
 ---
 
@@ -195,7 +195,8 @@ XCPro will follow XCSoar's transition-driven task logic:
 - Transition checks use last GPS vs current GPS positions (not single-point proximity).
 
 Implementation details and the long-term strategy live in:
-- `docs/02_Tasks/Racing_XCSoar_Navigation.md`
+- `docs/RACING_TASK/validation_algorithms.md`
+- `docs/RACING_TASK/CHANGE_PLAN_RACING_TASK_PRODUCTION_GRADE_PHASED_IP_2026-03-07.md`
 
 ---
 ## - FAI Compliance
@@ -305,10 +306,14 @@ if (result.isValid) {
 - [AAT_Tasks.md](./AAT_Tasks.md) - Comparison with AAT
 
 ### Racing-Specific
+- [README.md](../RACING_TASK/README.md) - Racing rules package
 - [racing_task_definition.md](../RACING_TASK/racing_task_definition.md) - Racing task definition
-- [racingtask.md](./racingtask.md) - Product and implementation summary
+- [validation_algorithms.md](../RACING_TASK/validation_algorithms.md) - Validation and transition algorithms
 - [keyhole_task_spec.md](../../keyhole_task_spec.md) - Keyhole geometry details
 - [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) - Module architecture
+
+### Historical
+- [archive/2026-03-task-doc-cleanup/README.md](./archive/2026-03-task-doc-cleanup/README.md) - Archived racing implementation plans
 
 ### Reference
 - [Quick_Reference.md](./Quick_Reference.md) - Command cheat sheet

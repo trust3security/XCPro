@@ -1,20 +1,17 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.location.Location
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.runtime.BuildConfig as RuntimeBuildConfig
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
-import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.android.style.layers.PropertyFactory.iconRotate
+import org.maplibre.android.style.layers.PropertyFactory.iconSize
+import org.maplibre.android.style.layers.PropertyFactory.visibility
 import org.maplibre.android.style.layers.SymbolLayer
-import org.maplibre.android.style.layers.PropertyFactory.*
-import org.maplibre.geojson.Point
-import org.maplibre.geojson.Feature
-import kotlin.math.*
+import org.maplibre.android.style.sources.GeoJsonSource
 
 /**
  * Sailplane location overlay showing current user position.
@@ -30,8 +27,6 @@ class BlueLocationOverlay(
         const val LAYER_ID = MAP_BLUE_LOCATION_LAYER_ID
         private const val ICON_ID = "aircraft-location-icon"
         const val ICON_SIZE_PX = 144 // Bitmap size in pixels (3x larger = 300% increase)
-        private const val LOCATION_EPSILON = 1e-7
-        private const val ROTATION_EPSILON_DEG = 0.05f
     }
 
     private var currentLocation: LatLng? = null
@@ -39,10 +34,15 @@ class BlueLocationOverlay(
     private var currentHeadingDeg: Double = 0.0
     private var currentMapBearing: Double = 0.0
     private var currentOrientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
+    private var currentViewportMetrics: MapCameraViewportMetrics? = null
+    private var currentDistancePerPixelMeters: Double? = null
+    private var currentIconScale: Float = resolveBlueLocationViewportScalePolicy(null).iconScaleMultiplier
+    private var desiredVisible: Boolean = true
     private var isLayerAdded = false
     private var boundStyle: Style? = null
     private var lastRenderedLocation: LatLng? = null
     private var lastRenderedIconRotation: Float? = null
+    private var lastRenderedIconScale: Float? = null
     private var lastRenderedVisible: Boolean? = null
     private val verboseLogging = RuntimeBuildConfig.DEBUG
 
@@ -54,10 +54,12 @@ class BlueLocationOverlay(
             }
             AppLogger.d(TAG, "Initializing aircraft location overlay")
 
-            ensureRuntimeObjects(style)
-            isLayerAdded = hasRuntimeObjects(style)
+            ensureBlueLocationRuntimeObjects(style, ICON_ID, SOURCE_ID, LAYER_ID, currentIconScale)
+            isLayerAdded = hasBlueLocationRuntimeObjects(style, ICON_ID, SOURCE_ID, LAYER_ID)
             boundStyle = if (isLayerAdded) style else null
-            lastRenderedVisible = if (isLayerAdded) true else null
+            if (isLayerAdded) {
+                reapplyCurrentStateToStyle(style, force = true)
+            }
             if (isLayerAdded) {
                 AppLogger.d(TAG, "Sailplane location overlay initialized successfully")
             } else {
@@ -70,18 +72,30 @@ class BlueLocationOverlay(
         }
     }
 
-    private fun createLocationLayer(): SymbolLayer =
-        SymbolLayer(LAYER_ID, SOURCE_ID)
-            .withProperties(
-                iconImage(ICON_ID),
-                iconSize(1.0f),
-                iconRotate(0f),
-                iconAllowOverlap(true),
-                iconIgnorePlacement(true),
-                iconRotationAlignment("viewport"),
-                iconAnchor("center"),
-                iconOffset(arrayOf(0f, 0f))
-            )
+    fun setViewportMetrics(
+        metrics: MapCameraViewportMetrics?,
+        distancePerPixelMeters: Double? = currentDistancePerPixelMeters
+    ) {
+        currentViewportMetrics = metrics
+        currentDistancePerPixelMeters = distancePerPixelMeters
+        val style = map.style ?: return
+        val styleChanged = boundStyle !== style
+        if (!ensureOverlayReadyForUpdate(style, styleChanged)) {
+            return
+        }
+        val layer = style.getLayerAs<SymbolLayer>(LAYER_ID) ?: run {
+            clearRuntimeCache()
+            return
+        }
+        val location = currentLocation ?: return
+        applyResolvedIconScale(
+            layer = layer,
+            location = location,
+            force = styleChanged
+        )
+        isLayerAdded = true
+        boundStyle = style
+    }
 
     fun updateLocation(
         location: LatLng,
@@ -91,7 +105,7 @@ class BlueLocationOverlay(
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP
     ) {
         try {
-            if (!isValidCoordinate(location.latitude, location.longitude)) {
+            if (!isValidBlueLocationCoordinate(location.latitude, location.longitude)) {
                 AppLogger.w(TAG, "Invalid coordinates - update skipped")
                 return
             }
@@ -101,7 +115,7 @@ class BlueLocationOverlay(
                 return
             }
             val styleChanged = boundStyle !== style
-            val iconRotation = normalizeAngle(headingDeg - mapBearing).toFloat()
+            val iconRotation = normalizeBlueLocationAngle(headingDeg - mapBearing).toFloat()
 
             currentLocation = location
             currentTrack = gpsTrack
@@ -118,12 +132,12 @@ class BlueLocationOverlay(
             }
 
             val previousLocation = lastRenderedLocation
-            val deltaMeters = previousLocation?.let { distanceMeters(it, location) }
+            val deltaMeters = previousLocation?.let { calculateBlueLocationDistanceMeters(it, location) }
 
             var source = style.getSourceAs<GeoJsonSource>(SOURCE_ID)
             var layer = style.getLayerAs<SymbolLayer>(LAYER_ID)
             if (source == null || layer == null) {
-                ensureRuntimeObjects(style)
+                ensureBlueLocationRuntimeObjects(style, ICON_ID, SOURCE_ID, LAYER_ID, currentIconScale)
                 source = style.getSourceAs(SOURCE_ID)
                 layer = style.getLayerAs(LAYER_ID)
             }
@@ -133,13 +147,16 @@ class BlueLocationOverlay(
                 return
             }
 
-            if (styleChanged || lastRenderedLocation == null || !sameLocation(lastRenderedLocation, location)) {
-                val point = Point.fromLngLat(location.longitude, location.latitude)
-                val feature = Feature.fromGeometry(point)
-                source.setGeoJson(feature)
+            applyResolvedIconScale(
+                layer = layer,
+                location = location,
+                force = styleChanged
+            )
+            if (styleChanged || lastRenderedLocation == null || !sameBlueLocation(lastRenderedLocation, location)) {
+                updateBlueLocationSource(source, location)
                 lastRenderedLocation = location
             }
-            if (styleChanged || !sameRotation(lastRenderedIconRotation, iconRotation)) {
+            if (styleChanged || !sameBlueLocationRotation(lastRenderedIconRotation, iconRotation)) {
                 layer.setProperties(iconRotate(iconRotation))
                 lastRenderedIconRotation = iconRotation
             }
@@ -171,43 +188,9 @@ class BlueLocationOverlay(
         }
     }
 
-    private fun normalizeAngle(angle: Double): Double {
-        var normalized = angle % 360
-        if (normalized > 180) normalized -= 360
-        if (normalized < -180) normalized += 360
-        return normalized
-    }
-
-    private fun isValidCoordinate(lat: Double, lon: Double): Boolean {
-        if (!lat.isFinite() || !lon.isFinite()) {
-            return false
-        }
-
-        if (lat < -90.0 || lat > 90.0) {
-            return false
-        }
-
-        if (lon < -180.0 || lon > 180.0) {
-            return false
-        }
-
-        return true
-    }
-
-    private fun distanceMeters(from: LatLng, to: LatLng): Float {
-        val results = FloatArray(1)
-        Location.distanceBetween(
-            from.latitude,
-            from.longitude,
-            to.latitude,
-            to.longitude,
-            results
-        )
-        return results[0]
-    }
-
     fun setVisible(visible: Boolean) {
         try {
+            desiredVisible = visible
             val style = map.style ?: run {
                 clearRuntimeCache()
                 return
@@ -220,7 +203,7 @@ class BlueLocationOverlay(
                 clearRuntimeCache()
                 return
             }
-            applyVisibility(layer, visible = visible, force = styleChanged)
+            applyVisibility(layer, visible = desiredVisible, force = styleChanged)
             isLayerAdded = true
             boundStyle = style
 
@@ -255,21 +238,15 @@ class BlueLocationOverlay(
             val topId = style.layers.lastOrNull()?.id
             if (topId == LAYER_ID) return
             style.removeLayer(LAYER_ID)
-            val layer = createLocationLayer()
+            val layer = createBlueLocationLayer(LAYER_ID, SOURCE_ID, ICON_ID, currentIconScale)
             style.addLayer(layer)
             isLayerAdded = true
             boundStyle = style
             AppLogger.d(TAG, "Re-added aircraft overlay to keep it on top")
-            currentLocation?.let {
-                updateLocation(it, currentTrack, currentHeadingDeg, currentMapBearing, currentOrientationMode)
-            }
+            reapplyCurrentStateToStyle(style, force = true)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error bringing aircraft overlay to front: ${e.message}", e)
         }
-    }
-
-    private fun createSailplaneIconBitmap(): Bitmap {
-        return SailplaneIconBitmapFactory.create(ICON_SIZE_PX)
     }
 
     private fun ensureOverlayReadyForUpdate(style: Style, styleChanged: Boolean): Boolean {
@@ -277,10 +254,10 @@ class BlueLocationOverlay(
             if (AppLogger.rateLimit(TAG, "overlay_recovery", 2_000L)) {
                 AppLogger.w(TAG, "Overlay runtime missing, attempting self-heal")
             }
-            ensureRuntimeObjects(style)
+            ensureBlueLocationRuntimeObjects(style, ICON_ID, SOURCE_ID, LAYER_ID, currentIconScale)
             boundStyle = style
         }
-        isLayerAdded = hasRuntimeObjects(style)
+        isLayerAdded = hasBlueLocationRuntimeObjects(style, ICON_ID, SOURCE_ID, LAYER_ID)
         return isLayerAdded
     }
 
@@ -296,19 +273,47 @@ class BlueLocationOverlay(
         val renderedRotation = lastRenderedIconRotation ?: return false
         val renderedVisible = lastRenderedVisible ?: return false
         return renderedVisible &&
-            sameLocation(renderedLocation, location) &&
-            sameRotation(renderedRotation, iconRotation)
+            sameBlueLocation(renderedLocation, location) &&
+            sameBlueLocationRotation(renderedRotation, iconRotation)
     }
 
-    private fun sameLocation(first: LatLng?, second: LatLng): Boolean {
-        val location = first ?: return false
-        return abs(location.latitude - second.latitude) < LOCATION_EPSILON &&
-            abs(location.longitude - second.longitude) < LOCATION_EPSILON
+    private fun applyResolvedIconScale(
+        layer: SymbolLayer,
+        location: LatLng,
+        force: Boolean
+    ) {
+        val resolvedScale = resolveCurrentIconScale(location)
+        if (!force && sameBlueLocationIconScale(lastRenderedIconScale, resolvedScale)) {
+            currentIconScale = resolvedScale
+            return
+        }
+        layer.setProperties(iconSize(resolvedScale))
+        currentIconScale = resolvedScale
+        lastRenderedIconScale = resolvedScale
     }
 
-    private fun sameRotation(first: Float?, second: Float): Boolean {
-        val rotation = first ?: return false
-        return abs(rotation - second) < ROTATION_EPSILON_DEG
+    private fun resolveCurrentIconScale(location: LatLng): Float {
+        val viewportMetrics = currentViewportMetrics ?: return currentIconScale
+        val distancePerPixelMeters = currentDistancePerPixelMeters ?: run {
+            val metersPerPixelAtLatitude = runCatching {
+                map.projection.getMetersPerPixelAtLatitude(location.latitude)
+            }.getOrNull()
+            resolveBlueLocationDistancePerPixelMeters(
+                metersPerPixelAtLatitude = metersPerPixelAtLatitude,
+                viewportMetrics = viewportMetrics
+            )
+        } ?: return currentIconScale
+        val screenPoint = resolveBlueLocationScreenPoint(
+            map = map,
+            location = location
+        ) ?: return currentIconScale
+        val visibleRadiusMeters = resolveBlueLocationVisibleRadiusMeters(
+            screenX = screenPoint.x,
+            screenY = screenPoint.y,
+            viewportMetrics = viewportMetrics,
+            distancePerPixelMeters = distancePerPixelMeters
+        ) ?: return currentIconScale
+        return resolveBlueLocationViewportScalePolicy(visibleRadiusMeters).iconScaleMultiplier
     }
 
     private fun applyVisibility(layer: SymbolLayer, visible: Boolean, force: Boolean) {
@@ -320,31 +325,34 @@ class BlueLocationOverlay(
         AppLogger.d(TAG, "Location overlay visibility: $visible")
     }
 
+    private fun reapplyCurrentStateToStyle(style: Style, force: Boolean) {
+        val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID)
+        val layer = style.getLayerAs<SymbolLayer>(LAYER_ID)
+        if (source == null || layer == null) {
+            clearRuntimeCache()
+            return
+        }
+
+        currentLocation?.let { location ->
+            updateBlueLocationSource(source, location)
+            lastRenderedLocation = location
+            applyResolvedIconScale(layer = layer, location = location, force = force)
+        }
+
+        val iconRotation = normalizeBlueLocationAngle(currentHeadingDeg - currentMapBearing).toFloat()
+        layer.setProperties(iconRotate(iconRotation))
+        lastRenderedIconRotation = iconRotation
+        applyVisibility(layer, visible = desiredVisible, force = force)
+        isLayerAdded = true
+        boundStyle = style
+    }
+
     private fun clearRuntimeCache() {
         isLayerAdded = false
         boundStyle = null
         lastRenderedLocation = null
         lastRenderedIconRotation = null
+        lastRenderedIconScale = null
         lastRenderedVisible = null
-    }
-
-    private fun ensureRuntimeObjects(style: Style) {
-        val hasIcon = runCatching { style.getImage(ICON_ID) }.getOrNull() != null
-        if (!hasIcon) {
-            style.addImage(ICON_ID, createSailplaneIconBitmap())
-        }
-        if (style.getSourceAs<GeoJsonSource>(SOURCE_ID) == null) {
-            style.addSource(GeoJsonSource(SOURCE_ID))
-        }
-        if (style.getLayerAs<SymbolLayer>(LAYER_ID) == null) {
-            style.addLayer(createLocationLayer())
-        }
-    }
-
-    private fun hasRuntimeObjects(style: Style): Boolean {
-        val hasIcon = runCatching { style.getImage(ICON_ID) }.getOrNull() != null
-        return hasIcon &&
-            style.getSourceAs<GeoJsonSource>(SOURCE_ID) != null &&
-            style.getLayerAs<SymbolLayer>(LAYER_ID) != null
     }
 }

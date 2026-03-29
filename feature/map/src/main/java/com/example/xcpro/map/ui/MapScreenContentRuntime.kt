@@ -100,6 +100,7 @@ internal fun MapScreenContent(
     val overlayManager = overlayInputs.overlayManager
     val modalManager = overlayInputs.modalManager
     val taskScreenManager = overlayInputs.taskScreenManager
+    val taskFlightSurfaceUiState = overlayInputs.taskFlightSurfaceUiState
     val taskRenderSnapshotProvider = overlayInputs.taskRenderSnapshotProvider
     val watchedPilotFocusEpoch = overlayInputs.watchedPilotFocusEpoch
     val mapLibreMapProvider = overlayInputs.mapLibreMapProvider
@@ -343,7 +344,8 @@ internal fun MapScreenContent(
             waypointData = waypointData,
             unitsPreferences = unitsPreferences,
             currentLocation = visibleCurrentLocation,
-            currentQnh = qnhUiState.currentQnhLabel
+            currentQnh = qnhUiState.currentQnhLabel,
+            taskFlightSurfaceUiState = taskFlightSurfaceUiState
         )
 
         MapActionButtonsLayer(

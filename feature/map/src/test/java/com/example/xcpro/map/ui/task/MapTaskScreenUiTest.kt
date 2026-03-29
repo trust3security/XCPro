@@ -7,10 +7,13 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTasksUseCase
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.tasks.TaskFlightSurfaceUiState
 import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import org.junit.Rule
@@ -109,6 +112,31 @@ class MapTaskScreenUiTest {
             .assertCountEquals(0)
     }
 
+    @Test
+    fun taskMinimizedIndicator_usesFlightSurfaceLegForRacingDisplay() {
+        val task = sampleTaskForFlightSurface()
+        val taskScreenManager = createManager(task).apply {
+            hideTaskBottomSheet()
+        }
+
+        composeTestRule.setContent {
+            MapTaskScreenUi.TaskMinimizedIndicatorOverlay(
+                taskScreenManager = taskScreenManager,
+                currentTaskOverride = task,
+                taskFlightSurfaceUiState = TaskFlightSurfaceUiState(
+                    task = task,
+                    taskType = TaskType.RACING,
+                    displayLegIndex = 1
+                ),
+                showBottomSheetOverride = false
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText("Turn One")
+            .assertIsDisplayed()
+    }
+
     private fun createManager(task: Task): MapTaskScreenManager {
         val tasksUseCase: MapTasksUseCase = mock()
         whenever(tasksUseCase.currentTaskSnapshot()).thenReturn(task)
@@ -142,4 +170,34 @@ class MapTaskScreenUiTest {
             Task(id = "empty_task", waypoints = emptyList())
         }
     }
+
+    private fun sampleTaskForFlightSurface(): Task = Task(
+        id = "task_with_turns",
+        waypoints = listOf(
+            TaskWaypoint(
+                id = "wp-start",
+                title = "Start",
+                subtitle = "Start Line",
+                lat = 40.0,
+                lon = -105.0,
+                role = WaypointRole.START
+            ),
+            TaskWaypoint(
+                id = "wp-turn-1",
+                title = "Turn One",
+                subtitle = "TP1",
+                lat = 40.1,
+                lon = -104.9,
+                role = WaypointRole.TURNPOINT
+            ),
+            TaskWaypoint(
+                id = "wp-finish",
+                title = "Finish",
+                subtitle = "Goal",
+                lat = 40.2,
+                lon = -104.8,
+                role = WaypointRole.FINISH
+            )
+        )
+    )
 }

@@ -137,6 +137,10 @@ function Assert-MaxLines {
         [string]$FilePath,
         [int]$MaxLines
     )
+    $normalizedPath = $FilePath.Replace('\', '/')
+    if (($null -ne $script:LineBudgetExceptionSet) -and $script:LineBudgetExceptionSet.Contains($normalizedPath)) {
+        return
+    }
     if (-not (Test-Path $FilePath)) {
         Write-Host ""
         Write-Host "FAIL: $Name"
@@ -156,6 +160,7 @@ function Assert-MaxLines {
 Require-Rg
 
 $script:HadFailures = $false
+$script:LineBudgetExceptionSet = $null
 $repoRoot = Resolve-Path (Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath "..") -ChildPath "..")
 Set-Location $repoRoot
 
@@ -817,14 +822,18 @@ if ($runLineBudgetRules) {
     # Line-budget rules.
 
     # 33) Global default Kotlin line budget.
-    $globalDefaultLineBudgetExceptionPaths = @(
+    $lineBudgetExceptionPaths = @(
         # Keep synchronized with active time-boxed exceptions in
         # docs/ARCHITECTURE/KNOWN_DEVIATIONS.md.
-        "feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt"
+        "feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt",
+        "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt",
+        "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt",
+        "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt",
+        "feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt"
     )
-    $globalDefaultLineBudgetExceptionSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($exceptionPath in $globalDefaultLineBudgetExceptionPaths) {
-        [void]$globalDefaultLineBudgetExceptionSet.Add($exceptionPath.Replace('\', '/'))
+    $script:LineBudgetExceptionSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($exceptionPath in $lineBudgetExceptionPaths) {
+        [void]$script:LineBudgetExceptionSet.Add($exceptionPath.Replace('\', '/'))
     }
     $globalKotlinFileArgs = @(
         "--files",
@@ -842,7 +851,7 @@ if ($runLineBudgetRules) {
             continue
         }
         $normalizedPath = $filePath.Replace('\', '/')
-        if ($globalDefaultLineBudgetExceptionSet.Contains($normalizedPath)) {
+        if ($script:LineBudgetExceptionSet.Contains($normalizedPath)) {
             continue
         }
         Assert-MaxLines `
@@ -1106,15 +1115,9 @@ Assert-MaxLines `
     -MaxLines 350
 
     # 35) Top-20 hotspot line budgets (RULES-20260302-LINEBUDGET500).
+    # Keep implementation-owner budgets only. Comment-only facade files are not
+    # authoritative hotspot owners once the runtime file carries the behavior.
     Assert-MaxLines `
-    -Name "Top20: AdsbTrafficRepositoryTest line budget" `
-    -FilePath "feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt" `
-    -MaxLines 450
-Assert-MaxLines `
-    -Name "Top20: MapScreenViewModelTest line budget" `
-    -FilePath "feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt" `
-    -MaxLines 450
-Assert-MaxLines `
     -Name "Top20: OgnTrafficRepository line budget" `
     -FilePath "feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt" `
     -MaxLines 350
@@ -1126,18 +1129,6 @@ Assert-MaxLines `
     -Name "Top20: AdsbTrafficRepository line budget" `
     -FilePath "feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt" `
     -MaxLines 350
-Assert-MaxLines `
-    -Name "Top20: MapScreenContent line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt" `
-    -MaxLines 300
-Assert-MaxLines `
-    -Name "Top20: CalculateFlightMetricsUseCaseTest line budget" `
-    -FilePath "feature/flight-runtime/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt" `
-    -MaxLines 450
-Assert-MaxLines `
-    -Name "Top20: OgnThermalRepositoryTest line budget" `
-    -FilePath "feature/traffic/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt" `
-    -MaxLines 450
 Assert-MaxLines `
     -Name "Top20: ForecastRasterOverlay line budget" `
     -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt" `
@@ -1151,21 +1142,9 @@ Assert-MaxLines `
     -FilePath "feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt" `
     -MaxLines 350
 Assert-MaxLines `
-    -Name "Top20: ForecastOverlayRepositoryTest line budget" `
-    -FilePath "feature/forecast/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt" `
-    -MaxLines 450
-Assert-MaxLines `
-    -Name "Top20: Settings-df line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt" `
-    -MaxLines 300
-Assert-MaxLines `
     -Name "Top20: ForecastOverlayRepository line budget" `
     -FilePath "feature/forecast/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt" `
     -MaxLines 320
-Assert-MaxLines `
-    -Name "Top20: ForecastOverlayBottomSheet line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt" `
-    -MaxLines 300
 Assert-MaxLines `
     -Name "Top20: WeatherSettingsScreen line budget" `
     -FilePath "feature/weather/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt" `

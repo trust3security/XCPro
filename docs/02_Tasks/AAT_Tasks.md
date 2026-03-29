@@ -1,9 +1,9 @@
 
 # AAT (Assigned Area Tasks) - Complete Guide
 
-**Last Updated:** 2025-01-08
+**Last Updated:** 2026-03-29
 **Status:** ... Current - Consolidated from multiple sources
-**Module:** `app/src/main/java/.../tasks/aat/`
+**Module:** task logic in `feature/tasks/src/main/java/.../tasks/aat/`; rendering/edit surfaces in `feature/map` and `feature/map-runtime`
 
 > **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [AAT ARCHITECTURE](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md)
 
@@ -393,9 +393,12 @@ AAT pilots continuously optimize during flight:
 - [Racing_Tasks.md](./Racing_Tasks.md) - Comparison with Racing
 
 ### AAT-Specific
-- [AAT_IMPLEMENTATION_SUMMARY.md](./AAT_IMPLEMENTATION_SUMMARY.md) - AAT implementation summary
 - [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) - Module architecture
 - [aat/validation/README.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/README.md) - Validation guide
+- [AAT_PIN_DRAGGING_IMPLEMENTATION.md](./AAT_PIN_DRAGGING_IMPLEMENTATION.md) - Current AAT edit-mode interaction notes
+
+### Historical
+- [archive/2026-03-task-doc-cleanup/README.md](./archive/2026-03-task-doc-cleanup/README.md) - Archived task implementation plans and summaries
 
 ### Reference
 - [Quick_Reference.md](./Quick_Reference.md) - Command cheat sheet

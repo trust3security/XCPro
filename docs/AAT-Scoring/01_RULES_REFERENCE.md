@@ -282,7 +282,9 @@ Codex should re-check the current official documents at implementation time, but
 - FAI Annex A PDF used for detailed rule reading (`sc3a_2025.pdf`)
 - WeGlide live tracking docs noting that live scoring works for Racing and AAT
 - internal uploaded docs:
-  - `AAT_IMPLEMENTATION_SUMMARY.md`
-  - `AAT_Tasks.md`
+  - `docs/02_Tasks/AAT_Tasks.md`
+  - `docs/02_Tasks/archive/2026-03-task-doc-cleanup/AAT_IMPLEMENTATION_SUMMARY.md` (historical implementation snapshot)
+
+The archived AAT implementation summary is retained as historical context only.
 
 If the official FAI docs have changed by the time Codex runs, prefer the newer official text and keep the structure of this package.

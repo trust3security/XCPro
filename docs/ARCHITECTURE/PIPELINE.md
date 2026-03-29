@@ -1033,7 +1033,8 @@ Authoritative ownership:
   `TaskNavigationController.racingState`.
   It feeds the map/cards adapter path only; it does not reclaim route ownership
   and it does not expand `CompleteFlightData`.
-- Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskRepository.state` is not the cross-feature runtime authority.
+- Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskUiState.stats.activeIndex` remains the selected-leg/editor seam, not the universal racing in-flight leg. `TaskRepository.state` is not the cross-feature runtime authority.
+- Racing minimized top-of-map task surface: `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceUseCase.kt` is the dedicated in-flight projector for the minimized indicator path. It combines `TaskManagerCoordinator.taskSnapshotFlow` plus `TaskNavigationController.racingState`; racing tasks render nav-leg progress there, while task sheet/editor surfaces keep coordinator selected-leg semantics.
 - Zone entry policy and auto-advance policy: domain/use-case logic.
 - Persistence: repository/persistence adapters (not ViewModel/UI).
 - Map drawing side effects: runtime controllers invoked by use-case/viewmodel orchestration, not direct Composable manager calls.
@@ -1129,6 +1130,9 @@ Task map rendering bridge (2026-02-12):
 - `MapInitializer.setupInitialPosition(...)` and camera-idle callbacks are the startup/runtime viewport-zoom producers for traffic declutter:
   - ADS-B receives viewport zoom through `setAdsbViewportZoom(...)`.
   - OGN receives viewport zoom through `setOgnViewportZoom(...)`, and OGN effective icon size remains delegate-owned render-only state.
+- `MapInitializer.setupOverlays(...)` and camera-idle callbacks also push the blue ownship overlay viewport snapshot:
+  - `BlueLocationOverlay` receives `MapCameraViewportMetrics` plus the current map `distancePerPixel` snapshot.
+  - `BlueLocationOverlay` remains the sole owner of visible-radius band resolution and rendered ownship icon size.
 - `MapInitializer.setupMapStyle(...)` uses bounded style-load wait with fallback init to avoid startup hangs.
 - `MapRuntimeController` applies style commands with map-generation/request-token guards so stale callbacks do not mutate active overlays.
 - Parent Phase 3 visual/runtime primitive ownership now also lives in
@@ -1178,6 +1182,20 @@ Task navigation/replay bridge (2026-02-11):
   navigation/replay inputs.
 - Navigation/replay code paths do not read `RacingTaskManager.currentRacingTask`
   directly.
+- Racing replay restore completeness is owned by
+  `feature/map/src/main/java/com/example/xcpro/map/MapReplaySnapshotControllers.kt`:
+  the racing replay bundle now captures/restores coordinator selected leg,
+  full `RacingNavigationState`, full `RacingAdvanceState.Snapshot`, replay
+  mode/cadence/speed/`autoStopAfterFinish`, and racing replay map-shell
+  overrides.
+- `TaskNavigationController.restoreReplaySnapshot(...)` is the atomic
+  task-runtime restore entrypoint for racing replay. Replay restore must not be
+  reconstructed by separately mutating coordinator leg, advance mode/armed
+  state, and nav state from the map layer.
+- `MapScreenReplayCoordinator` fences racing-fix ingress during replay
+  start/terminal restore and restores the captured racing replay bundle once on
+  start failure or terminal replay completion/cancel/failure after replay
+  cleanup.
 
 Non-negotiable boundaries:
 - Composables do not call task managers/coordinators directly for mutation or business queries.

@@ -136,6 +136,46 @@ Compliance note (2026-02-20):
   - `AppLogger` has explicit contract coverage for redaction/gating behavior.
   - New raw production `Log.*` drift is blocked by automation except for narrow documented platform-edge exceptions.
 
+4) Temporary hotspot line-budget exceptions pending focused ownership splits
+- Rule:
+  - Kotlin hotspot line-budget enforcement (`CODING_RULES.md` section `1A.4`; `scripts/ci/enforce_rules.ps1` maintainability hotspot caps).
+- Issue: RULES-20260329-18
+- Introduced: 2026-03-29
+- Approved by: XCPro Team
+- Owner: XCPro Team
+- Next review: 2026-04-12
+- Expiry: 2026-05-15
+- Execution plan:
+  - `docs/refactor/Map_Task_Maintainability_5of5_Refactor_Plan_2026-02-14.md`
+  - `docs/refactor/Task_AAT_Ownership_Release_Grade_Phased_IP_2026-03-15.md`
+  - `docs/refactor/Map_Smoothness_IP_2026-03-15.md`
+  - `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_OVERLAY_VIEWPORT_SCALING_PHASED_IP_2026-03-29.md`
+- Scope:
+  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt`
+  - `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+- Risk:
+  - These files temporarily bypass their stricter hotspot caps, so unreviewed growth could hide renewed ownership drift in task/map orchestration seams.
+- Rationale:
+  - Each file remains below the repo-wide default `<= 500` cap, but currently exceeds a narrower hotspot budget by a small margin.
+  - Raising hotspot caps repo-wide would remove targeted maintainability guardrails that were added after deliberate ownership splits.
+  - A time-boxed exception is safer than silently loosening the hotspot policy.
+- Mitigation:
+  - Keep the configured hotspot caps unchanged in `scripts/ci/enforce_rules.ps1`.
+  - Sync the temporary exception list in `scripts/ci/enforce_rules.ps1` with this entry only.
+  - Do not add more logic to these files without first extracting focused helpers or bindings.
+- Removal steps:
+  - Reduce each scoped file back to its configured hotspot cap through focused ownership splits.
+  - Remove the matching exception paths from `scripts/ci/enforce_rules.ps1`.
+  - Delete this deviation entry in the same change set as the last exception removal.
+- Exit criteria:
+  - `TaskSheetViewModel.kt` is `<= 320` lines.
+  - `MapScreenRoot.kt` is `<= 250` lines.
+  - `MapScreenRootStateBindings.kt` is `<= 120` lines.
+  - `BlueLocationOverlay.kt` is `<= 350` lines.
+  - `./gradlew enforceRules` passes without those temporary exception paths.
+
 ## Verification
 
 Last verified: 2026-03-16

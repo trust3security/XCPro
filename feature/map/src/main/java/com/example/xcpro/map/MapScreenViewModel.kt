@@ -23,6 +23,8 @@ import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.tasks.TaskFlightSurfaceUiState
+import com.example.xcpro.tasks.TaskFlightSurfaceUseCase
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.weather.wind.model.WindState
@@ -46,6 +48,7 @@ class MapScreenViewModel @Inject constructor(
     private val sensorsUseCase: MapSensorsUseCase, private val flightDataUseCase: FlightDataUseCase,
     private val mapUiControllersUseCase: MapUiControllersUseCase, private val windStateUseCase: WindStateUseCase,
     private val mapReplayUseCase: MapReplayUseCase, private val mapTasksUseCase: MapTasksUseCase,
+    private val taskFlightSurfaceUseCase: TaskFlightSurfaceUseCase,
     private val mapFeatureFlagsUseCase: MapFeatureFlagsUseCase,
     private val mapCardPreferencesUseCase: MapCardPreferencesUseCase,
     private val calibrateQnhUseCase: CalibrateQnhUseCase,
@@ -88,6 +91,8 @@ class MapScreenViewModel @Inject constructor(
     val hawkVarioUiState: StateFlow<HawkVarioUiState> = hawkVarioUseCase.hawkVarioUiState
         .eagerState(scope = viewModelScope, initial = HawkVarioUiState())
     val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
+    val taskFlightSurfaceUiState: StateFlow<TaskFlightSurfaceUiState> = taskFlightSurfaceUseCase.uiState
+        .eagerState(scope = viewModelScope, initial = TaskFlightSurfaceUiState())
     val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
     val gpsStatusFlow: StateFlow<GpsStatusUiModel> = createGpsStatusUiState(viewModelScope, sensorsUseCase)

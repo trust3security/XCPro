@@ -15,10 +15,10 @@ Non-goals (explicit for Phase 1-3):
 - No UI redesign beyond small status indicators and event hooks.
 
 References:
-- docs/02_Tasks/racingtask.md
-- docs/02_Tasks/Racing_XCSoar_Navigation.md
-- docs/02_Tasks/Racing_Tasks.md
-- docs/02_Tasks/Task_Type_Separation.md
+- ./racingtask.md
+- ./Racing_XCSoar_Navigation.md
+- ../../Racing_Tasks.md
+- ../../Task_Type_Separation.md
 - ARCHITECTURE.md
 - CODING_RULES.md
 

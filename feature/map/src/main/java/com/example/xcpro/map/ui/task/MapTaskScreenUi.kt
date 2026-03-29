@@ -19,6 +19,7 @@ import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.tasks.TaskFlightSurfaceUiState
 import com.example.xcpro.tasks.TaskMinimizedIndicator
 import com.example.xcpro.tasks.TaskSheetViewModel
 import com.example.xcpro.tasks.TaskTopDropdownPanel
@@ -84,6 +85,7 @@ object MapTaskScreenUi {
         showBottomSheetOverride: Boolean? = null,
         currentTaskOverride: com.example.xcpro.tasks.core.Task? = null,
         activeLegOverride: Int? = null,
+        taskFlightSurfaceUiState: TaskFlightSurfaceUiState? = null,
         taskViewModel: TaskSheetViewModel? = null,
         currentLocation: MapLocationUiModel? = null
     ) {
@@ -92,15 +94,11 @@ object MapTaskScreenUi {
             panelState == MapTaskScreenManager.TaskPanelState.EXPANDED_PARTIAL ||
                 panelState == MapTaskScreenManager.TaskPanelState.EXPANDED_FULL
 
-        val resolvedTaskViewModel = if (currentTaskOverride != null && indicatorContent != null) {
-            null
-        } else {
-            taskViewModel ?: hiltViewModel()
-        }
+        val resolvedTaskViewModel = taskViewModel ?: if (currentTaskOverride != null) null else hiltViewModel()
         val taskUiState = resolvedTaskViewModel?.uiState?.collectAsStateWithLifecycle()?.value
 
-        val currentTask = currentTaskOverride ?: taskUiState?.task ?: return
-        val activeLeg = activeLegOverride ?: taskUiState?.stats?.activeIndex ?: 0
+        val currentTask = currentTaskOverride ?: taskFlightSurfaceUiState?.task ?: taskUiState?.task ?: return
+        val activeLeg = activeLegOverride ?: taskFlightSurfaceUiState?.displayLegIndex ?: taskUiState?.stats?.activeIndex ?: 0
         val onSetActiveLeg: (Int) -> Unit = { legIndex ->
             resolvedTaskViewModel?.onSetActiveLeg(legIndex)
         }
@@ -131,7 +129,7 @@ object MapTaskScreenUi {
                         activeLegIndex = activeLeg,
                         onSetActiveLeg = onSetActiveLeg,
                         distanceToWaypointMeters = resolvedTaskViewModel?.let { vm ->
-                            { lat, lon -> vm.distanceToActiveWaypointMeters(lat, lon) }
+                            { lat, lon -> vm.distanceToWaypointMeters(activeLeg, lat, lon) }
                         },
                         unitsPreferences = unitsPreferences,
                         currentGPSLocation = currentGpsLocation,
@@ -150,6 +148,7 @@ object MapTaskScreenUi {
         unitsPreferences: UnitsPreferences = UnitsPreferences(),
         currentQNH: String,
         modifier: Modifier = Modifier,
+        taskFlightSurfaceUiState: TaskFlightSurfaceUiState,
         currentLocation: MapLocationUiModel? = null
     ) {
         TaskTopPanel(
@@ -164,6 +163,7 @@ object MapTaskScreenUi {
             taskScreenManager = taskScreenManager,
             unitsPreferences = unitsPreferences,
             modifier = modifier,
+            taskFlightSurfaceUiState = taskFlightSurfaceUiState,
             currentLocation = currentLocation
         )
     }

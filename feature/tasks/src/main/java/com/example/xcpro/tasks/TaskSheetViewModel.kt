@@ -128,6 +128,13 @@ class TaskSheetViewModel @Inject constructor(
     fun distanceToActiveWaypointMeters(lat: Double, lon: Double): Double? {
         val state = uiState.value
         val leg = state.stats.activeIndex
+        return distanceToWaypointMeters(legIndex = leg, lat = lat, lon = lon)
+    }
+
+    fun distanceToWaypointMeters(legIndex: Int, lat: Double, lon: Double): Double? {
+        val state = uiState.value
+        if (state.task.waypoints.isEmpty()) return null
+        val leg = legIndex.coerceIn(0, state.task.waypoints.lastIndex)
         val waypoint = state.task.waypoints.getOrNull(leg) ?: return null
         val target = state.targets.getOrNull(leg)?.target
         return useCase.distanceMeters(

@@ -40,9 +40,12 @@ internal class MapScreenReplayCoordinator(
     private val racingEventDebouncer = RacingNavigationEventDebouncer()
     private val racingReplayLogger = RacingReplayEventLogger()
     private val racingReplaySnapshots = RacingReplaySnapshotController(
+        taskManager = taskManager,
         taskNavigationController = taskNavigationController,
         igcReplayController = igcReplayController,
-        replaySessionState = replaySessionState
+        replaySessionState = replaySessionState,
+        mapStateStore = mapStateStore,
+        mapStateActions = mapStateActions
     )
     private val demoReplaySnapshots = DemoReplaySnapshotController(
         mapStateStore = mapStateStore,
@@ -52,10 +55,18 @@ internal class MapScreenReplayCoordinator(
         replaySessionState = replaySessionState
     )
     private var racingReplayActive = false
+    @Volatile
+    private var suppressRacingFixes = false
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
     private val racingFixFlow = flightDataFlow
-        .mapNotNull { data -> data?.let(RacingNavigationFixAdapter::toFix) }
+        .mapNotNull { data ->
+            if (suppressRacingFixes) {
+                null
+            } else {
+                data?.let(RacingNavigationFixAdapter::toFix)
+            }
+        }
     private val liveGpsProfileFlow = flightDataFlow
         .mapNotNull { data -> data?.gps }
         .onEach { gps ->
@@ -206,11 +217,13 @@ internal class MapScreenReplayCoordinator(
     fun onRacingTaskReplay() {
         scope.launch {
             racingReplayActive = true
+            suppressRacingFixes = true
             racingReplayLogger.reset()
             try {
                 val task = currentRacingTaskOrNull(taskManager)
                 if (task == null) {
                     racingReplayActive = false
+                    suppressRacingFixes = false
                     uiEffects.emit(
                         MapUiEffect.ShowToast(
                             "Racing replay needs a valid racing task (start, at least 2 turnpoints, finish)"
@@ -233,14 +246,15 @@ internal class MapScreenReplayCoordinator(
                     logPoints = true
                 )
                 igcReplayController.loadLog(log, "Racing task replay")
+                suppressRacingFixes = false
                 mapStateActions.setHasInitiallyCentered(false)
                 mapStateActions.setShowReturnButton(false)
                 mapStateActions.setTrackingLocation(true)
                 igcReplayController.play()
                 uiEffects.emit(MapUiEffect.ShowToast("Racing task replay started"))
             } catch (t: Throwable) {
-                racingReplaySnapshots.restore()
-                racingReplayActive = false
+                igcReplayController.stopAndWait(emitCancelledEvent = false)
+                restoreRacingReplaySession()
                 AppLogger.e(TAG, "Failed to start racing task replay", t)
                 uiEffects.emit(MapUiEffect.ShowToast("Racing task replay failed"))
             }
@@ -265,12 +279,18 @@ internal class MapScreenReplayCoordinator(
                         is ReplayEvent.Completed -> Unit
                     }
                 }
-                if (racingReplayActive) {
-                    val session = replaySessionState.value
-                    racingReplayLogger.flush(session)
-                    racingReplayLogger.reset()
-                    racingReplaySnapshots.restore()
-                    racingReplayActive = false
+                if (racingReplayActive || racingReplaySnapshots.hasSnapshot) {
+                    when (event) {
+                        is ReplayEvent.Failed -> {
+                            igcReplayController.setAutoStopAfterFinish(false)
+                            igcReplayController.stopAndWait(emitCancelledEvent = false)
+                        }
+                        ReplayEvent.Cancelled -> {
+                            igcReplayController.setAutoStopAfterFinish(false)
+                        }
+                        is ReplayEvent.Completed -> Unit
+                    }
+                    restoreRacingReplaySession()
                 }
             }
             .launchIn(scope)
@@ -303,6 +323,15 @@ internal class MapScreenReplayCoordinator(
                 uiEffects.emit(MapUiEffect.ShowToast(buildRacingEventMessage(taskManager, event)))
             }
             .launchIn(scope)
+    }
+
+    private fun restoreRacingReplaySession() {
+        val session = replaySessionState.value
+        racingReplayLogger.flush(session)
+        racingReplayLogger.reset()
+        racingReplaySnapshots.restoreIfCaptured()
+        racingReplayActive = false
+        suppressRacingFixes = false
     }
 
 
