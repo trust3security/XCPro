@@ -7,6 +7,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconColor
@@ -17,6 +18,11 @@ import org.maplibre.android.style.layers.PropertyFactory.iconOpacity
 import org.maplibre.android.style.layers.PropertyFactory.iconRotate
 import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
 import org.maplibre.android.style.layers.PropertyFactory.iconSize
+import org.maplibre.android.style.layers.PropertyFactory.lineCap
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineJoin
+import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
 import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.textAnchor
 import org.maplibre.android.style.layers.PropertyFactory.textColor
@@ -30,6 +36,16 @@ import org.maplibre.android.style.layers.PropertyFactory.visibility
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.FeatureCollection
+
+internal fun createAdsbLeaderLineLayer(): LineLayer =
+    LineLayer(ADSB_TRAFFIC_LEADER_LINE_LAYER_ID, ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID)
+        .withProperties(
+            lineColor(ADSB_TRAFFIC_LEADER_LINE_COLOR),
+            lineWidth(ADSB_TRAFFIC_LEADER_LINE_WIDTH_PX),
+            lineOpacity(ADSB_TRAFFIC_LEADER_LINE_OPACITY),
+            lineCap("round"),
+            lineJoin("round")
+        )
 
 internal fun createAdsbIconOutlineLayer(
     currentIconSizePx: Int,
@@ -268,12 +284,14 @@ internal fun adsbBottomLabelOffsetYForPx(
 
 internal fun renderAdsbTrafficFrame(
     source: GeoJsonSource,
+    leaderLineSource: GeoJsonSource,
     nowMonoMs: Long,
     frameSnapshot: AdsbDisplayMotionSmoother.FrameSnapshot,
+    fullLabelKeys: Set<String>,
+    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate>,
     ownshipAltitudeMeters: Double?,
     unitsPreferences: UnitsPreferences,
     iconStyleIdOverrides: Map<String, String>,
-    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate>,
     emergencyFlashEnabled: Boolean,
     maxTargets: Int
 ) {
@@ -282,14 +300,24 @@ internal fun renderAdsbTrafficFrame(
             buildAdsbTrafficOverlayFeatures(
                 nowMonoMs = nowMonoMs,
                 targets = frameSnapshot.targets,
+                fullLabelKeys = fullLabelKeys,
+                displayCoordinatesByKey = displayCoordinatesByKey,
                 ownshipAltitudeMeters = ownshipAltitudeMeters,
                 unitsPreferences = unitsPreferences,
                 iconStyleIdOverrides = iconStyleIdOverrides,
-                displayCoordinatesByKey = displayCoordinatesByKey,
                 emergencyFlashEnabled = emergencyFlashEnabled,
                 maxTargets = maxTargets,
                 liveAlpha = ADSB_TRAFFIC_LIVE_ALPHA,
                 staleAlpha = ADSB_TRAFFIC_STALE_ALPHA
+            )
+        )
+    )
+    leaderLineSource.setGeoJson(
+        FeatureCollection.fromFeatures(
+            buildAdsbTrafficLeaderLineFeatures(
+                targets = frameSnapshot.targets,
+                displayCoordinatesByKey = displayCoordinatesByKey,
+                maxTargets = maxTargets
             )
         )
     )
@@ -339,3 +367,7 @@ private fun normalizeLongitude(longitude: Double): Double {
 
 private fun LatLng.hasFiniteCoordinates(): Boolean =
     latitude.isFinite() && longitude.isFinite()
+
+private const val ADSB_TRAFFIC_LEADER_LINE_COLOR = "#202020"
+private const val ADSB_TRAFFIC_LEADER_LINE_WIDTH_PX = 1.4f
+private const val ADSB_TRAFFIC_LEADER_LINE_OPACITY = 0.32f

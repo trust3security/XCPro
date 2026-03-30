@@ -21,6 +21,8 @@ class OgnTrafficOverlay(
     initialIconSizePx: Int = OGN_ICON_SIZE_DEFAULT_PX,
     initialUseSatelliteContrastIcons: Boolean = false
 ) : OgnTrafficOverlayHandle {
+    private val packedGroupLabelControl = TrafficPackedGroupLabelControl()
+    private val selectedGroupFanoutLayout = TrafficSelectedGroupFanoutLayout()
     private var currentIconSizePx: Int = clampOgnRenderedIconSizePx(initialIconSizePx)
     private var currentViewportZoom: Float =
         map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() } ?: OGN_TRAFFIC_CLOSE_ZOOM_THRESHOLD
@@ -34,12 +36,25 @@ class OgnTrafficOverlay(
             if (style.getSource(SOURCE_ID) == null) {
                 style.addSource(GeoJsonSource(SOURCE_ID))
             }
+            if (style.getSource(LEADER_LINE_SOURCE_ID) == null) {
+                style.addSource(GeoJsonSource(LEADER_LINE_SOURCE_ID))
+            }
             ensureOgnStyleImages(context, style)
+            if (style.getLayer(LEADER_LINE_LAYER_ID) == null) {
+                val leaderLineLayer = createOgnLeaderLineLayer()
+                val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
+                when {
+                    style.getLayer(ICON_LAYER_ID) != null -> style.addLayerBelow(leaderLineLayer, ICON_LAYER_ID)
+                    style.getLayer(anchorId) != null -> style.addLayerAbove(leaderLineLayer, anchorId)
+                    else -> style.addLayer(leaderLineLayer)
+                }
+            }
             if (style.getLayer(ICON_LAYER_ID) == null) {
                 val iconLayer = createOgnIconLayer(currentIconSizePx)
-                val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
-                if (style.getLayer(anchorId) != null) {
-                    style.addLayerAbove(iconLayer, anchorId)
+                if (style.getLayer(LEADER_LINE_LAYER_ID) != null) {
+                    style.addLayerAbove(iconLayer, LEADER_LINE_LAYER_ID)
+                } else if (style.getLayer(BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK) != null) {
+                    style.addLayerAbove(iconLayer, BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK)
                 } else {
                     style.addLayer(iconLayer)
                 }
@@ -103,18 +118,31 @@ class OgnTrafficOverlay(
 
     override fun render(
         targets: List<OgnTrafficTarget>,
+        selectedTargetKey: String?,
         ownshipAltitudeMeters: Double?,
         altitudeUnit: AltitudeUnit,
         unitsPreferences: UnitsPreferences
     ) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        val leaderLineSource = style.getSourceAs<GeoJsonSource>(LEADER_LINE_SOURCE_ID) ?: return
         val nowMonoMs = TimeBridge.nowMonoMs()
         val visibleBounds = map.projection.visibleRegion?.latLngBounds
+        val fullLabelKeys = resolveFullLabelKeys(
+            targets = targets,
+            selectedTargetKey = selectedTargetKey
+        )
+        val displayCoordinatesByKey = resolveDisplayCoordinatesByKey(
+            targets = targets,
+            selectedTargetKey = selectedTargetKey
+        )
         renderOgnTrafficFrame(
             source = source,
+            leaderLineSource = leaderLineSource,
             nowMonoMs = nowMonoMs,
             targets = targets,
+            fullLabelKeys = fullLabelKeys,
+            displayCoordinatesByKey = displayCoordinatesByKey,
             ownshipAltitudeMeters = ownshipAltitudeMeters,
             visibleBounds = visibleBounds,
             altitudeUnit = altitudeUnit,
@@ -151,6 +179,8 @@ class OgnTrafficOverlay(
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray<Feature>()))
+        val leaderLineSource = style.getSourceAs<GeoJsonSource>(LEADER_LINE_SOURCE_ID) ?: return
+        leaderLineSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray<Feature>()))
     }
 
     override fun cleanup() {
@@ -159,7 +189,9 @@ class OgnTrafficOverlay(
             style.removeLayer(BOTTOM_LABEL_LAYER_ID)
             style.removeLayer(TOP_LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
+            style.removeLayer(LEADER_LINE_LAYER_ID)
             style.removeSource(SOURCE_ID)
+            style.removeSource(LEADER_LINE_SOURCE_ID)
             OgnAircraftIcon.values().forEach { icon ->
                 style.removeImage(icon.styleImageId)
             }
@@ -175,6 +207,7 @@ class OgnTrafficOverlay(
     override fun bringToFront() {
         val style = map.style ?: return
         if (
+            style.getLayer(LEADER_LINE_LAYER_ID) == null ||
             style.getLayer(ICON_LAYER_ID) == null ||
             style.getLayer(TOP_LABEL_LAYER_ID) == null ||
             style.getLayer(BOTTOM_LABEL_LAYER_ID) == null
@@ -188,6 +221,8 @@ class OgnTrafficOverlay(
             style.removeLayer(BOTTOM_LABEL_LAYER_ID)
             style.removeLayer(TOP_LABEL_LAYER_ID)
             style.removeLayer(ICON_LAYER_ID)
+            style.removeLayer(LEADER_LINE_LAYER_ID)
+            style.addLayer(createOgnLeaderLineLayer())
             style.addLayer(createOgnIconLayer(currentIconSizePx))
             style.addLayer(
                 createOgnTopLabelLayer(
@@ -212,5 +247,66 @@ class OgnTrafficOverlay(
             renderedIconSizePx = currentIconSizePx,
             labelsVisible = currentViewportPolicy.labelsVisible
         )
+    }
+
+    private fun resolveFullLabelKeys(
+        targets: List<OgnTrafficTarget>,
+        selectedTargetKey: String?
+    ): Set<String> {
+        if (targets.isEmpty()) return emptySet()
+        val priorityRankByKey = rankOgnTargetsForPackedGroupLabels(
+            targets = targets,
+            selectedTargetKey = selectedTargetKey
+        )
+        val collisionSizePx = resolvePackedGroupCollisionSizePx()
+        val seeds = targets.map { target ->
+            TrafficPackedGroupLabelSeed(
+                key = target.canonicalKey,
+                latitude = target.latitude,
+                longitude = target.longitude,
+                collisionWidthPx = collisionSizePx,
+                collisionHeightPx = collisionSizePx,
+                priorityRank = priorityRankByKey.getValue(target.canonicalKey)
+            )
+        }
+        return packedGroupLabelControl.resolveFullLabelKeys(
+            map = map,
+            seeds = seeds
+        )
+    }
+
+    private fun resolveDisplayCoordinatesByKey(
+        targets: List<OgnTrafficTarget>,
+        selectedTargetKey: String?
+    ): Map<String, TrafficDisplayCoordinate> {
+        if (selectedTargetKey.isNullOrBlank() || currentViewportZoom < OGN_TRAFFIC_CLOSE_ZOOM_THRESHOLD) {
+            return emptyMap()
+        }
+        val collisionSizePx = resolvePackedGroupCollisionSizePx()
+        val seeds = targets.map { target ->
+            TrafficPackedGroupLabelSeed(
+                key = target.canonicalKey,
+                latitude = target.latitude,
+                longitude = target.longitude,
+                collisionWidthPx = collisionSizePx,
+                collisionHeightPx = collisionSizePx,
+                priorityRank = 0
+            )
+        }
+        return selectedGroupFanoutLayout.resolveDisplayCoordinatesByKey(
+            map = map,
+            seeds = seeds,
+            selectedTargetKey = selectedTargetKey
+        )
+    }
+
+    private fun resolvePackedGroupCollisionSizePx(): Float {
+        val density = context.resources.displayMetrics.density
+        val minimumCollisionSizePx = PACKED_GROUP_COLLISION_SIZE_DP * density
+        return maxOf(currentIconSizePx.toFloat(), minimumCollisionSizePx)
+    }
+
+    private companion object {
+        private const val PACKED_GROUP_COLLISION_SIZE_DP = 40f
     }
 }

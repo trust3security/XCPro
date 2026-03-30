@@ -67,12 +67,14 @@ class MapOverlayManagerOgnLifecycleTest {
         verify(trafficOverlay, times(1)).initialize()
         verify(trafficOverlay, times(1)).render(
             targets = eq(firstTargets),
+            selectedTargetKey = anyOrNull(),
             ownshipAltitudeMeters = eq(1200.0),
             altitudeUnit = eq(AltitudeUnit.METERS),
             unitsPreferences = eq(UnitsPreferences())
         )
         verify(trafficOverlay, times(1)).render(
             targets = eq(secondTargets),
+            selectedTargetKey = anyOrNull(),
             ownshipAltitudeMeters = eq(1200.0),
             altitudeUnit = eq(AltitudeUnit.METERS),
             unitsPreferences = eq(UnitsPreferences())
@@ -128,9 +130,11 @@ class MapOverlayManagerOgnLifecycleTest {
         val latestTargets = listOf(target(id = "T9", lastSeenMillis = 9_000L))
         val latestThermals = listOf(thermal(id = "H9"))
         val latestTrails = listOf(trail(id = "S9"))
+        val selectedTargetKey = latestTargets.single().canonicalKey
 
         fixture.manager.updateOgnTrafficTargets(
             targets = latestTargets,
+            selectedTargetKey = selectedTargetKey,
             ownshipAltitudeMeters = 900.0,
             altitudeUnit = AltitudeUnit.FEET,
             forceImmediate = false
@@ -171,6 +175,7 @@ class MapOverlayManagerOgnLifecycleTest {
 
         verify(secondTraffic, times(1)).render(
             targets = eq(latestTargets),
+            selectedTargetKey = eq(selectedTargetKey),
             ownshipAltitudeMeters = eq(900.0),
             altitudeUnit = eq(AltitudeUnit.FEET),
             unitsPreferences = eq(UnitsPreferences())
@@ -267,6 +272,7 @@ class MapOverlayManagerOgnLifecycleTest {
         )
         verify(trafficOverlay, times(0)).render(
             targets = any(),
+            selectedTargetKey = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             altitudeUnit = any(),
             unitsPreferences = any()

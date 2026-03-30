@@ -46,13 +46,16 @@ object AdsbGeoJsonMapper {
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences,
         iconStyleIdOverride: String? = null,
-        displayCoordinate: TrafficDisplayCoordinate? = null
+        displayCoordinate: TrafficDisplayCoordinate? = null,
+        showFullLabel: Boolean = true
     ): Feature? {
         if (!target.lat.isFinite() || !target.lon.isFinite()) return null
+        val renderLatitude = displayCoordinate?.latitude?.takeIf { it.isFinite() } ?: target.lat
+        val renderLongitude = displayCoordinate?.longitude?.takeIf { it.isFinite() } ?: target.lon
         val feature = Feature.fromGeometry(
             Point.fromLngLat(
-                displayCoordinate?.longitude ?: target.lon,
-                displayCoordinate?.latitude ?: target.lat
+                renderLongitude,
+                renderLatitude
             ),
             JsonObject(),
             target.id.raw
@@ -71,8 +74,8 @@ object AdsbGeoJsonMapper {
         val aircraftIcon = target.aircraftIcon()
         val normalIconStyleId = iconStyleIdOverride ?: aircraftIcon.styleImageId
         feature.addStringProperty(PROP_ICAO24, target.id.raw)
-        feature.addStringProperty(PROP_LABEL_TOP, labelMapping.topLabel)
-        feature.addStringProperty(PROP_LABEL_BOTTOM, labelMapping.bottomLabel)
+        feature.addStringProperty(PROP_LABEL_TOP, if (showFullLabel) labelMapping.topLabel else "")
+        feature.addStringProperty(PROP_LABEL_BOTTOM, if (showFullLabel) labelMapping.bottomLabel else "")
         feature.addStringProperty(
             PROP_ICON_ID,
             if (target.isEmergencyCollisionRisk) {

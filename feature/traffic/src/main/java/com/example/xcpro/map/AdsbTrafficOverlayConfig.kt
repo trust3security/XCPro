@@ -5,6 +5,8 @@ import android.graphics.Color
 internal const val ADSB_TRAFFIC_OVERLAY_TAG = "AdsbTrafficOverlay"
 
 internal const val ADSB_TRAFFIC_SOURCE_ID = "adsb-traffic-source"
+internal const val ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID = "adsb-traffic-leader-line-source"
+internal const val ADSB_TRAFFIC_LEADER_LINE_LAYER_ID = "adsb-traffic-leader-line-layer"
 internal const val ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID = "adsb-traffic-icon-outline-layer"
 internal const val ADSB_TRAFFIC_ICON_LAYER_ID = "adsb-traffic-icon-layer"
 internal const val ADSB_TRAFFIC_TOP_LABEL_LAYER_ID = "adsb-traffic-top-label-layer"

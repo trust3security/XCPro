@@ -5,6 +5,8 @@ import android.graphics.Color
 internal const val TAG = "OgnTrafficOverlay"
 
 internal const val SOURCE_ID = "ogn-traffic-source"
+internal const val LEADER_LINE_SOURCE_ID = "ogn-traffic-leader-line-source"
+internal const val LEADER_LINE_LAYER_ID = "ogn-traffic-leader-line-layer"
 internal const val ICON_LAYER_ID = "ogn-traffic-icon-layer"
 internal const val TOP_LABEL_LAYER_ID = "ogn-traffic-label-top-layer"
 internal const val BOTTOM_LABEL_LAYER_ID = "ogn-traffic-label-bottom-layer"

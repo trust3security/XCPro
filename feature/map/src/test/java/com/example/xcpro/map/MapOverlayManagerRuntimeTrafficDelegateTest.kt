@@ -49,6 +49,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(1)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -64,6 +65,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(1)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -73,6 +75,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(2)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -82,6 +85,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(2)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -110,6 +114,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(1)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -120,6 +125,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(1)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -129,6 +135,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(1)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -139,6 +146,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         runCurrent()
         verify(overlay, times(2)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -183,6 +191,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         val styleCaptor = argumentCaptor<Map<String, String>>()
         verify(overlay, atLeast(2)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = styleCaptor.capture()
@@ -191,6 +200,47 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         assertEquals(
             strongTarget.aircraftIcon().styleImageId,
             latestOverrides["abc123"]
+        )
+    }
+
+    @Test
+    fun selectedTargetChange_rerendersOverlayWhenTargetsAreUnchanged() = runTest {
+        val overlay: AdsbTrafficOverlayHandle = mock()
+        val map: MapLibreMap = mock()
+        val fixture = createFixture(
+            scope = this,
+            nowMonoMsProvider = { 0L },
+            interactionActiveProvider = { false },
+            overlay = overlay
+        )
+        fixture.mapState.mapLibreMap = map
+
+        val selectedTarget = target(icao24 = "abc123", category = 0)
+        fixture.delegate.updateAdsbTrafficTargets(
+            targets = listOf(selectedTarget),
+            selectedTargetId = null,
+            ownshipAltitudeMeters = 1_200.0,
+            unitsPreferences = UnitsPreferences(),
+            normalizeOwnshipAltitudeForRender = { it }
+        )
+        runCurrent()
+        org.mockito.kotlin.reset(overlay)
+
+        fixture.delegate.updateAdsbTrafficTargets(
+            targets = listOf(selectedTarget),
+            selectedTargetId = selectedTarget.id,
+            ownshipAltitudeMeters = 1_200.0,
+            unitsPreferences = UnitsPreferences(),
+            normalizeOwnshipAltitudeForRender = { it }
+        )
+        runCurrent()
+
+        verify(overlay, times(1)).render(
+            targets = any(),
+            selectedTargetId = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
         )
     }
 
@@ -222,6 +272,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         val styleCaptor = argumentCaptor<Map<String, String>>()
         verify(overlay, atLeast(2)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = styleCaptor.capture()

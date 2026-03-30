@@ -16,6 +16,8 @@ class AdsbTrafficOverlay(
     private val map: MapLibreMap,
     initialIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
 ) : AdsbTrafficOverlayHandle {
+    private val packedGroupLabelControl = TrafficPackedGroupLabelControl()
+    private val selectedGroupFanoutLayout = TrafficSelectedGroupFanoutLayout()
     private var currentIconSizePx: Int = clampAdsbIconSizePx(initialIconSizePx)
     private var currentViewportZoom: Float =
         map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() } ?: ADSB_TRAFFIC_INITIAL_VIEWPORT_ZOOM
@@ -26,10 +28,10 @@ class AdsbTrafficOverlay(
             viewportRangeMeters = currentViewportRangeMeters
         )
     private var emergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
+    private var currentSelectedTargetId: Icao24? = null
     private var currentOwnshipAltitudeMeters: Double? = null
     private var currentUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var currentIconStyleIdOverrides: Map<String, String> = emptyMap()
-    private val declutterEngine = TrafficScreenDeclutterEngine()
     private val motionSmoother = AdsbDisplayMotionSmoother()
     private val frameLoopController = AdsbOverlayFrameLoopController(
         minRenderIntervalMs = ADSB_TRAFFIC_ANIMATION_FRAME_INTERVAL_MS
@@ -65,19 +67,36 @@ class AdsbTrafficOverlay(
             if (style.getSource(SOURCE_ID) == null) {
                 style.addSource(GeoJsonSource(SOURCE_ID))
             }
+            if (style.getSource(ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID) == null) {
+                style.addSource(GeoJsonSource(ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID))
+            }
             ensureAdsbTrafficOverlayStyleImages(
                 context = context,
                 style = style,
                 emergencyIconColor = ADSB_TRAFFIC_EMERGENCY_ICON_COLOR
             )
+            if (style.getLayer(ADSB_TRAFFIC_LEADER_LINE_LAYER_ID) == null) {
+                val leaderLineLayer = createAdsbLeaderLineLayer()
+                val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
+                when {
+                    style.getLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID) != null ->
+                        style.addLayerBelow(leaderLineLayer, ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID)
+
+                    style.getLayer(anchorId) != null ->
+                        style.addLayerAbove(leaderLineLayer, anchorId)
+
+                    else -> style.addLayer(leaderLineLayer)
+                }
+            }
             if (style.getLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID) == null) {
                 val outlineLayer = createAdsbIconOutlineLayer(
                     currentIconSizePx = currentIconSizePx,
                     viewportPolicy = currentViewportPolicy
                 )
-                val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
-                if (style.getLayer(anchorId) != null) {
-                    style.addLayerBelow(outlineLayer, anchorId)
+                if (style.getLayer(ADSB_TRAFFIC_LEADER_LINE_LAYER_ID) != null) {
+                    style.addLayerAbove(outlineLayer, ADSB_TRAFFIC_LEADER_LINE_LAYER_ID)
+                } else if (style.getLayer(BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK) != null) {
+                    style.addLayerBelow(outlineLayer, BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK)
                 } else {
                     style.addLayer(outlineLayer)
                 }
@@ -158,6 +177,7 @@ class AdsbTrafficOverlay(
 
     override fun render(
         targets: List<AdsbTrafficUiModel>,
+        selectedTargetId: Icao24?,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences,
         iconStyleIdOverrides: Map<String, String>
@@ -165,9 +185,11 @@ class AdsbTrafficOverlay(
         initialize()
         val normalizedOwnshipAltitude = ownshipAltitudeMeters?.takeIf { it.isFinite() }
         val contextChanged =
+            currentSelectedTargetId != selectedTargetId ||
             currentOwnshipAltitudeMeters != normalizedOwnshipAltitude ||
                 currentUnitsPreferences != unitsPreferences ||
                 currentIconStyleIdOverrides != iconStyleIdOverrides
+        currentSelectedTargetId = selectedTargetId
         currentOwnshipAltitudeMeters = normalizedOwnshipAltitude
         currentUnitsPreferences = unitsPreferences
         currentIconStyleIdOverrides = iconStyleIdOverrides
@@ -213,22 +235,24 @@ class AdsbTrafficOverlay(
 
     fun clear() {
         stopFrameLoop()
-        declutterEngine.clear()
         motionSmoother.clear()
         frameLoopController.resetRenderClock()
+        currentSelectedTargetId = null
         currentOwnshipAltitudeMeters = null
         currentUnitsPreferences = UnitsPreferences()
         currentIconStyleIdOverrides = emptyMap()
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray<Feature>()))
+        val leaderLineSource = style.getSourceAs<GeoJsonSource>(ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID) ?: return
+        leaderLineSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray<Feature>()))
     }
 
     override fun cleanup() {
         stopFrameLoop()
-        declutterEngine.clear()
         motionSmoother.clear()
         frameLoopController.resetRenderClock()
+        currentSelectedTargetId = null
         currentOwnshipAltitudeMeters = null
         currentUnitsPreferences = UnitsPreferences()
         currentIconStyleIdOverrides = emptyMap()
@@ -238,7 +262,9 @@ class AdsbTrafficOverlay(
             style.removeLayer(ADSB_TRAFFIC_TOP_LABEL_LAYER_ID)
             style.removeLayer(ADSB_TRAFFIC_ICON_LAYER_ID)
             style.removeLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID)
+            style.removeLayer(ADSB_TRAFFIC_LEADER_LINE_LAYER_ID)
             style.removeSource(SOURCE_ID)
+            style.removeSource(ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID)
             removeAdsbTrafficOverlayStyleImages(style)
         } catch (t: Throwable) {
             AppLogger.w(ADSB_TRAFFIC_OVERLAY_TAG, "Failed to cleanup ADS-B overlay: ${t.message}")
@@ -247,7 +273,8 @@ class AdsbTrafficOverlay(
 
     override fun bringToFront() {
         val style = map.style ?: return
-        if (style.getLayer(ADSB_TRAFFIC_ICON_LAYER_ID) == null ||
+        if (style.getLayer(ADSB_TRAFFIC_LEADER_LINE_LAYER_ID) == null ||
+            style.getLayer(ADSB_TRAFFIC_ICON_LAYER_ID) == null ||
             style.getLayer(ADSB_TRAFFIC_TOP_LABEL_LAYER_ID) == null ||
             style.getLayer(ADSB_TRAFFIC_BOTTOM_LABEL_LAYER_ID) == null
         ) {
@@ -261,6 +288,8 @@ class AdsbTrafficOverlay(
             style.removeLayer(ADSB_TRAFFIC_TOP_LABEL_LAYER_ID)
             style.removeLayer(ADSB_TRAFFIC_ICON_LAYER_ID)
             style.removeLayer(ADSB_TRAFFIC_ICON_OUTLINE_LAYER_ID)
+            style.removeLayer(ADSB_TRAFFIC_LEADER_LINE_LAYER_ID)
+            style.addLayer(createAdsbLeaderLineLayer())
             style.addLayer(
                 createAdsbIconOutlineLayer(
                     currentIconSizePx = currentIconSizePx,
@@ -309,20 +338,19 @@ class AdsbTrafficOverlay(
     ) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
-        val declutteredCoordinates = resolveTrafficDeclutteredDisplayCoordinates(
-            map = map,
-            seeds = buildDeclutterSeeds(frameSnapshot.targets),
-            declutterEngine = declutterEngine,
-            strengthMultiplier = resolveAdsbTrafficScreenDeclutterStrength(currentViewportZoom)
-        )
+        val leaderLineSource = style.getSourceAs<GeoJsonSource>(ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID) ?: return
+        val fullLabelKeys = resolveFullLabelKeys(frameSnapshot.targets)
+        val displayCoordinatesByKey = resolveDisplayCoordinatesByKey(frameSnapshot.targets)
         renderAdsbTrafficFrame(
             source = source,
+            leaderLineSource = leaderLineSource,
             nowMonoMs = nowMonoMs,
             frameSnapshot = frameSnapshot,
+            fullLabelKeys = fullLabelKeys,
+            displayCoordinatesByKey = displayCoordinatesByKey,
             ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
             unitsPreferences = currentUnitsPreferences,
             iconStyleIdOverrides = currentIconStyleIdOverrides,
-            displayCoordinatesByKey = declutteredCoordinates,
             emergencyFlashEnabled = emergencyFlashEnabled,
             maxTargets = currentViewportPolicy.maxTargets
         )
@@ -345,27 +373,66 @@ class AdsbTrafficOverlay(
         emergencyFlashEnabled = emergencyFlashEnabled
     )
 
-    private fun buildDeclutterSeeds(
+    private fun resolveFullLabelKeys(
         targets: List<AdsbTrafficUiModel>
-    ): List<TrafficProjectionSeed> {
+    ): Set<String> {
+        if (targets.isEmpty()) return emptySet()
         val renderTargets = targets.take(currentViewportPolicy.maxTargets)
-        val collisionSizePx = currentIconSizePx.toFloat() *
-            currentViewportPolicy.iconScaleMultiplier *
-            ADSB_TRAFFIC_OUTLINE_ICON_SCALE_MULTIPLIER
-        return renderTargets.mapIndexed { index, target ->
-            TrafficProjectionSeed(
+        val priorityRankByKey = rankAdsbTargetsForPackedGroupLabels(
+            targets = renderTargets,
+            selectedTargetId = currentSelectedTargetId
+        )
+        val collisionSizePx = resolvePackedGroupCollisionSizePx()
+        val seeds = renderTargets.map { target ->
+            TrafficPackedGroupLabelSeed(
                 key = target.id.raw,
                 latitude = target.lat,
                 longitude = target.lon,
                 collisionWidthPx = collisionSizePx,
                 collisionHeightPx = collisionSizePx,
-                priorityRank = index
+                priorityRank = priorityRankByKey.getValue(target.id.raw)
             )
         }
+        return packedGroupLabelControl.resolveFullLabelKeys(
+            map = map,
+            seeds = seeds
+        )
+    }
+
+    private fun resolveDisplayCoordinatesByKey(
+        targets: List<AdsbTrafficUiModel>
+    ): Map<String, TrafficDisplayCoordinate> {
+        val selectedTargetId = currentSelectedTargetId ?: return emptyMap()
+        if (currentViewportZoom < ADSB_TRAFFIC_LABELS_MIN_ZOOM) return emptyMap()
+        val renderTargets = targets.take(currentViewportPolicy.maxTargets)
+        val collisionSizePx = resolvePackedGroupCollisionSizePx()
+        val seeds = renderTargets.map { target ->
+            TrafficPackedGroupLabelSeed(
+                key = target.id.raw,
+                latitude = target.lat,
+                longitude = target.lon,
+                collisionWidthPx = collisionSizePx,
+                collisionHeightPx = collisionSizePx,
+                priorityRank = 0
+            )
+        }
+        return selectedGroupFanoutLayout.resolveDisplayCoordinatesByKey(
+            map = map,
+            seeds = seeds,
+            selectedTargetKey = selectedTargetId.raw
+        )
+    }
+
+    private fun resolvePackedGroupCollisionSizePx(): Float {
+        val density = context.resources.displayMetrics.density
+        val minimumCollisionSizePx = PACKED_GROUP_COLLISION_SIZE_DP * density
+        val renderedIconSizePx = currentIconSizePx.toFloat() * currentViewportPolicy.iconScaleMultiplier
+        return maxOf(renderedIconSizePx, minimumCollisionSizePx)
     }
 
     private companion object {
         private const val SOURCE_ID = ADSB_TRAFFIC_SOURCE_ID
         private const val ADSB_TRAFFIC_INITIAL_VIEWPORT_ZOOM = 10f
+        private const val PACKED_GROUP_COLLISION_SIZE_DP = 40f
     }
 }

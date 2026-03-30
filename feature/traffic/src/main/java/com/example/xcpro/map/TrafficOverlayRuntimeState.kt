@@ -38,6 +38,7 @@ interface AdsbTrafficOverlayHandle {
     fun setEmergencyFlashEnabled(enabled: Boolean)
     fun render(
         targets: List<AdsbTrafficUiModel>,
+        selectedTargetId: Icao24?,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences,
         iconStyleIdOverrides: Map<String, String>
@@ -54,6 +55,7 @@ interface OgnTrafficOverlayHandle {
     fun setUseSatelliteContrastIcons(enabled: Boolean)
     fun render(
         targets: List<OgnTrafficTarget>,
+        selectedTargetKey: String?,
         ownshipAltitudeMeters: Double?,
         altitudeUnit: AltitudeUnit,
         unitsPreferences: UnitsPreferences

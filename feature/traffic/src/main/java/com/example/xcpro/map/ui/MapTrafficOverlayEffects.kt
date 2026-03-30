@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.map.Icao24
 import com.example.xcpro.map.OgnDisplayUpdateMode
 import com.example.xcpro.map.OgnGliderTrailSegment
 import com.example.xcpro.map.OgnThermalHotspot
@@ -17,6 +18,7 @@ interface TrafficOverlayRenderPort {
     fun setOgnDisplayUpdateMode(mode: OgnDisplayUpdateMode)
     fun updateOgnTrafficTargets(
         targets: List<OgnTrafficTarget>,
+        selectedTargetKey: String?,
         ownshipAltitudeMeters: Double?,
         altitudeUnit: AltitudeUnit,
         unitsPreferences: UnitsPreferences
@@ -36,6 +38,7 @@ interface TrafficOverlayRenderPort {
     fun setOgnIconSizePx(iconSizePx: Int)
     fun updateAdsbTrafficTargets(
         targets: List<AdsbTrafficUiModel>,
+        selectedTargetId: Icao24?,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences
     )
@@ -60,11 +63,13 @@ data class MapTrafficOverlayRenderState(
     val ognAltitudeUnit: AltitudeUnit,
     val unitsPreferences: UnitsPreferences,
     val ognIconSizePx: Int,
+    val selectedOgnTargetKey: String?,
     val adsbTargets: List<AdsbTrafficUiModel>,
     val adsbOverlayEnabled: Boolean,
     val adsbIconSizePx: Int,
     val adsbEmergencyFlashEnabled: Boolean,
-    val adsbDefaultMediumUnknownIconEnabled: Boolean
+    val adsbDefaultMediumUnknownIconEnabled: Boolean,
+    val selectedAdsbTargetId: Icao24?
 )
 
 data class MapTrafficOverlayReadyConfig(
@@ -114,12 +119,14 @@ fun MapTrafficOverlayEffects(
     }
     LaunchedEffect(
         renderedOgnTargets,
+        renderState.selectedOgnTargetKey,
         overlayOwnshipAltitudeMeters,
         renderState.ognAltitudeUnit,
         renderState.unitsPreferences
     ) {
         port.updateOgnTrafficTargets(
             targets = renderedOgnTargets,
+            selectedTargetKey = renderState.selectedOgnTargetKey,
             ownshipAltitudeMeters = overlayOwnshipAltitudeMeters,
             altitudeUnit = renderState.ognAltitudeUnit,
             unitsPreferences = renderState.unitsPreferences
@@ -151,9 +158,15 @@ fun MapTrafficOverlayEffects(
     LaunchedEffect(renderState.ognIconSizePx) {
         port.setOgnIconSizePx(renderState.ognIconSizePx)
     }
-    LaunchedEffect(renderedAdsbTargets, overlayOwnshipAltitudeMeters, renderState.unitsPreferences) {
+    LaunchedEffect(
+        renderedAdsbTargets,
+        renderState.selectedAdsbTargetId,
+        overlayOwnshipAltitudeMeters,
+        renderState.unitsPreferences
+    ) {
         port.updateAdsbTrafficTargets(
             targets = renderedAdsbTargets,
+            selectedTargetId = renderState.selectedAdsbTargetId,
             ownshipAltitudeMeters = overlayOwnshipAltitudeMeters,
             unitsPreferences = renderState.unitsPreferences
         )

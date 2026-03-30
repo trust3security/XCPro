@@ -49,6 +49,7 @@ class OgnTrafficOverlayFeatureTargetsTest {
     ) = buildOgnTrafficOverlayFeatures(
         nowMonoMs = 10_000L,
         targets = targets,
+        fullLabelKeys = targets.map { it.canonicalKey }.toSet(),
         ownshipAltitudeMeters = 1_000.0,
         visibleBounds = null,
         altitudeUnit = AltitudeUnit.METERS,

@@ -1,3 +1,7 @@
+> Archived on 2026-03-31.
+> Superseded by [xcpro-close-proximity-declutter-brief.md](../../xcpro-close-proximity-declutter-brief.md) and [xcpro-phase-2a-close-proximity-declutter-plan.md](../../xcpro-phase-2a-close-proximity-declutter-plan.md).
+> This document reflects pre-Phase 2A assumptions and should not be used as current declutter direction.
+
 # Summary
 
 - Confirmed: aircraft traffic rendering is split across `feature:traffic` and the map shell. Raw aircraft state lives in `feature:traffic` repositories/use cases, the map screen assembles UI binding state in `feature:map`, and actual map-layer rendering is done by MapLibre overlay classes in `feature:traffic`.

@@ -1,3 +1,7 @@
+> Archived on 2026-03-31.
+> Superseded by [xcpro-close-proximity-declutter-brief.md](../../xcpro-close-proximity-declutter-brief.md) and [xcpro-phase-2a-close-proximity-declutter-plan.md](../../xcpro-phase-2a-close-proximity-declutter-plan.md).
+> This pass record belongs to the older declutter direction and is not the active Phase 2A brief.
+
 # Aircraft Declutter Pass 4 Fix
 
 ## Summary

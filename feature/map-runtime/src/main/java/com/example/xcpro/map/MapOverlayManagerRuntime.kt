@@ -146,12 +146,14 @@ open class MapOverlayManagerRuntime(
 
     fun updateOgnTrafficTargets(
         targets: List<OgnTrafficTarget>,
+        selectedTargetKey: String? = null,
         ownshipAltitudeMeters: Double?,
         altitudeUnit: AltitudeUnit,
         unitsPreferences: UnitsPreferences = UnitsPreferences(),
         forceImmediate: Boolean = false
     ) = ognDelegate.updateTrafficTargets(
         targets = targets,
+        selectedTargetKey = selectedTargetKey,
         ownshipAltitudeMeters = ownshipAltitudeMeters,
         altitudeUnit = altitudeUnit,
         unitsPreferences = unitsPreferences,
@@ -206,10 +208,12 @@ open class MapOverlayManagerRuntime(
 
     fun updateAdsbTrafficTargets(
         targets: List<AdsbTrafficUiModel>,
+        selectedTargetId: Icao24? = null,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences
     ) = trafficDelegate.updateAdsbTrafficTargets(
         targets = targets,
+        selectedTargetId = selectedTargetId,
         ownshipAltitudeMeters = ownshipAltitudeMeters,
         unitsPreferences = unitsPreferences,
         normalizeOwnshipAltitudeForRender = ::normalizeOwnshipAltitudeForRender
