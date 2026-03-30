@@ -112,6 +112,7 @@ import com.example.xcpro.map.OgnThermalRepository
 import com.example.xcpro.map.OgnGliderTrailRepository
 import com.example.xcpro.map.OgnGliderTrailSegment
 import com.example.xcpro.map.OgnTrailSelectionPreferencesRepository
+import com.example.xcpro.ogn.OgnSciaStartupResetCoordinator
 import com.example.xcpro.thermalling.ThermallingModeCoordinator
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import org.junit.Assert.assertEquals
@@ -225,7 +226,8 @@ class MapScreenViewModelOverlayPreferenceTest : MapScreenViewModelTestBase() {
     @Test
     fun ognIconSize_readsPersistedPreferenceOnInit() = runBlocking {
         val preferencesRepository = OgnTrafficPreferencesRepository(
-            newTestPreferencesDataStore("ogn_traffic_seed")
+            newTestPreferencesDataStore("ogn_traffic_seed"),
+            OgnSciaStartupResetCoordinator.AlreadyReset
         )
         preferencesRepository.setIconSizePx(OGN_ICON_SIZE_MAX_PX)
 
@@ -240,7 +242,8 @@ class MapScreenViewModelOverlayPreferenceTest : MapScreenViewModelTestBase() {
     @Test
     fun ognDisplayUpdateMode_readsPersistedPreferenceOnInit() = runBlocking {
         val preferencesRepository = OgnTrafficPreferencesRepository(
-            newTestPreferencesDataStore("ogn_traffic_seed")
+            newTestPreferencesDataStore("ogn_traffic_seed"),
+            OgnSciaStartupResetCoordinator.AlreadyReset
         )
         preferencesRepository.setDisplayUpdateMode(OgnDisplayUpdateMode.BATTERY)
 

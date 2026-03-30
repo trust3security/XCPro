@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -23,21 +24,33 @@ private val KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS = stringSetPreferencesKey(
 
 @Singleton
 class OgnTrailSelectionPreferencesRepository constructor(
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
+    private val startupResetCoordinator: OgnSciaStartupResetCoordinator
 ) {
     @Inject
     constructor(
-        @ApplicationContext context: Context
-    ) : this(context.ognTrailSelectionDataStore)
+        @ApplicationContext context: Context,
+        startupResetCoordinator: OgnSciaStartupResetCoordinator
+    ) : this(
+        dataStore = context.ognTrailSelectionDataStore,
+        startupResetCoordinator = startupResetCoordinator
+    )
 
-    val selectedAircraftKeysFlow: Flow<Set<String>> = dataStore.data
-        .map { preferences ->
+    val selectedAircraftKeysFlow: Flow<Set<String>> = combine(
+        dataStore.data.map { preferences ->
             preferences[KEY_OGN_TRAIL_SELECTED_AIRCRAFT_KEYS]
                 ?.mapNotNull(::normalizeOgnAircraftKeyOrNull)
                 ?.toSet()
                 ?: emptySet()
+        },
+        startupResetCoordinator.resetState
+    ) { persistedKeys, resetState ->
+        if (resetState == OgnSciaStartupResetState.COMPLETED) {
+            persistedKeys
+        } else {
+            emptySet()
         }
-        .distinctUntilChanged()
+    }.distinctUntilChanged()
 
     suspend fun setAircraftSelected(aircraftKey: String, selected: Boolean) {
         val normalizedKey = normalizeOgnAircraftKeyOrNull(aircraftKey) ?: return

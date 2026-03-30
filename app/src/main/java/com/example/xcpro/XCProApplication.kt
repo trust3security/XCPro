@@ -4,9 +4,9 @@ import android.app.Application
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.example.xcpro.ogn.OgnSciaStartupResetCoordinator
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
-import kotlinx.coroutines.runBlocking
 
 @HiltAndroidApp
 class XCProApplication : Application(), Configuration.Provider {
@@ -18,17 +18,12 @@ class XCProApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
     @Inject
-    lateinit var sciaStartupResetter: SciaStartupResetter
+    lateinit var sciaStartupResetCoordinator: OgnSciaStartupResetCoordinator
 
     override fun onCreate() {
         super.onCreate()
-        runCatching {
-            // Product decision: do not persist SCIA state across app restarts.
-            runBlocking {
-                sciaStartupResetter.resetForFreshProcessStart()
-            }
-        }.onFailure { throwable ->
-            Log.e(TAG, "Failed to reset SCIA startup state", throwable)
+        if (::sciaStartupResetCoordinator.isInitialized) {
+            sciaStartupResetCoordinator.startIfNeeded()
         }
     }
 

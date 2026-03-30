@@ -3,6 +3,7 @@ package com.example.xcpro.di
 import android.content.Context
 import com.example.dfcards.CardPreferences
 import com.example.xcpro.AirspaceRepository
+import com.example.xcpro.AppOgnSciaStartupResetCoordinator
 import com.example.xcpro.BuildConfig
 import com.example.xcpro.adsb.OpenSkyClientCredentials
 import com.example.xcpro.adsb.OpenSkyConfiguredCredentialsProvider
@@ -11,6 +12,7 @@ import com.example.xcpro.common.waypoint.HomeWaypointRepository
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.igc.AppIgcRecoveryDiagnosticsReporter
 import com.example.xcpro.igc.domain.IgcRecoveryDiagnosticsReporter
+import com.example.xcpro.ogn.OgnSciaStartupResetCoordinator
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.domain.engine.AATTaskEngine
@@ -114,6 +116,12 @@ object AppModule {
     fun provideIgcRecoveryDiagnosticsReporter(
         reporter: AppIgcRecoveryDiagnosticsReporter
     ): IgcRecoveryDiagnosticsReporter = reporter
+
+    @Provides
+    @Singleton
+    fun provideOgnSciaStartupResetCoordinator(
+        coordinator: AppOgnSciaStartupResetCoordinator
+    ): OgnSciaStartupResetCoordinator = coordinator
 
     @Provides
     @Singleton

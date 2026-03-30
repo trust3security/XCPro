@@ -9,6 +9,8 @@ import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -23,6 +25,7 @@ class OgnTrafficPreferencesRepositoryTest {
     private lateinit var storeScope: CoroutineScope
     private lateinit var storeDispatcher: ExecutorCoroutineDispatcher
     private lateinit var repository: OgnTrafficPreferencesRepository
+    private lateinit var startupResetCoordinator: FakeStartupResetCoordinator
 
     @Before
     fun setUp() {
@@ -36,7 +39,8 @@ class OgnTrafficPreferencesRepositoryTest {
             scope = storeScope,
             produceFile = { storeFile }
         )
-        repository = OgnTrafficPreferencesRepository(dataStore)
+        startupResetCoordinator = FakeStartupResetCoordinator()
+        repository = OgnTrafficPreferencesRepository(dataStore, startupResetCoordinator)
     }
 
     @After
@@ -143,6 +147,22 @@ class OgnTrafficPreferencesRepositoryTest {
     fun setShowSciaEnabled_persistsValue() = runBlocking {
         repository.setShowSciaEnabled(true)
         assertEquals(true, repository.showSciaEnabledFlow.first())
+    }
+
+    @Test
+    fun showSciaFlow_staysClearedWhileStartupResetIsPending() = runBlocking {
+        repository.setShowSciaEnabled(true)
+        startupResetCoordinator.setState(OgnSciaStartupResetState.PENDING)
+
+        assertEquals(false, repository.showSciaEnabledFlow.first())
+    }
+
+    @Test
+    fun showSciaFlow_staysClearedWhenStartupResetFails() = runBlocking {
+        repository.setShowSciaEnabled(true)
+        startupResetCoordinator.setState(OgnSciaStartupResetState.FAILED)
+
+        assertEquals(false, repository.showSciaEnabledFlow.first())
     }
 
     @Test
@@ -254,6 +274,15 @@ class OgnTrafficPreferencesRepositoryTest {
     }
 
     @Test
+    fun targetSelection_staysClearedWhileStartupResetIsPending() = runBlocking {
+        repository.setTargetSelection(enabled = true, aircraftKey = "FLARM:AB12CD")
+        startupResetCoordinator.setState(OgnSciaStartupResetState.PENDING)
+
+        assertEquals(false, repository.targetEnabledFlow.first())
+        assertNull(repository.targetAircraftKeyFlow.first())
+    }
+
+    @Test
     fun ownshipHexFlows_defaultToNull() = runBlocking {
         repository.setOwnFlarmHex(null)
         repository.setOwnIcaoHex(null)
@@ -296,5 +325,19 @@ class OgnTrafficPreferencesRepositoryTest {
         repository.setClientCallsign("XCPA1B2C3")
         repository.setClientCallsign("bad-callsign")
         assertEquals("XCPA1B2C3", repository.clientCallsignFlow.first())
+    }
+
+    private class FakeStartupResetCoordinator(
+        initialState: OgnSciaStartupResetState = OgnSciaStartupResetState.COMPLETED
+    ) : OgnSciaStartupResetCoordinator {
+        private val mutableState = MutableStateFlow(initialState)
+
+        override val resetState: StateFlow<OgnSciaStartupResetState> = mutableState
+
+        override fun startIfNeeded() = Unit
+
+        fun setState(state: OgnSciaStartupResetState) {
+            mutableState.value = state
+        }
     }
 }

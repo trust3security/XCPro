@@ -29,7 +29,7 @@ data class ToneComponent(
     val gain: Double
 )
 
-class VarioToneGenerator {
+class VarioToneGenerator : VarioToneOutput {
 
     companion object {
         private const val TAG = "VarioToneGenerator"
@@ -118,13 +118,13 @@ class VarioToneGenerator {
      * @param volume Volume 0.0 to 1.0
      */
     @Synchronized
-    fun playTone(
+    override fun playTone(
         frequencyHz: Double,
         durationMs: Long,
-        volume: Float = currentVolume,
-        envelope: ToneEnvelope = ToneEnvelope(),
-        components: List<ToneComponent> = emptyList(),
-        preservePhase: Boolean = false
+        volume: Float,
+        envelope: ToneEnvelope,
+        components: List<ToneComponent>,
+        preservePhase: Boolean
     ) {
         if (!isInitialized) {
             AppLogger.dRateLimited(TAG, "play_before_init", 5_000L) {
@@ -221,7 +221,7 @@ class VarioToneGenerator {
      * Used for beep pattern off-time
      */
     @Synchronized
-    fun playSilence(durationMs: Long) {
+    override fun playSilence(durationMs: Long) {
         if (!isInitialized) return
 
         val track = audioTrack ?: return
@@ -294,7 +294,7 @@ class VarioToneGenerator {
      * @param volume 0.0 (mute) to 1.0 (full)
      */
     @Synchronized
-    fun setVolume(volume: Float) {
+    override fun setVolume(volume: Float) {
         currentVolume = volume.coerceIn(0f, 1f)
         audioTrack?.setVolume(currentVolume)
     }
@@ -306,7 +306,7 @@ class VarioToneGenerator {
      * Stop playback and flush buffer
      */
     @Synchronized
-    fun stop() {
+    override fun stop() {
         try {
             audioTrack?.pause()
             audioTrack?.flush()
@@ -347,7 +347,7 @@ class VarioToneGenerator {
      * Check if audio system is ready
      */
     @Synchronized
-    fun isReady(): Boolean {
+    override fun isReady(): Boolean {
         val track = audioTrack ?: return false
         return isInitialized && track.state == AudioTrack.STATE_INITIALIZED
     }
@@ -361,7 +361,7 @@ class VarioToneGenerator {
     }
 
     @Synchronized
-    fun resetPhase() {
+    override fun resetPhase() {
         phaseAccumulator = 0.0
     }
 

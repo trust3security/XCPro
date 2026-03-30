@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Usage:
  * ```
- * val engine = VarioAudioEngine(context, audioFocusManager)
+ * val engine = VarioAudioEngine(context, audioFocusManager, scope)
  * engine.initialize()
  * engine.start()
  * engine.updateVerticalSpeed(verticalSpeedMs)
@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class VarioAudioEngine(
     private val context: Context,
     private val audioFocusManager: AudioFocusManager,
-    scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    scope: CoroutineScope
 ) {
 
     companion object {
@@ -46,7 +46,7 @@ class VarioAudioEngine(
 
     // Components
     private val toneGenerator = VarioToneGenerator()
-    private val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
+    private val audioScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
     private lateinit var frequencyMapper: VarioFrequencyMapper
     private lateinit var beepController: VarioBeepController
 
@@ -102,7 +102,7 @@ class VarioAudioEngine(
             frequencyMapper = VarioFrequencyMapper(_settings.value)
 
             // Create controller
-            beepController = VarioBeepController(toneGenerator, internalScope)
+            beepController = VarioBeepController(toneGenerator, audioScope)
 
             // Apply initial volume
             toneGenerator.setVolume(_settings.value.volume)
