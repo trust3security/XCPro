@@ -117,23 +117,19 @@ class OgnTargetRingOverlay(
         CircleLayer(LAYER_ID, SOURCE_ID).withProperties(
             circleColor("rgba(0,0,0,0)"),
             circleStrokeColor(RING_STROKE_COLOR),
-            circleStrokeWidth(ringStrokeWidthPx(currentIconSizePx)),
+            circleStrokeWidth(resolveOgnTargetRingStrokeWidthPx(currentIconSizePx)),
             circleOpacity(RING_OPACITY),
-            circleRadius(ringRadiusPx(currentIconSizePx))
+            circleRadius(resolveOgnTargetRingRadiusPx(currentIconSizePx))
         )
 
     private fun applyRingSizeToStyle() {
         val style = map.style ?: return
         val layer = style.getLayer(LAYER_ID) as? CircleLayer ?: return
         layer.setProperties(
-            circleStrokeWidth(ringStrokeWidthPx(currentIconSizePx)),
-            circleRadius(ringRadiusPx(currentIconSizePx))
+            circleStrokeWidth(resolveOgnTargetRingStrokeWidthPx(currentIconSizePx)),
+            circleRadius(resolveOgnTargetRingRadiusPx(currentIconSizePx))
         )
     }
-
-    private fun ringRadiusPx(iconSizePx: Int): Float = (iconSizePx * 0.56f).coerceIn(18f, 150f)
-
-    private fun ringStrokeWidthPx(iconSizePx: Int): Float = (iconSizePx / 22f).coerceIn(2f, 8f)
 
     private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
         if (!latitude.isFinite() || !longitude.isFinite()) return false
@@ -147,6 +143,21 @@ class OgnTargetRingOverlay(
         private const val SOURCE_ID = "ogn-target-ring-source"
         private const val LAYER_ID = "ogn-target-ring-layer"
         private const val RING_OPACITY = 0.95f
-        private const val RING_STROKE_COLOR = "#F5C842"
+        private const val RING_STROKE_COLOR = "#E0B52E"
     }
 }
+
+internal fun resolveOgnTargetRingRadiusPx(iconSizePx: Int): Float =
+    (clampOgnRenderedIconSizePx(iconSizePx) * OGN_TARGET_RING_RADIUS_MULTIPLIER)
+        .coerceIn(OGN_TARGET_RING_RADIUS_MIN_PX, OGN_TARGET_RING_RADIUS_MAX_PX)
+
+internal fun resolveOgnTargetRingStrokeWidthPx(iconSizePx: Int): Float =
+    (clampOgnRenderedIconSizePx(iconSizePx) / OGN_TARGET_RING_STROKE_DIVISOR)
+        .coerceIn(OGN_TARGET_RING_STROKE_MIN_PX, OGN_TARGET_RING_STROKE_MAX_PX)
+
+private const val OGN_TARGET_RING_RADIUS_MULTIPLIER = 0.23f
+private const val OGN_TARGET_RING_RADIUS_MIN_PX = 10.5f
+private const val OGN_TARGET_RING_RADIUS_MAX_PX = 72f
+private const val OGN_TARGET_RING_STROKE_DIVISOR = 64f
+private const val OGN_TARGET_RING_STROKE_MIN_PX = 1.0f
+private const val OGN_TARGET_RING_STROKE_MAX_PX = 3.0f

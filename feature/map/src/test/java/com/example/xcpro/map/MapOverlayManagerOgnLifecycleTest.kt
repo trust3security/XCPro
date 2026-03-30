@@ -211,7 +211,7 @@ class MapOverlayManagerOgnLifecycleTest {
     }
 
     @Test
-    fun updateOgnTargetVisuals_updatesPinnedKeyAndAvoidsTrafficRenderWithoutTargets() = runTest {
+    fun updateOgnTargetVisuals_updatesTargetVisualsWithoutTrafficRenderWhenTargetsAbsent() = runTest {
         val map: MapLibreMap = mock()
         val trafficOverlay: OgnTrafficOverlayHandle = mock()
         val targetRingOverlay: OgnTargetRingOverlayHandle = mock()
@@ -265,7 +265,6 @@ class MapOverlayManagerOgnLifecycleTest {
             altitudeUnit = eq(AltitudeUnit.FEET),
             unitsPreferences = eq(UnitsPreferences())
         )
-        verify(trafficOverlay, times(1)).setPinnedTargetKey(target.canonicalKey)
         verify(trafficOverlay, times(0)).render(
             targets = any(),
             ownshipAltitudeMeters = anyOrNull(),

@@ -1,68 +1,62 @@
 package com.example.xcpro.ogn
 
 import com.example.xcpro.common.di.IoDispatcher
-import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.InetSocketAddress
+import com.example.xcpro.ogn.domain.OgnNetworkAvailabilityPort
 import java.net.Socket
-import java.net.SocketTimeoutException
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
 
-
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class OgnTrafficRepositoryRuntime(
     internal val parser: OgnAprsLineParser,
     internal val ddbRepository: OgnDdbRepository,
     internal val preferencesRepository: OgnTrafficPreferencesRepository,
     internal val clock: Clock,
-    @IoDispatcher dispatcher: CoroutineDispatcher
+    @IoDispatcher internal val ioDispatcher: CoroutineDispatcher,
+    internal val networkAvailabilityPort: OgnNetworkAvailabilityPort
 ) : OgnTrafficRepository {
 
-    internal val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    internal val writerDispatcher: CoroutineDispatcher = ioDispatcher.limitedParallelism(1)
+    private val runtimeJob = SupervisorJob()
+    internal val scope = CoroutineScope(runtimeJob + writerDispatcher)
+    internal val ioScope = CoroutineScope(runtimeJob + ioDispatcher)
     internal val targetsByKey = ConcurrentHashMap<String, OgnTrafficTarget>()
 
     internal val _targets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList())
     override val targets: StateFlow<List<OgnTrafficTarget>> = _targets.asStateFlow()
+
     internal val suppressedTargetSeenMonoByKey = ConcurrentHashMap<String, Long>()
     internal val lastTimedSourceSeenMonoByKey = ConcurrentHashMap<String, Long>()
     internal val lastAcceptedTimedSourceTimestampWallByKey = ConcurrentHashMap<String, Long>()
     internal val _suppressedTargetIds = MutableStateFlow<Set<String>>(emptySet())
     override val suppressedTargetIds: StateFlow<Set<String>> = _suppressedTargetIds.asStateFlow()
 
+    internal val centerState = MutableStateFlow<Center?>(null)
     internal val _snapshot = MutableStateFlow(
         OgnTrafficSnapshot(
             targets = emptyList(),
             connectionState = OgnConnectionState.DISCONNECTED,
+            connectionIssue = null,
             lastError = null,
             subscriptionCenterLat = null,
             subscriptionCenterLon = null,
             receiveRadiusKm = OGN_RECEIVE_RADIUS_DEFAULT_KM,
             ddbCacheAgeMs = null,
             reconnectBackoffMs = null,
-            lastReconnectWallMs = null
+            lastReconnectWallMs = null,
+            networkOnline = true
         )
     )
     override val snapshot: StateFlow<OgnTrafficSnapshot> = _snapshot.asStateFlow()
@@ -91,7 +85,13 @@ internal class OgnTrafficRepositoryRuntime(
     internal var connectionState: OgnConnectionState = OgnConnectionState.DISCONNECTED
 
     @Volatile
+    internal var connectionIssue: OgnConnectionIssue? = null
+
+    @Volatile
     internal var lastError: String? = null
+
+    @Volatile
+    internal var networkOnline: Boolean = true
 
     @Volatile
     internal var lastDdbRefreshSuccessWallMs: Long = Long.MIN_VALUE
@@ -137,17 +137,18 @@ internal class OgnTrafficRepositoryRuntime(
 
     @Volatile
     internal var reconnectRequestedForRadiusChange: Boolean = false
+
     @Volatile
     internal var lastDistanceRefreshCenter: Center? = null
+
     @Volatile
     internal var lastDistanceRefreshMonoMs: Long = Long.MIN_VALUE
+
     @Volatile
     internal var droppedOutOfOrderSourceFrames: Long = 0L
+
     @Volatile
     internal var droppedImplausibleMotionFrames: Long = 0L
-
-    internal val stateTransitionMutex = Mutex()
-    internal val ddbRefreshLock = Any()
 
     internal var socketFactory: () -> Socket = { Socket() }
 
@@ -187,6 +188,12 @@ internal class OgnTrafficRepositoryRuntime(
                 clientCallsign = resolvedCallsign
             }
         }
+
+        scope.launch {
+            networkAvailabilityPort.isOnline.collect { isOnline ->
+                applyNetworkOnline(isOnline)
+            }
+        }
     }
 
     override fun start() {
@@ -198,40 +205,14 @@ internal class OgnTrafficRepositoryRuntime(
     }
 
     override fun setEnabled(enabled: Boolean) {
-        if (_isEnabled.value == enabled) return
-        _isEnabled.value = enabled
         scope.launch {
-            stateTransitionMutex.withLock {
-                if (_isEnabled.value) {
-                    ensureLoopRunning()
-                } else {
-                    stopLoopAndClearTargets()
-                }
-            }
+            applySetEnabled(enabled)
         }
     }
 
     override fun updateCenter(latitude: Double, longitude: Double) {
-        if (!latitude.isFinite() || !longitude.isFinite()) return
-        if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
-        val updatedCenter = Center(latitude = latitude, longitude = longitude)
-        val previousCenter = center
-        if (previousCenter == updatedCenter) return
-        center = updatedCenter
-
-        val nowMonoMs = clock.nowMonoMs()
-        if (shouldRefreshTargetDistancesForCenterUpdate(
-                previousCenter = previousCenter,
-                updatedCenter = updatedCenter,
-                nowMonoMs = nowMonoMs
-            )
-        ) {
-            refreshTargetDistancesForCurrentCenter(nowMonoMs)
-        } else {
-            publishSnapshot()
-        }
-        if (_isEnabled.value) {
-            ensureLoopRunning()
+        scope.launch {
+            applyUpdateCenter(latitude = latitude, longitude = longitude)
         }
     }
 
@@ -249,6 +230,41 @@ internal class OgnTrafficRepositoryRuntime(
                     isFlying = isFlying
                 )
             )
+        }
+    }
+
+    internal suspend fun applySetEnabled(enabled: Boolean) {
+        if (_isEnabled.value == enabled) return
+        _isEnabled.value = enabled
+        if (enabled) {
+            ensureLoopRunning()
+        } else {
+            stopLoopAndClearTargets()
+        }
+    }
+
+    internal fun applyUpdateCenter(latitude: Double, longitude: Double) {
+        if (!latitude.isFinite() || !longitude.isFinite()) return
+        if (abs(latitude) > 90.0 || abs(longitude) > 180.0) return
+        val updatedCenter = Center(latitude = latitude, longitude = longitude)
+        val previousCenter = center
+        if (previousCenter == updatedCenter) return
+        center = updatedCenter
+        centerState.value = updatedCenter
+
+        val nowMonoMs = clock.nowMonoMs()
+        if (shouldRefreshTargetDistancesForCenterUpdate(
+                previousCenter = previousCenter,
+                updatedCenter = updatedCenter,
+                nowMonoMs = nowMonoMs
+            )
+        ) {
+            refreshTargetDistancesForCurrentCenter(nowMonoMs)
+        } else {
+            publishSnapshot()
+        }
+        if (_isEnabled.value) {
+            ensureLoopRunning()
         }
     }
 
@@ -275,6 +291,17 @@ internal class OgnTrafficRepositoryRuntime(
         }
     }
 
+    private fun applyNetworkOnline(isOnline: Boolean) {
+        if (networkOnline == isOnline) return
+        networkOnline = isOnline
+        publishSnapshot()
+    }
+
+    internal suspend fun <T> runOnWriter(
+        block: OgnTrafficRepositoryRuntime.() -> T
+    ): T = kotlinx.coroutines.withContext(writerDispatcher) {
+        block()
+    }
 
     internal data class Center(
         val latitude: Double,
@@ -287,39 +314,11 @@ internal class OgnTrafficRepositoryRuntime(
     )
 
     internal enum class ConnectionExitReason {
-        StreamEnded,
-        ReconnectRequested
+        ReconnectRequested,
+        Stopped
     }
 
     private companion object {
-        private const val TAG = "OgnTrafficRepository"
-        private const val HOST = "aprs.glidernet.org"
-        private const val FILTER_PORT = 14580
-        private const val APP_NAME = "XCPro"
-        private const val APP_VERSION = "0.1"
-
-        private const val METERS_PER_KILOMETER = 1_000.0
-        private const val FILTER_UPDATE_MIN_MOVE_METERS = 20_000.0
-
-        private const val SOCKET_CONNECT_TIMEOUT_MS = 10_000
-        private const val SOCKET_READ_TIMEOUT_MS = 20_000
-        private const val KEEPALIVE_INTERVAL_MS = 60_000L
-        private const val STALL_TIMEOUT_MS = 120_000L
-        private const val WAIT_FOR_CENTER_MS = 1_000L
-
-        private const val TARGET_STALE_AFTER_MS = 120_000L
-        private const val STALE_SWEEP_INTERVAL_MS = 10_000L
-        private const val CENTER_DISTANCE_REFRESH_MIN_MOVE_METERS = 200.0
-        private const val CENTER_DISTANCE_REFRESH_MIN_INTERVAL_MS = 5_000L
-        private const val UNTIMED_SOURCE_FALLBACK_AFTER_MS = 30_000L
-        private const val SOURCE_TIME_REWIND_TOLERANCE_MS = 0L
-        private const val MAX_PLAUSIBLE_SPEED_MPS = 250.0
-        private const val DDB_ACTIVE_REFRESH_CHECK_INTERVAL_MS = 60_000L
-
-        private const val RECONNECT_BACKOFF_START_MS = 1_000L
-        private const val RECONNECT_BACKOFF_MAX_MS = 60_000L
-        private const val DDB_REFRESH_CHECK_INTERVAL_MS = 60L * 60L * 1000L
         private const val DDB_REFRESH_FAILURE_RETRY_START_MS = 2L * 60L * 1000L
-        private const val DDB_REFRESH_FAILURE_RETRY_MAX_MS = 5L * 60L * 1000L
     }
 }

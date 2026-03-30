@@ -5,6 +5,7 @@ import com.example.xcpro.map.ADSB_ERROR_CIRCUIT_BREAKER_PROBE
 import com.example.xcpro.map.AdsbAuthMode
 import com.example.xcpro.map.AdsbConnectionState
 import com.example.xcpro.map.AdsbNetworkFailureKind
+import com.example.xcpro.map.OgnConnectionIssue
 import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.map.OgnConnectionState
 import com.example.xcpro.map.backoffRetryAfterSec
@@ -20,6 +21,14 @@ fun OgnConnectionState.toDebugLabel(): String = when (this) {
     OgnConnectionState.CONNECTING -> "CONNECTING"
     OgnConnectionState.CONNECTED -> "CONNECTED"
     OgnConnectionState.ERROR -> "ERROR"
+}
+
+fun OgnConnectionIssue.toDebugLabel(): String = when (this) {
+    OgnConnectionIssue.UNEXPECTED_STREAM_END -> "Unexpected stream end"
+    OgnConnectionIssue.OFFLINE_WAIT -> "Offline wait"
+    OgnConnectionIssue.LOGIN_UNVERIFIED -> "Login unverified"
+    OgnConnectionIssue.STALL_TIMEOUT -> "Stream stalled"
+    OgnConnectionIssue.TRANSPORT_ERROR -> "Transport error"
 }
 
 fun AdsbConnectionState.toDebugLabel(): String = when {

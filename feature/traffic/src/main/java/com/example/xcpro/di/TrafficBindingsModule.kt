@@ -23,6 +23,8 @@ import com.example.xcpro.ogn.OgnThermalRepository
 import com.example.xcpro.ogn.OgnThermalRepositoryImpl
 import com.example.xcpro.ogn.OgnTrafficRepository
 import com.example.xcpro.ogn.OgnTrafficRepositoryImpl
+import com.example.xcpro.ogn.data.AndroidOgnNetworkAvailabilityAdapter
+import com.example.xcpro.ogn.domain.OgnNetworkAvailabilityPort
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -36,6 +38,11 @@ abstract class OgnBindingsModule {
 
     @Binds
     abstract fun bindOgnTrafficRepository(impl: OgnTrafficRepositoryImpl): OgnTrafficRepository
+
+    @Binds
+    abstract fun bindOgnNetworkAvailabilityPort(
+        impl: AndroidOgnNetworkAvailabilityAdapter
+    ): OgnNetworkAvailabilityPort
 
     @Binds
     abstract fun bindOgnThermalRepository(impl: OgnThermalRepositoryImpl): OgnThermalRepository

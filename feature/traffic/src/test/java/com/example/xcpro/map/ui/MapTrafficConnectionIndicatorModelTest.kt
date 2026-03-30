@@ -3,6 +3,7 @@ package com.example.xcpro.map.ui
 import com.example.xcpro.adsb.ADSB_ERROR_OFFLINE
 import com.example.xcpro.map.AdsbAuthMode
 import com.example.xcpro.map.AdsbNetworkFailureKind
+import com.example.xcpro.map.OgnConnectionIssue
 import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.map.OgnConnectionState
 import com.example.xcpro.map.OgnTrafficSnapshot
@@ -42,6 +43,40 @@ class MapTrafficConnectionIndicatorModelTest {
             indicator = state.ogn,
             sourceLabel = "OGN",
             message = "OGN connection lost"
+        )
+    }
+
+    @Test
+    fun build_returnsOgnLostCard_whenOgnIsWaitingOffline() {
+        val state = buildState(
+            ognOverlayEnabled = true,
+            ognSnapshot = ognSnapshot(
+                connectionState = OgnConnectionState.ERROR,
+                connectionIssue = OgnConnectionIssue.OFFLINE_WAIT
+            )
+        )
+
+        assertLostCard(
+            indicator = state.ogn,
+            sourceLabel = "OGN",
+            message = "OGN connection lost"
+        )
+    }
+
+    @Test
+    fun build_returnsCompactRedOgnDot_whenOgnLoginIsUnverified() {
+        val state = buildState(
+            ognOverlayEnabled = true,
+            ognSnapshot = ognSnapshot(
+                connectionState = OgnConnectionState.ERROR,
+                connectionIssue = OgnConnectionIssue.LOGIN_UNVERIFIED
+            )
+        )
+
+        assertDot(
+            indicator = state.ogn,
+            sourceLabel = "OGN",
+            tone = TrafficConnectionIndicatorTone.RED
         )
     }
 
@@ -217,10 +252,12 @@ class MapTrafficConnectionIndicatorModelTest {
     )
 
     private fun ognSnapshot(
-        connectionState: OgnConnectionState
+        connectionState: OgnConnectionState,
+        connectionIssue: OgnConnectionIssue? = null
     ): OgnTrafficSnapshot = OgnTrafficSnapshot(
         targets = emptyList(),
         connectionState = connectionState,
+        connectionIssue = connectionIssue,
         lastError = null,
         subscriptionCenterLat = null,
         subscriptionCenterLon = null,

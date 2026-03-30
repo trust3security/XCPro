@@ -34,7 +34,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private var latestOgnGliderTrailSignature: Int = gliderTrailSegmentIdentitySignature(emptyList())
     private var latestTargetEnabled: Boolean = false
     private var latestResolvedTarget: OgnTrafficTarget? = null
-    private var latestPinnedTargetKey: String? = null
     private var latestOwnshipLocation: OverlayCoordinate? = null
     private var latestTargetOwnshipAltitudeMeters: Double? = null
     private var latestTargetAltitudeUnit: AltitudeUnit = AltitudeUnit.METERS
@@ -59,7 +58,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
         runtimeState.ognTrafficOverlay?.cleanup()
         runtimeState.ognTrafficOverlay = createOgnTrafficOverlay(map)
         runtimeState.ognTrafficOverlay?.initialize()
-        runtimeState.ognTrafficOverlay?.setPinnedTargetKey(latestPinnedTargetKey)
         runtimeState.ognTrafficOverlay?.render(
             targets = latestOgnTargets,
             ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
@@ -177,8 +175,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
     ) {
         val sameEnabled = latestTargetEnabled == enabled
         val sameResolvedTarget = latestResolvedTarget == resolvedTarget
-        val newPinnedTargetKey = resolvedTarget?.canonicalKey?.takeIf { enabled }
-        val pinnedTargetChanged = latestPinnedTargetKey != newPinnedTargetKey
         val sameOwnshipLocation = latestOwnshipLocation == ownshipLocation
         val normalizedOwnshipAltitude = normalizeOwnshipAltitudeForRender(ownshipAltitudeMeters)
         val sameOwnshipAltitude = latestTargetOwnshipAltitudeMeters == normalizedOwnshipAltitude
@@ -191,7 +187,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
             sameOwnshipAltitude &&
             sameAltitudeUnit &&
             sameUnitsPreferences &&
-            !pinnedTargetChanged &&
             !forceImmediate &&
             runtimeState.ognTargetRingOverlay != null &&
             runtimeState.ognTargetLineOverlay != null &&
@@ -205,16 +200,11 @@ class MapOverlayManagerRuntimeOgnDelegate(
         latestTargetOwnshipAltitudeMeters = normalizedOwnshipAltitude
         latestTargetAltitudeUnit = altitudeUnit
         latestTargetUnitsPreferences = unitsPreferences
-        latestPinnedTargetKey = newPinnedTargetKey
-        runtimeState.ognTrafficOverlay?.setPinnedTargetKey(latestPinnedTargetKey)
         scheduleRender(
             state = ognTargetVisualsRenderState,
             forceImmediate = forceImmediate || !enabled || resolvedTarget == null || ownshipLocation == null
         ) {
             renderTargetVisualsNow()
-        }
-        if (pinnedTargetChanged && latestOgnTargets.isNotEmpty()) {
-            invalidateProjection(forceImmediate = true)
         }
     }
 
@@ -262,16 +252,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         applyResolvedIconSizeToLiveOverlays()
     }
 
-    fun invalidateProjection(forceImmediate: Boolean = false) {
-        if (latestOgnTargets.isEmpty()) return
-        syncViewportZoomFromMapIfAvailable()
-        scheduleRender(
-            state = ognTrafficRenderState,
-            forceImmediate = forceImmediate,
-            intervalMsOverride = TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS,
-            renderNow = ::renderTargetsNow
-        )
-    }
+    fun invalidateProjection(forceImmediate: Boolean = false) = Unit
 
     fun findTargetAt(tap: LatLng): String? {
         val ringTarget = runtimeState.ognTargetRingOverlay?.findTargetAt(tap)
@@ -325,7 +306,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
             satelliteContrastIconsEnabled()
         ).also { overlay ->
             ognViewportZoom?.let(overlay::setViewportZoom)
-            overlay.setPinnedTargetKey(latestPinnedTargetKey)
         }
 
     private fun createTargetRingOverlay(map: MapLibreMap): OgnTargetRingOverlayHandle =
@@ -338,7 +318,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
             runtimeState.ognTrafficOverlay = createOgnTrafficOverlay(map)
             runtimeState.ognTrafficOverlay?.initialize()
         }
-        runtimeState.ognTrafficOverlay?.setPinnedTargetKey(latestPinnedTargetKey)
         runtimeState.ognTrafficOverlay?.render(
             targets = latestOgnTargets,
             ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
@@ -417,13 +396,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
         renderedOgnIconSizePx = resolvedSizePx
         runtimeState.ognTrafficOverlay?.setIconSizePx(resolvedSizePx)
         runtimeState.ognTargetRingOverlay?.setIconSizePx(resolvedSizePx)
-    }
-
-    private fun syncViewportZoomFromMapIfAvailable() {
-        val liveZoom = runtimeState.mapLibreMap?.cameraPosition?.zoom?.toFloat()
-            ?.takeIf { it.isFinite() }
-            ?: return
-        setViewportZoom(liveZoom)
     }
 
     private fun resolveRenderedOgnIconSizePx(): Int =

@@ -26,9 +26,7 @@ class OgnTrafficOverlay(
         map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() } ?: OGN_TRAFFIC_CLOSE_ZOOM_THRESHOLD
     private var currentViewportPolicy: OgnTrafficViewportDeclutterPolicy =
         resolveOgnTrafficViewportDeclutterPolicy(currentViewportZoom)
-    private var pinnedTargetKey: String? = null
     private var useSatelliteContrastIcons: Boolean = initialUseSatelliteContrastIcons
-    private val declutterEngine = TrafficScreenDeclutterEngine()
 
     override fun initialize() {
         val style = map.style ?: return
@@ -99,10 +97,6 @@ class OgnTrafficOverlay(
         applyViewportPolicyToStyle()
     }
 
-    override fun setPinnedTargetKey(targetKey: String?) {
-        pinnedTargetKey = targetKey?.trim()?.takeIf { it.isNotEmpty() }
-    }
-
     override fun setUseSatelliteContrastIcons(enabled: Boolean) {
         useSatelliteContrastIcons = enabled
     }
@@ -117,12 +111,6 @@ class OgnTrafficOverlay(
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         val nowMonoMs = TimeBridge.nowMonoMs()
         val visibleBounds = map.projection.visibleRegion?.latLngBounds
-        val declutteredCoordinates = resolveTrafficDeclutteredDisplayCoordinates(
-            map = map,
-            seeds = buildDeclutterSeeds(targets, visibleBounds),
-            declutterEngine = declutterEngine,
-            strengthMultiplier = resolveOgnTrafficScreenDeclutterStrength(currentViewportZoom)
-        )
         renderOgnTrafficFrame(
             source = source,
             nowMonoMs = nowMonoMs,
@@ -135,8 +123,7 @@ class OgnTrafficOverlay(
             maxTargets = MAX_TARGETS,
             staleVisualAfterMs = STALE_VISUAL_AFTER_MS,
             liveAlpha = LIVE_ALPHA,
-            staleAlpha = STALE_ALPHA,
-            displayCoordinatesByKey = declutteredCoordinates
+            staleAlpha = STALE_ALPHA
         )
     }
 
@@ -161,14 +148,12 @@ class OgnTrafficOverlay(
     }
 
     fun clear() {
-        declutterEngine.clear()
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         source.setGeoJson(FeatureCollection.fromFeatures(emptyArray<Feature>()))
     }
 
     override fun cleanup() {
-        declutterEngine.clear()
         val style = map.style ?: return
         try {
             style.removeLayer(BOTTOM_LABEL_LAYER_ID)
@@ -227,27 +212,5 @@ class OgnTrafficOverlay(
             renderedIconSizePx = currentIconSizePx,
             labelsVisible = currentViewportPolicy.labelsVisible
         )
-    }
-
-    private fun buildDeclutterSeeds(
-        targets: List<OgnTrafficTarget>,
-        visibleBounds: org.maplibre.android.geometry.LatLngBounds?
-    ): List<TrafficProjectionSeed> {
-        val seeds = ArrayList<TrafficProjectionSeed>(targets.size.coerceAtMost(MAX_TARGETS))
-        targets.forEachIndexed { index, target ->
-            if (seeds.size >= MAX_TARGETS) return@forEachIndexed
-            if (!isValidOgnCoordinate(target.latitude, target.longitude)) return@forEachIndexed
-            if (!isOgnInVisibleBounds(target.latitude, target.longitude, visibleBounds)) return@forEachIndexed
-            seeds += TrafficProjectionSeed(
-                key = target.canonicalKey,
-                latitude = target.latitude,
-                longitude = target.longitude,
-                collisionWidthPx = currentIconSizePx.toFloat(),
-                collisionHeightPx = currentIconSizePx.toFloat(),
-                priorityRank = index,
-                pinAtOrigin = target.canonicalKey == pinnedTargetKey
-            )
-        }
-        return seeds
     }
 }

@@ -3,6 +3,7 @@ package com.example.xcpro.ogn
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
+import com.example.xcpro.ogn.domain.OgnNetworkAvailabilityPort
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
@@ -56,7 +57,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     ddbRepository: OgnDdbRepository,
     preferencesRepository: OgnTrafficPreferencesRepository,
     clock: Clock,
-    @IoDispatcher dispatcher: CoroutineDispatcher
+    @IoDispatcher dispatcher: CoroutineDispatcher,
+    networkAvailabilityPort: OgnNetworkAvailabilityPort
 ) : OgnTrafficRepository {
 
     private val runtime = OgnTrafficRepositoryRuntime(
@@ -64,7 +66,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
         ddbRepository = ddbRepository,
         preferencesRepository = preferencesRepository,
         clock = clock,
-        dispatcher = dispatcher
+        ioDispatcher = dispatcher,
+        networkAvailabilityPort = networkAvailabilityPort
     )
 
     internal var socketFactory: () -> Socket

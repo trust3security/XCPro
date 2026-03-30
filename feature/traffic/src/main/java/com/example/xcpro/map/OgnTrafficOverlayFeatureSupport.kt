@@ -19,8 +19,7 @@ internal fun buildOgnTrafficOverlayFeatures(
     maxTargets: Int,
     staleVisualAfterMs: Long,
     liveAlpha: Double,
-    staleAlpha: Double,
-    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate> = emptyMap()
+    staleAlpha: Double
 ): List<Feature> {
     val features = ArrayList<Feature>(targets.size.coerceAtMost(maxTargets))
     for (target in targets) {
@@ -28,12 +27,8 @@ internal fun buildOgnTrafficOverlayFeatures(
         if (!isValidOgnCoordinate(target.latitude, target.longitude)) continue
         if (!isOgnInVisibleBounds(target.latitude, target.longitude, visibleBounds)) continue
 
-        val displayCoordinate = displayCoordinatesByKey[target.canonicalKey]
         val feature = Feature.fromGeometry(
-            Point.fromLngLat(
-                displayCoordinate?.longitude ?: target.longitude,
-                displayCoordinate?.latitude ?: target.latitude
-            )
+            Point.fromLngLat(target.longitude, target.latitude)
         )
         feature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
         feature.addStringProperty(PROP_TARGET_ID, target.id)
@@ -91,8 +86,7 @@ internal fun renderOgnTrafficFrame(
     maxTargets: Int,
     staleVisualAfterMs: Long,
     liveAlpha: Double,
-    staleAlpha: Double,
-    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate> = emptyMap()
+    staleAlpha: Double
 ) {
     source.setGeoJson(
         FeatureCollection.fromFeatures(
@@ -107,8 +101,7 @@ internal fun renderOgnTrafficFrame(
                 maxTargets = maxTargets,
                 staleVisualAfterMs = staleVisualAfterMs,
                 liveAlpha = liveAlpha,
-                staleAlpha = staleAlpha,
-                displayCoordinatesByKey = displayCoordinatesByKey
+                staleAlpha = staleAlpha
             ).toTypedArray()
         )
     )

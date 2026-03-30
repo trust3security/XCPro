@@ -2,6 +2,7 @@ package com.example.xcpro.ogn
 
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.core.time.FakeClock
+import com.example.xcpro.ogn.domain.OgnNetworkAvailabilityPort
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -10,6 +11,7 @@ import java.net.SocketAddress
 import java.net.SocketTimeoutException
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -20,7 +22,8 @@ internal fun newRepository(
     autoReceiveRadiusEnabledFlow: MutableStateFlow<Boolean> = MutableStateFlow(false),
     clientCallsignFlow: MutableStateFlow<String?> = MutableStateFlow("XCPTEST01"),
     clock: Clock = FakeClock(monoMs = 0L, wallMs = 0L),
-    ddbRepository: OgnDdbRepository? = null
+    ddbRepository: OgnDdbRepository? = null,
+    networkAvailabilityPort: OgnNetworkAvailabilityPort = FakeOgnNetworkAvailabilityPort()
 ): OgnTrafficRepositoryImpl {
     val resolvedDdbRepository = ddbRepository ?: mock<OgnDdbRepository>().also { repository ->
         runBlocking {
@@ -38,8 +41,23 @@ internal fun newRepository(
         ddbRepository = resolvedDdbRepository,
         preferencesRepository = preferencesRepository,
         clock = clock,
-        dispatcher = dispatcher
+        dispatcher = dispatcher,
+        networkAvailabilityPort = networkAvailabilityPort
     )
+}
+
+internal class FakeOgnNetworkAvailabilityPort(
+    initialOnline: Boolean = true
+) : OgnNetworkAvailabilityPort {
+    private val onlineState = MutableStateFlow(initialOnline)
+
+    override val isOnline: StateFlow<Boolean> = onlineState
+
+    override fun currentOnlineState(): Boolean = onlineState.value
+
+    fun setOnline(isOnline: Boolean) {
+        onlineState.value = isOnline
+    }
 }
 
 internal class ScriptedSocket(

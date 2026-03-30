@@ -3,6 +3,7 @@ package com.example.xcpro.map.ui
 import com.example.xcpro.adsb.ADSB_ERROR_OFFLINE
 import com.example.xcpro.map.AdsbAuthMode
 import com.example.xcpro.map.AdsbNetworkFailureKind
+import com.example.xcpro.map.OgnConnectionIssue
 import com.example.xcpro.map.AdsbTrafficSnapshot
 import com.example.xcpro.map.OgnConnectionState
 import com.example.xcpro.map.OgnTrafficSnapshot
@@ -65,10 +66,14 @@ internal object MapTrafficConnectionIndicatorModelBuilder {
         return when (snapshot.connectionState) {
             OgnConnectionState.CONNECTED -> connectedDot(sourceLabel = OGN_SOURCE_LABEL)
 
-            OgnConnectionState.ERROR -> lostCard(
-                sourceLabel = OGN_SOURCE_LABEL,
-                message = OGN_CONNECTION_LOST_MESSAGE
-            )
+            OgnConnectionState.ERROR -> if (shouldShowOgnSignalLost(snapshot)) {
+                lostCard(
+                    sourceLabel = OGN_SOURCE_LABEL,
+                    message = OGN_CONNECTION_LOST_MESSAGE
+                )
+            } else {
+                failedDot(sourceLabel = OGN_SOURCE_LABEL)
+            }
 
             OgnConnectionState.DISCONNECTED,
             OgnConnectionState.CONNECTING -> null
@@ -143,10 +148,24 @@ internal object MapTrafficConnectionIndicatorModelBuilder {
         return snapshot.lastNetworkFailureKind in TRANSPORT_LOSS_FAILURE_KINDS
     }
 
+    private fun shouldShowOgnSignalLost(
+        snapshot: OgnTrafficSnapshot
+    ): Boolean {
+        val issue = snapshot.connectionIssue ?: return true
+        return issue in OGN_TRANSPORT_LOSS_ISSUES
+    }
+
     private val TRANSPORT_LOSS_FAILURE_KINDS = setOf(
         AdsbNetworkFailureKind.DNS,
         AdsbNetworkFailureKind.TIMEOUT,
         AdsbNetworkFailureKind.CONNECT,
         AdsbNetworkFailureKind.NO_ROUTE
+    )
+
+    private val OGN_TRANSPORT_LOSS_ISSUES = setOf(
+        OgnConnectionIssue.UNEXPECTED_STREAM_END,
+        OgnConnectionIssue.OFFLINE_WAIT,
+        OgnConnectionIssue.STALL_TIMEOUT,
+        OgnConnectionIssue.TRANSPORT_ERROR
     )
 }

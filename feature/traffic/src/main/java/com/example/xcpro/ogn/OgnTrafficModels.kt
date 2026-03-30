@@ -16,10 +16,19 @@ enum class OgnConnectionState {
     ERROR
 }
 
+enum class OgnConnectionIssue {
+    UNEXPECTED_STREAM_END,
+    OFFLINE_WAIT,
+    LOGIN_UNVERIFIED,
+    STALL_TIMEOUT,
+    TRANSPORT_ERROR
+}
+
 data class OgnTrafficSnapshot(
     val targets: List<OgnTrafficTarget>,
     val suppressedTargetIds: Set<String> = emptySet(),
     val connectionState: OgnConnectionState,
+    val connectionIssue: OgnConnectionIssue? = null,
     val lastError: String?,
     val subscriptionCenterLat: Double?,
     val subscriptionCenterLon: Double?,
@@ -27,6 +36,7 @@ data class OgnTrafficSnapshot(
     val ddbCacheAgeMs: Long?,
     val reconnectBackoffMs: Long?,
     val lastReconnectWallMs: Long?,
+    val networkOnline: Boolean = true,
     val activeSubscriptionCenterLat: Double? = null,
     val activeSubscriptionCenterLon: Double? = null,
     val droppedOutOfOrderSourceFrames: Long = 0L,

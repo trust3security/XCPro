@@ -647,6 +647,14 @@ OGN lifecycle/position semantics:
   - Connection state remains `CONNECTING` until server `logresp verified` or
     first valid traffic frame.
   - If no center is available yet, repository waits before opening the stream.
+  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
+    plus `feature/traffic/src/main/java/com/example/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt`
+    add the explicit OGN offline-wait seam; OGN pauses reconnect attempts while
+    offline and resumes when connectivity returns instead of blind socket churn.
+  - OGN runtime ownership is split intentionally:
+    blocking socket reads and DDB refresh work run on the injected IO lane, while
+    authoritative OGN state mutation and `OgnTrafficSnapshot` publication run on
+    a dedicated writer lane inside `OgnTrafficRepositoryRuntime`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - OGN traffic overlay renders `emptyList()` when overlay preference is disabled.
   - Thermal overlay renders `emptyList()` unless `ognOverlayEnabled && showThermalsEnabled`.

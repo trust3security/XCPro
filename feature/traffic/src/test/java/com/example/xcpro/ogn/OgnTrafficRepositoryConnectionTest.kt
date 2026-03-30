@@ -78,6 +78,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertNotNull(secondLogin)
         assertTrue(firstLogin?.contains("filter r/0.00000/0.00000/150") == true)
         assertTrue(secondLogin?.contains("filter r/0.50000/0.00000/150") == true)
+        assertTrue(repository.snapshot.value.connectionIssue == null)
 
         repository.stop()
         runCurrent()
@@ -283,7 +284,8 @@ class OgnTrafficRepositoryConnectionTest {
 
         val snapshot = repository.snapshot.value
         assertTrue(snapshot.connectionState == OgnConnectionState.ERROR)
-        assertTrue(snapshot.lastError == "IllegalStateException")
+        assertTrue(snapshot.connectionIssue == OgnConnectionIssue.STALL_TIMEOUT)
+        assertTrue(snapshot.lastError == "StreamStalled")
         assertTrue(socket.writtenLines().any { line -> line == "#keepalive" })
 
         repository.stop()

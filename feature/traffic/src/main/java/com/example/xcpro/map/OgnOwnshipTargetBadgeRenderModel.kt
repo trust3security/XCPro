@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.DistanceM
+import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 
@@ -10,8 +11,7 @@ internal data class OgnOwnshipTargetBadgeRenderRequest(
     val target: OgnTrafficTarget?,
     val ownshipAltitudeMeters: Double?,
     val altitudeUnit: AltitudeUnit,
-    val unitsPreferences: UnitsPreferences,
-    val targetOnScreen: Boolean
+    val unitsPreferences: UnitsPreferences
 )
 
 internal data class OgnOwnshipTargetBadgeRenderModel(
@@ -21,13 +21,13 @@ internal data class OgnOwnshipTargetBadgeRenderModel(
 
 internal object OgnOwnshipTargetBadgeRenderModelBuilder {
     const val UNKNOWN_DISTANCE_TEXT = "--"
+    const val UNKNOWN_SPEED_TEXT = "--"
     const val ABOVE_OR_LEVEL_TEXT_COLOR_HEX = "#0B2E59"
     const val BELOW_TEXT_COLOR_HEX = "#C62828"
 
     fun build(request: OgnOwnshipTargetBadgeRenderRequest): OgnOwnshipTargetBadgeRenderModel? {
         if (!request.enabled) return null
         if (request.target == null) return null
-        if (request.targetOnScreen) return null
 
         val deltaMeters = relativeAltitudeDeltaMeters(
             targetAltitudeMeters = request.target.altitudeMeters,
@@ -46,8 +46,17 @@ internal object OgnOwnshipTargetBadgeRenderModelBuilder {
             deltaMeters = deltaMeters,
             altitudeUnit = request.altitudeUnit
         )
+        val speedText = request.target.groundSpeedMps
+            ?.takeIf { it.isFinite() && it >= 0.0 }
+            ?.let {
+                UnitsFormatter.speed(
+                    speed = SpeedMs(it),
+                    preferences = request.unitsPreferences
+                ).text
+            }
+            ?: UNKNOWN_SPEED_TEXT
         return OgnOwnshipTargetBadgeRenderModel(
-            labelText = "$distanceText\n$deltaText",
+            labelText = "$distanceText\n$deltaText | $speedText",
             textColorHex = resolveTextColorHex(deltaMeters)
         )
     }
