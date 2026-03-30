@@ -8,6 +8,11 @@ All code must follow **CODING_RULES.md** and must not violate **ARCHITECTURE.md*
 
 ## 1) Required Reading
 
+If you are not sure whether the change is trivial, start with
+`PLAN_MODE_START_HERE.md`.
+It explains when to use plan mode, what "non-trivial" means, and what minimum
+plan output is required before coding.
+
 ### Map Display (Quick Notes)
 - Map position must come from `FlightDataRepository` (SSOT); do not read sensor flows in ViewModels.
 - Display smoothing is UI-only; do not write smoothed values back into repositories.
@@ -16,8 +21,10 @@ All code must follow **CODING_RULES.md** and must not violate **ARCHITECTURE.md*
 
 
 Read these in order before making changes:
+- `PLAN_MODE_START_HERE.md` - beginner planning entrypoint for non-trivial work
 - `ARCHITECTURE.md` - system invariants (data flow, SSOT, threading, DI, lifecycle rules)
 - `CODING_RULES.md` - day-to-day coding constraints that enforce the architecture
+- `PIPELINE_INDEX.md` - quick routing into the authoritative pipeline doc
 - `PIPELINE.md` - end-to-end data flow (see `PIPELINE.svg`)
 - If touching map interaction or overlay runtime behavior, also read:
   - `../MAPSCREEN/01_MAPSCREEN_PRODUCTION_GRADE_PHASED_IP_2026-03-05.md`
@@ -27,7 +34,7 @@ Read these in order before making changes:
   - `../LEVO/levo.md`
   - `../LEVO/levo-replay.md`
 - `CONTRIBUTING.md` - workflow, branching, PR rules, testing expectations, and AI usage
-AI/agents: read the first three files in order before edits; include Levo docs when applicable.
+AI/agents: read the planning entry doc plus the architecture files above in order before edits; include Levo docs when applicable.
 
 ---
 
@@ -231,7 +238,7 @@ Unit-test hang protection policy:
 - Add top-of-file header describing role and invariants.
 - Use `// AI-NOTE:` before intent-critical rationale so future AI tools preserve design.
 - Do not duplicate architecture rules in multiple docs with different wording; `ARCHITECTURE.md` owns invariants and `CODING_RULES.md` owns implementation defaults.
-- Use `CHANGE_PLAN_TEMPLATE.md` for non-trivial work and `ADR_TEMPLATE.md` for non-trivial architecture decisions.
+- Use `PLAN_MODE_START_HERE.md` to decide whether work is non-trivial, then use `CHANGE_PLAN_TEMPLATE.md` for non-trivial work and `ADR_TEMPLATE.md` for non-trivial architecture decisions.
 - Keep global docs durable; task-specific "active plan" pointers belong in the change plan, not the global contract docs.
 
 Example:
@@ -278,7 +285,7 @@ Example:
 
 ## 13) New Contributor Quickstart
 1. Fork/clone, create branch `feat/<scope>-<short>`.
-2. Implement per **ARCHITECTURE.md** + **CODING_RULES.md**.
+2. For non-trivial work, start with `PLAN_MODE_START_HERE.md` and `CHANGE_PLAN_TEMPLATE.md`; then implement per **ARCHITECTURE.md** + **CODING_RULES.md**.
 3. Add tests + `AI-NOTE` comments.
 4. Run the configured quality gates plus `testDebugUnitTest`, and run `:app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"` when relevant.
 5. Run full `connectedDebugAndroidTest --no-parallel` before release/merge.

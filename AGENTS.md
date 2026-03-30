@@ -6,16 +6,24 @@ This is the canonical instruction entrypoint for coding agents in this repo.
 It defines what must be read first, what must never be violated, and what
 checks are required before considering work complete.
 
+Planning entrypoint for non-trivial work:
+
+- `docs/ARCHITECTURE/PLAN_MODE_START_HERE.md`
+
+Use that guide to decide whether a change needs planning before coding.
+It does not replace the mandatory read order below.
+
 ## Mandatory Read Order
 
 Read these files in order before making changes:
 
 1. `docs/ARCHITECTURE/ARCHITECTURE.md`
 2. `docs/ARCHITECTURE/CODING_RULES.md`
-3. `docs/ARCHITECTURE/PIPELINE.md`
-4. `docs/ARCHITECTURE/CODEBASE_CONTEXT_AND_INTENT.md`
-5. `docs/ARCHITECTURE/CONTRIBUTING.md`
-6. `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md`
+3. `docs/ARCHITECTURE/PIPELINE_INDEX.md`
+4. `docs/ARCHITECTURE/PIPELINE.md`
+5. `docs/ARCHITECTURE/CODEBASE_CONTEXT_AND_INTENT.md`
+6. `docs/ARCHITECTURE/CONTRIBUTING.md`
+7. `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md`
 
 If touching variometer/replay pipeline behavior, also read:
 
@@ -93,6 +101,7 @@ Implementation expectations:
 
 For autonomous feature/refactor work, start from:
 
+- `docs/ARCHITECTURE/PLAN_MODE_START_HERE.md`
 - `docs/ARCHITECTURE/AGENT.md`
 
 This ensures phased execution, acceptance criteria, required checks, and a mandatory quality rescore.
@@ -105,6 +114,7 @@ This ensures phased execution, acceptance criteria, required checks, and a manda
 - If ownership boundaries, module APIs, or long-lived architecture tradeoffs
   change, add or update an ADR using `docs/ARCHITECTURE/ADR_TEMPLATE.md`.
 - For non-trivial feature/refactor work, start from
+  `docs/ARCHITECTURE/PLAN_MODE_START_HERE.md`, then
   `docs/ARCHITECTURE/CHANGE_PLAN_TEMPLATE.md` before implementation.
 - Do not rely on unstated assumptions; document intent in-repo.
 
