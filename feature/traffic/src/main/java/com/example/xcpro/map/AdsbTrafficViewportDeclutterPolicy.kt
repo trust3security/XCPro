@@ -64,9 +64,17 @@ internal fun shouldShowAllAdsbLabels(
     }
 }
 
+internal fun resolveAdsbTrafficScreenDeclutterStrength(
+    zoomLevel: Float
+): Float = resolveTrafficDeclutterStrengthMultiplier(
+    zoomLevel = zoomLevel,
+    fullStrengthAtOrBelowZoom = ADSB_TRAFFIC_WIDE_ZOOM_THRESHOLD,
+    zeroStrengthAtOrAboveZoom = ADSB_TRAFFIC_LABELS_MIN_ZOOM
+)
+
 private const val ADSB_TRAFFIC_DEFAULT_VIEWPORT_ZOOM = 10f
 private const val ADSB_TRAFFIC_LABELS_VIEWPORT_RANGE_METERS = 30_000.0
 private const val ADSB_TRAFFIC_PRIORITY_LABEL_DISTANCE_METERS = 10_000.0
-private const val ADSB_TRAFFIC_LABELS_MIN_ZOOM = 10.5f
+internal const val ADSB_TRAFFIC_LABELS_MIN_ZOOM = 10.5f
 private const val ADSB_TRAFFIC_MID_ZOOM_THRESHOLD = 9.25f
-private const val ADSB_TRAFFIC_WIDE_ZOOM_THRESHOLD = 8.25f
+internal const val ADSB_TRAFFIC_WIDE_ZOOM_THRESHOLD = 8.25f

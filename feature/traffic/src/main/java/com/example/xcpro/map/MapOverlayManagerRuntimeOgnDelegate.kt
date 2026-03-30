@@ -252,6 +252,8 @@ class MapOverlayManagerRuntimeOgnDelegate(
         applyResolvedIconSizeToLiveOverlays()
     }
 
+    fun invalidateProjection(forceImmediate: Boolean = false) = Unit
+
     fun findTargetAt(tap: LatLng): String? {
         val ringTarget = runtimeState.ognTargetRingOverlay?.findTargetAt(tap)
         if (!ringTarget.isNullOrBlank()) return ringTarget
@@ -405,10 +407,11 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private fun scheduleRender(
         state: OgnRenderThrottleState,
         forceImmediate: Boolean,
+        intervalMsOverride: Long? = null,
         renderNow: () -> Unit
     ) {
         val map = runtimeState.mapLibreMap ?: return
-        val intervalMs = resolveInteractionAwareIntervalMs(
+        val intervalMs = intervalMsOverride ?: resolveInteractionAwareIntervalMs(
             baseIntervalMs = ognDisplayUpdateMode.renderIntervalMs,
             interactionActive = mapInteractionActive,
             interactionFloorMs = OGN_INTERACTION_MIN_RENDER_INTERVAL_MS
@@ -417,6 +420,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         if (forceImmediate || intervalMs <= 0L) {
             state.pendingJob?.cancel()
             state.pendingJob = null
+            state.pendingDueMonoMs = Long.MAX_VALUE
             renderNow()
             state.lastRenderMonoMs = nowMonoMs()
             return
@@ -430,16 +434,19 @@ class MapOverlayManagerRuntimeOgnDelegate(
             return
         }
 
-        if (state.pendingJob != null) return
-
         val remainingMs = (intervalMs - elapsedMs).coerceAtLeast(0L)
+        val scheduledDueMonoMs = nowMonoMs + remainingMs
+        if (state.pendingJob != null && state.pendingDueMonoMs <= scheduledDueMonoMs) return
+        state.pendingJob?.cancel()
         state.pendingJob = coroutineScope.launch {
             delay(remainingMs)
             state.pendingJob = null
+            state.pendingDueMonoMs = Long.MAX_VALUE
             if (runtimeState.mapLibreMap != map || runtimeState.mapLibreMap == null) return@launch
             renderNow()
             state.lastRenderMonoMs = nowMonoMs()
         }
+        state.pendingDueMonoMs = scheduledDueMonoMs
     }
 
     private fun flushDeferredRenders() {
@@ -454,6 +461,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             val pending = state.pendingJob ?: return@forEach
             pending.cancel()
             state.pendingJob = null
+            state.pendingDueMonoMs = Long.MAX_VALUE
             renderNow()
             state.lastRenderMonoMs = nowMonoMs
         }
@@ -462,12 +470,16 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private fun cancelPendingRenders() {
         ognTrafficRenderState.pendingJob?.cancel()
         ognTrafficRenderState.pendingJob = null
+        ognTrafficRenderState.pendingDueMonoMs = Long.MAX_VALUE
         ognTargetVisualsRenderState.pendingJob?.cancel()
         ognTargetVisualsRenderState.pendingJob = null
+        ognTargetVisualsRenderState.pendingDueMonoMs = Long.MAX_VALUE
         ognThermalRenderState.pendingJob?.cancel()
         ognThermalRenderState.pendingJob = null
+        ognThermalRenderState.pendingDueMonoMs = Long.MAX_VALUE
         ognTrailRenderState.pendingJob?.cancel()
         ognTrailRenderState.pendingJob = null
+        ognTrailRenderState.pendingDueMonoMs = Long.MAX_VALUE
     }
 
     private companion object {

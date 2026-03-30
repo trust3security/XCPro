@@ -59,10 +59,22 @@ fun OgnDebugPanel(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
+                text = "Network: ${if (snapshot.networkOnline) "ONLINE" else "OFFLINE"}",
+                color = Color(0xFFD1D5DB),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
                 text = "Drops (order/motion): ${snapshot.droppedOutOfOrderSourceFrames}/${snapshot.droppedImplausibleMotionFrames}",
                 color = Color(0xFFD1D5DB),
                 style = MaterialTheme.typography.bodySmall
             )
+            snapshot.connectionIssue?.let { issue ->
+                Text(
+                    text = "Issue: ${issue.toDebugLabel()}",
+                    color = Color(0xFFFBBF24),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             snapshot.lastError?.takeIf { it.isNotBlank() }?.let { error ->
                 Text(
                     text = "Error: $error",

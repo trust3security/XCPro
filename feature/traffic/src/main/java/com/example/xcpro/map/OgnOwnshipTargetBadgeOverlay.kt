@@ -4,7 +4,6 @@ import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.logging.AppLogger
 import kotlin.math.abs
-import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
@@ -61,18 +60,13 @@ class OgnOwnshipTargetBadgeOverlay(
             clear()
             return
         }
-        val visibleBounds = map.projection.visibleRegion?.latLngBounds ?: run {
-            clear()
-            return
-        }
         val renderModel = OgnOwnshipTargetBadgeRenderModelBuilder.build(
             OgnOwnshipTargetBadgeRenderRequest(
                 enabled = enabled,
                 target = target,
                 ownshipAltitudeMeters = ownshipAltitudeMeters,
                 altitudeUnit = altitudeUnit,
-                unitsPreferences = unitsPreferences,
-                targetOnScreen = visibleBounds.contains(LatLng(target.latitude, target.longitude))
+                unitsPreferences = unitsPreferences
             )
         ) ?: run {
             clear()
@@ -155,10 +149,10 @@ class OgnOwnshipTargetBadgeOverlay(
         private const val SOURCE_ID = "ogn-ownship-target-badge-source"
         private const val LAYER_ID = "ogn-ownship-target-badge-layer"
         private const val PROP_LABEL = "label"
-        private const val TEXT_SIZE_SP = 12f
+        private const val TEXT_SIZE_SP = 14.5f
         private const val TEXT_HALO_COLOR_HEX = "#FFFFFF"
-        private const val TEXT_HALO_WIDTH_DP = 1.2f
-        private const val TEXT_OFFSET_X_EM = 6.0f
-        private const val TEXT_OFFSET_Y_EM = 0.2f
+        private const val TEXT_HALO_WIDTH_DP = 1.8f
+        private const val TEXT_OFFSET_X_EM = 5.0f
+        private const val TEXT_OFFSET_Y_EM = 0.12f
     }
 }

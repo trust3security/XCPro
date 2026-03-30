@@ -10,11 +10,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.maplibre.android.maps.MapLibreMap
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -126,6 +129,36 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
     }
 
     @Test
+    fun liveTargetRing_resizesWhenViewportZoomChangesWithoutTrafficOverlay() = runTest {
+        val targetRingOverlay: OgnTargetRingOverlayHandle = mock()
+        val fixture = createFixture(
+            scope = this,
+            targetRingOverlays = listOf(targetRingOverlay)
+        )
+
+        fixture.delegate.setViewportZoom(8.6f)
+        fixture.delegate.updateTargetVisuals(
+            enabled = true,
+            resolvedTarget = target("T2"),
+            ownshipLocation = OverlayCoordinate(-35.2, 149.2),
+            ownshipAltitudeMeters = 900.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences(),
+            forceImmediate = true
+        )
+        runCurrent()
+        reset(targetRingOverlay)
+
+        fixture.delegate.setViewportZoom(11.0f)
+
+        val expectedRenderedSizePx = resolveOgnTrafficViewportSizing(
+            baseIconSizePx = OGN_ICON_SIZE_DEFAULT_PX,
+            zoomLevel = 11.0f
+        ).renderedIconSizePx
+        verify(targetRingOverlay).setIconSizePx(expectedRenderedSizePx)
+    }
+
+    @Test
     fun cachedViewportZoom_isReusedWhenOverlaysAreRecreated() = runTest {
         val firstTrafficOverlay: OgnTrafficOverlayHandle = mock()
         val secondTrafficOverlay: OgnTrafficOverlayHandle = mock()
@@ -160,10 +193,64 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         verify(secondTargetRingOverlay, times(1)).initialize()
     }
 
+    @Test
+    fun selectedTargetChange_doesNotRerenderTrafficOverlay() = runTest {
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
+        val fixture = createFixture(
+            scope = this,
+            trafficOverlays = listOf(trafficOverlay)
+        )
+
+        fixture.delegate.updateTrafficTargets(
+            targets = listOf(target("T1")),
+            ownshipAltitudeMeters = 1_200.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+        reset(trafficOverlay)
+
+        fixture.delegate.updateTargetVisuals(
+            enabled = true,
+            resolvedTarget = target("T1"),
+            ownshipLocation = OverlayCoordinate(-35.2, 149.2),
+            ownshipAltitudeMeters = 900.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+
+        verifyNoInteractions(trafficOverlay)
+    }
+
+    @Test
+    fun projectionInvalidation_doesNotRerenderTrafficForOgn() = runTest {
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
+        val fixture = createFixture(
+            scope = this,
+            trafficOverlays = listOf(trafficOverlay)
+        )
+
+        fixture.delegate.updateTrafficTargets(
+            targets = listOf(target("T1")),
+            ownshipAltitudeMeters = 1_200.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+        reset(trafficOverlay)
+
+        fixture.delegate.invalidateProjection()
+        runCurrent()
+
+        verifyNoInteractions(trafficOverlay)
+    }
+
     private fun createFixture(
         scope: TestScope,
         trafficOverlays: List<OgnTrafficOverlayHandle> = listOf(mock()),
-        targetRingOverlays: List<OgnTargetRingOverlayHandle> = listOf(mock())
+        targetRingOverlays: List<OgnTargetRingOverlayHandle> = listOf(mock()),
+        nowMonoMsProvider: () -> Long = { 0L }
     ): Fixture {
         val runtimeState = TestTrafficOverlayRuntimeState(map = mock())
         val createdTrafficOverlayIconSizes = mutableListOf<Int>()
@@ -189,7 +276,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
             bringTrafficOverlaysToFront = {},
             satelliteContrastIconsEnabled = { false },
             normalizeOwnshipAltitudeForRender = { it },
-            nowMonoMs = { 0L }
+            nowMonoMs = nowMonoMsProvider
         )
         return Fixture(
             runtimeState = runtimeState,
@@ -209,7 +296,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         trackDegrees = 90.0,
         groundSpeedMps = 35.0,
         verticalSpeedMps = 1.2,
-        deviceIdHex = "ABC123",
+        deviceIdHex = id,
         signalDb = -12.0,
         displayLabel = id,
         identity = null,
@@ -218,8 +305,8 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         timestampMillis = 1_000L,
         lastSeenMillis = 1_000L,
         addressType = OgnAddressType.FLARM,
-        addressHex = "ABC123",
-        canonicalKey = "FLARM:ABC123"
+        addressHex = id,
+        canonicalKey = "FLARM:$id"
     )
 
     private data class Fixture(
@@ -230,7 +317,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
     )
 
     private class TestTrafficOverlayRuntimeState(
-        val map: MapLibreMap
+        var map: MapLibreMap
     ) : TrafficOverlayRuntimeState {
         override val mapLibreMap: MapLibreMap?
             get() = map

@@ -287,10 +287,13 @@ internal fun OgnTrafficRepositoryRuntime.publishSnapshot() {
         } else {
             null
         }
+        val resolvedNetworkOnline = currentNetworkOnlineState()
+        networkOnline = resolvedNetworkOnline
         _snapshot.value = OgnTrafficSnapshot(
             targets = _targets.value,
             suppressedTargetIds = _suppressedTargetIds.value,
             connectionState = connectionState,
+            connectionIssue = connectionIssue,
             lastError = lastError,
             subscriptionCenterLat = activeCenter?.latitude,
             subscriptionCenterLon = activeCenter?.longitude,
@@ -298,6 +301,7 @@ internal fun OgnTrafficRepositoryRuntime.publishSnapshot() {
             ddbCacheAgeMs = ddbAge,
             reconnectBackoffMs = reconnectBackoffMs,
             lastReconnectWallMs = lastReconnectWallMs,
+            networkOnline = resolvedNetworkOnline,
             activeSubscriptionCenterLat = activeSubscriptionCenter?.latitude,
             activeSubscriptionCenterLon = activeSubscriptionCenter?.longitude,
             droppedOutOfOrderSourceFrames = droppedOutOfOrderSourceFrames,
@@ -305,9 +309,12 @@ internal fun OgnTrafficRepositoryRuntime.publishSnapshot() {
         )
     }
 
-internal fun OgnTrafficRepositoryRuntime.requestDdbRefreshIfDue(nowMonoMs: Long, nowWallMs: Long) {
-        val shouldLaunch = synchronized(ddbRefreshLock) {
-            if (ddbRefreshInFlight) return@synchronized false
+internal suspend fun OgnTrafficRepositoryRuntime.requestDdbRefreshIfDue(
+        nowMonoMs: Long,
+        nowWallMs: Long
+    ) {
+        val shouldLaunch = runOnWriter {
+            if (ddbRefreshInFlight) return@runOnWriter false
             val hasPendingFailure = ddbRefreshNextFailureRetryMonoMs != Long.MIN_VALUE
             val due = if (hasPendingFailure) {
                 nowMonoMs >= ddbRefreshNextFailureRetryMonoMs
@@ -315,27 +322,27 @@ internal fun OgnTrafficRepositoryRuntime.requestDdbRefreshIfDue(nowMonoMs: Long,
                 lastDdbRefreshSuccessWallMs == Long.MIN_VALUE ||
                     nowWallMs - lastDdbRefreshSuccessWallMs >= DDB_REFRESH_CHECK_INTERVAL_MS
             }
-            if (!due) return@synchronized false
+            if (!due) return@runOnWriter false
             ddbRefreshInFlight = true
             true
         }
         if (!shouldLaunch) return
 
-        scope.launch {
+        ioScope.launch {
             try {
                 when (ddbRepository.refreshIfNeeded()) {
-                    OgnDdbRefreshResult.Updated -> synchronized(ddbRefreshLock) {
+                    OgnDdbRefreshResult.Updated -> runOnWriter {
                         lastDdbRefreshSuccessWallMs = clock.nowWallMs()
                         ddbRefreshNextFailureRetryMonoMs = Long.MIN_VALUE
                         ddbRefreshFailureRetryDelayMs = DDB_REFRESH_FAILURE_RETRY_START_MS
                     }
 
-                    OgnDdbRefreshResult.NotDue -> synchronized(ddbRefreshLock) {
+                    OgnDdbRefreshResult.NotDue -> runOnWriter {
                         // Keep repository-side cadence aligned with DDB's internal "not due" decision
                         // so we do not relaunch refresh attempts every active-session check tick.
-                        val nowWallMs = clock.nowWallMs()
-                        if (nowWallMs > lastDdbRefreshSuccessWallMs) {
-                            lastDdbRefreshSuccessWallMs = nowWallMs
+                        val refreshedWallMs = clock.nowWallMs()
+                        if (refreshedWallMs > lastDdbRefreshSuccessWallMs) {
+                            lastDdbRefreshSuccessWallMs = refreshedWallMs
                         }
                         ddbRefreshNextFailureRetryMonoMs = Long.MIN_VALUE
                         ddbRefreshFailureRetryDelayMs = DDB_REFRESH_FAILURE_RETRY_START_MS
@@ -345,7 +352,7 @@ internal fun OgnTrafficRepositoryRuntime.requestDdbRefreshIfDue(nowMonoMs: Long,
                 throw e
             } catch (throwable: Throwable) {
                 AppLogger.w(TAG, "DDB refresh failed: ${throwable.message}")
-                synchronized(ddbRefreshLock) {
+                runOnWriter {
                     val failureNowMonoMs = clock.nowMonoMs()
                     val retryDelayMs = ddbRefreshFailureRetryDelayMs
                     ddbRefreshNextFailureRetryMonoMs = failureNowMonoMs + retryDelayMs
@@ -353,7 +360,7 @@ internal fun OgnTrafficRepositoryRuntime.requestDdbRefreshIfDue(nowMonoMs: Long,
                         .coerceAtMost(DDB_REFRESH_FAILURE_RETRY_MAX_MS)
                 }
             } finally {
-                synchronized(ddbRefreshLock) {
+                runOnWriter {
                     ddbRefreshInFlight = false
                 }
             }
@@ -383,8 +390,21 @@ internal fun OgnTrafficRepositoryRuntime.generateAprsPasscode(callsign: String):
 
 internal fun OgnTrafficRepositoryRuntime.formatCoord(value: Double): String = String.format(Locale.US, "%.5f", value)
 
+internal fun OgnTrafficRepositoryRuntime.deriveConnectionIssue(
+        throwable: Throwable
+    ): OgnConnectionIssue = when (throwable) {
+        is OgnUnexpectedStreamEndException -> OgnConnectionIssue.UNEXPECTED_STREAM_END
+        is OgnLoginUnverifiedException -> OgnConnectionIssue.LOGIN_UNVERIFIED
+        is OgnStreamStalledException -> OgnConnectionIssue.STALL_TIMEOUT
+        else -> OgnConnectionIssue.TRANSPORT_ERROR
+    }
+
 internal fun OgnTrafficRepositoryRuntime.sanitizeError(throwable: Throwable): String {
-        val type = throwable::class.java.simpleName.ifBlank { "Error" }
-        return type.take(80)
+        return when (throwable) {
+            is OgnUnexpectedStreamEndException -> "UnexpectedStreamEnd"
+            is OgnLoginUnverifiedException -> "LoginUnverified"
+            is OgnStreamStalledException -> "StreamStalled"
+            else -> throwable::class.java.simpleName.ifBlank { "Error" }.take(80)
+        }
     }
 

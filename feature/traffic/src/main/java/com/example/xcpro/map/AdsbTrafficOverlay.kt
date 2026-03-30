@@ -29,6 +29,7 @@ class AdsbTrafficOverlay(
     private var currentOwnshipAltitudeMeters: Double? = null
     private var currentUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var currentIconStyleIdOverrides: Map<String, String> = emptyMap()
+    private val declutterEngine = TrafficScreenDeclutterEngine()
     private val motionSmoother = AdsbDisplayMotionSmoother()
     private val frameLoopController = AdsbOverlayFrameLoopController(
         minRenderIntervalMs = ADSB_TRAFFIC_ANIMATION_FRAME_INTERVAL_MS
@@ -212,6 +213,7 @@ class AdsbTrafficOverlay(
 
     fun clear() {
         stopFrameLoop()
+        declutterEngine.clear()
         motionSmoother.clear()
         frameLoopController.resetRenderClock()
         currentOwnshipAltitudeMeters = null
@@ -224,6 +226,7 @@ class AdsbTrafficOverlay(
 
     override fun cleanup() {
         stopFrameLoop()
+        declutterEngine.clear()
         motionSmoother.clear()
         frameLoopController.resetRenderClock()
         currentOwnshipAltitudeMeters = null
@@ -306,6 +309,12 @@ class AdsbTrafficOverlay(
     ) {
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
+        val declutteredCoordinates = resolveTrafficDeclutteredDisplayCoordinates(
+            map = map,
+            seeds = buildDeclutterSeeds(frameSnapshot.targets),
+            declutterEngine = declutterEngine,
+            strengthMultiplier = resolveAdsbTrafficScreenDeclutterStrength(currentViewportZoom)
+        )
         renderAdsbTrafficFrame(
             source = source,
             nowMonoMs = nowMonoMs,
@@ -313,6 +322,7 @@ class AdsbTrafficOverlay(
             ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
             unitsPreferences = currentUnitsPreferences,
             iconStyleIdOverrides = currentIconStyleIdOverrides,
+            displayCoordinatesByKey = declutteredCoordinates,
             emergencyFlashEnabled = emergencyFlashEnabled,
             maxTargets = currentViewportPolicy.maxTargets
         )
@@ -334,6 +344,25 @@ class AdsbTrafficOverlay(
         frameSnapshot = frameSnapshot,
         emergencyFlashEnabled = emergencyFlashEnabled
     )
+
+    private fun buildDeclutterSeeds(
+        targets: List<AdsbTrafficUiModel>
+    ): List<TrafficProjectionSeed> {
+        val renderTargets = targets.take(currentViewportPolicy.maxTargets)
+        val collisionSizePx = currentIconSizePx.toFloat() *
+            currentViewportPolicy.iconScaleMultiplier *
+            ADSB_TRAFFIC_OUTLINE_ICON_SCALE_MULTIPLIER
+        return renderTargets.mapIndexed { index, target ->
+            TrafficProjectionSeed(
+                key = target.id.raw,
+                latitude = target.lat,
+                longitude = target.lon,
+                collisionWidthPx = collisionSizePx,
+                collisionHeightPx = collisionSizePx,
+                priorityRank = index
+            )
+        }
+    }
 
     private companion object {
         private const val SOURCE_ID = ADSB_TRAFFIC_SOURCE_ID

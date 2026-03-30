@@ -647,6 +647,14 @@ OGN lifecycle/position semantics:
   - Connection state remains `CONNECTING` until server `logresp verified` or
     first valid traffic frame.
   - If no center is available yet, repository waits before opening the stream.
+  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
+    plus `feature/traffic/src/main/java/com/example/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt`
+    add the explicit OGN offline-wait seam; OGN pauses reconnect attempts while
+    offline and resumes when connectivity returns instead of blind socket churn.
+  - OGN runtime ownership is split intentionally:
+    blocking socket reads and DDB refresh work run on the injected IO lane, while
+    authoritative OGN state mutation and `OgnTrafficSnapshot` publication run on
+    a dedicated writer lane inside `OgnTrafficRepositoryRuntime`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - OGN traffic overlay renders `emptyList()` when overlay preference is disabled.
   - Thermal overlay renders `emptyList()` unless `ognOverlayEnabled && showThermalsEnabled`.
@@ -1130,6 +1138,10 @@ Task map rendering bridge (2026-02-12):
 - `MapInitializer.setupInitialPosition(...)` and camera-idle callbacks are the startup/runtime viewport-zoom producers for traffic declutter:
   - ADS-B receives viewport zoom through `setAdsbViewportZoom(...)`.
   - OGN receives viewport zoom through `setOgnViewportZoom(...)`, and OGN effective icon size remains delegate-owned render-only state.
+- `MapInitializer.setupInitialPosition(...)`, camera-move callbacks, and camera-idle callbacks are also the viewport-projection invalidation producers for display-only traffic declutter:
+  - `MapOverlayManagerRuntime.invalidateTrafficProjection(...)` fans out to the OGN and ADS-B runtime delegates.
+  - Those delegates recompute screen-space display offsets locally in `feature:traffic`; authoritative aircraft lat/lon stay unchanged in repositories/ViewModels.
+  - Projection-only rerenders reuse the interaction-aware throttle path so crowded traffic stays aligned during pan/rotate without turning repositories or ViewModels into display-state owners.
 - `MapInitializer.setupOverlays(...)` and camera-idle callbacks also push the blue ownship overlay viewport snapshot:
   - `BlueLocationOverlay` receives `MapCameraViewportMetrics` plus the current map `distancePerPixel` snapshot.
   - `BlueLocationOverlay` remains the sole owner of visible-radius band resolution and rendered ownship icon size.

@@ -29,6 +29,7 @@ import com.example.xcpro.ogn.OGN_ICON_SIZE_DEFAULT_PX as ognIconSizeDefaultPx
 import com.example.xcpro.ogn.OGN_ICON_SIZE_MAX_PX as ognIconSizeMaxPx
 import com.example.xcpro.ogn.OGN_ICON_SIZE_MIN_PX as ognIconSizeMinPx
 import com.example.xcpro.ogn.OgnAircraftIcon
+import com.example.xcpro.ogn.OgnConnectionIssue
 import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnGliderTrailSegment
@@ -87,6 +88,7 @@ typealias AdsbAircraftIcon = com.example.xcpro.adsb.ui.AdsbAircraftIcon
 
 typealias OgnAddressType = com.example.xcpro.ogn.OgnAddressType
 typealias OgnAircraftIcon = com.example.xcpro.ogn.OgnAircraftIcon
+typealias OgnConnectionIssue = com.example.xcpro.ogn.OgnConnectionIssue
 typealias OgnConnectionState = com.example.xcpro.ogn.OgnConnectionState
 typealias OgnDisplayUpdateMode = com.example.xcpro.ogn.OgnDisplayUpdateMode
 typealias OgnGliderTrailRepository = com.example.xcpro.ogn.OgnGliderTrailRepository

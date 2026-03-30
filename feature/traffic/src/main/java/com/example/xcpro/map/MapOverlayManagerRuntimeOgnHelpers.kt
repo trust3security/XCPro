@@ -11,7 +11,8 @@ data class OgnOverlayStatusSnapshot(
 
 internal data class OgnRenderThrottleState(
     var lastRenderMonoMs: Long = 0L,
-    var pendingJob: kotlinx.coroutines.Job? = null
+    var pendingJob: kotlinx.coroutines.Job? = null,
+    var pendingDueMonoMs: Long = Long.MAX_VALUE
 )
 
 internal fun gliderTrailSegmentIdentitySignature(segments: List<OgnGliderTrailSegment>): Int {

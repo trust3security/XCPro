@@ -22,6 +22,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.maplibre.android.maps.MapLibreMap
 import org.mockito.Mockito.clearInvocations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -209,7 +211,7 @@ class MapOverlayManagerOgnLifecycleTest {
     }
 
     @Test
-    fun updateOgnTargetVisuals_rendersRingAndLineWithoutTrafficRerender() = runTest {
+    fun updateOgnTargetVisuals_updatesTargetVisualsWithoutTrafficRenderWhenTargetsAbsent() = runTest {
         val map: MapLibreMap = mock()
         val trafficOverlay: OgnTrafficOverlayHandle = mock()
         val targetRingOverlay: OgnTargetRingOverlayHandle = mock()
@@ -263,7 +265,12 @@ class MapOverlayManagerOgnLifecycleTest {
             altitudeUnit = eq(AltitudeUnit.FEET),
             unitsPreferences = eq(UnitsPreferences())
         )
-        verifyNoInteractions(trafficOverlay)
+        verify(trafficOverlay, times(0)).render(
+            targets = any(),
+            ownshipAltitudeMeters = anyOrNull(),
+            altitudeUnit = any(),
+            unitsPreferences = any()
+        )
     }
 
     private fun createFixture(
@@ -317,7 +324,7 @@ class MapOverlayManagerOgnLifecycleTest {
         trackDegrees = 90.0,
         groundSpeedMps = 35.0,
         verticalSpeedMps = 1.2,
-        deviceIdHex = "ABC123",
+        deviceIdHex = id,
         signalDb = -12.0,
         displayLabel = id,
         identity = null,
@@ -326,8 +333,8 @@ class MapOverlayManagerOgnLifecycleTest {
         timestampMillis = lastSeenMillis,
         lastSeenMillis = lastSeenMillis,
         addressType = OgnAddressType.FLARM,
-        addressHex = "ABC123",
-        canonicalKey = "FLARM:ABC123"
+        addressHex = id,
+        canonicalKey = "FLARM:$id"
     )
 
     private fun thermal(id: String): OgnThermalHotspot = OgnThermalHotspot(

@@ -217,6 +217,10 @@ open class MapOverlayManagerRuntime(
 
     fun setAdsbViewportZoom(zoomLevel: Float) = trafficDelegate.setAdsbViewportZoom(zoomLevel)
     fun setOgnViewportZoom(zoomLevel: Float) = ognDelegate.setViewportZoom(zoomLevel)
+    fun invalidateTrafficProjection(forceImmediate: Boolean = false) {
+        ognDelegate.invalidateProjection(forceImmediate = forceImmediate)
+        trafficDelegate.invalidateProjection(forceImmediate = forceImmediate)
+    }
 
     fun setForecastOverlay(
         enabled: Boolean,
