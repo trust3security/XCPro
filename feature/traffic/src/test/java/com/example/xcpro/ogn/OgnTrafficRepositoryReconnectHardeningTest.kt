@@ -45,7 +45,7 @@ class OgnTrafficRepositoryReconnectHardeningTest {
             )
             assertEquals(2_000L, repository.snapshot.value.reconnectBackoffMs)
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }
@@ -79,7 +79,7 @@ class OgnTrafficRepositoryReconnectHardeningTest {
 
             assertEquals(1, connectAttempts)
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }
@@ -123,7 +123,7 @@ class OgnTrafficRepositoryReconnectHardeningTest {
 
             assertEquals(2, connectAttempts)
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }
@@ -148,7 +148,7 @@ class OgnTrafficRepositoryReconnectHardeningTest {
             )
             assertEquals("LoginUnverified", repository.snapshot.value.lastError)
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }

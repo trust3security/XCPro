@@ -15,8 +15,8 @@ import kotlinx.coroutines.*
  * Performance: <100ms response time to match sensor fusion
  */
 class VarioBeepController(
-    private val toneGenerator: VarioToneGenerator,
-    scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val toneOutput: VarioToneOutput,
+    private val scope: CoroutineScope
 ) {
 
     companion object {
@@ -25,7 +25,6 @@ class VarioBeepController(
         private const val TRANSITION_SMOOTHING = 0.3  // Smooth frequency transitions
         private const val TONE_ATTACK_MS = 5L
         private const val TONE_RELEASE_MS = 5L
-        private const val STOP_JOIN_TIMEOUT_MS = 250L
     }
 
     // Current audio state
@@ -33,8 +32,6 @@ class VarioBeepController(
     private var targetParams: AudioParams? = null
     private var isRunning = false
     private var lastMode: AudioMode? = null
-
-    private val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
 
     // Coroutine job for beep loop
     private var beepJob: Job? = null
@@ -52,7 +49,7 @@ class VarioBeepController(
             return true
         }
 
-        if (!toneGenerator.isReady()) {
+        if (!toneOutput.isReady()) {
             AppLogger.w(TAG, "Beep controller start blocked; tone generator not ready")
             return false
         }
@@ -67,26 +64,23 @@ class VarioBeepController(
      * Stop the beep controller
      */
     fun stop() {
-        stopInternal(awaitLoopQuiescence = true)
+        stopInternal(resetAudioState = false)
         AppLogger.i(TAG, "Beep controller stopped")
     }
 
-    private fun stopInternal(awaitLoopQuiescence: Boolean) {
+    private fun stopInternal(resetAudioState: Boolean) {
         isRunning = false
         val runningJob = beepJob
         beepJob = null
         runningJob?.cancel()
-        if (awaitLoopQuiescence && runningJob != null) {
-            runCatching {
-                runBlocking {
-                    withTimeoutOrNull(STOP_JOIN_TIMEOUT_MS) {
-                        runningJob.join()
-                    }
-                }
-            }
-        }
-        toneGenerator.stop()
+        toneOutput.stop()
         lastMode = null
+        if (resetAudioState) {
+            currentParams = null
+            targetParams = null
+            smoothedFrequency = 0.0
+            smoothedCycleTime = 0.0
+        }
     }
 
     /**
@@ -109,7 +103,7 @@ class VarioBeepController(
      * Main beep loop - runs continuously while started
      */
     private fun startBeepLoop() {
-        beepJob = internalScope.launch {
+        beepJob = scope.launch {
             while (isRunning) {
                 try {
                     val target = targetParams
@@ -134,14 +128,14 @@ class VarioBeepController(
                         when (target.mode) {
                             AudioMode.BEEPING -> {
                                 if (previousMode == AudioMode.CONTINUOUS) {
-                                    toneGenerator.resetPhase()
+                                    toneOutput.resetPhase()
                                 }
                                 playBeepCycle()
                             }
                             AudioMode.CONTINUOUS -> playContinuousTone(applyEnvelope = previousMode != AudioMode.CONTINUOUS)
                             AudioMode.SILENCE -> {
                                 if (previousMode == AudioMode.CONTINUOUS) {
-                                    toneGenerator.resetPhase()
+                                    toneOutput.resetPhase()
                                 }
                                 playSilence()
                             }
@@ -201,7 +195,7 @@ class VarioBeepController(
 
         // Play tone
         if (toneDuration > 0) {
-            toneGenerator.playTone(
+            toneOutput.playTone(
                 frequencyHz = params.frequencyHz,
                 durationMs = toneDuration,
                 envelope = ToneEnvelope(
@@ -216,7 +210,7 @@ class VarioBeepController(
 
         // Play silence (pause between beeps)
         if (silenceDuration > 0) {
-            toneGenerator.playSilence(silenceDuration)
+            toneOutput.playSilence(silenceDuration)
             delay(silenceDuration)
         }
     }
@@ -234,7 +228,7 @@ class VarioBeepController(
 
         // Play 1-second chunks of continuous tone
         val duration = 1000L
-        toneGenerator.playTone(
+        toneOutput.playTone(
             frequencyHz = params.frequencyHz,
             durationMs = duration,
             envelope = if (applyEnvelope) {
@@ -255,7 +249,7 @@ class VarioBeepController(
      * Play silence (deadband)
      */
     private suspend fun playSilence() {
-        toneGenerator.playSilence(UPDATE_RATE_MS)
+        toneOutput.playSilence(UPDATE_RATE_MS)
         delay(UPDATE_RATE_MS)
     }
 
@@ -263,7 +257,7 @@ class VarioBeepController(
      * Set volume
      */
     fun setVolume(volume: Float) {
-        toneGenerator.setVolume(volume)
+        toneOutput.setVolume(volume)
     }
 
     /**
@@ -291,7 +285,6 @@ class VarioBeepController(
      * Release resources
      */
     fun release() {
-        stopInternal(awaitLoopQuiescence = true)
-        internalScope.cancel()
+        stopInternal(resetAudioState = true)
     }
 }

@@ -47,7 +47,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertTrue(loginLine != null)
         assertTrue(loginLine?.contains("filter r/-33.86880/151.20930/150") == true)
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -62,7 +62,10 @@ class OgnTrafficRepositoryConnectionTest {
             }
         )
         val secondSocket = ScriptedSocket(
-            script = "# logresp OGNXC1 verified, server GLIDERN1\n"
+            script = "# logresp OGNXC1 verified, server GLIDERN1\n",
+            onFirstLineDelivered = {
+                repository.stop()
+            }
         )
         val sockets = ArrayDeque<ScriptedSocket>()
         sockets.addLast(firstSocket)
@@ -80,7 +83,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertTrue(secondLogin?.contains("filter r/0.50000/0.00000/150") == true)
         assertTrue(repository.snapshot.value.connectionIssue == null)
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -106,7 +109,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertTrue(loginLine != null)
         assertTrue(loginLine?.contains("filter r/46.00000/7.00000/200") == true)
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -136,7 +139,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertTrue(loginLine != null)
         assertTrue(loginLine?.contains("filter r/46.00000/7.00000/220") == true)
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -161,7 +164,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertTrue(loginLine != null)
         assertTrue(loginLine?.startsWith("user XCPA1B2C3 pass ") == true)
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -192,7 +195,7 @@ class OgnTrafficRepositoryConnectionTest {
                 ?.matches(Regex("^[A-Z][A-Z0-9]{2,8}$")) == true
         )
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -219,7 +222,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertTrue(target?.longitude?.let { kotlin.math.abs(it - 9.949666) < 1e-5 } == true)
         assertTrue(repository.snapshot.value.droppedOutOfOrderSourceFrames >= 1L)
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -257,7 +260,7 @@ class OgnTrafficRepositoryConnectionTest {
             assertTrue(target?.longitude?.let { kotlin.math.abs(it - 9.950000) < 1e-5 } == true)
             assertTrue(repository.snapshot.value.droppedOutOfOrderSourceFrames >= 1L)
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }
@@ -288,7 +291,7 @@ class OgnTrafficRepositoryConnectionTest {
         assertTrue(snapshot.lastError == "StreamStalled")
         assertTrue(socket.writtenLines().any { line -> line == "#keepalive" })
 
-        repository.stop()
+        repository.shutdownForTest()
         runCurrent()
     }
 
@@ -325,7 +328,7 @@ class OgnTrafficRepositoryConnectionTest {
 
             verify(ddbRepository, atLeast(1)).refreshIfNeeded()
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }
@@ -370,7 +373,7 @@ class OgnTrafficRepositoryConnectionTest {
 
             verify(ddbRepository, atLeast(2)).refreshIfNeeded()
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }
@@ -414,7 +417,7 @@ class OgnTrafficRepositoryConnectionTest {
             verify(ddbRepository, atLeast(1)).refreshIfNeeded()
             verify(ddbRepository, atMost(2)).refreshIfNeeded()
         } finally {
-            repository.stop()
+            repository.shutdownForTest()
             runCurrent()
         }
     }

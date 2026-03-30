@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -35,12 +36,17 @@ private val KEY_OGN_CLIENT_CALLSIGN = stringPreferencesKey("ogn_client_callsign"
 
 @Singleton
 class OgnTrafficPreferencesRepository constructor(
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
+    private val startupResetCoordinator: OgnSciaStartupResetCoordinator
 ) {
     @Inject
     constructor(
-        @ApplicationContext context: Context
-    ) : this(context.ognTrafficDataStore)
+        @ApplicationContext context: Context,
+        startupResetCoordinator: OgnSciaStartupResetCoordinator
+    ) : this(
+        dataStore = context.ognTrafficDataStore,
+        startupResetCoordinator = startupResetCoordinator
+    )
 
     val enabledFlow: Flow<Boolean> = dataStore.data
         .map { preferences -> preferences[KEY_OGN_TRAFFIC_ENABLED] ?: false }
@@ -72,9 +78,11 @@ class OgnTrafficPreferencesRepository constructor(
         }
         .distinctUntilChanged()
 
-    val showSciaEnabledFlow: Flow<Boolean> = dataStore.data
-        .map { preferences -> preferences[KEY_OGN_SHOW_SCIA_ENABLED] ?: false }
-        .distinctUntilChanged()
+    val showSciaEnabledFlow: Flow<Boolean> = startupResetSafeFlow(
+        source = dataStore.data
+            .map { preferences -> preferences[KEY_OGN_SHOW_SCIA_ENABLED] ?: false },
+        safeValue = false
+    )
 
     val showThermalsEnabledFlow: Flow<Boolean> = dataStore.data
         .map { preferences -> preferences[KEY_OGN_SHOW_THERMALS_ENABLED] ?: false }
@@ -96,15 +104,19 @@ class OgnTrafficPreferencesRepository constructor(
         }
         .distinctUntilChanged()
 
-    val targetEnabledFlow: Flow<Boolean> = dataStore.data
-        .map { preferences -> preferences[KEY_OGN_TARGET_ENABLED] ?: false }
-        .distinctUntilChanged()
+    val targetEnabledFlow: Flow<Boolean> = startupResetSafeFlow(
+        source = dataStore.data
+            .map { preferences -> preferences[KEY_OGN_TARGET_ENABLED] ?: false },
+        safeValue = false
+    )
 
-    val targetAircraftKeyFlow: Flow<String?> = dataStore.data
-        .map { preferences ->
-            normalizeOgnAircraftKeyOrNull(preferences[KEY_OGN_TARGET_AIRCRAFT_KEY])
-        }
-        .distinctUntilChanged()
+    val targetAircraftKeyFlow: Flow<String?> = startupResetSafeFlow(
+        source = dataStore.data
+            .map { preferences ->
+                normalizeOgnAircraftKeyOrNull(preferences[KEY_OGN_TARGET_AIRCRAFT_KEY])
+            },
+        safeValue = null
+    )
 
     val ownFlarmHexFlow: Flow<String?> = dataStore.data
         .map { preferences ->
@@ -255,4 +267,18 @@ class OgnTrafficPreferencesRepository constructor(
             }
         }
     }
+
+    private fun <T> startupResetSafeFlow(
+        source: Flow<T>,
+        safeValue: T
+    ): Flow<T> = combine(
+        source,
+        startupResetCoordinator.resetState
+    ) { persistedValue, resetState ->
+        if (resetState == OgnSciaStartupResetState.COMPLETED) {
+            persistedValue
+        } else {
+            safeValue
+        }
+    }.distinctUntilChanged()
 }

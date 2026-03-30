@@ -122,6 +122,7 @@ import com.example.xcpro.map.OgnThermalRepository
 import com.example.xcpro.map.OgnGliderTrailRepository
 import com.example.xcpro.map.OgnGliderTrailSegment
 import com.example.xcpro.map.OgnTrailSelectionPreferencesRepository
+import com.example.xcpro.ogn.OgnSciaStartupResetCoordinator
 import com.example.xcpro.thermalling.ThermallingModeCoordinator
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import org.junit.Assert.assertEquals
@@ -379,9 +380,13 @@ abstract class MapScreenViewModelTestBase {
         val ognThermalRepository = ognThermalRepositoryOverride ?: FakeOgnThermalRepository()
         val ognGliderTrailRepository = FakeOgnGliderTrailRepository()
         val ognTrafficPreferencesRepository = ognPreferencesRepositoryOverride
-            ?: OgnTrafficPreferencesRepository(newTestPreferencesDataStore("ogn_traffic"))
+            ?: OgnTrafficPreferencesRepository(
+                newTestPreferencesDataStore("ogn_traffic"),
+                OgnSciaStartupResetCoordinator.AlreadyReset
+            )
         val ognTrailSelectionPreferencesRepository = OgnTrailSelectionPreferencesRepository(
-            newTestPreferencesDataStore("ogn_trail_selection")
+            newTestPreferencesDataStore("ogn_trail_selection"),
+            OgnSciaStartupResetCoordinator.AlreadyReset
         )
         val ognTrafficFacade = OgnTrafficUseCase(
             repository = ognTrafficRepository,

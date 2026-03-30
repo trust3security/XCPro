@@ -25,12 +25,12 @@ internal fun newRepository(
     ddbRepository: OgnDdbRepository? = null,
     networkAvailabilityPort: OgnNetworkAvailabilityPort = FakeOgnNetworkAvailabilityPort()
 ): OgnTrafficRepositoryImpl {
-    val resolvedDdbRepository = ddbRepository ?: mock<OgnDdbRepository>().also { repository ->
+    val resolvedDdbRepository = ddbRepository ?: mock<OgnDdbRepository>(stubOnly = true).also { repository ->
         runBlocking {
             whenever(repository.refreshIfNeeded()).thenReturn(OgnDdbRefreshResult.Updated)
         }
     }
-    val preferencesRepository: OgnTrafficPreferencesRepository = mock()
+    val preferencesRepository: OgnTrafficPreferencesRepository = mock(stubOnly = true)
     whenever(preferencesRepository.ownFlarmHexFlow).thenReturn(MutableStateFlow(null))
     whenever(preferencesRepository.ownIcaoHexFlow).thenReturn(MutableStateFlow(null))
     whenever(preferencesRepository.receiveRadiusKmFlow).thenReturn(receiveRadiusKmFlow)

@@ -103,6 +103,8 @@ class OgnTrafficRepositoryImpl @Inject constructor(
     override fun start() = runtime.start()
 
     override fun stop() = runtime.stop()
+
+    internal suspend fun shutdownForTest() = runtime.shutdownForTest()
 }
 
 internal enum class OgnLogrespStatus {

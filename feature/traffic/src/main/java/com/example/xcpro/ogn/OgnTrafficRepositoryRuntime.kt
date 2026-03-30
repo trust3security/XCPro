@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -301,6 +302,12 @@ internal class OgnTrafficRepositoryRuntime(
         block: OgnTrafficRepositoryRuntime.() -> T
     ): T = kotlinx.coroutines.withContext(writerDispatcher) {
         block()
+    }
+
+    internal suspend fun shutdownForTest() {
+        _isEnabled.value = false
+        stopLoopAndClearTargets()
+        runtimeJob.cancel()
     }
 
     internal data class Center(
