@@ -41,6 +41,7 @@ class MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest {
         verify(overlay).setViewportZoom(8.0f)
         verify(overlay, times(1)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -67,6 +68,7 @@ class MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest {
         verify(overlay).setViewportZoom(8.0f)
         verify(overlay, times(2)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -94,6 +96,7 @@ class MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest {
         verify(overlay).setViewportZoom(10.5f)
         verify(overlay, never()).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()
@@ -142,6 +145,7 @@ class MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest {
         verify(overlay).setViewportZoom(8.2f)
         verify(overlay, times(1)).render(
             targets = any(),
+            selectedTargetId = anyOrNull(),
             ownshipAltitudeMeters = anyOrNull(),
             unitsPreferences = any(),
             iconStyleIdOverrides = any()

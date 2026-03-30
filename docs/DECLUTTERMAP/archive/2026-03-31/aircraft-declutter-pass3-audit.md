@@ -1,3 +1,7 @@
+> Archived on 2026-03-31.
+> Superseded by [xcpro-close-proximity-declutter-brief.md](../../xcpro-close-proximity-declutter-brief.md) and [xcpro-phase-2a-close-proximity-declutter-plan.md](../../xcpro-phase-2a-close-proximity-declutter-plan.md).
+> This audit captured the pre-Phase 2A direction and is retained for history only.
+
 # Aircraft Declutter Pass 3 Audit
 
 ## Summary Verdict

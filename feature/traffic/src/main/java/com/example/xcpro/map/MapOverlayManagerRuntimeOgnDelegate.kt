@@ -26,6 +26,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private val nowMonoMs: () -> Long
 ) {
     private var latestOgnTargets: List<OgnTrafficTarget> = emptyList()
+    private var latestSelectedTargetKey: String? = null
     private var latestOgnOwnshipAltitudeMeters: Double? = null
     private var latestOgnAltitudeUnit: AltitudeUnit = AltitudeUnit.METERS
     private var latestOgnUnitsPreferences: UnitsPreferences = UnitsPreferences()
@@ -60,6 +61,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         runtimeState.ognTrafficOverlay?.initialize()
         runtimeState.ognTrafficOverlay?.render(
             targets = latestOgnTargets,
+            selectedTargetKey = latestSelectedTargetKey,
             ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
             altitudeUnit = latestOgnAltitudeUnit,
             unitsPreferences = latestOgnUnitsPreferences
@@ -132,6 +134,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
 
     fun updateTrafficTargets(
         targets: List<OgnTrafficTarget>,
+        selectedTargetKey: String? = null,
         ownshipAltitudeMeters: Double?,
         altitudeUnit: AltitudeUnit,
         unitsPreferences: UnitsPreferences = UnitsPreferences(),
@@ -142,8 +145,10 @@ class MapOverlayManagerRuntimeOgnDelegate(
         val sameOwnshipAltitude = latestOgnOwnshipAltitudeMeters == normalizedOwnshipAltitude
         val sameAltitudeUnit = latestOgnAltitudeUnit == altitudeUnit
         val sameUnitsPreferences = latestOgnUnitsPreferences == unitsPreferences
+        val sameSelectedTargetKey = latestSelectedTargetKey == selectedTargetKey
         if (
             sameTargets &&
+            sameSelectedTargetKey &&
             sameOwnshipAltitude &&
             sameAltitudeUnit &&
             sameUnitsPreferences &&
@@ -153,6 +158,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             return
         }
         latestOgnTargets = targets
+        latestSelectedTargetKey = selectedTargetKey
         latestOgnOwnshipAltitudeMeters = normalizedOwnshipAltitude
         latestOgnAltitudeUnit = altitudeUnit
         latestOgnUnitsPreferences = unitsPreferences
@@ -252,7 +258,17 @@ class MapOverlayManagerRuntimeOgnDelegate(
         applyResolvedIconSizeToLiveOverlays()
     }
 
-    fun invalidateProjection(forceImmediate: Boolean = false) = Unit
+    fun invalidateProjection(forceImmediate: Boolean = false) {
+        if (latestOgnTargets.isEmpty()) return
+        syncViewportZoomFromMapIfAvailable()
+        scheduleRender(
+            state = ognTrafficRenderState,
+            forceImmediate = forceImmediate,
+            intervalMsOverride = TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS
+        ) {
+            renderTargetsNow()
+        }
+    }
 
     fun findTargetAt(tap: LatLng): String? {
         val ringTarget = runtimeState.ognTargetRingOverlay?.findTargetAt(tap)
@@ -274,6 +290,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         if (runtimeState.ognTrafficOverlay != null || latestOgnTargets.isNotEmpty()) {
             updateTrafficTargets(
                 targets = latestOgnTargets,
+                selectedTargetKey = latestSelectedTargetKey,
                 ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
                 altitudeUnit = latestOgnAltitudeUnit,
                 unitsPreferences = latestOgnUnitsPreferences,
@@ -320,6 +337,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         }
         runtimeState.ognTrafficOverlay?.render(
             targets = latestOgnTargets,
+            selectedTargetKey = latestSelectedTargetKey,
             ownshipAltitudeMeters = latestOgnOwnshipAltitudeMeters,
             altitudeUnit = latestOgnAltitudeUnit,
             unitsPreferences = latestOgnUnitsPreferences
@@ -396,6 +414,16 @@ class MapOverlayManagerRuntimeOgnDelegate(
         renderedOgnIconSizePx = resolvedSizePx
         runtimeState.ognTrafficOverlay?.setIconSizePx(resolvedSizePx)
         runtimeState.ognTargetRingOverlay?.setIconSizePx(resolvedSizePx)
+    }
+
+    private fun syncViewportZoomFromMapIfAvailable() {
+        val liveZoom = runtimeState.mapLibreMap?.cameraPosition?.zoom?.toFloat()
+            ?.takeIf { it.isFinite() }
+            ?: return
+        if (ognViewportZoom == liveZoom) return
+        ognViewportZoom = liveZoom
+        runtimeState.ognTrafficOverlay?.setViewportZoom(liveZoom)
+        applyResolvedIconSizeToLiveOverlays()
     }
 
     private fun resolveRenderedOgnIconSizePx(): Int =

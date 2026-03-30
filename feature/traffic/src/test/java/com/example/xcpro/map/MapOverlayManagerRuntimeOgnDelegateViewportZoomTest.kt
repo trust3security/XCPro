@@ -12,6 +12,7 @@ import org.junit.runner.RunWith
 import org.maplibre.android.maps.MapLibreMap
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.times
@@ -224,11 +225,52 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
     }
 
     @Test
-    fun projectionInvalidation_doesNotRerenderTrafficForOgn() = runTest {
+    fun selectedTargetChange_rerendersTrafficOverlayWhenTargetsAreUnchanged() = runTest {
         val trafficOverlay: OgnTrafficOverlayHandle = mock()
         val fixture = createFixture(
             scope = this,
             trafficOverlays = listOf(trafficOverlay)
+        )
+
+        val target = target("T1")
+        fixture.delegate.updateTrafficTargets(
+            targets = listOf(target),
+            ownshipAltitudeMeters = 1_200.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+        reset(trafficOverlay)
+
+        fixture.delegate.updateTrafficTargets(
+            targets = listOf(target),
+            selectedTargetKey = target.canonicalKey,
+            ownshipAltitudeMeters = 1_200.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+
+        verify(trafficOverlay, times(1)).render(
+            targets = eq(listOf(target)),
+            selectedTargetKey = eq(target.canonicalKey),
+            ownshipAltitudeMeters = anyOrNull(),
+            altitudeUnit = eq(AltitudeUnit.METERS),
+            unitsPreferences = eq(UnitsPreferences())
+        )
+    }
+
+    @Test
+    fun projectionInvalidation_rerendersTrafficForOgnAndSyncsLiveMapZoom() = runTest {
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
+        val fixture = createFixture(
+            scope = this,
+            trafficOverlays = listOf(trafficOverlay)
+        )
+        whenever(fixture.runtimeState.map.cameraPosition).thenReturn(
+            org.maplibre.android.camera.CameraPosition.Builder()
+                .zoom(8.2)
+                .build()
         )
 
         fixture.delegate.updateTrafficTargets(
@@ -240,10 +282,17 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         runCurrent()
         reset(trafficOverlay)
 
-        fixture.delegate.invalidateProjection()
+        fixture.delegate.invalidateProjection(forceImmediate = true)
         runCurrent()
 
-        verifyNoInteractions(trafficOverlay)
+        verify(trafficOverlay).setViewportZoom(8.2f)
+        verify(trafficOverlay, times(1)).render(
+            targets = any(),
+            selectedTargetKey = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            altitudeUnit = any(),
+            unitsPreferences = any()
+        )
     }
 
     private fun createFixture(

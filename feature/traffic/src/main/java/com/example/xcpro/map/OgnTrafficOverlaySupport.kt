@@ -9,6 +9,7 @@ import androidx.core.graphics.drawable.DrawableCompat
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
@@ -18,6 +19,11 @@ import org.maplibre.android.style.layers.PropertyFactory.iconOpacity
 import org.maplibre.android.style.layers.PropertyFactory.iconRotate
 import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
 import org.maplibre.android.style.layers.PropertyFactory.iconSize
+import org.maplibre.android.style.layers.PropertyFactory.lineCap
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineJoin
+import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
 import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.textAnchor
 import org.maplibre.android.style.layers.PropertyFactory.textColor
@@ -40,6 +46,16 @@ internal fun ensureOgnStyleImages(context: Context, style: Style) {
     ensureOgnSatelliteGliderStyleImage(style, context)
     ensureOgnRelativeGliderStyleImages(style, context)
 }
+
+internal fun createOgnLeaderLineLayer(): LineLayer =
+    LineLayer(LEADER_LINE_LAYER_ID, LEADER_LINE_SOURCE_ID)
+        .withProperties(
+            lineColor(LEADER_LINE_COLOR),
+            lineWidth(LEADER_LINE_WIDTH_PX),
+            lineOpacity(LEADER_LINE_OPACITY),
+            lineCap("round"),
+            lineJoin("round")
+        )
 
 internal fun createOgnIconLayer(renderedIconSizePx: Int): SymbolLayer =
     SymbolLayer(ICON_LAYER_ID, SOURCE_ID)
@@ -109,6 +125,7 @@ internal fun ensureOgnLayerOrder(
     val anchorId = BLUE_LOCATION_OVERLAY_LAYER_ID_FALLBACK
     if (style.getLayer(anchorId) == null) return
     if (
+        style.getLayer(LEADER_LINE_LAYER_ID) == null ||
         style.getLayer(ICON_LAYER_ID) == null ||
         style.getLayer(TOP_LABEL_LAYER_ID) == null ||
         style.getLayer(BOTTOM_LABEL_LAYER_ID) == null
@@ -117,21 +134,25 @@ internal fun ensureOgnLayerOrder(
     }
 
     val layerIds = style.layers.map { it.id }
+    val leaderLineIndex = layerIds.indexOf(LEADER_LINE_LAYER_ID)
     val anchorIndex = layerIds.indexOf(anchorId)
     val iconIndex = layerIds.indexOf(ICON_LAYER_ID)
     val topIndex = layerIds.indexOf(TOP_LABEL_LAYER_ID)
     val bottomIndex = layerIds.indexOf(BOTTOM_LABEL_LAYER_ID)
-    if (anchorIndex < 0 || iconIndex < 0 || topIndex < 0 || bottomIndex < 0) return
+    if (anchorIndex < 0 || leaderLineIndex < 0 || iconIndex < 0 || topIndex < 0 || bottomIndex < 0) return
 
-    val iconNeedsMove = iconIndex <= anchorIndex
+    val leaderLineNeedsMove = leaderLineIndex <= anchorIndex
+    val iconNeedsMove = iconIndex <= leaderLineIndex
     val topNeedsMove = topIndex <= iconIndex
     val bottomNeedsMove = bottomIndex <= topIndex
-    if (!iconNeedsMove && !topNeedsMove && !bottomNeedsMove) return
+    if (!leaderLineNeedsMove && !iconNeedsMove && !topNeedsMove && !bottomNeedsMove) return
 
     style.removeLayer(BOTTOM_LABEL_LAYER_ID)
     style.removeLayer(TOP_LABEL_LAYER_ID)
     style.removeLayer(ICON_LAYER_ID)
-    style.addLayerAbove(createOgnIconLayer(renderedIconSizePx), anchorId)
+    style.removeLayer(LEADER_LINE_LAYER_ID)
+    style.addLayerAbove(createOgnLeaderLineLayer(), anchorId)
+    style.addLayerAbove(createOgnIconLayer(renderedIconSizePx), LEADER_LINE_LAYER_ID)
     style.addLayerAbove(
         createOgnTopLabelLayer(
             renderedIconSizePx = renderedIconSizePx,
@@ -285,3 +306,7 @@ internal fun ognTopLabelOffsetYForPx(iconSizePx: Int): Float =
 
 internal fun ognBottomLabelOffsetYForPx(iconSizePx: Int): Float =
     LABEL_TEXT_OFFSET_BASE_Y * ognIconScaleForPx(iconSizePx)
+
+private const val LEADER_LINE_COLOR = "#202020"
+private const val LEADER_LINE_WIDTH_PX = 1.4f
+private const val LEADER_LINE_OPACITY = 0.32f

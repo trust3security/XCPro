@@ -19,6 +19,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
     private val nowMonoMs: () -> Long
 ) {
     private var latestAdsbTargets: List<AdsbTrafficUiModel> = emptyList()
+    private var latestSelectedTargetId: Icao24? = null
     private var latestAdsbOwnshipAltitudeMeters: Double? = null
     private var latestAdsbUnitsPreferences: UnitsPreferences = UnitsPreferences()
     private var adsbIconSizePx: Int = ADSB_ICON_SIZE_DEFAULT_PX
@@ -45,6 +46,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         val projectedStyleIds = projectedAdsbStyleIds(nowMonoMs())
         runtimeState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
+            selectedTargetId = latestSelectedTargetId,
             ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
             unitsPreferences = latestAdsbUnitsPreferences,
             iconStyleIdOverrides = projectedStyleIds
@@ -55,6 +57,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
 
     fun updateAdsbTrafficTargets(
         targets: List<AdsbTrafficUiModel>,
+        selectedTargetId: Icao24? = null,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences,
         normalizeOwnshipAltitudeForRender: (Double?) -> Double?
@@ -62,10 +65,12 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         val previouslyHadNoTargets = latestAdsbTargets.isEmpty()
         val normalizedOwnshipAltitude = normalizeOwnshipAltitudeForRender(ownshipAltitudeMeters)
         val sameTargets = latestAdsbTargets == targets
+        val sameSelectedTarget = latestSelectedTargetId == selectedTargetId
         val sameOwnshipAltitude = latestAdsbOwnshipAltitudeMeters == normalizedOwnshipAltitude
         val sameUnitsPreferences = latestAdsbUnitsPreferences == unitsPreferences
         if (
             sameTargets &&
+            sameSelectedTarget &&
             sameOwnshipAltitude &&
             sameUnitsPreferences &&
             runtimeState.adsbTrafficOverlay != null
@@ -73,6 +78,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
             return
         }
         latestAdsbTargets = targets
+        latestSelectedTargetId = selectedTargetId
         latestAdsbOwnshipAltitudeMeters = normalizedOwnshipAltitude
         latestAdsbUnitsPreferences = unitsPreferences
         scheduleAdsbRender(forceImmediate = targets.isEmpty() || previouslyHadNoTargets)
@@ -237,6 +243,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         )
         runtimeState.adsbTrafficOverlay?.render(
             targets = latestAdsbTargets,
+            selectedTargetId = latestSelectedTargetId,
             ownshipAltitudeMeters = latestAdsbOwnshipAltitudeMeters,
             unitsPreferences = latestAdsbUnitsPreferences,
             iconStyleIdOverrides = projectedStyleIds

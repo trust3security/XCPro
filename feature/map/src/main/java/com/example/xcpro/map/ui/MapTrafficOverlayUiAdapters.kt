@@ -29,11 +29,13 @@ internal fun rememberTrafficOverlayRenderState(
     unitsPreferences,
     renderLocalOwnship,
     traffic.ognIconSizePx,
+    traffic.selectedOgnTarget,
     traffic.adsbTargets,
     traffic.adsbOverlayEnabled,
     traffic.adsbIconSizePx,
     traffic.adsbEmergencyFlashEnabled,
-    traffic.adsbDefaultMediumUnknownIconEnabled
+    traffic.adsbDefaultMediumUnknownIconEnabled,
+    traffic.selectedAdsbTarget
 ) {
     buildTrafficOverlayRenderState(
         traffic = traffic,
@@ -66,11 +68,13 @@ internal fun buildTrafficOverlayRenderState(
         ognAltitudeUnit = traffic.ognAltitudeUnit,
         unitsPreferences = unitsPreferences,
         ognIconSizePx = traffic.ognIconSizePx,
+        selectedOgnTargetKey = traffic.selectedOgnTarget?.canonicalKey,
         adsbTargets = traffic.adsbTargets,
         adsbOverlayEnabled = traffic.adsbOverlayEnabled,
         adsbIconSizePx = traffic.adsbIconSizePx,
         adsbEmergencyFlashEnabled = traffic.adsbEmergencyFlashEnabled,
-        adsbDefaultMediumUnknownIconEnabled = traffic.adsbDefaultMediumUnknownIconEnabled
+        adsbDefaultMediumUnknownIconEnabled = traffic.adsbDefaultMediumUnknownIconEnabled,
+        selectedAdsbTargetId = traffic.selectedAdsbTarget?.id
     )
 }
 
@@ -112,12 +116,14 @@ internal fun createTrafficOverlayRenderPort(
 
     override fun updateOgnTrafficTargets(
         targets: List<com.example.xcpro.map.OgnTrafficTarget>,
+        selectedTargetKey: String?,
         ownshipAltitudeMeters: Double?,
         altitudeUnit: com.example.xcpro.common.units.AltitudeUnit,
         unitsPreferences: UnitsPreferences
     ) {
         overlayManager.updateOgnTrafficTargets(
             targets = targets,
+            selectedTargetKey = selectedTargetKey,
             ownshipAltitudeMeters = ownshipAltitudeMeters,
             altitudeUnit = altitudeUnit,
             unitsPreferences = unitsPreferences
@@ -156,11 +162,13 @@ internal fun createTrafficOverlayRenderPort(
 
     override fun updateAdsbTrafficTargets(
         targets: List<com.example.xcpro.map.AdsbTrafficUiModel>,
+        selectedTargetId: com.example.xcpro.map.Icao24?,
         ownshipAltitudeMeters: Double?,
         unitsPreferences: UnitsPreferences
     ) {
         overlayManager.updateAdsbTrafficTargets(
             targets = targets,
+            selectedTargetId = selectedTargetId,
             ownshipAltitudeMeters = ownshipAltitudeMeters,
             unitsPreferences = unitsPreferences
         )

@@ -6,11 +6,14 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
 internal fun buildOgnTrafficOverlayFeatures(
     nowMonoMs: Long,
     targets: List<OgnTrafficTarget>,
+    fullLabelKeys: Set<String>,
+    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate> = emptyMap(),
     ownshipAltitudeMeters: Double?,
     visibleBounds: LatLngBounds?,
     altitudeUnit: AltitudeUnit,
@@ -27,8 +30,11 @@ internal fun buildOgnTrafficOverlayFeatures(
         if (!isValidOgnCoordinate(target.latitude, target.longitude)) continue
         if (!isOgnInVisibleBounds(target.latitude, target.longitude, visibleBounds)) continue
 
+        val displayCoordinate = displayCoordinatesByKey[target.canonicalKey]
+        val renderLatitude = displayCoordinate?.latitude ?: target.latitude
+        val renderLongitude = displayCoordinate?.longitude ?: target.longitude
         val feature = Feature.fromGeometry(
-            Point.fromLngLat(target.longitude, target.latitude)
+            Point.fromLngLat(renderLongitude, renderLatitude)
         )
         feature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
         feature.addStringProperty(PROP_TARGET_ID, target.id)
@@ -60,8 +66,9 @@ internal fun buildOgnTrafficOverlayFeatures(
             )
         )
         feature.addStringProperty(PROP_ICON_ID, mapping.iconStyleImageId)
-        feature.addStringProperty(PROP_TOP_LABEL, mapping.topLabel)
-        feature.addStringProperty(PROP_BOTTOM_LABEL, mapping.bottomLabel)
+        val showFullLabel = target.canonicalKey in fullLabelKeys
+        feature.addStringProperty(PROP_TOP_LABEL, if (showFullLabel) mapping.topLabel else "")
+        feature.addStringProperty(PROP_BOTTOM_LABEL, if (showFullLabel) mapping.bottomLabel else "")
         feature.addNumberProperty(
             PROP_ALPHA,
             if (target.isStale(nowMonoMs, staleVisualAfterMs)) staleAlpha else liveAlpha
@@ -74,10 +81,41 @@ internal fun buildOgnTrafficOverlayFeatures(
     return features
 }
 
+internal fun buildOgnTrafficLeaderLineFeatures(
+    targets: List<OgnTrafficTarget>,
+    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate>,
+    visibleBounds: LatLngBounds?,
+    maxTargets: Int
+): List<Feature> {
+    if (displayCoordinatesByKey.isEmpty()) return emptyList()
+    val features = ArrayList<Feature>(displayCoordinatesByKey.size)
+    for (target in targets) {
+        if (features.size >= maxTargets) break
+        if (!isValidOgnCoordinate(target.latitude, target.longitude)) continue
+        if (!isOgnInVisibleBounds(target.latitude, target.longitude, visibleBounds)) continue
+        val displayCoordinate = displayCoordinatesByKey[target.canonicalKey] ?: continue
+        if (!isValidOgnCoordinate(displayCoordinate.latitude, displayCoordinate.longitude)) continue
+        val lineFeature = Feature.fromGeometry(
+            LineString.fromLngLats(
+                listOf(
+                    Point.fromLngLat(target.longitude, target.latitude),
+                    Point.fromLngLat(displayCoordinate.longitude, displayCoordinate.latitude)
+                )
+            )
+        )
+        lineFeature.addStringProperty(PROP_TARGET_KEY, target.canonicalKey)
+        features += lineFeature
+    }
+    return features
+}
+
 internal fun renderOgnTrafficFrame(
     source: GeoJsonSource,
+    leaderLineSource: GeoJsonSource,
     nowMonoMs: Long,
     targets: List<OgnTrafficTarget>,
+    fullLabelKeys: Set<String>,
+    displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate>,
     ownshipAltitudeMeters: Double?,
     visibleBounds: LatLngBounds?,
     altitudeUnit: AltitudeUnit,
@@ -93,6 +131,8 @@ internal fun renderOgnTrafficFrame(
             buildOgnTrafficOverlayFeatures(
                 nowMonoMs = nowMonoMs,
                 targets = targets,
+                fullLabelKeys = fullLabelKeys,
+                displayCoordinatesByKey = displayCoordinatesByKey,
                 ownshipAltitudeMeters = ownshipAltitudeMeters,
                 visibleBounds = visibleBounds,
                 altitudeUnit = altitudeUnit,
@@ -102,6 +142,16 @@ internal fun renderOgnTrafficFrame(
                 staleVisualAfterMs = staleVisualAfterMs,
                 liveAlpha = liveAlpha,
                 staleAlpha = staleAlpha
+            ).toTypedArray()
+        )
+    )
+    leaderLineSource.setGeoJson(
+        FeatureCollection.fromFeatures(
+            buildOgnTrafficLeaderLineFeatures(
+                targets = targets,
+                displayCoordinatesByKey = displayCoordinatesByKey,
+                visibleBounds = visibleBounds,
+                maxTargets = maxTargets
             ).toTypedArray()
         )
     )

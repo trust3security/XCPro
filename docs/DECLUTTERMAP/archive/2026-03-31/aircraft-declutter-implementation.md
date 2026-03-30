@@ -1,3 +1,7 @@
+> Archived on 2026-03-31.
+> Superseded by [xcpro-close-proximity-declutter-brief.md](../../xcpro-close-proximity-declutter-brief.md) and [xcpro-phase-2a-close-proximity-declutter-plan.md](../../xcpro-phase-2a-close-proximity-declutter-plan.md).
+> This document described the earlier fan-out-first path and is no longer the active implementation contract.
+
 # Aircraft Declutter Implementation
 
 ## Summary
