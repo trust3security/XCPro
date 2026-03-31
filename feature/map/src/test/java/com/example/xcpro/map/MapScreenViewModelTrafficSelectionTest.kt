@@ -422,6 +422,53 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
     }
 
     @Test
+    fun setMapVisible_falseClearsSelectedTrafficDetails() = runBlocking {
+        val adsbRepository = FakeAdsbTrafficRepository()
+        val ognRepository = FakeOgnTrafficRepository()
+        val thermalRepository = FakeOgnThermalRepository()
+        val viewModel = createViewModel(
+            adsbRepositoryOverride = adsbRepository,
+            ognRepositoryOverride = ognRepository,
+            ognThermalRepositoryOverride = thermalRepository
+        )
+        val adsbId = Icao24.from("abc123") ?: error("invalid adsb id")
+        val ognId = "OGN123"
+        val thermalId = "OGN123-thermal-1"
+
+        adsbRepository.targets.value = listOf(sampleAdsbTarget(adsbId))
+        ognRepository.targets.value = listOf(sampleOgnTarget(ognId))
+        thermalRepository.hotspots.value = listOf(sampleThermalHotspot(thermalId, ognId))
+        drainMain()
+
+        viewModel.setMapVisible(true)
+        viewModel.onOgnTargetSelected(ognId)
+        drainMain()
+        assertEquals(ognId, viewModel.selectedOgnTarget.value?.id)
+
+        viewModel.setMapVisible(false)
+        drainMain()
+        assertNull(viewModel.selectedOgnTarget.value)
+
+        viewModel.setMapVisible(true)
+        viewModel.onOgnThermalSelected(thermalId)
+        drainMain()
+        assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+
+        viewModel.setMapVisible(false)
+        drainMain()
+        assertNull(viewModel.selectedOgnThermal.value)
+
+        viewModel.setMapVisible(true)
+        viewModel.onAdsbTargetSelected(adsbId)
+        drainMain()
+        assertEquals(adsbId, viewModel.selectedAdsbTarget.value?.id)
+
+        viewModel.setMapVisible(false)
+        drainMain()
+        assertNull(viewModel.selectedAdsbTarget.value)
+    }
+
+    @Test
     fun selectingThermal_clearsSelectedOgnAndAdsbTargets() = runBlocking {
         val adsbRepository = FakeAdsbTrafficRepository()
         val ognRepository = FakeOgnTrafficRepository()

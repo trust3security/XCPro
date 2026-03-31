@@ -260,6 +260,11 @@ class MapScreenTrafficCoordinator(
     fun setMapVisible(isVisible: Boolean) {
         if (streamingGate.isMapVisible.value == isVisible) return
         streamingGate.setMapVisible(isVisible)
+        if (!isVisible) {
+            selectionPort.setSelectedOgnId(null)
+            selectionPort.setSelectedThermalId(null)
+            selectionPort.setSelectedAdsbId(null)
+        }
     }
 
     fun onToggleOgnTraffic() {
