@@ -3,12 +3,12 @@ package com.example.xcpro.glider
 import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.glider.GliderModel
 
-internal data class GlidePolarDerivedMetrics(
+data class GlidePolarDerivedMetrics(
     val bestLd: Double?,
     val bestLdSpeedMs: Double?
 )
 
-internal object GlidePolarMetricsResolver {
+object GlidePolarMetricsResolver {
     private const val MIN_SCAN_STEP_MS = 0.25
     private const val MAX_SCAN_STEP_MS = 1.0
     private const val TARGET_SCAN_SAMPLES = 240.0
