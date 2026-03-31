@@ -2,27 +2,37 @@ package com.example.xcpro.map
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.maplibre.android.geometry.LatLng
 
 class AdsbTrafficOverlaySupportTest {
 
     @Test
-    fun viewportRange_returnsFarthestEdgeMidpointDistanceFromCenter() {
-        val rangeMeters = resolveAdsbViewportRangeMeters(
-            center = LatLng(0.0, 0.0),
-            topLeft = LatLng(0.30, -0.20),
-            topRight = LatLng(0.30, 0.20),
-            bottomLeft = LatLng(-0.30, -0.20),
-            bottomRight = LatLng(-0.30, 0.20)
+    fun adsbPackedGroupCollisionSizePx_usesOutlineHaloWhenLargerThanMinimum() {
+        val collisionSizePx = adsbPackedGroupCollisionSizePx(
+            iconSizePx = 60,
+            viewportPolicy = viewportPolicy(iconScaleMultiplier = 1f),
+            density = 1f
         )
 
-        val expectedMeters = haversineMeters(
-            lat1 = 0.0,
-            lon1 = 0.0,
-            lat2 = 0.30,
-            lon2 = 0.0
-        )
-        requireNotNull(rangeMeters)
-        assertEquals(expectedMeters, rangeMeters, 250.0)
+        assertEquals(68.4f, collisionSizePx, 0.001f)
     }
+
+    @Test
+    fun adsbPackedGroupCollisionSizePx_respectsMinimumFloor() {
+        val collisionSizePx = adsbPackedGroupCollisionSizePx(
+            iconSizePx = 24,
+            viewportPolicy = viewportPolicy(iconScaleMultiplier = 0.88f),
+            density = 2f
+        )
+
+        assertEquals(80f, collisionSizePx, 0.001f)
+    }
+
+    private fun viewportPolicy(
+        iconScaleMultiplier: Float
+    ) = AdsbTrafficViewportDeclutterPolicy(
+        iconScaleMultiplier = iconScaleMultiplier,
+        showAllLabels = false,
+        closeTrafficLabelDistanceMeters = 10_000.0,
+        maxTargets = 72
+    )
 }

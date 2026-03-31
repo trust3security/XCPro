@@ -6,6 +6,20 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
+internal fun selectRenderableAdsbTargets(
+    targets: List<AdsbTrafficUiModel>,
+    maxTargets: Int
+): List<AdsbTrafficUiModel> {
+    if (targets.isEmpty() || maxTargets <= 0) return emptyList()
+    val renderTargets = ArrayList<AdsbTrafficUiModel>(targets.size.coerceAtMost(maxTargets))
+    for (target in targets) {
+        if (renderTargets.size >= maxTargets) break
+        if (!target.lat.isFinite() || !target.lon.isFinite()) continue
+        renderTargets += target
+    }
+    return renderTargets
+}
+
 internal fun buildAdsbTrafficOverlayFeatures(
     nowMonoMs: Long,
     targets: List<AdsbTrafficUiModel>,
@@ -19,9 +33,9 @@ internal fun buildAdsbTrafficOverlayFeatures(
     liveAlpha: Double,
     staleAlpha: Double
 ): Array<Feature> {
-    val features = ArrayList<Feature>(maxTargets)
-    for (target in targets) {
-        if (features.size >= maxTargets) break
+    val renderTargets = selectRenderableAdsbTargets(targets = targets, maxTargets = maxTargets)
+    val features = ArrayList<Feature>(renderTargets.size)
+    for (target in renderTargets) {
         val feature = AdsbGeoJsonMapper.toFeatureInternal(
             target = target,
             ownshipAltitudeMeters = ownshipAltitudeMeters,
@@ -51,9 +65,9 @@ internal fun buildAdsbTrafficLeaderLineFeatures(
     maxTargets: Int
 ): Array<Feature> {
     if (displayCoordinatesByKey.isEmpty()) return emptyArray()
-    val features = ArrayList<Feature>(displayCoordinatesByKey.size)
-    for (target in targets) {
-        if (features.size >= maxTargets) break
+    val renderTargets = selectRenderableAdsbTargets(targets = targets, maxTargets = maxTargets)
+    val features = ArrayList<Feature>(displayCoordinatesByKey.size.coerceAtMost(renderTargets.size))
+    for (target in renderTargets) {
         val displayCoordinate = displayCoordinatesByKey[target.id.raw] ?: continue
         if (!displayCoordinate.latitude.isFinite() || !displayCoordinate.longitude.isFinite()) continue
         val feature = Feature.fromGeometry(

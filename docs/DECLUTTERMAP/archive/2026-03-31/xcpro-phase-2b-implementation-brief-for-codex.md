@@ -1,3 +1,12 @@
+> Archived on 2026-03-31.
+> This was the one-off Codex execution prompt for the first selected-group
+> fan-out pass.
+> Current active direction remains
+> [xcpro-close-proximity-declutter-brief.md](../../xcpro-close-proximity-declutter-brief.md),
+> [xcpro-phase-2a-close-proximity-declutter-plan.md](../../xcpro-phase-2a-close-proximity-declutter-plan.md),
+> and [README.md](../../README.md).
+> Treat this file as historical implementation context only.
+
 # XCPro Phase 2B implementation brief for Codex
 
 Implement **Phase 2B only**.

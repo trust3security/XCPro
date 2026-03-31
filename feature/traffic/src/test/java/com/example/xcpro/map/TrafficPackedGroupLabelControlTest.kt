@@ -4,7 +4,10 @@ import android.graphics.PointF
 import com.example.xcpro.ogn.OgnAddressType
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.maplibre.android.geometry.LatLngBounds
 import org.junit.runner.RunWith
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.VisibleRegion
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Projection
 import org.mockito.kotlin.mock
@@ -52,6 +55,32 @@ class TrafficPackedGroupLabelControlTest {
         )
 
         assertEquals(setOf("primary", "solo"), fullLabelKeys)
+    }
+
+    @Test
+    fun resolveFullLabelKeys_excludesOffscreenTargetFromPrimaryElection() {
+        val map = mapOfPoints(
+            -35.0 to 149.0 to PointF(195f, 100f),
+            -35.0 to 149.0001 to PointF(205f, 100f),
+            -35.2 to 149.2 to PointF(50f, 50f),
+            viewportBoundsPx = PackedGroupDisplayBounds(
+                left = 0f,
+                top = 0f,
+                right = 200f,
+                bottom = 200f
+            )
+        )
+
+        val fullLabelKeys = control.resolveFullLabelKeys(
+            map = map,
+            seeds = listOf(
+                seed("visible", -35.0, 149.0, 1),
+                seed("offscreen", -35.0, 149.0001, 0),
+                seed("solo", -35.2, 149.2, 2)
+            )
+        )
+
+        assertEquals(setOf("visible", "solo"), fullLabelKeys)
     }
 
     @Test
@@ -177,18 +206,50 @@ class TrafficPackedGroupLabelControlTest {
     )
 
     private fun mapOfPoints(
-        vararg entries: Pair<Pair<Double, Double>, PointF>
+        vararg entries: Pair<Pair<Double, Double>, PointF>,
+        viewportBoundsPx: PackedGroupDisplayBounds? = null
     ): MapLibreMap {
         val map: MapLibreMap = mock()
         val projection: Projection = mock()
         whenever(map.projection).thenReturn(projection)
+        if (viewportBoundsPx != null) {
+            val farLeft = LatLng(1.0, 1.0)
+            val farRight = LatLng(1.0, 2.0)
+            val nearLeft = LatLng(0.0, 1.0)
+            val nearRight = LatLng(0.0, 2.0)
+            val visibleRegion = VisibleRegion(
+                farLeft,
+                farRight,
+                nearLeft,
+                nearRight,
+                LatLngBounds.from(
+                    1.0,
+                    2.0,
+                    0.0,
+                    1.0
+                )
+            )
+            whenever(projection.visibleRegion).thenReturn(visibleRegion)
+            whenever(projection.toScreenLocation(farLeft)).thenReturn(
+                PointF(viewportBoundsPx.left, viewportBoundsPx.top)
+            )
+            whenever(projection.toScreenLocation(farRight)).thenReturn(
+                PointF(viewportBoundsPx.right, viewportBoundsPx.top)
+            )
+            whenever(projection.toScreenLocation(nearLeft)).thenReturn(
+                PointF(viewportBoundsPx.left, viewportBoundsPx.bottom)
+            )
+            whenever(projection.toScreenLocation(nearRight)).thenReturn(
+                PointF(viewportBoundsPx.right, viewportBoundsPx.bottom)
+            )
+        }
         val points = entries.toMap()
-        whenever(projection.toScreenLocation(org.maplibre.android.geometry.LatLng(0.0, 0.0)))
+        whenever(projection.toScreenLocation(LatLng(0.0, 0.0)))
             .thenReturn(PointF())
         points.forEach { (coordinate, point) ->
             whenever(
                 projection.toScreenLocation(
-                    org.maplibre.android.geometry.LatLng(coordinate.first, coordinate.second)
+                    LatLng(coordinate.first, coordinate.second)
                 )
             ).thenReturn(point)
         }

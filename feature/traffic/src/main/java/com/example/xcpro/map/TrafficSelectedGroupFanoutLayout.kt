@@ -13,8 +13,8 @@ internal data class TrafficDisplayCoordinate(
 
 internal data class TrafficSelectedGroupFanoutLayoutConfig(
     val collisionPaddingPx: Float = 6f,
-    val firstRingRadiusPx: Float = 36f,
-    val additionalRingRadiusStepPx: Float = 20f,
+    val firstRingRadiusMultiplier: Float = 1f,
+    val additionalRingRadiusStepMultiplier: Float = 1f,
     val firstRingSlotCount: Int = 6,
     val additionalRingSlotCount: Int = 12
 )
@@ -48,12 +48,18 @@ internal class TrafficSelectedGroupFanoutLayout(
             .filterNot { it.key == selectedTarget.key }
             .sortedBy { it.key }
         if (nonPrimaryTargets.isEmpty()) return emptyMap()
+        val packedGroupFootprintPx = resolvePackedGroupFootprintPx(
+            targets = selectedGroup.map { index -> projectedTargets[index] }
+        )
 
         val displayCoordinatesByKey = LinkedHashMap<String, TrafficDisplayCoordinate>(nonPrimaryTargets.size)
         nonPrimaryTargets.forEachIndexed { index, target ->
             val slot = resolveSlot(index)
             val angleRadians = (-PI / 2.0) + ((slot.slotIndex.toDouble() / slot.slotCount.toDouble()) * PI * 2.0)
-            val radiusPx = config.firstRingRadiusPx + (config.additionalRingRadiusStepPx * slot.ringIndex)
+            val radiusPx = resolveRingRadiusPx(
+                packedGroupFootprintPx = packedGroupFootprintPx,
+                ringIndex = slot.ringIndex
+            )
             val displayLatLng = runCatching {
                 map.projection.fromScreenLocation(
                     PointF(
@@ -87,6 +93,21 @@ internal class TrafficSelectedGroupFanoutLayout(
             slotIndex = outerIndex % outerCount,
             slotCount = outerCount
         )
+    }
+
+    private fun resolvePackedGroupFootprintPx(
+        targets: List<ProjectedPackedGroupTarget>
+    ): Float = targets
+        .maxOf { target -> maxOf(target.collisionWidthPx, target.collisionHeightPx) } +
+        (config.collisionPaddingPx * 2f)
+
+    private fun resolveRingRadiusPx(
+        packedGroupFootprintPx: Float,
+        ringIndex: Int
+    ): Float {
+        val firstRingRadiusPx = packedGroupFootprintPx * config.firstRingRadiusMultiplier
+        val ringStepPx = packedGroupFootprintPx * config.additionalRingRadiusStepMultiplier
+        return firstRingRadiusPx + (ringStepPx * ringIndex)
     }
 
     private data class FanoutSlot(

@@ -19,6 +19,7 @@ internal const val ADSB_TRAFFIC_STALE_ALPHA = 0.45
 internal const val ADSB_TRAFFIC_LABEL_TEXT_SIZE_SP = 13f
 internal const val ADSB_TRAFFIC_LABEL_TEXT_OFFSET_BASE_Y = 1.7f
 internal const val ADSB_TRAFFIC_LABEL_TEXT_COLOR = "#000000"
+internal const val ADSB_TRAFFIC_PACKED_GROUP_COLLISION_SIZE_DP = 40f
 internal const val ADSB_TRAFFIC_OUTLINE_ICON_SCALE_MULTIPLIER = 1.14f
 internal val ADSB_TRAFFIC_LABEL_FONT_STACK = arrayOf(
     "Open Sans Semibold",

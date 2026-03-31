@@ -125,6 +125,53 @@ class DisplayPoseSmootherTest {
     }
 
     @Test
+    fun large_gap_reanchors_to_latest_fix_instead_of_crawling_from_stale_pose() {
+        val smoother = DisplayPoseSmoother(minSpeedForPredictionMs = 0.0)
+        smoother.pushRawFix(
+            DisplayPoseSmoother.RawFix(
+                latitude = 0.0,
+                longitude = 0.0,
+                speedMs = 18.0,
+                trackDeg = 0.0,
+                headingDeg = 0.0,
+                accuracyM = 5.0,
+                bearingAccuracyDeg = 5.0,
+                speedAccuracyMs = 0.5,
+                timestampMs = 0L,
+                orientationMode = MapOrientationMode.NORTH_UP
+            )
+        )
+        val initial = smoother.tick(0L)!!
+
+        smoother.pushRawFix(
+            DisplayPoseSmoother.RawFix(
+                latitude = 0.0045, // ~500 m north
+                longitude = 0.0,
+                speedMs = 18.0,
+                trackDeg = 0.0,
+                headingDeg = 0.0,
+                accuracyM = 5.0,
+                bearingAccuracyDeg = 5.0,
+                speedAccuracyMs = 0.5,
+                timestampMs = 10_000L,
+                orientationMode = MapOrientationMode.NORTH_UP
+            )
+        )
+        val pose = smoother.tick(10_000L)!!
+
+        val moved = distanceMeters(
+            initial.location.latitude,
+            initial.location.longitude,
+            pose.location.latitude,
+            pose.location.longitude
+        )
+
+        assertEquals(0.0045, pose.location.latitude, 1e-6)
+        assertEquals(0.0, pose.location.longitude, 1e-6)
+        assertTrue(moved > 400.0)
+    }
+
+    @Test
     fun prediction_disabled_when_speed_accuracy_is_poor() {
         val smoother = DisplayPoseSmoother(minSpeedForPredictionMs = 0.0)
         smoother.pushRawFix(

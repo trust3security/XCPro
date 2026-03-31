@@ -29,7 +29,9 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
   - short dead reckoning between fixes,
   - low-pass smoothing for position and track,
   - accuracy-aware damping (including bearing accuracy when available),
-  - display-only outlier clamping (limits sudden GNSS jumps without freezing).
+  - display-only outlier clamping (limits sudden GNSS jumps without freezing),
+  - long-gap re-anchoring so foreground resume/doze recovery snaps to the latest
+    fresh fix instead of walking from a stale pre-background pose.
 - Smoothing is applied only to the UI marker/camera. Sensor fusion remains unchanged.
 
 ### Live smoothing profiles
@@ -86,6 +88,8 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
 ### Display guardrails (jitter prevention)
 - Outlier clamp: if a fix jumps unrealistically far in a short time, the target is
   clamped along its direction using accuracy/speed-derived limits.
+- Long-gap re-anchor: if the next accepted fix arrives after a large timestamp gap,
+  the smoother resets visual continuity and treats that fix as the new anchor.
 - Prediction is gated by speed + speed accuracy; poor speed accuracy disables
   dead reckoning to avoid wobble while stationary or walking.
 - Bearing accuracy scales prediction horizon to reduce over-shoot on noisy headings.

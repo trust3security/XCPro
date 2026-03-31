@@ -31,39 +31,39 @@ class BlueLocationViewportScalePolicyTest {
     }
 
     @Test
-    fun closeRadius_keepsCurrentTriangleSize() {
+    fun closeRadius_usesReducedTriangleSize() {
         val policy = resolveBlueLocationViewportScalePolicy(4_999.0)
 
-        assertEquals(1.0f, policy.iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, policy.iconScaleMultiplier, 0f)
     }
 
     @Test
     fun fiveKilometers_reducesTriangleByTwentyFivePercent() {
         val policy = resolveBlueLocationViewportScalePolicy(5_000.0)
 
-        assertEquals(0.75f, policy.iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, policy.iconScaleMultiplier, 0f)
     }
 
     @Test
     fun tenKilometers_usesTheReducedTriangleSize() {
         val policy = resolveBlueLocationViewportScalePolicy(10_000.0)
 
-        assertEquals(0.75f, policy.iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, policy.iconScaleMultiplier, 0f)
     }
 
     @Test
     fun twentyKilometers_stillUsesTheReducedTriangleSize() {
         val policy = resolveBlueLocationViewportScalePolicy(20_000.0)
 
-        assertEquals(0.75f, policy.iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, policy.iconScaleMultiplier, 0f)
     }
 
     @Test
-    fun invalidOrUnavailableRadius_fallsBackToBaseSize() {
-        assertEquals(1.0f, resolveBlueLocationViewportScalePolicy(null).iconScaleMultiplier, 0f)
-        assertEquals(1.0f, resolveBlueLocationViewportScalePolicy(Double.NaN).iconScaleMultiplier, 0f)
-        assertEquals(1.0f, resolveBlueLocationViewportScalePolicy(Double.POSITIVE_INFINITY).iconScaleMultiplier, 0f)
-        assertEquals(1.0f, resolveBlueLocationViewportScalePolicy(0.0).iconScaleMultiplier, 0f)
-        assertEquals(1.0f, resolveBlueLocationViewportScalePolicy(-1.0).iconScaleMultiplier, 0f)
+    fun invalidOrUnavailableRadius_stillUsesReducedTriangleSize() {
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, resolveBlueLocationViewportScalePolicy(null).iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, resolveBlueLocationViewportScalePolicy(Double.NaN).iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, resolveBlueLocationViewportScalePolicy(Double.POSITIVE_INFINITY).iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, resolveBlueLocationViewportScalePolicy(0.0).iconScaleMultiplier, 0f)
+        assertEquals(BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER, resolveBlueLocationViewportScalePolicy(-1.0).iconScaleMultiplier, 0f)
     }
 }

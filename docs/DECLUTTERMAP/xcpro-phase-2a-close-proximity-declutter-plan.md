@@ -6,7 +6,14 @@
 - Owner: Codex
 - Date: 2026-03-31
 - Issue/PR: local branch `feat/traffic-declutter-phase2a`
-- Status: Verified locally
+- Status: Verified locally for Phase 2A; see `README.md` for current declutter branch status
+
+Status note (2026-03-31):
+- This plan remains the active contract for Phase 2A packed-group label control.
+- The narrow review-correction pass is implemented in the current branch and no
+  longer needs a top-level execution brief.
+- Do not treat archived Phase 2B execution prompts as the current source of
+  truth.
 
 ## 1) Scope
 

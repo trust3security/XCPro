@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,13 @@ APP_BUILD_GRADLE = ROOT / "app" / "build.gradle.kts"
 EXPECTED_APPLICATION_ID = "com.example.openxcpro"
 EXPECTED_DEBUG_APPLICATION_ID_SUFFIX = ".debug"
 RAW_LOG_ALLOWLIST = ROOT / "config" / "quality" / "raw_log_allowlist.txt"
+EXCLUDED_DIR_NAMES = {
+    ".git",
+    ".gradle",
+    ".idea",
+    "artifacts",
+    "build",
+}
 
 FORBIDDEN_PATTERNS = [
     r"\bSystem\.currentTimeMillis\(\)",
@@ -24,6 +32,7 @@ FORBIDDEN_PATTERNS = [
     r"\bDate\(",
     r"\bkotlin\.system\.getTimeMillis\(",
 ]
+FORBIDDEN_REGEXES = tuple(re.compile(pattern) for pattern in FORBIDDEN_PATTERNS)
 
 ALLOW_DIR_PARTS = {
     "src/test",
@@ -64,19 +73,36 @@ def as_repo_relative(path: Path) -> str:
     return str(path.relative_to(ROOT)).replace("\\", "/")
 
 
-def is_allowed_path(path: Path) -> bool:
-    rel = as_repo_relative(path)
+def is_allowed_relative_path(rel: str) -> bool:
     if any(part in rel for part in ALLOW_DIR_PARTS):
         return True
     return rel in ALLOW_PRODUCTION_FILES
 
 
-def find_violations(path: Path) -> list[Violation]:
+def is_production_kotlin_relative_path(rel: str) -> bool:
+    return rel.endswith(".kt") and "/src/main/" in rel
+
+
+def iter_repo_kotlin_files() -> list[Path]:
+    kotlin_files: list[Path] = []
+    for current_root, dirnames, filenames in os.walk(ROOT):
+        dirnames[:] = [
+            dirname for dirname in dirnames if dirname not in EXCLUDED_DIR_NAMES
+        ]
+        current_path = Path(current_root)
+        for filename in filenames:
+            if Path(filename).suffix not in KOTLIN_FILE_EXTS:
+                continue
+            kotlin_files.append(current_path / filename)
+    kotlin_files.sort(key=as_repo_relative)
+    return kotlin_files
+
+
+def find_violations(path: Path, text: str) -> list[Violation]:
     violations: list[Violation] = []
-    text = path.read_text(encoding="utf-8", errors="replace")
     for idx, line in enumerate(text.splitlines(), start=1):
-        for pattern in FORBIDDEN_PATTERNS:
-            if re.search(pattern, line):
+        for pattern, regex in zip(FORBIDDEN_PATTERNS, FORBIDDEN_REGEXES):
+            if regex.search(line):
                 violations.append(
                     Violation(
                         path=path,
@@ -116,29 +142,36 @@ def load_raw_log_allowlist() -> dict[str, int]:
     return allowances
 
 
-def is_production_kotlin_file(path: Path) -> bool:
-    if not path.is_file() or path.suffix not in PRODUCTION_KOTLIN_FILE_EXTS:
-        return False
-    rel = as_repo_relative(path)
-    return "/src/main/" in rel and "/build/" not in rel
-
-
-def count_raw_log_lines(path: Path) -> int:
-    text = path.read_text(encoding="utf-8", errors="replace")
+def count_raw_log_lines(text: str) -> int:
     return sum(1 for line in text.splitlines() if RAW_LOG_PATTERN.search(line))
 
 
-def find_raw_log_drift() -> list[RawLogDrift]:
-    allowances = load_raw_log_allowlist()
-    actual_counts: dict[str, int] = {}
-    for path in ROOT.rglob("*"):
-        if not is_production_kotlin_file(path):
-            continue
+def scan_repo_kotlin_files(
+    kotlin_files: list[Path],
+) -> tuple[list[Violation], dict[str, int]]:
+    violations: list[Violation] = []
+    actual_raw_log_counts: dict[str, int] = {}
+    for path in kotlin_files:
         rel = as_repo_relative(path)
-        count = count_raw_log_lines(path)
-        if count > 0:
-            actual_counts[rel] = count
+        should_scan_time = not is_allowed_relative_path(rel)
+        should_count_raw_logs = is_production_kotlin_relative_path(rel)
+        if not should_scan_time and not should_count_raw_logs:
+            continue
 
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if should_scan_time:
+            violations.extend(find_violations(path, text))
+        if should_count_raw_logs:
+            count = count_raw_log_lines(text)
+            if count > 0:
+                actual_raw_log_counts[rel] = count
+
+    return violations, actual_raw_log_counts
+
+
+def find_raw_log_drift(
+    actual_counts: dict[str, int], allowances: dict[str, int]
+) -> list[RawLogDrift]:
     drift: list[RawLogDrift] = []
     for rel, actual_count in sorted(actual_counts.items()):
         allowed_count = allowances.get(rel)
@@ -156,13 +189,8 @@ def find_raw_log_drift() -> list[RawLogDrift]:
 
 
 def main() -> int:
-    violations: list[Violation] = []
-    for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in KOTLIN_FILE_EXTS:
-            continue
-        if is_allowed_path(path):
-            continue
-        violations.extend(find_violations(path))
+    kotlin_files = iter_repo_kotlin_files()
+    violations, actual_raw_log_counts = scan_repo_kotlin_files(kotlin_files)
 
     if violations:
         print("\nARCH GATE FAILED: forbidden time API usage found in production code\n")
@@ -191,10 +219,11 @@ def main() -> int:
         return 1
 
     try:
-        raw_log_drift = find_raw_log_drift()
+        allowances = load_raw_log_allowlist()
     except (FileNotFoundError, ValueError) as exc:
         print(f"\nARCH GATE FAILED: {exc}\n")
         return 1
+    raw_log_drift = find_raw_log_drift(actual_raw_log_counts, allowances)
 
     if raw_log_drift:
         print("\nARCH GATE FAILED: raw Log.* production logging drift detected\n")

@@ -31,4 +31,6 @@ dependencies {
     implementation(libs.androidx.datastore.core.android)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("javax.inject:javax.inject:1")
+
+    testImplementation(libs.junit)
 }

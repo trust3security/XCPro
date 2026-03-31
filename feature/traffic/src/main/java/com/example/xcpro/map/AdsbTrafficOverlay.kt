@@ -339,13 +339,18 @@ class AdsbTrafficOverlay(
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         val leaderLineSource = style.getSourceAs<GeoJsonSource>(ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID) ?: return
-        val fullLabelKeys = resolveFullLabelKeys(frameSnapshot.targets)
-        val displayCoordinatesByKey = resolveDisplayCoordinatesByKey(frameSnapshot.targets)
+        val renderTargets = selectRenderableAdsbTargets(
+            targets = frameSnapshot.targets,
+            maxTargets = currentViewportPolicy.maxTargets
+        )
+        val renderFrameSnapshot = frameSnapshot.copy(targets = renderTargets)
+        val fullLabelKeys = resolveFullLabelKeys(renderTargets)
+        val displayCoordinatesByKey = resolveDisplayCoordinatesByKey(renderTargets)
         renderAdsbTrafficFrame(
             source = source,
             leaderLineSource = leaderLineSource,
             nowMonoMs = nowMonoMs,
-            frameSnapshot = frameSnapshot,
+            frameSnapshot = renderFrameSnapshot,
             fullLabelKeys = fullLabelKeys,
             displayCoordinatesByKey = displayCoordinatesByKey,
             ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
@@ -377,13 +382,12 @@ class AdsbTrafficOverlay(
         targets: List<AdsbTrafficUiModel>
     ): Set<String> {
         if (targets.isEmpty()) return emptySet()
-        val renderTargets = targets.take(currentViewportPolicy.maxTargets)
         val priorityRankByKey = rankAdsbTargetsForPackedGroupLabels(
-            targets = renderTargets,
+            targets = targets,
             selectedTargetId = currentSelectedTargetId
         )
         val collisionSizePx = resolvePackedGroupCollisionSizePx()
-        val seeds = renderTargets.map { target ->
+        val seeds = targets.map { target ->
             TrafficPackedGroupLabelSeed(
                 key = target.id.raw,
                 latitude = target.lat,
@@ -404,9 +408,8 @@ class AdsbTrafficOverlay(
     ): Map<String, TrafficDisplayCoordinate> {
         val selectedTargetId = currentSelectedTargetId ?: return emptyMap()
         if (currentViewportZoom < ADSB_TRAFFIC_LABELS_MIN_ZOOM) return emptyMap()
-        val renderTargets = targets.take(currentViewportPolicy.maxTargets)
         val collisionSizePx = resolvePackedGroupCollisionSizePx()
-        val seeds = renderTargets.map { target ->
+        val seeds = targets.map { target ->
             TrafficPackedGroupLabelSeed(
                 key = target.id.raw,
                 latitude = target.lat,
@@ -424,15 +427,15 @@ class AdsbTrafficOverlay(
     }
 
     private fun resolvePackedGroupCollisionSizePx(): Float {
-        val density = context.resources.displayMetrics.density
-        val minimumCollisionSizePx = PACKED_GROUP_COLLISION_SIZE_DP * density
-        val renderedIconSizePx = currentIconSizePx.toFloat() * currentViewportPolicy.iconScaleMultiplier
-        return maxOf(renderedIconSizePx, minimumCollisionSizePx)
+        return adsbPackedGroupCollisionSizePx(
+            iconSizePx = currentIconSizePx,
+            viewportPolicy = currentViewportPolicy,
+            density = context.resources.displayMetrics.density
+        )
     }
 
     private companion object {
         private const val SOURCE_ID = ADSB_TRAFFIC_SOURCE_ID
         private const val ADSB_TRAFFIC_INITIAL_VIEWPORT_ZOOM = 10f
-        private const val PACKED_GROUP_COLLISION_SIZE_DP = 40f
     }
 }

@@ -6,6 +6,7 @@ import com.example.xcpro.ogn.OgnTrafficIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.maplibre.android.geometry.LatLngBounds
 
 class OgnTrafficOverlayFeatureTargetsTest {
 
@@ -35,6 +36,60 @@ class OgnTrafficOverlayFeatureTargetsTest {
     }
 
     @Test
+    fun featureGeneration_skipsOffscreenTargetsAndRespectsMaxTargets() {
+        val visibleBounds = visibleBounds()
+        val features = buildFeatures(
+            targets = listOf(
+                target("OFF", latitude = -34.5),
+                target("A1"),
+                target("B2")
+            ),
+            visibleBounds = visibleBounds,
+            maxTargets = 1
+        )
+
+        assertEquals(1, features.size)
+        assertEquals("FLARM:A1", resolveOgnTrafficTargetKey(features.single()))
+    }
+
+    @Test
+    fun selectRenderableOgnTargets_skipsOffscreenEarlyTargetForPackedGroupSeeds() {
+        val visibleBounds = visibleBounds()
+
+        val renderTargets = selectRenderableOgnTargets(
+            targets = listOf(
+                target("OFF", latitude = -34.5),
+                target("A1"),
+                target("B2")
+            ),
+            visibleBounds = visibleBounds,
+            maxTargets = 1
+        )
+
+        assertEquals(listOf("FLARM:A1"), renderTargets.map { it.canonicalKey })
+    }
+
+    @Test
+    fun buildOgnTrafficLeaderLineFeatures_skipsOffscreenTargetsEvenWhenDisplayCoordinateExists() {
+        val visibleBounds = visibleBounds()
+        val visible = target("A1")
+        val offscreen = target("OFF", latitude = -34.5)
+
+        val features = buildOgnTrafficLeaderLineFeatures(
+            targets = listOf(offscreen, visible),
+            displayCoordinatesByKey = mapOf(
+                offscreen.canonicalKey to TrafficDisplayCoordinate(latitude = -34.49, longitude = 149.02),
+                visible.canonicalKey to TrafficDisplayCoordinate(latitude = -35.01, longitude = 149.02)
+            ),
+            visibleBounds = visibleBounds,
+            maxTargets = 1
+        )
+
+        assertEquals(1, features.size)
+        assertEquals(visible.canonicalKey, resolveOgnTrafficTargetKey(features.single()))
+    }
+
+    @Test
     fun resolveOgnTrafficTargetKey_returnsNullWhenFeatureHasNoTargetIdentity() {
         val feature = org.maplibre.geojson.Feature.fromGeometry(
             org.maplibre.geojson.Point.fromLngLat(149.0, -35.0)
@@ -45,13 +100,14 @@ class OgnTrafficOverlayFeatureTargetsTest {
 
     private fun buildFeatures(
         targets: List<OgnTrafficTarget>,
+        visibleBounds: LatLngBounds? = null,
         maxTargets: Int = MAX_TARGETS
     ) = buildOgnTrafficOverlayFeatures(
         nowMonoMs = 10_000L,
         targets = targets,
         fullLabelKeys = targets.map { it.canonicalKey }.toSet(),
         ownshipAltitudeMeters = 1_000.0,
-        visibleBounds = null,
+        visibleBounds = visibleBounds,
         altitudeUnit = AltitudeUnit.METERS,
         useSatelliteContrastIcons = false,
         unitsPreferences = UnitsPreferences(),
@@ -94,4 +150,13 @@ class OgnTrafficOverlayFeatureTargetsTest {
         addressHex = id,
         canonicalKey = "FLARM:$id"
     )
+
+    private fun visibleBounds(): LatLngBounds {
+        return LatLngBounds.from(
+            -34.9,
+            149.1,
+            -35.1,
+            148.9
+        )
+    }
 }

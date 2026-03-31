@@ -28,7 +28,7 @@ import org.robolectric.annotation.Config
 class BlueLocationOverlayTest {
 
     @Test
-    fun setViewportMetrics_knownLocation_updatesScaleWithoutRewritingSource() {
+    fun setViewportMetrics_knownLocation_keepsReducedScaleWithoutRewritingLayerOrSource() {
         val fixture = createFixture()
         val location = LatLng(-35.0, 149.0)
 
@@ -51,8 +51,7 @@ class BlueLocationOverlayTest {
             distancePerPixelMeters = 100.0
         )
 
-        verifyNoInteractions(fixture.source)
-        verify(fixture.layer, atLeastOnce()).setProperties(any())
+        verifyNoInteractions(fixture.source, fixture.layer)
         assertCurrentIconScale(fixture.overlay, 0.75f)
     }
 
@@ -79,7 +78,7 @@ class BlueLocationOverlayTest {
             mapBearing = 10.0,
             orientationMode = MapOrientationMode.NORTH_UP
         )
-        assertCurrentIconScale(fixture.overlay, 1.0f)
+        assertCurrentIconScale(fixture.overlay, 0.75f)
 
         fixture.overlay.updateLocation(
             location = wideLocation,
