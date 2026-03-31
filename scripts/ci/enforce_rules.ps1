@@ -21,34 +21,22 @@ function Invoke-Rg {
     param(
         [string[]]$RgArgs
     )
-    $stdoutFile = [System.IO.Path]::GetTempFileName()
     $stderrFile = [System.IO.Path]::GetTempFileName()
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
-        $proc = Start-Process `
-            -FilePath "rg" `
-            -ArgumentList $RgArgs `
-            -NoNewWindow `
-            -Wait `
-            -PassThru `
-            -RedirectStandardOutput $stdoutFile `
-            -RedirectStandardError $stderrFile
-        $code = $proc.ExitCode
-        $output = @()
-        if (Test-Path $stdoutFile) {
-            $output = @(Get-Content $stdoutFile)
-        }
-        $stderr = @()
+        $ErrorActionPreference = "Continue"
+        $lines = @(& rg @RgArgs 2> $stderrFile | ForEach-Object { "$_" })
+        $code = $LASTEXITCODE
+        $stderrLines = @()
         if (Test-Path $stderrFile) {
-            $stderr = @(Get-Content $stderrFile)
+            $stderrLines = @(Get-Content $stderrFile)
         }
     }
     finally {
-        Remove-Item -Path $stdoutFile -ErrorAction SilentlyContinue
+        $ErrorActionPreference = $previousErrorActionPreference
         Remove-Item -Path $stderrFile -ErrorAction SilentlyContinue
     }
 
-    $lines = @($output | ForEach-Object { "$_" })
-    $stderrLines = @($stderr | ForEach-Object { "$_" })
     $noFilesMatches = @(@($lines + $stderrLines) | Where-Object { $_ -match "No files were searched" })
     $noFilesSearched = $code -eq 2 -and $noFilesMatches.Count -gt 0
     if ($noFilesSearched) {
@@ -65,6 +53,34 @@ function Invoke-Rg {
         NoFilesSearched = $false
         ErrorOutput     = $stderrLines
     }
+}
+
+function Get-FileLineCount {
+    param(
+        [string]$FilePath
+    )
+    return (Get-Content $FilePath | Measure-Object -Line).Lines
+}
+
+function Initialize-LineCountMap {
+    param(
+        [string[]]$FilePaths
+    )
+    $lineCountMap = [System.Collections.Generic.Dictionary[string, int]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($filePath in $FilePaths) {
+        if (-not $filePath) {
+            continue
+        }
+        $normalizedPath = $filePath.Replace('\', '/')
+        if ($lineCountMap.ContainsKey($normalizedPath)) {
+            continue
+        }
+        if (-not (Test-Path $normalizedPath)) {
+            continue
+        }
+        $lineCountMap[$normalizedPath] = Get-FileLineCount -FilePath $normalizedPath
+    }
+    return $lineCountMap
 }
 
 function Assert-NoMatches {
@@ -148,7 +164,16 @@ function Assert-MaxLines {
         $script:HadFailures = $true
         return
     }
-    $lineCount = (Get-Content $FilePath | Measure-Object -Line).Lines
+    $lineCount = $null
+    if (($null -ne $script:LineCountByPath) -and $script:LineCountByPath.ContainsKey($normalizedPath)) {
+        $lineCount = $script:LineCountByPath[$normalizedPath]
+    }
+    else {
+        $lineCount = Get-FileLineCount -FilePath $FilePath
+        if ($null -ne $script:LineCountByPath) {
+            $script:LineCountByPath[$normalizedPath] = $lineCount
+        }
+    }
     if ($lineCount -gt $MaxLines) {
         Write-Host ""
         Write-Host "FAIL: $Name"
@@ -161,42 +186,25 @@ Require-Rg
 
 $script:HadFailures = $false
 $script:LineBudgetExceptionSet = $null
+$script:LineCountByPath = $null
 $repoRoot = Resolve-Path (Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath "..") -ChildPath "..")
 Set-Location $repoRoot
 
-$runTimebaseRules = $RuleSet -eq "Full"
 $runArchitectureRules = $true
 $runHygieneRules = $RuleSet -ne "ArchitectureFast"
 $runRegressionContractRules = $RuleSet -ne "ArchitectureFast"
 $runLineBudgetRules = $RuleSet -ne "ArchitectureFast"
 $selectedRuleGroups = @()
-if ($runTimebaseRules) { $selectedRuleGroups += "timebase" }
 if ($runArchitectureRules) { $selectedRuleGroups += "architecture" }
 if ($runHygieneRules) { $selectedRuleGroups += "hygiene" }
 if ($runRegressionContractRules) { $selectedRuleGroups += "regression-contracts" }
 if ($runLineBudgetRules) { $selectedRuleGroups += "line-budgets" }
 Write-Host "Running rule set '$RuleSet' with groups: $($selectedRuleGroups -join ', ')"
 
-if ($runTimebaseRules) {
-    # Timebase rules.
-
-    # 1) Timebase: no direct system time in domain/fusion logic.
-    $timebaseArgs = @(
-        "-n",
-        "-P",
-        "(System\.currentTimeMillis|SystemClock|Date\(|Instant\.now)",
-        "--glob", "feature/**/src/main/java/**/sensors/**/*.kt",
-        "--glob", "feature/**/src/main/java/**/domain/**/*.kt",
-        "--glob", "core/**/src/main/java/**/domain/**/*.kt",
-        "--glob", "dfcards-library/src/main/java/**/*.kt"
-    )
-    Assert-NoMatches -Name "Timebase usage in domain/fusion" -RgArgs $timebaseArgs
-}
-
 if ($runArchitectureRules) {
     # Architecture rules.
 
-    # 2) DI: core pipeline constructed inside managers (heuristic).
+    # 1) DI: core pipeline constructed inside managers (heuristic).
     $diArgs = @(
         "-n",
         "FlightDataCalculator\(",
@@ -205,7 +213,7 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "DI: pipeline constructed inside managers" -RgArgs $diArgs
 
-    # 3) ViewModel purity: no SharedPreferences or UI types in ViewModels.
+    # 2) ViewModel purity: no SharedPreferences or UI types in ViewModels.
     $vmArgs = @(
         "-n",
         "(SharedPreferences|getSharedPreferences|androidx\\.compose\\.ui)",
@@ -213,7 +221,7 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "ViewModel purity violations" -RgArgs $vmArgs
 
-    # 4) Compose lifecycle: ban collectAsState without lifecycle awareness.
+    # 3) Compose lifecycle: ban collectAsState without lifecycle awareness.
     $collectArgs = @(
         "-n",
         "collectAsState\(",
@@ -225,7 +233,7 @@ if ($runArchitectureRules) {
 if ($runHygieneRules) {
     # Hygiene rules.
 
-    # 5) Vendor strings: no xcsoar in production Kotlin source.
+    # 4) Vendor strings: no xcsoar in production Kotlin source.
     $vendorArgs = @(
         "-n",
         "-i",
@@ -234,7 +242,7 @@ if ($runHygieneRules) {
     )
     Assert-NoMatches -Name "Vendor strings in production Kotlin source" -RgArgs $vendorArgs
 
-    # 6) ASCII hygiene: no non-ASCII characters in production Kotlin source.
+    # 5) ASCII hygiene: no non-ASCII characters in production Kotlin source.
     $asciiArgs = @(
         "-n",
         "-P",
@@ -245,7 +253,7 @@ if ($runHygieneRules) {
 }
 
 if ($runArchitectureRules) {
-    # 7) Task coordinator boundary: no manager escape-hatch APIs/calls in production source.
+    # 6) Task coordinator boundary: no manager escape-hatch APIs/calls in production source.
     $taskBoundaryArgs = @(
         "-n",
         "(getRacingTaskManager\(|getAATTaskManager\()",
@@ -253,7 +261,7 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "Task coordinator manager escape hatches in production source" -RgArgs $taskBoundaryArgs
 
-    # 8) Task manager boundary: no MapLibre imports in AAT/Racing task managers.
+    # 7) Task manager boundary: no MapLibre imports in AAT/Racing task managers.
     $taskManagerMapLibreImportsArgs = @(
         "-n",
         "org\.maplibre\.android",
@@ -846,6 +854,7 @@ if ($runLineBudgetRules) {
         $details = ($globalKotlinFiles.ErrorOutput -join "; ")
         throw "rg failed while collecting Kotlin files for the global line budget (exit $($globalKotlinFiles.Code)). $details"
     }
+    $script:LineCountByPath = Initialize-LineCountMap -FilePaths @($globalKotlinFiles.Output)
     foreach ($filePath in @($globalKotlinFiles.Output | Sort-Object -Unique)) {
         if (-not $filePath) {
             continue

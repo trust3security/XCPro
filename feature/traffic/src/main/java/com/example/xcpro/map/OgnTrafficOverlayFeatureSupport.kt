@@ -9,6 +9,22 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
+internal fun selectRenderableOgnTargets(
+    targets: List<OgnTrafficTarget>,
+    visibleBounds: LatLngBounds?,
+    maxTargets: Int
+): List<OgnTrafficTarget> {
+    if (targets.isEmpty() || maxTargets <= 0) return emptyList()
+    val renderTargets = ArrayList<OgnTrafficTarget>(targets.size.coerceAtMost(maxTargets))
+    for (target in targets) {
+        if (renderTargets.size >= maxTargets) break
+        if (!isValidOgnCoordinate(target.latitude, target.longitude)) continue
+        if (!isOgnInVisibleBounds(target.latitude, target.longitude, visibleBounds)) continue
+        renderTargets += target
+    }
+    return renderTargets
+}
+
 internal fun buildOgnTrafficOverlayFeatures(
     nowMonoMs: Long,
     targets: List<OgnTrafficTarget>,
@@ -24,12 +40,13 @@ internal fun buildOgnTrafficOverlayFeatures(
     liveAlpha: Double,
     staleAlpha: Double
 ): List<Feature> {
-    val features = ArrayList<Feature>(targets.size.coerceAtMost(maxTargets))
-    for (target in targets) {
-        if (features.size >= maxTargets) break
-        if (!isValidOgnCoordinate(target.latitude, target.longitude)) continue
-        if (!isOgnInVisibleBounds(target.latitude, target.longitude, visibleBounds)) continue
-
+    val renderTargets = selectRenderableOgnTargets(
+        targets = targets,
+        visibleBounds = visibleBounds,
+        maxTargets = maxTargets
+    )
+    val features = ArrayList<Feature>(renderTargets.size)
+    for (target in renderTargets) {
         val displayCoordinate = displayCoordinatesByKey[target.canonicalKey]
         val renderLatitude = displayCoordinate?.latitude ?: target.latitude
         val renderLongitude = displayCoordinate?.longitude ?: target.longitude
@@ -88,11 +105,13 @@ internal fun buildOgnTrafficLeaderLineFeatures(
     maxTargets: Int
 ): List<Feature> {
     if (displayCoordinatesByKey.isEmpty()) return emptyList()
-    val features = ArrayList<Feature>(displayCoordinatesByKey.size)
-    for (target in targets) {
-        if (features.size >= maxTargets) break
-        if (!isValidOgnCoordinate(target.latitude, target.longitude)) continue
-        if (!isOgnInVisibleBounds(target.latitude, target.longitude, visibleBounds)) continue
+    val renderTargets = selectRenderableOgnTargets(
+        targets = targets,
+        visibleBounds = visibleBounds,
+        maxTargets = maxTargets
+    )
+    val features = ArrayList<Feature>(displayCoordinatesByKey.size.coerceAtMost(renderTargets.size))
+    for (target in renderTargets) {
         val displayCoordinate = displayCoordinatesByKey[target.canonicalKey] ?: continue
         if (!isValidOgnCoordinate(displayCoordinate.latitude, displayCoordinate.longitude)) continue
         val lineFeature = Feature.fromGeometry(

@@ -272,6 +272,19 @@ internal fun adsbRenderedIconScale(
     viewportPolicy: AdsbTrafficViewportDeclutterPolicy
 ): Float = adsbIconScaleForPx(iconSizePx) * viewportPolicy.iconScaleMultiplier
 
+internal fun adsbPackedGroupCollisionSizePx(
+    iconSizePx: Int,
+    viewportPolicy: AdsbTrafficViewportDeclutterPolicy,
+    density: Float
+): Float {
+    val minimumCollisionSizePx = ADSB_TRAFFIC_PACKED_GROUP_COLLISION_SIZE_DP * density
+    val renderedOutlineSizePx =
+        iconSizePx.toFloat() *
+            viewportPolicy.iconScaleMultiplier *
+            ADSB_TRAFFIC_OUTLINE_ICON_SCALE_MULTIPLIER
+    return maxOf(renderedOutlineSizePx, minimumCollisionSizePx)
+}
+
 internal fun adsbTopLabelOffsetYForPx(
     iconSizePx: Int,
     viewportPolicy: AdsbTrafficViewportDeclutterPolicy

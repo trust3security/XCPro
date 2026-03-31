@@ -4,6 +4,8 @@ internal data class BlueLocationViewportScalePolicy(
     val iconScaleMultiplier: Float
 )
 
+internal const val BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER: Float = 0.75f
+
 internal fun resolveBlueLocationVisibleRadiusMeters(
     screenX: Float,
     screenY: Float,
@@ -36,17 +38,7 @@ internal fun resolveBlueLocationVisibleRadiusMeters(
 internal fun resolveBlueLocationViewportScalePolicy(
     visibleRadiusMeters: Double?
 ): BlueLocationViewportScalePolicy {
-    val radiusMeters = visibleRadiusMeters
-        ?.takeIf { it.isFinite() && it > 0.0 }
-        ?: return BlueLocationViewportScalePolicy(iconScaleMultiplier = 1.0f)
-
-    return when {
-        radiusMeters >= BLUE_LOCATION_VISIBLE_RADIUS_MID_METERS ->
-            BlueLocationViewportScalePolicy(iconScaleMultiplier = 0.75f)
-
-        else ->
-            BlueLocationViewportScalePolicy(iconScaleMultiplier = 1.0f)
-    }
+    return BlueLocationViewportScalePolicy(
+        iconScaleMultiplier = BLUE_LOCATION_SMALL_ICON_SCALE_MULTIPLIER
+    )
 }
-
-internal const val BLUE_LOCATION_VISIBLE_RADIUS_MID_METERS: Double = 5_000.0

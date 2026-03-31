@@ -128,19 +128,24 @@ class OgnTrafficOverlay(
         val leaderLineSource = style.getSourceAs<GeoJsonSource>(LEADER_LINE_SOURCE_ID) ?: return
         val nowMonoMs = TimeBridge.nowMonoMs()
         val visibleBounds = map.projection.visibleRegion?.latLngBounds
-        val fullLabelKeys = resolveFullLabelKeys(
+        val renderTargets = selectRenderableOgnTargets(
             targets = targets,
+            visibleBounds = visibleBounds,
+            maxTargets = MAX_TARGETS
+        )
+        val fullLabelKeys = resolveFullLabelKeys(
+            targets = renderTargets,
             selectedTargetKey = selectedTargetKey
         )
         val displayCoordinatesByKey = resolveDisplayCoordinatesByKey(
-            targets = targets,
+            targets = renderTargets,
             selectedTargetKey = selectedTargetKey
         )
         renderOgnTrafficFrame(
             source = source,
             leaderLineSource = leaderLineSource,
             nowMonoMs = nowMonoMs,
-            targets = targets,
+            targets = renderTargets,
             fullLabelKeys = fullLabelKeys,
             displayCoordinatesByKey = displayCoordinatesByKey,
             ownshipAltitudeMeters = ownshipAltitudeMeters,

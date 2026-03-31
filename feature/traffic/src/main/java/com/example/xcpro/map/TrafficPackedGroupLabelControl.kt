@@ -34,12 +34,16 @@ internal fun projectPackedGroupTargets(
     seeds: List<TrafficPackedGroupLabelSeed>
 ): List<ProjectedPackedGroupTarget> {
     if (seeds.isEmpty()) return emptyList()
+    val viewportScreenBounds = resolveViewportScreenBounds(map)
     val projectedTargets = ArrayList<ProjectedPackedGroupTarget>(seeds.size)
     seeds.forEach { seed ->
         val screenPoint = runCatching {
             map.projection.toScreenLocation(LatLng(seed.latitude, seed.longitude))
         }.getOrNull() ?: return@forEach
         if (!screenPoint.x.isFinite() || !screenPoint.y.isFinite()) return@forEach
+        if (viewportScreenBounds != null && !viewportScreenBounds.contains(screenPoint.x, screenPoint.y)) {
+            return@forEach
+        }
         projectedTargets += ProjectedPackedGroupTarget(
             key = seed.key,
             latitude = seed.latitude,
@@ -52,6 +56,32 @@ internal fun projectPackedGroupTargets(
         )
     }
     return projectedTargets
+}
+
+private fun resolveViewportScreenBounds(
+    map: MapLibreMap
+): PackedGroupDisplayBounds? {
+    val projection = map.projection
+    val visibleRegion = runCatching { projection.visibleRegion }.getOrNull() ?: return null
+    val corners = listOf(
+        visibleRegion.farLeft,
+        visibleRegion.farRight,
+        visibleRegion.nearLeft,
+        visibleRegion.nearRight
+    )
+    if (corners.any { it == null }) return null
+    val screenCorners = corners.mapNotNull { corner ->
+        runCatching { projection.toScreenLocation(corner ?: return@mapNotNull null) }.getOrNull()
+    }.filter { point ->
+        point.x.isFinite() && point.y.isFinite()
+    }
+    if (screenCorners.size != 4) return null
+    return PackedGroupDisplayBounds(
+        left = screenCorners.minOf { it.x },
+        top = screenCorners.minOf { it.y },
+        right = screenCorners.maxOf { it.x },
+        bottom = screenCorners.maxOf { it.y }
+    )
 }
 
 internal fun buildPackedGroupCollisionGroups(
@@ -115,6 +145,12 @@ internal data class PackedGroupDisplayBounds(
     val right: Float,
     val bottom: Float
 ) {
+    fun contains(screenX: Float, screenY: Float): Boolean =
+        screenX >= left &&
+            screenX <= right &&
+            screenY >= top &&
+            screenY <= bottom
+
     fun overlaps(other: PackedGroupDisplayBounds): Boolean =
         left < other.right &&
             right > other.left &&
@@ -166,11 +202,13 @@ internal class TrafficPackedGroupLabelControl(
     ): Set<String> {
         if (seeds.isEmpty()) return emptySet()
 
-        val fullLabelKeys = LinkedHashSet<String>(seeds.size)
-        seeds.forEach { seed -> fullLabelKeys += seed.key }
-
         val projectedTargets = projectPackedGroupTargets(map = map, seeds = seeds)
-        if (projectedTargets.isEmpty()) return fullLabelKeys
+        if (projectedTargets.isEmpty()) {
+            return seeds.mapTo(LinkedHashSet(seeds.size)) { seed -> seed.key }
+        }
+
+        val fullLabelKeys = LinkedHashSet<String>(projectedTargets.size)
+        projectedTargets.forEach { target -> fullLabelKeys += target.key }
 
         val groups = buildPackedGroupCollisionGroups(
             targets = projectedTargets,
