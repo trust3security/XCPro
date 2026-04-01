@@ -22,11 +22,11 @@ class RacingReplayTaskHelpersTest {
         coordinator.addWaypoint(searchWaypoint("tp2", 0.0, 0.06))
         coordinator.addWaypoint(searchWaypoint("finish", 0.0, 0.1))
 
-        val replayTask = currentRacingTaskOrNull(coordinator)
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
 
         assertNotNull(replayTask)
-        assertEquals(coordinator.currentTask.id, replayTask?.id)
-        assertEquals(coordinator.currentTask.waypoints, replayTask?.waypoints)
+        assertEquals(coordinator.taskSnapshotFlow.value.task.id, replayTask?.id)
+        assertEquals(coordinator.taskSnapshotFlow.value.task.waypoints, replayTask?.waypoints)
     }
 
     @Test
@@ -35,7 +35,7 @@ class RacingReplayTaskHelpersTest {
         coordinator.setTaskTypeForTesting(TaskType.RACING)
         coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
 
-        val replayTask = currentRacingTaskOrNull(coordinator)
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
 
         assertNull(replayTask)
     }
@@ -47,7 +47,7 @@ class RacingReplayTaskHelpersTest {
         coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
         coordinator.addWaypoint(searchWaypoint("finish", 0.0, 0.1))
 
-        val replayTask = currentRacingTaskOrNull(coordinator)
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
 
         assertNull(replayTask)
     }
@@ -71,7 +71,7 @@ class RacingReplayTaskHelpersTest {
             faiQuadrantOuterRadiusMeters = null
         )
 
-        val replayTask = currentRacingTaskOrNull(coordinator)
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
 
         assertNull(replayTask)
     }

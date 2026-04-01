@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
@@ -7,7 +8,9 @@ import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayCadenceProfile
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.ReplayMode
+import com.example.xcpro.replay.Selection
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.replay.SessionStatus
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.tasks.TaskFeatureFlags
 import com.example.xcpro.tasks.TaskManagerCoordinator
@@ -95,6 +98,40 @@ class MapScreenReplayCoordinatorTest {
         }
     }
 
+    @Test
+    fun racingReplay_terminalCleanupFence_blocks_liveFixes_before_restore() = runTest {
+        val fixture = createFixture(StandardTestDispatcher(testScheduler))
+        try {
+            fixture.coordinator.onRacingTaskReplay()
+            advanceUntilIdle()
+
+            fixture.replaySession.value = SessionState(
+                selection = Selection(DocumentRef(uri = "asset:///replay/racing.igc")),
+                status = SessionStatus.PLAYING,
+                speedMultiplier = 2.0
+            )
+            advanceUntilIdle()
+
+            fixture.replaySession.value = SessionState(speedMultiplier = 2.0)
+            fixture.flightDataFlow.value = buildCompleteFlightData(
+                gps = defaultGps(longitude = -0.001, timestampMillis = 1_000L)
+            )
+            fixture.flightDataFlow.value = buildCompleteFlightData(
+                gps = defaultGps(longitude = 0.001, timestampMillis = 2_000L)
+            )
+            advanceUntilIdle()
+
+            assertEquals(0, fixture.taskManager.currentLeg)
+            assertEquals(0, fixture.taskNavigationController.racingState.value.currentLegIndex)
+            assertEquals(
+                RacingNavigationStatus.PENDING_START,
+                fixture.taskNavigationController.racingState.value.status
+            )
+        } finally {
+            fixture.close()
+        }
+    }
+
     private fun createFixture(dispatcher: TestDispatcher): Fixture {
         val taskManager = TaskManagerCoordinator(
             taskEnginePersistenceService = null,
@@ -115,6 +152,7 @@ class MapScreenReplayCoordinatorTest {
         val replayController = Mockito.mock(IgcReplayController::class.java)
         val replaySession = MutableStateFlow(SessionState(speedMultiplier = 2.0))
         val replayEvents = MutableSharedFlow<ReplayEvent>(extraBufferCapacity = 4)
+        val flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
         Mockito.`when`(replayController.session).thenReturn(replaySession)
         Mockito.`when`(replayController.events).thenReturn(replayEvents)
         Mockito.`when`(replayController.getReplayCadence()).thenReturn(ReplayCadenceProfile.DEFAULT)
@@ -129,7 +167,7 @@ class MapScreenReplayCoordinatorTest {
         val coordinator = MapScreenReplayCoordinator(
             taskManager = taskManager,
             taskNavigationController = taskNavigationController,
-            flightDataFlow = MutableStateFlow<CompleteFlightData?>(null),
+            flightDataFlow = flightDataFlow,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),
             featureFlags = MapFeatureFlags(),
@@ -144,7 +182,9 @@ class MapScreenReplayCoordinatorTest {
             taskManager = taskManager,
             taskNavigationController = taskNavigationController,
             replayController = replayController,
+            replaySession = replaySession,
             replayEvents = replayEvents,
+            flightDataFlow = flightDataFlow,
             mapStateStore = mapStateStore,
             coordinator = coordinator,
             scope = scope
@@ -171,7 +211,9 @@ class MapScreenReplayCoordinatorTest {
         val taskManager: TaskManagerCoordinator,
         val taskNavigationController: TaskNavigationController,
         val replayController: IgcReplayController,
+        val replaySession: MutableStateFlow<SessionState>,
         val replayEvents: MutableSharedFlow<ReplayEvent>,
+        val flightDataFlow: MutableStateFlow<CompleteFlightData?>,
         val mapStateStore: MapStateStore,
         val coordinator: MapScreenReplayCoordinator,
         val scope: CoroutineScope

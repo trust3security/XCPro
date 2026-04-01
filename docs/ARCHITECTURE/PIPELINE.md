@@ -1218,6 +1218,10 @@ Task navigation/replay bridge (2026-02-11):
   start/terminal restore and restores the captured racing replay bundle once on
   start failure or terminal replay completion/cancel/failure after replay
   cleanup.
+- `feature:map` replay/task helpers consume the approved task-definition seam
+  (`TaskManagerCoordinator.taskSnapshotFlow`) for replay-task validation,
+  replay snapshot capture, and racing event labelling; map replay code does not
+  read coordinator `currentTask`/`currentLeg` as cross-feature state.
 
 Non-negotiable boundaries:
 - Composables do not call task managers/coordinators directly for mutation or business queries.

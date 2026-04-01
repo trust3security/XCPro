@@ -28,8 +28,9 @@ internal class RacingReplaySnapshotController(
 
     fun captureIfNeeded() {
         if (snapshot != null) return
+        val taskSnapshot = taskManager.taskSnapshotFlow.value
         snapshot = RacingReplaySnapshot(
-            selectedLeg = taskManager.currentLeg,
+            selectedLeg = taskSnapshot.activeLeg,
             navigationState = taskNavigationController.racingState.value,
             advanceSnapshot = taskManager.racingAdvanceSnapshot(),
             replayMode = igcReplayController.getReplayMode(),

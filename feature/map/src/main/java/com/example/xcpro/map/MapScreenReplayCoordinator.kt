@@ -18,6 +18,7 @@ import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
@@ -59,14 +60,17 @@ internal class MapScreenReplayCoordinator(
     private var suppressRacingFixes = false
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
-    private val racingFixFlow = flightDataFlow
-        .mapNotNull { data ->
-            if (suppressRacingFixes) {
-                null
-            } else {
-                data?.let(RacingNavigationFixAdapter::toFix)
-            }
+    private val racingFixFlow = combine(flightDataFlow, replaySessionState) { data, session ->
+        // Keep live fixes out of the task runtime while racing replay is booting
+        // or after replay cleanup has dropped the session selection but before the
+        // pre-replay task/nav bundle has been restored.
+        if (suppressRacingFixes || (racingReplayActive && session.selection == null)) {
+            null
+        } else {
+            data?.let(RacingNavigationFixAdapter::toFix)
         }
+    }
+        .mapNotNull { it }
     private val liveGpsProfileFlow = flightDataFlow
         .mapNotNull { data -> data?.gps }
         .onEach { gps ->
@@ -220,7 +224,7 @@ internal class MapScreenReplayCoordinator(
             suppressRacingFixes = true
             racingReplayLogger.reset()
             try {
-                val task = currentRacingTaskOrNull(taskManager)
+                val task = currentRacingTaskOrNull(taskManager.taskSnapshotFlow.value)
                 if (task == null) {
                     racingReplayActive = false
                     suppressRacingFixes = false
@@ -253,6 +257,7 @@ internal class MapScreenReplayCoordinator(
                 igcReplayController.play()
                 uiEffects.emit(MapUiEffect.ShowToast("Racing task replay started"))
             } catch (t: Throwable) {
+                suppressRacingFixes = true
                 igcReplayController.stopAndWait(emitCancelledEvent = false)
                 restoreRacingReplaySession()
                 AppLogger.e(TAG, "Failed to start racing task replay", t)
@@ -280,6 +285,7 @@ internal class MapScreenReplayCoordinator(
                     }
                 }
                 if (racingReplayActive || racingReplaySnapshots.hasSnapshot) {
+                    suppressRacingFixes = true
                     when (event) {
                         is ReplayEvent.Failed -> {
                             igcReplayController.setAutoStopAfterFinish(false)
@@ -320,7 +326,11 @@ internal class MapScreenReplayCoordinator(
                     racingReplayLogger.record(event)
                 }
                 if (!racingEventDebouncer.shouldEmit(event)) return@onEach
-                uiEffects.emit(MapUiEffect.ShowToast(buildRacingEventMessage(taskManager, event)))
+                uiEffects.emit(
+                    MapUiEffect.ShowToast(
+                        buildRacingEventMessage(taskManager.taskSnapshotFlow.value, event)
+                    )
+                )
             }
             .launchIn(scope)
     }
