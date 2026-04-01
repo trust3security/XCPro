@@ -5,7 +5,6 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlanner
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEpsilonPolicy
-import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
 import dagger.Module
@@ -38,7 +37,6 @@ object TaskNavigationModule {
     ): TaskNavigationController = TaskNavigationController(
         taskManager = taskManager,
         stateStore = RacingNavigationStateStore(),
-        advanceState = RacingAdvanceState(),
         engine = RacingNavigationEngine(
             crossingPlanner = crossingPlanner,
             epsilonPolicy = epsilonPolicy

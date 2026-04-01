@@ -1,6 +1,8 @@
 package com.example.xcpro.map.ui
 
 import android.annotation.SuppressLint
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -10,20 +12,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.livefollow.watch.LiveFollowWatchViewModel
 import com.example.xcpro.map.MapSize
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
-import com.example.xcpro.map.MapUiEvent
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.map.MapUiEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +36,7 @@ internal fun MapScreenRoot(
     settingsExpanded: MutableState<Boolean>,
     initialMapStyle: String,
     allowFlightSensorStart: Boolean,
+    isGeneralSettingsVisible: Boolean,
     onMapStyleSelected: (String) -> Unit = {},
     onOpenGeneralSettings: () -> Unit,
     mapViewModel: MapScreenViewModel
@@ -231,6 +232,7 @@ internal fun MapScreenRoot(
         onMapStyleSelected = onMapStyleSelected,
         onOpenGeneralSettings = onOpenGeneralSettings,
         allowFlightSensorStart = allowFlightSensorStart,
+        isGeneralSettingsVisible = isGeneralSettingsVisible,
         renderLocalOwnship = renderLocalOwnship,
         mapViewModel = mapViewModel,
         hotPathBindings = hotPathBindings,

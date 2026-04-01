@@ -1,42 +1,46 @@
-# Gliding Racing Task Rules for an Android Task Builder (XCPro)
+# Racing Task Docs
 
-These notes are a developer-oriented extraction of **FAI gliding championship task rules** relevant to building and validating a **Racing Task (RT)** in a mobile app.
+This folder contains XCPro's Racing Task reference material and the active
+production-grade execution plan for the racing-task slice.
 
-They are intended to be fed to an LLM coding agent (Codex) as implementation guidance. They are **not** the official rules; always check the original FAI documents and any local competition rules.
+These documents are implementation guidance for XCPro. They are not the FAI
+rulebook. When a rule question matters, verify against the official FAI
+documents first.
 
-## Primary sources
+## Current reference docs
 
-- FAI Sporting Code **Section 3 – Annex A** (Gliding Championships), **2025 edition**: https://www.fai.org/sites/default/files/sc3a_2025.pdf
-- Historical reference: FAI SC3 **Annex A 2013**: https://www.fai.org/sites/default/files/documents/sc3a_2013_1.pdf
-- (Context) FAI Sporting Code **Section 3 – Gliding (2024)**: https://www.fai.org/sites/default/files/sc3_2024.pdf
-- FAI documents index page (useful to find newer editions): https://www.fai.org/page/documents-0
+- `sources.md`
+- `racing_task_definition.md`
+- `task_elements_and_geometry.md`
+- `start_procedure.md`
+- `turnpoints_and_observation_zones.md`
+- `finish_procedure.md`
+- `validation_algorithms.md`
+- `task_creation_ui_spec.md`
+- `task_json_schema_example.md`
 
-## Scope
+## Current execution docs
 
-This package focuses on what an app needs to let a user **create a Racing Task** and **validate task progress/completion** from a GPS track:
+- `CHANGE_PLAN_RACING_TASK_PRODUCTION_GRADE_PHASED_IP_2026-03-07.md`
+- `AGENT_AUTOMATION_CONTRACT_RACING_TASK_2026-03-08.md`
 
-- Task structure: Start → (≥2) Turn Points → Finish (+ optional Steering Point).
-- Zone geometry: start line / start ring / start cylinder; turnpoint cylinders; finish ring / finish line.
-- Validation logic: enter/leave/cross, sequencing, time interpolation, and “near miss” tolerances.
-- Parameters that are typically configured on a “Task Sheet”: zone sizes, times, and optional start procedures (e.g., PEV start option).
+## Archived historical plans
 
-Scoring formulas and penalty point calculations are *mostly out of scope*, but some penalty-related parameters are included because they affect how a task is defined (e.g., min finish altitude).
+- `archive/2026-04-doc-pass/CHANGE_PLAN_RACING_TASK_RT_COMPLIANCE_2026-02-20.md`
+- `archive/2026-04-doc-pass/CHANGE_PLAN_RACING_TASK_PHASE1_CANONICAL_MODEL_95PLUS_2026-03-07.md`
 
-## File index
+## Primary rules source
 
-1. `sources.md` — authoritative documents and section pointers.
-2. `racing_task_definition.md` — what an RT is and what data it needs.
-3. `task_elements_and_geometry.md` — how Start/TP/Finish are represented (zones, bearings).
-4. `start_procedure.md` — start opening/closing, line start, PEV option, cylinder start, tolerances.
-5. `turnpoints_and_observation_zones.md` — TP cylinder rules and achievement detection.
-6. `finish_procedure.md` — finish ring/line rules, closure, and validation.
-7. `validation_algorithms.md` — concrete pseudocode for “did we start/turn/finish?”
-8. `task_creation_ui_spec.md` — suggested UI fields + validation checks for a task editor.
-9. `task_json_schema_example.md` — a JSON task format proposal (schema + example).
+- FAI Sporting Code Section 3 Annex A, 2025 edition:
+  `https://www.fai.org/sites/default/files/sc3a_2025.pdf`
+- FAI Sporting Code Section 3, 2025 edition:
+  `https://www.fai.org/sites/default/files/sc3_2025.pdf`
+- FAI documents index:
+  `https://www.fai.org/page/documents-0`
 
-## Conventions
+## Exactness note
 
-- **FAI rule** = a paraphrase of SC3 Annex A text, with section numbers so you can verify it.
-- **App guidance** = recommended behavior for an Android task builder; adjust to your needs.
-- All bearings are **true** bearings on WGS‑84. Distances are geodesic unless otherwise stated.
-
+For XCPro live navigation, task progression should be driven by the declared
+boundary geometry and credited crossing evidence. Near-miss and tolerance cases
+must be surfaced explicitly and must not silently auto-advance the task as if
+they were clean achievements.

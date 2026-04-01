@@ -1,17 +1,17 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEvent
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEventType
 
-internal fun currentRacingTaskOrNull(taskManager: TaskManagerCoordinator): Task? {
-    if (taskManager.taskType != TaskType.RACING) {
+internal fun currentRacingTaskOrNull(taskSnapshot: TaskRuntimeSnapshot): Task? {
+    if (taskSnapshot.taskType != TaskType.RACING) {
         return null
     }
-    val task = taskManager.currentTask
+    val task = taskSnapshot.task
     if (!RacingTaskStructureRules.validate(task).isValid) {
         return null
     }
@@ -19,10 +19,10 @@ internal fun currentRacingTaskOrNull(taskManager: TaskManagerCoordinator): Task?
 }
 
 internal fun buildRacingEventMessage(
-    taskManager: TaskManagerCoordinator,
+    taskSnapshot: TaskRuntimeSnapshot,
     event: RacingNavigationEvent
 ): String {
-    val waypointName = taskManager.currentTask.waypoints
+    val waypointName = taskSnapshot.task.waypoints
         .getOrNull(event.fromLegIndex)
         ?.title
     return when (event.type) {

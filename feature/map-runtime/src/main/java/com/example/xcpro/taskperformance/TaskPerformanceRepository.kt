@@ -12,7 +12,7 @@ import com.example.xcpro.tasks.navigation.NavigationRouteInvalidReason
 import com.example.xcpro.tasks.navigation.NavigationRouteRepository
 import com.example.xcpro.tasks.navigation.NavigationRouteSnapshot
 import com.example.xcpro.tasks.navigation.TaskPerformanceDistanceProjector
-import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
+import com.example.xcpro.tasks.racing.navigation.RacingCreditedBoundaryHit
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
 import dagger.hilt.android.scopes.ViewModelScoped
@@ -70,23 +70,21 @@ class TaskPerformanceRepository internal constructor(
         val startRules = taskSnapshot.task.waypoints.firstOrNull()?.let { waypoint ->
             RacingStartCustomParams.from(waypoint.customParameters)
         } ?: RacingStartCustomParams()
-        val acceptedStartFix = navigationState.acceptedStartFix
-        val acceptedStartTimestampMillis = navigationState.acceptedStartTimestampMillis
-        val acceptedStartAltitudeReference = navigationState.acceptedStartAltitudeReference
-            ?: startRules.altitudeReference
+        val creditedStart = navigationState.creditedStart
+        val startAltitudeReference = creditedStart?.altitudeReference ?: startRules.altitudeReference
 
         val startAltitude = resolveStartAltitude(
             navigationState = navigationState,
-            acceptedStartFix = acceptedStartFix,
-            altitudeReference = acceptedStartAltitudeReference
+            creditedStart = creditedStart,
+            altitudeReference = startAltitudeReference
         )
         val remainingDistance = resolveRemainingDistance(
             completeData = completeData,
             route = route,
             navigationState = navigationState
         )
-        val startReferenceDistanceMeters = acceptedStartFix?.let { fix ->
-            distanceProjector.startReferenceDistanceMeters(taskSnapshot, fix)
+        val startReferenceDistanceMeters = creditedStart?.let { start ->
+            distanceProjector.startReferenceDistanceMeters(taskSnapshot, start)
         }
         val taskDistance = resolveTaskDistance(
             navigationState = navigationState,
@@ -94,7 +92,7 @@ class TaskPerformanceRepository internal constructor(
             remainingDistanceValid = remainingDistance.valid,
             remainingDistanceInvalidReason = remainingDistance.reason,
             startReferenceDistanceMeters = startReferenceDistanceMeters,
-            acceptedStartFix = acceptedStartFix
+            creditedStart = creditedStart
         )
         val taskSpeed = resolveTaskSpeed(
             completeData = completeData,
@@ -102,8 +100,7 @@ class TaskPerformanceRepository internal constructor(
             taskDistanceMeters = taskDistance.value,
             taskDistanceValid = taskDistance.valid,
             taskDistanceInvalidReason = taskDistance.reason,
-            acceptedStartTimestampMillis = acceptedStartTimestampMillis,
-            acceptedStartFix = acceptedStartFix
+            creditedStart = creditedStart
         )
         val remainingTime = resolveRemainingTime(
             navigationState = navigationState,
@@ -137,13 +134,13 @@ class TaskPerformanceRepository internal constructor(
 
     private fun resolveStartAltitude(
         navigationState: RacingNavigationState,
-        acceptedStartFix: RacingNavigationFix?,
+        creditedStart: RacingCreditedBoundaryHit?,
         altitudeReference: RacingAltitudeReference
     ): MetricValue<Double> {
         if (navigationState.status == RacingNavigationStatus.PENDING_START) {
             return invalidDoubleMetric(TaskPerformanceInvalidReason.PRESTART)
         }
-        val fix = acceptedStartFix ?: return invalidDoubleMetric(TaskPerformanceInvalidReason.NO_START)
+        val fix = creditedStart?.altitudeSourceFix ?: return invalidDoubleMetric(TaskPerformanceInvalidReason.NO_START)
         val altitudeMeters = when (altitudeReference) {
             RacingAltitudeReference.MSL -> fix.altitudeMslMeters
             RacingAltitudeReference.QNH -> fix.altitudeQnhMeters ?: fix.altitudeMslMeters
@@ -188,12 +185,12 @@ class TaskPerformanceRepository internal constructor(
         remainingDistanceValid: Boolean,
         remainingDistanceInvalidReason: TaskPerformanceInvalidReason,
         startReferenceDistanceMeters: Double?,
-        acceptedStartFix: RacingNavigationFix?
+        creditedStart: RacingCreditedBoundaryHit?
     ): MetricValue<Double> {
         if (navigationState.status == RacingNavigationStatus.PENDING_START) {
             return invalidDoubleMetric(TaskPerformanceInvalidReason.PRESTART)
         }
-        if (acceptedStartFix == null) {
+        if (creditedStart == null) {
             return invalidDoubleMetric(TaskPerformanceInvalidReason.NO_START)
         }
         val referenceDistanceMeters = startReferenceDistanceMeters
@@ -216,13 +213,12 @@ class TaskPerformanceRepository internal constructor(
         taskDistanceMeters: Double,
         taskDistanceValid: Boolean,
         taskDistanceInvalidReason: TaskPerformanceInvalidReason,
-        acceptedStartTimestampMillis: Long?,
-        acceptedStartFix: RacingNavigationFix?
+        creditedStart: RacingCreditedBoundaryHit?
     ): MetricValue<Double> {
         if (navigationState.status == RacingNavigationStatus.PENDING_START) {
             return invalidDoubleMetric(TaskPerformanceInvalidReason.PRESTART)
         }
-        if (acceptedStartFix == null || acceptedStartTimestampMillis == null) {
+        if (creditedStart == null) {
             return invalidDoubleMetric(TaskPerformanceInvalidReason.NO_START)
         }
         if (!taskDistanceValid) {
@@ -230,12 +226,13 @@ class TaskPerformanceRepository internal constructor(
         }
 
         val currentTaskTimeMillis = when (navigationState.status) {
-            RacingNavigationStatus.FINISHED -> navigationState.finishCrossingTimeMillis
+            RacingNavigationStatus.FINISHED -> navigationState.creditedFinish?.timestampMillis
+                ?: navigationState.finishCrossingTimeMillis
                 ?: navigationState.lastTransitionTimeMillis.takeIf { it > 0L }
             else -> completeData?.gps?.timeForCalculationsMillis
         } ?: return invalidDoubleMetric(TaskPerformanceInvalidReason.NO_POSITION)
 
-        val elapsedMillis = currentTaskTimeMillis - acceptedStartTimestampMillis
+        val elapsedMillis = currentTaskTimeMillis - creditedStart.timestampMillis
         if (elapsedMillis <= 0L) {
             return invalidDoubleMetric(TaskPerformanceInvalidReason.NO_START)
         }

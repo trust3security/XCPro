@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.racing.navigation
 
+import com.example.xcpro.tasks.core.RacingAltitudeReference
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryGeometry
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
@@ -73,6 +74,22 @@ internal fun buildTaskSignature(taskWaypoints: List<RacingWaypoint>): String {
 }
 
 internal fun buildTaskSignature(task: SimpleRacingTask): String = buildTaskSignature(task.waypoints)
+
+internal fun buildCreditedBoundaryHit(
+    legIndex: Int,
+    waypointRole: RacingWaypointRole,
+    transitionTimeMillis: Long,
+    crossing: RacingBoundaryCrossing,
+    altitudeSourceFix: RacingNavigationFix? = null,
+    altitudeReference: RacingAltitudeReference? = null
+): RacingCreditedBoundaryHit = RacingCreditedBoundaryHit(
+    legIndex = legIndex,
+    waypointRole = waypointRole,
+    timestampMillis = transitionTimeMillis,
+    crossingEvidence = crossing.toEventEvidence(),
+    altitudeSourceFix = altitudeSourceFix,
+    altitudeReference = altitudeReference
+)
 
 internal fun shouldEvaluateTransitions(
     activeWaypoint: RacingWaypoint,

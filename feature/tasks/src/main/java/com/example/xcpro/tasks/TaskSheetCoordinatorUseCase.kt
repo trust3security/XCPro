@@ -11,6 +11,7 @@ import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
+import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
@@ -18,24 +19,29 @@ import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import java.time.Duration
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 data class TaskCoordinatorSnapshot(
     val task: Task,
     val taskType: TaskType,
     val activeLeg: Int,
-    val racingValidationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT
+    val racingValidationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT,
+    val racingAdvanceSnapshot: RacingAdvanceState.Snapshot = RacingAdvanceState().snapshot()
 )
 
 class TaskSheetCoordinatorUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator
 ) {
-    val snapshotFlow: Flow<TaskCoordinatorSnapshot> = taskManager.taskSnapshotFlow.map { snapshot ->
+    val snapshotFlow: Flow<TaskCoordinatorSnapshot> = combine(
+        taskManager.taskSnapshotFlow,
+        taskManager.racingAdvanceSnapshotFlow
+    ) { snapshot, racingAdvanceSnapshot ->
         TaskCoordinatorSnapshot(
             task = snapshot.task,
             taskType = snapshot.taskType,
             activeLeg = snapshot.activeLeg,
-            racingValidationProfile = taskManager.getRacingValidationProfile()
+            racingValidationProfile = taskManager.getRacingValidationProfile(),
+            racingAdvanceSnapshot = racingAdvanceSnapshot
         )
     }
 
@@ -218,4 +224,10 @@ class TaskSheetCoordinatorUseCase @Inject constructor(
     }
 
     suspend fun loadTask(taskName: String): Boolean = taskManager.loadTask(taskName)
+
+    fun setRacingAdvanceMode(mode: RacingAdvanceState.Mode) {
+        taskManager.setRacingAdvanceMode(mode)
+    }
+
+    fun toggleRacingAdvanceArm(): Boolean = taskManager.toggleRacingAdvanceArmed()
 }

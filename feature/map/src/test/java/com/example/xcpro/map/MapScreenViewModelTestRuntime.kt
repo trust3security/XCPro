@@ -310,7 +310,6 @@ abstract class MapScreenViewModelTestBase {
         val localTaskNavigationController = TaskNavigationController(
             taskManager = localTaskManager,
             stateStore = RacingNavigationStateStore(),
-            advanceState = RacingAdvanceState(),
             engine = RacingNavigationEngine(),
             featureFlags = localTaskFeatureFlags
         )

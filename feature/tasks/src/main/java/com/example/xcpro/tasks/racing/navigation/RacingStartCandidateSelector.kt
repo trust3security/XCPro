@@ -3,7 +3,9 @@ package com.example.xcpro.tasks.racing.navigation
 internal object RacingStartCandidateSelector {
 
     fun selectBestIndex(candidates: List<RacingStartCandidate>): Int? {
-        val valid = candidates.withIndex().filter { it.value.isValid }
+        val valid = candidates.withIndex().filter {
+            it.value.isValid && it.value.candidateType == RacingStartCandidateType.STRICT
+        }
         if (valid.isEmpty()) return null
 
         val comparator =

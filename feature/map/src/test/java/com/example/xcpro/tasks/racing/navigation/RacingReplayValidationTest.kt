@@ -70,7 +70,7 @@ class RacingReplayValidationTest {
     }
 
     @Test
-    fun replayStartOutcomes_areDeterministicForRejectedAndToleranceAndPevPenaltyCases() {
+    fun replayStartOutcomes_areDeterministicForRejectedAndNonAdvancingToleranceCases() {
         val task = buildSimpleTask()
         val rules = RacingStartCustomParams(
             gateOpenTimeMillis = 2_000L,
@@ -87,17 +87,18 @@ class RacingReplayValidationTest {
             RacingNavigationFix(lat = 37.0, lon = -122.0, timestampMillis = 2_500L)
         )
 
-        val firstRun = replayStartEventsWithRules(task, fixes, rules)
-        val secondRun = replayStartEventsWithRules(task, fixes, rules)
+        val firstRun = replayStartOutcomeWithRules(task, fixes, rules)
+        val secondRun = replayStartOutcomeWithRules(task, fixes, rules)
 
         assertEquals(firstRun, secondRun)
-        assertEquals(2, firstRun.size)
-        assertEquals(RacingNavigationEventType.START_REJECTED, firstRun[0].type)
-        assertEquals(RacingNavigationEventType.START, firstRun[1].type)
-        assertEquals(RacingStartRejectionReason.GATE_NOT_OPEN, firstRun[0].startCandidate?.rejectionReason)
-        assertEquals(RacingStartCandidateType.TOLERANCE, firstRun[1].startCandidate?.candidateType)
+        assertEquals(1, firstRun.first.size)
+        assertEquals(RacingNavigationEventType.START_REJECTED, firstRun.first[0].type)
+        assertEquals(RacingStartRejectionReason.GATE_NOT_OPEN, firstRun.first[0].startCandidate?.rejectionReason)
+        assertEquals(RacingStartCandidateType.TOLERANCE, firstRun.second.startCandidates.last().candidateType)
+        assertEquals(RacingNavigationStatus.PENDING_START, firstRun.second.status)
+        assertTrue(firstRun.second.creditedStart == null)
         assertTrue(
-            firstRun[1].startCandidate?.penaltyFlags?.contains(RacingStartPenaltyFlag.PEV_MISSING) == true
+            firstRun.second.startCandidates.last().penaltyFlags.contains(RacingStartPenaltyFlag.PEV_MISSING)
         )
     }
 
@@ -246,11 +247,11 @@ class RacingReplayValidationTest {
         return trace
     }
 
-    private fun replayStartEventsWithRules(
+    private fun replayStartOutcomeWithRules(
         task: SimpleRacingTask,
         fixes: List<RacingNavigationFix>,
         rules: RacingStartCustomParams
-    ): List<RacingNavigationEvent> {
+    ): Pair<List<RacingNavigationEvent>, RacingNavigationState> {
         val events = mutableListOf<RacingNavigationEvent>()
         var state = RacingNavigationState()
         fixes.forEach { fix ->
@@ -258,7 +259,7 @@ class RacingReplayValidationTest {
             state = decision.state
             decision.event?.let(events::add)
         }
-        return events
+        return events to state
     }
 
     private fun replayEvents(

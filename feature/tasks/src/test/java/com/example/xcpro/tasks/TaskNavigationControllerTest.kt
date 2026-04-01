@@ -2,11 +2,16 @@ package com.example.xcpro.tasks
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
+import com.example.xcpro.tasks.racing.navigation.RacingBoundaryCrossingEvidence
+import com.example.xcpro.tasks.racing.navigation.RacingCreditedBoundaryHit
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
+import com.example.xcpro.tasks.racing.models.RacingWaypointRole
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEvidenceSource
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.racing.RacingTaskManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -63,6 +68,50 @@ class TaskNavigationControllerTest {
                 job.cancel()
             }
         } finally {
+        }
+    }
+
+    @Test
+    fun controllerDoesNotStartTaskWhenDisarmed() = runTest {
+        val coordinator = createCoordinator()
+        coordinator.initializeTask(sampleWaypoints())
+        val controller = createController(coordinator)
+
+        val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 2)
+        val job = controller.bind(fixes, this)
+        try {
+            advanceUntilIdle()
+            fixes.emit(RacingNavigationFix(lat = 0.0, lon = -0.001, timestampMillis = 1_000L))
+            fixes.emit(RacingNavigationFix(lat = 0.0, lon = 0.001, timestampMillis = 2_000L))
+            advanceUntilIdle()
+
+            assertEquals(0, coordinator.currentLeg)
+            assertEquals(RacingNavigationStatus.PENDING_START, controller.racingState.value.status)
+            assertEquals(null, controller.racingState.value.creditedStart)
+        } finally {
+            job.cancel()
+        }
+    }
+
+    @Test
+    fun controllerDoesNotAdvanceFromBoundaryFixWithoutInteriorStartEvidence() = runTest {
+        val coordinator = createCoordinator()
+        coordinator.initializeTask(sampleWaypoints())
+        val controller = createController(coordinator)
+        controller.setAdvanceArmed(true)
+
+        val fixes = MutableSharedFlow<RacingNavigationFix>(extraBufferCapacity = 2)
+        val job = controller.bind(fixes, this)
+        try {
+            advanceUntilIdle()
+            fixes.emit(RacingNavigationFix(lat = 0.0, lon = 0.0, timestampMillis = 1_000L))
+            fixes.emit(RacingNavigationFix(lat = 0.0, lon = 0.001, timestampMillis = 2_000L))
+            advanceUntilIdle()
+
+            assertEquals(0, coordinator.currentLeg)
+            assertEquals(RacingNavigationStatus.PENDING_START, controller.racingState.value.status)
+        } finally {
+            job.cancel()
         }
     }
 
@@ -134,7 +183,17 @@ class TaskNavigationControllerTest {
                 ),
                 lastTransitionTimeMillis = 12_345L,
                 taskSignature = "replay-restore",
-                acceptedStartTimestampMillis = 10_000L,
+                creditedStart = RacingCreditedBoundaryHit(
+                    legIndex = 0,
+                    waypointRole = RacingWaypointRole.START,
+                    timestampMillis = 10_000L,
+                    crossingEvidence = RacingBoundaryCrossingEvidence(
+                        crossingPoint = RacingBoundaryPoint(0.0, 0.0),
+                        insideAnchor = RacingBoundaryPoint(0.0, -0.0005),
+                        outsideAnchor = RacingBoundaryPoint(0.0, 0.0005),
+                        evidenceSource = RacingBoundaryEvidenceSource.LINE_INTERSECTION
+                    )
+                ),
                 preStartAltitudeSatisfied = true
             )
             val restoredAdvance = RacingAdvanceState.Snapshot(
@@ -170,7 +229,6 @@ class TaskNavigationControllerTest {
     ): TaskNavigationController = TaskNavigationController(
         taskManager = coordinator,
         stateStore = RacingNavigationStateStore(),
-        advanceState = RacingAdvanceState(),
         engine = RacingNavigationEngine(),
         featureFlags = featureFlags
     )

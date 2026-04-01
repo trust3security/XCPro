@@ -1020,6 +1020,11 @@ Task UI (Compose)
 
 Authoritative ownership:
 - Cross-feature task definition and active leg: `TaskManagerCoordinator.taskSnapshotFlow`.
+- Racing start arm/mode authority: `TaskManagerCoordinator.racingAdvanceSnapshotFlow`.
+  `Disarmed` means racing start crossings are ignored entirely: the task stays in
+  `PENDING_START`, no `START` or `START_REJECTED` event is emitted, no start is
+  credited, and the active leg does not advance until the pilot re-arms and
+  makes a new valid start crossing.
 - Current final-glide route seam:
   `feature:tasks` now also exposes
   `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt`
@@ -1039,11 +1044,16 @@ Authoritative ownership:
   `TaskManagerCoordinator.taskSnapshotFlow`,
   task-owned `NavigationRouteRepository.route`, and
   `TaskNavigationController.racingState`.
+  It reads task-owned credited-boundary runtime state (`creditedStart`,
+  `creditedFinish`) for exact task distance/speed truth, while tolerance or
+  near-miss candidates remain advisory only and do not advance task progress.
   It feeds the map/cards adapter path only; it does not reclaim route ownership
   and it does not expand `CompleteFlightData`.
-- Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` combines them with sheet-local advance policy, and `TaskRepository` projects the resulting `TaskUiState`. `TaskUiState.stats.activeIndex` remains the selected-leg/editor seam, not the universal racing in-flight leg. `TaskRepository.state` is not the cross-feature runtime authority.
+- Task sheet UI state: `TaskSheetViewModel` collects coordinator snapshots, `TaskSheetUseCase` projects coordinator-owned racing advance state for racing tasks and keeps sheet-local advance policy only for AAT, and `TaskRepository` projects the resulting `TaskUiState`. `TaskUiState.stats.activeIndex` remains the selected-leg/editor seam, not the universal racing in-flight leg. `TaskRepository.state` is not the cross-feature runtime authority.
 - Racing minimized top-of-map task surface: `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceUseCase.kt` is the dedicated in-flight projector for the minimized indicator path. It combines `TaskManagerCoordinator.taskSnapshotFlow` plus `TaskNavigationController.racingState`; racing tasks render nav-leg progress there, while task sheet/editor surfaces keep coordinator selected-leg semantics.
-- Zone entry policy and auto-advance policy: domain/use-case logic.
+- Zone entry policy and auto-advance policy: domain/use-case logic backed by
+  explicit planner crossing evidence; sampled inside-fix shortcuts are not a
+  valid achievement path for racing start/turnpoint/finish progression.
 - Persistence: repository/persistence adapters (not ViewModel/UI).
 - Map drawing side effects: runtime controllers invoked by use-case/viewmodel orchestration, not direct Composable manager calls.
 
@@ -1208,6 +1218,10 @@ Task navigation/replay bridge (2026-02-11):
   start/terminal restore and restores the captured racing replay bundle once on
   start failure or terminal replay completion/cancel/failure after replay
   cleanup.
+- `feature:map` replay/task helpers consume the approved task-definition seam
+  (`TaskManagerCoordinator.taskSnapshotFlow`) for replay-task validation,
+  replay snapshot capture, and racing event labelling; map replay code does not
+  read coordinator `currentTask`/`currentLeg` as cross-feature state.
 
 Non-negotiable boundaries:
 - Composables do not call task managers/coordinators directly for mutation or business queries.

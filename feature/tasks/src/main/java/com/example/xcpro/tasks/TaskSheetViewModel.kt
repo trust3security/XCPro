@@ -10,7 +10,6 @@ import com.example.xcpro.tasks.core.PersistedOzParams
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
@@ -53,7 +52,9 @@ class TaskSheetViewModel @Inject constructor(
         }
         viewModelScope.launch {
             taskCoordinator.snapshotFlow.collect { snapshot ->
-                if (lastObservedActiveLeg != null && lastObservedActiveLeg != snapshot.activeLeg) {
+                if (snapshot.taskType == TaskType.AAT &&
+                    lastObservedActiveLeg != null &&
+                    lastObservedActiveLeg != snapshot.activeLeg) {
                     useCase.armAdvance(false)
                 }
                 lastObservedActiveLeg = snapshot.activeLeg
@@ -92,15 +93,22 @@ class TaskSheetViewModel @Inject constructor(
         taskCoordinator.toggleAATTargetLock(index)
     }
 
-    fun onAdvanceMode(mode: TaskAdvanceState.Mode) {
-        useCase.setAdvanceMode(mode)
+    fun onAdvanceMode(mode: TaskAdvanceUiSnapshot.Mode) {
+        when (uiState.value.taskType) {
+            TaskType.RACING -> taskCoordinator.setRacingAdvanceMode(mode.toRacingAdvanceMode())
+            TaskType.AAT -> useCase.setAdvanceMode(mode.toTaskAdvanceMode())
+        }
     }
 
     fun onAdvanceArmToggle() {
-        useCase.toggleAdvanceArm()
+        when (uiState.value.taskType) {
+            TaskType.RACING -> taskCoordinator.toggleRacingAdvanceArm()
+            TaskType.AAT -> useCase.toggleAdvanceArm()
+        }
     }
 
     fun onProximityEvent(hasEnteredOZ: Boolean, closeToTarget: Boolean) = mutate {
+        if (uiState.value.taskType == TaskType.RACING) return@mutate
         if (useCase.shouldAutoAdvance(hasEnteredOZ, closeToTarget)) {
             taskCoordinator.advanceToNextLeg()
         }

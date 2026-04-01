@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.racing.navigation
 
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossing
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEvidenceSource
 import com.example.xcpro.tasks.racing.models.RacingWaypointRole
 
@@ -40,3 +41,11 @@ data class RacingNavigationEvent(
     val finishUsedStraightInException: Boolean = false,
     val crossingEvidence: RacingBoundaryCrossingEvidence? = null
 )
+
+internal fun RacingBoundaryCrossing.toEventEvidence(): RacingBoundaryCrossingEvidence =
+    RacingBoundaryCrossingEvidence(
+        crossingPoint = crossingPoint,
+        insideAnchor = insideAnchor,
+        outsideAnchor = outsideAnchor,
+        evidenceSource = evidenceSource
+    )

@@ -834,10 +834,7 @@ if ($runLineBudgetRules) {
         # Keep synchronized with active time-boxed exceptions in
         # docs/ARCHITECTURE/KNOWN_DEVIATIONS.md.
         "feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt",
-        "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt",
-        "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt",
-        "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt",
-        "feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt"
+        "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt"
     )
     $script:LineBudgetExceptionSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($exceptionPath in $lineBudgetExceptionPaths) {

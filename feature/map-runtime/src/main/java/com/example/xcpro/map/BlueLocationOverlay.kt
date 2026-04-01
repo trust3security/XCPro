@@ -15,7 +15,6 @@ import org.maplibre.android.style.sources.GeoJsonSource
 
 /**
  * Sailplane location overlay showing current user position.
- * Uses sailplane icon that rotates based on bearing.
  */
 class BlueLocationOverlay(
     private val context: Context,
@@ -65,7 +64,6 @@ class BlueLocationOverlay(
             } else {
                 AppLogger.w(TAG, "Sailplane location overlay initialize incomplete")
             }
-
         } catch (e: Exception) {
             clearRuntimeCache()
             AppLogger.e(TAG, "Error initializing blue location overlay: ${e.message}", e)
@@ -116,7 +114,6 @@ class BlueLocationOverlay(
             }
             val styleChanged = boundStyle !== style
             val iconRotation = normalizeBlueLocationAngle(headingDeg - mapBearing).toFloat()
-
             currentLocation = location
             currentTrack = gpsTrack
             currentHeadingDeg = headingDeg
@@ -146,7 +143,6 @@ class BlueLocationOverlay(
                 AppLogger.w(TAG, "Overlay source/layer missing after recovery attempt")
                 return
             }
-
             applyResolvedIconScale(
                 layer = layer,
                 location = location,
@@ -182,7 +178,6 @@ class BlueLocationOverlay(
                     )
                 }
             }
-
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error updating location: ${e.message}", e)
         }
@@ -206,7 +201,6 @@ class BlueLocationOverlay(
             applyVisibility(layer, visible = desiredVisible, force = styleChanged)
             isLayerAdded = true
             boundStyle = style
-
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error setting location visibility: ${e.message}", e)
         }
@@ -248,7 +242,6 @@ class BlueLocationOverlay(
             AppLogger.e(TAG, "Error bringing aircraft overlay to front: ${e.message}", e)
         }
     }
-
     private fun ensureOverlayReadyForUpdate(style: Style, styleChanged: Boolean): Boolean {
         if (styleChanged || !isLayerAdded) {
             if (AppLogger.rateLimit(TAG, "overlay_recovery", 2_000L)) {
@@ -332,7 +325,6 @@ class BlueLocationOverlay(
             clearRuntimeCache()
             return
         }
-
         currentLocation?.let { location ->
             updateBlueLocationSource(source, location)
             lastRenderedLocation = location

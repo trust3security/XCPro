@@ -63,4 +63,60 @@ class MapScreenBottomTabsUiStateTest {
             )
         )
     }
+
+    @Test
+    fun shouldSuspendBottomTabsSheetForGeneralSettings_trueWhenGeneralOpensOverVisibleSheet() {
+        assertTrue(
+            shouldSuspendBottomTabsSheetForGeneralSettings(
+                isGeneralSettingsVisible = true,
+                isBottomTabsSheetVisible = true
+            )
+        )
+    }
+
+    @Test
+    fun shouldSuspendBottomTabsSheetForGeneralSettings_falseWhenSheetAlreadyHidden() {
+        assertFalse(
+            shouldSuspendBottomTabsSheetForGeneralSettings(
+                isGeneralSettingsVisible = true,
+                isBottomTabsSheetVisible = false
+            )
+        )
+    }
+
+    @Test
+    fun shouldRestoreBottomTabsSheetAfterGeneralSettings_trueWhenNoOtherBlockerRemains() {
+        assertTrue(
+            shouldRestoreBottomTabsSheetAfterGeneralSettings(
+                isGeneralSettingsVisible = false,
+                restoreAfterGeneralSettings = true,
+                isTaskPanelVisible = false,
+                hasTrafficDetailsOpen = false
+            )
+        )
+    }
+
+    @Test
+    fun shouldRestoreBottomTabsSheetAfterGeneralSettings_falseWhenTaskPanelStillVisible() {
+        assertFalse(
+            shouldRestoreBottomTabsSheetAfterGeneralSettings(
+                isGeneralSettingsVisible = false,
+                restoreAfterGeneralSettings = true,
+                isTaskPanelVisible = true,
+                hasTrafficDetailsOpen = false
+            )
+        )
+    }
+
+    @Test
+    fun shouldRestoreBottomTabsSheetAfterGeneralSettings_falseWhileGeneralStillVisible() {
+        assertFalse(
+            shouldRestoreBottomTabsSheetAfterGeneralSettings(
+                isGeneralSettingsVisible = true,
+                restoreAfterGeneralSettings = true,
+                isTaskPanelVisible = false,
+                hasTrafficDetailsOpen = false
+            )
+        )
+    }
 }

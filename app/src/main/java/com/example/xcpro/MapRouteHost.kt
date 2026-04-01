@@ -79,6 +79,7 @@ internal fun SharedMapRouteHost(
                 },
                 initialMapStyle = initialMapStyle,
                 allowFlightSensorStart = allowFlightSensorStart,
+                isGeneralSettingsVisible = showGeneralSettings,
                 onOpenGeneralSettings = {
                     showGeneralSettings = true
                 },
