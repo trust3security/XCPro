@@ -2,6 +2,8 @@ package com.example.xcpro.tasks.racing.navigation
 
 import com.example.xcpro.tasks.core.RacingPevCustomParams
 import com.example.xcpro.tasks.core.RacingStartCustomParams
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEvidenceSource
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -13,7 +15,7 @@ class RacingNavigationEngineStartPolicyTest {
     private val engine = RacingNavigationEngine()
 
     @Test
-    fun startBeforeGateOpen_isRejected_andLaterToleranceStartIsAccepted() {
+    fun startBeforeGateOpen_isRejected_andLaterToleranceStartStaysPending() {
         val task = buildLineStartTask()
         val rules = RacingStartCustomParams(
             gateOpenTimeMillis = 1_500L,
@@ -35,17 +37,31 @@ class RacingNavigationEngineStartPolicyTest {
 
         val toleranceFix = RacingNavigationFix(lat = 0.0, lon = 0.0, timestampMillis = 2_000L)
         val startedDecision = engine.step(task, rejectedDecision.state, toleranceFix, rules)
-        assertEquals(RacingNavigationEventType.START, startedDecision.event?.type)
+        assertNull(startedDecision.event)
         assertEquals(
             RacingStartCandidateType.TOLERANCE,
-            startedDecision.event?.startCandidate?.candidateType
+            startedDecision.state.startCandidates.last().candidateType
         )
         assertEquals(2, startedDecision.state.startCandidates.size)
-        assertEquals(1, startedDecision.state.selectedStartCandidateIndex)
-        assertEquals(startedDecision.event?.timestampMillis, startedDecision.state.acceptedStartTimestampMillis)
-        assertEquals(toleranceFix.lat, startedDecision.state.acceptedStartFix?.lat ?: Double.NaN, 1e-9)
-        assertEquals(toleranceFix.lon, startedDecision.state.acceptedStartFix?.lon ?: Double.NaN, 1e-9)
-        assertEquals(rules.altitudeReference, startedDecision.state.acceptedStartAltitudeReference)
+        assertEquals(RacingNavigationStatus.PENDING_START, startedDecision.state.status)
+        assertNull(startedDecision.state.selectedStartCandidateIndex)
+        assertNull(startedDecision.state.creditedStart)
+    }
+
+    @Test
+    fun startBeforeGateOpen_whileDisarmed_isIgnoredWithoutRejectedEventOrCandidate() {
+        val task = buildLineStartTask()
+        val rules = RacingStartCustomParams(gateOpenTimeMillis = 1_500L)
+        val firstFix = RacingNavigationFix(lat = 0.0, lon = -0.001, timestampMillis = 1_000L)
+        val firstDecision = engine.step(task, RacingNavigationState(), firstFix, rules, startArmed = false)
+
+        val earlyCrossFix = RacingNavigationFix(lat = 0.0, lon = 0.001, timestampMillis = 1_200L)
+        val ignoredDecision = engine.step(task, firstDecision.state, earlyCrossFix, rules, startArmed = false)
+
+        assertNull(ignoredDecision.event)
+        assertEquals(RacingNavigationStatus.PENDING_START, ignoredDecision.state.status)
+        assertTrue(ignoredDecision.state.startCandidates.isEmpty())
+        assertNull(ignoredDecision.state.creditedStart)
     }
 
     @Test
@@ -131,18 +147,38 @@ class RacingNavigationEngineStartPolicyTest {
     }
 
     @Test
+    fun boundaryFixAfterTaskActivation_doesNotStartUntilInteriorEvidenceExists() {
+        val task = buildLineStartTask()
+        val boundaryFix = RacingNavigationFix(lat = 0.0, lon = 0.0, timestampMillis = 1_000L)
+
+        val firstDecision = engine.step(task, RacingNavigationState(), boundaryFix)
+
+        assertNull(firstDecision.event)
+        assertFalse(firstDecision.state.hasObservedRequiredApproachSideForActiveLeg)
+
+        val outsideFix = RacingNavigationFix(lat = 0.0, lon = 0.001, timestampMillis = 2_000L)
+        val secondDecision = engine.step(task, firstDecision.state, outsideFix)
+
+        assertNull(secondDecision.event)
+        assertEquals(RacingNavigationStatus.PENDING_START, secondDecision.state.status)
+        assertEquals(0, secondDecision.state.currentLegIndex)
+    }
+
+    @Test
     fun startSelection_prefersExistingBetterCandidateOverLatestPenalizedCandidate() {
         val task = buildLineStartTask()
         val existingBest = RacingStartCandidate(
             timestampMillis = 1_000L,
             candidateType = RacingStartCandidateType.STRICT,
             isValid = true,
-            penaltyFlags = emptySet()
+            penaltyFlags = emptySet(),
+            crossingEvidence = strictCrossingEvidence()
         )
         val previousState = RacingNavigationState(
             status = RacingNavigationStatus.PENDING_START,
             lastFix = RacingNavigationFix(lat = 0.0, lon = -0.001, timestampMillis = 1_500L),
-            startCandidates = listOf(existingBest)
+            startCandidates = listOf(existingBest),
+            hasObservedRequiredApproachSideForActiveLeg = true
         )
         val rules = RacingStartCustomParams(
             pev = RacingPevCustomParams(
@@ -159,5 +195,14 @@ class RacingNavigationEngineStartPolicyTest {
         assertEquals(0, decision.state.selectedStartCandidateIndex)
         assertEquals(existingBest, decision.event?.startCandidate)
         assertEquals(existingBest.timestampMillis, decision.event?.timestampMillis)
+        assertEquals(existingBest.timestampMillis, decision.state.creditedStart?.timestampMillis)
     }
+
+    private fun strictCrossingEvidence(): RacingBoundaryCrossingEvidence =
+        RacingBoundaryCrossingEvidence(
+            crossingPoint = RacingBoundaryPoint(0.0, 0.0),
+            insideAnchor = RacingBoundaryPoint(0.0, -0.0005),
+            outsideAnchor = RacingBoundaryPoint(0.0, 0.0005),
+            evidenceSource = RacingBoundaryEvidenceSource.LINE_INTERSECTION
+        )
 }

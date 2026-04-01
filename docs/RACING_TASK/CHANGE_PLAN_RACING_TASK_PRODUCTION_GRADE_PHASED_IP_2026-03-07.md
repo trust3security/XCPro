@@ -12,8 +12,8 @@ for areas 1-10 to >95/100 each, while remaining compliant with:
 - `docs/ARCHITECTURE/AGENT.md`
 
 This plan supersedes tactical execution priority for RT over
-`CHANGE_PLAN_RACING_TASK_RT_COMPLIANCE_2026-02-20.md` and keeps that file as
-historical context.
+`archive/2026-04-doc-pass/CHANGE_PLAN_RACING_TASK_RT_COMPLIANCE_2026-02-20.md`
+and keeps that file as historical context.
 
 ## 0) Metadata
 
@@ -32,7 +32,7 @@ Execution update (2026-03-07):
 
 - Phase 0 item 1 completed: CI guardrails + minimum compliance refactor.
 - Phase 1 dedicated production plan created:
-  - `docs/RACING_TASK/CHANGE_PLAN_RACING_TASK_PHASE1_CANONICAL_MODEL_95PLUS_2026-03-07.md`
+  - `docs/RACING_TASK/archive/2026-04-doc-pass/CHANGE_PLAN_RACING_TASK_PHASE1_CANONICAL_MODEL_95PLUS_2026-03-07.md`
 - Phase 1 execution started (P1-C/P1-D/P1-E partial, P1-F partial guards):
   - runtime nav/render removed direct `toSimpleRacingTask()` bypass,
   - coordinator/persistence bridge switched to full-task hydration APIs.
@@ -51,7 +51,7 @@ Execution update (2026-03-07):
   - `RacingTaskInitializer` now generates deterministic task IDs,
   - RT validity now routes through shared `RacingTaskStructureRules`.
 - Phase 1 score update:
-  - `docs/RACING_TASK/CHANGE_PLAN_RACING_TASK_PHASE1_CANONICAL_MODEL_95PLUS_2026-03-07.md`
+  - `docs/RACING_TASK/archive/2026-04-doc-pass/CHANGE_PLAN_RACING_TASK_PHASE1_CANONICAL_MODEL_95PLUS_2026-03-07.md`
     now records Phase 1 total `97/100` (gate met).
 - Phase 2 formal re-score update (2026-03-08):
   - Area 1 (RT structure + profile validator): **96/100**.
@@ -232,6 +232,32 @@ Execution update (2026-03-07):
     - Automated test coverage depth: 30/30
     - Determinism/timebase and architecture compliance: 20/20
     - Operational hardening and docs sync: 9/10 (full-branch rules gate currently red for unrelated reasons)
+- Phase 7.5 execution update (2026-04-01):
+  - Exact boundary credit hardening:
+    - `RacingNavigationState` now stores authoritative `creditedStart`,
+      per-leg `creditedTurnpointsByLeg`, and `creditedFinish` runtime evidence.
+    - tolerance start candidates remain diagnostic only; they no longer emit
+      a normal `START` or auto-advance the task.
+    - turnpoints and finish cylinders no longer complete from first-inside-fix
+      fallback; live advancement now requires explicit planner crossing evidence.
+  - Consumer cutover:
+    - `TaskPerformanceRepository` and `TaskPerformanceDistanceProjector` now
+      derive task distance/speed/start-altitude from credited boundary evidence
+      instead of sampled `acceptedStartFix` state.
+    - `PIPELINE.md` updated so task-performance truth and racing auto-advance
+      policy both describe credited-boundary runtime semantics.
+  - Regression coverage added:
+    - activation-inside TP and finish cylinder must not auto-advance.
+    - boundary activation and non-advancing tolerance-start regressions.
+    - credited-start task-performance path.
+    - replay determinism for rejected plus non-advancing tolerance start states.
+  - Verification:
+    - `./gradlew :feature:tasks:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest" --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineStartPolicyTest" --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test" --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineFinishRulesTest" --tests "com.example.xcpro.tasks.TaskNavigationControllerTest" --tests "com.example.xcpro.tasks.navigation.NavigationRouteRepositoryTest"`: PASS
+    - `./gradlew :feature:map-runtime:testDebugUnitTest --tests "com.example.xcpro.taskperformance.TaskPerformanceRepositoryTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest"`: PASS
+    - `./gradlew enforceRules`: PASS
+    - `scripts\qa\run_root_unit_tests_reliable.bat`: PASS
+    - `./gradlew assembleDebug`: PASS
 - Phase 8-10 code-pass advisory update (2026-03-08):
   - Evidence run:
     - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskPersistSerializerFidelityTest" --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.example.xcpro.tasks.TaskNavigationControllerTest"`: PASS
@@ -440,7 +466,7 @@ Forbidden:
 - Goal:
   - Establish one runtime-authoritative RT model contract.
 - Execution plan:
-  - `docs/RACING_TASK/CHANGE_PLAN_RACING_TASK_PHASE1_CANONICAL_MODEL_95PLUS_2026-03-07.md`
+  - `docs/RACING_TASK/archive/2026-04-doc-pass/CHANGE_PLAN_RACING_TASK_PHASE1_CANONICAL_MODEL_95PLUS_2026-03-07.md`
 - Changes:
   - Introduce typed RT rules payload in core/domain model.
   - Demote/remove `SimpleRacingTask` runtime authority (adapter-only transitional use).

@@ -55,8 +55,6 @@ internal fun evaluateFinishProgressTransition(
     previousFix: RacingNavigationFix?,
     activeWaypoint: RacingWaypoint,
     previousWaypoint: RacingWaypoint?,
-    insidePrevious: Boolean,
-    insideNow: Boolean,
     crossingPlanner: RacingBoundaryCrossingPlanner,
     finishRules: RacingFinishCustomParams
 ): RacingNavigationDecision {
@@ -86,7 +84,7 @@ internal fun evaluateFinishProgressTransition(
                 currentFix = fix,
                 transition = RacingBoundaryTransition.ENTER
             )
-            crossing != null || (!insidePrevious && insideNow)
+            crossing != null
         }
     }
 
@@ -151,10 +149,19 @@ internal fun evaluateFinishProgressTransition(
     } else {
         null
     }
+    val creditedFinish = crossing?.let { boundaryCrossing ->
+        buildCreditedBoundaryHit(
+            legIndex = state.currentLegIndex,
+            waypointRole = activeWaypoint.role,
+            transitionTimeMillis = transitionTime,
+            crossing = boundaryCrossing
+        )
+    }
 
     val nextState = stateWithCloseTracking.copy(
         status = RacingNavigationStatus.FINISHED,
         lastTransitionTimeMillis = transitionTime,
+        creditedFinish = creditedFinish,
         finishOutcome = finishOutcome,
         finishUsedStraightInException = straightInException,
         finishCrossingTimeMillis = transitionTime,
@@ -170,14 +177,7 @@ internal fun evaluateFinishProgressTransition(
         timestampMillis = transitionTime,
         finishOutcome = finishOutcome,
         finishUsedStraightInException = straightInException,
-        crossingEvidence = crossing?.let { boundaryCrossing ->
-            RacingBoundaryCrossingEvidence(
-                crossingPoint = boundaryCrossing.crossingPoint,
-                insideAnchor = boundaryCrossing.insideAnchor,
-                outsideAnchor = boundaryCrossing.outsideAnchor,
-                evidenceSource = boundaryCrossing.evidenceSource
-            )
-        }
+        crossingEvidence = crossing?.toEventEvidence()
     )
     return RacingNavigationDecision(state = nextState, event = event)
 }
@@ -212,6 +212,7 @@ private fun finishOutlandedAtCloseDecision(
     val nextState = state.copy(
         status = RacingNavigationStatus.FINISHED,
         lastTransitionTimeMillis = transitionTime,
+        creditedFinish = null,
         finishOutcome = RacingFinishOutcome.OUTLANDED_AT_CLOSE,
         finishUsedStraightInException = false,
         finishCrossingTimeMillis = transitionTime,
@@ -267,6 +268,7 @@ private fun finishContestBoundaryStopPlusFiveDecision(
     val nextState = stateWithStop.copy(
         status = RacingNavigationStatus.FINISHED,
         lastTransitionTimeMillis = transitionTime,
+        creditedFinish = null,
         finishOutcome = RacingFinishOutcome.CONTEST_BOUNDARY_STOP_PLUS_FIVE,
         finishUsedStraightInException = false,
         finishCrossingTimeMillis = transitionTime,

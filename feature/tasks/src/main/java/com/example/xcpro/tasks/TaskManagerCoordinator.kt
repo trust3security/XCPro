@@ -21,6 +21,8 @@ import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
+import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationEventType
 import com.example.xcpro.tasks.racing.toRacingWaypoints
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +47,7 @@ class TaskManagerCoordinator(
     private var aatDelegate = createAATDelegate()
     private var proximityHandler: ((Boolean, Boolean) -> Unit)? = null
     private val legChangeHandlers = LinkedHashSet<(Int) -> Unit>()
+    private val racingAdvanceState = RacingAdvanceState()
 
     private val _taskType = MutableStateFlow(TaskType.RACING)
     val taskType: TaskType get() = _taskType.value
@@ -53,6 +56,8 @@ class TaskManagerCoordinator(
     val aatEditWaypointIndexFlow: StateFlow<Int?> = _aatEditWaypointIndex.asStateFlow()
     private val _taskSnapshot = MutableStateFlow(buildSnapshot())
     val taskSnapshotFlow: StateFlow<TaskRuntimeSnapshot> = _taskSnapshot.asStateFlow()
+    private val _racingAdvanceSnapshot = MutableStateFlow(racingAdvanceState.snapshot())
+    val racingAdvanceSnapshotFlow: StateFlow<RacingAdvanceState.Snapshot> = _racingAdvanceSnapshot.asStateFlow()
     private val persistenceBridge = TaskCoordinatorPersistenceBridge(
         taskTypeState = _taskType,
         taskEnginePersistenceService = taskEnginePersistenceService,
@@ -78,6 +83,10 @@ class TaskManagerCoordinator(
     private fun log(@Suppress("UNUSED_PARAMETER") message: String) {}
 
     private fun currentDelegate(): TaskTypeCoordinatorDelegate = if (_taskType.value == TaskType.RACING) racingDelegate else aatDelegate
+
+    private fun publishRacingAdvanceSnapshot() {
+        _racingAdvanceSnapshot.value = racingAdvanceState.snapshot()
+    }
 
     private fun createRacingDelegate() = RacingCoordinatorDelegate(
         taskManager = racingTaskManager,
@@ -333,6 +342,42 @@ class TaskManagerCoordinator(
         clearAatEditMode()
         _taskType.value = taskType
         updateTaskSnapshot(taskType)
+    }
+
+    fun racingAdvanceSnapshot(): RacingAdvanceState.Snapshot = _racingAdvanceSnapshot.value
+
+    fun setRacingAdvanceMode(mode: RacingAdvanceState.Mode) {
+        racingAdvanceState.setMode(mode)
+        publishRacingAdvanceSnapshot()
+    }
+
+    fun setRacingAdvanceArmed(armed: Boolean) {
+        racingAdvanceState.setArmed(armed)
+        publishRacingAdvanceSnapshot()
+    }
+
+    fun toggleRacingAdvanceArmed(): Boolean {
+        val armed = racingAdvanceState.toggleArmed()
+        publishRacingAdvanceSnapshot()
+        return armed
+    }
+
+    fun shouldRacingAdvance(eventType: RacingNavigationEventType): Boolean =
+        racingAdvanceState.shouldAdvance(eventType)
+
+    fun resetRacingAdvanceToStartPhase() {
+        racingAdvanceState.resetToStartPhase()
+        publishRacingAdvanceSnapshot()
+    }
+
+    fun onRacingStartAccepted() {
+        racingAdvanceState.onStartAdvanced()
+        publishRacingAdvanceSnapshot()
+    }
+
+    fun restoreRacingAdvanceSnapshot(snapshot: RacingAdvanceState.Snapshot) {
+        racingAdvanceState.restore(snapshot)
+        publishRacingAdvanceSnapshot()
     }
 
     fun updateAATWaypointPointTypeMeters(

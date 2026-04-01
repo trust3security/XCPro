@@ -17,6 +17,5 @@ data class TaskUiState(
     val validationErrors: List<TaskValidator.ValidationError> = emptyList(),
     val targets: List<TaskTargetSnapshot> = emptyList(),
     val racingValidationProfile: RacingTaskStructureRules.Profile = RacingTaskStructureRules.Profile.FAI_STRICT,
-    val advanceSnapshot: com.example.xcpro.tasks.domain.logic.TaskAdvanceState.Snapshot =
-        com.example.xcpro.tasks.domain.logic.TaskAdvanceState().snapshot()
+    val advanceSnapshot: TaskAdvanceUiSnapshot = TaskAdvanceUiSnapshot()
 )

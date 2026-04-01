@@ -19,6 +19,11 @@ import com.example.xcpro.tasks.navigation.NavigationRoutePoint
 import com.example.xcpro.tasks.navigation.NavigationRouteSnapshot
 import com.example.xcpro.tasks.navigation.TaskPerformanceDistanceProjector
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEvidenceSource
+import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
+import com.example.xcpro.tasks.racing.models.RacingWaypointRole
+import com.example.xcpro.tasks.racing.navigation.RacingBoundaryCrossingEvidence
+import com.example.xcpro.tasks.racing.navigation.RacingCreditedBoundaryHit
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
@@ -40,12 +45,12 @@ class TaskPerformanceRepositoryTest {
         val routePoints = listOf(
             NavigationRoutePoint(lat = 0.0, lon = 0.08, label = "Finish Boundary")
         )
-        val acceptedStartFix = RacingNavigationFix(
-            lat = 0.0,
+        val creditedStart = creditedStart(
             lon = 0.01,
             timestampMillis = 2_000L,
             altitudeMslMeters = 1_100.0,
-            altitudeQnhMeters = 1_120.0
+            altitudeQnhMeters = 1_120.0,
+            altitudeReference = RacingAltitudeReference.QNH
         )
         val repository = TaskPerformanceRepository(
             flightDataFlow = MutableStateFlow(completeFlightData(longitude = 0.06, monotonicTimestampMillis = 102_000L)),
@@ -61,9 +66,7 @@ class TaskPerformanceRepositoryTest {
                 RacingNavigationState(
                     status = RacingNavigationStatus.IN_PROGRESS,
                     currentLegIndex = 2,
-                    acceptedStartTimestampMillis = 2_000L,
-                    acceptedStartFix = acceptedStartFix,
-                    acceptedStartAltitudeReference = RacingAltitudeReference.QNH,
+                    creditedStart = creditedStart,
                     lastFix = RacingNavigationFix(lat = 0.0, lon = 0.06, timestampMillis = 102_000L)
                 )
             ),
@@ -71,7 +74,7 @@ class TaskPerformanceRepositoryTest {
         )
 
         val snapshot = repository.taskPerformance.first()
-        val expectedStartReference = distanceProjector.startReferenceDistanceMeters(taskSnapshot, acceptedStartFix)!!
+        val expectedStartReference = distanceProjector.startReferenceDistanceMeters(taskSnapshot, creditedStart)!!
         val expectedRemaining = routeDistanceMeters(
             startLat = 0.0,
             startLon = 0.06,
@@ -122,7 +125,7 @@ class TaskPerformanceRepositoryTest {
     }
 
     @Test
-    fun missing_accepted_start_keeps_start_based_metrics_invalid_without_guessing() = runTest {
+    fun missing_credited_start_keeps_start_based_metrics_invalid_without_guessing() = runTest {
         val repository = TaskPerformanceRepository(
             flightDataFlow = MutableStateFlow(completeFlightData(navAltitudeMeters = 1_450.0)),
             taskSnapshotFlow = MutableStateFlow(racingTaskSnapshot()),
@@ -160,11 +163,14 @@ class TaskPerformanceRepositoryTest {
     fun finished_task_freezes_final_distance_speed_and_zeroes_remaining() = runTest {
         val distanceProjector = TaskPerformanceDistanceProjector()
         val taskSnapshot = racingTaskSnapshot()
-        val acceptedStartFix = RacingNavigationFix(
-            lat = 0.0,
+        val creditedStart = creditedStart(
             lon = 0.01,
             timestampMillis = 2_000L,
             altitudeMslMeters = 1_100.0
+        )
+        val creditedFinish = creditedFinish(
+            lon = 0.10,
+            timestampMillis = 122_000L
         )
         val repository = TaskPerformanceRepository(
             flightDataFlow = MutableStateFlow(completeFlightData(longitude = 0.09, monotonicTimestampMillis = 200_000L)),
@@ -174,9 +180,8 @@ class TaskPerformanceRepositoryTest {
                 RacingNavigationState(
                     status = RacingNavigationStatus.FINISHED,
                     currentLegIndex = 2,
-                    acceptedStartTimestampMillis = 2_000L,
-                    acceptedStartFix = acceptedStartFix,
-                    acceptedStartAltitudeReference = RacingAltitudeReference.MSL,
+                    creditedStart = creditedStart,
+                    creditedFinish = creditedFinish,
                     finishCrossingTimeMillis = 122_000L,
                     lastTransitionTimeMillis = 122_000L
                 )
@@ -185,7 +190,7 @@ class TaskPerformanceRepositoryTest {
         )
 
         val snapshot = repository.taskPerformance.first()
-        val expectedTaskDistance = distanceProjector.startReferenceDistanceMeters(taskSnapshot, acceptedStartFix)!!
+        val expectedTaskDistance = distanceProjector.startReferenceDistanceMeters(taskSnapshot, creditedStart)!!
         val expectedTaskSpeed = expectedTaskDistance / 120.0
 
         assertTrue(snapshot.taskDistanceValid)
@@ -200,8 +205,7 @@ class TaskPerformanceRepositoryTest {
 
     @Test
     fun remaining_time_is_invalid_when_achieved_task_speed_is_not_credible() = runTest {
-        val acceptedStartFix = RacingNavigationFix(
-            lat = 0.0,
+        val creditedStart = creditedStart(
             lon = 0.029,
             timestampMillis = 2_000L,
             altitudeMslMeters = 1_100.0
@@ -223,8 +227,7 @@ class TaskPerformanceRepositoryTest {
                 RacingNavigationState(
                     status = RacingNavigationStatus.IN_PROGRESS,
                     currentLegIndex = 1,
-                    acceptedStartTimestampMillis = 2_000L,
-                    acceptedStartFix = acceptedStartFix
+                    creditedStart = creditedStart
                 )
             ),
             distanceProjector = TaskPerformanceDistanceProjector()
@@ -327,4 +330,50 @@ class TaskPerformanceRepositoryTest {
         }
         return totalMeters
     }
+
+    private fun creditedStart(
+        lat: Double = 0.0,
+        lon: Double,
+        timestampMillis: Long,
+        altitudeMslMeters: Double? = null,
+        altitudeQnhMeters: Double? = null,
+        altitudeReference: RacingAltitudeReference = RacingAltitudeReference.MSL
+    ): RacingCreditedBoundaryHit {
+        val sourceFix = RacingNavigationFix(
+            lat = lat,
+            lon = lon,
+            timestampMillis = timestampMillis,
+            altitudeMslMeters = altitudeMslMeters,
+            altitudeQnhMeters = altitudeQnhMeters
+        )
+        return RacingCreditedBoundaryHit(
+            legIndex = 0,
+            waypointRole = RacingWaypointRole.START,
+            timestampMillis = timestampMillis,
+            crossingEvidence = boundaryEvidence(lat = lat, lon = lon),
+            altitudeSourceFix = sourceFix,
+            altitudeReference = altitudeReference
+        )
+    }
+
+    private fun creditedFinish(
+        lat: Double = 0.0,
+        lon: Double,
+        timestampMillis: Long
+    ): RacingCreditedBoundaryHit = RacingCreditedBoundaryHit(
+        legIndex = 2,
+        waypointRole = RacingWaypointRole.FINISH,
+        timestampMillis = timestampMillis,
+        crossingEvidence = boundaryEvidence(lat = lat, lon = lon)
+    )
+
+    private fun boundaryEvidence(
+        lat: Double,
+        lon: Double
+    ): RacingBoundaryCrossingEvidence = RacingBoundaryCrossingEvidence(
+        crossingPoint = RacingBoundaryPoint(lat, lon),
+        insideAnchor = RacingBoundaryPoint(lat, lon - 0.0005),
+        outsideAnchor = RacingBoundaryPoint(lat, lon + 0.0005),
+        evidenceSource = RacingBoundaryEvidenceSource.CYLINDER_INTERSECTION
+    )
 }

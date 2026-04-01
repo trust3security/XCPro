@@ -30,7 +30,8 @@ data class RacingStartCandidate(
     val rejectionReason: RacingStartRejectionReason? = null,
     val penaltyFlags: Set<RacingStartPenaltyFlag> = emptySet(),
     val sampleFix: RacingNavigationFix? = null,
-    val altitudeReference: RacingAltitudeReference? = null
+    val altitudeReference: RacingAltitudeReference? = null,
+    val crossingEvidence: RacingBoundaryCrossingEvidence? = null
 ) {
     val hasPenalty: Boolean
         get() = penaltyFlags.isNotEmpty()

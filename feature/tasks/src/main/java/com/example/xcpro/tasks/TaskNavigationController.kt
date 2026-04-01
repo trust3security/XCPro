@@ -6,6 +6,7 @@ import com.example.xcpro.tasks.core.RacingStartCustomParams
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationDecision
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
+import com.example.xcpro.tasks.racing.navigation.RacingNavigationEvent
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEventType
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationFix
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationState
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.onEach
 class TaskNavigationController(
     private val taskManager: TaskManagerCoordinator,
     private val stateStore: RacingNavigationStateStore,
-    private val advanceState: RacingAdvanceState,
     private val engine: RacingNavigationEngine,
     private val featureFlags: TaskFeatureFlags
 ) {
@@ -73,7 +73,8 @@ class TaskNavigationController(
             previousState = stateStore.state.value,
             fix = fix,
             startRules = startRules,
-            finishRules = finishRules
+            finishRules = finishRules,
+            startArmed = taskManager.racingAdvanceSnapshot().armState == RacingAdvanceState.ArmState.START_ARMED
         )
         applyDecision(decision)
     }
@@ -82,11 +83,12 @@ class TaskNavigationController(
         val event = decision.event
         val allowAdvance = event != null &&
             featureFlags.enableRacingAutoAdvance &&
-            advanceState.shouldAdvance(event.type)
+            taskManager.shouldRacingAdvance(event.type) &&
+            eventSupportsAutoAdvance(event)
 
         if (event != null) {
             if (event.type == RacingNavigationEventType.START) {
-                advanceState.onStartAdvanced()
+                taskManager.onRacingStartAccepted()
             }
             stateStore.update(decision.state, event)
         } else {
@@ -110,39 +112,55 @@ class TaskNavigationController(
         val maxIndex = taskManager.currentTask.waypoints.lastIndex
         val clampedIndex = if (maxIndex >= 0) newLegIndex.coerceIn(0, maxIndex) else 0
         val status = if (clampedIndex <= 0) {
-            advanceState.resetToStartPhase()
+            taskManager.resetRacingAdvanceToStartPhase()
             RacingNavigationStatus.PENDING_START
         } else {
-            advanceState.onStartAdvanced()
+            taskManager.onRacingStartAccepted()
             RacingNavigationStatus.IN_PROGRESS
         }
 
         val currentState = stateStore.state.value
-        val updatedState = currentState.copy(
-            status = status,
-            currentLegIndex = clampedIndex,
-            lastFix = null,
-            lastTransitionTimeMillis = 0L
-        )
+        val updatedState = if (clampedIndex <= 0) {
+            RacingNavigationState(taskSignature = currentState.taskSignature)
+        } else {
+            currentState.copy(
+                status = status,
+                currentLegIndex = clampedIndex,
+                lastFix = null,
+                lastTransitionTimeMillis = 0L,
+                creditedTurnpointsByLeg = currentState.creditedTurnpointsByLeg
+                    .filterKeys { legIndex -> legIndex < clampedIndex },
+                creditedFinish = null,
+                hasObservedRequiredApproachSideForActiveLeg = false,
+                reportedNearMissTurnpointLegIndices = emptySet(),
+                finishOutcome = null,
+                finishUsedStraightInException = false,
+                finishCrossingTimeMillis = null,
+                finishLandingDeadlineMillis = null,
+                finishLandingStopStartTimeMillis = null,
+                finishBoundaryStopStartTimeMillis = null,
+                lastFixBeforeFinishClose = null
+            )
+        }
         stateStore.update(updatedState, null)
     }
 
     fun setAdvanceMode(mode: RacingAdvanceState.Mode) {
-        advanceState.setMode(mode)
+        taskManager.setRacingAdvanceMode(mode)
     }
 
     fun setAdvanceArmed(armed: Boolean) {
-        advanceState.setArmed(armed)
+        taskManager.setRacingAdvanceArmed(armed)
     }
 
-    fun toggleAdvanceArmed(): Boolean = advanceState.toggleArmed()
+    fun toggleAdvanceArmed(): Boolean = taskManager.toggleRacingAdvanceArmed()
 
     fun resetNavigationState(taskSignature: String = "") {
-        advanceState.resetToStartPhase()
+        taskManager.resetRacingAdvanceToStartPhase()
         stateStore.reset(taskSignature)
     }
 
-    fun snapshot(): RacingAdvanceState.Snapshot = advanceState.snapshot()
+    fun snapshot(): RacingAdvanceState.Snapshot = taskManager.racingAdvanceSnapshot()
 
     fun restoreReplaySnapshot(
         selectedLeg: Int,
@@ -162,7 +180,7 @@ class TaskNavigationController(
         suppressManualDisarm = true
         try {
             taskManager.setActiveLeg(clampedSelectedLeg)
-            advanceState.restore(advanceSnapshot)
+            taskManager.restoreRacingAdvanceSnapshot(advanceSnapshot)
             stateStore.restore(navigationState)
         } finally {
             suppressManualDisarm = false
@@ -175,7 +193,7 @@ class TaskNavigationController(
         }
         val listener: (Int) -> Unit = { newLegIndex ->
             if (!suppressManualDisarm) {
-                advanceState.setArmed(false)
+                taskManager.setRacingAdvanceArmed(false)
                 syncManualLegChange(newLegIndex)
             }
         }
@@ -192,5 +210,15 @@ class TaskNavigationController(
         }
         legChangeListener?.let(taskManager::removeLegChangeListener)
         legChangeListener = null
+    }
+
+    private fun eventSupportsAutoAdvance(event: RacingNavigationEvent): Boolean {
+        return when (event.type) {
+            RacingNavigationEventType.START,
+            RacingNavigationEventType.TURNPOINT -> event.crossingEvidence != null
+            RacingNavigationEventType.FINISH,
+            RacingNavigationEventType.START_REJECTED,
+            RacingNavigationEventType.TURNPOINT_NEAR_MISS -> true
+        }
     }
 }

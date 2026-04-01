@@ -39,7 +39,8 @@ class RacingNavigationEngine internal constructor(
         previousState: RacingNavigationState,
         fix: RacingNavigationFix,
         startRules: RacingStartCustomParams = RacingStartCustomParams(),
-        finishRules: RacingFinishCustomParams = RacingFinishCustomParams()
+        finishRules: RacingFinishCustomParams = RacingFinishCustomParams(),
+        startArmed: Boolean = true
     ): RacingNavigationDecision {
         val signature = buildTaskSignature(taskWaypoints)
         val state = normalizeNavigationState(previousState, taskWaypoints, signature)
@@ -114,8 +115,10 @@ class RacingNavigationEngine internal constructor(
                 insidePrevious = insidePrevious,
                 insideNow = insideNow,
                 startRules = startRules,
+                startArmed = startArmed,
                 zoneDetector = zoneDetector,
                 crossingPlanner = crossingPlanner,
+                epsilonPolicy = epsilonPolicy,
                 startEvaluator = startEvaluator
             )
             RacingNavigationStatus.IN_PROGRESS -> handleProgressTransition(
@@ -144,8 +147,9 @@ class RacingNavigationEngine internal constructor(
         previousState: RacingNavigationState,
         fix: RacingNavigationFix,
         startRules: RacingStartCustomParams = RacingStartCustomParams(),
-        finishRules: RacingFinishCustomParams = RacingFinishCustomParams()
-    ): RacingNavigationDecision = step(task.waypoints, previousState, fix, startRules, finishRules)
+        finishRules: RacingFinishCustomParams = RacingFinishCustomParams(),
+        startArmed: Boolean = true
+    ): RacingNavigationDecision = step(task.waypoints, previousState, fix, startRules, finishRules, startArmed)
 
     private fun handleProgressTransition(
         taskWaypoints: List<RacingWaypoint>,
@@ -187,16 +191,22 @@ class RacingNavigationEngine internal constructor(
                     )
                 }
 
-                val achievedByInsideFix = !insidePrevious && insideNow
-                val shouldTrigger = crossing != null || achievedByInsideFix
-
-                if (shouldTrigger) {
-                    val transitionTime = crossing?.crossingTimeMillis ?: fix.timestampMillis
+                if (crossing != null) {
+                    val transitionTime = crossing.crossingTimeMillis
                     val nextIndex = minOf(state.currentLegIndex + 1, taskWaypoints.lastIndex)
+                    val creditedTurnpoint = buildCreditedBoundaryHit(
+                        legIndex = state.currentLegIndex,
+                        waypointRole = activeWaypoint.role,
+                        transitionTimeMillis = transitionTime,
+                        crossing = crossing
+                    )
                     val nextState = state.copy(
                         status = RacingNavigationStatus.IN_PROGRESS,
                         currentLegIndex = nextIndex,
                         lastTransitionTimeMillis = transitionTime,
+                        creditedTurnpointsByLeg = state.creditedTurnpointsByLeg +
+                            (state.currentLegIndex to creditedTurnpoint),
+                        hasObservedRequiredApproachSideForActiveLeg = false,
                         reportedNearMissTurnpointLegIndices = state.reportedNearMissTurnpointLegIndices -
                             state.currentLegIndex
                     )
@@ -206,14 +216,7 @@ class RacingNavigationEngine internal constructor(
                         toLegIndex = nextIndex,
                         waypointRole = activeWaypoint.role,
                         timestampMillis = transitionTime,
-                        crossingEvidence = crossing?.let { boundaryCrossing ->
-                            RacingBoundaryCrossingEvidence(
-                                crossingPoint = boundaryCrossing.crossingPoint,
-                                insideAnchor = boundaryCrossing.insideAnchor,
-                                outsideAnchor = boundaryCrossing.outsideAnchor,
-                                evidenceSource = boundaryCrossing.evidenceSource
-                            )
-                        }
+                        crossingEvidence = crossing.toEventEvidence()
                     )
                     RacingNavigationDecision(state = nextState, event = event)
                 } else {
@@ -249,8 +252,6 @@ class RacingNavigationEngine internal constructor(
                     previousFix = previousFix,
                     activeWaypoint = activeWaypoint,
                     previousWaypoint = previousWaypoint,
-                    insidePrevious = insidePrevious,
-                    insideNow = insideNow,
                     crossingPlanner = crossingPlanner,
                     finishRules = finishRules
                 )

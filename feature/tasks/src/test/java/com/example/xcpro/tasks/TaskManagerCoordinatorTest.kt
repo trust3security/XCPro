@@ -16,6 +16,7 @@ import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.racing.RacingGeometryUtils
 import com.example.xcpro.tasks.racing.RacingTaskManager
+import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -174,6 +175,35 @@ class TaskManagerCoordinatorTest {
         assertEquals(TaskType.RACING, snapshot.taskType)
         assertEquals(listOf("start", "finish"), snapshot.task.waypoints.map { it.id })
         assertEquals(1, snapshot.activeLeg)
+    }
+
+    @Test
+    fun `racingAdvanceSnapshotFlow mirrors coordinator racing advance mutations`() {
+        val localCoordinator = createCoordinatorWithoutPersistence()
+
+        localCoordinator.setRacingAdvanceMode(RacingAdvanceState.Mode.MANUAL)
+        localCoordinator.setRacingAdvanceArmed(true)
+        localCoordinator.onRacingStartAccepted()
+
+        assertEquals(
+            RacingAdvanceState.Snapshot(
+                mode = RacingAdvanceState.Mode.MANUAL,
+                armState = RacingAdvanceState.ArmState.TURN_ARMED,
+                isArmed = true
+            ),
+            localCoordinator.racingAdvanceSnapshotFlow.value
+        )
+
+        localCoordinator.resetRacingAdvanceToStartPhase()
+
+        assertEquals(
+            RacingAdvanceState.Snapshot(
+                mode = RacingAdvanceState.Mode.MANUAL,
+                armState = RacingAdvanceState.ArmState.START_ARMED,
+                isArmed = true
+            ),
+            localCoordinator.racingAdvanceSnapshot()
+        )
     }
 
     @Test

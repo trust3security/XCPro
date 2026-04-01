@@ -108,7 +108,6 @@ class MapScreenReplayCoordinatorTest {
         val taskNavigationController = TaskNavigationController(
             taskManager = taskManager,
             stateStore = RacingNavigationStateStore(),
-            advanceState = RacingAdvanceState(),
             engine = RacingNavigationEngine(),
             featureFlags = TaskFeatureFlags()
         )

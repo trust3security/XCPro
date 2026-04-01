@@ -31,7 +31,7 @@ internal class RacingReplaySnapshotController(
         snapshot = RacingReplaySnapshot(
             selectedLeg = taskManager.currentLeg,
             navigationState = taskNavigationController.racingState.value,
-            advanceSnapshot = taskNavigationController.snapshot(),
+            advanceSnapshot = taskManager.racingAdvanceSnapshot(),
             replayMode = igcReplayController.getReplayMode(),
             replayCadence = igcReplayController.getReplayCadence(),
             replaySpeed = replaySessionState.value.speedMultiplier,

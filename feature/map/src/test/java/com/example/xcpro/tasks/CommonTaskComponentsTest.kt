@@ -11,7 +11,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextInput
 import com.example.xcpro.common.waypoint.WaypointData
-import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -30,9 +29,9 @@ class CommonTaskComponentsTest {
             MaterialTheme {
                 val snapshot = remember {
                     mutableStateOf(
-                        TaskAdvanceState.Snapshot(
-                            mode = TaskAdvanceState.Mode.MANUAL,
-                            armState = TaskAdvanceState.ArmState.START_DISARMED,
+                        TaskAdvanceUiSnapshot(
+                            mode = TaskAdvanceUiSnapshot.Mode.MANUAL,
+                            armState = TaskAdvanceUiSnapshot.ArmState.START_DISARMED,
                             isArmed = false
                         )
                     )

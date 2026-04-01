@@ -22,7 +22,7 @@ Current replacement map:
 | `racingtask.md` | `../../../RACING_TASK/README.md`, `../../../RACING_TASK/racing_task_definition.md` |
 | `Racing_XCSoar_Navigation.md` | `../../../RACING_TASK/validation_algorithms.md`, `../../../ARCHITECTURE/ARCHITECTURE.md` |
 | `RacingTask_Refactor.md` | `../../../RACING_TASK/CHANGE_PLAN_RACING_TASK_PRODUCTION_GRADE_PHASED_IP_2026-03-07.md`, `../../../ARCHITECTURE/PIPELINE.md` |
-| `RacingTask_Crossing_Implementation_Plan.md` | `../../../RACING_TASK/CHANGE_PLAN_RACING_TASK_RT_COMPLIANCE_2026-02-20.md`, `../../../RACING_TASK/validation_algorithms.md` |
+| `RacingTask_Crossing_Implementation_Plan.md` | `../../../RACING_TASK/archive/2026-04-doc-pass/CHANGE_PLAN_RACING_TASK_RT_COMPLIANCE_2026-02-20.md`, `../../../RACING_TASK/validation_algorithms.md` |
 | `RacingReplay_LiveCadence_Plan.md` | `../../../RACING_TASK/CHANGE_PLAN_RACING_TASK_PRODUCTION_GRADE_PHASED_IP_2026-03-07.md`, `../../../ARCHITECTURE/PIPELINE.md` |
 
 Notes:

@@ -32,7 +32,6 @@ import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.toSearchWaypoint
 import androidx.compose.ui.focus.focusRequester
-import com.example.xcpro.tasks.domain.logic.TaskAdvanceState
 
 /**
  * Common UI components shared between task types.
@@ -138,8 +137,8 @@ private fun TaskQRCodeItem(
 
 @Composable
 fun AdvanceControls(
-    snapshot: TaskAdvanceState.Snapshot,
-    onModeChange: (TaskAdvanceState.Mode) -> Unit,
+    snapshot: TaskAdvanceUiSnapshot,
+    onModeChange: (TaskAdvanceUiSnapshot.Mode) -> Unit,
     onToggleArm: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -158,20 +157,20 @@ fun AdvanceControls(
         ) {
             AssistChip(
                 modifier = Modifier.testTag(ADVANCE_MANUAL_CHIP_TAG),
-                onClick = { onModeChange(TaskAdvanceState.Mode.MANUAL) },
+                onClick = { onModeChange(TaskAdvanceUiSnapshot.Mode.MANUAL) },
                 label = { Text("Manual") },
                 leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (snapshot.mode == TaskAdvanceState.Mode.MANUAL) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                    containerColor = if (snapshot.mode == TaskAdvanceUiSnapshot.Mode.MANUAL) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
                 )
             )
             AssistChip(
                 modifier = Modifier.testTag(ADVANCE_AUTO_CHIP_TAG),
-                onClick = { onModeChange(TaskAdvanceState.Mode.AUTO) },
+                onClick = { onModeChange(TaskAdvanceUiSnapshot.Mode.AUTO) },
                 label = { Text("Auto") },
                 leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (snapshot.mode == TaskAdvanceState.Mode.AUTO) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                    containerColor = if (snapshot.mode == TaskAdvanceUiSnapshot.Mode.AUTO) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
                 )
             )
             AssistChip(

@@ -1,5 +1,8 @@
 package com.example.xcpro.tasks.racing.navigation
 
+import com.example.xcpro.tasks.core.RacingAltitudeReference
+import com.example.xcpro.tasks.racing.models.RacingWaypointRole
+
 enum class RacingNavigationStatus {
     PENDING_START,
     STARTED,
@@ -19,6 +22,15 @@ data class RacingNavigationFix(
     val bearingDeg: Double? = null
 )
 
+data class RacingCreditedBoundaryHit(
+    val legIndex: Int,
+    val waypointRole: RacingWaypointRole,
+    val timestampMillis: Long,
+    val crossingEvidence: RacingBoundaryCrossingEvidence,
+    val altitudeSourceFix: RacingNavigationFix? = null,
+    val altitudeReference: RacingAltitudeReference? = null
+)
+
 data class RacingNavigationState(
     val status: RacingNavigationStatus = RacingNavigationStatus.PENDING_START,
     val currentLegIndex: Int = 0,
@@ -27,10 +39,11 @@ data class RacingNavigationState(
     val taskSignature: String = "",
     val startCandidates: List<RacingStartCandidate> = emptyList(),
     val selectedStartCandidateIndex: Int? = null,
-    val acceptedStartTimestampMillis: Long? = null,
-    val acceptedStartFix: RacingNavigationFix? = null,
-    val acceptedStartAltitudeReference: com.example.xcpro.tasks.core.RacingAltitudeReference? = null,
+    val creditedStart: RacingCreditedBoundaryHit? = null,
+    val creditedTurnpointsByLeg: Map<Int, RacingCreditedBoundaryHit> = emptyMap(),
+    val creditedFinish: RacingCreditedBoundaryHit? = null,
     val preStartAltitudeSatisfied: Boolean = false,
+    val hasObservedRequiredApproachSideForActiveLeg: Boolean = false,
     val reportedNearMissTurnpointLegIndices: Set<Int> = emptySet(),
     val finishOutcome: RacingFinishOutcome? = null,
     val finishUsedStraightInException: Boolean = false,

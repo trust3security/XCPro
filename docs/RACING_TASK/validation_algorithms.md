@@ -1,69 +1,77 @@
 # Validation algorithms (pseudocode)
 
-This file gives implementable logic for an Android app that tracks progress through a Racing Task.
+This file gives implementable logic for an Android app that tracks progress
+through a Racing Task.
 
 It assumes:
-- A GPS track is a list of fixes with time (seconds), lat/lon, and optional altitude.
-- Distances are computed geodesically (or locally approximated for small radii).
-- “Valid fix” filtering (e.g., removing obvious GNSS jumps) is handled upstream.
+
+- a GPS track is a list of fixes with time, lat/lon, and optional altitude
+- distances are computed geodesically or with a suitable local approximation for
+  small radii
+- "valid fix" filtering is handled upstream
 
 ## High-level task state machine
 
-A Racing Task is completed when (SC3 Annex A 2025, 7.9.1):
-- the competitor has a **valid Start** (possibly with penalty),
-- has achieved all Turn Points in the correct order (possibly with penalties),
-- and has a **valid Finish** (possibly with penalty).
+A Racing Task is completed when the competitor has:
+
+- a valid Start
+- achieved all Turn Points in the correct order
+- a valid Finish
 
 ### State machine
-```
+
+```text
 PRE_START
-  -> STARTED (on valid start)
+  -> STARTED
 STARTED
-  -> TP_i_ACHIEVED (for each TP in order)
+  -> TP_i_ACHIEVED
 TP_n_ACHIEVED
-  -> FINISHED (on valid finish)
+  -> FINISHED
 ```
 
 ## Geometry helper functions
 
 ### 1) Distance (meters)
-Use a WGS‑84 geodesic library if available. If not, Haversine is acceptable for <~1000 km.
 
-```
+Use a WGS-84 geodesic library if available. If not, Haversine is acceptable for
+short task geometry calculations.
+
+```text
 distanceMeters(lat1, lon1, lat2, lon2) -> double
 ```
 
 ### 2) Cylinder inclusion
-```
+
+```text
 isInsideCylinder(fix, center, radiusM):
   return distanceMeters(fix.lat, fix.lon, center.lat, center.lon) <= radiusM
 ```
 
 ### 3) Segment intersects cylinder (local ENU approximation)
-For small radii (500 m) you can treat a neighborhood around the center as planar.
 
-```
+For small radii such as 500 m, you can treat the neighborhood as planar.
+
+```text
 segmentIntersectsCylinder(A, B, center, radiusM):
-  # convert A,B,center to local ENU coordinates (meters) using center as origin
   a = toENU(A, origin=center)
   b = toENU(B, origin=center)
-  c = (0,0)
-
-  # compute closest distance from point c to segment ab
+  c = (0, 0)
   d = distancePointToSegment(c, a, b)
   return d <= radiusM
 ```
 
-### 4) Start ring “leave circle” detection
-```
+### 4) Start ring leave-circle detection
+
+```text
 detectLeaveCircle(prevFix, fix, center, radiusM):
   insidePrev = isInsideCylinder(prevFix, center, radiusM)
   insideNow  = isInsideCylinder(fix, center, radiusM)
   return insidePrev && !insideNow
 ```
 
-### 5) Finish ring “enter circle” detection
-```
+### 5) Finish ring enter-circle detection
+
+```text
 detectEnterCircle(prevFix, fix, center, radiusM):
   insidePrev = isInsideCylinder(prevFix, center, radiusM)
   insideNow  = isInsideCylinder(fix, center, radiusM)
@@ -72,71 +80,89 @@ detectEnterCircle(prevFix, fix, center, radiusM):
 
 ### 6) Line crossing with direction
 
-Represent a finite line segment by two endpoints `L1` and `L2` and a “valid crossing direction” vector `dir` (unit vector in local ENU).
+Represent a finite line segment by endpoints `L1` and `L2` and a valid crossing
+direction vector `dir`.
 
-```
+```text
 segmentCrossesLine(prevFix, fix, L1, L2):
-  # planar line segment intersection in ENU coordinates
   return segmentsIntersect(prevFix, fix, L1, L2)
 
 crossingDirectionOk(prevFix, fix, dir):
-  v = toENU(fix, origin=prevFix)  # movement vector
+  v = toENU(fix, origin=prevFix)
   return dot(v, dir) > 0
 ```
 
-**App guidance:** Create `dir` from:
-- Start: bearing from Start Point to first TP (or to first Assigned Area center).
-- Finish: bearing specified by contest; often bearing from last point to finish.
+Create `dir` from:
+
+- Start: bearing from Start Point to the first TP or first assigned area center
+- Finish: the contest-specified finish direction
 
 ### 7) Interpolated event time (nearest second)
-If A at time tA and B at time tB cross a boundary at fraction `f` along segment, event time is:
 
-```
+If fix `A` at time `tA` and fix `B` at time `tB` cross a boundary at fraction
+`f` along the segment:
+
+```text
 t = tA + f * (tB - tA)
 return roundToNearestSecond(t)
 ```
 
-Compute `f` from the geometry (line intersection or circle boundary intersection). If you can’t compute `f`, use the time of the first fix inside / first fix after crossing as a conservative approximation.
+Compute `f` from the geometry whenever the result will be treated as
+authoritative task progression. If you cannot compute `f`, treat the fallback
+time as advisory UI only, not exact credited boundary evidence.
 
 ## Start detection
 
 Inputs:
+
 - `startGateOpenTime`
-- start geometry (`LINE` or `RING` or `CYLINDER`)
-- (optional) tolerance rules: fix within 500 m of start zone
+- start geometry (`LINE`, `RING`, or `CYLINDER`)
+- optional 500 m tolerance handling
 
 Algorithm:
-1. Ignore fixes with timestamp < startGateOpenTime.
-2. For each consecutive fix pair (A,B), detect start condition:
-   - Line: segment crosses start line AND direction OK.
-   - Ring: leave circle (inside→outside).
-   - Cylinder start (PEV): requires PEV events, typically not available in a generic GPS log; treat as unsupported unless you have recorder events.
-3. If found, record `startTime` (interpolated) and `startFixIndex`.
-4. If not found, check tolerance:
-   - find a fix within 500 m of the start line/circle AFTER gate open; mark as “tolerance start”.
 
-## Turn point detection (for each TP in order)
+1. Ignore fixes with timestamp before `startGateOpenTime`.
+2. For each consecutive fix pair `(A, B)`, detect the start condition:
+   - Line: segment crosses the start line and direction is correct.
+   - Ring: inside-to-outside leave-circle transition.
+   - Cylinder start: requires PEV events unless the contest uses a simplified
+     compatibility mode.
+3. If found, record `startTime` and the credited crossing evidence.
+4. If not found, check 500 m tolerance and mark it as a penalized fallback, not
+   a clean start.
 
-For TP_i with center C and radius R=500m:
+## Turnpoint detection (for each TP in order)
+
+For TP_i with center `C` and radius `R = 500 m`:
+
 1. Starting from the last achieved index, scan fixes:
-   - if isInsideCylinder(fix,C,R) => achieved at fix time
-   - else if segmentIntersectsCylinder(prevFix, fix, C, R) => achieved with interpolated time
+   - if `isInsideCylinder(fix, C, R)` then achieved at fix time
+   - else if `segmentIntersectsCylinder(prevFix, fix, C, R)` then achieved with
+     interpolated time
 2. If never achieved, compute near-miss:
-   - compute minimum distance to boundary; if a fix is within 500 m outside boundary, flag `nearMiss500m`.
+   - compute minimum distance to the boundary
+   - if a fix is within 500 m outside the boundary, flag `nearMiss500m`
+
+Exact live-navigation note:
+
+- do not auto-advance a leg from a near-miss
+- if the leg becomes active while the glider is already inside the OZ, do not
+  treat the first inside fix as enough for exact auto-advance unless you have
+  active-leg evidence that proves the achievement belongs to the current leg
 
 ## Finish detection
 
 Similar to start:
-- Finish ring: detect enter circle (outside→inside).
-- Finish line: segment crosses line AND direction OK.
-- Apply closing time if provided; if finish is closed, treat as “outlanded at last fix before close”.
+
+- Finish ring: detect outside-to-inside enter-circle transition
+- Finish line: detect line crossing with correct direction
+- apply finish close time when present
 
 ## Multiple starts
 
-FAI scoring for line start allows multiple valid starts; best scoring may be used (SC3 Annex A 2025, 7.4.3.6). For a pilot-navigation app:
+FAI scoring for line start allows multiple valid starts, with the best-scoring
+start potentially used for scoring. For a live navigation app:
 
-**App guidance:**
-- Default behavior: use the **first** valid start after the gate opens for live navigation.
-- Provide UI: “Select another start time” if multiple starts are detected.
-- When exporting to scoring, keep all detected starts with timestamps so scoring software can choose.
-
+- preserve all detected start candidates
+- keep the credited start outcome explicit
+- do not silently reinterpret a tolerance start as a clean start

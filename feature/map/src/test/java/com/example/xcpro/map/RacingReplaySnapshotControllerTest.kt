@@ -139,7 +139,6 @@ class RacingReplaySnapshotControllerTest {
     ): TaskNavigationController = TaskNavigationController(
         taskManager = coordinator,
         stateStore = RacingNavigationStateStore(),
-        advanceState = RacingAdvanceState(),
         engine = RacingNavigationEngine(),
         featureFlags = featureFlags
     )

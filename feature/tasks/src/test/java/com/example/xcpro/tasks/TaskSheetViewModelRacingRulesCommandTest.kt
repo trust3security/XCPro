@@ -12,6 +12,7 @@ import com.example.xcpro.tasks.racing.RacingTaskStructureRules
 import com.example.xcpro.tasks.racing.UpdateRacingFinishRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingStartRulesCommand
 import com.example.xcpro.tasks.racing.UpdateRacingValidationRulesCommand
+import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -94,6 +95,28 @@ class TaskSheetViewModelRacingRulesCommandTest {
         viewModel.onUpdateRacingValidationRules(command)
 
         Mockito.verify(coordinator).updateRacingValidationRules(command)
+    }
+
+    @Test
+    fun onAdvanceMode_forRacing_forwardsToCoordinatorRacingAdvanceOwner() {
+        val coordinator = mockCoordinator()
+        val viewModel = createViewModel(coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+
+        viewModel.onAdvanceMode(TaskAdvanceUiSnapshot.Mode.MANUAL)
+
+        Mockito.verify(coordinator).setRacingAdvanceMode(RacingAdvanceState.Mode.MANUAL)
+    }
+
+    @Test
+    fun onAdvanceArmToggle_forRacing_forwardsToCoordinatorRacingAdvanceOwner() {
+        val coordinator = mockCoordinator()
+        val viewModel = createViewModel(coordinator)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+
+        viewModel.onAdvanceArmToggle()
+
+        Mockito.verify(coordinator).toggleRacingAdvanceArm()
     }
 
     private fun createViewModel(coordinator: TaskSheetCoordinatorUseCase): TaskSheetViewModel {
