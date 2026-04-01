@@ -89,6 +89,7 @@ internal fun MapScreenContent(
     val showReturnButton = overlayInputs.showReturnButton
     val showDistanceCircles = overlayInputs.showDistanceCircles
     val showPilotStatusIndicator = overlayInputs.showPilotStatusIndicator
+    val isGeneralSettingsVisible = overlayInputs.isGeneralSettingsVisible
     val trafficBinding = overlayInputs.traffic
     val isUiEditMode = overlayInputs.isUiEditMode
     val onEditModeChange = overlayInputs.onEditModeChange
@@ -203,7 +204,8 @@ internal fun MapScreenContent(
     val bottomTabsUiState = rememberMapScreenBottomTabsUiState(
         taskScreenManager = taskScreenManager,
         hasTrafficDetailsOpen = trafficContentUiState.hasTrafficDetailsOpen,
-        currentMapStyleName = currentMapStyleName
+        currentMapStyleName = currentMapStyleName,
+        isGeneralSettingsVisible = isGeneralSettingsVisible
     )
     val windTapUiState = rememberMapScreenWindTapUiState(
         isForecastWindArrowOverlayActive = forecastWeatherState.isForecastWindArrowOverlayActive

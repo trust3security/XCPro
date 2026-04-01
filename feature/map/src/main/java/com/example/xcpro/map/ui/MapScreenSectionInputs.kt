@@ -71,6 +71,7 @@ internal data class MapScreenOverlayContentInputs(
     val showReturnButton: Boolean,
     val showDistanceCircles: Boolean,
     val showPilotStatusIndicator: Boolean,
+    val isGeneralSettingsVisible: Boolean,
     val traffic: MapTrafficUiBinding,
     val isUiEditMode: Boolean,
     val onEditModeChange: (Boolean) -> Unit,

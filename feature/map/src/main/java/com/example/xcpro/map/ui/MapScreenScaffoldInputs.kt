@@ -40,6 +40,7 @@ internal fun rememberMapScreenScaffoldInputs(
     onMapStyleSelected: (String) -> Unit,
     onOpenGeneralSettings: () -> Unit,
     allowFlightSensorStart: Boolean,
+    isGeneralSettingsVisible: Boolean,
     renderLocalOwnship: Boolean,
     mapViewModel: MapScreenViewModel,
     hotPathBindings: MapScreenHotPathBindings,
@@ -154,6 +155,7 @@ internal fun rememberMapScreenScaffoldInputs(
                 showReturnButton = mapBindings.showReturnButton,
                 showDistanceCircles = mapBindings.showDistanceCircles,
                 showPilotStatusIndicator = allowFlightSensorStart,
+                isGeneralSettingsVisible = isGeneralSettingsVisible,
                 traffic = bindings.traffic,
                 isUiEditMode = mapUiState.isUiEditMode,
                 onEditModeChange = { enabled ->

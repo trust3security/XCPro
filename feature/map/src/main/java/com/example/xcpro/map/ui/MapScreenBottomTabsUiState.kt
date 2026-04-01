@@ -41,15 +41,36 @@ internal fun shouldHideBottomTabsSheet(
     hasTrafficDetailsOpen: Boolean
 ): Boolean = isTaskPanelVisible || hasTrafficDetailsOpen
 
+internal fun shouldSuspendBottomTabsSheetForGeneralSettings(
+    isGeneralSettingsVisible: Boolean,
+    isBottomTabsSheetVisible: Boolean
+): Boolean = isGeneralSettingsVisible && isBottomTabsSheetVisible
+
+internal fun shouldRestoreBottomTabsSheetAfterGeneralSettings(
+    isGeneralSettingsVisible: Boolean,
+    restoreAfterGeneralSettings: Boolean,
+    isTaskPanelVisible: Boolean,
+    hasTrafficDetailsOpen: Boolean
+): Boolean {
+    return !isGeneralSettingsVisible &&
+        restoreAfterGeneralSettings &&
+        !shouldHideBottomTabsSheet(
+            isTaskPanelVisible = isTaskPanelVisible,
+            hasTrafficDetailsOpen = hasTrafficDetailsOpen
+        )
+}
+
 @Composable
 internal fun rememberMapScreenBottomTabsUiState(
     taskScreenManager: MapTaskScreenManager,
     hasTrafficDetailsOpen: Boolean,
-    currentMapStyleName: String
+    currentMapStyleName: String,
+    isGeneralSettingsVisible: Boolean
 ): MapScreenBottomTabsUiState {
     var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.SKYSIGHT.name) }
     var isBottomTabsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var lastNonSatelliteMapStyleName by rememberSaveable { mutableStateOf<String?>(null) }
+    var restoreBottomTabsSheetAfterGeneralSettings by rememberSaveable { mutableStateOf(false) }
 
     val selectedBottomTab = remember(selectedBottomTabName) {
         resolveMapBottomTab(selectedBottomTabName)
@@ -64,9 +85,30 @@ internal fun rememberMapScreenBottomTabsUiState(
             previousLastNonSatelliteMapStyleName = lastNonSatelliteMapStyleName
         )
     }
-    LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen) {
+    LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen, isGeneralSettingsVisible) {
         if (shouldHideBottomTabsSheet(isTaskPanelVisible, hasTrafficDetailsOpen)) {
             isBottomTabsSheetVisible = false
+            restoreBottomTabsSheetAfterGeneralSettings = false
+        } else if (
+            shouldSuspendBottomTabsSheetForGeneralSettings(
+                isGeneralSettingsVisible = isGeneralSettingsVisible,
+                isBottomTabsSheetVisible = isBottomTabsSheetVisible
+            )
+        ) {
+            restoreBottomTabsSheetAfterGeneralSettings = true
+            isBottomTabsSheetVisible = false
+        } else if (
+            shouldRestoreBottomTabsSheetAfterGeneralSettings(
+                isGeneralSettingsVisible = isGeneralSettingsVisible,
+                restoreAfterGeneralSettings = restoreBottomTabsSheetAfterGeneralSettings,
+                isTaskPanelVisible = isTaskPanelVisible,
+                hasTrafficDetailsOpen = hasTrafficDetailsOpen
+            )
+        ) {
+            restoreBottomTabsSheetAfterGeneralSettings = false
+            isBottomTabsSheetVisible = true
+        } else if (!isGeneralSettingsVisible && restoreBottomTabsSheetAfterGeneralSettings) {
+            restoreBottomTabsSheetAfterGeneralSettings = false
         }
     }
 
