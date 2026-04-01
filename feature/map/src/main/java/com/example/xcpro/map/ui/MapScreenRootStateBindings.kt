@@ -74,9 +74,7 @@ internal fun rememberMapScreenProfileLookAndFeelBinding(): MapScreenProfileLookA
     val lookAndFeelViewModel: LookAndFeelViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val activeProfileId = ProfileIdResolver.canonicalOrDefault(profileUiState.activeProfile?.id)
-    LaunchedEffect(activeProfileId) {
-        lookAndFeelViewModel.setProfileId(activeProfileId)
-    }
+    LaunchedEffect(activeProfileId) { lookAndFeelViewModel.setProfileId(activeProfileId) }
     val lookAndFeelUiState by lookAndFeelViewModel.uiState.collectAsStateWithLifecycle()
     val cardStyle = remember(lookAndFeelUiState.cardStyleId) {
         CardStyle.values().find { it.id == lookAndFeelUiState.cardStyleId } ?: CardStyle.default
