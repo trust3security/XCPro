@@ -14,11 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -123,18 +121,7 @@ internal fun MapBottomTabsLayer(
     }
 
     if (isSheetVisible) {
-        val latestOnDismissSheet = rememberUpdatedState(onDismissSheet)
-        val sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-            confirmValueChange = { targetValue ->
-                if (targetValue == SheetValue.Hidden) {
-                    latestOnDismissSheet.value()
-                    false
-                } else {
-                    true
-                }
-            }
-        )
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
         LaunchedEffect(sheetState) {
             if (!sheetState.isVisible) {
@@ -143,7 +130,7 @@ internal fun MapBottomTabsLayer(
         }
 
         ModalBottomSheet(
-            onDismissRequest = latestOnDismissSheet.value,
+            onDismissRequest = onDismissSheet,
             sheetState = sheetState
         ) {
             Column(
