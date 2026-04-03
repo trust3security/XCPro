@@ -26,9 +26,6 @@ internal class MapOverlayManagerRuntimeWeatherRainDelegate(
     fun setMapInteractionActive(active: Boolean) {
         if (mapInteractionActive == active) return
         mapInteractionActive = active
-        if (!active) {
-            flushDeferredWeatherRainConfig()
-        }
     }
 
     fun onMapStyleChanged(map: MapLibreMap?) {
@@ -163,23 +160,33 @@ internal class MapOverlayManagerRuntimeWeatherRainDelegate(
 
     private fun applyWeatherRainOverlay(
         map: MapLibreMap,
-        config: WeatherRainRuntimeConfig
+        config: WeatherRainRuntimeConfig,
+        reconcileFrontOrder: Boolean = true
     ): Boolean {
         return applyWeatherRainOverlayRuntime(
             runtimeState = runtimeState,
             map = map,
             config = config,
-            bringTrafficOverlaysToFront = bringTrafficOverlaysToFront
+            bringTrafficOverlaysToFront = bringTrafficOverlaysToFront,
+            reconcileFrontOrder = reconcileFrontOrder
         )
     }
 
-    private fun flushDeferredWeatherRainConfig() {
-        val deferred = deferredWeatherRainConfig ?: return
+    fun flushDeferredInteractionReleaseWork(reconcileFrontOrder: Boolean = true): Boolean {
+        val deferred = deferredWeatherRainConfig ?: return false
         deferredWeatherRainConfig = null
-        val map = runtimeState.mapLibreMap ?: return
-        if (applyWeatherRainOverlay(map, deferred)) {
-            lastWeatherRainConfig = deferred
+        val map = runtimeState.mapLibreMap ?: return false
+        val runtimeConfig = deferred.copy(
+            transitionDurationMs = effectiveWeatherRainTransitionDurationMs(
+                interactionActive = mapInteractionActive,
+                requestedDurationMs = deferred.transitionDurationMs
+            )
+        )
+        if (applyWeatherRainOverlay(map, runtimeConfig, reconcileFrontOrder = reconcileFrontOrder)) {
+            lastWeatherRainConfig = runtimeConfig
             lastWeatherRainApplyMonoMs = nowMonoMs()
+            return true
         }
+        return false
     }
 }

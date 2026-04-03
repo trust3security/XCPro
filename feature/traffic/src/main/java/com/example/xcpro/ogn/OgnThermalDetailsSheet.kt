@@ -14,6 +14,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.DistanceM
 import com.example.xcpro.common.units.UnitsFormatter
@@ -24,6 +25,7 @@ import com.example.xcpro.common.units.VerticalSpeedMs
 @Composable
 fun OgnThermalDetailsSheet(
     hotspot: OgnThermalHotspot,
+    context: SelectedOgnThermalContext?,
     distanceMeters: Double?,
     unitsPreferences: UnitsPreferences,
     onDismiss: () -> Unit
@@ -51,8 +53,12 @@ fun OgnThermalDetailsSheet(
                 color = MaterialTheme.colorScheme.primary
             )
             DetailRow("Distance", formatDistance(distanceMeters, unitsPreferences))
+            DetailRow("Age", formatThermalAge(context?.ageMs))
+            DetailRow("Duration", formatThermalDuration(context?.durationMs))
+            DetailRow("Drift", formatThermalDrift(context, unitsPreferences))
             DetailRow("Start Height", formatAltitude(hotspot.startAltitudeMeters, unitsPreferences))
             DetailRow("Max Height", formatAltitude(hotspot.maxAltitudeMeters, unitsPreferences))
+            DetailRow("Altitude Gain", formatThermalAltitudeDelta(context?.altitudeGainMeters, unitsPreferences))
             DetailRow("Max Climb", formatClimbRate(hotspot.maxClimbRateMps, unitsPreferences))
             DetailRow(
                 "Average Climb",
@@ -108,3 +114,64 @@ private fun formatDistance(distanceMeters: Double?, unitsPreferences: UnitsPrefe
         ?.takeIf { it.isFinite() }
         ?.let { UnitsFormatter.distance(DistanceM(it), unitsPreferences).text }
         ?: "--"
+
+internal fun formatThermalAge(ageMs: Long?): String = compactElapsedLabel(ageMs)
+
+internal fun formatThermalDuration(durationMs: Long?): String = compactElapsedLabel(durationMs)
+
+internal fun compactElapsedLabel(durationMs: Long?): String {
+    val safeDurationMs = durationMs?.coerceAtLeast(0L) ?: return "--"
+    if (safeDurationMs < 1_000L) return "<1s"
+    val totalSeconds = safeDurationMs / 1_000L
+    val hours = totalSeconds / 3_600L
+    val minutes = (totalSeconds % 3_600L) / 60L
+    val seconds = totalSeconds % 60L
+    return when {
+        hours > 0L -> "${hours}h ${minutes.toString().padStart(2, '0')}m"
+        minutes > 0L -> "${minutes}m ${seconds.toString().padStart(2, '0')}s"
+        else -> "${seconds}s"
+    }
+}
+
+internal fun formatThermalDrift(
+    context: SelectedOgnThermalContext?,
+    unitsPreferences: UnitsPreferences
+): String {
+    val bearing = context?.driftBearingDeg?.takeIf { it.isFinite() } ?: return "--"
+    val distance = context.driftDistanceMeters?.takeIf { it.isFinite() } ?: return "--"
+    return "${cardinalDirectionLabel(bearing)}, ${formatDistance(distance, unitsPreferences)}"
+}
+
+internal fun cardinalDirectionLabel(bearingDeg: Double): String {
+    val normalized = ((bearingDeg % 360.0) + 360.0) % 360.0
+    val cards = arrayOf(
+        "N",
+        "NNE",
+        "NE",
+        "ENE",
+        "E",
+        "ESE",
+        "SE",
+        "SSE",
+        "S",
+        "SSW",
+        "SW",
+        "WSW",
+        "W",
+        "WNW",
+        "NW",
+        "NNW"
+    )
+    val index = (((normalized + 11.25) / 22.5).toInt()) % cards.size
+    return cards[index]
+}
+
+internal fun formatThermalAltitudeDelta(
+    altitudeDeltaMeters: Double?,
+    unitsPreferences: UnitsPreferences
+): String {
+    val delta = altitudeDeltaMeters?.takeIf { it.isFinite() } ?: return "--"
+    val sign = if (delta > 0.0) "+" else if (delta < 0.0) "-" else ""
+    val formatted = UnitsFormatter.altitude(AltitudeM(abs(delta)), unitsPreferences).text
+    return "$sign$formatted"
+}

@@ -1,6 +1,7 @@
 package com.example.xcpro.livefollow.data.friends
 
 import com.example.xcpro.livefollow.model.LiveFollowTransportState
+import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -12,6 +13,7 @@ import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -152,6 +154,23 @@ class CurrentApiActivePilotsDataSourceTest {
         require(result is ActivePilotsFetchResult.Failure)
         assertEquals(LiveFollowTransportState.DEGRADED, result.availability.state)
         assertTrue(result.message.contains("active list unavailable"))
+    }
+
+    @Test
+    fun fetchActivePilots_ioFailure_usesFriendlyTransportMessage() = runTest {
+        val dataSource = CurrentApiActivePilotsDataSource(
+            httpClient = OkHttpClient.Builder().addInterceptor(
+                Interceptor { throw UnknownHostException("api.xcpro.com.au") }
+            ).build(),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler)
+        )
+
+        val result = dataSource.fetchActivePilots()
+
+        require(result is ActivePilotsFetchResult.Failure)
+        assertEquals(LiveFollowTransportState.UNAVAILABLE, result.availability.state)
+        assertEquals("LiveFollow network error. Check connection and retry.", result.message)
+        assertFalse(result.message.contains("hostname", ignoreCase = true))
     }
 
     private fun arrayRootPayload(): String {

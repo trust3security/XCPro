@@ -63,7 +63,6 @@ internal fun MapBottomTabsLayer(
     adsbTrafficEnabled: Boolean,
     showOgnThermalsEnabled: Boolean,
     showDistanceCircles: Boolean,
-    currentQnhLabel: String,
     onAdsbTrafficEnabledChanged: (Boolean) -> Unit,
     onShowOgnThermalsEnabledChanged: (Boolean) -> Unit,
     onShowDistanceCirclesChanged: (Boolean) -> Unit,
@@ -198,7 +197,6 @@ internal fun MapBottomTabsLayer(
                             )
                             Map4MapControlsContent(
                                 showDistanceCircles = showDistanceCircles,
-                                currentQnhLabel = currentQnhLabel,
                                 onShowDistanceCirclesChanged = onShowDistanceCirclesChanged,
                                 onOpenQnhDialog = onOpenQnhDialogFromTab
                             )

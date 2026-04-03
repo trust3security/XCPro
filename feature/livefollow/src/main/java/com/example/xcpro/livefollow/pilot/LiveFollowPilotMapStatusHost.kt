@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -37,6 +38,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -106,10 +110,10 @@ fun BoxScope.LiveFollowPilotMapStatusHost(
                 end = 16.dp
             )
     ) {
-        TextButton(
-            onClick = { expanded = true },
-            modifier = Modifier.widthIn(min = 40.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+        Box(
+            modifier = Modifier
+                .semantics { contentDescription = visuals.contentDescription }
+                .clickable(role = Role.Button) { expanded = true }
         ) {
             Surface(
                 shape = CircleShape,
@@ -123,7 +127,7 @@ fun BoxScope.LiveFollowPilotMapStatusHost(
                 ) {
                     Icon(
                         imageVector = visuals.icon,
-                        contentDescription = visuals.contentDescription,
+                        contentDescription = null,
                         tint = visuals.color,
                         modifier = Modifier
                             .size(LiveFollowIndicatorDotSize)

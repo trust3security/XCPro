@@ -2,6 +2,8 @@ package com.example.xcpro.livefollow.data.friends
 
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.livefollow.data.transport.CurrentApiLivePoint
+import com.example.xcpro.livefollow.data.transport.LiveFollowTransportFailureSurface
+import com.example.xcpro.livefollow.data.transport.logAndNormalizeLiveFollowTransportFailure
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiActivePilotsResponse
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiErrorMessage
 import com.example.xcpro.livefollow.di.LiveFollowHttpClient
@@ -59,8 +61,12 @@ class CurrentApiActivePilotsDataSource @Inject constructor(
                 ActivePilotsFetchResult.Success(items)
             }
         } catch (e: IOException) {
-            val message = e.localizedMessage?.takeIf { it.isNotBlank() }
-                ?: e::class.java.simpleName
+            val message = logAndNormalizeLiveFollowTransportFailure(
+                tag = TAG,
+                operationLabel = "Active pilots fetch",
+                surface = LiveFollowTransportFailureSurface.LIVEFOLLOW,
+                throwable = e
+            ).userMessage
             ActivePilotsFetchResult.Failure(
                 availability = liveFollowUnavailableTransport(message),
                 message = message
@@ -109,5 +115,6 @@ class CurrentApiActivePilotsDataSource @Inject constructor(
         private const val LIVEFOLLOW_BASE_URL = "https://api.xcpro.com.au/"
         private const val CONTENT_TYPE_JSON = "application/json"
         private const val HEADER_ACCEPT = "Accept"
+        private const val TAG = "LiveFollowActivePilots"
     }
 }

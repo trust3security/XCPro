@@ -40,6 +40,16 @@ class MapOverlayManagerRuntimeForecastWeatherDelegate(
         weatherRainDelegate.setMapInteractionActive(active)
     }
 
+    fun flushDeferredInteractionReleaseWork(reconcileFrontOrder: Boolean = true): Boolean {
+        val skySightReapplied = skySightSatelliteDelegate.flushInteractionReleaseReapplyIfNeeded(
+            reconcileFrontOrder = reconcileFrontOrder
+        )
+        val weatherRainFlushed = weatherRainDelegate.flushDeferredInteractionReleaseWork(
+            reconcileFrontOrder = reconcileFrontOrder
+        )
+        return skySightReapplied || weatherRainFlushed
+    }
+
     fun satelliteContrastIconsEnabled(): Boolean =
         skySightSatelliteDelegate.satelliteContrastIconsEnabled()
 

@@ -30,6 +30,7 @@ internal class MapOverlayManagerRuntimeSkySightSatelliteDelegate(
     private var skySightSatelliteReferenceTimeUtcMs: Long? = null
     private var satelliteContrastIconsEnabled: Boolean = false
     private var lastSkySightSatelliteConfig: SkySightSatelliteRuntimeConfig? = null
+    private var pendingInteractionReleaseReapply: Boolean = false
     private var mapInteractionActive: Boolean = false
     private val _skySightSatelliteRuntimeErrorMessage = MutableStateFlow<String?>(null)
     val skySightSatelliteRuntimeErrorMessage: StateFlow<String?> =
@@ -38,9 +39,7 @@ internal class MapOverlayManagerRuntimeSkySightSatelliteDelegate(
     fun setMapInteractionActive(active: Boolean) {
         if (mapInteractionActive == active) return
         mapInteractionActive = active
-        if (!active) {
-            runtimeState.mapLibreMap?.let(::reapplySkySightSatelliteOverlay)
-        }
+        pendingInteractionReleaseReapply = !active && shouldReapplyAfterInteractionRelease()
     }
 
     fun satelliteContrastIconsEnabled(): Boolean = satelliteContrastIconsEnabled
@@ -60,6 +59,7 @@ internal class MapOverlayManagerRuntimeSkySightSatelliteDelegate(
 
     fun onMapDetached() {
         mapInteractionActive = false
+        pendingInteractionReleaseReapply = false
         _skySightSatelliteRuntimeErrorMessage.value = null
     }
 
@@ -128,6 +128,13 @@ internal class MapOverlayManagerRuntimeSkySightSatelliteDelegate(
         runtimeState.mapLibreMap?.let(::reapplySkySightSatelliteOverlay)
     }
 
+    fun flushInteractionReleaseReapplyIfNeeded(reconcileFrontOrder: Boolean = true): Boolean {
+        if (!pendingInteractionReleaseReapply) return false
+        pendingInteractionReleaseReapply = false
+        val map = runtimeState.mapLibreMap ?: return false
+        return reapplySkySightSatelliteOverlay(map, reconcileFrontOrder = reconcileFrontOrder)
+    }
+
     fun statusSnapshot(): SkySightSatelliteRuntimeStatus = SkySightSatelliteRuntimeStatus(
         contrastIconsEnabled = satelliteContrastIconsEnabled,
         enabled = skySightSatelliteEnabled,
@@ -138,7 +145,10 @@ internal class MapOverlayManagerRuntimeSkySightSatelliteDelegate(
         historyFrameCount = skySightSatelliteHistoryFrames
     )
 
-    private fun reapplySkySightSatelliteOverlay(map: MapLibreMap) {
+    private fun reapplySkySightSatelliteOverlay(
+        map: MapLibreMap,
+        reconcileFrontOrder: Boolean = true
+    ): Boolean {
         val config = SkySightSatelliteRuntimeConfig(
             enabled = skySightSatelliteEnabled,
             showSatelliteImagery = skySightSatelliteImageryEnabled,
@@ -148,25 +158,35 @@ internal class MapOverlayManagerRuntimeSkySightSatelliteDelegate(
             historyFrameCount = skySightSatelliteHistoryFrames,
             referenceTimeUtcMs = skySightSatelliteReferenceTimeUtcMs
         )
-        if (applySkySightSatelliteOverlay(map, config)) {
+        if (applySkySightSatelliteOverlay(map, config, reconcileFrontOrder = reconcileFrontOrder)) {
             lastSkySightSatelliteConfig = config
             setSatelliteContrastIconsEnabled(
                 config.enabled && (config.showSatelliteImagery || config.showRadar || config.showLightning)
             )
+            return true
         }
+        return false
     }
 
     private fun applySkySightSatelliteOverlay(
         map: MapLibreMap,
-        config: SkySightSatelliteRuntimeConfig
+        config: SkySightSatelliteRuntimeConfig,
+        reconcileFrontOrder: Boolean = true
     ): Boolean {
         return applySkySightSatelliteOverlayRuntime(
             runtimeState = runtimeState,
             map = map,
             config = config,
             onRuntimeErrorChanged = { _skySightSatelliteRuntimeErrorMessage.value = it },
-            bringTrafficOverlaysToFront = bringTrafficOverlaysToFront
+            bringTrafficOverlaysToFront = bringTrafficOverlaysToFront,
+            reconcileFrontOrder = reconcileFrontOrder
         )
+    }
+
+    private fun shouldReapplyAfterInteractionRelease(): Boolean {
+        if (!skySightSatelliteEnabled) return false
+        if (!skySightSatelliteAnimateEnabled) return false
+        return skySightSatelliteImageryEnabled || skySightSatelliteRadarEnabled || skySightSatelliteLightningEnabled
     }
 
     private fun setSatelliteContrastIconsEnabled(enabled: Boolean) {

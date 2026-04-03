@@ -1,0 +1,84 @@
+﻿{
+    "package_id":  "pkg-e1",
+    "generated_at":  "2026-04-03T18:30:46.4724533+11:00",
+    "slo_targets":  [
+                        {
+                            "slo_id":  "MS-UX-01",
+                            "status":  "captured",
+                            "baseline":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture.",
+                            "post_change":  {
+                                                "tier_a":  {
+                                                               "frame_time_p95_ms":  24,
+                                                               "frame_time_p99_ms":  34,
+                                                               "jank_percent":  1.42
+                                                           },
+                                                "tier_b":  {
+                                                               "frame_time_p95_ms":  34,
+                                                               "frame_time_p99_ms":  48,
+                                                               "jank_percent":  19.25
+                                                           }
+                                            }
+                        }
+                    ],
+    "unit_evidence":  {
+                          "focused_tests":  [
+                                                "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
+                                                "com.example.xcpro.map.TaskRenderSyncCoordinatorTest"
+                                            ],
+                          "status":  "pass"
+                      },
+    "command_gates":  [
+                          {
+                              "command":  ".\\\\gradlew.bat enforceRules --console=plain",
+                              "label":  "enforceRules",
+                              "startedAt":  null,
+                              "finishedAt":  null,
+                              "status":  "pass",
+                              "exitCode":  0,
+                              "output":  [
+                                             "See enforceRules.log"
+                                         ]
+                          },
+                          {
+                              "command":  "scripts\\\\qa\\\\run_root_unit_tests_reliable.bat",
+                              "label":  "testDebugUnitTest",
+                              "startedAt":  null,
+                              "finishedAt":  null,
+                              "status":  "pass",
+                              "exitCode":  0,
+                              "output":  [
+                                             "See run_root_unit_tests_reliable.log"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\\\gradlew.bat assembleDebug --console=plain",
+                              "label":  "assembleDebug",
+                              "startedAt":  null,
+                              "finishedAt":  null,
+                              "status":  "pass",
+                              "exitCode":  0,
+                              "output":  [
+                                             "See assembleDebug.log"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\\\gradlew.bat :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true --console=plain",
+                              "label":  "connected_app_tests",
+                              "startedAt":  null,
+                              "finishedAt":  null,
+                              "status":  "pass",
+                              "exitCode":  0,
+                              "output":  [
+                                             "See connected_app_tests.log"
+                                         ]
+                          }
+                      ],
+    "determinism_targets":  [
+                                {
+                                    "det_id":  "DET-04",
+                                    "status":  "unit_validated",
+                                    "evidence":  "MapLifecycleManagerResumeSyncTest"
+                                }
+                            ]
+}

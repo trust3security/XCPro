@@ -1,8 +1,12 @@
 package com.example.xcpro.map.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,6 +27,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 import com.example.xcpro.map.AdsbConnectionState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @Ignore("Compose hierarchy is unavailable in current module-level connected test harness; behavior is covered by Robolectric tests.")
 @RunWith(AndroidJUnit4::class)
@@ -192,13 +198,13 @@ class AdsbStatusBadgesInstrumentedTest {
     ) {
         composeTestRule.setContent {
             val currentSnapshot = currentSnapshotProvider()
-            val showPersistentStatus = rememberPersistentIssueVisibility(
+            val showPersistentStatus = rememberPersistentIssueVisibilityForTest(
                 enabled = true,
                 issueActive = shouldSurfacePersistentAdsbStatus(currentSnapshot),
                 healthy = isAdsbReadyForAutoDismiss(currentSnapshot),
                 recoveryDwellMs = 2_000L
             )
-            val showIssueFlash = rememberTimedVisibility(
+            val showIssueFlash = rememberTimedVisibilityForTest(
                 enabled = shouldFlashAdsbIssue(currentSnapshot),
                 readyForAutoDismiss = true,
                 autoDismissDelayMs = 2_000L
@@ -241,5 +247,66 @@ class AdsbStatusBadgesInstrumentedTest {
             lastError = lastError,
             lastNetworkFailureKind = lastNetworkFailureKind
         )
+}
+
+@Composable
+private fun rememberTimedVisibilityForTest(
+    enabled: Boolean,
+    readyForAutoDismiss: Boolean,
+    autoDismissDelayMs: Long
+): Boolean {
+    var visible by remember(enabled) { mutableStateOf(enabled) }
+    LaunchedEffect(enabled, readyForAutoDismiss, autoDismissDelayMs) {
+        if (!enabled) {
+            visible = false
+            return@LaunchedEffect
+        }
+        visible = true
+        if (!readyForAutoDismiss) return@LaunchedEffect
+        delay(autoDismissDelayMs)
+        if (isActive) {
+            visible = false
+        }
+    }
+    return visible
+}
+
+@Composable
+private fun rememberPersistentIssueVisibilityForTest(
+    enabled: Boolean,
+    issueActive: Boolean,
+    healthy: Boolean,
+    recoveryDwellMs: Long
+): Boolean {
+    var state by remember(enabled) {
+        mutableStateOf(
+            PersistentIssueVisibilityState(
+                visible = enabled && issueActive,
+                healthySinceMonoMs = null
+            )
+        )
+    }
+    LaunchedEffect(enabled, issueActive, healthy, recoveryDwellMs) {
+        fun updateState(nowMonoMs: Long) {
+            state = reducePersistentIssueVisibility(
+                previous = state,
+                enabled = enabled,
+                issueActive = issueActive,
+                healthy = healthy,
+                recoveryDwellMs = recoveryDwellMs,
+                nowMonoMs = nowMonoMs
+            )
+        }
+
+        updateState(withFrameNanos { it / 1_000_000L })
+        if (!state.visible || issueActive || !healthy) {
+            return@LaunchedEffect
+        }
+
+        while (isActive && state.visible && !issueActive && healthy) {
+            updateState(withFrameNanos { it / 1_000_000L })
+        }
+    }
+    return state.visible
 }
 

@@ -45,17 +45,22 @@ class MapBottomSheetTabsTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun map4_showsMapControlRows() {
+    fun map4_showsMapControlRows_withoutLegacyHelperCopy() {
         setBottomTabsContent(
             selectedTab = MapBottomTab.MAP4,
             isSheetVisible = true
         )
 
-        composeTestRule.onNodeWithText("Map controls").assertIsDisplayed()
         composeTestRule.onNodeWithText("ADS-B traffic").assertIsDisplayed()
         composeTestRule.onNodeWithText("Hotspots (TH)").assertIsDisplayed()
         composeTestRule.onNodeWithText("Distance circles").assertIsDisplayed()
         composeTestRule.onNodeWithTag(MAP4_QNH_BUTTON_TAG).assert(existsMatcher())
+        composeTestRule.onAllNodesWithText("Map controls").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("QNH 1013.3 hPa").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("These controls replace the map FABs for QNH and circles.")
+            .assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("These controls replace the traffic FABs for ADS-B and hotspots.")
+            .assertCountEquals(0)
     }
 
     @Test
@@ -75,7 +80,6 @@ class MapBottomSheetTabsTest {
                     adsbTrafficEnabled = false,
                     showOgnThermalsEnabled = false,
                     showDistanceCircles = false,
-                    currentQnhLabel = "1013.3 hPa",
                     onAdsbTrafficEnabledChanged = {},
                     onShowOgnThermalsEnabledChanged = {},
                     onShowDistanceCirclesChanged = {},
@@ -245,7 +249,6 @@ class MapBottomSheetTabsTest {
                         adsbTrafficEnabled = false,
                         showOgnThermalsEnabled = false,
                         showDistanceCircles = false,
-                        currentQnhLabel = "1013.3 hPa",
                         onAdsbTrafficEnabledChanged = {},
                         onShowOgnThermalsEnabledChanged = {},
                         onShowDistanceCirclesChanged = {},
@@ -400,7 +403,6 @@ class MapBottomSheetTabsTest {
                     adsbTrafficEnabled = false,
                     showOgnThermalsEnabled = false,
                     showDistanceCircles = false,
-                    currentQnhLabel = "1013.3 hPa",
                     onAdsbTrafficEnabledChanged = {},
                     onShowOgnThermalsEnabledChanged = {},
                     onShowDistanceCirclesChanged = {},
@@ -473,7 +475,6 @@ class MapBottomSheetTabsTest {
                             adsbTrafficEnabled = false,
                             showOgnThermalsEnabled = false,
                             showDistanceCircles = false,
-                            currentQnhLabel = "1013.3 hPa",
                             onAdsbTrafficEnabledChanged = {},
                             onShowOgnThermalsEnabledChanged = {},
                             onShowDistanceCirclesChanged = {},

@@ -221,3 +221,8 @@ Execution-note:
     - `MS-UX-01` optimization is postponed to a follow-up pass,
     - current lane remains blocked only at `pkg-e1` phase-5 threshold gate,
     - next activation trigger: start focused `pkg-e1` cycle before `2026-04-15` and close `RULES-20260305-12`.
+28. Focused `pkg-e1` follow-up runtime remediation landed:
+    - traffic projection invalidation now uses a dedicated interaction-aware floor (`120 ms` base, `250 ms` while interaction is active) instead of always reusing the fixed `120 ms` projection window during pan/rotate,
+    - deferred weather/OGN/ADS-B interaction-release work is now batched by `MapOverlayManagerRuntime` behind one short settle window before the final front-order reconcile,
+    - targeted unit coverage was added for projection cadence and interaction-release flush sequencing across runtime, weather, OGN, and ADS-B owners,
+    - next required step remains a fresh strict `pkg-e1` evidence run to determine whether `RULES-20260305-12` can be removed.

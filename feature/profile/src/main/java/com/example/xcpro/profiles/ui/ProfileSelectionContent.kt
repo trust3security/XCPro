@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.profiles.AircraftType
 import com.example.xcpro.profiles.ProfileCreationRequest
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.profiles.UserProfile
@@ -34,6 +35,7 @@ import com.example.xcpro.profiles.UserProfile
 @Composable
 fun ProfileSelectionContent(
     state: ProfileUiState,
+    onCompleteFirstLaunch: (AircraftType) -> Unit = {},
     onSelectProfile: (UserProfile) -> Unit,
     onDeleteProfile: (String) -> Unit,
     onCreateProfile: (ProfileCreationRequest) -> Unit,
@@ -52,10 +54,20 @@ fun ProfileSelectionContent(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        ProfileSelectionHeader()
+        if (!state.isFirstLaunchSetupRequired) {
+            ProfileSelectionHeader()
+        }
 
         when {
             !state.isHydrated || state.isLoading -> ProfileSelectionLoading(
+                modifier = Modifier.weight(1f)
+            )
+
+            state.isFirstLaunchSetupRequired -> ProfileFirstLaunchSetupCard(
+                isLoading = state.isLoading,
+                onCompleteFirstLaunch = onCompleteFirstLaunch,
+                onImportProfiles = onShowImportDialog,
+                storageNamespaceLabel = storageNamespaceLabel,
                 modifier = Modifier.weight(1f)
             )
 
@@ -63,6 +75,7 @@ fun ProfileSelectionContent(
                 modifier = Modifier.weight(1f),
                 onCreateFirstProfile = onShowCreateDialog,
                 onImportProfiles = onShowImportDialog,
+                allowManualCreation = state.bootstrapError.isNullOrBlank(),
                 storageNamespaceLabel = storageNamespaceLabel
             )
 
@@ -143,6 +156,7 @@ private fun ProfileEmptyState(
     modifier: Modifier = Modifier,
     onCreateFirstProfile: () -> Unit,
     onImportProfiles: () -> Unit,
+    allowManualCreation: Boolean,
     storageNamespaceLabel: String?
 ) {
     Card(
@@ -165,31 +179,41 @@ private fun ProfileEmptyState(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             Text(
-                text = "Welcome to your flight app!",
+                text = if (allowManualCreation) {
+                    "Welcome to your flight app!"
+                } else {
+                    "Profile startup needs attention"
+                },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Create your first flight profile to get started.",
+                text = if (allowManualCreation) {
+                    "Create your first flight profile to get started."
+                } else {
+                    "Use the recovery actions below to restore or recreate the default profile."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
-            Button(
-                onClick = onCreateFirstProfile,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Create Your First Profile")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onImportProfiles,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Load Profile File")
+            if (allowManualCreation) {
+                Button(
+                    onClick = onCreateFirstProfile,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Create Your First Profile")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onImportProfiles,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Load Profile File")
+                }
             }
             if (!storageNamespaceLabel.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))

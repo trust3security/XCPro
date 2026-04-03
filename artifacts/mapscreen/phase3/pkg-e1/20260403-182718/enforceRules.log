@@ -1,0 +1,15 @@
+Configuration on demand is an incubating feature.
+Reusing configuration cache.
+
+> Task :archGate
+ARCH GATE PASSED
+
+> Task :enforceRepositoryRules
+Running rule set 'RepositoryFull' with groups: architecture, hygiene, regression-contracts, line-budgets
+Rule enforcement [RepositoryFull] passed.
+
+> Task :enforceRules
+
+BUILD SUCCESSFUL in 11s
+2 actionable tasks: 2 executed
+Configuration cache entry reused.

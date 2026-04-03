@@ -2,6 +2,8 @@ package com.example.xcpro.livefollow.data.session
 
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.livefollow.account.XcAccountRepository
+import com.example.xcpro.livefollow.data.transport.LiveFollowTransportFailureSurface
+import com.example.xcpro.livefollow.data.transport.logAndNormalizeLiveFollowTransportFailure
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiErrorMessage
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiLiveReadResponse
 import com.example.xcpro.livefollow.data.transport.mapCurrentApiTaskClearPayload
@@ -345,8 +347,12 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                 LiveFollowPilotPositionUploadResult.Uploaded
             }
         } catch (e: IOException) {
-            val message = e.localizedMessage?.takeIf { it.isNotBlank() }
-                ?: e::class.java.simpleName
+            val message = logAndNormalizeLiveFollowTransportFailure(
+                tag = TAG,
+                operationLabel = "Pilot position upload",
+                surface = LiveFollowTransportFailureSurface.LIVEFOLLOW,
+                throwable = e
+            ).userMessage
             mutableSessionState.value = mutableSessionState.value.copy(
                 transportAvailability = liveFollowUnavailableTransport(message),
                 lastError = message
@@ -428,8 +434,12 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                 LiveFollowPilotTaskUploadResult.Uploaded
             }
         } catch (e: IOException) {
-            val message = e.localizedMessage?.takeIf { it.isNotBlank() }
-                ?: e::class.java.simpleName
+            val message = logAndNormalizeLiveFollowTransportFailure(
+                tag = TAG,
+                operationLabel = "Pilot task upload",
+                surface = LiveFollowTransportFailureSurface.LIVEFOLLOW,
+                throwable = e
+            ).userMessage
             mutableSessionState.value = mutableSessionState.value.copy(
                 transportAvailability = liveFollowUnavailableTransport(message),
                 lastError = message
@@ -476,8 +486,12 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
                 }
             }
         } catch (e: IOException) {
-            val message = e.localizedMessage?.takeIf { it.isNotBlank() }
-                ?: e::class.java.simpleName
+            val message = logAndNormalizeLiveFollowTransportFailure(
+                tag = TAG,
+                operationLabel = "Session command",
+                surface = LiveFollowTransportFailureSurface.LIVEFOLLOW,
+                throwable = e
+            ).userMessage
             mutableSessionState.value = mutableSessionState.value.copy(
                 transportAvailability = liveFollowUnavailableTransport(message),
                 lastError = message
@@ -490,5 +504,9 @@ class CurrentApiLiveFollowSessionGateway @Inject constructor(
         return xcAccountRepository.state.value.session?.accessToken
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
+    }
+
+    private companion object {
+        private const val TAG = "LiveFollowSessionGateway"
     }
 }

@@ -64,6 +64,7 @@ fun BoxScope.MapTrafficPanelsAndSheetsLayer(
         traffic.selectedOgnThermal != null -> {
             OgnThermalDetailsSheet(
                 hotspot = traffic.selectedOgnThermal,
+                context = traffic.selectedOgnThermalContext,
                 distanceMeters = computeOwnshipDistanceToHotspotMeters(
                     ownshipCoordinate = ownshipCoordinate,
                     hotspot = traffic.selectedOgnThermal

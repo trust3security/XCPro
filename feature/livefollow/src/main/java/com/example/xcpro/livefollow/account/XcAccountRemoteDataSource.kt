@@ -2,6 +2,8 @@ package com.example.xcpro.livefollow.account
 
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.livefollow.di.LiveFollowHttpClient
+import com.example.xcpro.livefollow.data.transport.LiveFollowTransportFailureSurface
+import com.example.xcpro.livefollow.data.transport.logAndNormalizeLiveFollowTransportFailure
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import java.io.IOException
@@ -246,10 +248,15 @@ class CurrentApiXcAccountDataSource @Inject constructor(
                 XcAccountRemoteResult.Success(parsed)
             }
         } catch (e: IOException) {
+            val message = logAndNormalizeLiveFollowTransportFailure(
+                tag = TAG,
+                operationLabel = "XC account request ${request.url.encodedPath}",
+                surface = LiveFollowTransportFailureSurface.XC_ACCOUNT,
+                throwable = e
+            ).userMessage
             XcAccountRemoteResult.Failure(
                 XcAccountApiError(
-                    message = e.localizedMessage?.takeIf { it.isNotBlank() }
-                        ?: e::class.java.simpleName
+                    message = message
                 )
             )
         }
@@ -267,5 +274,6 @@ class CurrentApiXcAccountDataSource @Inject constructor(
         private const val HEADER_CONTENT_TYPE = "Content-Type"
         private val JSON_MEDIA_TYPE = CONTENT_TYPE_JSON.toMediaType()
         private val EMPTY_JSON_BODY = "{}".toRequestBody(JSON_MEDIA_TYPE)
+        private const val TAG = "XcAccountRemote"
     }
 }

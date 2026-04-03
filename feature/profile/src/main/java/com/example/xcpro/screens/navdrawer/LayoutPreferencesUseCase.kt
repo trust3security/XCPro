@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.Flow
 class LayoutPreferencesUseCase @Inject constructor(
     private val cardPreferences: CardPreferences
 ) {
+    // AI-NOTE: These flows back the General -> Layouts DF-card screen only and
+    // intentionally stay on the global CardPreferences seam for this phase.
     val cardsAcrossPortrait: Flow<Int> = cardPreferences.getCardsAcrossPortrait()
     val cardsAnchorPortrait: Flow<CardPreferences.CardAnchor> = cardPreferences.getCardsAnchorPortrait()
 

@@ -6,6 +6,7 @@ const val OGN_INTERACTION_MIN_RENDER_INTERVAL_MS = 900L
 const val ADSB_INTERACTION_MIN_RENDER_INTERVAL_MS = 750L
 const val OVERLAY_FRONT_ORDER_INTERACTION_MIN_APPLY_INTERVAL_MS = 500L
 const val TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS = 120L
+const val TRAFFIC_PROJECTION_INVALIDATION_INTERACTION_MIN_RENDER_INTERVAL_MS = 250L
 
 fun resolveInteractionAwareIntervalMs(
     baseIntervalMs: Long,
@@ -26,3 +27,11 @@ fun shouldThrottleOverlayFrontOrderDuringInteraction(
     val elapsedMs = nowMonoMs - lastAppliedMonoMs
     return elapsedMs in Long.MIN_VALUE until minIntervalMs
 }
+
+fun resolveTrafficProjectionInvalidationIntervalMs(
+    interactionActive: Boolean
+): Long = resolveInteractionAwareIntervalMs(
+    baseIntervalMs = TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS,
+    interactionActive = interactionActive,
+    interactionFloorMs = TRAFFIC_PROJECTION_INVALIDATION_INTERACTION_MIN_RENDER_INTERVAL_MS
+)

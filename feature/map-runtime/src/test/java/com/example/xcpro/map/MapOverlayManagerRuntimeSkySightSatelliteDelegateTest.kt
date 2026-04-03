@@ -57,6 +57,62 @@ class MapOverlayManagerRuntimeSkySightSatelliteDelegateTest {
         }
     }
 
+    @Test
+    fun interactionRelease_reappliesAnimatedConfigOnlyWhenFlushed() {
+        val runtimeState = FakeForecastWeatherOverlayRuntimeState()
+        val map: MapLibreMap = mock()
+        val overlay: SkySightSatelliteOverlay = mock()
+        val delegate = MapOverlayManagerRuntimeSkySightSatelliteDelegate(
+            runtimeState = runtimeState,
+            bringTrafficOverlaysToFront = {},
+            onSatelliteContrastIconsChanged = {}
+        )
+        runtimeState.mapLibreMap = map
+        runtimeState.skySightSatelliteOverlay = overlay
+
+        delegate.setMapInteractionActive(true)
+        delegate.setSkySightSatelliteOverlay(
+            enabled = true,
+            showSatelliteImagery = true,
+            showRadar = false,
+            showLightning = false,
+            animate = true,
+            historyFrameCount = 4,
+            referenceTimeUtcMs = 2_468L
+        )
+        delegate.setMapInteractionActive(false)
+
+        verify(overlay, times(1)).render(
+            eq(
+                SkySightSatelliteRenderConfig(
+                    enabled = true,
+                    showSatelliteImagery = true,
+                    showRadar = false,
+                    showLightning = false,
+                    animate = false,
+                    historyFrameCount = 4,
+                    referenceTimeUtcMs = 2_468L
+                )
+            )
+        )
+
+        delegate.flushInteractionReleaseReapplyIfNeeded(reconcileFrontOrder = false)
+
+        verify(overlay, times(1)).render(
+            eq(
+                SkySightSatelliteRenderConfig(
+                    enabled = true,
+                    showSatelliteImagery = true,
+                    showRadar = false,
+                    showLightning = false,
+                    animate = true,
+                    historyFrameCount = 4,
+                    referenceTimeUtcMs = 2_468L
+                )
+            )
+        )
+    }
+
     private class FakeForecastWeatherOverlayRuntimeState : ForecastWeatherOverlayRuntimeState {
         override var mapLibreMap: MapLibreMap? = null
         override var forecastOverlay: ForecastRasterOverlay? = null

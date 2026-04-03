@@ -37,7 +37,6 @@ internal fun MapBottomTabsSection(
     adsbOverlayEnabled: Boolean,
     showOgnThermalsEnabled: Boolean,
     showDistanceCircles: Boolean,
-    currentQnhLabel: String,
     onToggleAdsbTraffic: () -> Unit,
     onToggleOgnThermals: () -> Unit,
     overlayManager: MapOverlayManager,
@@ -81,7 +80,6 @@ internal fun MapBottomTabsSection(
         adsbTrafficEnabled = adsbOverlayEnabled,
         showOgnThermalsEnabled = showOgnThermalsEnabled,
         showDistanceCircles = showDistanceCircles,
-        currentQnhLabel = currentQnhLabel,
         onAdsbTrafficEnabledChanged = { enabled ->
             if (enabled != adsbOverlayEnabled) onToggleAdsbTraffic()
         },

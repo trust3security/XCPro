@@ -49,6 +49,9 @@ internal const val LAYOUT_TAG_ANCHOR_BOTTOM_BUTTON = "layout_anchor_bottom_butto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+// AI-NOTE: General -> Layouts is intentionally narrow. This screen owns only the
+// global DF-card portrait layout controls backed by CardPreferences. Map widget
+// placement/sizing and variometer layout remain separate runtime-owned seams.
 fun LayoutScreen(
     navController: NavHostController,
     drawerState: DrawerState,

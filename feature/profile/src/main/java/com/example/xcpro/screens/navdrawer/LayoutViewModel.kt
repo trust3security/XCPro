@@ -17,6 +17,8 @@ data class LayoutUiState(
 )
 
 @HiltViewModel
+// AI-NOTE: Keep this VM limited to the canonical DF-card layout preferences.
+// Do not expand it into a map-widget or profile-scoped layout state owner.
 class LayoutViewModel @Inject constructor(
     private val useCase: LayoutPreferencesUseCase
 ) : ViewModel() {

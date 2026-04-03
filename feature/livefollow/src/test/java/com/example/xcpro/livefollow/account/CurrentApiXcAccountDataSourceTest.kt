@@ -1,5 +1,6 @@
 package com.example.xcpro.livefollow.account
 
+import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -12,6 +13,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.MediaType.Companion.toMediaType
 import okio.Buffer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -240,6 +242,22 @@ class CurrentApiXcAccountDataSourceTest {
         assertEquals(XcFollowRequestDirection.OUTGOING, result.value.direction)
         assertEquals("pilot.two", result.value.counterpart.handle)
         assertEquals(XcRelationshipState.OUTGOING_PENDING, result.value.relationshipState)
+    }
+
+    @Test
+    fun fetchMe_ioFailure_usesFriendlyAccountMessage() = runTest {
+        val dataSource = CurrentApiXcAccountDataSource(
+            httpClient = OkHttpClient.Builder().addInterceptor(
+                Interceptor { throw UnknownHostException("api.xcpro.com.au") }
+            ).build(),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler)
+        )
+
+        val result = dataSource.fetchMe("test-token")
+
+        require(result is XcAccountRemoteResult.Failure)
+        assertEquals("XC account network error. Check connection and retry.", result.error.message)
+        assertFalse(result.error.message.contains("hostname", ignoreCase = true))
     }
 
     private fun mePayload(): String {

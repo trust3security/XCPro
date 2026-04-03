@@ -93,7 +93,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
     }
 
     @Test
-    fun projectionInvalidation_whileInteracting_respectsCadenceWindow() = runTest {
+    fun projectionInvalidation_whileInteracting_usesProjectionInteractionFloor() = runTest {
         var nowMonoMs = 0L
         val overlay: AdsbTrafficOverlayHandle = mock()
         val map: MapLibreMap = mock()
@@ -131,7 +131,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
             iconStyleIdOverrides = any()
         )
 
-        advanceTimeBy(89L)
+        advanceTimeBy(219L)
         runCurrent()
         verify(overlay, times(1)).render(
             targets = any(),
@@ -141,7 +141,7 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
             iconStyleIdOverrides = any()
         )
 
-        nowMonoMs = 120L
+        nowMonoMs = TRAFFIC_PROJECTION_INVALIDATION_INTERACTION_MIN_RENDER_INTERVAL_MS
         advanceTimeBy(1L)
         runCurrent()
         verify(overlay, times(2)).render(
@@ -395,6 +395,12 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
             get() = state.ognGliderTrailOverlay
             set(value) {
                 state.ognGliderTrailOverlay = value
+            }
+
+        override var ognSelectedThermalOverlay: OgnSelectedThermalOverlayHandle?
+            get() = state.ognSelectedThermalOverlay
+            set(value) {
+                state.ognSelectedThermalOverlay = value
             }
 
         override var adsbTrafficOverlay: AdsbTrafficOverlayHandle?

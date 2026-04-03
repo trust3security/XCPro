@@ -60,6 +60,20 @@ internal fun emitClimbSamplesForTarget(
     }
 }
 
+internal fun emitThermalSamples(
+    trafficRepository: FakeOgnTrafficRepository,
+    clock: FakeClock,
+    samples: List<OgnTrafficTarget>,
+    advance: () -> Unit
+) {
+    for (target in samples) {
+        clock.setMonoMs(target.lastSeenMillis)
+        clock.setWallMs(target.lastSeenMillis)
+        trafficRepository.targets.value = listOf(target)
+        advance()
+    }
+}
+
 internal fun emitLowTurnClimbSamples(
     trafficRepository: FakeOgnTrafficRepository,
     clock: FakeClock,

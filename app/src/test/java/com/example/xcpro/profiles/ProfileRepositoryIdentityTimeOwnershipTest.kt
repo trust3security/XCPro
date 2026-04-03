@@ -32,7 +32,7 @@ class ProfileRepositoryIdentityTimeOwnershipTest {
     }
 
     @Test
-    fun bootstrapDefaultProfile_usesInjectedClockForRecoveryMetadata() = runTest {
+    fun completeFirstLaunch_usesInjectedClockForDefaultProfileMetadata() = runTest {
         val harness = createScopedProfileRepositoryTestHarness(
             scope = backgroundScope,
             clock = FakeClock(wallMs = 456_789L)
@@ -40,8 +40,9 @@ class ProfileRepositoryIdentityTimeOwnershipTest {
 
         harness.repository.bootstrapComplete.first { it }
 
-        val defaultProfile = harness.repository.profiles.value.first()
+        val defaultProfile = harness.repository.completeFirstLaunch(AircraftType.SAILPLANE).getOrThrow()
         assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, defaultProfile.id)
+        assertEquals(AircraftType.SAILPLANE, defaultProfile.aircraftType)
         assertEquals(456_789L, defaultProfile.createdAt)
         assertEquals(456_789L, defaultProfile.lastUsed)
     }

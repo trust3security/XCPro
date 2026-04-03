@@ -392,7 +392,8 @@ abstract class MapScreenViewModelTestBase {
             preferencesRepository = ognTrafficPreferencesRepository,
             thermalRepository = ognThermalRepository,
             gliderTrailRepository = ognGliderTrailRepository,
-            trailSelectionRepository = ognTrailSelectionPreferencesRepository
+            trailSelectionRepository = ognTrailSelectionPreferencesRepository,
+            clock = testClock
         )
         val adsbTrafficRepository = adsbRepositoryOverride ?: object : AdsbTrafficRepository {
             override val targets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList())

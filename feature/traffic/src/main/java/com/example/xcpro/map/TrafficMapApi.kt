@@ -5,6 +5,7 @@ import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.ogn.SelectedOgnThermalContext
 import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
@@ -25,6 +26,7 @@ interface OgnTrafficFacade {
     val thermalHotspots: StateFlow<List<OgnThermalHotspot>>
     val showThermalsEnabled: Flow<Boolean>
     val gliderTrailSegments: Flow<List<OgnGliderTrailSegment>>
+    fun selectedThermalContext(selectedThermalId: Flow<String?>): Flow<SelectedOgnThermalContext?>
 
     fun setStreamingEnabled(enabled: Boolean)
     fun updateCenter(latitude: Double, longitude: Double)

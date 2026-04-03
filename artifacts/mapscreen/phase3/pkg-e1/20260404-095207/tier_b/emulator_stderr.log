@@ -1,0 +1,97 @@
+I0404 09:55:45.878286    2744 opengles.cpp:307] android_startOpenglesRenderer: gpu info
+I0404 09:55:45.879836    2744 opengles.cpp:308] GPU #1
+  Make: 1002
+  Model: AMD Radeon 780M Graphics
+  Device ID: 1900
+
+I0404 09:55:45.881320    2744 HealthMonitor.cpp:275] HealthMonitor disabled.
+I0404 09:55:45.882584    2744 VulkanDispatch.cpp:66] initIcdPaths: ICD set to 'swiftshader', using Swiftshader ICD
+I0404 09:55:45.883821    2744 VulkanDispatch.cpp:43] Setting ICD filenames for the loader = C:\Users\Asus\AppData\Local\Android\Sdk\emulator\qemu\windows-x86_64\lib64\vulkan\vk_swiftshader_icd.json;C:\Users\Asus\AppData\Local\Android\Sdk\emulator\lib64\vulkan\vk_swiftshader_icd.json
+I0404 09:55:45.884455    2744 SharedLibrary.cpp:64] SharedLibrary::open for [vulkan-1.dll]
+I0404 09:55:45.884866    2744 SharedLibrary.cpp:76] SharedLibrary::open for [vulkan-1.dll]: not found in map, open for the first time
+I0404 09:55:45.885173    2744 SharedLibrary.cpp:94] SharedLibrary::open for [vulkan-1.dll] (win32): call LoadLibrary
+I0404 09:55:45.886946    2744 SharedLibrary.cpp:116] SharedLibrary::open succeeded for [vulkan-1.dll]. File name: [C:\Windows\SYSTEM32\vulkan-1.dll]
+I0404 09:55:45.887119    2744 VulkanDispatch.cpp:133] Added library: vulkan-1.dll
+I0404 09:55:45.907966    2744 VkCommonOperations.cpp:1361] Selecting Vulkan device: SwiftShader Device (LLVM 10.0.0), Version: 1.2.0
+I0404 09:55:45.986136    2744 VkDecoderGlobalState.cpp:206] Disabling sparse binding feature support
+I0404 09:55:45.988651    2744 SharedLibrary.cpp:76] SharedLibrary::open for [libGLESv2.dll]: not found in map, open for the first time
+I0404 09:55:45.988865    2744 SharedLibrary.cpp:94] SharedLibrary::open for [libGLESv2.dll] (win32): call LoadLibrary
+I0404 09:55:46.006513    2744 SharedLibrary.cpp:116] SharedLibrary::open succeeded for [libGLESv2.dll]. File name: [C:\Users\Asus\AppData\Local\Android\Sdk\emulator\lib64\gles_swiftshader\libGLESv2.dll]
+I0404 09:55:46.007507    2744 SharedLibrary.cpp:76] SharedLibrary::open for [libEGL.dll]: not found in map, open for the first time
+I0404 09:55:46.007625    2744 SharedLibrary.cpp:94] SharedLibrary::open for [libEGL.dll] (win32): call LoadLibrary
+I0404 09:55:46.013712    2744 SharedLibrary.cpp:116] SharedLibrary::open succeeded for [libEGL.dll]. File name: [C:\Users\Asus\AppData\Local\Android\Sdk\emulator\lib64\gles_swiftshader\libEGL.dll]
+I0404 09:55:46.073878    2744 VkCommonOperations.cpp:1669] Initializing VkEmulation features:
+I0404 09:55:46.074314    2744 VkCommonOperations.cpp:1670]     glInteropSupported: false
+I0404 09:55:46.074525    2744 VkCommonOperations.cpp:1671]     useDeferredCommands: true
+I0404 09:55:46.074749    2744 VkCommonOperations.cpp:1673]     createResourceWithRequirements: true
+I0404 09:55:46.074873    2744 VkCommonOperations.cpp:1675]     useVulkanComposition: false
+I0404 09:55:46.075077    2744 VkCommonOperations.cpp:1677]     useVulkanNativeSwapchain: false
+I0404 09:55:46.075191    2744 VkCommonOperations.cpp:1678]     enable guestRenderDoc: false
+I0404 09:55:46.075300    2744 VkCommonOperations.cpp:1680]     ASTC LDR emulation mode: Gpu
+I0404 09:55:46.075410    2744 VkCommonOperations.cpp:1682]     enable ETC2 emulation: true
+I0404 09:55:46.075525    2744 VkCommonOperations.cpp:1684]     enable Ycbcr emulation: false
+I0404 09:55:46.075629    2744 VkCommonOperations.cpp:1685]     guestVulkanOnly: false
+I0404 09:55:46.075737    2744 VkCommonOperations.cpp:1687]     useDedicatedAllocations: false
+I0404 09:55:46.079366    2744 FrameBuffer.cpp:460] Graphics Adapter Vendor Google (Google Inc.)
+I0404 09:55:46.079529    2744 FrameBuffer.cpp:461] Graphics Adapter Android Emulator OpenGL ES Translator (Google SwiftShader)
+I0404 09:55:46.079637    2744 FrameBuffer.cpp:462] Graphics API Version OpenGL ES 3.0 (OpenGL ES 3.0 SwiftShader 4.0.0.1)
+I0404 09:55:46.079741    2744 FrameBuffer.cpp:463] Graphics API Extensions GL_OES_EGL_sync GL_OES_EGL_image GL_OES_EGL_image_external GL_OES_depth24 GL_OES_depth32 GL_OES_element_index_uint GL_OES_texture_float GL_OES_texture_float_linear GL_OES_compressed_paletted_texture GL_OES_compressed_ETC1_RGB8_texture GL_OES_depth_texture GL_OES_texture_half_float GL_OES_texture_half_float_linear GL_OES_packed_depth_stencil GL_OES_vertex_half_float GL_OES_standard_derivatives GL_OES_texture_npot GL_OES_rgb8_rgba8 GL_EXT_color_buffer_float GL_EXT_color_buffer_half_float GL_EXT_texture_format_BGRA8888 GL_APPLE_texture_format_BGRA8888 
+I0404 09:55:46.079919    2744 FrameBuffer.cpp:464] Graphics Device Extensions N/A
+I0404 09:55:46.120067    2744 userspace-boot-properties.cpp:760] Userspace boot properties:
+I0404 09:55:46.120241    2744 userspace-boot-properties.cpp:764]   androidboot.boot_devices=pci0000:00/0000:00:03.0 pci0000:00/0000:00:06.0
+I0404 09:55:46.120352    2744 userspace-boot-properties.cpp:764]   androidboot.dalvik.vm.heapsize=512m
+I0404 09:55:46.120443    2744 userspace-boot-properties.cpp:764]   androidboot.debug.hwui.renderer=skiagl
+I0404 09:55:46.120535    2744 userspace-boot-properties.cpp:764]   androidboot.debug.sf.nobootanimation=1
+I0404 09:55:46.120623    2744 userspace-boot-properties.cpp:764]   androidboot.hardware=ranchu
+I0404 09:55:46.120713    2744 userspace-boot-properties.cpp:764]   androidboot.hardware.gltransport=pipe
+I0404 09:55:46.120800    2744 userspace-boot-properties.cpp:764]   androidboot.hardware.vulkan=ranchu
+I0404 09:55:46.120888    2744 userspace-boot-properties.cpp:764]   androidboot.logcat=*:V
+I0404 09:55:46.120976    2744 userspace-boot-properties.cpp:764]   androidboot.opengles.version=196608
+I0404 09:55:46.121065    2744 userspace-boot-properties.cpp:764]   androidboot.qemu=1
+I0404 09:55:46.121152    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.adb.pubkey=QAAAAF0WWK4Lku63ZqXA0H4Sv6TENOKIspHU5wkVTEONnw53Z34dL3ye+cR92kvqxt9vEcooTaHH6/Yyj7I5KpWz3Roi86BmLb9IUJH+5pbbxc9Og94yy2Sn9Kvntrz/Xci+RsWA8ytjj36w1pw4a7tqxn3j4FfIPwXV4WPXA6HZz2f9Q1DZi6/jS8duktmQB9G1BIk8Jpr79LT4OY1rBZ/XCX8BtuIwbIwVNpCPBCh58XMUCeS3JEnGkuBhnKUP5zEqyEuvBFWdgdIOZDNYRuhprwXwaL6LCO/POkEJh2nJrU3YCVI8hyVpNck/RiXUKUIVknlluH65a1zOS7odt21ZRjtysIelM8CzLsfJIbzCTsysPb9sppPbyHCxvSerZhAJcRUugzdCFklp4hsekJrOjZZjGDRLC38jnNrx0FzI3+O09uVpJg4HyJY36T9Bk1HBNaoHqRa9Bskgd+NK+0wWexU0KL5m7djNkQ181UuOE4fTGS6ZYNSkIolBfyL/UgUByj7ACDhW7+5qL/DC/6bkKfx+bH8z1NDlhm2OVVlHyKqQ63aQOrpUDihEvEx18Lb03/c4t8lEuCehaQt0p4csP+zWKgAzPo5hQiXUFaU1wTPJRWcv67RmF0YBlvv4MpzY6uTswaVoKBAMCe/JYo2B8fYQkQajlKTqcsGM5LQCn1/DDDQmLgEAAQA= @unknown
+I0404 09:55:46.121242    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.avd_name=codex_recovery_api36
+I0404 09:55:46.121328    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.camera_hq_edge_processing=0
+I0404 09:55:46.121425    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.camera_protocol_ver=1
+I0404 09:55:46.121513    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.cpuvulkan.version=4202496
+I0404 09:55:46.121604    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.gltransport.drawFlushInterval=800
+I0404 09:55:46.121692    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.gltransport.name=pipe
+I0404 09:55:46.121890    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.hwcodec.avcdec=2
+I0404 09:55:46.121989    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.hwcodec.hevcdec=2
+I0404 09:55:46.122095    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.hwcodec.vpxdec=2
+I0404 09:55:46.122220    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.settings.system.screen_off_timeout=2147483647
+I0404 09:55:46.122313    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.virtiowifi=1
+I0404 09:55:46.122405    2744 userspace-boot-properties.cpp:764]   androidboot.qemu.vsync=60
+I0404 09:55:46.122498    2744 userspace-boot-properties.cpp:764]   androidboot.serialno=EMULATOR35X6X11X0
+I0404 09:55:46.122591    2744 userspace-boot-properties.cpp:764]   androidboot.vbmeta.digest=c3fec574c004d42a1ba9007bad5d0e4e9018afeb9ec9c0424f1a6b4f033003fb
+I0404 09:55:46.122683    2744 userspace-boot-properties.cpp:764]   androidboot.vbmeta.hash_alg=sha256
+I0404 09:55:46.122887    2744 userspace-boot-properties.cpp:764]   androidboot.vbmeta.size=6720
+I0404 09:55:46.123061    2744 userspace-boot-properties.cpp:764]   androidboot.veritymode=enforcing
+netsimd I 04-03 22:55:46.226 daemon\src\rust_main.rs:98 - netsim artifacts path: "C:\\Users\\Asus\\AppData\\Local\\Temp\\netsimd"
+netsimd I 04-03 22:55:46.227 daemon\src\rust_main.rs:101 - NetsimdArgs {
+    fd_startup_str: None,
+    no_cli_ui: true,
+    no_web_ui: true,
+    pcap: false,
+    disable_address_reuse: false,
+    hci_port: None,
+    connector_instance: None,
+    instance: None,
+    logtostderr: false,
+    dev: false,
+    forward_host_mdns: false,
+    vsock: None,
+    config: None,
+    host_dns: Some(
+        "192.168.1.1",
+    ),
+    http_proxy: None,
+    wifi_tap: None,
+    wifi: None,
+    test_beacons: false,
+    no_test_beacons: false,
+    no_shutdown: false,
+    verbose: false,
+    version: false,
+}
+I0404 09:55:46.724265    8000 FrameBuffer.cpp:2805] Setting display: 0 configuration to: 1080x2400, dpi: 420x420 
+I0404 09:55:46.737168    8000 FrameBuffer.cpp:2818] setDisplayActiveConfig 0

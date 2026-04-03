@@ -34,7 +34,10 @@ import com.example.xcpro.ogn.OgnConnectionState
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnGliderTrailSegment
 import com.example.xcpro.ogn.OgnGliderTrailRepository
+import com.example.xcpro.ogn.OgnThermalPoint
 import com.example.xcpro.ogn.OgnSelectionLookup
+import com.example.xcpro.ogn.SelectedOgnThermalContext
+import com.example.xcpro.ogn.SelectedOgnThermalOverlayContext
 import com.example.xcpro.ogn.OgnSubscriptionPolicy
 import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.OgnThermalHotspotState
@@ -93,7 +96,11 @@ typealias OgnConnectionState = com.example.xcpro.ogn.OgnConnectionState
 typealias OgnDisplayUpdateMode = com.example.xcpro.ogn.OgnDisplayUpdateMode
 typealias OgnGliderTrailRepository = com.example.xcpro.ogn.OgnGliderTrailRepository
 typealias OgnGliderTrailSegment = com.example.xcpro.ogn.OgnGliderTrailSegment
+typealias OgnThermalPoint = com.example.xcpro.ogn.OgnThermalPoint
 typealias OgnSelectionLookup = com.example.xcpro.ogn.OgnSelectionLookup
+typealias SelectedOgnThermalContext = com.example.xcpro.ogn.SelectedOgnThermalContext
+typealias SelectedOgnThermalOverlayContext =
+    com.example.xcpro.ogn.SelectedOgnThermalOverlayContext
 typealias OgnThermalRepository = com.example.xcpro.ogn.OgnThermalRepository
 typealias OgnThermalHotspot = com.example.xcpro.ogn.OgnThermalHotspot
 typealias OgnThermalHotspotState = com.example.xcpro.ogn.OgnThermalHotspotState
@@ -245,11 +252,13 @@ fun OgnMarkerDetailsSheet(
 @Composable
 fun OgnThermalDetailsSheet(
     hotspot: OgnThermalHotspot,
+    context: SelectedOgnThermalContext?,
     distanceMeters: Double?,
     unitsPreferences: UnitsPreferences,
     onDismiss: () -> Unit
 ) = ognThermalDetailsSheetInternal(
     hotspot = hotspot,
+    context = context,
     distanceMeters = distanceMeters,
     unitsPreferences = unitsPreferences,
     onDismiss = onDismiss

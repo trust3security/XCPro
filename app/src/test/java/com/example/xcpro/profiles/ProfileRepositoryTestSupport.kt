@@ -162,3 +162,7 @@ internal suspend fun createReadyScopedProfileRepositoryTestHarness(
 ).also { harness ->
     harness.repository.bootstrapComplete.first { it }
 }
+
+internal suspend fun ProfileRepositoryTestHarness.completeFirstLaunch(
+    aircraftType: AircraftType = AircraftType.PARAGLIDER
+): UserProfile = repository.completeFirstLaunch(aircraftType).getOrThrow()

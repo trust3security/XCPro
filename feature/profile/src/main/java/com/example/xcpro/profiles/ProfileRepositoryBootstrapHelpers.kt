@@ -99,8 +99,8 @@ internal fun ensureBootstrapProfile(
 ): DefaultProfileProvisioningResult {
     if (profiles.isEmpty()) {
         return DefaultProfileProvisioningResult(
-            profiles = listOf(buildDefaultProfile(clock)),
-            insertedDefaultProfile = true,
+            profiles = emptyList(),
+            insertedDefaultProfile = false,
             migratedLegacyDefaultAlias = false
         )
     }
@@ -133,11 +133,14 @@ internal fun ensureBootstrapProfile(
     )
 }
 
-internal fun buildDefaultProfile(clock: Clock): UserProfile =
+internal fun buildDefaultProfile(
+    clock: Clock,
+    aircraftType: AircraftType = AircraftType.PARAGLIDER
+): UserProfile =
     UserProfile(
         id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
         name = "Default",
-        aircraftType = AircraftType.PARAGLIDER,
+        aircraftType = aircraftType,
         createdAt = clock.nowWallMs(),
         lastUsed = clock.nowWallMs()
     )

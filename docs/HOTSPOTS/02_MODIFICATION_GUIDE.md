@@ -42,6 +42,59 @@ If dedupe feels too aggressive or too sparse:
 Do not dedupe in overlay rendering code; keep dedupe in repository output policy.
 Keep winner ordering deterministic: active/recent first, then strength tie-breaks.
 
+## 2.2A Keep hotspot anchors stable
+
+Hotspot map position is a stable best-climb anchor, not a moving centroid.
+
+1. Keep the rendered hotspot `latitude` / `longitude` tied to the strongest climb sample seen for that hotspot.
+2. Do not re-center the hotspot on every later circling sample just because the pilot drifted while thermalling.
+3. Only move the hotspot anchor when a later sample has a strictly stronger climb than the current anchor.
+
+Why this exists:
+
+- SCIA trail already shows the real flown circle/drift path.
+- A moving hotspot dot suggests the thermal core itself moved, which is misleading.
+- Stable anchors better match tactical pilot expectations when revisiting lift.
+
+## 2.2B Selected thermal context overlay
+
+Selected thermal context is a read-only projection over hotspot SSOT + raw SCIA trail segments.
+
+1. Keep segment association in use-case/domain code, not in Composables or map overlay classes.
+2. Match SCIA segments by hotspot `sourceTargetId` and hotspot monotonic time window.
+3. Keep the selected overlay render-only:
+   highlighted loop, occupancy hull, start/latest markers, and drift line.
+4. Clear the selected overlay when selection disappears, the hotspot disappears, or thermals are hidden.
+5. Keep the base hotspot overlay and base SCIA overlay unchanged; selection visuals are additive only.
+
+Current owners:
+
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnSelectedThermalContextProjector.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnSelectedThermalOverlay.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
+
+Defaults:
+
+- Occupancy area = convex hull of valid loop points.
+- Drift = observed `start -> latest`.
+- Overlay scope = selected hotspot only.
+
+## 2.2C Selected thermal details metrics
+
+If product wants more or fewer selected-thermal metrics:
+
+1. Derive the metric in the selected thermal projector or adjacent domain mapper.
+2. Keep formatting and units adaptation in the details sheet only.
+3. Use monotonic time for duration and wall time for age/freshness.
+4. Do not recompute drift, age, duration, or altitude gain ad hoc in the Composable.
+
+Current detail rows sourced from selected context:
+
+- Age
+- Drift
+- Duration
+- Altitude Gain
+
 ## 2.3 Change retention options
 
 If slider range changes:
@@ -140,6 +193,9 @@ Current hotspot color clamp:
 - Omitting thermal layer IDs from cross-overlay anchor lists.
 - Reintroducing fatal hotspot-ID invariants in repository paths.
 - Assuming all thermal coordinates are valid without render-time guarding.
+- Rebuilding selected-thermal geometry inside overlay classes instead of a domain/use-case projector.
+- Treating selected thermal drift as inferred wind instead of the observed start-to-latest presentation vector.
+- Rendering occupancy hulls for every hotspot instead of only the selected hotspot.
 - Updating docs only partially after behavior changes.
 
 ## 4) Performance notes
