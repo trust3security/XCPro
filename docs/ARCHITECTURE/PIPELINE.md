@@ -851,7 +851,7 @@ Forecast overlay (SkySight-backed) path:
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeSkySightSatelliteDelegate.kt`
   - Runtime owner for SkySight satellite config, style-reload reapply, runtime error flow, and contrast-icon side effects.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeWeatherRainDelegate.kt`
-  - Runtime owner for RainViewer apply state, deferred interaction cadence, and detach-safe deferred-config cleanup.
+  - Runtime owner for RainViewer apply state, deferred interaction cadence, runtime-owned post-interaction release flush consumption, and detach-safe deferred-config cleanup.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapWeatherRainInteractionCadencePolicy.kt`
   - Weather-owned interaction cadence policy for rain apply throttling and transition overrides during map interaction.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
@@ -899,10 +899,10 @@ Weather rain overlay path:
   - Thin shell adapter for overlay/runtime ownership.
   - Owns shell-specific overlay lifecycle/status collaborator construction and attaches those ports to `MapOverlayManagerRuntime`.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-  - Runtime owner for overlay behavior behind the shell adapter.
+  - Runtime owner for overlay behavior behind the shell adapter, including the batched post-interaction deferred flush settle window for weather and traffic overlays.
   - No longer depends directly on `MapScreenState`; consumes runtime-side shell-port contracts plus leaf-owned runtime state adapters.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeInteractionDelegate.kt`
-  - Runtime-owned interaction grace/deactivation helper used by the overlay runtime owner.
+  - Runtime-owned interaction grace/deactivation helper used by the overlay runtime owner before the runtime-owned deferred release-flush batch runs.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
   - Runtime-owned overlay base-ops delegate for distance-circle toggles, airspace/waypoint refresh, and task-overlay refresh/clear behavior.
   - Consumes shell-supplied refresh closures from `MapOverlayManager.kt` so `:feature:map-runtime` does not depend back on shell-owned airspace/waypoint helpers.
@@ -1199,7 +1199,8 @@ Task map rendering bridge (2026-02-12):
 - `MapInitializer.setupInitialPosition(...)`, camera-move callbacks, and camera-idle callbacks are also the viewport-projection invalidation producers for display-only traffic declutter:
   - `MapOverlayManagerRuntime.invalidateTrafficProjection(...)` fans out to the OGN and ADS-B runtime delegates.
   - Those delegates recompute screen-space display offsets locally in `feature:traffic`; authoritative aircraft lat/lon stay unchanged in repositories/ViewModels.
-  - Projection-only rerenders reuse the interaction-aware throttle path so crowded traffic stays aligned during pan/rotate without turning repositories or ViewModels into display-state owners.
+  - Projection-only rerenders reuse a dedicated interaction-aware invalidation floor (`120 ms` base, `250 ms` during active pan/rotate) so crowded traffic stays aligned without matching every camera-move callback.
+  - After interaction deactivation grace expires, `MapOverlayManagerRuntime` batches any deferred weather/OGN/ADS-B release work behind one short settle window before the traffic front-order reconcile runs.
 - `MapInitializer.setupOverlays(...)` and camera-idle callbacks also push the blue ownship overlay viewport snapshot:
   - `BlueLocationOverlay` receives `MapCameraViewportMetrics` plus the current map `distancePerPixel` snapshot.
   - `BlueLocationOverlay` remains the sole owner of visible-radius band resolution and rendered ownship icon size.

@@ -53,6 +53,7 @@ class MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest {
         )
 
         fixture.delegate.setMapInteractionActive(false)
+        fixture.delegate.flushDeferredInteractionReleaseWork()
 
         val frameCaptor = argumentCaptor<WeatherRainFrameSelection>()
         verify(fixture.weatherOverlay, times(2)).render(
@@ -101,6 +102,7 @@ class MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest {
         )
 
         fixture.delegate.setMapInteractionActive(false)
+        fixture.delegate.flushDeferredInteractionReleaseWork()
 
         verify(fixture.weatherOverlay, times(1)).render(
             frameSelection = any(),
@@ -111,7 +113,7 @@ class MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest {
     }
 
     @Test
-    fun setMapInteractionActive_flushWithNullMap_consumesDeferredConfigWithoutLaterReplay() {
+    fun flushDeferredInteractionReleaseWork_withNullMap_consumesDeferredConfigWithoutLaterReplay() {
         val fixture = createFixture()
         val frame1 = frameSelection(5_000L)
         val frame2 = frameSelection(5_600L)
@@ -137,9 +139,11 @@ class MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest {
 
         fixture.runtimeState.mapLibreMap = null
         fixture.delegate.setMapInteractionActive(false)
+        fixture.delegate.flushDeferredInteractionReleaseWork()
         fixture.runtimeState.mapLibreMap = fixture.map
         fixture.delegate.setMapInteractionActive(true)
         fixture.delegate.setMapInteractionActive(false)
+        fixture.delegate.flushDeferredInteractionReleaseWork()
 
         verify(fixture.weatherOverlay, times(1)).render(
             frameSelection = any(),

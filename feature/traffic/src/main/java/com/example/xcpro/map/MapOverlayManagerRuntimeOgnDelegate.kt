@@ -139,7 +139,6 @@ class MapOverlayManagerRuntimeOgnDelegate(
     fun setMapInteractionActive(active: Boolean) {
         if (mapInteractionActive == active) return
         mapInteractionActive = active
-        if (!active) flushDeferredRenders()
     }
 
     fun updateTrafficTargets(
@@ -278,7 +277,9 @@ class MapOverlayManagerRuntimeOgnDelegate(
         scheduleRender(
             state = ognTrafficRenderState,
             forceImmediate = forceImmediate,
-            intervalMsOverride = TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS
+            intervalMsOverride = resolveTrafficProjectionInvalidationIntervalMs(
+                interactionActive = mapInteractionActive
+            )
         ) {
             renderTargetsNow()
         }
@@ -316,24 +317,11 @@ class MapOverlayManagerRuntimeOgnDelegate(
         cancelPendingRenders()
     }
 
-    fun statusSnapshot(): OgnOverlayStatusSnapshot = OgnOverlayStatusSnapshot(
-        displayUpdateMode = ognDisplayUpdateMode,
-        targetsCount = latestOgnTargets.size,
-        thermalHotspotsCount = latestOgnThermalHotspots.size,
-        gliderTrailSegmentsCount = latestOgnGliderTrailSegments.size,
-        targetEnabled = latestTargetEnabled,
-        targetResolved = latestResolvedTarget != null
-    )
+    fun statusSnapshot(): OgnOverlayStatusSnapshot = OgnOverlayStatusSnapshot(displayUpdateMode = ognDisplayUpdateMode, targetsCount = latestOgnTargets.size, thermalHotspotsCount = latestOgnThermalHotspots.size, gliderTrailSegmentsCount = latestOgnGliderTrailSegments.size, targetEnabled = latestTargetEnabled, targetResolved = latestResolvedTarget != null)
 
-    private fun createOgnTrafficOverlay(map: MapLibreMap): OgnTrafficOverlayHandle =
-        ognTrafficOverlayFactory(
-            context,
-            map,
-            renderedOgnIconSizePx,
-            satelliteContrastIconsEnabled()
-        ).also { overlay ->
-            ognViewportZoom?.let(overlay::setViewportZoom)
-        }
+    private fun createOgnTrafficOverlay(map: MapLibreMap): OgnTrafficOverlayHandle = ognTrafficOverlayFactory(
+        context, map, renderedOgnIconSizePx, satelliteContrastIconsEnabled()
+    ).also { overlay -> ognViewportZoom?.let(overlay::setViewportZoom) }
 
     private fun createTargetRingOverlay(map: MapLibreMap): OgnTargetRingOverlayHandle = ognTargetRingOverlayFactory(map, renderedOgnIconSizePx)
 
@@ -498,7 +486,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         state.pendingDueMonoMs = scheduledDueMonoMs
     }
 
-    private fun flushDeferredRenders() {
+    fun flushDeferredInteractionReleaseWork(): Boolean {
         val nowMonoMs = nowMonoMs()
         val states = listOf(
             ognTrafficRenderState to ::renderTargetsNow,
@@ -507,14 +495,18 @@ class MapOverlayManagerRuntimeOgnDelegate(
             ognTrailRenderState to ::renderTrailsNow,
             ognSelectedThermalRenderState to ::renderSelectedThermalNow
         )
+        var renderedAny = false
         states.forEach { (state, renderNow) ->
             val pending = state.pendingJob ?: return@forEach
             pending.cancel()
             state.pendingJob = null
             state.pendingDueMonoMs = Long.MAX_VALUE
+            if (runtimeState.mapLibreMap == null) return@forEach
             renderNow()
             state.lastRenderMonoMs = nowMonoMs
+            renderedAny = true
         }
+        return renderedAny
     }
 
     private fun cancelPendingRenders() {

@@ -62,4 +62,19 @@ class MapOverlayInteractionCadencePolicyTest {
         )
     }
 
+    @Test
+    fun resolveTrafficProjectionInvalidationIntervalMs_inactive_keepsBaseInterval() {
+        assertEquals(
+            TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS,
+            resolveTrafficProjectionInvalidationIntervalMs(interactionActive = false)
+        )
+    }
+
+    @Test
+    fun resolveTrafficProjectionInvalidationIntervalMs_active_usesInteractionFloor() {
+        assertEquals(
+            TRAFFIC_PROJECTION_INVALIDATION_INTERACTION_MIN_RENDER_INTERVAL_MS,
+            resolveTrafficProjectionInvalidationIntervalMs(interactionActive = true)
+        )
+    }
 }

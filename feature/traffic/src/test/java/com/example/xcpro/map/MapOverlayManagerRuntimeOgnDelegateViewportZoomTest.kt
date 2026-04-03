@@ -4,6 +4,7 @@ import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -286,6 +287,48 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         runCurrent()
 
         verify(trafficOverlay).setViewportZoom(8.2f)
+        verify(trafficOverlay, times(1)).render(
+            targets = any(),
+            selectedTargetKey = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            altitudeUnit = any(),
+            unitsPreferences = any()
+        )
+    }
+
+    @Test
+    fun projectionInvalidation_whileInteracting_usesProjectionInteractionFloor() = runTest {
+        var nowMonoMs = 0L
+        val trafficOverlay: OgnTrafficOverlayHandle = mock()
+        val fixture = createFixture(
+            scope = this,
+            trafficOverlays = listOf(trafficOverlay),
+            nowMonoMsProvider = { nowMonoMs }
+        )
+
+        fixture.delegate.updateTrafficTargets(
+            targets = listOf(target("T2")),
+            ownshipAltitudeMeters = 1_200.0,
+            altitudeUnit = AltitudeUnit.METERS,
+            unitsPreferences = UnitsPreferences()
+        )
+        runCurrent()
+        reset(trafficOverlay)
+
+        fixture.delegate.setMapInteractionActive(true)
+        nowMonoMs = 30L
+        fixture.delegate.invalidateProjection()
+        runCurrent()
+        verifyNoInteractions(trafficOverlay)
+
+        advanceTimeBy(219L)
+        runCurrent()
+        verifyNoInteractions(trafficOverlay)
+
+        nowMonoMs = TRAFFIC_PROJECTION_INVALIDATION_INTERACTION_MIN_RENDER_INTERVAL_MS
+        advanceTimeBy(1L)
+        runCurrent()
+
         verify(trafficOverlay, times(1)).render(
             targets = any(),
             selectedTargetKey = anyOrNull(),

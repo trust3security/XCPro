@@ -105,7 +105,9 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         syncViewportZoomFromMapIfAvailable()
         scheduleAdsbRender(
             forceImmediate = forceImmediate,
-            intervalMsOverride = TRAFFIC_PROJECTION_INVALIDATION_MIN_RENDER_INTERVAL_MS
+            intervalMsOverride = resolveTrafficProjectionInvalidationIntervalMs(
+                interactionActive = interactionActiveProvider()
+            )
         )
     }
 
@@ -175,13 +177,14 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         lastOverlayFrontOrderSignature = captureOverlayFrontOrderSignature()
     }
 
-    fun flushDeferredAdsbRenderIfNeeded() {
-        val pending = adsbRenderState.pendingJob ?: return
+    fun flushDeferredAdsbRenderIfNeeded(reconcileFrontOrder: Boolean = true): Boolean {
+        val pending = adsbRenderState.pendingJob ?: return false
         pending.cancel()
         adsbRenderState.pendingJob = null
         adsbRenderState.pendingDueMonoMs = Long.MAX_VALUE
-        val map = runtimeState.mapLibreMap ?: return
-        renderAdsbNow(map)
+        val map = runtimeState.mapLibreMap ?: return false
+        renderAdsbNow(map, reconcileFrontOrder = reconcileFrontOrder)
+        return true
     }
 
     private fun scheduleAdsbRender(
@@ -228,7 +231,10 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         adsbRenderState.pendingDueMonoMs = scheduledDueMonoMs
     }
 
-    private fun renderAdsbNow(map: MapLibreMap) {
+    private fun renderAdsbNow(
+        map: MapLibreMap,
+        reconcileFrontOrder: Boolean = true
+    ) {
         val renderMonoMs = nowMonoMs()
         val projectedStyleIds = projectedAdsbStyleIds(renderMonoMs)
         if (runtimeState.adsbTrafficOverlay == null) {
@@ -249,7 +255,9 @@ class MapOverlayManagerRuntimeTrafficDelegate(
             iconStyleIdOverrides = projectedStyleIds
         )
         adsbRenderState.lastRenderMonoMs = renderMonoMs
-        bringTrafficOverlaysToFront()
+        if (reconcileFrontOrder) {
+            bringTrafficOverlaysToFront()
+        }
     }
 
     private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlayHandle =

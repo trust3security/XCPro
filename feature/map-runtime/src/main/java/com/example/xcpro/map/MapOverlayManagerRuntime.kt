@@ -11,7 +11,10 @@ import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.weather.rain.WeatherRainFrameSelection
 import com.example.xcpro.weather.rain.WeatherRadarStatusCode
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 
@@ -41,9 +44,11 @@ open class MapOverlayManagerRuntime(
 ) {
     companion object {
         private const val OWN_ALTITUDE_RENDER_RESOLUTION_SCALE = 10.0
+        private const val INTERACTION_RELEASE_FLUSH_SETTLE_MS = 120L
     }
 
     private var aatPreviewForwardCount = 0L
+    private var pendingInteractionReleaseFlushJob: Job? = null
     private lateinit var lifecyclePort: MapOverlayRuntimeLifecyclePort
     private lateinit var trafficDelegate: MapOverlayManagerRuntimeTrafficDelegate
     private val forecastWeatherDelegate = MapOverlayManagerRuntimeForecastWeatherDelegate(
@@ -140,6 +145,8 @@ open class MapOverlayManagerRuntime(
     fun setOgnDisplayUpdateMode(mode: OgnDisplayUpdateMode) = ognDelegate.setDisplayUpdateMode(mode)
 
     fun onMapDetached() {
+        pendingInteractionReleaseFlushJob?.cancel()
+        pendingInteractionReleaseFlushJob = null
         forecastWeatherDelegate.onMapDetached()
         trafficDelegate.onMapDetached()
         ognDelegate.onMapDetached()
@@ -359,10 +366,28 @@ open class MapOverlayManagerRuntime(
     }
 
     private fun applyMapInteractionState(active: Boolean) {
+        pendingInteractionReleaseFlushJob?.cancel()
+        pendingInteractionReleaseFlushJob = null
         forecastWeatherDelegate.setMapInteractionActive(active)
         ognDelegate.setMapInteractionActive(active)
-        if (!active) {
-            trafficDelegate.flushDeferredAdsbRenderIfNeeded()
+        if (active) {
+            return
+        }
+        pendingInteractionReleaseFlushJob = coroutineScope.launch {
+            delay(INTERACTION_RELEASE_FLUSH_SETTLE_MS)
+            pendingInteractionReleaseFlushJob = null
+            if (interactionDelegate.isMapInteractionActive) return@launch
+
+            val forecastFlushed = forecastWeatherDelegate.flushDeferredInteractionReleaseWork(
+                reconcileFrontOrder = false
+            )
+            val ognFlushed = ognDelegate.flushDeferredInteractionReleaseWork()
+            val adsbFlushed = trafficDelegate.flushDeferredAdsbRenderIfNeeded(
+                reconcileFrontOrder = false
+            )
+            if (forecastFlushed || ognFlushed || adsbFlushed) {
+                trafficDelegate.bringTrafficOverlaysToFront()
+            }
         }
     }
 }

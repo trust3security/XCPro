@@ -9,7 +9,8 @@ internal fun applySkySightSatelliteOverlayRuntime(
     map: MapLibreMap,
     config: SkySightSatelliteRuntimeConfig,
     onRuntimeErrorChanged: (String?) -> Unit,
-    bringTrafficOverlaysToFront: () -> Unit
+    bringTrafficOverlaysToFront: () -> Unit,
+    reconcileFrontOrder: Boolean = true
 ): Boolean {
     val hasAnySatelliteLayer = config.showSatelliteImagery || config.showRadar || config.showLightning
     if (!config.enabled || !hasAnySatelliteLayer) {
@@ -33,7 +34,9 @@ internal fun applySkySightSatelliteOverlayRuntime(
             )
         )
         onRuntimeErrorChanged(null)
-        bringTrafficOverlaysToFront()
+        if (reconcileFrontOrder) {
+            bringTrafficOverlaysToFront()
+        }
         true
     }.getOrElse { throwable ->
         onRuntimeErrorChanged(
@@ -49,7 +52,8 @@ internal fun applyWeatherRainOverlayRuntime(
     runtimeState: ForecastWeatherOverlayRuntimeState,
     map: MapLibreMap,
     config: WeatherRainRuntimeConfig,
-    bringTrafficOverlaysToFront: () -> Unit
+    bringTrafficOverlaysToFront: () -> Unit,
+    reconcileFrontOrder: Boolean = true
 ): Boolean {
     val frameSelection = config.frameSelection
     if (!config.enabled || frameSelection == null) {
@@ -70,7 +74,9 @@ internal fun applyWeatherRainOverlayRuntime(
             opacity = effectiveOpacity,
             transitionDurationMs = config.transitionDurationMs
         )
-        bringTrafficOverlaysToFront()
+        if (reconcileFrontOrder) {
+            bringTrafficOverlaysToFront()
+        }
         true
     }.getOrElse { throwable ->
         Log.e("MapOverlayManager", "Weather rain overlay apply failed: ${throwable.message}", throwable)
