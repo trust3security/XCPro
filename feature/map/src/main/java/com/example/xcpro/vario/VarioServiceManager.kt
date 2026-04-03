@@ -177,9 +177,9 @@ open class VarioServiceManager @Inject constructor(
         val useCase = igcRecordingUseCase ?: return
         if (igcActionJob != null) return
         igcActionJob = serviceScope.launch {
-            // AI-NOTE: IGC state-machine actions are ordered runtime side effects.
-            // Do not use collectLatest here because a later action can cancel an
-            // in-flight finalize/publish path before terminal callbacks complete.
+            // IGC actions are ordered runtime side effects. Keep sequential
+            // collection so later terminal actions cannot cancel in-flight
+            // finalize work before callbacks complete.
             useCase.actions.collect { action ->
                 when (action) {
                     is IgcSessionStateMachine.Action.EnterArmed -> {
