@@ -19,19 +19,34 @@ class ProfileRepositoryBootstrapRecoveryTest {
     }
 
     @Test
-    fun bootstrap_emptyState_provisionsDefaultProfileAndActiveId() = runTest {
+    fun bootstrap_emptyState_requiresExplicitFirstLaunchSetup() = runTest {
         val harness = createScopedProfileRepositoryTestHarness(backgroundScope)
 
+        assertTrue(harness.repository.bootstrapComplete.first { it })
+        assertTrue(harness.repository.profiles.value.isEmpty())
+        assertEquals(null, harness.repository.activeProfile.value)
+        assertEquals(0, harness.writeStateCalls)
+        assertEquals(null, harness.snapshotState.value.profilesJson)
+        assertEquals(null, harness.snapshotState.value.activeProfileId)
+    }
+
+    @Test
+    fun completeFirstLaunch_provisionsSelectedCanonicalDefaultProfileAndActiveId() = runTest {
+        val harness = createScopedProfileRepositoryTestHarness(backgroundScope)
+        harness.repository.bootstrapComplete.first { it }
+
+        val created = harness.completeFirstLaunch(AircraftType.HANG_GLIDER)
         val persisted = harness.snapshotState.first {
             !it.profilesJson.isNullOrBlank() && !it.activeProfileId.isNullOrBlank()
         }
 
-        val profiles = harness.repository.profiles.first { it.isNotEmpty() }
-        assertEquals(1, profiles.size)
-        assertEquals(profiles.first().id, harness.repository.activeProfile.value?.id)
-        assertEquals(profiles.first().id, persisted.activeProfileId)
+        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, created.id)
+        assertEquals("Default", created.name)
+        assertEquals(AircraftType.HANG_GLIDER, created.aircraftType)
+        assertEquals(created.id, harness.repository.activeProfile.value?.id)
+        assertEquals(created.id, persisted.activeProfileId)
         assertEquals(1, harness.writeStateCalls)
-        assertTrue((persisted.profilesJson ?: "").contains(profiles.first().id))
+        assertTrue((persisted.profilesJson ?: "").contains(created.id))
     }
 
     @Test
@@ -64,6 +79,32 @@ class ProfileRepositoryBootstrapRecoveryTest {
     }
 
     @Test
+    fun bootstrap_existingCanonicalSnapshot_restoresProfilesWithoutRequiringRepair() = runTest {
+        val harness = createScopedProfileRepositoryTestHarness(
+            scope = backgroundScope,
+            initialSnapshot = ProfileStorageSnapshot(
+                profilesJson = """
+                    [
+                      {"id":"default-profile","name":"Default","aircraftType":"PARAGLIDER"},
+                      {"id":"p-restored","name":"Restored Pilot","aircraftType":"SAILPLANE"}
+                    ]
+                """.trimIndent(),
+                activeProfileId = "p-restored",
+                readStatus = ProfileStorageReadStatus.OK
+            )
+        )
+
+        val hydrated = harness.repository.profiles.first { profiles ->
+            profiles.any { it.id == "p-restored" }
+        }
+
+        assertEquals(2, hydrated.size)
+        assertEquals("p-restored", harness.repository.activeProfile.value?.id)
+        assertEquals(0, harness.writeStateCalls)
+        assertEquals(null, harness.repository.bootstrapError.value)
+    }
+
+    @Test
     fun parseFailure_preservesLastKnownGoodProfiles() = runTest {
         val harness = createScopedProfileRepositoryTestHarness(backgroundScope)
         val created = harness.repository.createProfile(
@@ -90,7 +131,7 @@ class ProfileRepositoryBootstrapRecoveryTest {
     }
 
     @Test
-    fun parseFailure_withoutLastKnownGood_recoversDefaultProfileAndPersistsState() = runTest {
+    fun parseFailure_withoutLastKnownGood_entersRecoveryStateWithoutPersisting() = runTest {
         val harness = createScopedProfileRepositoryTestHarness(
             scope = backgroundScope,
             initialSnapshot = ProfileStorageSnapshot(
@@ -100,18 +141,12 @@ class ProfileRepositoryBootstrapRecoveryTest {
             )
         )
 
-        val hydrated = harness.repository.profiles.first { it.isNotEmpty() }
-        assertEquals(1, hydrated.size)
-        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, hydrated.first().id)
-        assertEquals(
-            ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
-            harness.repository.activeProfile.value?.id
-        )
-        assertTrue(harness.writeStateCalls > 0)
-        assertTrue(
-            (harness.snapshotState.value.profilesJson ?: "")
-                .contains(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
-        )
+        val error = harness.repository.bootstrapError.first { it != null }
+        assertNotNull(error)
+        assertTrue(harness.repository.profiles.value.isEmpty())
+        assertEquals(null, harness.repository.activeProfile.value)
+        assertEquals(0, harness.writeStateCalls)
+        assertEquals("{invalid-json", harness.snapshotState.value.profilesJson)
         assertTrue(harness.diagnosticsEvents.any { it.first == "profile_bootstrap_parse_failed" })
     }
 
@@ -125,7 +160,6 @@ class ProfileRepositoryBootstrapRecoveryTest {
             )
         ).getOrThrow()
         harness.repository.setActiveProfile(created).getOrThrow()
-        val baselineActiveWrites = harness.writeActiveCalls
 
         harness.snapshotState.value = harness.snapshotState.value.copy(
             activeProfileId = null,
@@ -134,7 +168,6 @@ class ProfileRepositoryBootstrapRecoveryTest {
 
         val repairedSnapshot = harness.snapshotState.first { !it.activeProfileId.isNullOrBlank() }
         assertEquals(created.id, repairedSnapshot.activeProfileId)
-        assertTrue(harness.writeActiveCalls > baselineActiveWrites)
         val active = harness.repository.activeProfile.first()
         assertEquals(created.id, active?.id)
         assertEquals(created.id, harness.snapshotState.value.activeProfileId)
@@ -280,6 +313,6 @@ class ProfileRepositoryBootstrapRecoveryTest {
         assertTrue(recovery.isSuccess)
         assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, harness.repository.activeProfile.value?.id)
         assertTrue(harness.repository.profiles.value.any { it.id == created.id })
-        assertEquals(baselineProfileCount, harness.repository.profiles.value.size)
+        assertEquals(baselineProfileCount + 1, harness.repository.profiles.value.size)
     }
 }

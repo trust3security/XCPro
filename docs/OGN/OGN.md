@@ -233,6 +233,16 @@ Marker tap behavior:
 - Marker selection uses canonical typed target keys internally (`FLARM:HEX` / `ICAO:HEX` / fallback),
   with legacy key compatibility during matching.
 
+Close-zoom marker label semantics:
+- OGN markers remain two-line labels when labels are visible.
+- One line remains identifier + distance (`competition number/registration tail + distance`).
+- The relative-height line now appends ground speed as `height | speed` when target speed is valid.
+- Relative-height line placement keeps the existing altitude-band behavior:
+  - above/near ownship: relative-height line renders above the identifier/distance line
+  - below ownship: relative-height line renders below the identifier/distance line
+- Speed formatting uses the general units SSOT (`UnitsPreferences.speed` via `UnitsFormatter.speed`),
+  so OGN labels follow `km/h`, `kt`, `mph`, or `m/s` automatically.
+
 ## Reliability Hardening Status
 
 - Connectivity reliability hardening (ordering + liveness + DDB cadence) implemented

@@ -7,6 +7,22 @@ internal class ProfileRepositoryMutationCoordinator(
     private val clock: Clock,
     private val profileIdGenerator: ProfileIdGenerator
 ) {
+    suspend fun completeFirstLaunch(
+        aircraftType: AircraftType,
+        currentProfiles: List<UserProfile>,
+        persistState: suspend (List<UserProfile>, String?) -> Unit,
+        commitState: (List<UserProfile>, UserProfile?) -> Unit
+    ): UserProfile {
+        require(currentProfiles.isEmpty()) {
+            "First-launch setup is only available before any profiles exist"
+        }
+
+        val defaultProfile = buildDefaultProfile(clock, aircraftType)
+        persistState(listOf(defaultProfile), defaultProfile.id)
+        commitState(listOf(defaultProfile), defaultProfile)
+        return defaultProfile
+    }
+
     suspend fun createProfile(
         request: ProfileCreationRequest,
         currentProfiles: List<UserProfile>,
@@ -133,13 +149,7 @@ internal class ProfileRepositoryMutationCoordinator(
         val recoveredProfiles = ensureBootstrapProfile(currentProfiles, clock).profiles
         val defaultProfile = recoveredProfiles.firstOrNull {
             ProfileIdResolver.isCanonicalDefault(it.id)
-        } ?: UserProfile(
-            id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
-            name = "Default",
-            aircraftType = AircraftType.PARAGLIDER,
-            createdAt = clock.nowWallMs(),
-            lastUsed = clock.nowWallMs()
-        )
+        } ?: buildDefaultProfile(clock)
         val normalizedProfiles = dedupeProfilesById(
             listOf(defaultProfile) + recoveredProfiles.filterNot {
                 ProfileIdResolver.isCanonicalDefault(it.id)

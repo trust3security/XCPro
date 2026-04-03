@@ -1,0 +1,9 @@
+﻿{
+    "frame_time_p95_ms":  34,
+    "frame_time_p99_ms":  48,
+    "jank_percent":  19.25,
+    "captured_at":  "2026-04-03T19:03:11.1208598+11:00",
+    "application_id":  "com.example.openxcpro.debug",
+    "activity":  "com.example.xcpro.MainActivity",
+    "duration_seconds":  90
+}

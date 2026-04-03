@@ -146,17 +146,29 @@ class ProfileRepositoryBackupSyncTest {
     }
 
     @Test
-    fun bootstrap_emptyState_syncsDefaultProfileBackup() = runTest {
+    fun bootstrap_emptyState_skipsBackupSyncUntilFirstLaunchCompletes() = runTest {
         val harness = Harness(backgroundScope)
 
         advanceUntilIdle()
 
-        val calls = harness.backupSink.calls.first { it.isNotEmpty() }
-        val latest = calls.last()
+        assertTrue(harness.backupSink.calls.value.isEmpty())
+        assertTrue(harness.snapshotProvider.requestedProfileIds.value.isEmpty())
+    }
+
+    @Test
+    fun completeFirstLaunch_syncsCanonicalDefaultProfileBackup() = runTest {
+        val harness = Harness(backgroundScope)
+
+        advanceUntilIdle()
+        harness.repository.completeFirstLaunch(AircraftType.HANG_GLIDER).getOrThrow()
+        advanceUntilIdle()
+
+        val latest = harness.backupSink.calls.first { it.isNotEmpty() }.last()
         val profiles = latest.profiles
         val activeProfileId = latest.activeProfileId
         assertEquals(1, profiles.size)
         assertEquals("default-profile", profiles.first().id)
+        assertEquals(AircraftType.HANG_GLIDER, profiles.first().aircraftType)
         assertEquals("default-profile", activeProfileId)
         assertTrue(
             latest.settingsSnapshot.sections.containsKey(ProfileSettingsSectionIds.CARD_PREFERENCES)
@@ -175,6 +187,31 @@ class ProfileRepositoryBackupSyncTest {
             ProfileSettingsSectionSets.CAPTURED_SECTION_ORDER,
             latest.settingsSnapshot.sections.keys.toList()
         )
+    }
+
+    @Test
+    fun bootstrap_existingCanonicalSnapshot_syncsBackupForRestoredState() = runTest {
+        val harness = SnapshotHarness(
+            scope = backgroundScope,
+            initialSnapshot = ProfileStorageSnapshot(
+                profilesJson = """
+                    [
+                      {"id":"default-profile","name":"Default","aircraftType":"PARAGLIDER"},
+                      {"id":"p-restored","name":"Restored Pilot","aircraftType":"SAILPLANE"}
+                    ]
+                """.trimIndent(),
+                activeProfileId = "p-restored",
+                readStatus = ProfileStorageReadStatus.OK
+            )
+        )
+
+        advanceUntilIdle()
+
+        val latest = harness.backupSink.calls.first { it.isNotEmpty() }.last()
+        assertEquals("p-restored", latest.activeProfileId)
+        assertEquals(2, latest.profiles.size)
+        assertTrue(latest.profiles.any { it.id == "p-restored" })
+        assertTrue(latest.profiles.any { it.id == "default-profile" })
     }
 
     @Test
@@ -203,7 +240,7 @@ class ProfileRepositoryBackupSyncTest {
     }
 
     @Test
-    fun bootstrap_parseFailureWithoutFallback_recoversButSkipsBackupSyncUntilStable() = runTest {
+    fun bootstrap_parseFailureWithoutFallback_skipsBackupSyncAndLeavesRecoveryState() = runTest {
         val harness = SnapshotHarness(
             scope = backgroundScope,
             initialSnapshot = ProfileStorageSnapshot(
@@ -217,7 +254,7 @@ class ProfileRepositoryBackupSyncTest {
         harness.repository.bootstrapComplete.first { it }
 
         assertTrue(harness.backupSink.calls.value.isEmpty())
-        val activeProfileId = harness.repository.activeProfile.value?.id
-        assertEquals(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID, activeProfileId)
+        assertEquals(null, harness.repository.activeProfile.value)
+        assertTrue(harness.repository.profiles.value.isEmpty())
     }
 }

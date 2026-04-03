@@ -11,6 +11,9 @@ class ProfileUseCase @Inject constructor(
     val bootstrapComplete: StateFlow<Boolean> = repository.bootstrapComplete
     val bootstrapError: StateFlow<String?> = repository.bootstrapError
 
+    suspend fun completeFirstLaunch(aircraftType: AircraftType): Result<UserProfile> =
+        repository.completeFirstLaunch(aircraftType)
+
     suspend fun setActiveProfile(profile: UserProfile): Result<Unit> =
         repository.setActiveProfile(profile)
 

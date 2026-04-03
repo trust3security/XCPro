@@ -110,6 +110,7 @@ class MapOverlayManagerRuntimeDetachOrderingTest {
         ognTargetLineOverlayFactory = { _ -> mock() },
         ognThermalOverlayFactory = { _ -> mock() },
         ognGliderTrailOverlayFactory = { _ -> mock() },
+        ognSelectedThermalOverlayFactory = { _ -> mock() },
         nowMonoMs = nowMonoMs
     ) {
         init {
@@ -151,6 +152,7 @@ class MapOverlayManagerRuntimeDetachOrderingTest {
         override var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle? = null
         override var ognThermalOverlay: OgnThermalOverlayHandle? = null
         override var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle? = null
+        override var ognSelectedThermalOverlay: OgnSelectedThermalOverlayHandle? = null
         override var adsbTrafficOverlay: AdsbTrafficOverlayHandle? = null
     }
 }

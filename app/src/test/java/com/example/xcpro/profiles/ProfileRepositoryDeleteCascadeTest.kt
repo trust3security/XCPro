@@ -74,6 +74,7 @@ class ProfileRepositoryDeleteCascadeTest {
         val cleaner = RecordingCleaner()
         val harness = Harness(backgroundScope, cleaner)
         harness.repository.bootstrapComplete.first { it }
+        harness.repository.completeFirstLaunch(AircraftType.PARAGLIDER).getOrThrow()
         val created = harness.repository.createProfile(
             ProfileCreationRequest(
                 name = "Pilot Delete",
@@ -91,6 +92,7 @@ class ProfileRepositoryDeleteCascadeTest {
     fun deleteProfile_whenCleanupFails_doesNotDeleteProfile() = runTest {
         val harness = Harness(backgroundScope, RecordingCleaner(shouldFail = true))
         harness.repository.bootstrapComplete.first { it }
+        harness.repository.completeFirstLaunch(AircraftType.PARAGLIDER).getOrThrow()
         val created = harness.repository.createProfile(
             ProfileCreationRequest(
                 name = "Pilot Keep",

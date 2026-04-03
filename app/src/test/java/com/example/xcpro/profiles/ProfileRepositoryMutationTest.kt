@@ -215,7 +215,8 @@ class ProfileRepositoryMutationTest {
     @Test
     fun deleteProfile_cannotDeleteProvisionedDefaultProfile() = runTest {
         val scopedHarness = createScopedProfileRepositoryTestHarness(backgroundScope)
-        val defaultProfile = scopedHarness.repository.profiles.first { it.isNotEmpty() }.first()
+        scopedHarness.repository.bootstrapComplete.first { it }
+        val defaultProfile = scopedHarness.completeFirstLaunch()
         val second = scopedHarness.repository.createProfile(
             ProfileCreationRequest(
                 name = "Pilot D",
@@ -227,6 +228,22 @@ class ProfileRepositoryMutationTest {
         val deletion = scopedHarness.repository.deleteProfile(defaultProfile.id)
         assertTrue(deletion.isFailure)
         assertTrue((deletion.exceptionOrNull()?.message ?: "").contains("default profile"))
+    }
+
+    @Test
+    fun completeFirstLaunch_rejectsWhenProfilesAlreadyExist() = runTest {
+        val harness = createHarness(backgroundScope)
+        harness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Existing",
+                aircraftType = AircraftType.SAILPLANE
+            )
+        ).getOrThrow()
+
+        val result = harness.repository.completeFirstLaunch(AircraftType.HANG_GLIDER)
+
+        assertTrue(result.isFailure)
+        assertTrue((result.exceptionOrNull()?.message ?: "").contains("First-launch setup"))
     }
 
     private suspend fun createHarness(scope: CoroutineScope): ProfileRepositoryTestHarness =

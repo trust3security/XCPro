@@ -33,6 +33,8 @@ open class MapOverlayManagerRuntime(
         TrafficOverlayFactories::createOgnThermalOverlay,
     private val ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory =
         TrafficOverlayFactories::createOgnGliderTrailOverlay,
+    private val ognSelectedThermalOverlayFactory: OgnSelectedThermalOverlayFactory =
+        TrafficOverlayFactories::createOgnSelectedThermalOverlay,
     private val adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory =
         TrafficOverlayFactories::createAdsbTrafficOverlay,
     private val nowMonoMs: () -> Long = TimeBridge::nowMonoMs
@@ -64,6 +66,7 @@ open class MapOverlayManagerRuntime(
         ognOwnshipTargetBadgeOverlayFactory = ognOwnshipTargetBadgeOverlayFactory,
         ognThermalOverlayFactory = ognThermalOverlayFactory,
         ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
+        ognSelectedThermalOverlayFactory = ognSelectedThermalOverlayFactory,
         bringTrafficOverlaysToFront = { trafficDelegate.bringTrafficOverlaysToFront() },
         satelliteContrastIconsEnabled = { forecastWeatherDelegate.satelliteContrastIconsEnabled() },
         normalizeOwnshipAltitudeForRender = ::normalizeOwnshipAltitudeForRender,
@@ -165,6 +168,11 @@ open class MapOverlayManagerRuntime(
 
     fun updateOgnGliderTrailSegments(segments: List<OgnGliderTrailSegment>, forceImmediate: Boolean = false) =
         ognDelegate.updateGliderTrailSegments(segments, forceImmediate)
+
+    fun updateSelectedOgnThermalContext(
+        context: SelectedOgnThermalOverlayContext?,
+        forceImmediate: Boolean = false
+    ) = ognDelegate.updateSelectedThermalContext(context, forceImmediate)
 
     fun updateOgnTargetVisuals(
         enabled: Boolean,

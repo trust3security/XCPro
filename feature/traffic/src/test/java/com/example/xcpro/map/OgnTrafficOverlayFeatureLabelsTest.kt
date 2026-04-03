@@ -1,6 +1,9 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.common.units.SpeedUnit
+import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.ogn.OgnTrafficIdentity
 import org.junit.Assert.assertEquals
@@ -20,7 +23,10 @@ class OgnTrafficOverlayFeatureLabelsTest {
             fullLabelKeys = setOf("FLARM:ABC123")
         )
 
-        assertEquals("+40 m", feature.getStringProperty(PROP_TOP_LABEL))
+        assertEquals(
+            "+40 m | ${UnitsFormatter.speed(SpeedMs(35.0), UnitsPreferences()).text}",
+            feature.getStringProperty(PROP_TOP_LABEL)
+        )
         assertEquals("AB1 1.2 km", feature.getStringProperty(PROP_BOTTOM_LABEL))
     }
 
@@ -35,7 +41,10 @@ class OgnTrafficOverlayFeatureLabelsTest {
         )
 
         assertEquals("AB1 1.2 km", feature.getStringProperty(PROP_TOP_LABEL))
-        assertEquals("-40 m", feature.getStringProperty(PROP_BOTTOM_LABEL))
+        assertEquals(
+            "-40 m | ${UnitsFormatter.speed(SpeedMs(35.0), UnitsPreferences()).text}",
+            feature.getStringProperty(PROP_BOTTOM_LABEL)
+        )
     }
 
     @Test
@@ -50,6 +59,40 @@ class OgnTrafficOverlayFeatureLabelsTest {
 
         assertEquals("", feature.getStringProperty(PROP_TOP_LABEL))
         assertEquals("", feature.getStringProperty(PROP_BOTTOM_LABEL))
+    }
+
+    @Test
+    fun featureGeneration_usesUnitsPreferenceForSpeedOnRelativeLabel() {
+        val unitsPreferences = UnitsPreferences(speed = SpeedUnit.KNOTS)
+        val feature = buildFeature(
+            target = target(
+                id = "T4A",
+                altitudeMeters = 1_040.0
+            ),
+            fullLabelKeys = setOf("FLARM:ABC123"),
+            unitsPreferences = unitsPreferences
+        )
+
+        assertEquals(
+            "+40 m | ${UnitsFormatter.speed(SpeedMs(35.0), unitsPreferences).text}",
+            feature.getStringProperty(PROP_TOP_LABEL)
+        )
+        assertEquals("AB1 1.2 km", feature.getStringProperty(PROP_BOTTOM_LABEL))
+    }
+
+    @Test
+    fun featureGeneration_keepsDeltaOnlyWhenSpeedUnavailable() {
+        val feature = buildFeature(
+            target = target(
+                id = "T4B",
+                altitudeMeters = 1_040.0,
+                groundSpeedMps = null
+            ),
+            fullLabelKeys = setOf("FLARM:ABC123")
+        )
+
+        assertEquals("+40 m", feature.getStringProperty(PROP_TOP_LABEL))
+        assertEquals("AB1 1.2 km", feature.getStringProperty(PROP_BOTTOM_LABEL))
     }
 
     @Test
@@ -102,7 +145,8 @@ class OgnTrafficOverlayFeatureLabelsTest {
     private fun buildFeature(
         target: OgnTrafficTarget,
         fullLabelKeys: Set<String>,
-        displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate> = emptyMap()
+        displayCoordinatesByKey: Map<String, TrafficDisplayCoordinate> = emptyMap(),
+        unitsPreferences: UnitsPreferences = UnitsPreferences()
     ) = buildOgnTrafficOverlayFeatures(
         nowMonoMs = 10_000L,
         targets = listOf(target),
@@ -112,7 +156,7 @@ class OgnTrafficOverlayFeatureLabelsTest {
         visibleBounds = null,
         altitudeUnit = AltitudeUnit.METERS,
         useSatelliteContrastIcons = false,
-        unitsPreferences = UnitsPreferences(),
+        unitsPreferences = unitsPreferences,
         maxTargets = MAX_TARGETS,
         staleVisualAfterMs = 5_000L,
         liveAlpha = 1.0,
@@ -121,7 +165,8 @@ class OgnTrafficOverlayFeatureLabelsTest {
 
     private fun target(
         id: String,
-        altitudeMeters: Double
+        altitudeMeters: Double,
+        groundSpeedMps: Double? = 35.0
     ): OgnTrafficTarget = OgnTrafficTarget(
         id = id,
         callsign = "CALL$id",
@@ -130,7 +175,7 @@ class OgnTrafficOverlayFeatureLabelsTest {
         longitude = 149.0,
         altitudeMeters = altitudeMeters,
         trackDegrees = 90.0,
-        groundSpeedMps = 35.0,
+        groundSpeedMps = groundSpeedMps,
         verticalSpeedMps = 1.2,
         deviceIdHex = "ABC123",
         signalDb = -12.0,

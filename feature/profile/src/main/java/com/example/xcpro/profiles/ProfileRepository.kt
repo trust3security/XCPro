@@ -181,7 +181,7 @@ class ProfileRepository(
         _bootstrapComplete.value = true
         suppressNextHydrationBackupSync = hydration.suppressNextHydrationBackupSync
         if (!hydration.parseFailed && !suppressNextHydrationBackupSync) {
-            backupSyncCoordinator.scheduleProfileBackupSync(
+            scheduleBackupSyncIfReady(
                 profiles = hydration.profiles,
                 activeProfileId = hydration.activeProfile?.id
             )
@@ -211,10 +211,29 @@ class ProfileRepository(
         lastKnownGoodActiveProfileId = activeProfile?.id
         _bootstrapError.value = null
         _bootstrapComplete.value = true
-        backupSyncCoordinator.scheduleProfileBackupSync(profiles, activeProfile?.id)
+        scheduleBackupSyncIfReady(profiles, activeProfile?.id)
+    }
+    private fun scheduleBackupSyncIfReady(profiles: List<UserProfile>, activeProfileId: String?) {
+        if (profiles.isEmpty() || activeProfileId == null) {
+            return
+        }
+        backupSyncCoordinator.scheduleProfileBackupSync(profiles, activeProfileId)
     }
     private suspend fun awaitBootstrapCompletion() {
         if (!_bootstrapComplete.value) bootstrapComplete.first { it }
+    }
+    suspend fun completeFirstLaunch(aircraftType: AircraftType): Result<UserProfile> {
+        awaitBootstrapCompletion()
+        return mutationMutex.withLock {
+            runCatching {
+                mutationCoordinator.completeFirstLaunch(
+                    aircraftType = aircraftType,
+                    currentProfiles = _profiles.value,
+                    persistState = ::persistState,
+                    commitState = ::commitState
+                )
+            }
+        }
     }
     suspend fun exportBundle(profileIds: Set<String>? = null): Result<ProfileBundleExportArtifact> {
         awaitBootstrapCompletion()

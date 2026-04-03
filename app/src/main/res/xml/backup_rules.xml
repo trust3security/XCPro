@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
+    <!-- Profile DataStore is intentionally included in backup. These exclusions are limited
+         to sensitive/shared credentials, so reinstall/device transfer can restore profiles. -->
     <exclude domain="sharedpref" path="adsb_opensky_credentials.xml" />
     <exclude domain="sharedpref" path="forecast_provider_credentials.xml" />
     <exclude domain="sharedpref" path="xcpro_private_follow_account.xml" />

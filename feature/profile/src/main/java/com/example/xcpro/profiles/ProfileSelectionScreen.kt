@@ -24,6 +24,7 @@ fun ProfileSelectionScreen(
 
     ProfileSelectionContent(
         state = uiState,
+        onCompleteFirstLaunch = viewModel::completeFirstLaunch,
         onSelectProfile = { viewModel.selectProfile(it) },
         onDeleteProfile = { viewModel.deleteProfile(it) },
         onCreateProfile = { viewModel.createProfile(it) },

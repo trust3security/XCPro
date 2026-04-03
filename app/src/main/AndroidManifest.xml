@@ -29,6 +29,8 @@
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
 
+    <!-- Profile DataStore intentionally participates in Android backup/device transfer.
+         "First launch" is defined by hydrated profile state, not by APK install count. -->
     <application
         android:name=".XCProApplication"
         android:allowBackup="true"

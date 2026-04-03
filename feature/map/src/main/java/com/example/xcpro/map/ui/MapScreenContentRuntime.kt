@@ -384,7 +384,6 @@ internal fun MapScreenContent(
             adsbOverlayEnabled = adsbOverlayEnabled,
             showOgnThermalsEnabled = showOgnThermalsEnabled,
             showDistanceCircles = showDistanceCircles,
-            currentQnhLabel = qnhUiState.currentQnhLabel,
             onToggleAdsbTraffic = onToggleAdsbTraffic,
             onToggleOgnThermals = onToggleOgnThermals,
             overlayManager = overlayManager,

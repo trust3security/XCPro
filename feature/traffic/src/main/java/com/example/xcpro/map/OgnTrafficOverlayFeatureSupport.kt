@@ -1,6 +1,8 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.common.units.AltitudeUnit
+import com.example.xcpro.common.units.SpeedMs
+import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.style.sources.GeoJsonSource
@@ -79,7 +81,11 @@ internal fun buildOgnTrafficOverlayFeatures(
                 gliderAboveIconStyleImageId = RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID,
                 gliderBelowIconStyleImageId = RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID,
                 gliderNearIconStyleImageId = RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID,
-                secondaryLabelText = secondaryLabel.text
+                secondaryLabelText = secondaryLabel.text,
+                speedText = formatOgnGroundSpeedText(
+                    groundSpeedMps = target.groundSpeedMps,
+                    unitsPreferences = unitsPreferences
+                )
             )
         )
         feature.addStringProperty(PROP_ICON_ID, mapping.iconStyleImageId)
@@ -188,3 +194,10 @@ internal fun resolveOgnTrafficTargetKey(feature: Feature): String? {
     }
     return key?.trim()?.takeIf { it.isNotEmpty() }
 }
+
+private fun formatOgnGroundSpeedText(
+    groundSpeedMps: Double?,
+    unitsPreferences: UnitsPreferences
+): String? = groundSpeedMps
+    ?.takeIf { it.isFinite() && it >= 0.0 }
+    ?.let { UnitsFormatter.speed(speed = SpeedMs(it), preferences = unitsPreferences).text }

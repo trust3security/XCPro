@@ -32,7 +32,15 @@ internal class ProfileRepositoryHydrationCoordinator(
             gson = gson,
             onParseError = onError
         )
-        val defaultProvisioning = ensureBootstrapProfile(parseResult.profiles, clock)
+        val defaultProvisioning = if (parseResult.parseFailed) {
+            DefaultProfileProvisioningResult(
+                profiles = parseResult.profiles,
+                insertedDefaultProfile = false,
+                migratedLegacyDefaultAlias = false
+            )
+        } else {
+            ensureBootstrapProfile(parseResult.profiles, clock)
+        }
         val loadedProfiles = defaultProvisioning.profiles
 
         val activeIdForResolution = if (parseResult.parseFailed) {

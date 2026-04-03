@@ -128,10 +128,6 @@ fun MapTrafficMap4ControlsContent(
             onCheckedChange = null
         )
     }
-    Text(
-        text = "These controls replace the traffic FABs for ADS-B and hotspots.",
-        style = MaterialTheme.typography.bodySmall
-    )
 }
 
 private const val TRAFFIC_MAP4_ADSB_SWITCH_TAG = "map4_adsb_switch"

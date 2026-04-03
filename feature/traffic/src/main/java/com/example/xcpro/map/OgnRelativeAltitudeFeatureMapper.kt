@@ -12,7 +12,8 @@ data class OgnRelativeAltitudeFeatureMapperInput(
     val gliderAboveIconStyleImageId: String,
     val gliderBelowIconStyleImageId: String,
     val gliderNearIconStyleImageId: String,
-    val secondaryLabelText: String
+    val secondaryLabelText: String,
+    val speedText: String? = null
 )
 
 data class OgnRelativeAltitudeFeatureMapping(
@@ -35,6 +36,10 @@ object OgnRelativeAltitudeFeatureMapper {
             deltaMeters = deltaMeters,
             altitudeUnit = input.altitudeUnit
         )
+        val relativeDetailText = buildRelativeDetailText(
+            deltaText = deltaText,
+            speedText = input.speedText
+        )
         val secondaryLabel = input.secondaryLabelText
             .trim()
             .ifBlank { OgnIdentifierDistanceLabelMapper.UNKNOWN_IDENTIFIER }
@@ -42,11 +47,11 @@ object OgnRelativeAltitudeFeatureMapper {
         val topLabel: String
         val bottomLabel: String
         if (layout.deltaOnTop) {
-            topLabel = deltaText
+            topLabel = relativeDetailText
             bottomLabel = secondaryLabel
         } else {
             topLabel = secondaryLabel
-            bottomLabel = deltaText
+            bottomLabel = relativeDetailText
         }
 
         val iconStyleImageId = when {
@@ -73,5 +78,16 @@ object OgnRelativeAltitudeFeatureMapper {
         val target = targetAltitudeMeters?.takeIf { it.isFinite() } ?: return null
         val ownship = ownshipAltitudeMeters?.takeIf { it.isFinite() } ?: return null
         return target - ownship
+    }
+
+    private fun buildRelativeDetailText(
+        deltaText: String,
+        speedText: String?
+    ): String {
+        val normalizedSpeedText = speedText
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return deltaText
+        return "$deltaText | $normalizedSpeedText"
     }
 }

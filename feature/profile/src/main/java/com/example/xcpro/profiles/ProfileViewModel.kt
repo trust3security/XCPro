@@ -15,6 +15,7 @@ data class ProfileUiState(
     val profiles: List<UserProfile> = emptyList(),
     val activeProfile: UserProfile? = null,
     val isHydrated: Boolean = false,
+    val isFirstLaunchSetupRequired: Boolean = false,
     val bootstrapError: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -43,16 +44,42 @@ class ProfileViewModel @Inject constructor(
                     profiles = profiles,
                     activeProfile = activeProfile,
                     bootstrapComplete = bootstrapComplete,
-                    bootstrapError = bootstrapError
+                    bootstrapError = bootstrapError,
+                    isFirstLaunchSetupRequired = bootstrapComplete &&
+                        profiles.isEmpty() &&
+                        activeProfile == null &&
+                        bootstrapError.isNullOrBlank()
                 )
             }.collect { snapshot ->
                 _uiState.value = _uiState.value.copy(
                     profiles = snapshot.profiles,
                     activeProfile = snapshot.activeProfile,
                     isHydrated = snapshot.bootstrapComplete,
+                    isFirstLaunchSetupRequired = snapshot.isFirstLaunchSetupRequired,
                     bootstrapError = snapshot.bootstrapError
                 )
             }
+        }
+    }
+
+    fun completeFirstLaunch(aircraftType: AircraftType) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                importResult = null,
+                bundleImportResult = null
+            )
+            useCase.completeFirstLaunch(aircraftType)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Failed to complete first launch: ${error.message}"
+                    )
+                }
         }
     }
 
@@ -269,7 +296,8 @@ class ProfileViewModel @Inject constructor(
         val profiles: List<UserProfile>,
         val activeProfile: UserProfile?,
         val bootstrapComplete: Boolean,
-        val bootstrapError: String?
+        val bootstrapError: String?,
+        val isFirstLaunchSetupRequired: Boolean
     )
 
     private fun buildDuplicateProfileName(baseName: String): String {

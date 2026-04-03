@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
+        <!-- Profile DataStore is intentionally included in cloud backup/device transfer.
+             Only sensitive/shared credentials are excluded here. -->
         <exclude domain="sharedpref" path="adsb_opensky_credentials.xml" />
         <exclude domain="sharedpref" path="forecast_provider_credentials.xml" />
         <exclude domain="sharedpref" path="xcpro_private_follow_account.xml" />
