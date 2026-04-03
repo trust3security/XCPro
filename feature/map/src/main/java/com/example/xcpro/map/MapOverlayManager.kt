@@ -34,6 +34,8 @@ class MapOverlayManager(
         TrafficOverlayFactories::createOgnThermalOverlay,
     ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory =
         TrafficOverlayFactories::createOgnGliderTrailOverlay,
+    ognSelectedThermalOverlayFactory: OgnSelectedThermalOverlayFactory =
+        TrafficOverlayFactories::createOgnSelectedThermalOverlay,
     adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory =
         TrafficOverlayFactories::createAdsbTrafficOverlay,
     monoTimeMs: () -> Long = TimeBridge::nowMonoMs
@@ -49,6 +51,7 @@ class MapOverlayManager(
     ognOwnshipTargetBadgeOverlayFactory = ognOwnshipTargetBadgeOverlayFactory,
     ognThermalOverlayFactory = ognThermalOverlayFactory,
     ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
+    ognSelectedThermalOverlayFactory = ognSelectedThermalOverlayFactory,
     adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,
     nowMonoMs = monoTimeMs
 ) {

@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.map.SelectedOgnThermalOverlayContext
 import com.example.xcpro.map.TrafficMapCoordinate
 
 @Composable
@@ -24,6 +25,7 @@ internal fun rememberTrafficOverlayRenderState(
     traffic.showOgnThermalsEnabled,
     traffic.ognDisplayUpdateMode,
     traffic.ognGliderTrailSegments,
+    traffic.selectedOgnThermalContext,
     traffic.ownshipAltitudeMeters,
     traffic.ognAltitudeUnit,
     unitsPreferences,
@@ -64,6 +66,17 @@ internal fun buildTrafficOverlayRenderState(
         showOgnThermalsEnabled = traffic.showOgnThermalsEnabled,
         ognDisplayUpdateMode = traffic.ognDisplayUpdateMode,
         ognGliderTrailSegments = traffic.ognGliderTrailSegments,
+        selectedOgnThermalOverlayContext = traffic.selectedOgnThermalContext?.let { context ->
+            SelectedOgnThermalOverlayContext(
+                hotspotId = context.hotspot.id,
+                snailColorIndex = context.hotspot.snailColorIndex,
+                hotspotPoint = context.hotspotPoint,
+                highlightedSegments = context.highlightedSegments,
+                occupancyHullPoints = context.occupancyHullPoints,
+                startPoint = context.startPoint,
+                latestPoint = context.latestPoint
+            )
+        },
         ownshipAltitudeMeters = traffic.ownshipAltitudeMeters?.takeIf { renderLocalOwnship },
         ognAltitudeUnit = traffic.ognAltitudeUnit,
         unitsPreferences = unitsPreferences,
@@ -136,6 +149,12 @@ internal fun createTrafficOverlayRenderPort(
 
     override fun updateOgnGliderTrailSegments(segments: List<com.example.xcpro.map.OgnGliderTrailSegment>) {
         overlayManager.updateOgnGliderTrailSegments(segments)
+    }
+
+    override fun updateSelectedOgnThermalContext(
+        context: com.example.xcpro.map.SelectedOgnThermalOverlayContext?
+    ) {
+        overlayManager.updateSelectedOgnThermalContext(context)
     }
 
     override fun updateOgnTargetVisuals(

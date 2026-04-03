@@ -168,6 +168,9 @@ class MapScreenViewModel @Inject constructor(
     val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> = trafficSelectionState.selectedAdsbTarget
     val selectedOgnTarget: StateFlow<OgnTrafficTarget?> = trafficSelectionState.selectedOgnTarget
     val selectedOgnThermal: StateFlow<OgnThermalHotspot?> = trafficSelectionState.selectedOgnThermal
+    val selectedOgnThermalContext: StateFlow<SelectedOgnThermalContext?> =
+        ognTrafficFacade.selectedThermalContext(trafficSelectionState.selectedThermalId)
+            .eagerState(scope = viewModelScope, initial = null)
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)

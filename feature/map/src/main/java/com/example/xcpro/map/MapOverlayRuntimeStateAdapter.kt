@@ -51,6 +51,12 @@ internal class MapOverlayRuntimeStateAdapter(
             mapState.ognGliderTrailOverlay = value
         }
 
+    override var ognSelectedThermalOverlay: OgnSelectedThermalOverlayHandle?
+        get() = mapState.ognSelectedThermalOverlay
+        set(value) {
+            mapState.ognSelectedThermalOverlay = value
+        }
+
     override var adsbTrafficOverlay: AdsbTrafficOverlayHandle?
         get() = mapState.adsbTrafficOverlay
         set(value) {

@@ -6,6 +6,39 @@ plus how replay and parallel pipelines attach. Update this file whenever the wir
 
 Diagram: `PIPELINE.svg`.
 
+## Startup Profile Bootstrap (2026-04-03)
+
+- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
+  - gates normal app entry on profile hydration and active-profile availability.
+  - routes to `ProfileSelectionScreen` whenever no active profile exists yet.
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryHydrationCoordinator.kt`
+  and `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryBootstrapHelpers.kt`
+  - hydrate stored profile state and legacy aliases.
+  - restored private profile state from Android backup/device transfer is treated
+    the same as any other valid stored profile state.
+  - clean valid storage now remains empty instead of silently provisioning a
+    default profile.
+  - parse/read/bootstrap errors keep the explicit recovery path instead of
+    reusing clean-install first-launch setup.
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+  - derives `isFirstLaunchSetupRequired` from hydrated + empty profiles + no
+    bootstrap error.
+  - first-launch is therefore defined by hydrated state, not by APK reinstall.
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt`
+  and `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileFirstLaunchSetupCard.kt`
+  - own the first-launch aircraft-type picker UI and keep `Load Profile File`
+    available on clean install.
+- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+  and `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryMutationCoordinator.kt`
+  - own canonical first-launch completion through `completeFirstLaunch(...)`.
+  - create `default-profile` named `Default` using the selected aircraft type
+    and set it active atomically.
+  - delay managed backup sync until at least one real profile exists and an
+    active profile ID is present, so pristine startup does not emit empty public
+    backup artifacts.
+  - app-private DataStore remains the authoritative startup profile source;
+    public files under `Download/XCPro/profiles/` are export/debug artifacts only.
+
 ## Automated Quality Gates
 
 These artifacts block architecture/timebase regressions:
@@ -580,18 +613,22 @@ OGN settings path:
 - `feature/traffic/src/main/java/com/example/xcpro/map/MapTrafficUseCases.kt`
   - `OgnTrafficUseCase` implements `OgnTrafficFacade` and combines trail segments with selected OGN aircraft keys
     from trail-selection SSOT before ViewModel/UI collection.
+  - Projects `SelectedOgnThermalContext` from selected thermal ID + hotspot SSOT + raw SCIA trail segments
+    so selected-loop highlight, occupancy hull, and derived age/drift/duration/gain metrics remain
+    business-owned instead of being recomputed in UI or overlay code.
 - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionViewModel.kt`
   - Observes OGN suppressed-key stream and prunes suppressed keys from persisted trail selections.
 - `feature/traffic/src/main/java/com/example/xcpro/map/MapTrafficUseCases.kt`
   - `OgnTrafficUseCase` exposes OGN settings, thermal-hotspot flows, and OGN glider trail segment flows through `OgnTrafficFacade`.
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - Converts OGN settings, thermal-hotspot state, and OGN trail state to lifecycle-aware UI/runtime state via `OgnTrafficFacade`.
+  - Converts OGN settings, thermal-hotspot state, OGN trail state, and selected thermal context to
+    lifecycle-aware UI/runtime state via `OgnTrafficFacade`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
   - Pushes OGN overlay targets, thermal hotspots, and OGN trail segments into runtime overlay manager.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - Owns OGN thermal + OGN glider-trail overlay runtime lifecycle.
+  - Owns OGN thermal + OGN glider-trail + selected-thermal-context overlay runtime lifecycle.
   - Owns zoom-aware OGN rendered icon sizing by combining base icon-size preference with runtime viewport zoom in the OGN delegate.
-  - Applies display-update mode (`real_time` / `balanced` / `battery`) as map-render throttling only for OGN traffic/thermal/trail overlays (ingest is unchanged).
+  - Applies display-update mode (`real_time` / `balanced` / `battery`) as map-render throttling only for OGN traffic/thermal/trail/selected-context overlays (ingest is unchanged).
   - Owns OGN/ADS-b traffic overlay creation on startup/style recreation (MapInitializer delegates traffic overlay construction to this runtime owner).
 - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
   - Updates SymbolLayer `iconSize` dynamically from configured pixel size.
@@ -613,6 +650,9 @@ OGN settings path:
   - Consumes repository suppression keys and purges ownship-derived trackers/hotspots in-session.
 - `feature/map/src/main/java/com/example/xcpro/map/OgnThermalOverlay.kt`
   - Renders color-coded thermal hotspots using snail-trail climb palette indexing.
+- `feature/traffic/src/main/java/com/example/xcpro/map/OgnSelectedThermalOverlay.kt`
+  - Renders selected-thermal context only: highlighted SCIA loop segments, a faint occupancy hull, start/latest markers,
+    and a start-to-latest drift line while reusing the base hotspot dot as the core anchor.
 - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
   - Derives per-glider OGN trail segments from fresh OGN target samples.
   - Owns sink/climb style mapping (color index + asymmetric width) and bounded in-memory retention.
@@ -664,21 +704,26 @@ OGN lifecycle/position semantics:
   - OGN glider-trail overlay renders `emptyList()` unless
     `ognOverlayEnabled && showSciaEnabled`; per-aircraft filtering is applied
     from selected OGN aircraft keys.
+  - Selected-thermal context overlay renders only for the currently selected thermal;
+    it clears on deselection, hidden thermals, or missing hotspot context.
 - `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayEffects.kt`
   - Forwards selected OGN target render inputs, including ownship coordinate,
     quantized ownship altitude, altitude unit, and units preferences, into the
     map runtime target-visual path.
+  - Forwards selected thermal context into the runtime selected-thermal overlay path.
 - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
   - Keeps OGN target visuals render-only and runtime-owned.
   - Renders the existing target ring + target line, and additionally renders an
     ownship-adjacent badge only when the selected OGN target is outside the
     current visible map bounds.
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+  - Keeps selected thermal highlight/hull/drift visuals render-only and runtime-owned.
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
   - Renders selected OGN target details in a `ModalBottomSheet`.
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
-  - Renders selected thermal hotspot details in a partially-expandable `ModalBottomSheet`.
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
   - Renders selected thermal details in a half-sheet style `ModalBottomSheet`.
+  - Shows derived age, drift bearing/distance, duration, and altitude gain from `SelectedOgnThermalContext`
+    alongside the existing climb and altitude metrics.
 
 ADS-b settings path:
 - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`

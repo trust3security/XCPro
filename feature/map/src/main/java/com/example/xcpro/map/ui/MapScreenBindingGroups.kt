@@ -16,6 +16,7 @@ import com.example.xcpro.map.OgnGliderTrailSegment
 import com.example.xcpro.map.OgnThermalHotspot
 import com.example.xcpro.map.OgnTrafficSnapshot
 import com.example.xcpro.map.OgnTrafficTarget
+import com.example.xcpro.map.SelectedOgnThermalContext
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
@@ -141,6 +142,7 @@ internal fun rememberMapScreenTrafficBinding(
     val adsbDefaultMediumUnknownIconEnabled by mapViewModel.adsbDefaultMediumUnknownIconEnabled.collectAsStateWithLifecycle()
     val selectedOgnTarget by mapViewModel.selectedOgnTarget.collectAsStateWithLifecycle()
     val selectedOgnThermal by mapViewModel.selectedOgnThermal.collectAsStateWithLifecycle()
+    val selectedOgnThermalContext by mapViewModel.selectedOgnThermalContext.collectAsStateWithLifecycle()
     val selectedAdsbTarget by mapViewModel.selectedAdsbTarget.collectAsStateWithLifecycle()
 
     return buildMapTrafficUiBinding(
@@ -166,6 +168,7 @@ internal fun rememberMapScreenTrafficBinding(
         adsbDefaultMediumUnknownIconEnabled = adsbDefaultMediumUnknownIconEnabled,
         selectedOgnTarget = selectedOgnTarget,
         selectedOgnThermal = selectedOgnThermal,
+        selectedOgnThermalContext = selectedOgnThermalContext,
         selectedAdsbTarget = selectedAdsbTarget
     )
 }
@@ -193,6 +196,7 @@ internal fun buildMapTrafficUiBinding(
     adsbDefaultMediumUnknownIconEnabled: Boolean,
     selectedOgnTarget: OgnTrafficTarget?,
     selectedOgnThermal: OgnThermalHotspot?,
+    selectedOgnThermalContext: SelectedOgnThermalContext?,
     selectedAdsbTarget: AdsbSelectedTargetDetails?
 ): MapTrafficUiBinding =
     MapTrafficUiBinding(
@@ -218,5 +222,6 @@ internal fun buildMapTrafficUiBinding(
         adsbDefaultMediumUnknownIconEnabled = adsbDefaultMediumUnknownIconEnabled,
         selectedOgnTarget = selectedOgnTarget,
         selectedOgnThermal = selectedOgnThermal,
+        selectedOgnThermalContext = selectedOgnThermalContext,
         selectedAdsbTarget = selectedAdsbTarget
     )

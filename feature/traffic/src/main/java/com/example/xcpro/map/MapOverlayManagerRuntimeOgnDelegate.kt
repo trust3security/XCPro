@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import android.util.Log
+import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import android.content.Context
@@ -20,6 +21,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private val ognOwnshipTargetBadgeOverlayFactory: OgnOwnshipTargetBadgeOverlayFactory,
     private val ognThermalOverlayFactory: OgnThermalOverlayFactory,
     private val ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory,
+    private val ognSelectedThermalOverlayFactory: OgnSelectedThermalOverlayFactory,
     private val bringTrafficOverlaysToFront: () -> Unit,
     private val satelliteContrastIconsEnabled: () -> Boolean,
     private val normalizeOwnshipAltitudeForRender: (Double?) -> Double?,
@@ -33,6 +35,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private var latestOgnThermalHotspots: List<OgnThermalHotspot> = emptyList()
     private var latestOgnGliderTrailSegments: List<OgnGliderTrailSegment> = emptyList()
     private var latestOgnGliderTrailSignature: Int = gliderTrailSegmentIdentitySignature(emptyList())
+    private var latestSelectedThermalContext: SelectedOgnThermalOverlayContext? = null
     private var latestTargetEnabled: Boolean = false
     private var latestResolvedTarget: OgnTrafficTarget? = null
     private var latestOwnshipLocation: OverlayCoordinate? = null
@@ -47,6 +50,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
     private val ognTargetVisualsRenderState = OgnRenderThrottleState()
     private val ognThermalRenderState = OgnRenderThrottleState()
     private val ognTrailRenderState = OgnRenderThrottleState()
+    private val ognSelectedThermalRenderState = OgnRenderThrottleState()
     private var mapInteractionActive: Boolean = false
 
     fun initializeTrafficOverlays(map: MapLibreMap?) {
@@ -101,12 +105,18 @@ class MapOverlayManagerRuntimeOgnDelegate(
         runtimeState.ognGliderTrailOverlay?.initialize()
         runtimeState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
 
+        runtimeState.ognSelectedThermalOverlay?.cleanup()
+        runtimeState.ognSelectedThermalOverlay = ognSelectedThermalOverlayFactory(map)
+        runtimeState.ognSelectedThermalOverlay?.initialize()
+        runtimeState.ognSelectedThermalOverlay?.render(latestSelectedThermalContext)
+
         bringTrafficOverlaysToFront()
         val nowMonoMs = nowMonoMs()
         ognTrafficRenderState.lastRenderMonoMs = nowMonoMs
         ognTargetVisualsRenderState.lastRenderMonoMs = nowMonoMs
         ognThermalRenderState.lastRenderMonoMs = nowMonoMs
         ognTrailRenderState.lastRenderMonoMs = nowMonoMs
+        ognSelectedThermalRenderState.lastRenderMonoMs = nowMonoMs
     }
 
     fun setDisplayUpdateMode(mode: OgnDisplayUpdateMode) {
@@ -117,19 +127,19 @@ class MapOverlayManagerRuntimeOgnDelegate(
         renderTargetVisualsNow()
         renderThermalsNow()
         renderTrailsNow()
+        renderSelectedThermalNow()
         val nowMonoMs = nowMonoMs()
         ognTrafficRenderState.lastRenderMonoMs = nowMonoMs
         ognTargetVisualsRenderState.lastRenderMonoMs = nowMonoMs
         ognThermalRenderState.lastRenderMonoMs = nowMonoMs
         ognTrailRenderState.lastRenderMonoMs = nowMonoMs
+        ognSelectedThermalRenderState.lastRenderMonoMs = nowMonoMs
     }
 
     fun setMapInteractionActive(active: Boolean) {
         if (mapInteractionActive == active) return
         mapInteractionActive = active
-        if (!active) {
-            flushDeferredRenders()
-        }
+        if (!active) flushDeferredRenders()
     }
 
     fun updateTrafficTargets(
@@ -218,10 +228,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
         val sameHotspots = latestOgnThermalHotspots == hotspots
         if (sameHotspots && !forceImmediate && runtimeState.ognThermalOverlay != null) return
         latestOgnThermalHotspots = hotspots
-        scheduleRender(
-            state = ognThermalRenderState,
-            forceImmediate = forceImmediate || hotspots.isEmpty()
-        ) {
+        scheduleRender(state = ognThermalRenderState, forceImmediate = forceImmediate || hotspots.isEmpty()) {
             renderThermalsNow()
         }
     }
@@ -234,11 +241,18 @@ class MapOverlayManagerRuntimeOgnDelegate(
         if (sameSegments && !forceImmediate && runtimeState.ognGliderTrailOverlay != null) return
         latestOgnGliderTrailSegments = segments
         latestOgnGliderTrailSignature = incomingSignature
-        scheduleRender(
-            state = ognTrailRenderState,
-            forceImmediate = forceImmediate || segments.isEmpty()
-        ) {
-            renderTrailsNow()
+        scheduleRender(state = ognTrailRenderState, forceImmediate = forceImmediate || segments.isEmpty()) { renderTrailsNow() }
+    }
+
+    fun updateSelectedThermalContext(
+        context: SelectedOgnThermalOverlayContext?,
+        forceImmediate: Boolean = false
+    ) {
+        val sameContext = latestSelectedThermalContext == context
+        if (sameContext && !forceImmediate && runtimeState.ognSelectedThermalOverlay != null) return
+        latestSelectedThermalContext = context
+        scheduleRender(state = ognSelectedThermalRenderState, forceImmediate = forceImmediate || context == null) {
+            renderSelectedThermalNow()
         }
     }
 
@@ -270,19 +284,15 @@ class MapOverlayManagerRuntimeOgnDelegate(
         }
     }
 
-    fun findTargetAt(tap: LatLng): String? {
-        val ringTarget = runtimeState.ognTargetRingOverlay?.findTargetAt(tap)
-        if (!ringTarget.isNullOrBlank()) return ringTarget
-        return runtimeState.ognTrafficOverlay?.findTargetAt(tap)
-    }
+    fun findTargetAt(tap: LatLng): String? =
+        runtimeState.ognTargetRingOverlay?.findTargetAt(tap)?.takeUnless { it.isBlank() }
+            ?: runtimeState.ognTrafficOverlay?.findTargetAt(tap)
 
     fun findThermalHotspotAt(tap: LatLng): String? = runtimeState.ognThermalOverlay?.findTargetAt(tap)
 
     fun bringOverlaysToFront() {
-        runtimeState.ognTargetLineOverlay?.bringToFront()
-        runtimeState.ognTrafficOverlay?.bringToFront()
-        runtimeState.ognTargetRingOverlay?.bringToFront()
-        runtimeState.ognOwnshipTargetBadgeOverlay?.bringToFront()
+        runtimeState.ognTargetLineOverlay?.bringToFront(); runtimeState.ognTrafficOverlay?.bringToFront()
+        runtimeState.ognTargetRingOverlay?.bringToFront(); runtimeState.ognOwnshipTargetBadgeOverlay?.bringToFront()
     }
 
     fun applySatelliteContrastIcons(enabled: Boolean) {
@@ -325,8 +335,7 @@ class MapOverlayManagerRuntimeOgnDelegate(
             ognViewportZoom?.let(overlay::setViewportZoom)
         }
 
-    private fun createTargetRingOverlay(map: MapLibreMap): OgnTargetRingOverlayHandle =
-        ognTargetRingOverlayFactory(map, renderedOgnIconSizePx)
+    private fun createTargetRingOverlay(map: MapLibreMap): OgnTargetRingOverlayHandle = ognTargetRingOverlayFactory(map, renderedOgnIconSizePx)
 
     private fun renderTargetsNow() {
         val map = runtimeState.mapLibreMap ?: return
@@ -367,6 +376,19 @@ class MapOverlayManagerRuntimeOgnDelegate(
             runtimeState.ognGliderTrailOverlay?.render(latestOgnGliderTrailSegments)
         }.onFailure { throwable ->
             Log.e(TAG, "Failed to render OGN glider trails: ${throwable.message}", throwable)
+        }
+    }
+
+    private fun renderSelectedThermalNow() {
+        val map = runtimeState.mapLibreMap ?: return
+        if (runtimeState.ognSelectedThermalOverlay == null) {
+            runtimeState.ognSelectedThermalOverlay = ognSelectedThermalOverlayFactory(map)
+            runtimeState.ognSelectedThermalOverlay?.initialize()
+        }
+        runCatching {
+            runtimeState.ognSelectedThermalOverlay?.render(latestSelectedThermalContext)
+        }.onFailure { throwable ->
+            AppLogger.e(TAG, "Failed to render selected OGN thermal context: ${throwable.message}", throwable)
         }
     }
 
@@ -426,11 +448,10 @@ class MapOverlayManagerRuntimeOgnDelegate(
         applyResolvedIconSizeToLiveOverlays()
     }
 
-    private fun resolveRenderedOgnIconSizePx(): Int =
-        resolveOgnTrafficViewportSizing(
-            baseIconSizePx = ognIconSizePx,
-            zoomLevel = ognViewportZoom
-        ).renderedIconSizePx
+    private fun resolveRenderedOgnIconSizePx(): Int = resolveOgnTrafficViewportSizing(
+        baseIconSizePx = ognIconSizePx,
+        zoomLevel = ognViewportZoom
+    ).renderedIconSizePx
 
     private fun scheduleRender(
         state: OgnRenderThrottleState,
@@ -483,7 +504,8 @@ class MapOverlayManagerRuntimeOgnDelegate(
             ognTrafficRenderState to ::renderTargetsNow,
             ognTargetVisualsRenderState to ::renderTargetVisualsNow,
             ognThermalRenderState to ::renderThermalsNow,
-            ognTrailRenderState to ::renderTrailsNow
+            ognTrailRenderState to ::renderTrailsNow,
+            ognSelectedThermalRenderState to ::renderSelectedThermalNow
         )
         states.forEach { (state, renderNow) ->
             val pending = state.pendingJob ?: return@forEach
@@ -508,6 +530,9 @@ class MapOverlayManagerRuntimeOgnDelegate(
         ognTrailRenderState.pendingJob?.cancel()
         ognTrailRenderState.pendingJob = null
         ognTrailRenderState.pendingDueMonoMs = Long.MAX_VALUE
+        ognSelectedThermalRenderState.pendingJob?.cancel()
+        ognSelectedThermalRenderState.pendingJob = null
+        ognSelectedThermalRenderState.pendingDueMonoMs = Long.MAX_VALUE
     }
 
     private companion object {

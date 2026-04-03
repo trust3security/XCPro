@@ -10,6 +10,9 @@ This folder is the execution and maintenance contract for the OGN thermal hotspo
 - Display share slider is persisted (`5%` .. `100%`) and enforced by repository strongest-first policy.
 - Thermal confirmation enforces fake-climb suppression (`cumulative turn > 730 deg`).
 - Hotspot publishing enforces one best hotspot per area using distance-based dedupe with active/recent-first winner policy and strength tie-breaks.
+- Hotspot map position now uses a stable best-climb anchor, not a moving centroid of all circling samples.
+- Selecting a hotspot now highlights the associated SCIA thermal loop and shows a faint occupancy hull plus observed drift from thermal start to latest point.
+- Thermal details now include age, drift bearing/distance, duration, and altitude gain in addition to existing climb/height data.
 
 Implementation update (2026-02-27):
 
@@ -55,6 +58,10 @@ Implementation update (2026-02-25):
 - `5%` means show only the strongest top 5% hotspots; `100%` shows all retained hotspots.
 - Fake climb suppression: thermal must include more than `730` degrees cumulative turn.
 - Area dedupe: show only one hotspot per local area radius using active/recent-first winner policy, then strength tie-breaks.
+- Hotspot dot position should stay stable unless a later stronger climb sample replaces the current best-climb anchor.
+- Selected hotspot context should highlight only the associated SCIA thermal loop, not every trail from that aircraft.
+- Selected hotspot drift is an observed `start -> latest` presentation metric, not a wind estimate or inferred thermal-core vector.
+- Occupancy area should be a faint derived envelope of the flown loop and must remain selection-only to avoid clutter.
 
 ## Why the display share slider exists
 

@@ -137,6 +137,7 @@ class MapTrafficOverlayUiAdaptersTest {
             adsbDefaultMediumUnknownIconEnabled = false,
             selectedOgnTarget = null,
             selectedOgnThermal = null,
+            selectedOgnThermalContext = null,
             selectedAdsbTarget = null
         )
     }

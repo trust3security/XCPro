@@ -40,18 +40,12 @@ internal data class ThermalTracker(
     var averageMetricStartAltitudeMeters: Double?,
     var averageMetricSampleCount: Int,
     var averageMetricClimbSumMps: Double,
-    var centroidLatitudeSum: Double,
-    var centroidLongitudeSum: Double,
-    var centroidSampleCount: Int,
+    var bestClimbAnchorLatitude: Double,
+    var bestClimbAnchorLongitude: Double,
+    var bestClimbAnchorClimbRateMps: Double,
     var confirmed: Boolean,
     var hotspotId: String?
 ) {
-    val centroidLatitude: Double
-        get() = centroidLatitudeSum / centroidSampleCount.toDouble()
-
-    val centroidLongitude: Double
-        get() = centroidLongitudeSum / centroidSampleCount.toDouble()
-
     val averageClimbRateMps: Double?
         get() = if (averageMetricSampleCount > 0) {
             averageMetricClimbSumMps / averageMetricSampleCount.toDouble()
@@ -70,10 +64,17 @@ internal data class ThermalTracker(
             return (maxAltitude - startAltitude) / elapsedSeconds
         }
 
-    fun addPositionSample(latitude: Double, longitude: Double) {
-        centroidLatitudeSum += latitude
-        centroidLongitudeSum += longitude
-        centroidSampleCount += 1
+    fun updateBestClimbAnchor(
+        latitude: Double,
+        longitude: Double,
+        climbRateMps: Double?
+    ) {
+        val candidateClimbRateMps = climbRateMps?.takeIf { it.isFinite() } ?: return
+        // Keep the first location on ties so repeated rounded APRS climb values do not jitter the hotspot.
+        if (candidateClimbRateMps <= bestClimbAnchorClimbRateMps) return
+        bestClimbAnchorLatitude = latitude
+        bestClimbAnchorLongitude = longitude
+        bestClimbAnchorClimbRateMps = candidateClimbRateMps
     }
 
     fun addTrackSample(trackDegrees: Double?) {
@@ -110,8 +111,8 @@ internal data class ThermalTracker(
             id = stableId,
             sourceTargetId = sourceTargetId,
             sourceLabel = sourceLabel,
-            latitude = centroidLatitude,
-            longitude = centroidLongitude,
+            latitude = bestClimbAnchorLatitude,
+            longitude = bestClimbAnchorLongitude,
             startedAtMonoMs = startedAtMonoMs,
             startedAtWallMs = startedAtWallMs,
             updatedAtMonoMs = nowMonoMs,
@@ -158,9 +159,9 @@ internal data class ThermalTracker(
                 averageMetricStartAltitudeMeters = null,
                 averageMetricSampleCount = 0,
                 averageMetricClimbSumMps = 0.0,
-                centroidLatitudeSum = target.latitude,
-                centroidLongitudeSum = target.longitude,
-                centroidSampleCount = 1,
+                bestClimbAnchorLatitude = target.latitude,
+                bestClimbAnchorLongitude = target.longitude,
+                bestClimbAnchorClimbRateMps = climbRateMps,
                 confirmed = false,
                 hotspotId = null
             )

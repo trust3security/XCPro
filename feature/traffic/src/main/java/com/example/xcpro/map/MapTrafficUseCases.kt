@@ -7,9 +7,11 @@ import com.example.xcpro.adsb.AdsbTrafficUiModel
 import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncRepository
 import com.example.xcpro.adsb.metadata.domain.AircraftMetadataSyncScheduler
 import com.example.xcpro.adsb.metadata.domain.MetadataSyncState
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.ogn.OgnDisplayUpdateMode
 import com.example.xcpro.ogn.OgnGliderTrailRepository
 import com.example.xcpro.ogn.OgnGliderTrailSegment
+import com.example.xcpro.ogn.SelectedOgnThermalContext
 import com.example.xcpro.ogn.OgnThermalHotspot
 import com.example.xcpro.ogn.OgnThermalRepository
 import com.example.xcpro.ogn.OgnTrafficPreferencesRepository
@@ -18,6 +20,7 @@ import com.example.xcpro.ogn.OgnTrafficSnapshot
 import com.example.xcpro.ogn.OgnTrafficTarget
 import com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepository
 import com.example.xcpro.ogn.buildOgnSelectionLookup
+import com.example.xcpro.ogn.observeSelectedOgnThermalContext
 import com.example.xcpro.ogn.selectionLookupContainsOgnKey
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -31,7 +34,8 @@ class OgnTrafficUseCase @Inject constructor(
     private val preferencesRepository: OgnTrafficPreferencesRepository,
     private val thermalRepository: OgnThermalRepository,
     private val gliderTrailRepository: OgnGliderTrailRepository,
-    private val trailSelectionRepository: OgnTrailSelectionPreferencesRepository
+    private val trailSelectionRepository: OgnTrailSelectionPreferencesRepository,
+    private val clock: Clock
 ) : OgnTrafficFacade {
     override val targets: StateFlow<List<OgnTrafficTarget>> = repository.targets
     override val suppressedTargetIds: StateFlow<Set<String>> = repository.suppressedTargetIds
@@ -63,6 +67,15 @@ class OgnTrafficUseCase @Inject constructor(
             filtered
         }
     }.distinctUntilChanged(::sameOgnGliderTrailSegmentsByIdentity)
+
+    override fun selectedThermalContext(
+        selectedThermalId: Flow<String?>
+    ): Flow<SelectedOgnThermalContext?> = observeSelectedOgnThermalContext(
+        selectedThermalId = selectedThermalId,
+        hotspots = thermalRepository.hotspots,
+        rawSegments = gliderTrailRepository.segments,
+        clock = clock
+    )
 
     override fun setStreamingEnabled(enabled: Boolean) {
         repository.setEnabled(enabled)

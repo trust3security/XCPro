@@ -322,6 +322,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
             ognOwnshipTargetBadgeOverlayFactory = { mock() },
             ognThermalOverlayFactory = { mock() },
             ognGliderTrailOverlayFactory = { mock() },
+            ognSelectedThermalOverlayFactory = { mock() },
             bringTrafficOverlaysToFront = {},
             satelliteContrastIconsEnabled = { false },
             normalizeOwnshipAltitudeForRender = { it },
@@ -382,6 +383,7 @@ class MapOverlayManagerRuntimeOgnDelegateViewportZoomTest {
         override var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle? = null
         override var ognThermalOverlay: OgnThermalOverlayHandle? = null
         override var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle? = null
+        override var ognSelectedThermalOverlay: OgnSelectedThermalOverlayHandle? = null
         override var adsbTrafficOverlay: AdsbTrafficOverlayHandle? = null
     }
 }

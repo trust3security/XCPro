@@ -11,6 +11,7 @@ import com.example.xcpro.map.OgnDisplayUpdateMode
 import com.example.xcpro.map.OgnGliderTrailSegment
 import com.example.xcpro.map.OgnThermalHotspot
 import com.example.xcpro.map.OgnTrafficTarget
+import com.example.xcpro.map.SelectedOgnThermalOverlayContext
 import com.example.xcpro.map.TrafficMapCoordinate
 import kotlin.math.round
 
@@ -26,6 +27,7 @@ interface TrafficOverlayRenderPort {
 
     fun updateOgnThermalHotspots(hotspots: List<OgnThermalHotspot>)
     fun updateOgnGliderTrailSegments(segments: List<OgnGliderTrailSegment>)
+    fun updateSelectedOgnThermalContext(context: SelectedOgnThermalOverlayContext?)
     fun updateOgnTargetVisuals(
         enabled: Boolean,
         resolvedTarget: OgnTrafficTarget?,
@@ -59,6 +61,7 @@ data class MapTrafficOverlayRenderState(
     val showOgnThermalsEnabled: Boolean,
     val ognDisplayUpdateMode: OgnDisplayUpdateMode,
     val ognGliderTrailSegments: List<OgnGliderTrailSegment>,
+    val selectedOgnThermalOverlayContext: SelectedOgnThermalOverlayContext?,
     val ownshipAltitudeMeters: Double?,
     val ognAltitudeUnit: AltitudeUnit,
     val unitsPreferences: UnitsPreferences,
@@ -137,6 +140,9 @@ fun MapTrafficOverlayEffects(
     }
     LaunchedEffect(renderedOgnTrails) {
         port.updateOgnGliderTrailSegments(renderedOgnTrails)
+    }
+    LaunchedEffect(renderState.selectedOgnThermalOverlayContext) {
+        port.updateSelectedOgnThermalContext(renderState.selectedOgnThermalOverlayContext)
     }
     LaunchedEffect(
         renderOgnTargetEnabled,

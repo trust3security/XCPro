@@ -22,6 +22,7 @@ interface TrafficOverlayRuntimeState {
     var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle?
     var ognThermalOverlay: OgnThermalOverlayHandle?
     var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle?
+    var ognSelectedThermalOverlay: OgnSelectedThermalOverlayHandle?
     var adsbTrafficOverlay: AdsbTrafficOverlayHandle?
 }
 
@@ -108,6 +109,12 @@ interface OgnGliderTrailOverlayHandle {
     fun cleanup()
 }
 
+interface OgnSelectedThermalOverlayHandle {
+    fun initialize()
+    fun render(context: SelectedOgnThermalOverlayContext?)
+    fun cleanup()
+}
+
 typealias AdsbTrafficOverlayFactory = (Context, MapLibreMap, Int) -> AdsbTrafficOverlayHandle
 typealias OgnTrafficOverlayFactory = (Context, MapLibreMap, Int, Boolean) -> OgnTrafficOverlayHandle
 typealias OgnTargetRingOverlayFactory = (MapLibreMap, Int) -> OgnTargetRingOverlayHandle
@@ -115,6 +122,7 @@ typealias OgnTargetLineOverlayFactory = (MapLibreMap) -> OgnTargetLineOverlayHan
 typealias OgnOwnshipTargetBadgeOverlayFactory = (MapLibreMap) -> OgnOwnshipTargetBadgeOverlayHandle
 typealias OgnThermalOverlayFactory = (MapLibreMap) -> OgnThermalOverlayHandle
 typealias OgnGliderTrailOverlayFactory = (MapLibreMap) -> OgnGliderTrailOverlayHandle
+typealias OgnSelectedThermalOverlayFactory = (MapLibreMap) -> OgnSelectedThermalOverlayHandle
 
 /** Default factories for constructing traffic overlays in callers that still own context. */
 object TrafficOverlayFactories {
@@ -159,4 +167,7 @@ object TrafficOverlayFactories {
 
     fun createOgnGliderTrailOverlay(map: MapLibreMap): OgnGliderTrailOverlayHandle =
         OgnGliderTrailOverlay(map = map)
+
+    fun createOgnSelectedThermalOverlay(map: MapLibreMap): OgnSelectedThermalOverlayHandle =
+        OgnSelectedThermalOverlay(map = map)
 }

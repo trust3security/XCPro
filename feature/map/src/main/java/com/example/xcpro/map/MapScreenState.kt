@@ -21,6 +21,7 @@ class MapScreenState : MapScaleBarRuntimeState, SnailTrailRuntimeState {
     var ognOwnshipTargetBadgeOverlay: OgnOwnshipTargetBadgeOverlayHandle? = null
     var ognThermalOverlay: OgnThermalOverlayHandle? = null
     var ognGliderTrailOverlay: OgnGliderTrailOverlayHandle? = null
+    var ognSelectedThermalOverlay: OgnSelectedThermalOverlayHandle? = null
     var adsbTrafficOverlay: AdsbTrafficOverlayHandle? = null
     var forecastOverlay: ForecastRasterOverlay? = null
     var forecastWindOverlay: ForecastRasterOverlay? = null

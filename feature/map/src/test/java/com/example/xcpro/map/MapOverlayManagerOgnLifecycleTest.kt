@@ -91,12 +91,15 @@ class MapOverlayManagerOgnLifecycleTest {
         val secondThermal: OgnThermalOverlayHandle = mock()
         val firstTrail: OgnGliderTrailOverlayHandle = mock()
         val secondTrail: OgnGliderTrailOverlayHandle = mock()
+        val firstSelectedThermal: OgnSelectedThermalOverlayHandle = mock()
+        val secondSelectedThermal: OgnSelectedThermalOverlayHandle = mock()
         val firstAdsb: AdsbTrafficOverlayHandle = mock()
         val secondAdsb: AdsbTrafficOverlayHandle = mock()
 
         var trafficFactoryCount = 0
         var thermalFactoryCount = 0
         var trailFactoryCount = 0
+        var selectedThermalFactoryCount = 0
         var adsbFactoryCount = 0
 
         val fixture = createFixture(
@@ -117,6 +120,12 @@ class MapOverlayManagerOgnLifecycleTest {
                 when (trailFactoryCount++) {
                     0 -> firstTrail
                     else -> secondTrail
+                }
+            },
+            ognSelectedThermalOverlayFactory = { _ ->
+                when (selectedThermalFactoryCount++) {
+                    0 -> firstSelectedThermal
+                    else -> secondSelectedThermal
                 }
             },
             adsbTrafficOverlayFactory = { _, _, _ ->
@@ -154,10 +163,12 @@ class MapOverlayManagerOgnLifecycleTest {
             firstTraffic,
             firstThermal,
             firstTrail,
+            firstSelectedThermal,
             firstAdsb,
             secondTraffic,
             secondThermal,
             secondTrail,
+            secondSelectedThermal,
             secondAdsb
         )
 
@@ -166,11 +177,13 @@ class MapOverlayManagerOgnLifecycleTest {
         verify(firstTraffic, times(1)).cleanup()
         verify(firstThermal, times(1)).cleanup()
         verify(firstTrail, times(1)).cleanup()
+        verify(firstSelectedThermal, times(1)).cleanup()
         verify(firstAdsb, times(1)).cleanup()
 
         verify(secondTraffic, times(1)).initialize()
         verify(secondThermal, times(1)).initialize()
         verify(secondTrail, times(1)).initialize()
+        verify(secondSelectedThermal, times(1)).initialize()
         verify(secondAdsb, times(1)).initialize()
 
         verify(secondTraffic, times(1)).render(
@@ -182,6 +195,7 @@ class MapOverlayManagerOgnLifecycleTest {
         )
         verify(secondThermal, times(1)).render(eq(latestThermals))
         verify(secondTrail, times(1)).render(eq(latestTrails))
+        verify(secondSelectedThermal, times(1)).render(eq(null))
     }
 
     @Test
@@ -288,6 +302,8 @@ class MapOverlayManagerOgnLifecycleTest {
             { _ -> mock<OgnOwnshipTargetBadgeOverlayHandle>() },
         ognThermalOverlayFactory: OgnThermalOverlayFactory,
         ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory,
+        ognSelectedThermalOverlayFactory: OgnSelectedThermalOverlayFactory =
+            { _ -> mock<OgnSelectedThermalOverlayHandle>() },
         adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory
     ): Fixture {
         val mapState = MapScreenState()
@@ -309,6 +325,7 @@ class MapOverlayManagerOgnLifecycleTest {
             ognOwnshipTargetBadgeOverlayFactory = ognOwnshipTargetBadgeOverlayFactory,
             ognThermalOverlayFactory = ognThermalOverlayFactory,
             ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
+            ognSelectedThermalOverlayFactory = ognSelectedThermalOverlayFactory,
             adsbTrafficOverlayFactory = adsbTrafficOverlayFactory
         )
         return Fixture(

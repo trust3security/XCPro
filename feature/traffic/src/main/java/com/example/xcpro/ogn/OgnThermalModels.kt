@@ -5,6 +5,7 @@ enum class OgnThermalHotspotState {
     FINALIZED
 }
 
+// Hotspot coordinates are the stable display anchor for the thermal, not a running centroid.
 data class OgnThermalHotspot(
     val id: String,
     val sourceTargetId: String,

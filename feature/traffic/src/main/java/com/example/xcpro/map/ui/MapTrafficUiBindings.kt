@@ -7,6 +7,7 @@ import com.example.xcpro.map.AdsbTrafficUiModel
 import com.example.xcpro.map.Icao24
 import com.example.xcpro.map.OgnDisplayUpdateMode
 import com.example.xcpro.map.OgnGliderTrailSegment
+import com.example.xcpro.map.SelectedOgnThermalContext
 import com.example.xcpro.map.OgnThermalHotspot
 import com.example.xcpro.map.OgnTrafficSnapshot
 import com.example.xcpro.map.OgnTrafficTarget
@@ -34,6 +35,7 @@ data class MapTrafficUiBinding(
     val adsbDefaultMediumUnknownIconEnabled: Boolean,
     val selectedOgnTarget: OgnTrafficTarget?,
     val selectedOgnThermal: OgnThermalHotspot?,
+    val selectedOgnThermalContext: SelectedOgnThermalContext?,
     val selectedAdsbTarget: AdsbSelectedTargetDetails?
 )
 

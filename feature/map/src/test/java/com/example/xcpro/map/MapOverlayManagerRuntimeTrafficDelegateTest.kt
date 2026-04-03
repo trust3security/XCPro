@@ -397,6 +397,12 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
                 state.ognGliderTrailOverlay = value
             }
 
+        override var ognSelectedThermalOverlay: OgnSelectedThermalOverlayHandle?
+            get() = state.ognSelectedThermalOverlay
+            set(value) {
+                state.ognSelectedThermalOverlay = value
+            }
+
         override var adsbTrafficOverlay: AdsbTrafficOverlayHandle?
             get() = state.adsbTrafficOverlay
             set(value) {
