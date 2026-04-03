@@ -9,6 +9,8 @@ import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
 import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookup
 import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookupType
 import com.example.xcpro.livefollow.data.session.deriveLiveFollowWatchLookup
+import com.example.xcpro.livefollow.data.transport.LiveFollowTransportFailureSurface
+import com.example.xcpro.livefollow.data.transport.logAndNormalizeLiveFollowTransportFailure
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiErrorMessage
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiLiveReadResponse
 import com.example.xcpro.livefollow.data.transport.preferredCurrentApiLivePoint
@@ -145,8 +147,12 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
                 mutableTransportAvailability.value = liveFollowAvailableTransport()
             }
         } catch (e: IOException) {
-            val message = e.localizedMessage?.takeIf { it.isNotBlank() }
-                ?: e::class.java.simpleName
+            val message = logAndNormalizeLiveFollowTransportFailure(
+                tag = TAG,
+                operationLabel = "Direct watch poll",
+                surface = LiveFollowTransportFailureSurface.LIVEFOLLOW,
+                throwable = e
+            ).userMessage
             mutableTransportAvailability.value = liveFollowUnavailableTransport(message)
         }
     }
@@ -221,6 +227,7 @@ class CurrentApiDirectWatchTrafficSource @Inject constructor(
         private const val HEADER_ACCEPT = "Accept"
         private const val HEADER_AUTHORIZATION = "Authorization"
         private const val DEFAULT_POLL_INTERVAL_MS = 5_000L
+        private const val TAG = "LiveFollowDirectWatch"
     }
 }
 

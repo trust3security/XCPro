@@ -3,6 +3,8 @@ package com.example.xcpro.livefollow.data.following
 import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.livefollow.account.XcAccountRepository
 import com.example.xcpro.livefollow.data.transport.CurrentApiLivePoint
+import com.example.xcpro.livefollow.data.transport.LiveFollowTransportFailureSurface
+import com.example.xcpro.livefollow.data.transport.logAndNormalizeLiveFollowTransportFailure
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiErrorMessage
 import com.example.xcpro.livefollow.data.transport.parseCurrentApiFollowingActivePilotsResponse
 import com.example.xcpro.livefollow.di.LiveFollowHttpClient
@@ -80,8 +82,12 @@ class CurrentApiFollowingActivePilotsDataSource @Inject constructor(
                     )
                 }
             } catch (e: IOException) {
-                val message = e.localizedMessage?.takeIf { it.isNotBlank() }
-                    ?: e::class.java.simpleName
+                val message = logAndNormalizeLiveFollowTransportFailure(
+                    tag = TAG,
+                    operationLabel = "Following active pilots fetch",
+                    surface = LiveFollowTransportFailureSurface.LIVEFOLLOW,
+                    throwable = e
+                ).userMessage
                 FollowingActivePilotsFetchResult.Failure(
                     availability = liveFollowUnavailableTransport(message),
                     message = message
@@ -106,5 +112,6 @@ class CurrentApiFollowingActivePilotsDataSource @Inject constructor(
         private const val CONTENT_TYPE_JSON = "application/json"
         private const val HEADER_ACCEPT = "Accept"
         private const val HEADER_AUTHORIZATION = "Authorization"
+        private const val TAG = "LiveFollowFollowingPilots"
     }
 }

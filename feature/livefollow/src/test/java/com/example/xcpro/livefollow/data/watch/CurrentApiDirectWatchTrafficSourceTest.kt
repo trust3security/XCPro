@@ -2,24 +2,19 @@ package com.example.xcpro.livefollow.data.watch
 
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.livefollow.account.mockXcAccountRepository
-import com.example.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
-import com.example.xcpro.livefollow.data.session.LiveFollowSessionRole
-import com.example.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
-import com.example.xcpro.livefollow.data.session.LiveFollowWatchLookup
 import com.example.xcpro.livefollow.data.session.liveFollowShareCodeLookup
 import com.example.xcpro.livefollow.model.LiveFollowTransportState
-import com.example.xcpro.livefollow.model.liveFollowAvailableTransport
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import com.example.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.example.xcpro.livefollow.state.LiveFollowRuntimeMode
+import java.net.UnknownHostException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -31,6 +26,7 @@ import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -380,135 +376,31 @@ class CurrentApiDirectWatchTrafficSourceTest {
         }
     }
 
-    private fun TestScope.repoScope(): CoroutineScope =
-        CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+    @Test
+    fun poll_ioFailure_usesFriendlyTransportMessage() = runTest {
+        val scope = repoScope()
+        try {
+            val source = CurrentApiDirectWatchTrafficSource(
+                scope = scope,
+                clock = FakeClock(monoMs = 20_000L, wallMs = 1_000_000L),
+                sessionState = MutableStateFlow(activeWatchSession()),
+                xcAccountRepository = mockXcAccountRepository(),
+                httpClient = OkHttpClient.Builder().addInterceptor(
+                    Interceptor { throw UnknownHostException("api.xcpro.com.au") }
+                ).build(),
+                ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+                pollIntervalMs = 60_000L
+            )
+            runCurrent()
 
-    private fun activeWatchSession(
-        sessionId: String = "watch-1",
-        shareCode: String? = null,
-        watchLookup: LiveFollowWatchLookup? = null,
-        runtimeMode: LiveFollowRuntimeMode = LiveFollowRuntimeMode.LIVE,
-        sideEffectsAllowed: Boolean = true,
-        replayBlockReason: LiveFollowReplayBlockReason = LiveFollowReplayBlockReason.NONE
-    ): LiveFollowSessionSnapshot {
-        return LiveFollowSessionSnapshot(
-            sessionId = sessionId,
-            role = LiveFollowSessionRole.WATCHER,
-            lifecycle = LiveFollowSessionLifecycle.ACTIVE,
-            runtimeMode = runtimeMode,
-            watchIdentity = null,
-            directWatchAuthorized = true,
-            transportAvailability = liveFollowAvailableTransport(),
-            sideEffectsAllowed = sideEffectsAllowed,
-            replayBlockReason = replayBlockReason,
-            lastError = null,
-            shareCode = shareCode,
-            watchLookup = watchLookup
-        )
-    }
-
-    private fun sampleLivePayload(): String {
-        return """
-            {
-              "session": "watch-1",
-              "share_code": "WATCH123",
-              "status": "active",
-              "created_at": "2026-03-20T10:00:00Z",
-              "last_position_at": "1970-01-01T00:16:39Z",
-              "ended_at": null,
-              "latest": {
-                "lat": -33.91,
-                "lon": 151.21,
-                "alt": 510.0,
-                "agl_meters": 45.0,
-                "speed": 13.0,
-                "heading": 185.0,
-                "timestamp": "1970-01-01T00:16:39Z"
-              },
-              "positions": [],
-              "task": {
-                "task_id": "task-1",
-                "current_revision": 1,
-                "updated_at": "2026-03-20T10:05:00Z",
-                "payload": {
-                  "task_name": "spectator-task",
-                  "task": {
-                    "turnpoints": [
-                      {
-                        "name": "Start",
-                        "type": "START_LINE",
-                        "lat": -33.91,
-                        "lon": 151.21,
-                        "radius_m": 10000.0
-                      },
-                      {
-                        "name": "TP1",
-                        "type": "TURN_POINT_CYLINDER",
-                        "lat": -33.85,
-                        "lon": 151.26,
-                        "radius_m": 500.0
-                      },
-                      {
-                        "name": "Finish",
-                        "type": "FINISH_CYLINDER",
-                        "lat": -33.80,
-                        "lon": 151.31
-                      }
-                    ],
-                    "start": {
-                      "type": "START_LINE",
-                      "radius_m": 10000.0
-                    },
-                    "finish": {
-                      "type": "FINISH_CYLINDER",
-                      "radius_m": 3000.0
-                    }
-                  }
-                }
-              }
-            }
-        """.trimIndent()
-    }
-
-    private fun sampleLivePayloadWithoutTask(): String {
-        return """
-            {
-              "session": "watch-1",
-              "share_code": "WATCH123",
-              "status": "active",
-              "created_at": "2026-03-20T10:00:00Z",
-              "last_position_at": "1970-01-01T00:16:39Z",
-              "ended_at": null,
-              "latest": {
-                "lat": -33.91,
-                "lon": 151.21,
-                "alt": 510.0,
-                "agl_meters": 45.0,
-                "speed": 13.0,
-                "heading": 185.0,
-                "timestamp": "1970-01-01T00:16:39Z"
-              },
-              "positions": [],
-              "task": null
-            }
-        """.trimIndent()
-    }
-
-    private fun clientForBody(
-        body: String,
-        requestCount: AtomicInteger? = null
-    ): OkHttpClient {
-        return OkHttpClient.Builder().addInterceptor(
-            Interceptor { chain ->
-                requestCount?.incrementAndGet()
-                Response.Builder()
-                    .request(chain.request())
-                    .protocol(Protocol.HTTP_1_1)
-                    .code(200)
-                    .message("OK")
-                    .body(body.toResponseBody("application/json".toMediaType()))
-                    .build()
-            }
-        ).build()
+            assertEquals(LiveFollowTransportState.UNAVAILABLE, source.transportAvailability.value.state)
+            assertEquals(
+                "LiveFollow network error. Check connection and retry.",
+                source.transportAvailability.value.message
+            )
+            assertFalse(source.transportAvailability.value.message.orEmpty().contains("hostname", ignoreCase = true))
+        } finally {
+            scope.cancel()
+        }
     }
 }

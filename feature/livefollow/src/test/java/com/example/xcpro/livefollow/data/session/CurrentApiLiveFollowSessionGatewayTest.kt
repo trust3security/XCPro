@@ -12,19 +12,14 @@ import com.example.xcpro.livefollow.model.LiveFollowValueQuality
 import com.example.xcpro.livefollow.model.LiveFollowValueState
 import com.example.xcpro.livefollow.model.LiveOwnshipSnapshot
 import com.example.xcpro.livefollow.model.LiveOwnshipSourceLabel
+import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import okhttp3.Interceptor
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
-import okio.Buffer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -210,6 +205,29 @@ class CurrentApiLiveFollowSessionGatewayTest {
         )
         assertEquals(LiveFollowTransportState.DEGRADED, gateway.sessionState.value.transportAvailability.state)
         assertEquals("backend unavailable", gateway.sessionState.value.lastError)
+    }
+
+    @Test
+    fun startPilotSession_ioFailure_usesFriendlyTransportMessage() = runTest {
+        val interceptor = RecordingInterceptor { throw UnknownHostException("api.xcpro.com.au") }
+        val gateway = gateway(interceptor)
+
+        val result = gateway.startPilotSession(
+            StartPilotLiveFollowSession(pilotIdentity = identityProfile("AB12CD"))
+        )
+
+        assertEquals(
+            LiveFollowSessionGatewayResult.Failure(
+                "LiveFollow network error. Check connection and retry."
+            ),
+            result
+        )
+        assertEquals(LiveFollowTransportState.UNAVAILABLE, gateway.sessionState.value.transportAvailability.state)
+        assertEquals(
+            "LiveFollow network error. Check connection and retry.",
+            gateway.sessionState.value.lastError
+        )
+        assertFalse(gateway.sessionState.value.lastError.orEmpty().contains("hostname", ignoreCase = true))
     }
 
     @Test
@@ -491,47 +509,5 @@ class CurrentApiLiveFollowSessionGatewayTest {
                 )
             )
         )
-    }
-
-    private data class RecordedRequest(
-        val path: String,
-        val body: String,
-        val headers: Map<String, String>
-    ) {
-        fun headerValue(name: String): String? =
-            headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
-    }
-
-    private class RecordingInterceptor(
-        private val responder: (Request) -> Response
-    ) : Interceptor {
-        val requests = mutableListOf<RecordedRequest>()
-
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request()
-            val buffer = Buffer()
-            request.body?.writeTo(buffer)
-            requests += RecordedRequest(
-                path = request.url.encodedPath,
-                body = buffer.readUtf8(),
-                headers = request.headers.toMultimap().mapValues { it.value.last() }
-            )
-            return responder(request)
-        }
-    }
-
-    private fun testResponse(
-        request: Request,
-        body: String,
-        code: Int = 200,
-        message: String = "OK"
-    ): Response {
-        return Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(code)
-            .message(message)
-            .body(body.toResponseBody("application/json".toMediaType()))
-            .build()
     }
 }
