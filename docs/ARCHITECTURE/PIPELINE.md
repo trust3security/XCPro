@@ -387,6 +387,9 @@ ViewModel:
   - Profile owns the layout settings route shell plus the settings-side
     `LayoutViewModel` / `LayoutPreferencesUseCase` that wrap canonical
     `CardPreferences`.
+  - Current scope is DF-card portrait layout only (`cardsAcrossPortrait`,
+    `cardsAnchorPortrait`); map widget placement/sizing remains in the separate
+    `MapWidgetLayout*` runtime seam.
 - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/ColorsScreen.kt`
   - Profile owns the colors settings route shell, `ColorsViewModel`, and the
     settings-side `ThemePreferencesUseCase` used for theme writes and custom

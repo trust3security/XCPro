@@ -34,6 +34,10 @@ class CardPreferences(
 
         private const val DEFAULT_SMOOTHING_ALPHA = 0.25f
         private val VARIO_SMOOTHING_KEY = floatPreferencesKey("vario_smoothing_alpha")
+        // AI-NOTE: These keys are the canonical owner for General -> Layouts DF-card
+        // portrait settings. They are global by design in the current release slice
+        // and must not be conflated with profile-scoped card positions or map widget
+        // layout storage.
         private val CARDS_ACROSS_PORTRAIT_KEY = intPreferencesKey("cards_across_portrait")
         private val CARDS_ANCHOR_PORTRAIT_KEY = stringPreferencesKey("cards_anchor_portrait")
     }
@@ -425,6 +429,8 @@ class CardPreferences(
 
     suspend fun clearProfile(profileId: String) {
         context.dataStore.edit { preferences ->
+            // AI-NOTE: Profile cleanup is scoped to profile_* card data only. The
+            // global General -> Layouts keys remain intact across profile delete/switch.
             val keysToRemove = preferences.asMap().keys.filter { key ->
                 key.name.startsWith("profile_${profileId}_")
             }

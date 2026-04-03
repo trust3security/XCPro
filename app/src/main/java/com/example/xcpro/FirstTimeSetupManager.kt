@@ -50,7 +50,6 @@ class FirstTimeSetupManager @Inject constructor(
         Log.i(TAG, "Performing first-time setup...")
         try {
             clearPreviousCache()
-            setupDefaultCardLayout()
             setupDefaultNavigationDrawer()
             setupDefaultMapSettings()
             markSetupComplete()
@@ -63,7 +62,6 @@ class FirstTimeSetupManager @Inject constructor(
     private suspend fun clearPreviousCache() = withContext(ioDispatcher) {
         Log.d(TAG, "Clearing previous cache...")
         val prefsToClean = listOf(
-            "card_layout_prefs",
             "drawer_config_prefs"
         )
 
@@ -76,22 +74,6 @@ class FirstTimeSetupManager @Inject constructor(
             }.onFailure { e ->
                 Log.w(TAG, "Could not clear $prefName", e)
             }
-        }
-    }
-
-    private suspend fun setupDefaultCardLayout() = withContext(ioDispatcher) {
-        Log.d(TAG, "Setting up default card layout...")
-        val cardLayoutPrefs = context.getSharedPreferences("card_layout_prefs", Context.MODE_PRIVATE)
-        cardLayoutPrefs.edit().apply {
-            putString("top_cards", "[\"altitude\", \"ground_speed\"]")
-            putString("middle_cards", "[\"vario\", \"wind\"]")
-            putString("bottom_cards", "[\"distance\", \"bearing\"]")
-            putString("card_size_mode", "medium")
-            putFloat("card_spacing", 8f)
-            putFloat("card_corner_radius", 12f)
-            putFloat("margin_horizontal", 16f)
-            putFloat("margin_vertical", 8f)
-            apply()
         }
     }
 
