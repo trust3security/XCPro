@@ -56,6 +56,7 @@ class VarioServiceManagerConstructionTest {
     fun `start and stop use injected repository`() = runTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
+        val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
         val unifiedSensorManager = mock<UnifiedSensorManager>()
         whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
         whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
@@ -93,7 +94,8 @@ class VarioServiceManagerConstructionTest {
             levoVarioPreferencesRepository = levoRepo,
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
-            flightStateSource = flightStateSource
+            flightStateSource = flightStateSource,
+            defaultDispatcher = serviceDispatcher
         )
 
         val started = manager.start()
@@ -111,6 +113,7 @@ class VarioServiceManagerConstructionTest {
     fun `start returns false when barometer is available but not started`() = runTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
+        val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
         val unifiedSensorManager = mock<UnifiedSensorManager>()
         whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
         whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
@@ -147,7 +150,8 @@ class VarioServiceManagerConstructionTest {
             levoVarioPreferencesRepository = levoRepo,
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
-            flightStateSource = flightStateSource
+            flightStateSource = flightStateSource,
+            defaultDispatcher = serviceDispatcher
         )
 
         val started = manager.start()
@@ -160,6 +164,7 @@ class VarioServiceManagerConstructionTest {
     fun `igc session actions are dispatched to action sink`() = runTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
+        val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
         val unifiedSensorManager = mock<UnifiedSensorManager>()
         whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
         whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
@@ -202,6 +207,7 @@ class VarioServiceManagerConstructionTest {
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
+            defaultDispatcher = serviceDispatcher,
             igcRecordingUseCase = recordingUseCase,
             igcRecordingActionSink = actionSink
         )
@@ -246,6 +252,7 @@ class VarioServiceManagerConstructionTest {
     fun `igc finalize failure is routed back to recording use case`() = runTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
+        val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
         val unifiedSensorManager = mock<UnifiedSensorManager>()
         whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
         whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
@@ -293,6 +300,7 @@ class VarioServiceManagerConstructionTest {
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
+            defaultDispatcher = serviceDispatcher,
             igcRecordingUseCase = recordingUseCase,
             igcRecordingActionSink = actionSink
         )

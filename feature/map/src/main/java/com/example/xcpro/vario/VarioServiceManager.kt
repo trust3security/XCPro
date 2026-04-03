@@ -1,6 +1,7 @@
 package com.example.xcpro.vario
 
 import com.example.xcpro.audio.AudioFocusManager
+import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.igc.IgcRecordingActionSink
 import com.example.xcpro.igc.NoopIgcRecordingActionSink
@@ -22,10 +23,12 @@ import com.example.xcpro.weglide.notifications.WeGlidePostFlightPromptNotificati
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -46,6 +49,7 @@ open class VarioServiceManager @Inject constructor(
     private val hawkConfigRepository: HawkConfigRepository,
     private val hawkVarioRepository: HawkVarioRepository,
     val flightStateSource: FlightStateSource,
+    @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
     private val igcRecordingUseCase: IgcRecordingUseCase? = null,
     private val igcRecordingActionSink: IgcRecordingActionSink = NoopIgcRecordingActionSink,
     private val evaluateWeGlidePostFlightPromptUseCase: EvaluateWeGlidePostFlightPromptUseCase? = null,
@@ -61,7 +65,7 @@ open class VarioServiceManager @Inject constructor(
         private const val GPS_UPDATE_INTERVAL_FAST_MS = 200L
     }
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val serviceScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
 
     private var running = false
     private var collectionJob: Job? = null
@@ -173,7 +177,10 @@ open class VarioServiceManager @Inject constructor(
         val useCase = igcRecordingUseCase ?: return
         if (igcActionJob != null) return
         igcActionJob = serviceScope.launch {
-            useCase.actions.collectLatest { action ->
+            // AI-NOTE: IGC state-machine actions are ordered runtime side effects.
+            // Do not use collectLatest here because a later action can cancel an
+            // in-flight finalize/publish path before terminal callbacks complete.
+            useCase.actions.collect { action ->
                 when (action) {
                     is IgcSessionStateMachine.Action.EnterArmed -> {
                         igcRecordingActionSink.onSessionArmed(action.monoTimeMs)
