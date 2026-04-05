@@ -104,6 +104,8 @@ class MapScreenViewModel @Inject constructor(
         .map { state -> state.isFlying }
         .eagerState(scope = viewModelScope, initial = false)
     val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
+    val overlayOwnshipAltitudeMeters: StateFlow<Double?> =
+        createOverlayOwnshipAltitudeState(viewModelScope, flightDataUseCase)
     private val ownshipIsCircling: StateFlow<Boolean> = createOwnshipCirclingState(viewModelScope, flightDataUseCase)
     private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> = createCirclingFeatureEnabledState(viewModelScope, thermallingModeUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficFacade.targets
@@ -167,7 +169,12 @@ class MapScreenViewModel @Inject constructor(
     val selectedAdsbId: StateFlow<Icao24?> = trafficSelectionState.selectedAdsbId
     val selectedAdsbTarget: StateFlow<AdsbSelectedTargetDetails?> = trafficSelectionState.selectedAdsbTarget
     val selectedOgnTarget: StateFlow<OgnTrafficTarget?> = trafficSelectionState.selectedOgnTarget
+    val selectedOgnTargetKey: StateFlow<String?> = selectedOgnTarget
+        .map { target -> target?.canonicalKey }
+        .eagerState(scope = viewModelScope, initial = null)
     val selectedOgnThermal: StateFlow<OgnThermalHotspot?> = trafficSelectionState.selectedOgnThermal
+    val selectedOgnThermalDetailsVisible: StateFlow<Boolean> =
+        trafficSelectionState.selectedThermalDetailsVisible
     val selectedOgnThermalContext: StateFlow<SelectedOgnThermalContext?> =
         ognTrafficFacade.selectedThermalContext(trafficSelectionState.selectedThermalId)
             .eagerState(scope = viewModelScope, initial = null)

@@ -15,7 +15,8 @@ internal class DisplayPoseRenderCoordinator(
     private val replayFixProvider: ((Long) -> ReplayDisplayPose?)?,
     private val trackingCameraController: MapTrackingCameraController,
     private val positionController: MapPositionController,
-    private val frameLogger: DisplayPoseFrameLogger
+    private val frameLogger: DisplayPoseFrameLogger,
+    private val diagnostics: MapRenderSurfaceDiagnostics
 ) {
     private var latestOrientation: OrientationData = OrientationData()
     @Volatile private var lastDisplayPoseLocation: LatLng? = null
@@ -23,6 +24,7 @@ internal class DisplayPoseRenderCoordinator(
     @Volatile private var lastDisplayPoseFrameId: Long = 0L
     @Volatile private var displayPoseFrameListener: ((DisplayPoseSnapshot) -> Unit)? = null
     private var displayFrameCounter: Long = 0L
+    private var lastRenderedFrameSnapshot: DisplayPoseRenderSnapshot? = null
 
     fun updateOrientation(orientation: OrientationData) {
         latestOrientation = orientation
@@ -52,6 +54,7 @@ internal class DisplayPoseRenderCoordinator(
         lastDisplayPoseTimestampMs = 0L
         lastDisplayPoseFrameId = 0L
         displayFrameCounter = 0L
+        lastRenderedFrameSnapshot = null
     }
 
     fun renderDisplayFrame(onInitialCenteredZoom: (location: LatLng, zoom: Double) -> Unit) {
@@ -86,12 +89,30 @@ internal class DisplayPoseRenderCoordinator(
         val headingValid = runtimeBearing != null || forceTrackHeading || orientation.headingValid
         val trackDeg = runtimeBearing ?: pose.trackDeg
         val speedMs = runtimeFix?.speedMs ?: pose.speedMs
+        val currentSurfaceBearing = surfacePort.currentCameraBearing()
         val cameraTargetBearing = if (runtimeBearing != null &&
             orientation.mode != MapOrientationMode.NORTH_UP
         ) {
             runtimeBearing
         } else {
             orientation.bearing
+        }
+        val currentFrameSnapshot = DisplayPoseRenderSnapshot(
+            location = poseLocation,
+            trackDeg = trackDeg,
+            headingDeg = headingDeg,
+            headingValid = headingValid,
+            bearingAccuracyDeg = pose.bearingAccuracyDeg,
+            speedAccuracyMs = pose.speedAccuracyMs,
+            mapBearingDeg = currentSurfaceBearing ?: orientation.bearing,
+            cameraTargetBearingDeg = cameraTargetBearing,
+            orientationMode = orientation.mode,
+            speedMs = speedMs,
+            timeBase = poseCoordinator.timeBase
+        )
+        if (DisplayPoseFrameDiffPolicy.isNoOp(lastRenderedFrameSnapshot, currentFrameSnapshot)) {
+            diagnostics.recordDisplayFrameNoOpSkipped()
+            return
         }
 
         displayFrameCounter += 1
@@ -134,7 +155,7 @@ internal class DisplayPoseRenderCoordinator(
         }
 
         val cameraBearing = trackingResult?.cameraBearing
-            ?: surfacePort.currentCameraBearing()
+            ?: currentSurfaceBearing
             ?: orientation.bearing
         val overlayBearing = if (cameraBearing.isFinite()) cameraBearing else orientation.bearing
         positionController.updateOverlay(
@@ -150,5 +171,6 @@ internal class DisplayPoseRenderCoordinator(
             nowMs = nowMs,
             frameId = lastDisplayPoseFrameId
         )
+        lastRenderedFrameSnapshot = currentFrameSnapshot.copy(mapBearingDeg = overlayBearing)
     }
 }

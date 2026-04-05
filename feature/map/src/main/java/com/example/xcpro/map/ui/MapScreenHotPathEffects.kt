@@ -4,14 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.MapCameraEffects
 import com.example.xcpro.map.MapCameraRuntimePort
 import com.example.xcpro.map.MapOverlayManager
-import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
-import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 internal fun MapScreenCameraRuntimeEffects(
@@ -32,23 +29,19 @@ internal fun MapScreenCameraRuntimeEffects(
 @Composable
 internal fun MapTrafficOverlayRuntimeEffects(
     overlayManager: MapOverlayManager,
-    traffic: MapTrafficUiBinding,
-    currentLocation: StateFlow<MapLocationUiModel?>,
-    unitsPreferences: UnitsPreferences,
+    inputs: MapTrafficOverlayRuntimeInputs,
     renderLocalOwnship: Boolean
 ) {
-    val locationForUi by currentLocation.collectAsStateWithLifecycle()
     val trafficOverlayPort = remember(overlayManager) {
         createTrafficOverlayRenderPort(overlayManager)
     }
-    val trafficOverlayRenderState = rememberTrafficOverlayRenderState(
-        traffic = traffic,
-        locationForUi = locationForUi,
-        unitsPreferences = unitsPreferences,
-        renderLocalOwnship = renderLocalOwnship
-    )
-    MapTrafficOverlayEffects(
+    val collectorTelemetrySink = remember(overlayManager) {
+        createTrafficOverlayCollectorTelemetrySink(overlayManager)
+    }
+    BindMapTrafficOverlayRuntime(
         port = trafficOverlayPort,
-        renderState = trafficOverlayRenderState
+        telemetrySink = collectorTelemetrySink,
+        inputs = inputs,
+        renderLocalOwnship = renderLocalOwnship
     )
 }

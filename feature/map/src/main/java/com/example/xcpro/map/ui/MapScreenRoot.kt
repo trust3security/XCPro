@@ -134,6 +134,10 @@ internal fun MapScreenRoot(
     val mapBindings = bindings.map
     val sessionBindings = bindings.session
     val taskBindings = bindings.task
+    val trafficOverlayRuntimeInputs = rememberMapTrafficOverlayRuntimeInputs(
+        mapViewModel = mapViewModel,
+        currentLocation = hotPathBindings.currentLocation
+    )
 
     MapAirspaceOverlayEffect(
         mapState = mapState,
@@ -142,9 +146,7 @@ internal fun MapScreenRoot(
     )
     MapTrafficOverlayRuntimeEffects(
         overlayManager = managers.overlayManager,
-        traffic = bindings.traffic,
-        currentLocation = hotPathBindings.currentLocation,
-        unitsPreferences = rootUiBinding.mapUiState.unitsPreferences,
+        inputs = trafficOverlayRuntimeInputs,
         renderLocalOwnship = renderLocalOwnship
     )
     MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
@@ -238,6 +240,7 @@ internal fun MapScreenRoot(
         hotPathBindings = hotPathBindings,
         rootUiBinding = rootUiBinding,
         bindings = bindings,
+        trafficOverlayRuntimeInputs = trafficOverlayRuntimeInputs,
         profileLookAndFeelBinding = profileLookAndFeelBinding,
         flightCardsBinding = flightCardsBinding,
         widgetLayout = widgetLayout,

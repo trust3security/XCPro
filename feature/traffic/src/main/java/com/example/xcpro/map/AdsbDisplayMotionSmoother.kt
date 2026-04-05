@@ -10,7 +10,8 @@ class AdsbDisplayMotionSmoother {
 
     data class FrameSnapshot(
         val targets: List<AdsbTrafficUiModel>,
-        val hasActiveAnimations: Boolean
+        val hasActiveAnimations: Boolean,
+        val activeAnimatedTargetCount: Int
     )
 
     private val entries = LinkedHashMap<Icao24, Entry>()
@@ -88,19 +89,28 @@ class AdsbDisplayMotionSmoother {
         entries.values.map { it.frameAt(nowMonoMs) }
 
     fun snapshot(nowMonoMs: Long): FrameSnapshot {
-        if (entries.isEmpty()) return FrameSnapshot(targets = emptyList(), hasActiveAnimations = false)
+        if (entries.isEmpty()) {
+            return FrameSnapshot(
+                targets = emptyList(),
+                hasActiveAnimations = false,
+                activeAnimatedTargetCount = 0
+            )
+        }
 
         var hasActiveAnimations = false
+        var activeAnimatedTargetCount = 0
         val targets = ArrayList<AdsbTrafficUiModel>(entries.size)
         for (entry in entries.values) {
-            if (!hasActiveAnimations && entry.isAnimating(nowMonoMs)) {
+            if (entry.isAnimating(nowMonoMs)) {
                 hasActiveAnimations = true
+                activeAnimatedTargetCount += 1
             }
             targets.add(entry.frameAt(nowMonoMs))
         }
         return FrameSnapshot(
             targets = targets,
-            hasActiveAnimations = hasActiveAnimations
+            hasActiveAnimations = hasActiveAnimations,
+            activeAnimatedTargetCount = activeAnimatedTargetCount
         )
     }
 

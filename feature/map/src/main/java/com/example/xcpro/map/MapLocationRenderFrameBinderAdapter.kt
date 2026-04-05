@@ -2,11 +2,13 @@ package com.example.xcpro.map
 
 class MapLocationRenderFrameBinderAdapter(
     useRenderFrameSync: () -> Boolean,
-    onRenderFrame: () -> Unit
+    onRenderFrame: () -> Unit,
+    renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics
 ) : MapLocationRenderFrameBinder, MapRenderFrameCleanupPort {
     private val renderFrameSync = RenderFrameSync(
         isEnabled = useRenderFrameSync,
-        onRenderFrame = onRenderFrame
+        onRenderFrame = onRenderFrame,
+        diagnostics = renderSurfaceDiagnostics
     )
 
     override fun bindRenderFrameListener(mapView: org.maplibre.android.maps.MapView) {

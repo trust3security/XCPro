@@ -62,10 +62,12 @@ internal fun createAdsbTrafficFilterPort(
 internal fun createTrafficSelectionPort(
     selectedOgnId: MutableStateFlow<String?>,
     selectedThermalId: MutableStateFlow<String?>,
+    selectedThermalDetailsVisible: MutableStateFlow<Boolean> = MutableStateFlow(false),
     selectedAdsbId: MutableStateFlow<Icao24?>
 ): TrafficSelectionPort = object : TrafficSelectionPort {
     override val selectedOgnId: StateFlow<String?> = selectedOgnId
     override val selectedThermalId: StateFlow<String?> = selectedThermalId
+    override val selectedThermalDetailsVisible: StateFlow<Boolean> = selectedThermalDetailsVisible
     override val selectedAdsbId: StateFlow<Icao24?> = selectedAdsbId
 
     override fun setSelectedOgnId(id: String?) {
@@ -74,6 +76,13 @@ internal fun createTrafficSelectionPort(
 
     override fun setSelectedThermalId(id: String?) {
         selectedThermalId.value = id
+        if (id == null) {
+            selectedThermalDetailsVisible.value = false
+        }
+    }
+
+    override fun setSelectedThermalDetailsVisible(visible: Boolean) {
+        selectedThermalDetailsVisible.value = visible && selectedThermalId.value != null
     }
 
     override fun setSelectedAdsbId(id: Icao24?) {

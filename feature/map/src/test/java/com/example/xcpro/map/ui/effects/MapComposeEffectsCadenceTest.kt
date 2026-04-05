@@ -1,5 +1,6 @@
 package com.example.xcpro.map.ui.effects
 
+import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -46,6 +47,30 @@ class MapComposeEffectsCadenceTest {
                 frameNanos = 9_000_000L,
                 lastDispatchNanos = 10_000_000L,
                 minIntervalNanos = 16_666_667L
+            )
+        )
+    }
+
+    @Test
+    fun shouldDispatchLiveDisplayPoseFrame_runtimeBlocks_skips() {
+        assertFalse(
+            shouldDispatchLiveDisplayPoseFrame(
+                frameNanos = 26_666_667L,
+                lastDispatchNanos = 10_000_000L,
+                minIntervalNanos = 16_666_667L,
+                runtimeAllowsDispatch = false
+            )
+        )
+    }
+
+    @Test
+    fun shouldDispatchLiveDisplayPoseFrame_runtimeAllows_dispatches() {
+        assertTrue(
+            shouldDispatchLiveDisplayPoseFrame(
+                frameNanos = 26_666_667L,
+                lastDispatchNanos = 10_000_000L,
+                minIntervalNanos = 16_666_667L,
+                runtimeAllowsDispatch = true
             )
         )
     }

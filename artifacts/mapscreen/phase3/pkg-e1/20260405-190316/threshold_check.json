@@ -1,0 +1,80 @@
+﻿{
+    "checked_at":  "2026-04-05T21:20:18.2045056+10:00",
+    "artifact_root":  "C:\\Users\\Asus\\AndroidStudioProjects\\XCPro\\artifacts\\mapscreen\\phase3\\pkg-e1\\20260405-190316",
+    "package_id":  "pkg-e1",
+    "phase":  "phase3",
+    "command_gates_pass":  true,
+    "determinism_gates_pass":  true,
+    "failed_slo_count":  1,
+    "pending_slo_count":  0,
+    "promotion_decision":  "blocked_failed_thresholds",
+    "command_gate_failures":  [
+
+                              ],
+    "determinism_failures":  [
+
+                             ],
+    "slo_evaluations":  [
+                            {
+                                "slo_id":  "MS-UX-01",
+                                "status":  "fail",
+                                "reason":  "one or more threshold checks failed",
+                                "tier_results":  [
+                                                     {
+                                                         "tier":  "tier_a",
+                                                         "status":  "pass",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "frame_time_p95_ms",
+                                                                            "metricPath":  "frame_time_p95_ms",
+                                                                            "detail":  "actual=16 op=le expected=16.7"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "frame_time_p99_ms",
+                                                                            "metricPath":  "frame_time_p99_ms",
+                                                                            "detail":  "actual=22 op=le expected=24"
+                                                                        },
+                                                                        {
+                                                                            "status":  "pass",
+                                                                            "pass":  true,
+                                                                            "metric":  "jank_percent",
+                                                                            "metricPath":  "jank_percent",
+                                                                            "detail":  "actual=4.28 op=le expected=5"
+                                                                        }
+                                                                    ]
+                                                     },
+                                                     {
+                                                         "tier":  "tier_b",
+                                                         "status":  "fail",
+                                                         "checks":  [
+                                                                        {
+                                                                            "status":  "fail",
+                                                                            "pass":  false,
+                                                                            "metric":  "frame_time_p95_ms",
+                                                                            "metricPath":  "frame_time_p95_ms",
+                                                                            "detail":  "actual=77 op=le expected=16.7"
+                                                                        },
+                                                                        {
+                                                                            "status":  "fail",
+                                                                            "pass":  false,
+                                                                            "metric":  "frame_time_p99_ms",
+                                                                            "metricPath":  "frame_time_p99_ms",
+                                                                            "detail":  "actual=77 op=le expected=24"
+                                                                        },
+                                                                        {
+                                                                            "status":  "fail",
+                                                                            "pass":  false,
+                                                                            "metric":  "jank_percent",
+                                                                            "metricPath":  "jank_percent",
+                                                                            "detail":  "actual=58.82 op=le expected=5"
+                                                                        }
+                                                                    ]
+                                                     }
+                                                 ]
+                            }
+                        ]
+}

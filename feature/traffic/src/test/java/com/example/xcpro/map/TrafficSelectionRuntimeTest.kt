@@ -12,6 +12,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -67,6 +69,53 @@ class TrafficSelectionRuntimeTest {
 
         assertEquals("thermal-1", selectionState.selectedThermalId.value)
         assertEquals("thermal-1", selectionState.selectedOgnThermalId.value)
+        assertFalse(selectionState.selectedThermalDetailsVisible.value)
+    }
+
+    @Test
+    fun trafficSelectionState_hidesThermalDetailsWithoutClearingThermalSelection() = runTest {
+        val selectionState = createSelectionState(
+            scope = backgroundScope,
+            rawAdsbTargets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList()),
+            ognTargets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList()),
+            thermalHotspots = MutableStateFlow(listOf(sampleThermalHotspot("thermal-1"))),
+            scheduler = testScheduler
+        )
+
+        selectionState.setSelectedThermalId("thermal-1")
+        selectionState.setSelectedThermalDetailsVisible(true)
+        advanceUntilIdle()
+
+        assertTrue(selectionState.selectedThermalDetailsVisible.value)
+        assertEquals("thermal-1", selectionState.selectedThermalId.value)
+
+        selectionState.setSelectedThermalDetailsVisible(false)
+        advanceUntilIdle()
+
+        assertFalse(selectionState.selectedThermalDetailsVisible.value)
+        assertEquals("thermal-1", selectionState.selectedThermalId.value)
+    }
+
+    @Test
+    fun trafficSelectionState_clearingThermalSelectionAlsoClearsDetailsVisibility() = runTest {
+        val selectionState = createSelectionState(
+            scope = backgroundScope,
+            rawAdsbTargets = MutableStateFlow<List<AdsbTrafficUiModel>>(emptyList()),
+            ognTargets = MutableStateFlow<List<OgnTrafficTarget>>(emptyList()),
+            thermalHotspots = MutableStateFlow(listOf(sampleThermalHotspot("thermal-1"))),
+            scheduler = testScheduler
+        )
+
+        selectionState.setSelectedThermalId("thermal-1")
+        selectionState.setSelectedThermalDetailsVisible(true)
+        advanceUntilIdle()
+        assertTrue(selectionState.selectedThermalDetailsVisible.value)
+
+        selectionState.setSelectedThermalId(null)
+        advanceUntilIdle()
+
+        assertEquals(null, selectionState.selectedThermalId.value)
+        assertFalse(selectionState.selectedThermalDetailsVisible.value)
     }
 
     private fun createSelectionState(

@@ -12,6 +12,8 @@ import com.example.xcpro.toOrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS
+import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLocationPermissionRequester
 import com.example.xcpro.map.MapLocationRuntimePort
@@ -20,13 +22,11 @@ import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
-
-internal const val DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS = 25_000_000L
-internal const val DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS = 16_666_667L
+import androidx.compose.runtime.rememberUpdatedState
 internal const val PROFILE_CARD_PREPARE_MIN_INTERVAL_MS = 500L
 
 internal fun shouldDispatchDisplayPoseFrame(
@@ -38,6 +38,18 @@ internal fun shouldDispatchDisplayPoseFrame(
     return frameNanos - lastDispatchNanos >= minIntervalNanos
 }
 
+internal fun shouldDispatchLiveDisplayPoseFrame(
+    frameNanos: Long,
+    lastDispatchNanos: Long,
+    minIntervalNanos: Long,
+    runtimeAllowsDispatch: Boolean
+): Boolean {
+    if (!shouldDispatchDisplayPoseFrame(frameNanos, lastDispatchNanos, minIntervalNanos)) {
+        return false
+    }
+    return runtimeAllowsDispatch
+}
+
 internal fun shouldRunComposeDisplayPoseLoop(useRenderFrameSync: Boolean): Boolean =
     !useRenderFrameSync
 
@@ -47,12 +59,15 @@ object MapComposeEffects {
     fun LocationAndPermissionEffects(
         locationManager: MapLocationRuntimePort,
         locationPermissionRequester: MapLocationPermissionRequester,
-        currentLocation: MapLocationUiModel?,
-        orientationData: OrientationData,
+        currentLocationFlow: StateFlow<MapLocationUiModel?>,
+        orientationFlow: StateFlow<OrientationData>,
         suppressLiveGps: Boolean = false,
         allowSensorStart: Boolean = true,
         renderLocalOwnship: Boolean = true
     ) {
+        val suppressLiveGpsState = rememberUpdatedState(suppressLiveGps)
+        val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
+
         LaunchedEffect(renderLocalOwnship) {
             locationManager.setLocalOwnshipRenderEnabled(renderLocalOwnship)
         }
@@ -63,13 +78,15 @@ object MapComposeEffects {
             }
         }
 
-        LaunchedEffect(currentLocation, suppressLiveGps, renderLocalOwnship) {
-            if (renderLocalOwnship && !suppressLiveGps) {
-                currentLocation?.let { location ->
-                    locationManager.updateLocationFromGPS(
-                        location,
-                        orientationData
-                    )
+        LaunchedEffect(locationManager, currentLocationFlow) {
+            currentLocationFlow.collectLatest { currentLocation ->
+                if (renderLocalOwnshipState.value && !suppressLiveGpsState.value) {
+                    currentLocation?.let { location ->
+                        locationManager.updateLocationFromGPS(
+                            location,
+                            orientationFlow.value
+                        )
+                    }
                 }
             }
         }
@@ -133,12 +150,11 @@ object MapComposeEffects {
     fun FlightDataAndCardEffects(
         flightDataManager: FlightDataManager,
         locationManager: MapLocationRuntimePort,
-        orientationData: OrientationData,
+        orientationFlow: StateFlow<OrientationData>,
         orientationManager: MapOrientationManager,
         suppressLiveGps: Boolean,
         renderLocalOwnship: Boolean
     ) {
-        val orientationState = rememberUpdatedState(orientationData)
         val suppressLiveGpsState = rememberUpdatedState(suppressLiveGps)
         val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
 
@@ -154,7 +170,7 @@ object MapComposeEffects {
                         // Replay/IGC: use flight data for map updates when GPS is suppressed.
                         locationManager.updateLocationFromFlightData(
                             liveData,
-                            orientationState.value
+                            orientationFlow.value
                         )
                     }
                 }
@@ -165,7 +181,7 @@ object MapComposeEffects {
     @Composable
     fun DisplayPoseEffects(
         locationManager: MapLocationRuntimePort,
-        orientationData: OrientationData,
+        orientationFlow: StateFlow<OrientationData>,
         replaySessionState: SessionState,
         useRenderFrameSync: Boolean,
         renderLocalOwnship: Boolean
@@ -176,8 +192,10 @@ object MapComposeEffects {
             locationManager.setReplaySpeedMultiplier(replaySessionState.speedMultiplier)
         }
 
-        LaunchedEffect(orientationData) {
-            locationManager.updateOrientation(orientationData)
+        LaunchedEffect(locationManager, orientationFlow) {
+            orientationFlow.collectLatest { orientationData ->
+                locationManager.updateOrientation(orientationData)
+            }
         }
 
         if (!renderLocalOwnship || !shouldRunComposeDisplayPoseLoop(useRenderFrameSync)) {
@@ -193,10 +211,11 @@ object MapComposeEffects {
                 } else {
                     DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS
                 }
-                if (!shouldDispatchDisplayPoseFrame(
+                if (!shouldDispatchLiveDisplayPoseFrame(
                         frameNanos = frameNanos,
                         lastDispatchNanos = lastDispatchNanos,
-                        minIntervalNanos = minFrameIntervalNanos
+                        minIntervalNanos = minFrameIntervalNanos,
+                        runtimeAllowsDispatch = locationManager.shouldDispatchLiveDisplayFrame()
                     )
                 ) {
                     continue
@@ -218,18 +237,11 @@ object MapComposeEffects {
     }
 
     @Composable
-    fun TestAndDebugEffects(
-        orientationData: OrientationData
-    ) {
-        LaunchedEffect(orientationData.mode, orientationData.isValid) { }
-    }
-
-    @Composable
     fun AllMapEffects(
         locationManager: MapLocationRuntimePort,
         locationPermissionRequester: MapLocationPermissionRequester,
-        currentLocation: MapLocationUiModel?,
-        orientationData: OrientationData,
+        currentLocationFlow: StateFlow<MapLocationUiModel?>,
+        orientationFlow: StateFlow<OrientationData>,
         orientationManager: MapOrientationManager,
         uiState: ProfileUiState,
         flightDataManager: FlightDataManager,
@@ -254,8 +266,8 @@ object MapComposeEffects {
         LocationAndPermissionEffects(
             locationManager = locationManager,
             locationPermissionRequester = locationPermissionRequester,
-            currentLocation = currentLocation,
-            orientationData = orientationData,
+            currentLocationFlow = currentLocationFlow,
+            orientationFlow = orientationFlow,
             suppressLiveGps = suppressLiveGps,
             allowSensorStart = allowSensorStart,
             renderLocalOwnship = renderLocalOwnship
@@ -278,7 +290,7 @@ object MapComposeEffects {
         FlightDataAndCardEffects(
             flightDataManager = flightDataManager,
             locationManager = locationManager,
-            orientationData = orientationData,
+            orientationFlow = orientationFlow,
             orientationManager = orientationManager,
             suppressLiveGps = suppressLiveGps,
             renderLocalOwnship = renderLocalOwnship
@@ -286,7 +298,7 @@ object MapComposeEffects {
 
         DisplayPoseEffects(
             locationManager = locationManager,
-            orientationData = orientationData,
+            orientationFlow = orientationFlow,
             replaySessionState = replaySessionState,
             useRenderFrameSync = useRenderFrameSync,
             renderLocalOwnship = renderLocalOwnship
@@ -296,7 +308,5 @@ object MapComposeEffects {
             initialMapStyle = initialMapStyle,
             onStyleResolved = onMapStyleResolved
         )
-
-        TestAndDebugEffects(orientationData = orientationData)
     }
 }

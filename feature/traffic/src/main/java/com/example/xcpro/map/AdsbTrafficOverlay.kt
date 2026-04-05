@@ -18,6 +18,7 @@ class AdsbTrafficOverlay(
 ) : AdsbTrafficOverlayHandle {
     private val packedGroupLabelControl = TrafficPackedGroupLabelControl()
     private val selectedGroupFanoutLayout = TrafficSelectedGroupFanoutLayout()
+    private val diagnosticsState = AdsbTrafficOverlayDiagnosticsState()
     private var currentIconSizePx: Int = clampAdsbIconSizePx(initialIconSizePx)
     private var currentViewportZoom: Float =
         map.cameraPosition.zoom.toFloat().takeIf { it.isFinite() } ?: ADSB_TRAFFIC_INITIAL_VIEWPORT_ZOOM
@@ -28,6 +29,7 @@ class AdsbTrafficOverlay(
             viewportRangeMeters = currentViewportRangeMeters
         )
     private var emergencyFlashEnabled: Boolean = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT
+    private var interactionReducedMotionActive: Boolean = false
     private var currentSelectedTargetId: Icao24? = null
     private var currentOwnshipAltitudeMeters: Double? = null
     private var currentUnitsPreferences: UnitsPreferences = UnitsPreferences()
@@ -41,20 +43,34 @@ class AdsbTrafficOverlay(
         // Use one monotonic clock source for both immediate and choreographer frames.
         val nowMonoMs = nowMonoMs()
         val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
-        val hasVisualAnimation = hasActiveAdsbVisualAnimation(
+        val emergencyAnimatedTargetCount = activeEmergencyAnimatedTargetCount(frameSnapshot)
+        val hasVisualAnimation = shouldAnimateAdsbVisuals(
             frameSnapshot = frameSnapshot,
-            emergencyFlashEnabled = emergencyFlashEnabled
+            emergencyFlashEnabled = emergencyFlashEnabled,
+            interactionReducedMotionActive = interactionReducedMotionActive
         )
         if (!hasVisualAnimation) {
+            diagnosticsState.recordAnimationFrameSkipped(
+                activeAnimatedTargetCount = frameSnapshot.activeAnimatedTargetCount,
+                emergencyAnimatedTargetCount = emergencyAnimatedTargetCount
+            )
             return@frame
         }
         if (!frameLoopController.shouldRenderFrame(nowMonoMs)) {
+            diagnosticsState.recordAnimationFrameSkipped(
+                activeAnimatedTargetCount = frameSnapshot.activeAnimatedTargetCount,
+                emergencyAnimatedTargetCount = emergencyAnimatedTargetCount
+            )
             if (map.style != null && hasVisualAnimation) {
                 scheduleFrameLoop()
             }
             return@frame
         }
         renderFrame(nowMonoMs, frameSnapshot)
+        diagnosticsState.recordAnimationFrameRendered(
+            activeAnimatedTargetCount = frameSnapshot.activeAnimatedTargetCount,
+            emergencyAnimatedTargetCount = emergencyAnimatedTargetCount
+        )
         frameLoopController.markFrameRendered(nowMonoMs)
         if (map.style != null && hasVisualAnimation) {
             scheduleFrameLoop()
@@ -164,15 +180,14 @@ class AdsbTrafficOverlay(
     override fun setEmergencyFlashEnabled(enabled: Boolean) {
         if (emergencyFlashEnabled == enabled) return
         emergencyFlashEnabled = enabled
-        val nowMonoMs = nowMonoMs()
-        val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
-        renderFrame(nowMonoMs, frameSnapshot)
-        frameLoopController.markFrameRendered(nowMonoMs)
-        if (hasActiveVisualAnimation(frameSnapshot)) {
-            scheduleFrameLoop()
-        } else {
-            stopFrameLoop()
-        }
+        applyInteractionRenderMode()
+    }
+
+    override fun setInteractionReducedMotionActive(active: Boolean) {
+        if (interactionReducedMotionActive == active) return
+        interactionReducedMotionActive = active
+        diagnosticsState.setInteractionReducedMotionActive(active)
+        applyInteractionRenderMode()
     }
 
     override fun render(
@@ -208,6 +223,9 @@ class AdsbTrafficOverlay(
             stopFrameLoop()
         }
     }
+
+    override fun diagnosticsSnapshot(): AdsbTrafficOverlayDiagnosticsSnapshot =
+        diagnosticsState.snapshot()
 
     override fun findTargetAt(tap: LatLng): Icao24? {
         val style = map.style ?: return null
@@ -325,10 +343,11 @@ class AdsbTrafficOverlay(
             zoomLevel = currentViewportZoom,
             viewportRangeMeters = currentViewportRangeMeters
         )
+        val effectiveViewportPolicy = resolveEffectiveViewportPolicy()
         applyAdsbViewportPolicyToStyle(
             style = map.style ?: return,
             iconSizePx = currentIconSizePx,
-            viewportPolicy = currentViewportPolicy
+            viewportPolicy = effectiveViewportPolicy
         )
     }
 
@@ -339,9 +358,10 @@ class AdsbTrafficOverlay(
         val style = map.style ?: return
         val source = style.getSourceAs<GeoJsonSource>(SOURCE_ID) ?: return
         val leaderLineSource = style.getSourceAs<GeoJsonSource>(ADSB_TRAFFIC_LEADER_LINE_SOURCE_ID) ?: return
+        val effectiveViewportPolicy = resolveEffectiveViewportPolicy()
         val renderTargets = selectRenderableAdsbTargets(
             targets = frameSnapshot.targets,
-            maxTargets = currentViewportPolicy.maxTargets
+            maxTargets = effectiveViewportPolicy.maxTargets
         )
         val renderFrameSnapshot = frameSnapshot.copy(targets = renderTargets)
         val fullLabelKeys = resolveFullLabelKeys(renderTargets)
@@ -356,15 +376,20 @@ class AdsbTrafficOverlay(
             ownshipAltitudeMeters = currentOwnshipAltitudeMeters,
             unitsPreferences = currentUnitsPreferences,
             iconStyleIdOverrides = currentIconStyleIdOverrides,
-            emergencyFlashEnabled = emergencyFlashEnabled,
-            maxTargets = currentViewportPolicy.maxTargets
+            emergencyFlashEnabled = resolveEffectiveAdsbEmergencyFlashEnabled(
+                emergencyFlashEnabled = emergencyFlashEnabled,
+                interactionReducedMotionActive = interactionReducedMotionActive
+            ),
+            maxTargets = effectiveViewportPolicy.maxTargets
         )
     }
 
     private fun nowMonoMs(): Long = TimeBridge.nowMonoMs()
 
     private fun scheduleFrameLoop() {
-        frameLoopController.schedule(frameCallback)
+        if (frameLoopController.schedule(frameCallback)) {
+            diagnosticsState.recordAnimationFrameScheduled()
+        }
     }
 
     private fun stopFrameLoop() {
@@ -373,9 +398,10 @@ class AdsbTrafficOverlay(
 
     private fun hasActiveVisualAnimation(
         frameSnapshot: AdsbDisplayMotionSmoother.FrameSnapshot
-    ): Boolean = hasActiveAdsbVisualAnimation(
+    ): Boolean = shouldAnimateAdsbVisuals(
         frameSnapshot = frameSnapshot,
-        emergencyFlashEnabled = emergencyFlashEnabled
+        emergencyFlashEnabled = emergencyFlashEnabled,
+        interactionReducedMotionActive = interactionReducedMotionActive
     )
 
     private fun resolveFullLabelKeys(
@@ -429,9 +455,37 @@ class AdsbTrafficOverlay(
     private fun resolvePackedGroupCollisionSizePx(): Float {
         return adsbPackedGroupCollisionSizePx(
             iconSizePx = currentIconSizePx,
-            viewportPolicy = currentViewportPolicy,
+            viewportPolicy = resolveEffectiveViewportPolicy(),
             density = context.resources.displayMetrics.density
         )
+    }
+
+    private fun resolveEffectiveViewportPolicy(): AdsbTrafficViewportDeclutterPolicy =
+        if (interactionReducedMotionActive) {
+            resolveAdsbInteractionViewportDeclutterPolicy(currentViewportPolicy)
+        } else {
+            currentViewportPolicy
+        }
+
+    private fun applyInteractionRenderMode() {
+        diagnosticsState.setInteractionReducedMotionActive(interactionReducedMotionActive)
+        applyViewportPolicyToStyle()
+        val nowMonoMs = nowMonoMs()
+        val frameSnapshot = motionSmoother.snapshot(nowMonoMs)
+        renderFrame(nowMonoMs, frameSnapshot)
+        frameLoopController.markFrameRendered(nowMonoMs)
+        if (hasActiveVisualAnimation(frameSnapshot)) {
+            scheduleFrameLoop()
+        } else {
+            stopFrameLoop()
+        }
+    }
+
+    private fun activeEmergencyAnimatedTargetCount(
+        frameSnapshot: AdsbDisplayMotionSmoother.FrameSnapshot
+    ): Int = frameSnapshot.targets.count { target ->
+        !target.isPositionStale &&
+            target.proximityTier == AdsbProximityTier.EMERGENCY
     }
 
     private companion object {

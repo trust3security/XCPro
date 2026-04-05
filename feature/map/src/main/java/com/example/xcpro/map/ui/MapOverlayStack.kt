@@ -23,12 +23,14 @@ import com.example.xcpro.map.Icao24
 import com.example.xcpro.map.MapGestureSetup
 import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.MapCameraRuntimePort
+import com.example.xcpro.map.MapGestureRegion
 import com.example.xcpro.map.MapLocationRenderFrameBinder
 import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapModalUI
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapOverlayGestureTarget
+import com.example.xcpro.map.MapRenderSurfaceDiagnostics
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
@@ -52,6 +54,7 @@ internal fun MapOverlayStack(
     onMapViewBound: () -> Unit,
     locationManager: MapLocationRuntimePort,
     locationRenderFrameBinder: MapLocationRenderFrameBinder,
+    renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     taskType: TaskType,
@@ -60,10 +63,12 @@ internal fun MapOverlayStack(
     showWindSpeedOnVario: Boolean,
     cameraManager: MapCameraRuntimePort,
     currentMode: FlightMode,
-    currentZoom: Float,
+    currentZoomFlow: StateFlow<Float>,
     unitsPreferences: UnitsPreferences,
     onModeChange: (FlightMode) -> Unit,
-    currentLocation: MapLocationUiModel?,
+    currentLocationFlow: StateFlow<MapLocationUiModel?>,
+    renderLocalOwnship: Boolean,
+    showRecenterButton: Boolean,
     showReturnButton: Boolean,
     showDistanceCircles: Boolean,
     ognOverlayEnabled: Boolean,
@@ -134,6 +139,7 @@ internal fun MapOverlayStack(
             onMapReady = onMapReady,
             onMapViewBound = onMapViewBound,
             locationRenderFrameBinder = locationRenderFrameBinder,
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics,
             flightDataManager = flightDataManager,
             flightViewModel = flightViewModel,
             overlayManager = overlayManager,
@@ -160,60 +166,38 @@ internal fun MapOverlayStack(
             hiddenCardIds = hiddenCardIds
         )
 
-        if (!isUiEditMode) {
-            MapGestureSetup.GestureHandlerOverlay(
-                mapState = mapState,
-                taskType = taskType,
-                visibleModes = visibleModes,
-                locationManager = locationManager,
-                cameraManager = cameraManager,
-                currentMode = currentMode,
-                onModeChange = onModeChange,
-                currentLocation = currentLocation,
-                showReturnButton = showReturnButton,
-                isAATEditMode = isAATEditMode,
-                createTaskGestureHandler = createTaskGestureHandler,
-                onEnterAATEditMode = onEnterAATEditMode,
-                onExitAATEditMode = onExitAATEditMode,
-                onPreviewAATTargetPoint = { waypointIndex, lat, lon ->
-                    overlayManager.previewAatTargetPoint(waypointIndex, lat, lon)
-                },
-                onUpdateAATTargetPoint = onUpdateAATTargetPoint,
-                onSyncTaskVisuals = { overlayManager.requestTaskRenderSync() },
-                onMapTap = { tap ->
-                    // OGN layers render above ADS-B layers; resolve traffic tap in layer order.
-                    if (ognOverlayEnabled) {
-                        val tappedOgnId = overlayManager.findOgnTargetAt(tap)
-                        if (tappedOgnId != null) {
-                            onOgnTargetSelected(tappedOgnId)
-                            return@GestureHandlerOverlay
-                        }
-                    }
-
-                    if (ognOverlayEnabled && showOgnThermalsEnabled) {
-                        val tappedThermalId = overlayManager.findOgnThermalHotspotAt(tap)
-                        if (tappedThermalId != null) {
-                            onOgnThermalSelected(tappedThermalId)
-                            return@GestureHandlerOverlay
-                        }
-                    }
-
-                    val tappedAdsbId = overlayManager.findAdsbTargetAt(tap)
-                    if (tappedAdsbId != null) {
-                        onAdsbTargetSelected(tappedAdsbId)
-                        return@GestureHandlerOverlay
-                    }
-
-                    val tappedWindSpeedKt = overlayManager.findForecastWindArrowSpeedAt(tap)
-                    if (tappedWindSpeedKt != null) {
-                        onForecastWindArrowSpeedTap(tap, tappedWindSpeedKt)
-                    }
-                },
-                onMapLongPress = onMapLongPress,
-                gestureRegions = gestureRegions,
-                modifier = Modifier.zIndex(3.6f)
-            )
-        }
+        MapGestureHandlerRuntimeLayer(
+            enabled = !isUiEditMode,
+            mapState = mapState,
+            taskType = taskType,
+            visibleModes = visibleModes,
+            locationManager = locationManager,
+            cameraManager = cameraManager,
+            currentMode = currentMode,
+            onModeChange = onModeChange,
+            currentLocationFlow = currentLocationFlow,
+            renderLocalOwnship = renderLocalOwnship,
+            showRecenterButton = showRecenterButton,
+            showReturnButton = showReturnButton,
+            isAATEditMode = isAATEditMode,
+            createTaskGestureHandler = createTaskGestureHandler,
+            onEnterAATEditMode = onEnterAATEditMode,
+            onExitAATEditMode = onExitAATEditMode,
+            onPreviewAATTargetPoint = { waypointIndex, lat, lon ->
+                overlayManager.previewAatTargetPoint(waypointIndex, lat, lon)
+            },
+            onUpdateAATTargetPoint = onUpdateAATTargetPoint,
+            onSyncTaskVisuals = { overlayManager.requestTaskRenderSync() },
+            ognOverlayEnabled = ognOverlayEnabled,
+            showOgnThermalsEnabled = showOgnThermalsEnabled,
+            overlayManager = overlayManager,
+            onOgnTargetSelected = onOgnTargetSelected,
+            onOgnThermalSelected = onOgnThermalSelected,
+            onAdsbTargetSelected = onAdsbTargetSelected,
+            onForecastWindArrowSpeedTap = onForecastWindArrowSpeedTap,
+            onMapLongPress = onMapLongPress,
+            gestureRegions = gestureRegions
+        )
 
         MapUIWidgets.FlightModeMenu(
             widgetManager = widgetManager,
@@ -263,10 +247,11 @@ internal fun MapOverlayStack(
             replayState = replayState
         )
 
-        DistanceCirclesLayer(
+        DistanceCirclesRuntimeLayer(
             mapState = mapState,
-            currentZoom = currentZoom,
-            currentLocation = currentLocation,
+            currentZoomFlow = currentZoomFlow,
+            currentLocationFlow = currentLocationFlow,
+            renderLocalOwnship = renderLocalOwnship,
             showDistanceCircles = showDistanceCircles,
             unitsPreferences = unitsPreferences
         )
@@ -306,4 +291,115 @@ internal fun MapOverlayStack(
 
         MapModalUI.AirspaceSettingsModalOverlay(modalManager = modalManager)
     }
+}
+
+@Composable
+private fun MapGestureHandlerRuntimeLayer(
+    enabled: Boolean,
+    mapState: MapScreenState,
+    taskType: TaskType,
+    visibleModes: List<FlightMode>,
+    locationManager: MapLocationRuntimePort,
+    cameraManager: MapCameraRuntimePort,
+    currentMode: FlightMode,
+    onModeChange: (FlightMode) -> Unit,
+    currentLocationFlow: StateFlow<MapLocationUiModel?>,
+    renderLocalOwnship: Boolean,
+    showRecenterButton: Boolean,
+    showReturnButton: Boolean,
+    isAATEditMode: Boolean,
+    createTaskGestureHandler: (TaskGestureCallbacks) -> TaskGestureHandler,
+    onEnterAATEditMode: (Int) -> Unit,
+    onExitAATEditMode: () -> Unit,
+    onPreviewAATTargetPoint: (Int, Double, Double) -> Unit,
+    onUpdateAATTargetPoint: (Int, Double, Double) -> Unit,
+    onSyncTaskVisuals: () -> Unit,
+    ognOverlayEnabled: Boolean,
+    showOgnThermalsEnabled: Boolean,
+    overlayManager: MapOverlayManager,
+    onOgnTargetSelected: (String) -> Unit,
+    onOgnThermalSelected: (String) -> Unit,
+    onAdsbTargetSelected: (Icao24) -> Unit,
+    onForecastWindArrowSpeedTap: (LatLng, Double) -> Unit,
+    onMapLongPress: (LatLng) -> Unit,
+    gestureRegions: List<MapGestureRegion>
+) {
+    if (!enabled) return
+
+    val currentLocation = currentLocationFlow.collectAsStateWithLifecycle().value
+    val localOwnshipRenderState = resolveMapLocalOwnshipRenderState(
+        renderLocalOwnship = renderLocalOwnship,
+        currentLocation = currentLocation,
+        showRecenterButton = showRecenterButton,
+        showReturnButton = showReturnButton
+    )
+    MapGestureSetup.GestureHandlerOverlay(
+        mapState = mapState,
+        taskType = taskType,
+        visibleModes = visibleModes,
+        locationManager = locationManager,
+        cameraManager = cameraManager,
+        currentMode = currentMode,
+        onModeChange = onModeChange,
+        currentLocation = localOwnshipRenderState.currentLocation,
+        showReturnButton = localOwnshipRenderState.showReturnButton,
+        isAATEditMode = isAATEditMode,
+        createTaskGestureHandler = createTaskGestureHandler,
+        onEnterAATEditMode = onEnterAATEditMode,
+        onExitAATEditMode = onExitAATEditMode,
+        onPreviewAATTargetPoint = onPreviewAATTargetPoint,
+        onUpdateAATTargetPoint = onUpdateAATTargetPoint,
+        onSyncTaskVisuals = onSyncTaskVisuals,
+        onMapTap = { tap ->
+            if (ognOverlayEnabled) {
+                val tappedOgnId = overlayManager.findOgnTargetAt(tap)
+                if (tappedOgnId != null) {
+                    onOgnTargetSelected(tappedOgnId)
+                    return@GestureHandlerOverlay
+                }
+            }
+
+            if (ognOverlayEnabled && showOgnThermalsEnabled) {
+                val tappedThermalId = overlayManager.findOgnThermalHotspotAt(tap)
+                if (tappedThermalId != null) {
+                    onOgnThermalSelected(tappedThermalId)
+                    return@GestureHandlerOverlay
+                }
+            }
+
+            val tappedAdsbId = overlayManager.findAdsbTargetAt(tap)
+            if (tappedAdsbId != null) {
+                onAdsbTargetSelected(tappedAdsbId)
+                return@GestureHandlerOverlay
+            }
+
+            val tappedWindSpeedKt = overlayManager.findForecastWindArrowSpeedAt(tap)
+            if (tappedWindSpeedKt != null) {
+                onForecastWindArrowSpeedTap(tap, tappedWindSpeedKt)
+            }
+        },
+        onMapLongPress = onMapLongPress,
+        gestureRegions = gestureRegions,
+        modifier = Modifier.zIndex(3.6f)
+    )
+}
+
+@Composable
+private fun DistanceCirclesRuntimeLayer(
+    mapState: MapScreenState,
+    currentZoomFlow: StateFlow<Float>,
+    currentLocationFlow: StateFlow<MapLocationUiModel?>,
+    renderLocalOwnship: Boolean,
+    showDistanceCircles: Boolean,
+    unitsPreferences: UnitsPreferences
+) {
+    val currentZoom by currentZoomFlow.collectAsStateWithLifecycle()
+    val currentLocation = currentLocationFlow.collectAsStateWithLifecycle().value
+    DistanceCirclesLayer(
+        mapState = mapState,
+        currentZoom = currentZoom,
+        currentLocation = currentLocation.takeIf { renderLocalOwnship },
+        showDistanceCircles = showDistanceCircles,
+        unitsPreferences = unitsPreferences
+    )
 }

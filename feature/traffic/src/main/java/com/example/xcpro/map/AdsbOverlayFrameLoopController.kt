@@ -27,10 +27,11 @@ internal class AdsbOverlayFrameLoopController(
         return nowMonoMs - lastRendered >= minRenderIntervalMs
     }
 
-    fun schedule(frameCallback: Choreographer.FrameCallback) {
-        if (frameScheduled) return
+    fun schedule(frameCallback: Choreographer.FrameCallback): Boolean {
+        if (frameScheduled) return false
         frameScheduled = true
         choreographer.postFrameCallback(frameCallback)
+        return true
     }
 
     fun stop(frameCallback: Choreographer.FrameCallback) {

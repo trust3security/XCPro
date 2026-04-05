@@ -1,0 +1,32 @@
+﻿{
+    "package_id":  "pkg-e1",
+    "phase":  "phase3",
+    "work_package":  "WP-08",
+    "mapscreen_items":  [
+                            "MAPSCREEN-006",
+                            "MAPSCREEN-007"
+                        ],
+    "generated_at":  "2026-04-05T19:03:17.2792340+10:00",
+    "commit_sha":  "7304c64b5a4d9d61a9da1ec4bfb015fc2c4c5d68",
+    "branch":  "perf/mapscreen-e1-mixed-load-fanout-phase1",
+    "dirty_worktree":  true,
+    "build_variant":  "debug",
+    "scenario_ids":  [
+                         "scenario-8-mixed-load-stress",
+                         "scenario-3-panzoom-ogn-adsb-rain",
+                         "scenario-4-aat-edit-drag"
+                     ],
+    "device_tiers":  [
+                         "tier_a",
+                         "tier_b"
+                     ],
+    "run_count":  {
+                      "unit":  1,
+                      "integration":  0,
+                      "perf":  0
+                  },
+    "focused_tests":  [
+                          "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
+                          "com.example.xcpro.map.TaskRenderSyncCoordinatorTest"
+                      ]
+}

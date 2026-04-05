@@ -11,14 +11,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
@@ -35,7 +33,6 @@ import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.map.TrafficMapCoordinate
 import com.example.xcpro.map.WindArrowUiState
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
 import com.example.xcpro.map.ballast.BallastCommand
@@ -69,6 +66,7 @@ internal fun MapScreenContent(
     val onMapViewBound = mapInputs.onMapViewBound
     val locationManager = mapInputs.locationManager
     val locationRenderFrameBinder = mapInputs.locationRenderFrameBinder
+    val renderSurfaceDiagnostics = mapInputs.renderSurfaceDiagnostics
     val flightDataManager = mapInputs.flightDataManager
     val flightViewModel = mapInputs.flightViewModel
     val taskType = mapInputs.taskType
@@ -80,8 +78,8 @@ internal fun MapScreenContent(
     val onModeChange = mapInputs.onModeChange
     val currentMapStyleName = mapInputs.currentMapStyleName
     val onTransientMapStyleSelected = mapInputs.onTransientMapStyleSelected
-    val currentZoom by mapInputs.currentZoom.collectAsStateWithLifecycle()
-    val currentLocation by mapInputs.currentLocation.collectAsStateWithLifecycle()
+    val currentZoomFlow = mapInputs.currentZoom
+    val currentLocationFlow = mapInputs.currentLocation
 
     val showMapBottomNavigation = overlayInputs.showMapBottomNavigation
     val renderLocalOwnship = overlayInputs.renderLocalOwnship
@@ -166,21 +164,6 @@ internal fun MapScreenContent(
     val onDismissOgnTargetDetails = trafficActions.onDismissOgnTargetDetails
     val onDismissOgnThermalDetails = trafficActions.onDismissOgnThermalDetails
     val onDismissAdsbTargetDetails = trafficActions.onDismissAdsbTargetDetails
-    val localOwnshipRenderState = remember(
-        renderLocalOwnship,
-        currentLocation,
-        showRecenterButton,
-        showReturnButton
-    ) {
-        resolveMapLocalOwnshipRenderState(
-            renderLocalOwnship = renderLocalOwnship,
-            currentLocation = currentLocation,
-            showRecenterButton = showRecenterButton,
-            showReturnButton = showReturnButton
-        )
-    }
-    val visibleCurrentLocation = localOwnshipRenderState.currentLocation
-
     val qnhUiState = rememberMapScreenQnhUiState(
         flightDataManager = flightDataManager,
         unitsPreferences = unitsPreferences,
@@ -190,7 +173,7 @@ internal fun MapScreenContent(
     )
     val forecastWeatherState = rememberMapScreenForecastWeatherState(
         mapLibreMap = mapState.mapLibreMap,
-        currentLocation = currentLocation,
+        fallbackLocationProvider = { currentLocationFlow.value },
         overlayManager = overlayManager
     )
     val trafficRuntimeState = rememberMapTrafficRuntimeState(
@@ -269,6 +252,7 @@ internal fun MapScreenContent(
                         onMapViewBound = onMapViewBound,
                         locationManager = locationManager,
                         locationRenderFrameBinder = locationRenderFrameBinder,
+                        renderSurfaceDiagnostics = renderSurfaceDiagnostics,
                         flightDataManager = flightDataManager,
                         flightViewModel = flightViewModel,
                         taskType = taskType,
@@ -277,11 +261,13 @@ internal fun MapScreenContent(
                         showWindSpeedOnVario = showWindSpeedOnVario,
                         cameraManager = cameraManager,
                         currentMode = currentMode,
-                        currentZoom = currentZoom,
+                        currentZoomFlow = currentZoomFlow,
                         unitsPreferences = unitsPreferences,
                         onModeChange = onModeChange,
-                        currentLocation = visibleCurrentLocation,
-                        showReturnButton = localOwnshipRenderState.showReturnButton,
+                        currentLocationFlow = currentLocationFlow,
+                        renderLocalOwnship = renderLocalOwnship,
+                        showRecenterButton = showRecenterButton,
+                        showReturnButton = showReturnButton,
                         showDistanceCircles = showDistanceCircles,
                         ognOverlayEnabled = ognOverlayEnabled,
                         showOgnThermalsEnabled = showOgnThermalsEnabled,
@@ -338,22 +324,25 @@ internal fun MapScreenContent(
                         hiddenCardIds = hiddenCardIds,
                         replayState = replayState
                     )
-        }
+                }
             }
         }
-        MapTaskManagerLayer(
+
+        MapTaskManagerRuntimeLayer(
             taskScreenManager = taskScreenManager,
             waypointData = waypointData,
             unitsPreferences = unitsPreferences,
-            currentLocation = visibleCurrentLocation,
+            currentLocationFlow = currentLocationFlow,
+            renderLocalOwnship = renderLocalOwnship,
             currentQnh = qnhUiState.currentQnhLabel,
             taskFlightSurfaceUiState = taskFlightSurfaceUiState
         )
 
-        MapActionButtonsLayer(
-            currentLocation = visibleCurrentLocation,
-            showRecenterButton = localOwnshipRenderState.showRecenterButton,
-            showReturnButton = localOwnshipRenderState.showReturnButton,
+        MapActionButtonsRuntimeLayer(
+            currentLocationFlow = currentLocationFlow,
+            renderLocalOwnship = renderLocalOwnship,
+            showRecenterButton = showRecenterButton,
+            showReturnButton = showReturnButton,
             showVarioDemoFab = showVarioDemoFab && !hideReplayDebugFabs,
             showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
             showRacingReplayFab = showRacingReplayFab && !hideReplayDebugFabs,
@@ -402,23 +391,19 @@ internal fun MapScreenContent(
         )
 
         MapAuxiliaryPanelsAndSheetsSection(inputs = auxiliaryPanelsInputs)
-        MapTrafficRuntimeLayer(
+        MapTrafficRuntimePanelsLayer(
             traffic = trafficBinding,
             runtimeState = trafficRuntimeState,
             reserveTopEndPrimarySlot = false,
-            ownshipCoordinate = visibleCurrentLocation?.let { location ->
-                TrafficMapCoordinate(
-                    latitude = location.latitude,
-                    longitude = location.longitude
-                )
-            },
+            currentLocationFlow = currentLocationFlow,
+            renderLocalOwnship = renderLocalOwnship,
             unitsPreferences = unitsPreferences,
             trafficActions = trafficActions
         )
         MapLiveFollowRuntimeLayer(
             showPilotStatusIndicator = showPilotStatusIndicator,
             topEndAdditionalOffset = topEndPilotStatusOffset,
-            currentZoom = currentZoom,
+            currentZoomFlow = currentZoomFlow,
             taskRenderSnapshotProvider = taskRenderSnapshotProvider,
             watchedPilotFocusEpoch = watchedPilotFocusEpoch,
             mapLibreMapProvider = mapLibreMapProvider,

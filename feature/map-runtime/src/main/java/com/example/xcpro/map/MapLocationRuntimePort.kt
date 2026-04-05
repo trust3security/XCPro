@@ -25,6 +25,8 @@ interface MapLocationRuntimePort {
 
     fun setReplaySpeedMultiplier(multiplier: Double)
 
+    fun shouldDispatchLiveDisplayFrame(): Boolean
+
     fun onDisplayFrame()
 
     fun updateLocationFromFlightData(

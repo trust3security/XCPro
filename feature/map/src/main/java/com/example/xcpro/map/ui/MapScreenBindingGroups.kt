@@ -3,16 +3,12 @@ package com.example.xcpro.map.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.map.AdsbSelectedTargetDetails
 import com.example.xcpro.map.AdsbTrafficSnapshot
-import com.example.xcpro.map.AdsbTrafficUiModel
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.MapPoint
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapStateReader
-import com.example.xcpro.map.OgnDisplayUpdateMode
-import com.example.xcpro.map.OgnGliderTrailSegment
 import com.example.xcpro.map.OgnThermalHotspot
 import com.example.xcpro.map.OgnTrafficSnapshot
 import com.example.xcpro.map.OgnTrafficTarget
@@ -120,108 +116,64 @@ internal fun rememberMapScreenTaskBindings(
 internal fun rememberMapScreenTrafficBinding(
     mapViewModel: MapScreenViewModel
 ): MapTrafficUiBinding {
-    val ognTargets by mapViewModel.ognTargets.collectAsStateWithLifecycle()
     val ognSnapshot by mapViewModel.ognSnapshot.collectAsStateWithLifecycle()
     val ognOverlayEnabled by mapViewModel.ognOverlayEnabled.collectAsStateWithLifecycle()
-    val ognIconSizePx by mapViewModel.ognIconSizePx.collectAsStateWithLifecycle()
-    val ognDisplayUpdateMode by mapViewModel.ognDisplayUpdateMode.collectAsStateWithLifecycle()
-    val ognThermalHotspots by mapViewModel.ognThermalHotspots.collectAsStateWithLifecycle()
     val showOgnSciaEnabled by mapViewModel.showOgnSciaEnabled.collectAsStateWithLifecycle()
+    val showOgnThermalsEnabled by mapViewModel.showOgnThermalsEnabled.collectAsStateWithLifecycle()
     val ognTargetEnabled by mapViewModel.ognTargetEnabled.collectAsStateWithLifecycle()
     val ognTargetAircraftKey by mapViewModel.ognTargetAircraftKey.collectAsStateWithLifecycle()
-    val ognResolvedTarget by mapViewModel.ognResolvedTarget.collectAsStateWithLifecycle()
-    val showOgnThermalsEnabled by mapViewModel.showOgnThermalsEnabled.collectAsStateWithLifecycle()
-    val ognGliderTrailSegments by mapViewModel.ognGliderTrailSegments.collectAsStateWithLifecycle()
-    val ownshipAltitudeMeters by mapViewModel.ownshipAltitudeMeters.collectAsStateWithLifecycle()
-    val ognAltitudeUnit by mapViewModel.ognAltitudeUnit.collectAsStateWithLifecycle()
-    val adsbTargets by mapViewModel.adsbTargets.collectAsStateWithLifecycle()
     val adsbSnapshot by mapViewModel.adsbSnapshot.collectAsStateWithLifecycle()
     val adsbOverlayEnabled by mapViewModel.adsbOverlayEnabled.collectAsStateWithLifecycle()
-    val adsbIconSizePx by mapViewModel.adsbIconSizePx.collectAsStateWithLifecycle()
-    val adsbEmergencyFlashEnabled by mapViewModel.adsbEmergencyFlashEnabled.collectAsStateWithLifecycle()
-    val adsbDefaultMediumUnknownIconEnabled by mapViewModel.adsbDefaultMediumUnknownIconEnabled.collectAsStateWithLifecycle()
     val selectedOgnTarget by mapViewModel.selectedOgnTarget.collectAsStateWithLifecycle()
     val selectedOgnThermal by mapViewModel.selectedOgnThermal.collectAsStateWithLifecycle()
+    val selectedOgnThermalDetailsVisible by mapViewModel.selectedOgnThermalDetailsVisible.collectAsStateWithLifecycle()
     val selectedOgnThermalContext by mapViewModel.selectedOgnThermalContext.collectAsStateWithLifecycle()
     val selectedAdsbTarget by mapViewModel.selectedAdsbTarget.collectAsStateWithLifecycle()
 
     return buildMapTrafficUiBinding(
-        ognTargets = ognTargets,
         ognSnapshot = ognSnapshot,
         ognOverlayEnabled = ognOverlayEnabled,
-        ognIconSizePx = ognIconSizePx,
-        ognDisplayUpdateMode = ognDisplayUpdateMode,
-        ognThermalHotspots = ognThermalHotspots,
         showOgnSciaEnabled = showOgnSciaEnabled,
+        showOgnThermalsEnabled = showOgnThermalsEnabled,
         ognTargetEnabled = ognTargetEnabled,
         ognTargetAircraftKey = ognTargetAircraftKey,
-        ognResolvedTarget = ognResolvedTarget,
-        showOgnThermalsEnabled = showOgnThermalsEnabled,
-        ognGliderTrailSegments = ognGliderTrailSegments,
-        ownshipAltitudeMeters = ownshipAltitudeMeters,
-        ognAltitudeUnit = ognAltitudeUnit,
-        adsbTargets = adsbTargets,
         adsbSnapshot = adsbSnapshot,
         adsbOverlayEnabled = adsbOverlayEnabled,
-        adsbIconSizePx = adsbIconSizePx,
-        adsbEmergencyFlashEnabled = adsbEmergencyFlashEnabled,
-        adsbDefaultMediumUnknownIconEnabled = adsbDefaultMediumUnknownIconEnabled,
         selectedOgnTarget = selectedOgnTarget,
         selectedOgnThermal = selectedOgnThermal,
+        selectedOgnThermalDetailsVisible = selectedOgnThermalDetailsVisible,
         selectedOgnThermalContext = selectedOgnThermalContext,
         selectedAdsbTarget = selectedAdsbTarget
     )
 }
 
 internal fun buildMapTrafficUiBinding(
-    ognTargets: List<OgnTrafficTarget>,
     ognSnapshot: OgnTrafficSnapshot,
     ognOverlayEnabled: Boolean,
-    ognIconSizePx: Int,
-    ognDisplayUpdateMode: OgnDisplayUpdateMode,
-    ognThermalHotspots: List<OgnThermalHotspot>,
     showOgnSciaEnabled: Boolean,
+    showOgnThermalsEnabled: Boolean,
     ognTargetEnabled: Boolean,
     ognTargetAircraftKey: String?,
-    ognResolvedTarget: OgnTrafficTarget?,
-    showOgnThermalsEnabled: Boolean,
-    ognGliderTrailSegments: List<OgnGliderTrailSegment>,
-    ownshipAltitudeMeters: Double?,
-    ognAltitudeUnit: AltitudeUnit,
-    adsbTargets: List<AdsbTrafficUiModel>,
     adsbSnapshot: AdsbTrafficSnapshot,
     adsbOverlayEnabled: Boolean,
-    adsbIconSizePx: Int,
-    adsbEmergencyFlashEnabled: Boolean,
-    adsbDefaultMediumUnknownIconEnabled: Boolean,
     selectedOgnTarget: OgnTrafficTarget?,
     selectedOgnThermal: OgnThermalHotspot?,
+    selectedOgnThermalDetailsVisible: Boolean,
     selectedOgnThermalContext: SelectedOgnThermalContext?,
     selectedAdsbTarget: AdsbSelectedTargetDetails?
 ): MapTrafficUiBinding =
     MapTrafficUiBinding(
-        ognTargets = ognTargets,
         ognSnapshot = ognSnapshot,
         ognOverlayEnabled = ognOverlayEnabled,
-        ognIconSizePx = ognIconSizePx,
-        ognDisplayUpdateMode = ognDisplayUpdateMode,
-        ognThermalHotspots = ognThermalHotspots,
         showOgnSciaEnabled = showOgnSciaEnabled,
+        showOgnThermalsEnabled = showOgnThermalsEnabled,
         ognTargetEnabled = ognTargetEnabled,
         ognTargetAircraftKey = ognTargetAircraftKey,
-        ognResolvedTarget = ognResolvedTarget,
-        showOgnThermalsEnabled = showOgnThermalsEnabled,
-        ognGliderTrailSegments = ognGliderTrailSegments,
-        ownshipAltitudeMeters = ownshipAltitudeMeters,
-        ognAltitudeUnit = ognAltitudeUnit,
-        adsbTargets = adsbTargets,
         adsbSnapshot = adsbSnapshot,
         adsbOverlayEnabled = adsbOverlayEnabled,
-        adsbIconSizePx = adsbIconSizePx,
-        adsbEmergencyFlashEnabled = adsbEmergencyFlashEnabled,
-        adsbDefaultMediumUnknownIconEnabled = adsbDefaultMediumUnknownIconEnabled,
         selectedOgnTarget = selectedOgnTarget,
         selectedOgnThermal = selectedOgnThermal,
+        selectedOgnThermalDetailsVisible = selectedOgnThermalDetailsVisible,
         selectedOgnThermalContext = selectedOgnThermalContext,
         selectedAdsbTarget = selectedAdsbTarget
     )

@@ -61,7 +61,7 @@ fun BoxScope.MapTrafficPanelsAndSheetsLayer(
             )
         }
 
-        traffic.selectedOgnThermal != null -> {
+        traffic.selectedOgnThermal != null && traffic.selectedOgnThermalDetailsVisible -> {
             OgnThermalDetailsSheet(
                 hotspot = traffic.selectedOgnThermal,
                 context = traffic.selectedOgnThermalContext,

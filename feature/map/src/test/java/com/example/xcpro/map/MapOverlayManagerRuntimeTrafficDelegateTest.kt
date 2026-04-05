@@ -20,6 +20,7 @@ import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -324,6 +325,61 @@ class MapOverlayManagerRuntimeTrafficDelegateTest {
         assertEquals(400L, counters.adsbIconResolveLatencyAverageMs)
         assertEquals(true, counters.adsbDefaultMediumUnknownIconEnabled)
         assertTrue(counters.overlayFrontOrderApplyCount >= 1L)
+    }
+
+    @Test
+    fun setMapInteractionActive_forwardsReducedMotionToLiveOverlay() = runTest {
+        val overlay: AdsbTrafficOverlayHandle = mock()
+        val map: MapLibreMap = mock()
+        val fixture = createFixture(
+            scope = this,
+            nowMonoMsProvider = { 0L },
+            interactionActiveProvider = { false },
+            overlay = overlay
+        )
+        fixture.mapState.mapLibreMap = map
+
+        fixture.delegate.initializeAdsbTrafficOverlay(map)
+        runCurrent()
+        org.mockito.kotlin.reset(overlay)
+
+        fixture.delegate.setMapInteractionActive(true)
+
+        verify(overlay).setInteractionReducedMotionActive(true)
+    }
+
+    @Test
+    fun runtimeCounters_includeAdsbAnimationDiagnostics() = runTest {
+        val overlay: AdsbTrafficOverlayHandle = mock()
+        whenever(overlay.diagnosticsSnapshot()).thenReturn(
+            AdsbTrafficOverlayDiagnosticsSnapshot(
+                animationFrameScheduledCount = 4L,
+                animationFrameRenderedCount = 3L,
+                animationFrameSkippedCount = 2L,
+                activeAnimatedTargetCount = 5,
+                emergencyAnimatedTargetCount = 1,
+                interactionReducedMotionActive = true
+            )
+        )
+        val map: MapLibreMap = mock()
+        val fixture = createFixture(
+            scope = this,
+            nowMonoMsProvider = { 0L },
+            interactionActiveProvider = { false },
+            overlay = overlay
+        )
+        fixture.mapState.mapLibreMap = map
+        fixture.delegate.initializeAdsbTrafficOverlay(map)
+        runCurrent()
+
+        val counters = fixture.delegate.runtimeCounters()
+
+        assertEquals(4L, counters.adsbAnimationFrameScheduledCount)
+        assertEquals(3L, counters.adsbAnimationFrameRenderedCount)
+        assertEquals(2L, counters.adsbAnimationFrameSkippedCount)
+        assertEquals(5, counters.adsbActiveAnimatedTargetCount)
+        assertEquals(1, counters.adsbEmergencyAnimatedTargetCount)
+        assertEquals(true, counters.adsbInteractionReducedMotionActive)
     }
 
     private fun createFixture(

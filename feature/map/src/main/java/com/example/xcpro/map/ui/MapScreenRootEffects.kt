@@ -4,10 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntSize
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -16,8 +14,6 @@ import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.airspace.AirspaceUiState
 import com.example.xcpro.common.flight.FlightMode
-import com.example.xcpro.common.units.AltitudeUnit
-import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLifecycleEffects
@@ -116,13 +112,11 @@ internal fun MapScreenComposeAndLifecycleEffects(
     allowSensorStart: Boolean,
     renderLocalOwnship: Boolean
 ) {
-    val currentLocation by currentLocationFlow.collectAsStateWithLifecycle()
-    val orientationData by orientationFlow.collectAsStateWithLifecycle()
     MapComposeEffects.AllMapEffects(
         locationManager = locationManager,
         locationPermissionRequester = locationPermissionRequester,
-        currentLocation = currentLocation,
-        orientationData = orientationData,
+        currentLocationFlow = currentLocationFlow,
+        orientationFlow = orientationFlow,
         orientationManager = orientationManager,
         uiState = profileUiState,
         flightDataManager = flightDataManager,

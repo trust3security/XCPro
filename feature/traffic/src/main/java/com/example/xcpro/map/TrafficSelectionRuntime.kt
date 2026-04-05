@@ -15,12 +15,15 @@ class MapTrafficSelectionState(
     private val mutableSelectedOgnId: MutableStateFlow<String?>,
     val selectedOgnTarget: StateFlow<OgnTrafficTarget?>,
     private val mutableSelectedOgnThermalId: MutableStateFlow<String?>,
-    val selectedOgnThermal: StateFlow<OgnThermalHotspot?>
+    val selectedOgnThermal: StateFlow<OgnThermalHotspot?>,
+    private val mutableSelectedThermalDetailsVisible: MutableStateFlow<Boolean>
 ) : TrafficSelectionPort {
     override val selectedAdsbId: StateFlow<Icao24?> = mutableSelectedAdsbId.asStateFlow()
     override val selectedOgnId: StateFlow<String?> = mutableSelectedOgnId.asStateFlow()
     val selectedOgnThermalId: StateFlow<String?> = mutableSelectedOgnThermalId.asStateFlow()
     override val selectedThermalId: StateFlow<String?> = selectedOgnThermalId
+    override val selectedThermalDetailsVisible: StateFlow<Boolean> =
+        mutableSelectedThermalDetailsVisible.asStateFlow()
 
     override fun setSelectedOgnId(id: String?) {
         mutableSelectedOgnId.value = id
@@ -28,6 +31,13 @@ class MapTrafficSelectionState(
 
     override fun setSelectedThermalId(id: String?) {
         mutableSelectedOgnThermalId.value = id
+        if (id == null) {
+            mutableSelectedThermalDetailsVisible.value = false
+        }
+    }
+
+    override fun setSelectedThermalDetailsVisible(visible: Boolean) {
+        mutableSelectedThermalDetailsVisible.value = visible && mutableSelectedOgnThermalId.value != null
     }
 
     override fun setSelectedAdsbId(id: Icao24?) {
@@ -45,6 +55,7 @@ fun createTrafficSelectionState(
     val selectedAdsbId = MutableStateFlow<Icao24?>(null)
     val selectedOgnId = MutableStateFlow<String?>(null)
     val selectedOgnThermalId = MutableStateFlow<String?>(null)
+    val selectedThermalDetailsVisible = MutableStateFlow(false)
     return MapTrafficSelectionState(
         mutableSelectedAdsbId = selectedAdsbId,
         selectedAdsbTarget = createSelectedAdsbTargetState(
@@ -64,7 +75,8 @@ fun createTrafficSelectionState(
             scope = scope,
             selectedThermalId = selectedOgnThermalId,
             thermalHotspots = thermalHotspots
-        )
+        ),
+        mutableSelectedThermalDetailsVisible = selectedThermalDetailsVisible
     )
 }
 

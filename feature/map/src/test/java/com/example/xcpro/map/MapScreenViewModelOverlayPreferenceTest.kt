@@ -116,6 +116,7 @@ import com.example.xcpro.ogn.OgnSciaStartupResetCoordinator
 import com.example.xcpro.thermalling.ThermallingModeCoordinator
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -146,11 +147,13 @@ class MapScreenViewModelOverlayPreferenceTest : MapScreenViewModelTestBase() {
         viewModel.onOgnThermalSelected(thermalId)
         drainMain()
         assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+        assertTrue(viewModel.selectedOgnThermalDetailsVisible.value)
 
         thermalRepository.hotspots.value = emptyList()
         drainMain()
 
         assertNull(viewModel.selectedOgnThermal.value)
+        assertFalse(viewModel.selectedOgnThermalDetailsVisible.value)
     }
 
     @Test

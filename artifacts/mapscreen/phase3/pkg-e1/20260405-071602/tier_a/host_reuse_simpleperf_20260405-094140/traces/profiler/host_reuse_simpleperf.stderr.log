@@ -1,0 +1,5 @@
+simpleperf I environment.cpp:545] Waiting for process of app com.example.openxcpro.debug
+simpleperf I environment.cpp:537] Got process 15948 for package com.example.openxcpro.debug
+simpleperf W kallsyms.cpp:163] Access to kernel symbol addresses is restricted. If possible, please do `echo 0 >/proc/sys/kernel/kptr_restrict` to fix this.
+simpleperf I cmd_record.cpp:840] Recorded for 95.0304 seconds. Start post processing.
+simpleperf I cmd_record.cpp:941] Samples recorded: 63,564. Samples lost: 0.

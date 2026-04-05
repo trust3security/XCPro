@@ -83,6 +83,7 @@ class MapOverlayManagerDetachOrderingTest {
             coroutineScope = TestScope(),
             airspaceUseCase = mock<AirspaceUseCase>(),
             waypointFilesUseCase = mock<WaypointFilesUseCase>(),
+            renderSurfaceDiagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { fixture.nowMonoMs }),
             monoTimeMs = { fixture.nowMonoMs }
         )
         return fixture

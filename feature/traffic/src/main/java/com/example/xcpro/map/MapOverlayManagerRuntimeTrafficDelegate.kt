@@ -33,6 +33,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
     private val adsbIconTelemetryTracker = AdsbIconTelemetryTracker()
     private val stickyIconProjectionCache = AdsbStickyIconProjectionCache()
     private var defaultMediumUnknownIconEnabled = true
+    private var mapInteractionActive: Boolean = false
 
     fun initializeAdsbTrafficOverlay(map: MapLibreMap?) {
         adsbRenderState.pendingJob?.cancel()
@@ -42,6 +43,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         if (map == null) return
         runtimeState.adsbTrafficOverlay = createAdsbTrafficOverlay(map)
         runtimeState.adsbTrafficOverlay?.initialize()
+        runtimeState.adsbTrafficOverlay?.setInteractionReducedMotionActive(mapInteractionActive)
         runtimeState.adsbTrafficOverlay?.setViewportZoom(resolveAdsbViewportZoom(map))
         val projectedStyleIds = projectedAdsbStyleIds(nowMonoMs())
         runtimeState.adsbTrafficOverlay?.render(
@@ -116,6 +118,12 @@ class MapOverlayManagerRuntimeTrafficDelegate(
         runtimeState.adsbTrafficOverlay?.setEmergencyFlashEnabled(enabled)
     }
 
+    fun setMapInteractionActive(active: Boolean) {
+        if (mapInteractionActive == active) return
+        mapInteractionActive = active
+        runtimeState.adsbTrafficOverlay?.setInteractionReducedMotionActive(active)
+    }
+
     fun setAdsbDefaultMediumUnknownIconEnabled(enabled: Boolean) {
         if (defaultMediumUnknownIconEnabled == enabled) return
         defaultMediumUnknownIconEnabled = enabled
@@ -130,6 +138,10 @@ class MapOverlayManagerRuntimeTrafficDelegate(
 
     fun runtimeCounters(): MapOverlayRuntimeTrafficCounters {
         val iconTelemetry = adsbIconTelemetryTracker.snapshot()
+        val animationDiagnostics = runtimeState.adsbTrafficOverlay?.diagnosticsSnapshot()
+            ?: AdsbTrafficOverlayDiagnosticsSnapshot(
+                interactionReducedMotionActive = mapInteractionActive
+            )
         return MapOverlayRuntimeTrafficCounters(
             overlayFrontOrderApplyCount = overlayFrontOrderApplyCount,
             overlayFrontOrderSkippedCount = overlayFrontOrderSkippedCount,
@@ -139,11 +151,18 @@ class MapOverlayManagerRuntimeTrafficDelegate(
             adsbIconResolveLatencyLastMs = iconTelemetry.resolveLatencyLastMs,
             adsbIconResolveLatencyMaxMs = iconTelemetry.resolveLatencyMaxMs,
             adsbIconResolveLatencyAverageMs = iconTelemetry.resolveLatencyAverageMs,
-            adsbDefaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled
+            adsbDefaultMediumUnknownIconEnabled = defaultMediumUnknownIconEnabled,
+            adsbAnimationFrameScheduledCount = animationDiagnostics.animationFrameScheduledCount,
+            adsbAnimationFrameRenderedCount = animationDiagnostics.animationFrameRenderedCount,
+            adsbAnimationFrameSkippedCount = animationDiagnostics.animationFrameSkippedCount,
+            adsbActiveAnimatedTargetCount = animationDiagnostics.activeAnimatedTargetCount,
+            adsbEmergencyAnimatedTargetCount = animationDiagnostics.emergencyAnimatedTargetCount,
+            adsbInteractionReducedMotionActive = animationDiagnostics.interactionReducedMotionActive
         )
     }
 
     fun onMapDetached() {
+        mapInteractionActive = false
         adsbRenderState.pendingJob?.cancel()
         adsbRenderState.pendingJob = null
         adsbRenderState.pendingDueMonoMs = Long.MAX_VALUE
@@ -263,6 +282,7 @@ class MapOverlayManagerRuntimeTrafficDelegate(
     private fun createAdsbTrafficOverlay(map: MapLibreMap): AdsbTrafficOverlayHandle =
         adsbTrafficOverlayFactory(context, map, adsbIconSizePx).also { overlay ->
             overlay.setEmergencyFlashEnabled(adsbEmergencyFlashEnabled)
+            overlay.setInteractionReducedMotionActive(mapInteractionActive)
         }
 
     private fun resolveAdsbViewportZoom(map: MapLibreMap): Float =

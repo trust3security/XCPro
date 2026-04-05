@@ -156,6 +156,7 @@ class MapOverlayManagerSkySightSatelliteErrorTest {
             airspaceUseCase = mock<AirspaceUseCase>(),
             waypointFilesUseCase = mock<WaypointFilesUseCase>(),
             ognTrafficOverlayFactory = { _, _, _, _ -> mock<OgnTrafficOverlayHandle>() },
+            renderSurfaceDiagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 1_000L }),
             monoTimeMs = { 1_000L }
         )
         return Fixture(manager = manager, mapState = mapState)

@@ -36,7 +36,7 @@ function ConvertTo-Hashtable {
         foreach ($item in $InputObject) {
             $items += @(ConvertTo-Hashtable -InputObject $item)
         }
-        return $items
+        return ,$items
     }
 
     return $InputObject

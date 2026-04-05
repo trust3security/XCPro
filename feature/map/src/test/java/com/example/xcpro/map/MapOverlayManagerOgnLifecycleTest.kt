@@ -319,6 +319,7 @@ class MapOverlayManagerOgnLifecycleTest {
             coroutineScope = scope,
             airspaceUseCase = mock<AirspaceUseCase>(),
             waypointFilesUseCase = mock<WaypointFilesUseCase>(),
+            renderSurfaceDiagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 1_000L }),
             ognTrafficOverlayFactory = ognTrafficOverlayFactory,
             ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
             ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
