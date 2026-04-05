@@ -17,6 +17,7 @@ import com.example.xcpro.map.MapLocationRenderFrameBinder
 import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
+import com.example.xcpro.map.MapRenderSurfaceDiagnostics
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.TaskRenderSnapshot
@@ -49,6 +50,7 @@ internal data class MapScreenMapContentInputs(
     val onMapViewBound: () -> Unit,
     val locationManager: MapLocationRuntimePort,
     val locationRenderFrameBinder: MapLocationRenderFrameBinder,
+    val renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     val flightDataManager: FlightDataManager,
     val flightViewModel: FlightDataViewModel,
     val taskType: TaskType,

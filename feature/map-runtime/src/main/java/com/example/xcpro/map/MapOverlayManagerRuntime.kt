@@ -48,6 +48,18 @@ open class MapOverlayManagerRuntime(
     }
 
     private var aatPreviewForwardCount = 0L
+    private var ognTrafficCollectorEmissionCount = 0L
+    private var ognTrafficCollectorDedupedCount = 0L
+    private var ognTrafficPortUpdateCount = 0L
+    private var ognTargetVisualCollectorEmissionCount = 0L
+    private var ognTargetVisualCollectorDedupedCount = 0L
+    private var ognTargetVisualPortUpdateCount = 0L
+    private var adsbTrafficCollectorEmissionCount = 0L
+    private var adsbTrafficCollectorDedupedCount = 0L
+    private var adsbTrafficPortUpdateCount = 0L
+    private var ognThermalCollectorEmissionCount = 0L
+    private var ognTrailCollectorEmissionCount = 0L
+    private var selectedOgnThermalCollectorEmissionCount = 0L
     private var pendingInteractionReleaseFlushJob: Job? = null
     private lateinit var lifecyclePort: MapOverlayRuntimeLifecyclePort
     private lateinit var trafficDelegate: MapOverlayManagerRuntimeTrafficDelegate
@@ -136,8 +148,74 @@ open class MapOverlayManagerRuntime(
             adsbIconResolveLatencyLastMs = counters.adsbIconResolveLatencyLastMs,
             adsbIconResolveLatencyMaxMs = counters.adsbIconResolveLatencyMaxMs,
             adsbIconResolveLatencyAverageMs = counters.adsbIconResolveLatencyAverageMs,
-            adsbDefaultMediumUnknownIconEnabled = counters.adsbDefaultMediumUnknownIconEnabled
+            adsbDefaultMediumUnknownIconEnabled = counters.adsbDefaultMediumUnknownIconEnabled,
+            adsbAnimationFrameScheduledCount = counters.adsbAnimationFrameScheduledCount,
+            adsbAnimationFrameRenderedCount = counters.adsbAnimationFrameRenderedCount,
+            adsbAnimationFrameSkippedCount = counters.adsbAnimationFrameSkippedCount,
+            adsbActiveAnimatedTargetCount = counters.adsbActiveAnimatedTargetCount,
+            adsbEmergencyAnimatedTargetCount = counters.adsbEmergencyAnimatedTargetCount,
+            adsbInteractionReducedMotionActive = counters.adsbInteractionReducedMotionActive,
+            ognTrafficCollectorEmissionCount = ognTrafficCollectorEmissionCount,
+            ognTrafficCollectorDedupedCount = ognTrafficCollectorDedupedCount,
+            ognTrafficPortUpdateCount = ognTrafficPortUpdateCount,
+            ognTargetVisualCollectorEmissionCount = ognTargetVisualCollectorEmissionCount,
+            ognTargetVisualCollectorDedupedCount = ognTargetVisualCollectorDedupedCount,
+            ognTargetVisualPortUpdateCount = ognTargetVisualPortUpdateCount,
+            adsbTrafficCollectorEmissionCount = adsbTrafficCollectorEmissionCount,
+            adsbTrafficCollectorDedupedCount = adsbTrafficCollectorDedupedCount,
+            adsbTrafficPortUpdateCount = adsbTrafficPortUpdateCount,
+            ognThermalCollectorEmissionCount = ognThermalCollectorEmissionCount,
+            ognTrailCollectorEmissionCount = ognTrailCollectorEmissionCount,
+            selectedOgnThermalCollectorEmissionCount = selectedOgnThermalCollectorEmissionCount
         )
+    }
+
+    protected fun recordOgnTrafficCollectorEmissionRuntime() {
+        ognTrafficCollectorEmissionCount += 1
+    }
+
+    protected fun recordOgnTrafficCollectorDedupedRuntime() {
+        ognTrafficCollectorDedupedCount += 1
+    }
+
+    protected fun recordOgnTrafficPortUpdateRuntime() {
+        ognTrafficPortUpdateCount += 1
+    }
+
+    protected fun recordOgnTargetVisualCollectorEmissionRuntime() {
+        ognTargetVisualCollectorEmissionCount += 1
+    }
+
+    protected fun recordOgnTargetVisualCollectorDedupedRuntime() {
+        ognTargetVisualCollectorDedupedCount += 1
+    }
+
+    protected fun recordOgnTargetVisualPortUpdateRuntime() {
+        ognTargetVisualPortUpdateCount += 1
+    }
+
+    protected fun recordAdsbTrafficCollectorEmissionRuntime() {
+        adsbTrafficCollectorEmissionCount += 1
+    }
+
+    protected fun recordAdsbTrafficCollectorDedupedRuntime() {
+        adsbTrafficCollectorDedupedCount += 1
+    }
+
+    protected fun recordAdsbTrafficPortUpdateRuntime() {
+        adsbTrafficPortUpdateCount += 1
+    }
+
+    protected fun recordOgnThermalCollectorEmissionRuntime() {
+        ognThermalCollectorEmissionCount += 1
+    }
+
+    protected fun recordOgnTrailCollectorEmissionRuntime() {
+        ognTrailCollectorEmissionCount += 1
+    }
+
+    protected fun recordSelectedOgnThermalCollectorEmissionRuntime() {
+        selectedOgnThermalCollectorEmissionCount += 1
     }
 
     fun onTaskStateChanged(signature: TaskRenderSyncCoordinator.TaskStateSignature) =
@@ -370,6 +448,7 @@ open class MapOverlayManagerRuntime(
         pendingInteractionReleaseFlushJob = null
         forecastWeatherDelegate.setMapInteractionActive(active)
         ognDelegate.setMapInteractionActive(active)
+        trafficDelegate.setMapInteractionActive(active)
         if (active) {
             return
         }

@@ -46,6 +46,7 @@ internal fun rememberMapScreenScaffoldInputs(
     hotPathBindings: MapScreenHotPathBindings,
     rootUiBinding: MapScreenRootUiBinding,
     bindings: MapScreenBindings,
+    trafficOverlayRuntimeInputs: MapTrafficOverlayRuntimeInputs,
     profileLookAndFeelBinding: MapScreenProfileLookAndFeelBinding,
     flightCardsBinding: MapScreenFlightCardsBinding,
     widgetLayout: MapScreenWidgetLayoutBinding,
@@ -89,7 +90,7 @@ internal fun rememberMapScreenScaffoldInputs(
         mapRuntimeController.onMapReady(map)
         applyMapReadyTrafficOverlayConfig(
             port = createTrafficOverlayRenderPort(managers.overlayManager),
-            config = createMapReadyTrafficOverlayConfig(bindings.traffic)
+            config = createMapReadyTrafficOverlayConfig(trafficOverlayRuntimeInputs)
         )
         watchedPilotFocusEpoch += 1
     }
@@ -134,6 +135,7 @@ internal fun rememberMapScreenScaffoldInputs(
                 onMapViewBound = onMapViewBound,
                 locationManager = managers.locationManager,
                 locationRenderFrameBinder = managers.locationRenderFrameBinder,
+                renderSurfaceDiagnostics = managers.renderSurfaceDiagnostics,
                 flightDataManager = flightDataManager,
                 flightViewModel = flightCardsBinding.flightViewModel,
                 taskType = taskBindings.taskType,

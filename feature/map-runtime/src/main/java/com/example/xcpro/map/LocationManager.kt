@@ -24,6 +24,7 @@ class LocationManager(
     private val cameraUpdateGate: MapCameraUpdateGate,
     private val locationOverlayPort: MapLocationOverlayPort,
     private val displayPoseSurfacePort: MapDisplayPoseSurfacePort,
+    private val renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     private val localOwnshipRenderEnabledProvider: () -> Boolean = { true },
     private val replayHeadingProvider: ((Long) -> Double?)? = null,
     private val replayFixProvider: ((Long) -> ReplayDisplayPose?)? = null
@@ -121,8 +122,16 @@ class LocationManager(
         replayFixProvider = replayFixProvider,
         trackingCameraController = trackingCameraController,
         positionController = positionController,
-        frameLogger = frameLogger
+        frameLogger = frameLogger,
+        diagnostics = renderSurfaceDiagnostics
     )
+    private val displayPoseRepaintGate = DisplayPoseRepaintGate(
+        requestRepaint = {
+            cameraControllerProvider.controllerOrNull()?.triggerRepaint()
+        },
+        diagnostics = renderSurfaceDiagnostics
+    )
+    private val displayPoseFrameActivityGate = DisplayPoseFrameActivityGate()
     private var localOwnshipRenderEnabled: Boolean = localOwnshipRenderEnabledProvider()
 
     // Map UI state proxies (MapStateStore is the single owner)
@@ -159,8 +168,6 @@ class LocationManager(
     override fun setActiveProfileId(profileId: String) {
         locationPreferences.setActiveProfileId(profileId)
     }
-
-
     override fun updateLocationFromGPS(
         location: MapLocationUiModel,
         orientation: OrientationData
@@ -185,6 +192,8 @@ class LocationManager(
         }
         localOwnshipRenderEnabled = enabled
         if (!enabled) {
+            displayPoseRepaintGate.clear()
+            displayPoseFrameActivityGate.clear()
             displayPoseRenderer.clear()
             currentUserLocation = null
             stateActions.setShowRecenterButton(false)
@@ -192,11 +201,16 @@ class LocationManager(
             locationOverlayPort.setBlueLocationVisible(false)
             return
         }
-        requestRenderFrameIfEnabled()
+        requestRenderFrameIfEnabled(forceImmediate = true)
     }
 
     override fun updateOrientation(orientation: OrientationData) {
         displayPoseRenderer.updateOrientation(orientation)
+        displayPoseFrameActivityGate.updateOrientation(
+            orientation = orientation,
+            profile = mapStateReader.displaySmoothingProfile.value,
+            hasRenderableInput = hasRenderableDisplayInput()
+        )
         requestRenderFrameIfEnabled()
     }
 
@@ -206,28 +220,48 @@ class LocationManager(
         }
     }
 
+    override fun shouldDispatchLiveDisplayFrame(): Boolean {
+        if (!localOwnshipRenderEnabled) {
+            renderSurfaceDiagnostics.recordDisplayFramePreDispatchSuppressed()
+            return false
+        }
+        val shouldDispatch = displayPoseFrameActivityGate.shouldDispatch(
+            hasRenderableInput = hasRenderableDisplayInput(),
+            timeBase = poseCoordinator.timeBase,
+            mode = mapStateReader.displayPoseMode.value,
+            smoothingProfile = mapStateReader.displaySmoothingProfile.value
+        )
+        if (!shouldDispatch) {
+            renderSurfaceDiagnostics.recordDisplayFramePreDispatchSuppressed()
+        }
+        return shouldDispatch
+    }
+
     override fun onDisplayFrame() {
         if (featureFlags.useRenderFrameSync) {
-            cameraControllerProvider.controllerOrNull()?.triggerRepaint()
+            requestRenderFrameIfEnabled(forceImmediate = true)
             return
         }
+        renderSurfaceDiagnostics.recordRenderFrameDelivered()
         renderDisplayFrame()
+        renderSurfaceDiagnostics.recordFrameRendered()
     }
 
     fun onRenderFrame() {
         if (!featureFlags.useRenderFrameSync) {
             return
         }
+        renderSurfaceDiagnostics.recordRenderFrameDelivered()
         renderDisplayFrame()
+        renderSurfaceDiagnostics.recordFrameRendered()
+        displayPoseRepaintGate.onFrameRendered()
     }
 
     override fun getDisplayPoseLocation(): LatLng? = displayPoseRenderer.getDisplayPoseLocation()
 
-    override fun getDisplayPoseTimestampMs(): Long? =
-        displayPoseRenderer.getDisplayPoseTimestampMs()
+    override fun getDisplayPoseTimestampMs(): Long? = displayPoseRenderer.getDisplayPoseTimestampMs()
 
-    override fun getDisplayPoseSnapshot(): DisplayPoseSnapshot? =
-        displayPoseRenderer.getDisplayPoseSnapshot()
+    override fun getDisplayPoseSnapshot(): DisplayPoseSnapshot? = displayPoseRenderer.getDisplayPoseSnapshot()
 
     override fun setDisplayPoseFrameListener(listener: ((DisplayPoseSnapshot) -> Unit)?) {
         displayPoseRenderer.setDisplayPoseFrameListener(listener)
@@ -288,8 +322,12 @@ class LocationManager(
             trackingCameraController.onTimeBaseChanged(fixLocation)
         }
         currentUserLocation = fixLocation
+        displayPoseFrameActivityGate.markFixReceived(mapStateReader.displaySmoothingProfile.value)
         requestRenderFrameIfEnabled()
     }
+
+    private fun hasRenderableDisplayInput(): Boolean =
+        localOwnshipRenderEnabled && poseCoordinator.timeBase != null
 
     private fun isValidCoordinate(lat: Double, lon: Double): Boolean {
         if (!lat.isFinite() || !lon.isFinite()) return false
@@ -328,21 +366,20 @@ class LocationManager(
     ) {
         userInteractionController.handleUserInteraction(currentLocation, currentZoom, currentBearing)
     }
-
-
-
     private inline fun logLocationDebug(message: () -> String) {
         if (RuntimeBuildConfig.DEBUG) {
             Log.d(TAG, message())
         }
     }
 
-    private fun requestRenderFrameIfEnabled() {
+    private fun requestRenderFrameIfEnabled(forceImmediate: Boolean = false) {
         if (!featureFlags.useRenderFrameSync) {
             return
         }
-        cameraControllerProvider.controllerOrNull()?.triggerRepaint()
+        renderSurfaceDiagnostics.recordRepaintRequest(forceImmediate = forceImmediate)
+        displayPoseRepaintGate.request(
+            minIntervalNs = displayPoseMinFrameIntervalNs(poseCoordinator.timeBase),
+            forceImmediate = forceImmediate
+        )
     }
 }
-
-

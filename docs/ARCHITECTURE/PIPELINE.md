@@ -699,17 +699,21 @@ OGN lifecycle/position semantics:
     authoritative OGN state mutation and `OgnTrafficSnapshot` publication run on
     a dedicated writer lane inside `OgnTrafficRepositoryRuntime`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - OGN traffic overlay renders `emptyList()` when overlay preference is disabled.
-  - Thermal overlay renders `emptyList()` unless `ognOverlayEnabled && showThermalsEnabled`.
-  - OGN glider-trail overlay renders `emptyList()` unless
-    `ognOverlayEnabled && showSciaEnabled`; per-aircraft filtering is applied
-    from selected OGN aircraft keys.
-  - Selected-thermal context overlay renders only for the currently selected thermal;
-    it clears on deselection, hidden thermals, or missing hotspot context.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayEffects.kt`
+  - Wires a slim UI-only `MapTrafficUiBinding` for panels/sheets and a separate
+    runtime-only traffic overlay input holder for hot overlay mutation.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayRuntimeBindings.kt`
+  - Owns the runtime-only traffic overlay input holder and the map-ready OGN/ADS-B
+    overlay bootstrap config derived from current runtime state.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayRuntimeCollectors.kt`
+  - Owns direct flow collectors for OGN targets, thermals, glider trails,
+    selected thermal context, target visuals, ADS-B targets, and icon/config flags.
+  - Applies overlay enable gates at the runtime collector seam instead of via
+    list-keyed Compose render-state adapters.
+  - Owns collector-side request dedupe for hot OGN/ADS-B traffic and OGN target-visual
+    requests using render-relevant signatures before calling the overlay manager runtime.
   - Forwards selected OGN target render inputs, including ownship coordinate,
-    quantized ownship altitude, altitude unit, and units preferences, into the
-    map runtime target-visual path.
+    quantized overlay ownship altitude, altitude unit, and units preferences, into
+    the map runtime target-visual path.
   - Forwards selected thermal context into the runtime selected-thermal overlay path.
 - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
   - Keeps OGN target visuals render-only and runtime-owned.
@@ -737,11 +741,25 @@ ADS-b settings path:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
   - Converts ADS-b settings flows and ownship altitude into lifecycle-aware state for UI/runtime wiring via `AdsbTrafficFacade`.
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - Pushes icon-size and default-unknown rollout toggles into overlay runtime controller.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-  - Applies visual-only ownship-altitude quantization (`2 m` default) before
-    OGN/ADS-b runtime overlay updates to reduce high-frequency side-effect churn
-    without mutating repository SSOT values.
+  - Pushes icon-size and default-unknown rollout toggles into overlay runtime controller using runtime-owned traffic overlay collectors rather than root Compose list snapshots.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt`
+  - Derives a dedicated overlay-ownship-altitude state (`2 m` quantized and
+    `distinctUntilChanged`) so OGN/ADS-B render paths do not wake on raw altitude jitter
+    while repository and non-overlay consumers keep the unmodified ownship altitude SSOT.
+- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+  - Owns runtime forwarding of map-interaction state into the ADS-B overlay runtime.
+  - Keeps reduced-motion ownership runtime-side so Compose and ViewModels do not grow a
+    second interaction-quality state holder.
+- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+  - Owns ADS-B overlay-local animation timing, interaction reduced-motion behavior,
+    and the effective interaction declutter policy used while pan/zoom interaction is active.
+  - While reduced motion is active, emergency targets stay visible but flashing is disabled
+    and the overlay-local animation frame loop stops after the current frame.
+- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayDiagnostics.kt`
+  - Owns debug-only ADS-B overlay animation counters (`scheduled`, `rendered`, `skipped`,
+    active animated target count, emergency animated target count, reduced-motion state)
+    so the shell/runtime status path can attribute hot render work without creating a
+    second ad hoc logging seam.
 - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
   - Applies and re-applies icon size for existing and recreated overlays.
   - Is the single runtime owner for ADS-b/OGN traffic overlay recreation so persisted icon size is applied consistently on cold start.
@@ -1025,6 +1043,45 @@ Card configuration + hydration (current):
   display-pose frame loop, `LocationManager` requests repaints from raw-fix /
   orientation updates and resume sync, and `RenderFrameSync` remains the single
   render callback owner that dispatches `onRenderFrame()`.
+- Map smoothness Phase 5 now keeps hot map-host recomposition narrower:
+  `MapScreenComposeAndLifecycleEffects` forwards `currentLocationFlow` and
+  `orientationFlow` directly into `MapComposeEffects` collector-based runtime
+  effects instead of collecting them into root Compose state, while
+  `MapScreenContentRuntime`, `MapOverlayStack`, `MapLiveFollowRuntimeLayer`,
+  and the traffic/task/action-button wrapper layers collect location/zoom only
+  at the small UI/runtime seams that actually need those values. `MapViewHost`
+  stays under the retained shell, but it is no longer driven by root
+  `currentLocation` / `currentZoom` churn during steady-state movement.
+- Map smoothness Phase 6 now makes render-sync repaint requests cadence-aware in
+  `:feature:map-runtime`: `LocationManager` no longer calls `MapCameraController
+  .triggerRepaint()` on every accepted orientation/fix burst. A dedicated
+  `DisplayPoseRepaintGate` coalesces latest-wins repaint requests to the same
+  live/replay cadence contract used by the Compose-owned display-pose loop,
+  while exactness paths such as resume, ownship re-enable, and direct
+  `onRenderFrame()` processing remain immediate.
+- Map smoothness Phase 7 now tightens the remaining render-frame host path:
+  `MapViewHost` binds the render-frame listener once per `MapView` instance
+  through a dedicated host-binding controller instead of rebinding from every
+  `AndroidView.update`, reuses the `MapScreenState.mapView` instance across
+  transient host disposal so Compose host churn does not force a new
+  `SurfaceView`-backed `MapView`, and leaves final `mapView` clearing to the
+  lifecycle cleanup path in `MapLifecycleSurfaceAdapter`. `RenderFrameSync`
+  still coalesces off-main pending `mapView.post { onRenderFrame() }`
+  callbacks so repeated render-thread notifications cannot queue redundant
+  main-thread work.
+- Map smoothness Phase 8 now suppresses no-op live display frames in two
+  runtime-owned stages. `MapComposeEffects` still owns the live
+  `withFrameNanos` ticker when `useRenderFrameSync` is disabled, but it now
+  asks `LocationManager.shouldDispatchLiveDisplayFrame()` before dispatching
+  each live frame. That runtime gate derives its settle window from the active
+  `DisplaySmoothingProfile` and reactivates on real pose/orientation/config
+  changes, while `DisplayPoseRenderCoordinator` still compares the current
+  rendered pose snapshot against the last rendered snapshot and skips
+  materially unchanged frames before camera or blue-overlay mutation. Both the
+  pre-dispatch suppressions and late no-op skips are recorded in
+  `MapRenderSurfaceDiagnostics`. The live ticker cadence remains `25 ms` while
+  replay stays at `16.7 ms`; cadence ownership remains in
+  `DisplayPoseRenderCadence`.
 
 Card cadence (current):
 - `FlightDataManager.cardFlightDataFlow`: bucketed, unthrottled (near pass-through).

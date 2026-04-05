@@ -37,6 +37,7 @@ interface AdsbTrafficOverlayHandle {
     fun setIconSizePx(iconSizePx: Int)
     fun setViewportZoom(zoomLevel: Float)
     fun setEmergencyFlashEnabled(enabled: Boolean)
+    fun setInteractionReducedMotionActive(active: Boolean)
     fun render(
         targets: List<AdsbTrafficUiModel>,
         selectedTargetId: Icao24?,
@@ -44,6 +45,7 @@ interface AdsbTrafficOverlayHandle {
         unitsPreferences: UnitsPreferences,
         iconStyleIdOverrides: Map<String, String>
     )
+    fun diagnosticsSnapshot(): AdsbTrafficOverlayDiagnosticsSnapshot
     fun findTargetAt(tap: LatLng): Icao24?
     fun cleanup()
     fun bringToFront()

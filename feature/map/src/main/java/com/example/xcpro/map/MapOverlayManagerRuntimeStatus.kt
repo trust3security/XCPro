@@ -12,7 +12,8 @@ internal fun buildMapOverlayManagerStatus(
     latestAdsbTargetsCount: Int,
     runtimeCounters: MapOverlayRuntimeCounters,
     taskWaypointCount: Int,
-    forecastWeatherStatus: MapOverlayForecastWeatherStatus
+    forecastWeatherStatus: MapOverlayForecastWeatherStatus,
+    renderSurfaceStatus: String
 ): String {
     return buildString {
         append("MapOverlayManager Status:\n")
@@ -72,8 +73,38 @@ internal fun buildMapOverlayManagerStatus(
         append("- ADS-B Icon Resolve Latency Last Ms: ${runtimeCounters.adsbIconResolveLatencyLastMs}\n")
         append("- ADS-B Icon Resolve Latency Max Ms: ${runtimeCounters.adsbIconResolveLatencyMaxMs}\n")
         append("- ADS-B Icon Resolve Latency Average Ms: ${runtimeCounters.adsbIconResolveLatencyAverageMs}\n")
+        append("- ADS-B Animation Frame Scheduled Count: ${runtimeCounters.adsbAnimationFrameScheduledCount}\n")
+        append("- ADS-B Animation Frame Rendered Count: ${runtimeCounters.adsbAnimationFrameRenderedCount}\n")
+        append("- ADS-B Animation Frame Skipped Count: ${runtimeCounters.adsbAnimationFrameSkippedCount}\n")
+        append("- ADS-B Active Animated Target Count: ${runtimeCounters.adsbActiveAnimatedTargetCount}\n")
+        append("- ADS-B Emergency Animated Target Count: ${runtimeCounters.adsbEmergencyAnimatedTargetCount}\n")
+        append("- ADS-B Interaction Reduced Motion Active: ${runtimeCounters.adsbInteractionReducedMotionActive}\n")
         append("- Overlay Front Order Apply Count: ${runtimeCounters.overlayFrontOrderApplyCount}\n")
         append("- Overlay Front Order Skipped Count: ${runtimeCounters.overlayFrontOrderSkippedCount}\n")
+        append("- OGN Traffic Collector Emissions: ${runtimeCounters.ognTrafficCollectorEmissionCount}\n")
+        append("- OGN Traffic Collector Deduped: ${runtimeCounters.ognTrafficCollectorDedupedCount}\n")
+        append("- OGN Traffic Port Updates: ${runtimeCounters.ognTrafficPortUpdateCount}\n")
+        append(
+            "- OGN Target Visual Collector Emissions: ${
+                runtimeCounters.ognTargetVisualCollectorEmissionCount
+            }\n"
+        )
+        append(
+            "- OGN Target Visual Collector Deduped: ${
+                runtimeCounters.ognTargetVisualCollectorDedupedCount
+            }\n"
+        )
+        append("- OGN Target Visual Port Updates: ${runtimeCounters.ognTargetVisualPortUpdateCount}\n")
+        append("- ADS-B Traffic Collector Emissions: ${runtimeCounters.adsbTrafficCollectorEmissionCount}\n")
+        append("- ADS-B Traffic Collector Deduped: ${runtimeCounters.adsbTrafficCollectorDedupedCount}\n")
+        append("- ADS-B Traffic Port Updates: ${runtimeCounters.adsbTrafficPortUpdateCount}\n")
+        append("- OGN Thermal Collector Emissions: ${runtimeCounters.ognThermalCollectorEmissionCount}\n")
+        append("- OGN Trail Collector Emissions: ${runtimeCounters.ognTrailCollectorEmissionCount}\n")
+        append(
+            "- Selected OGN Thermal Collector Emissions: ${
+                runtimeCounters.selectedOgnThermalCollectorEmissionCount
+            }\n"
+        )
         append("- Forecast Overlay Enabled: ${forecastWeatherStatus.forecastOverlayEnabled}\n")
         append("- Forecast Wind Overlay Enabled: ${forecastWeatherStatus.forecastWindOverlayEnabled}\n")
         append(
@@ -108,5 +139,6 @@ internal fun buildMapOverlayManagerStatus(
             }\n"
         )
         append("- Task Waypoints: $taskWaypointCount\n")
+        append(renderSurfaceStatus)
     }
 }

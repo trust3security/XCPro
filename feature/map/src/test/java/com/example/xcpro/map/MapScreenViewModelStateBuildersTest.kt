@@ -4,6 +4,7 @@ import com.example.xcpro.map.AdsbTrafficUiModel
 import com.example.xcpro.map.Icao24
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.replay.Selection
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -125,6 +127,48 @@ class MapScreenViewModelStateBuildersTest {
         liveDataReady.value = true
         runCurrent()
         assertTrue(hydrationReady.value)
+    }
+
+    @Test
+    fun createOverlayOwnshipAltitudeState_quantizesAndDedupesWithinBucket() = runTest {
+        val repository = FlightDataRepository()
+        val useCase = FlightDataUseCase(repository)
+        val overlayAltitudeState = createOverlayOwnshipAltitudeState(
+            scope = backgroundScope,
+            flightDataUseCase = useCase
+        )
+        runCurrent()
+
+        repository.update(buildCompleteFlightData(gps = defaultGps(altitudeMeters = 1_001.1)))
+        runCurrent()
+        assertEquals(1_002.0, overlayAltitudeState.value ?: Double.NaN, 0.0)
+
+        repository.update(buildCompleteFlightData(gps = defaultGps(altitudeMeters = 1_001.8)))
+        runCurrent()
+        assertEquals(1_002.0, overlayAltitudeState.value ?: Double.NaN, 0.0)
+
+        repository.update(buildCompleteFlightData(gps = defaultGps(altitudeMeters = 1_003.2)))
+        runCurrent()
+        assertEquals(1_004.0, overlayAltitudeState.value ?: Double.NaN, 0.0)
+    }
+
+    @Test
+    fun createOverlayOwnshipAltitudeState_fallsBackToBaroAndHandlesNull() = runTest {
+        val repository = FlightDataRepository()
+        val useCase = FlightDataUseCase(repository)
+        val overlayAltitudeState = createOverlayOwnshipAltitudeState(
+            scope = backgroundScope,
+            flightDataUseCase = useCase
+        )
+        runCurrent()
+
+        repository.update(buildCompleteFlightData(gps = null, baroAltitudeMeters = 1_113.1))
+        runCurrent()
+        assertEquals(1_114.0, overlayAltitudeState.value ?: Double.NaN, 0.0)
+
+        repository.update(null)
+        runCurrent()
+        assertNull(overlayAltitudeState.value)
     }
 
     @Test

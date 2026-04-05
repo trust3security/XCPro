@@ -9,7 +9,13 @@ data class MapOverlayRuntimeTrafficCounters(
     val adsbIconResolveLatencyLastMs: Long?,
     val adsbIconResolveLatencyMaxMs: Long?,
     val adsbIconResolveLatencyAverageMs: Long?,
-    val adsbDefaultMediumUnknownIconEnabled: Boolean
+    val adsbDefaultMediumUnknownIconEnabled: Boolean,
+    val adsbAnimationFrameScheduledCount: Long,
+    val adsbAnimationFrameRenderedCount: Long,
+    val adsbAnimationFrameSkippedCount: Long,
+    val adsbActiveAnimatedTargetCount: Int,
+    val adsbEmergencyAnimatedTargetCount: Int,
+    val adsbInteractionReducedMotionActive: Boolean
 )
 
 data class OverlayFrontOrderSignature(

@@ -17,6 +17,7 @@ class MapLifecycleManagerForegroundRestoreTest {
             orientationManager = mock<MapOrientationRuntimePort>(),
             locationManager = mock<MapLocationRuntimePort>(),
             locationRenderFrameCleanup = mock<MapRenderFrameCleanupPort>(),
+            renderSurfaceDiagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 123L }),
             replaySessionState = MutableStateFlow(SessionState())
         )
 

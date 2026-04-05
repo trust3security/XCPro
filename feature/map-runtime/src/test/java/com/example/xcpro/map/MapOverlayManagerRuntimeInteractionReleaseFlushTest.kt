@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.maplibre.android.maps.MapLibreMap
+import org.mockito.Mockito.clearInvocations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
@@ -51,6 +52,7 @@ class MapOverlayManagerRuntimeInteractionReleaseFlushTest {
         reset(fixture.ognTrafficOverlay, fixture.adsbTrafficOverlay, fixture.weatherOverlay)
 
         fixture.manager.setMapInteractionActive(true)
+        clearInvocations(fixture.adsbTrafficOverlay)
         fixture.nowProbe.value = 10_100L
         fixture.manager.updateOgnTrafficTargets(
             targets = listOf(ognTarget("ogn-2")),
@@ -72,20 +74,42 @@ class MapOverlayManagerRuntimeInteractionReleaseFlushTest {
             stale = false
         )
         runCurrent()
-        verifyNoInteractions(fixture.ognTrafficOverlay, fixture.adsbTrafficOverlay, fixture.weatherOverlay)
+        verifyNoInteractions(fixture.ognTrafficOverlay, fixture.weatherOverlay)
+        verify(fixture.adsbTrafficOverlay, times(0)).render(
+            targets = any(),
+            selectedTargetId = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
 
         fixture.manager.setMapInteractionActive(false)
         runCurrent()
+        clearInvocations(fixture.adsbTrafficOverlay)
 
         fixture.nowProbe.value = 10_600L
         advanceTimeBy(500L)
         runCurrent()
-        verifyNoInteractions(fixture.ognTrafficOverlay, fixture.adsbTrafficOverlay, fixture.weatherOverlay)
+        verifyNoInteractions(fixture.ognTrafficOverlay, fixture.weatherOverlay)
+        verify(fixture.adsbTrafficOverlay, times(0)).render(
+            targets = any(),
+            selectedTargetId = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
 
         fixture.nowProbe.value = 10_719L
         advanceTimeBy(119L)
         runCurrent()
-        verifyNoInteractions(fixture.ognTrafficOverlay, fixture.adsbTrafficOverlay, fixture.weatherOverlay)
+        verifyNoInteractions(fixture.ognTrafficOverlay, fixture.weatherOverlay)
+        verify(fixture.adsbTrafficOverlay, times(0)).render(
+            targets = any(),
+            selectedTargetId = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
 
         fixture.nowProbe.value = 10_720L
         advanceTimeBy(1L)
@@ -125,6 +149,7 @@ class MapOverlayManagerRuntimeInteractionReleaseFlushTest {
         reset(fixture.adsbTrafficOverlay)
 
         fixture.manager.setMapInteractionActive(true)
+        clearInvocations(fixture.adsbTrafficOverlay)
         fixture.nowProbe.value = 10_100L
         fixture.manager.updateAdsbTrafficTargets(
             targets = listOf(adsbTarget("def456")),
@@ -132,21 +157,41 @@ class MapOverlayManagerRuntimeInteractionReleaseFlushTest {
             unitsPreferences = UnitsPreferences()
         )
         runCurrent()
-        verifyNoInteractions(fixture.adsbTrafficOverlay)
+        verify(fixture.adsbTrafficOverlay, times(0)).render(
+            targets = any(),
+            selectedTargetId = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
 
         fixture.manager.setMapInteractionActive(false)
+        clearInvocations(fixture.adsbTrafficOverlay)
         fixture.nowProbe.value = 10_600L
         advanceTimeBy(500L)
         runCurrent()
-        verifyNoInteractions(fixture.adsbTrafficOverlay)
+        verify(fixture.adsbTrafficOverlay, times(0)).render(
+            targets = any(),
+            selectedTargetId = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
 
         fixture.manager.setMapInteractionActive(true)
         runCurrent()
+        clearInvocations(fixture.adsbTrafficOverlay)
 
         fixture.nowProbe.value = 10_749L
         advanceTimeBy(149L)
         runCurrent()
-        verifyNoInteractions(fixture.adsbTrafficOverlay)
+        verify(fixture.adsbTrafficOverlay, times(0)).render(
+            targets = any(),
+            selectedTargetId = anyOrNull(),
+            ownshipAltitudeMeters = anyOrNull(),
+            unitsPreferences = any(),
+            iconStyleIdOverrides = any()
+        )
     }
 
     private fun createFixture(scope: TestScope): Fixture {

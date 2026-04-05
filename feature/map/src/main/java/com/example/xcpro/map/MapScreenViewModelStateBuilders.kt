@@ -11,8 +11,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.math.round
 
 internal fun createWindArrowState(
     scope: CoroutineScope,
@@ -114,10 +116,17 @@ internal fun createOwnshipAltitudeState(
     flightDataUseCase: FlightDataUseCase
 ): StateFlow<Double?> =
     flightDataUseCase.flightData
-        .map { sample ->
-            val gpsAltitude = sample?.gps?.altitude?.value?.takeIf { it.isFinite() }
-            gpsAltitude ?: sample?.baroAltitude?.value?.takeIf { it.isFinite() }
-        }
+        .map(::resolveOwnshipAltitudeMeters)
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+internal fun createOverlayOwnshipAltitudeState(
+    scope: CoroutineScope,
+    flightDataUseCase: FlightDataUseCase
+): StateFlow<Double?> =
+    flightDataUseCase.flightData
+        .map(::resolveOwnshipAltitudeMeters)
+        .map(::quantizeOverlayOwnshipAltitudeMeters)
+        .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, null)
 
 internal fun createOwnshipCirclingState(
@@ -179,3 +188,19 @@ internal fun <T> Flow<T>.eagerState(scope: CoroutineScope, initial: T): StateFlo
     stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = initial)
 
 private fun normalizeAngleDeg(angle: Float): Float = ((angle % 360f) + 360f) % 360f
+
+private fun resolveOwnshipAltitudeMeters(sample: com.example.xcpro.sensors.CompleteFlightData?): Double? {
+    val gpsAltitude = sample?.gps?.altitude?.value?.takeIf { it.isFinite() }
+    return gpsAltitude ?: sample?.baroAltitude?.value?.takeIf { it.isFinite() }
+}
+
+private fun quantizeOverlayOwnshipAltitudeMeters(
+    altitudeMeters: Double?,
+    quantizeStepMeters: Double = OVERLAY_OWNSHIP_ALTITUDE_QUANTIZE_STEP_METERS
+): Double? {
+    val altitude = altitudeMeters?.takeIf { it.isFinite() } ?: return null
+    if (!quantizeStepMeters.isFinite() || quantizeStepMeters <= 0.0) return altitude
+    return round(altitude / quantizeStepMeters) * quantizeStepMeters
+}
+
+private const val OVERLAY_OWNSHIP_ALTITUDE_QUANTIZE_STEP_METERS = 2.0

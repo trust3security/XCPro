@@ -15,6 +15,7 @@ class MapLifecycleManager(
     private val orientationManager: MapOrientationRuntimePort,
     internal val locationManager: MapLocationRuntimePort,
     private val locationRenderFrameCleanup: MapRenderFrameCleanupPort,
+    private val renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     private val replaySessionState: StateFlow<SessionState>
 ) : MapLifecycleRuntimePort {
     companion object {
@@ -44,6 +45,7 @@ class MapLifecycleManager(
             Lifecycle.Event.ON_RESUME -> {
                 dispatchMapViewResumeIfNeeded()
                 restartSensorsIfAllowed()
+                renderSurfaceDiagnostics.recordLifecycleResumeForcedFrame()
                 locationManager.onDisplayFrame()
             }
             Lifecycle.Event.ON_PAUSE -> {
@@ -62,6 +64,7 @@ class MapLifecycleManager(
                     mapViewStarted = false
                 }
                 orientationManager.stop()
+                AppLogger.i(LOG_TAG, renderSurfaceDiagnostics.buildCompactStatus(reason = "on_stop"))
             }
             Lifecycle.Event.ON_DESTROY -> {
                 if (mapViewCreated) {
@@ -119,6 +122,7 @@ class MapLifecycleManager(
             resetLifecycleTracking()
             lifecycleSurface.clearRuntimeOverlays()
             lifecycleSurface.clearMapSurfaceReferences()
+            AppLogger.i(LOG_TAG, renderSurfaceDiagnostics.buildCompactStatus(reason = "cleanup"))
         } catch (e: Exception) {
             AppLogger.e(LOG_TAG, "Error during cleanup: ${e.message}", e)
         }
@@ -150,6 +154,7 @@ class MapLifecycleManager(
             append("- Map LibreMap: ${if (lifecycleSurface.isMapLibreReady()) "Initialized" else "Not Initialized"}\n")
             append("- Orientation Manager: Available\n")
             append("- Location Tracking: ${locationManager.isGpsEnabled()}\n")
+            append(renderSurfaceDiagnostics.buildStatus(header = "Render Surface"))
         }
     }
 

@@ -29,7 +29,7 @@ internal data class MapScreenForecastWeatherState(
 @Composable
 internal fun rememberMapScreenForecastWeatherState(
     mapLibreMap: MapLibreMap?,
-    currentLocation: MapLocationUiModel?,
+    fallbackLocationProvider: () -> MapLocationUiModel?,
     overlayManager: MapOverlayManager
 ): MapScreenForecastWeatherState {
     val forecastViewModel: ForecastOverlayViewModel = hiltViewModel()
@@ -45,7 +45,7 @@ internal fun rememberMapScreenForecastWeatherState(
 
     val skySightRegionCoverageWarning = computeSkySightRegionCoverageWarning(
         mapLibreMap = mapLibreMap,
-        fallbackLocation = currentLocation,
+        fallbackLocation = fallbackLocationProvider(),
         regionCode = forecastOverlayState.selectedRegionCode
     )
     val skySightRainArbitrationWarning = computeSkySightRainSuppressionWarning(

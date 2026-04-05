@@ -114,6 +114,7 @@ import com.example.xcpro.map.OgnTrailSelectionPreferencesRepository
 import com.example.xcpro.thermalling.ThermallingModeCoordinator
 import com.example.xcpro.thermalling.ThermallingModePreferencesRepository
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -453,10 +454,12 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
         viewModel.onOgnThermalSelected(thermalId)
         drainMain()
         assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+        assertTrue(viewModel.selectedOgnThermalDetailsVisible.value)
 
         viewModel.setMapVisible(false)
         drainMain()
         assertNull(viewModel.selectedOgnThermal.value)
+        assertFalse(viewModel.selectedOgnThermalDetailsVisible.value)
 
         viewModel.setMapVisible(true)
         viewModel.onAdsbTargetSelected(adsbId)
@@ -500,8 +503,57 @@ class MapScreenViewModelTrafficSelectionTest : MapScreenViewModelTestBase() {
         drainMain()
 
         assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+        assertTrue(viewModel.selectedOgnThermalDetailsVisible.value)
         assertNull(viewModel.selectedOgnTarget.value)
         assertNull(viewModel.selectedAdsbTarget.value)
+    }
+
+    @Test
+    fun dismissSelectedOgnThermal_hidesDetailsWithoutClearingSelectedThermal() = runBlocking {
+        val thermalRepository = FakeOgnThermalRepository()
+        val viewModel = createViewModel(ognThermalRepositoryOverride = thermalRepository)
+        val thermalId = "OGN123-thermal-1"
+
+        thermalRepository.hotspots.value = listOf(sampleThermalHotspot(thermalId, "OGN123"))
+        drainMain()
+
+        viewModel.onOgnThermalSelected(thermalId)
+        drainMain()
+        assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+        assertTrue(viewModel.selectedOgnThermalDetailsVisible.value)
+
+        viewModel.dismissSelectedOgnThermal()
+        drainMain()
+
+        assertEquals(thermalId, viewModel.selectedOgnThermal.value?.id)
+        assertFalse(viewModel.selectedOgnThermalDetailsVisible.value)
+    }
+
+    @Test
+    fun selectingAnotherThermal_replacesSelectionAndReopensDetails() = runBlocking {
+        val thermalRepository = FakeOgnThermalRepository()
+        val viewModel = createViewModel(ognThermalRepositoryOverride = thermalRepository)
+        val firstThermalId = "OGN123-thermal-1"
+        val secondThermalId = "OGN123-thermal-2"
+
+        thermalRepository.hotspots.value = listOf(
+            sampleThermalHotspot(firstThermalId, "OGN123"),
+            sampleThermalHotspot(secondThermalId, "OGN123")
+        )
+        drainMain()
+
+        viewModel.onOgnThermalSelected(firstThermalId)
+        drainMain()
+        viewModel.dismissSelectedOgnThermal()
+        drainMain()
+        assertEquals(firstThermalId, viewModel.selectedOgnThermal.value?.id)
+        assertFalse(viewModel.selectedOgnThermalDetailsVisible.value)
+
+        viewModel.onOgnThermalSelected(secondThermalId)
+        drainMain()
+
+        assertEquals(secondThermalId, viewModel.selectedOgnThermal.value?.id)
+        assertTrue(viewModel.selectedOgnThermalDetailsVisible.value)
     }
 
 }

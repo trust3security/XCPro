@@ -38,6 +38,7 @@ class MapOverlayManager(
         TrafficOverlayFactories::createOgnSelectedThermalOverlay,
     adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory =
         TrafficOverlayFactories::createAdsbTrafficOverlay,
+    renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     monoTimeMs: () -> Long = TimeBridge::nowMonoMs
 ) : MapOverlayManagerRuntime(
     context = context,
@@ -89,7 +90,10 @@ class MapOverlayManager(
         ognStatusSnapshot = ::ognStatusSnapshotRuntime,
         latestAdsbTargetsCount = ::latestAdsbTargetsCountRuntime,
         runtimeCounters = ::runtimeCountersSnapshot,
-        forecastWeatherStatus = ::forecastWeatherStatusRuntime
+        forecastWeatherStatus = ::forecastWeatherStatusRuntime,
+        renderSurfaceStatus = {
+            renderSurfaceDiagnostics.buildStatus(header = "Render Surface Diagnostics")
+        }
     )
 
     init {
@@ -98,4 +102,29 @@ class MapOverlayManager(
             statusReporter = statusReporter
         )
     }
+
+    internal fun recordOgnTrafficCollectorEmission() = recordOgnTrafficCollectorEmissionRuntime()
+
+    internal fun recordOgnTrafficCollectorDeduped() = recordOgnTrafficCollectorDedupedRuntime()
+
+    internal fun recordOgnTrafficPortUpdate() = recordOgnTrafficPortUpdateRuntime()
+
+    internal fun recordOgnTargetVisualCollectorEmission() = recordOgnTargetVisualCollectorEmissionRuntime()
+
+    internal fun recordOgnTargetVisualCollectorDeduped() = recordOgnTargetVisualCollectorDedupedRuntime()
+
+    internal fun recordOgnTargetVisualPortUpdate() = recordOgnTargetVisualPortUpdateRuntime()
+
+    internal fun recordAdsbTrafficCollectorEmission() = recordAdsbTrafficCollectorEmissionRuntime()
+
+    internal fun recordAdsbTrafficCollectorDeduped() = recordAdsbTrafficCollectorDedupedRuntime()
+
+    internal fun recordAdsbTrafficPortUpdate() = recordAdsbTrafficPortUpdateRuntime()
+
+    internal fun recordOgnThermalCollectorEmission() = recordOgnThermalCollectorEmissionRuntime()
+
+    internal fun recordOgnTrailCollectorEmission() = recordOgnTrailCollectorEmissionRuntime()
+
+    internal fun recordSelectedOgnThermalCollectorEmission() =
+        recordSelectedOgnThermalCollectorEmissionRuntime()
 }

@@ -58,7 +58,7 @@ fun rememberMapTrafficContentUiState(
         buildOgnTrailAircraftRows(traffic.ognSnapshot.targets, trailSelectionLookup)
     }
     val hasTrafficDetailsOpen = traffic.selectedOgnTarget != null ||
-        traffic.selectedOgnThermal != null ||
+        (traffic.selectedOgnThermal != null && traffic.selectedOgnThermalDetailsVisible) ||
         traffic.selectedAdsbTarget != null
     val selectedOgnTargetSciaEnabled = remember(traffic.selectedOgnTarget, trailSelectionLookup) {
         traffic.selectedOgnTarget?.let { target ->

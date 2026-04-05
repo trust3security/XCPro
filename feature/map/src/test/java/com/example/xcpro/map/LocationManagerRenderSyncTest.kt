@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.domain.MapShiftBiasMode
@@ -57,6 +58,116 @@ class LocationManagerRenderSyncTest {
     }
 
     @Test
+    fun onDisplayFrame_requestsImmediateRepaint_whenRenderFrameSyncIsEnabled() {
+        val cameraController = FakeCameraController()
+        val diagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 123L })
+        val manager = createManager(
+            featureFlags = MapFeatureFlags().apply { useRenderFrameSync = true },
+            cameraController = cameraController,
+            renderSurfaceDiagnostics = diagnostics
+        )
+
+        manager.onDisplayFrame()
+
+        assertEquals(1, cameraController.repaintCount)
+        assertEquals(1L, diagnostics.snapshot().repaintRequestCount)
+        assertEquals(1L, diagnostics.snapshot().forcedImmediateRepaintRequestCount)
+        assertEquals(1L, diagnostics.snapshot().repaintDispatchCount)
+    }
+
+    @Test
+    fun shouldDispatchLiveDisplayFrame_falseBeforeFirstFix() {
+        val diagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 123L })
+        val manager = createManager(
+            featureFlags = MapFeatureFlags(),
+            cameraController = FakeCameraController(),
+            renderSurfaceDiagnostics = diagnostics
+        )
+
+        assertFalse(manager.shouldDispatchLiveDisplayFrame())
+        assertEquals(1L, diagnostics.snapshot().displayFramePreDispatchSuppressedCount)
+    }
+
+    @Test
+    fun shouldDispatchLiveDisplayFrame_trueAfterFix() {
+        val manager = createManager(
+            featureFlags = MapFeatureFlags(),
+            cameraController = FakeCameraController()
+        )
+
+        manager.updateLocationFromGPS(
+            location = MapLocationUiModel(
+                latitude = -35.0,
+                longitude = 149.0,
+                speedMs = 18.0,
+                bearingDeg = 90.0,
+                accuracyMeters = 3.0,
+                timestampMs = 1_000L
+            ),
+            orientation = OrientationData()
+        )
+
+        assertEquals(true, manager.shouldDispatchLiveDisplayFrame())
+    }
+
+    @Test
+    fun shouldDispatchLiveDisplayFrame_reactivatesOnProfileChange() {
+        val stateReader = FakeMapStateReader()
+        val manager = createManager(
+            featureFlags = MapFeatureFlags(),
+            cameraController = FakeCameraController(),
+            mapStateReader = stateReader
+        )
+
+        manager.updateLocationFromGPS(
+            location = MapLocationUiModel(
+                latitude = -35.0,
+                longitude = 149.0,
+                speedMs = 18.0,
+                bearingDeg = 90.0,
+                accuracyMeters = 3.0,
+                timestampMs = 1_000L
+            ),
+            orientation = OrientationData()
+        )
+        manager.shouldDispatchLiveDisplayFrame()
+        stateReader.displaySmoothingProfileFlow.value = DisplaySmoothingProfile.RESPONSIVE
+
+        assertEquals(true, manager.shouldDispatchLiveDisplayFrame())
+    }
+
+    @Test
+    fun shouldDispatchLiveDisplayFrame_reactivatesOnMeaningfulOrientationChange() {
+        val manager = createManager(
+            featureFlags = MapFeatureFlags(),
+            cameraController = FakeCameraController()
+        )
+
+        manager.updateLocationFromGPS(
+            location = MapLocationUiModel(
+                latitude = -35.0,
+                longitude = 149.0,
+                speedMs = 18.0,
+                bearingDeg = 90.0,
+                accuracyMeters = 3.0,
+                timestampMs = 1_000L
+            ),
+            orientation = OrientationData()
+        )
+        manager.updateOrientation(
+            OrientationData(
+                bearing = 10.0,
+                bearingSource = BearingSource.TRACK,
+                headingDeg = 10.0,
+                headingValid = true,
+                headingSource = BearingSource.TRACK
+            )
+        )
+
+        assertEquals(true, manager.shouldDispatchLiveDisplayFrame())
+    }
+
+    @Test
     fun spectatorModeClearsLocalOwnshipStateAndHidesOverlay() {
         val stateActions = RecordingMapStateActions()
         val overlayPort = RecordingLocationOverlayPort()
@@ -90,11 +201,14 @@ class LocationManagerRenderSyncTest {
     private fun createManager(
         featureFlags: MapFeatureFlags,
         cameraController: FakeCameraController,
+        mapStateReader: FakeMapStateReader = FakeMapStateReader(),
         stateActions: MapStateActions = NoOpMapStateActions(),
-        locationOverlayPort: MapLocationOverlayPort = NoOpLocationOverlayPort()
+        locationOverlayPort: MapLocationOverlayPort = NoOpLocationOverlayPort(),
+        renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics =
+            MapRenderSurfaceDiagnostics(nowMonoMs = { 123L })
     ): LocationManager {
         return LocationManager(
-            mapStateReader = FakeMapStateReader(),
+            mapStateReader = mapStateReader,
             stateActions = stateActions,
             featureFlags = featureFlags,
             cameraPreferenceReader = object : MapCameraPreferenceReader {
@@ -128,7 +242,8 @@ class LocationManagerRenderSyncTest {
             displayPoseSurfacePort = object : MapDisplayPoseSurfacePort {
                 override fun isMapReady(): Boolean = true
                 override fun currentCameraBearing(): Double? = 0.0
-            }
+            },
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics
         )
     }
 
@@ -152,10 +267,11 @@ class LocationManagerRenderSyncTest {
         override val targetLatLng: StateFlow<MapPoint?> = MutableStateFlow(null)
         override val targetZoom: StateFlow<Float?> = MutableStateFlow(null)
         override val currentUserLocation: StateFlow<MapPoint?> = MutableStateFlow(null)
-        override val displayPoseMode: StateFlow<DisplayPoseMode> =
-            MutableStateFlow(DisplayPoseMode.SMOOTHED)
+        val displayPoseModeFlow = MutableStateFlow(DisplayPoseMode.SMOOTHED)
+        override val displayPoseMode: StateFlow<DisplayPoseMode> = displayPoseModeFlow
+        val displaySmoothingProfileFlow = MutableStateFlow(DisplaySmoothingProfile.SMOOTH)
         override val displaySmoothingProfile: StateFlow<DisplaySmoothingProfile> =
-            MutableStateFlow(DisplaySmoothingProfile.SMOOTH)
+            displaySmoothingProfileFlow
     }
 
     private class NoOpMapStateActions : MapStateActions {

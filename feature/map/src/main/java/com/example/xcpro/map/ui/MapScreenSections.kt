@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
@@ -21,6 +23,7 @@ import com.example.xcpro.map.MapInitializer
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLocationRenderFrameBinder
 import com.example.xcpro.map.MapOverlayManager
+import com.example.xcpro.map.MapRenderSurfaceDiagnostics
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -37,6 +40,7 @@ fun MapMainLayers(
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     onMapViewBound: () -> Unit,
     locationRenderFrameBinder: MapLocationRenderFrameBinder,
+    renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     flightDataManager: FlightDataManager,
     flightViewModel: FlightDataViewModel,
     overlayManager: MapOverlayManager,
@@ -55,7 +59,8 @@ fun MapMainLayers(
             mapInitializer = mapInitializer,
             onMapReady = onMapReady,
             onMapViewBound = onMapViewBound,
-            locationRenderFrameBinder = locationRenderFrameBinder
+            locationRenderFrameBinder = locationRenderFrameBinder,
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics
         )
 
         CardGridLayer(
@@ -200,51 +205,72 @@ private fun MapViewHost(
     onMapReady: (org.maplibre.android.maps.MapLibreMap) -> Unit,
     onMapViewBound: () -> Unit,
     locationRenderFrameBinder: MapLocationRenderFrameBinder,
+    renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val latestOnMapReady = rememberUpdatedState(onMapReady)
     val latestMapInitializer = rememberUpdatedState(mapInitializer)
-    AndroidView(
-        factory = { ctx ->
-            MapView(ctx).apply {
-                mapState.mapView = this
-                locationRenderFrameBinder.bindRenderFrameListener(this)
-                onMapViewBound()
-                getMapAsync { map: MapLibreMap ->
-                    if (!scope.isActive) {
-                        return@getMapAsync
-                    }
-                    scope.launch {
-                        runCatching { latestMapInitializer.value.initializeMap(map) }
-                            .onFailure { error ->
-                                if (error is CancellationException) {
-                                    throw error
-                                }
-                                AppLogger.e("MapViewHost", "Map initialization failed: ${error.message}", error)
+    val latestOnMapViewBound = rememberUpdatedState(onMapViewBound)
+    val bindingController = remember(mapState, locationRenderFrameBinder, renderSurfaceDiagnostics) {
+        MapViewHostBindingController(
+            mapState = mapState,
+            locationRenderFrameBinder = locationRenderFrameBinder,
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics
+        )
+    }
+    val hostedMapView = remember(mapState, context) {
+        mapState.mapView ?: MapView(context).apply {
+            // Do not publish this MapView into mapState until the host binding
+            // controller actually attaches it. Lifecycle sync can run before the
+            // AndroidView host is attached, and the runtime lifecycle owner must
+            // not see a non-attached MapView as ready.
+            getMapAsync { map: MapLibreMap ->
+                if (!scope.isActive) {
+                    return@getMapAsync
+                }
+                scope.launch {
+                    runCatching { latestMapInitializer.value.initializeMap(map) }
+                        .onFailure { error ->
+                            if (error is CancellationException) {
+                                throw error
                             }
-                        if (!isActive) {
-                            return@launch
+                            AppLogger.e("MapViewHost", "Map initialization failed: ${error.message}", error)
                         }
-                        runCatching { latestOnMapReady.value(map) }
-                            .onFailure { callbackError ->
-                                AppLogger.e(
-                                    "MapViewHost",
-                                    "onMapReady callback failed after initialization: ${callbackError.message}",
-                                    callbackError
-                                )
-                            }
+                    if (!isActive) {
+                        return@launch
                     }
+                    runCatching { latestOnMapReady.value(map) }
+                        .onFailure { callbackError ->
+                            AppLogger.e(
+                                "MapViewHost",
+                                "onMapReady callback failed after initialization: ${callbackError.message}",
+                                callbackError
+                            )
+                        }
                 }
             }
-        },
+        }
+    }
+
+    DisposableEffect(locationRenderFrameBinder) {
+        onDispose {
+            locationRenderFrameBinder.unbindRenderFrameListener()
+        }
+    }
+
+    DisposableEffect(hostedMapView, bindingController) {
+        bindingController.attach(hostedMapView, latestOnMapViewBound.value)
+        onDispose {
+            bindingController.clear(hostedMapView)
+        }
+    }
+
+    AndroidView(
+        factory = { hostedMapView },
         update = { view ->
-            val mapViewChanged = mapState.mapView !== view
-            mapState.mapView = view
-            locationRenderFrameBinder.bindRenderFrameListener(view)
-            if (mapViewChanged) {
-                onMapViewBound()
-            }
+            bindingController.updateMapViewReference(view)
         },
         modifier = modifier.fillMaxSize()
     )

@@ -23,6 +23,12 @@ This package now includes:
 - resumable completion automation contract (`run_mapscreen_completion_contract.ps1`),
 - unattended overnight automation contract (`run_mapscreen_overnight_agent_contract.ps1`).
 
+Recent slice-specific change plans:
+
+- `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_OVERLAY_VIEWPORT_SCALING_PHASED_IP_2026-03-29.md`
+- `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_RESUME_REANCHOR_PHASED_IP_2026-03-31.md`
+- `docs/MAPSCREEN/CHANGE_PLAN_MAP_STYLE_RUNTIME_OWNERSHIP_CLEANUP_PHASED_IP_2026-04-05.md`
+
 ## Recommended Read Order
 
 1. `docs/MAPSCREEN/01_MAPSCREEN_PRODUCTION_GRADE_PHASED_IP_2026-03-05.md`

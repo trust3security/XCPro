@@ -7,7 +7,8 @@ internal class MapOverlayRuntimeStatusCoordinator(
     private val ognStatusSnapshot: () -> OgnOverlayStatusSnapshot,
     private val latestAdsbTargetsCount: () -> Int,
     private val runtimeCounters: () -> MapOverlayRuntimeCounters,
-    private val forecastWeatherStatus: () -> MapOverlayForecastWeatherStatus
+    private val forecastWeatherStatus: () -> MapOverlayForecastWeatherStatus,
+    private val renderSurfaceStatus: () -> String
 ) : MapOverlayRuntimeStatusReporter {
     override fun getOverlayStatus(): String {
         val currentOgnStatus = ognStatusSnapshot()
@@ -23,7 +24,8 @@ internal class MapOverlayRuntimeStatusCoordinator(
             latestAdsbTargetsCount = latestAdsbTargetsCount(),
             runtimeCounters = runtimeCounters(),
             taskWaypointCount = taskWaypointCount(),
-            forecastWeatherStatus = forecastWeatherStatus()
+            forecastWeatherStatus = forecastWeatherStatus(),
+            renderSurfaceStatus = renderSurfaceStatus()
         )
     }
 }

@@ -51,7 +51,8 @@ class MapOverlayManagerAirspaceTest {
             snailTrailManager = mock<SnailTrailManager>(),
             coroutineScope = this,
             airspaceUseCase = airspaceUseCase,
-            waypointFilesUseCase = waypointFilesUseCase
+            waypointFilesUseCase = waypointFilesUseCase,
+            renderSurfaceDiagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 1_000L })
         )
 
         manager.refreshAirspace(map = null)

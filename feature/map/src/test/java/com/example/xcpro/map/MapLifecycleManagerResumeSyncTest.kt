@@ -6,6 +6,7 @@ import com.example.xcpro.replay.Selection
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -17,15 +18,18 @@ class MapLifecycleManagerResumeSyncTest {
     @Test
     fun onResume_restartsSensors_andForcesImmediateDisplayFrameSync() {
         val locationManager: MapLocationRuntimePort = mock()
+        val diagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 123L })
         val manager = createLifecycleManager(
             locationManager = locationManager,
-            replayState = SessionState()
+            replayState = SessionState(),
+            renderSurfaceDiagnostics = diagnostics
         )
 
         manager.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
 
         verify(locationManager, times(1)).restartSensorsIfNeeded()
         verify(locationManager, times(1)).onDisplayFrame()
+        assertEquals(1L, diagnostics.snapshot().lifecycleResumeForcedFrameCount)
     }
 
     @Test
@@ -58,6 +62,32 @@ class MapLifecycleManagerResumeSyncTest {
     }
 
     @Test
+    fun syncCurrentOwnerState_resumed_retriesLifecycleAfterHostAttaches() {
+        val locationManager: MapLocationRuntimePort = mock()
+        val lifecycleSurface = FakeLifecycleSurface()
+        val manager = createLifecycleManager(
+            locationManager = locationManager,
+            replayState = SessionState(),
+            lifecycleSurface = lifecycleSurface
+        )
+
+        manager.syncCurrentOwnerState(Lifecycle.State.RESUMED)
+
+        assertEquals(0, lifecycleSurface.createCalls)
+        assertEquals(0, lifecycleSurface.startCalls)
+        assertEquals(0, lifecycleSurface.resumeCalls)
+
+        lifecycleSurface.hostToken = Any()
+        manager.syncCurrentOwnerState(Lifecycle.State.RESUMED)
+
+        assertEquals(1, lifecycleSurface.createCalls)
+        assertEquals(1, lifecycleSurface.startCalls)
+        assertEquals(1, lifecycleSurface.resumeCalls)
+        verify(locationManager, times(2)).restartSensorsIfNeeded()
+        verify(locationManager, never()).onDisplayFrame()
+    }
+
+    @Test
     fun onResume_withActiveReplay_skipsSensorRestart_butStillForcesDisplayFrameSync() {
         val locationManager: MapLocationRuntimePort = mock()
         val replayState = SessionState(
@@ -79,14 +109,61 @@ class MapLifecycleManagerResumeSyncTest {
 
     private fun createLifecycleManager(
         locationManager: MapLocationRuntimePort,
-        replayState: SessionState
+        replayState: SessionState,
+        lifecycleSurface: MapLifecycleSurfacePort = mock<MapLifecycleSurfacePort>(),
+        renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics =
+            MapRenderSurfaceDiagnostics(nowMonoMs = { 123L })
     ): MapLifecycleManager {
         return MapLifecycleManager(
-            lifecycleSurface = mock<MapLifecycleSurfacePort>(),
+            lifecycleSurface = lifecycleSurface,
             orientationManager = mock<MapOrientationRuntimePort>(),
             locationManager = locationManager,
             locationRenderFrameCleanup = mock<MapRenderFrameCleanupPort>(),
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics,
             replaySessionState = MutableStateFlow(replayState)
         )
+    }
+
+    private class FakeLifecycleSurface : MapLifecycleSurfacePort {
+        var hostToken: Any? = null
+        var createCalls: Int = 0
+        var startCalls: Int = 0
+        var resumeCalls: Int = 0
+
+        override fun currentHostToken(): Any? = hostToken
+
+        override fun dispatchCreateIfPresent(): Boolean {
+            if (hostToken == null) return false
+            createCalls += 1
+            return true
+        }
+
+        override fun dispatchStartIfPresent(): Boolean {
+            if (hostToken == null) return false
+            startCalls += 1
+            return true
+        }
+
+        override fun dispatchResumeIfPresent(): Boolean {
+            if (hostToken == null) return false
+            resumeCalls += 1
+            return true
+        }
+
+        override fun dispatchPauseIfPresent(): Boolean = hostToken != null
+
+        override fun dispatchStopIfPresent(): Boolean = hostToken != null
+
+        override fun dispatchDestroyIfPresent(): Boolean = hostToken != null
+
+        override fun captureCameraSnapshot() = Unit
+
+        override fun clearRuntimeOverlays() = Unit
+
+        override fun clearMapSurfaceReferences() = Unit
+
+        override fun isMapViewReady(): Boolean = hostToken != null
+
+        override fun isMapLibreReady(): Boolean = false
     }
 }

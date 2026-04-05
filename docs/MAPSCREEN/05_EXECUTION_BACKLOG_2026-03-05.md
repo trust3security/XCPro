@@ -226,3 +226,26 @@ Execution-note:
     - deferred weather/OGN/ADS-B interaction-release work is now batched by `MapOverlayManagerRuntime` behind one short settle window before the final front-order reconcile,
     - targeted unit coverage was added for projection cadence and interaction-release flush sequencing across runtime, weather, OGN, and ADS-B owners,
     - next required step remains a fresh strict `pkg-e1` evidence run to determine whether `RULES-20260305-12` can be removed.
+29. Phase-1 mixed-load fanout reduction landed:
+    - root Compose traffic binding is now UI-only; hot OGN/ADS-B overlay lists and icon/config inputs moved to a dedicated runtime-only traffic overlay input seam,
+    - traffic overlay mutation now runs from direct flow collectors instead of list-keyed Compose render-state effects,
+    - overlay ownship altitude is now quantized upstream (`2 m`, `distinctUntilChanged`) before the runtime collector seam, so raw altitude jitter no longer wakes root Compose for overlay-only work,
+    - next required step is a fresh strict `pkg-e1` Tier A/B evidence run to measure whether the remaining `MS-UX-01` miss is materially reduced before starting weather/front-order phase 2.
+30. Collector-side churn fix landed on the phase-1 branch after Tier A regression evidence:
+    - `MapTrafficOverlayRuntimeCollectors` now dedupes hot OGN traffic, ADS-B traffic, and OGN target-visual requests with render-relevant signatures before port updates,
+    - runtime-owned overlay status counters now expose collector emissions, dedupe skips, and forwarded port updates for the new collector seam,
+    - next required step is another strict `pkg-e1` Tier A/B run to determine whether the Tier A regression is recovered before opening weather/front-order phase 2.
+31. Main-thread frame-production repass landed after Tier A trace investigation:
+    - `MapScreenComposeAndLifecycleEffects` no longer collects hot `currentLocation` / `orientation` into root Compose state; `MapComposeEffects` now consumes those flows with collector-driven side effects,
+    - `MapScreenContentRuntime` no longer collects hot `currentLocation` / `currentZoom` at the content root; the location/zoom reads were pushed down to narrow runtime/UI seams in `MapOverlayStack`, live-follow, task/action-button wrappers, and traffic detail-panel wrappers,
+    - expected payoff is lower `Choreographer#doFrame` / `Recomposer:recompose` pressure on the phone-side mixed-load path before the next strict `pkg-e1` evidence run.
+32. Render-sync repaint coalescing landed for the remaining Tier B frame-time miss:
+    - `LocationManager` now routes render-sync repaint requests through a dedicated `DisplayPoseRepaintGate` instead of calling `triggerRepaint()` on every accepted orientation/fix update,
+    - the repaint gate uses the same live (`25 ms`) and replay (`16.7 ms`) cadence contract as the Compose-owned display-pose loop and clears pending work once a render frame starts,
+    - exactness paths stay immediate for lifecycle resume, ownship re-enable, and direct render-frame handling,
+    - next required step is a fresh strict `pkg-e1` Tier A/B run to confirm Tier A stays green and Tier B frame time clears `MS-UX-01`.
+33. Map host/render-frame queue tightening landed for the final Tier B-only miss:
+    - `MapViewHost` now binds the render-frame listener once per `MapView` instance through a dedicated host-binding controller instead of rebinding from `AndroidView.update`,
+    - `RenderFrameSync` now coalesces off-main pending `mapView.post { onRenderFrame() }` callbacks and clears stale pending work on rebind/unbind,
+    - expected payoff is a narrower `MapView`/render-thread handoff on the weaker tier without reopening traffic/runtime ownership,
+    - next required step is a fresh strict `pkg-e1` Tier A/B run to confirm the remaining Tier B `frame_time_p95_ms` miss is closed while Tier A stays green.

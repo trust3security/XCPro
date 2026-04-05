@@ -380,10 +380,11 @@ class MapScreenTrafficCoordinator(
         selectionPort.setSelectedOgnId(null)
         selectionPort.setSelectedAdsbId(null)
         selectionPort.setSelectedThermalId(id)
+        selectionPort.setSelectedThermalDetailsVisible(true)
     }
 
     fun dismissSelectedOgnThermal() {
-        selectionPort.setSelectedThermalId(null)
+        selectionPort.setSelectedThermalDetailsVisible(false)
     }
 
     private fun seedAdsbPositionFromCurrentPosition() {

@@ -32,10 +32,12 @@ interface AdsbTrafficFilterPort {
 interface TrafficSelectionPort {
     val selectedOgnId: StateFlow<String?>
     val selectedThermalId: StateFlow<String?>
+    val selectedThermalDetailsVisible: StateFlow<Boolean>
     val selectedAdsbId: StateFlow<Icao24?>
 
     fun setSelectedOgnId(id: String?)
     fun setSelectedThermalId(id: String?)
+    fun setSelectedThermalDetailsVisible(visible: Boolean)
     fun setSelectedAdsbId(id: Icao24?)
 }
 

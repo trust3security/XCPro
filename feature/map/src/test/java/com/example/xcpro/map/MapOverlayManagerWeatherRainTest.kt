@@ -246,6 +246,7 @@ class MapOverlayManagerWeatherRainTest {
             coroutineScope = TestScope(),
             airspaceUseCase = mock<AirspaceUseCase>(),
             waypointFilesUseCase = mock<WaypointFilesUseCase>(),
+            renderSurfaceDiagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 1_000L }),
             monoTimeMs = { 1_000L }
         )
         return Fixture(

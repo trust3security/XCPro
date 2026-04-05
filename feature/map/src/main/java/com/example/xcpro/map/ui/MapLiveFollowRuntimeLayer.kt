@@ -25,6 +25,7 @@ import com.example.xcpro.map.LiveFollowWatchTaskOverlay
 import com.example.xcpro.map.LiveFollowWatchTaskOverlayState
 import com.example.xcpro.map.TaskRenderSnapshot
 import java.util.Locale
+import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.maps.MapView
 
 internal data class MapLiveFollowTaskAttachmentState(
@@ -132,7 +133,7 @@ internal fun resolveMapLiveFollowWatchTaskOverlayState(
 internal fun BoxScope.MapLiveFollowRuntimeLayer(
     showPilotStatusIndicator: Boolean,
     topEndAdditionalOffset: Dp,
-    currentZoom: Float,
+    currentZoomFlow: StateFlow<Float>,
     taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
     watchedPilotFocusEpoch: Int,
     mapLibreMapProvider: () -> org.maplibre.android.maps.MapLibreMap?,
@@ -141,6 +142,7 @@ internal fun BoxScope.MapLiveFollowRuntimeLayer(
 ) {
     val watchViewModel: LiveFollowWatchViewModel = hiltViewModel()
     val uiState by watchViewModel.uiState.collectAsStateWithLifecycle()
+    val currentZoom by currentZoomFlow.collectAsStateWithLifecycle()
     val taskAttachmentState = remember(
         uiState
     ) {

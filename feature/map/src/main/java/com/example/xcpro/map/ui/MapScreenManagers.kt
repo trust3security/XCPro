@@ -24,6 +24,7 @@ import com.example.xcpro.map.MapLocationOverlayAdapter
 import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapModalManager
 import com.example.xcpro.map.MapOverlayManager
+import com.example.xcpro.map.MapRenderSurfaceDiagnostics
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenSizeProvider
 import com.example.xcpro.map.MapStateActions
@@ -54,6 +55,7 @@ internal data class MapScreenManagers(
     val cameraManager: MapCameraRuntimePort,
     val locationManager: MapLocationRuntimePort,
     val locationRenderFrameBinder: MapLocationRenderFrameBinder,
+    val renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
     val lifecycleManager: MapLifecycleRuntimePort,
     val modalManager: MapModalManager,
     val mapInitializer: MapInitializer
@@ -91,6 +93,8 @@ internal fun rememberMapScreenManagers(
         )
     }
 
+    val renderSurfaceDiagnostics = remember { MapRenderSurfaceDiagnostics() }
+
     val overlayManager = remember(
         mapState,
         tasksUseCase,
@@ -101,7 +105,8 @@ internal fun rememberMapScreenManagers(
         snailTrailManager,
         coroutineScope,
         airspaceUseCase,
-        waypointFilesUseCase
+        waypointFilesUseCase,
+        renderSurfaceDiagnostics
     ) {
         MapOverlayManager(
             context,
@@ -113,7 +118,8 @@ internal fun rememberMapScreenManagers(
             snailTrailManager,
             coroutineScope,
             airspaceUseCase,
-            waypointFilesUseCase
+            waypointFilesUseCase,
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics
         )
     }
 
@@ -201,16 +207,18 @@ internal fun rememberMapScreenManagers(
             cameraUpdateGate = cameraUpdateGate,
             locationOverlayPort = locationOverlayPort,
             displayPoseSurfacePort = displayPoseSurface,
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics,
             localOwnshipRenderEnabledProvider = localOwnshipRenderEnabled,
             replayHeadingProvider = replayHeadingProvider,
             replayFixProvider = replayFixProvider
         )
     }
 
-    val locationRenderFrameBinder = remember(featureFlags, locationManager) {
+    val locationRenderFrameBinder = remember(featureFlags, locationManager, renderSurfaceDiagnostics) {
         MapLocationRenderFrameBinderAdapter(
             useRenderFrameSync = { featureFlags.useRenderFrameSync },
-            onRenderFrame = { locationManager.onRenderFrame() }
+            onRenderFrame = { locationManager.onRenderFrame() },
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics
         )
     }
 
@@ -230,6 +238,7 @@ internal fun rememberMapScreenManagers(
             orientationManager = orientationManager,
             locationManager = locationManager,
             locationRenderFrameCleanup = locationRenderFrameBinder,
+            renderSurfaceDiagnostics = renderSurfaceDiagnostics,
             replaySessionState = replaySessionState
         )
     }
@@ -275,6 +284,7 @@ internal fun rememberMapScreenManagers(
         cameraManager = cameraManager,
         locationManager = locationManager,
         locationRenderFrameBinder = locationRenderFrameBinder,
+        renderSurfaceDiagnostics = renderSurfaceDiagnostics,
         lifecycleManager = lifecycleManager,
         modalManager = modalManager,
         mapInitializer = mapInitializer
