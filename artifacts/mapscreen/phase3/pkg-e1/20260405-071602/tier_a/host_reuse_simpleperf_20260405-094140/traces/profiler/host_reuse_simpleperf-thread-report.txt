@@ -1,0 +1,86 @@
+Cmdline: /system/bin/simpleperf record --app com.example.openxcpro.debug --add-meta-info app_type=debuggable --in-app --tracepoint-events /data/local/tmp/tracepoint_events --out-fd 3 --stop-signal-fd 4 --add-meta-info app_type=debuggable -f 400 --duration 95
+Arch: arm64
+Event: cpu-cycles (type 0, config 0)
+Samples: 63564
+Event count: 255784272155
+
+Overhead  Sample  Command                      Pid    Tid
+43.15%    23186   com.example.openxcpro.debug  15948  15948
+15.23%    8356    RenderThread 20              15948  16067
+7.16%     4037    RenderThread                 15948  15978
+5.06%     3262    Jit thread pool              15948  15955
+2.89%     2048    DefaultDispatch              15948  15998
+1.86%     1688    DefaultDispatch              15948  16003
+1.85%     1635    DefaultDispatch              15948  16002
+1.84%     1629    DefaultDispatch              15948  16094
+1.80%     1588    DefaultDispatch              15948  16005
+1.75%     1598    DefaultDispatch              15948  16001
+1.71%     1509    DefaultDispatch              15948  16004
+1.69%     1471    DefaultDispatch              15948  15971
+1.67%     1463    DefaultDispatch              15948  16062
+1.65%     1477    DefaultDispatch              15948  15973
+1.64%     1485    DefaultDispatch              15948  16092
+1.61%     1380    DefaultDispatch              15948  16007
+1.24%     1254    DefaultDispatch              15948  15972
+0.91%     642     Worker 1                     15948  16063
+0.86%     597     Worker 2                     15948  16064
+0.80%     614     Worker 3                     15948  16065
+0.72%     486     DefaultDispatch              15948  16006
+0.69%     552     Worker 4                     15948  16066
+0.44%     133     HeapTaskDaemon               15948  15956
+0.15%     153     binder:15948_3               15948  15963
+0.14%     80      DatabaseFileSou              15948  15987
+0.12%     121     binder:15948_4               15948  15966
+0.12%     29      EmojiCompatInit              15948  16028
+0.11%     102     binder:15948_2               15948  15962
+0.11%     86      Profile Saver                15948  15970
+0.11%     97      Worker 1                     15948  16107
+0.10%     96      Worker 1                     15948  16113
+0.09%     83      pi.xcpro.com.au              15948  16116
+0.08%     84      Worker 1                     15948  16105
+0.08%     87      DefaultExecutor              15948  16043
+0.07%     67      ResourceLoaderT              15948  15991
+0.06%     50      Worker 1                     15948  16103
+0.06%     42      binder:15948_1               15948  15960
+0.06%     56      binder:15948_5               15948  16038
+0.05%     50      binder:15948_3               15948  16012
+0.04%     7       sky-network.org              15948  16118
+0.04%     30      OnlineFileSourc              15948  15986
+0.04%     8       FinalizerDaemon              15948  15958
+0.03%     19      Worker 1                     15948  16075
+0.02%     13      network.org/...              15948  16080
+0.02%     19      Okio Watchdog                15948  16081
+0.01%     1       aptiler.com/...              15948  16096
+0.01%     3       aptiler.com/...              15948  16109
+0.01%     2       aptiler.com/...              15948  16110
+0.01%     10      OkHttp TaskRunn              15948  16136
+0.01%     3       pi.maptiler.com              15948  16115
+0.01%     1       OkHttp Dispatch              15948  16123
+0.01%     5       OkHttp Connecti              15948  16136
+0.01%     10      WM.task-1                    15948  15977
+0.00%     4       OkHttp TaskRunn              15948  16145
+0.00%     2       OkHttp Connecti              15948  16145
+0.00%     2       OkHttp TaskRunn              15948  16117
+0.00%     1       aptiler.com/...              15948  16108
+0.00%     8       ReferenceQueueD              15948  15957
+0.00%     8       WM.task-2                    15948  15992
+0.00%     1       ] writeSynReset              15948  16117
+0.00%     2       AsyncTask #1                 15948  15983
+0.00%     1       TracingMuxer                 15948  15995
+0.00%     2       queued-work-loo              15948  15984
+0.00%     1       SharedPreferenc              15948  15982
+0.00%     3       hwuiTask0                    15948  15996
+0.00%     1       allocateBuffers              15948  15999
+0.00%     3       hwuiTask1                    15948  15997
+0.00%     3       FinalizerWatchd              15948  15959
+0.00%     2       com.example.openxcpro.debug  15948  15995
+0.00%     1       com.example.openxcpro.debug  15948  15979
+0.00%     3       com.example.openxcpro.debug  15948  15978
+0.00%     1       WM.task-1                    15948  15981
+0.00%     1       OkHttp Dispatch              15948  16108
+0.00%     2       Okio Watchdog                15948  16101
+0.00%     2       com.example.openxcpro.debug  15948  15971
+0.00%     1       RenderThread                 15948  15999
+0.00%     2       com.example.openxcpro.debug  15948  15982
+0.00%     2       com.example.openxcpro.debug  15948  15996
+0.00%     1       com.example.openxcpro.debug  15948  15985

@@ -1,0 +1,41 @@
+﻿{
+    "package_id":  "pkg-e1",
+    "phase":  "phase3",
+    "generated_at":  "2026-04-05T21:20:18.2175263+10:00",
+    "command_gates":  [
+                          {
+                              "label":  "enforceRules",
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "testDebugUnitTest",
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "assembleDebug",
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "status":  "pass",
+                              "exit_code":  0
+                          }
+                      ],
+    "slo_gates":  [
+                      {
+                          "slo_id":  "MS-UX-01",
+                          "status":  "fail",
+                          "reason":  "one or more threshold checks failed"
+                      }
+                  ],
+    "promotion_decision":  "blocked_failed_thresholds",
+    "rollback_recommendation":  "Do not promote; fix failing gates/SLOs and rerun verification.",
+    "determinism_gates":  [
+                              {
+                                  "det_id":  "DET-04",
+                                  "status":  "pass",
+                                  "evidence":  "MapLifecycleManagerResumeSyncTest"
+                              }
+                          ]
+}

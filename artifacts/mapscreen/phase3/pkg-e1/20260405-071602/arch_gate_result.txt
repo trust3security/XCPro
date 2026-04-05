@@ -1,0 +1,6 @@
+﻿command: ./gradlew enforceRules
+arch_gate_owner: included_in_enforceRules
+result: PASS
+captured_at: 2026-04-05T07:16:03.2617286+10:00
+commit_sha: ab309985a2b300ffbefc7bb62e05fdd66b8f4cd4
+branch: perf/mapscreen-e1-mixed-load-fanout-phase1
