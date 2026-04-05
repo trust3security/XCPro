@@ -78,21 +78,27 @@ Compliance note (2026-02-20):
 - Introduced: 2026-03-05
 - Approved by: XCPro Team (backfilled 2026-03-14)
 - Owner: XCPro Team
-- Next review: 2026-04-01
+- Next review: 2026-04-10
 - Expiry: 2026-04-15
 - Scope:
   - `artifacts/mapscreen/phase3/pkg-e1/20260305-193049/`
   - `artifacts/mapscreen/phase3/pkg-e1/20260305-195205/`
+  - `artifacts/mapscreen/phase3/pkg-e1/20260405-071602/`
+  - `artifacts/mapscreen/phase3/pkg-e1/20260405-190316/`
   - `scripts/qa/run_mapscreen_completion_contract.ps1` (phase-5 gate evidence)
 - Risk:
   - Map interaction smoothness does not meet required `MS-UX-01` p95/p99/jank thresholds under automated gesture capture.
+  - Emulator-only Tier B evidence is noisy enough to produce misleading optimization targets and can trigger avoidable production perf churn after Tier A is already green.
 - Mitigation:
   - Keep phase-2 package lanes (`pkg-d1`, `pkg-g1`, `pkg-w1`) green and isolated.
   - Continue targeted `pkg-e1` runtime work with strict Tier A/B evidence capture before release promotion.
+  - Treat emulator Tier B as smoke/relative evidence only unless it is confirmed by a repeatable trace or by a trustworthy physical/remote-device Tier B target.
+  - Do not open new production perf slices from emulator-only Tier B failures when current physical-device Tier A evidence is already green.
   - Do not mark `pkg-r1` green unless this deviation is removed or an approved release exception is explicitly documented.
   - Defer final `MS-UX-01` closure to next focused optimization cycle (tracked in `docs/MAPSCREEN` execution backlog/contract docs).
 - Removal steps:
   - Deliver additional `MS-UX-01` runtime optimizations and re-run strict contract without allow-failure flags.
+  - Replace emulator-only Tier B closure evidence with a trustworthy physical-device or approved remote-device Tier B capture before using Tier B as the final promotion gate.
   - Produce a `pkg-e1` artifact where phase-5 verification reports `ready_for_promotion`.
   - Remove this entry after successful strict completion contract run (phases `0..8`) for the same code line.
 - Exit criteria:

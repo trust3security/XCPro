@@ -62,9 +62,9 @@ Required pre-read order:
 | Data | Owner | Exposed As | Forbidden Duplicates |
 |---|---|---|---|
 | persisted profile base map style key | `MapStyleRepository` | profile-scoped config entry | any runtime-only override persisted as a saved style |
-| runtime base map style selection | `MapStateStore` | `StateFlow<MapStyleId>` | drawer-local selected style state |
+| runtime base map style selection | `MapStateStore` | canonical catalog-backed style key flow | drawer-local selected style state |
 | runtime style override state | `MapStateStore` | internal override state + derived effective style flow | Compose-local restore caches such as `lastNonSatelliteMapStyleName` |
-| effective runtime map style | `MapStateStore` | `StateFlow<MapStyleId>` | second effective-style cache in UI, VM, or runtime managers |
+| effective runtime map style | `MapStateStore` | canonical catalog-backed effective style key flow | second effective-style cache in UI, VM, or runtime managers |
 | style ID -> label/url/selectability mapping | `MapStyleCatalog` | pure lookup functions | scattered string literals and inline style URL lists |
 | thermalling replay participation gate | `ThermallingModeRuntimeWiring` | internal runtime gating only | replay/live flags inside UI or coordinator state |
 
@@ -73,9 +73,9 @@ Required pre-read order:
 | State Item | Authoritative Owner | Allowed Mutators | Read Path | Derived From | Persistence Owner | Reset/Clear Conditions | Time Base | Required Tests |
 |---|---|---|---|---|---|---|---|---|
 | profile base style key | `MapStyleRepository` | `saveStyle`, `writeProfileStyle`, `clearProfile` | `MapStyleUseCase` | config JSON | `MapStyleRepository` | profile clear or explicit save | N/A | repository/use-case tests |
-| runtime base style | `MapStateStore` | `MapScreenStyleCoordinator` / thin VM delegates only | drawer binding, runtime style resolution | repository read or explicit user selection | none | profile switch, explicit user selection | N/A | state/store tests |
+| runtime base style | `MapStateStore` | `MapScreenStyleCoordinator` / thin VM delegates only | drawer binding, runtime style resolution | repository read or explicit user selection normalized through `MapStyleCatalog` | none | profile switch, explicit user selection | N/A | state/store tests |
 | runtime override set | `MapStateStore` | forecast and thermalling runtime mutators only | effective style resolver | active override reasons | none | override source disabled, replay reset, thermalling exit, lifecycle clear | N/A | override policy tests |
-| effective runtime style | `MapStateStore` | derived only | `MapInitializer`, `MapRuntimeController`, runtime/UI bindings | base style + override policy | none | derived from base/override state | N/A | coordinator/runtime tests |
+| effective runtime style | `MapStateStore` | derived only | `MapInitializer`, `MapRuntimeController`, runtime/UI bindings | canonical base style key + override policy | none | derived from base/override state | N/A | coordinator/runtime tests |
 | thermalling replay bypass flag | `ThermallingModeRuntimeWiring` | derived only | internal gating | `replaySessionState.selection != null` | none | changes with replay session | Replay selection state only | runtime wiring tests |
 
 ### 2.2 Dependency Direction
@@ -87,6 +87,7 @@ Confirm dependency flow remains:
 Modules/files touched:
 - `feature:map`
 - `feature:profile`
+- `feature:map-runtime` compatibility seam only unless a later follow-up explicitly chooses module API churn
 - `docs/MAPSCREEN`
 - `docs/ARCHITECTURE/PIPELINE.md` when implementation lands
 
@@ -101,7 +102,7 @@ Boundary risk:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapStateStore.kt` | canonical map runtime SSOT owner | keep authoritative runtime style state in the store, not UI-local remember state | expand the style state from one raw string to base + override + effective typed state |
+| `feature/map/src/main/java/com/example/xcpro/map/MapStateStore.kt` | canonical map runtime SSOT owner | keep authoritative runtime style state in the store, not UI-local remember state | expand the style state from one raw string to base + override + effective catalog-backed key state while preserving `MapStateReader.mapStyleName` compatibility in this IP |
 | `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt` | canonical imperative map-style apply seam | continue emitting `MapCommand.SetStyle(...)` from the ViewModel/feature boundary only | command payload becomes typed or catalog-backed instead of scattered raw strings |
 | `feature/map/src/main/java/com/example/xcpro/map/ThermallingModeRuntimeWiring.kt` | existing live runtime gate between fused flight data and thermalling policy | keep replay/live participation gating in runtime wiring, not inside the core coordinator | add explicit replay reset/no-op behavior that was deferred in the existing thermalling plan |
 
@@ -151,18 +152,25 @@ Boundary risk:
 | `feature/map/src/main/java/com/example/xcpro/map/MapScreenStyleCoordinator.kt` | New | style mutation orchestration and command emission without becoming an SSOT | keeps style orchestration out of the already-large ViewModel | not `MapScreenViewModel.kt`; keep VM delegates thin | No |
 | `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionCoordinator.kt` | Existing | profile switch orchestration; delegates style application to style coordinator | existing profile-switch owner should keep multi-setting switch behavior | do not move profile-switch orchestration into UI | No |
 | `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` | Existing | thin delegates only | existing screen boundary | do not add more than trivial forwarding because the file is already large | No |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapStateReader.kt` | Existing | read-only module API seam for map runtime consumers | current style flow crosses this module boundary | do not widen scope with avoidable API churn in this IP | No |
 | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Existing | wire drawer actions to base-style selection and transient style actions | existing UI-to-VM binding seam | not inside Composables | No |
 | `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt` | Existing | remove redundant startup style effect | current duplicate startup style writer lives here | not elsewhere | No |
 | `feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt` | Existing | render selected base style from authoritative state only | current stale local owner lives here | not another UI file | No |
 | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBottomTabsUiState.kt` | Existing | bottom-sheet display state only after style ownership is removed | current temporary style owner lives here | not a policy file | No |
+| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing | runtime content pass-through for bottom-tabs style inputs | current bottom-tabs style state crosses this seam | not a state owner, but must align when owner changes | No |
 | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt` | Existing | forecast satellite toggle calls transient override API only | existing caller for sat-view toggle | not a state owner | No |
+| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSupport.kt` | Existing | temporary style-name constants used by bottom-tabs runtime | current raw constants should fold into the catalog/policy seam | not left as a hidden second style contract | No |
+| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt` | Existing | UI pass-through model for current style name | current style value crosses this content seam | align with the chosen compatibility strategy | No |
 | `feature/map/src/main/java/com/example/xcpro/map/ThermallingModeRuntimeWiring.kt` | Existing | replay bypass/reset integration | correct live/replay runtime seam | not coordinator core logic | No |
 | `feature/map/src/main/java/com/example/xcpro/map/MapScreenThermallingRuntimeBinding.kt` | Existing | provide replay signal into thermalling runtime binding | existing binding entrypoint | not ViewModel business logic | No |
 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/TaskRouteScreen.kt` | Existing | consume canonical style catalog/resolver instead of inline URL | removes one remaining direct style bypass | not left as debt on a second map surface | No |
 | `feature/map/src/test/java/com/example/xcpro/map/MapStyleUrlResolverTest.kt` | Existing | catalog/resolver contract tests | existing resolver test home | not broad integration first | No |
+| `feature/map/src/test/java/com/example/xcpro/map/MapStateStoreTest.kt` | Existing | canonical runtime style state regressions | existing store behavior already covers style mutation dedupe | not only ViewModel tests | No |
 | `feature/map/src/test/java/com/example/xcpro/map/ThermallingModeRuntimeWiringTest.kt` | Existing | replay no-op/reset coverage | existing runtime wiring test home | not only coordinator tests | No |
 | `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenBottomTabsUiStateTest.kt` | Existing | prove style ownership leaves this file | regression against reintroducing local style ownership | not runtime test | No |
+| `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenBottomTabsUiStateRememberTest.kt` | Existing | Compose-state restore regression coverage for bottom tabs | existing test already covers general-settings sheet restore interactions | not only pure-function tests | No |
 | `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelCoreStateTest.kt` | Existing | profile style/base style state contract | existing screen state regression home | not repository-only tests | No |
+| `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierProfileScopedSectionsTest.kt` | Existing | profile restore compatibility proof for map style import | current restore contributor coverage already asserts `writeProfileStyle(...)` | not duplicated in feature:map tests | No |
 
 ### 2.2D1 Second Seam Pass Additions
 
@@ -171,8 +179,10 @@ Boundary risk:
 | `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`, `app/src/main/java/com/example/xcpro/AppNavGraph.kt`, `app/src/main/java/com/example/xcpro/MapRouteHost.kt` | app-shell `initialMapStyle` derivation and pass-through start here | remove runtime style prop plumbing in Phase 3 |
 | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreen.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt` | map-shell pass-through keeps the startup prop alive across the feature boundary | remove the prop chain in Phase 3 and bind UI from authoritative runtime state |
 | `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt` | startup first-apply and post-startup replay are separate owners that need an explicit contract | keep both seams, but document and test their non-overlapping ownership |
-| `feature/map/src/main/java/com/example/xcpro/map/MapCommand.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt` | typed-style migration is incomplete if these imperative/binding surfaces stay arbitrary strings | include them in Phase 1 typed-contract cleanup |
+| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapStateReader.kt` and `feature/map/src/test/java/com/example/xcpro/map/LocationManagerRenderSyncTest.kt` fake readers | `mapStyleName` is already a cross-module string API with downstream test doubles | keep this API string-backed in this IP and normalize style semantics behind `feature:map` boundaries |
+| `feature/map/src/main/java/com/example/xcpro/map/MapCommand.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt` | typed-style migration is incomplete if imperative and UI pass-through surfaces stay arbitrary strings | include them in Phase 1/2 contract cleanup without forcing module API churn |
 | `feature/profile/src/main/java/com/example/xcpro/profiles/MapStyleProfileSettingsContributor.kt` and profile contributor tests | profile import/export still captures and restores string keys | keep this as the compatibility seam while runtime becomes typed |
+| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSupport.kt` | bottom-tabs style state and raw style constants now cross these runtime helpers | include them in Phase 2 so the local restore owner is removed end-to-end |
 | `feature/map/src/main/java/com/example/xcpro/screens/overlays/MapControlsUI.kt` | second seam pass found a legacy raw-string helper that is currently unused | treat as delete-or-align debt in Phase 1, but not as a blocker if it remains inactive |
 
 ### 2.2E Module and API Surface
@@ -180,8 +190,9 @@ Boundary risk:
 | Contract / API | Owner | Consumers | Visibility | Why Needed | Compatibility / Removal Plan |
 |---|---|---|---|---|---|
 | `MapStyleId` and `MapStyleCatalog` | `feature:map` | map runtime/UI/use-case code | internal to `feature:map` where practical | map runtime needs typed style semantics without moving profile module boundaries | persisted repository values remain strings in this IP |
-| `MapCommand.SetStyle` style payload | `feature:map` | `MapScreenViewModel`, `MapRuntimeController` | internal to `feature:map` | the imperative runtime command boundary must not stay an arbitrary string seam | convert to typed or catalog-backed payload in Phase 1 |
-| `MapScreenMapBindings.mapStyleName` / effective style binding | `feature:map` | map UI scaffolding and overlays | internal to `feature:map` | UI needs authoritative style rendering, but should not invent style semantics | migrate to a typed/effective binding and adapt UI edge labels as needed |
+| `MapStateReader.mapStyleName` | `feature:map-runtime` | initializer, runtime managers, UI bindings, test doubles | module API | current runtime consumers already depend on a string flow | keep string-backed in this IP; catalog-backed normalization happens before values enter this seam |
+| `MapCommand.SetStyle` style payload | `feature:map` | `MapScreenViewModel`, `MapRuntimeController` | internal to `feature:map` | the imperative runtime command boundary must not stay an arbitrary string seam | convert to canonical catalog-backed key payload in Phase 1 without changing `MapStateReader` |
+| `MapScreenMapBindings.mapStyleName` / effective style binding | `feature:map` | map UI scaffolding and overlays | internal to `feature:map` | UI needs authoritative style rendering, but should not invent style semantics | keep as a canonical key/string binding in this IP; typed UI API can be a later cleanup if still needed |
 | `MapScreenStyleCoordinator` | `feature:map` | `MapScreenViewModel`, `MapScreenProfileSessionCoordinator` | internal to `feature:map` | keeps style orchestration focused and testable | no compatibility shim expected |
 | profile import/export map style payload | `feature:profile` `MapStyleProfileSettingsContributor` | profile snapshot/restore pipeline | existing | typed runtime cleanup must not break import/export compatibility | remain string-backed through the repository boundary |
 | repository string persistence contract | `feature:profile` `MapStyleRepository` | `MapStyleUseCase` | existing | preserve config compatibility and module direction | convert at the use-case boundary; do not leak strings upward |
@@ -197,6 +208,7 @@ No new long-lived scope is planned.
 | Shim / Bridge | Owner | Reason | Target Replacement | Removal Trigger | Test Coverage |
 |---|---|---|---|---|---|
 | `initialMapStyle` app/map shell prop chain | app shell + map UI shells | legacy startup bootstrap plumbing before the seeded store becomes the only owner | remove the prop chain in Phase 3 | no map route or map screen API accepts `initialMapStyle` | startup binding tests |
+| `MapStateReader.mapStyleName: StateFlow<String>` | `feature:map-runtime` | avoid unnecessary module API churn while catalog normalization is introduced | keep as compatibility API in this IP | only revisit in a separate module-API cleanup slice if it still hurts | `LocationManagerRenderSyncTest.kt` and runtime/test doubles stay green |
 | `MapStyleCatalog.fromPersistedKey(...)` fallback | `MapStyleCatalog` | preserve compatibility with existing config strings and unknown historical values | none; this is the permanent persistence boundary hardening path | not removed; unknown values must stay recoverable | catalog tests |
 | `MapStyleProfileSettingsContributor` string capture/apply seam | `feature:profile` | preserve profile import/export compatibility while runtime becomes typed | none in this IP; contributor remains the compatibility boundary | not removed in this IP | profile contributor tests |
 
@@ -206,6 +218,7 @@ No new long-lived scope is planned.
 |---|---|---|---|---|
 | style key/label/selectability/url mapping | `feature/map/src/main/java/com/example/xcpro/map/MapStyleCatalog.kt` | resolver, drawer, task screen, tests | style semantics belong to the map runtime feature | No |
 | effective style precedence (`forecast satellite > thermalling contrast > base style`) | `feature/map/src/main/java/com/example/xcpro/map/MapStyleOverridePolicy.kt` | state/store tests, style coordinator, runtime callers | override priority is runtime policy, not UI state | No |
+| satellite/default non-satellite fallback constants | `feature/map/src/main/java/com/example/xcpro/map/MapStyleCatalog.kt` or `MapStyleOverridePolicy.kt` | bottom-tabs runtime helpers | these constants are style semantics, not UI helper trivia | No |
 | replay no-op/reset for thermalling runtime | `feature/map/src/main/java/com/example/xcpro/map/ThermallingModeRuntimeWiring.kt` | thermalling runtime binding tests | this is an integration participation rule between replay and live thermalling automation | No |
 
 ### 2.2I Stateless Object / Singleton Boundary
@@ -279,6 +292,7 @@ No new production `NoOp` path is planned.
 | local style owner reappears in drawer/bottom sheet | SSOT-MAP-01, UI owns rendering only | unit/UI test + review | `MapScreenBottomTabsUiStateTest.kt`, drawer tests if added |
 | typed style contract drifts back to raw strings | canonical runtime style contract | unit tests + review | `MapStyleUrlResolverTest.kt`, catalog tests |
 | `MapCommand` / UI binding surfaces remain stringly typed | canonical runtime style contract | unit tests + review | catalog tests plus `MapScreenViewModelCoreStateTest.kt` / binding tests |
+| `feature:map-runtime` API churn expands scope without user value | module/API boundary rules | plan guard + compatibility tests | `MapStateReader.kt`, `LocationManagerRenderSyncTest.kt` |
 | replay still drives thermalling automation | replay determinism rules | runtime wiring tests | `ThermallingModeRuntimeWiringTest.kt` |
 | startup double-style apply race remains | startup/runtime ownership rules | targeted startup/runtime controller tests + review | startup binding tests, `MapRuntimeController` tests |
 | startup/profile style apply duplicates remain | startup/runtime ownership rules | state/binding tests + review | `MapScreenViewModelCoreStateTest.kt`, targeted wiring tests |
@@ -351,7 +365,9 @@ Phase 0 seam/code pass conclusions:
 - `NavigationDrawer` and `MapScreenBottomTabsUiState` are not valid style owners.
 - `MapInitializer` and `MapRuntimeController` are both legitimate style-apply seams, but they need an explicit non-overlapping boundary.
 - the `initialMapStyle` prop chain is broader than the first pass captured and must be removed end-to-end, not just at `MapComposeEffects`.
-- `MapCommand.SetStyle` and `MapScreenBindingGroups` are real typed-contract surfaces, not incidental implementation details.
+- `MapStateReader.mapStyleName` is a cross-module `feature:map-runtime` API seam; this IP should not widen scope by converting it unless a separate module-API slice is explicitly approved.
+- `MapCommand.SetStyle`, `MapScreenBindingGroups`, and `MapScreenSectionInputs` are real contract surfaces, not incidental implementation details.
+- `MapScreenContentRuntime.kt` and `MapScreenContentRuntimeSupport.kt` participate in the current bottom-tabs style seam and must be included when that local owner is removed.
 - profile import/export remains a required string compatibility seam through `MapStyleProfileSettingsContributor`.
 - `MapControlsUI.kt` is currently inactive helper debt, not an active owner, but it must not survive as a second raw-style contract if retained.
 - replay gating belongs in `ThermallingModeRuntimeWiring`, not in `ThermallingModeCoordinator`.
@@ -359,17 +375,20 @@ Phase 0 seam/code pass conclusions:
 ### Phase 1 - Typed style contract and canonical catalog
 
 - Goal:
-  - Replace runtime stringly typed style handling with a typed contract in `feature:map`.
+  - Replace ad hoc runtime string handling with a catalog-backed contract in `feature:map` without forcing `feature:map-runtime` API churn in this IP.
 - Files to change:
   - `MapStyleCatalog.kt` (new)
   - `MapStyleUrlResolver.kt`
   - `MapCommand.kt`
   - `MapScreenBindingGroups.kt`
+  - `MapScreenSectionInputs.kt`
+  - `MapScreenContentRuntimeSupport.kt`
   - `MapScreenUseCases.kt`
   - `MapControlsUI.kt` (delete if unused or align if retained)
   - resolver/use-case tests
 - Ownership/file split changes in this phase:
   - create one canonical style contract owner
+  - keep `MapStateReader.mapStyleName` string-backed as a compatibility seam in this IP
   - keep repository persistence values string-backed for compatibility
 - Tests to add/update:
   - persisted key -> `MapStyleId` parsing
@@ -378,7 +397,8 @@ Phase 0 seam/code pass conclusions:
   - hidden/non-selectable style metadata coverage
   - profile contributor compatibility coverage stays green against the typed runtime boundary
 - Exit criteria:
-  - runtime code no longer relies on arbitrary raw strings for style identity
+  - runtime mutation and resolution code no longer relies on arbitrary raw strings for style identity
+  - `feature:map-runtime` `MapStateReader` remains stable in this slice
   - one catalog owns labels, keys, and URLs
 
 ### Phase 2 - Runtime style owner consolidation
@@ -391,6 +411,9 @@ Phase 0 seam/code pass conclusions:
   - `MapScreenStyleCoordinator.kt` (new)
   - `NavigationDrawer.kt`
   - `MapScreenScaffoldInputs.kt`
+  - `MapScreenSectionInputs.kt`
+  - `MapScreenContentRuntime.kt`
+  - `MapScreenContentRuntimeSupport.kt`
   - `MapScreenBottomTabsUiState.kt`
   - `MapScreenContentRuntimeSections.kt`
 - Ownership/file split changes in this phase:
@@ -401,6 +424,7 @@ Phase 0 seam/code pass conclusions:
   - effective style precedence tests
   - drawer selected-state tests against authoritative base style
   - bottom-sheet tests proving no local restore owner remains
+  - bottom-tabs remember/runtime pass-through tests
 - Exit criteria:
   - no Compose-local map style state remains authoritative
   - effective style resolves from one runtime owner only
@@ -498,6 +522,7 @@ Phase 0 seam/code pass conclusions:
   - `MapStyleCatalog` parse/selectability/URL tests
   - `MapStyleOverridePolicy` precedence tests
   - `MapStateStore` effective-style state tests
+  - `MapScreenBottomTabsUiStateTest` and `MapScreenBottomTabsUiStateRememberTest` ownership/restore tests
   - startup style bootstrap and no-double-apply tests
   - `ThermallingModeRuntimeWiringTest` replay no-op/reset coverage
 - Replay/regression tests:
@@ -513,14 +538,26 @@ Phase 0 seam/code pass conclusions:
   - startup no longer depends on `initialMapStyle` round-trip write or shell prop threading
   - bottom-sheet no longer owns style restore cache
   - profile import/export still round-trips persisted map style keys
+  - `feature:map-runtime` fake/read-only consumers remain compatible because `MapStateReader.mapStyleName` stays string-backed in this IP
+- Existing suite anchors to update:
+  - `MapStateStoreTest.kt`
+  - `MapStyleUrlResolverTest.kt`
+  - `MapScreenBottomTabsUiStateTest.kt`
+  - `MapScreenBottomTabsUiStateRememberTest.kt`
+  - `MapScreenViewModelCoreStateTest.kt`
+  - `MapRuntimeControllerWeatherStyleTest.kt`
+  - `ThermallingModeRuntimeWiringTest.kt`
+  - `AppProfileSettingsSnapshotProviderTest.kt`
+  - `AppProfileSettingsRestoreApplierProfileScopedSectionsTest.kt`
 - Change-type coverage matrix:
 
 | Change Type | Required Proof | Planned Evidence |
 |---|---|---|
 | Runtime style policy | unit tests + resolver/state regressions | catalog, policy, and store tests |
 | Replay/runtime integration | deterministic runtime tests | `ThermallingModeRuntimeWiringTest.kt` |
-| Persistence/settings compatibility | round-trip parse/fallback tests | use-case/repository boundary tests |
+| Persistence/settings compatibility | round-trip parse/fallback tests | use-case/repository boundary tests plus profile contributor restore tests |
 | Ownership move / bypass removal | boundary lock tests | drawer/bottom-tabs/startup tests |
+| Cross-module compatibility seam | no avoidable API churn | `MapStateReader` consumers and fake-reader tests stay green |
 | Performance-sensitive path | SLO evidence when style wiring lands | targeted mapscreen evidence run if Phase 3 or 5 changes runtime timings materially |
 
 Required checks before merge-ready implementation:
@@ -542,6 +579,7 @@ scripts/qa/run_mapscreen_evidence.bat
 | Risk | Impact | Mitigation | Owner |
 |---|---|---|---|
 | typed style contract expands beyond the smallest useful slice | delayed delivery | preserve existing persisted strings and avoid config migration in this IP | XCPro Team |
+| typed-style cleanup drags `feature:map-runtime` into avoidable API churn | larger refactor, more test fallout, possible ADR requirement | keep `MapStateReader.mapStyleName` string-backed in this IP and normalize behind `feature:map` boundaries | XCPro Team |
 | `MapScreenViewModel.kt` grows further | maintainability loss | keep VM delegates thin and move style orchestration into a focused coordinator file | XCPro Team |
 | startup cleanup removes only one seam and leaves the double-apply race alive | redundant style reloads and overlay churn remain | treat the race as a first-class Phase 3 target and lock the `MapInitializer`/`MapRuntimeController` boundary with tests | XCPro Team |
 | style override policy conflicts with forecast satellite UX | incorrect effective style | centralize precedence in one policy file with tests before feature rollout | XCPro Team |
