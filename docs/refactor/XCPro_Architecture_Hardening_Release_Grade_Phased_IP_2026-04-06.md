@@ -194,7 +194,7 @@ Rules:
 | Public runtime/controller escape hatch from map ViewModel | `feature/map/.../MapScreenViewModel.kt`, `app/.../AppNavGraph.kt`, `feature/map/.../FlightDataMgmt.kt` | app/nav layer depends on concrete runtime collaborators through a ViewModel boundary | Phase 1 |
 | Hidden or self-created long-lived scopes | `feature/tasks/.../TaskManagerCoordinator.kt`, `feature/map/.../di/SensorFusionModule.kt`, `feature/livefollow/.../di/LiveFollowModule.kt`, `feature/map/.../MapOrientationManager.kt` | lifetime ambiguity, cleanup drift, hidden background work | Phase 2 |
 | Public production convenience constructors with silent `NoOp` policy wiring | `feature/profile/.../ProfileRepository.kt`, `feature/traffic/.../AdsbTrafficRepository.kt`, `feature/traffic/.../AdsbTrafficRepositoryRuntime.kt` | mandatory behavior can silently degrade in production wiring | Phase 3 |
-| Task authority not fully encoded in public API | `feature/tasks/.../TaskManagerCoordinator.kt`, `feature/map-runtime/.../MapTasksUseCase.kt` | future callers can bypass the canonical task seam | Phase 4 |
+| Task authority not fully encoded in public API | `feature/tasks/.../TaskManagerCoordinator.kt`, `feature/map/.../MapTasksUseCase.kt` | future callers can bypass the canonical task seam | Phase 4 |
 | `feature:map-runtime` depends on higher-level feature modules | `feature/map-runtime/build.gradle.kts` and runtime files importing task/forecast/profile/weather/traffic concerns | runtime/render boundary is organizational rather than architectural | Phase 5 |
 | Concentrated screen orchestration in map ViewModel | `feature/map/.../MapScreenViewModel.kt` | maintainability hotspot and future ownership drift | Phase 6 |
 
@@ -206,7 +206,7 @@ These are not separate phases, but they must be checked while the corresponding 
 |---|---|---|
 | Phase 2 | `feature/map/.../sensors/UnifiedSensorManager.kt`, `feature/map/.../replay/ReplayPipeline.kt`, `feature/map/.../replay/IgcReplayControllerRuntime.kt` | more examples of helper-owned or recreated runtime lifetime that can undermine the ownership standard |
 | Phase 2 | `feature/map/.../vario/VarioServiceManager.kt` | service-owned scope is acceptable only if the owner contract stays explicit and documented |
-| Phase 5 | `feature/map-runtime/.../map/MapTasksUseCase.kt`, task-performance / forecast / weather runtime adapters | these are likely the first code moves or contract extractions needed to make the module boundary real |
+| Phase 5 | `feature/map/.../MapTasksUseCase.kt`, task-performance / forecast / weather runtime adapters | these are likely the first code moves or contract extractions needed to make the module boundary real |
 | Phase 6 | prompt, replay, traffic, and profile-session orchestration inside `MapScreenViewModel` | split only after the lower seams are cleaned so the refactor does not freeze bad boundaries in place |
 
 ## 4) Phase Overview
@@ -432,7 +432,7 @@ Turn the current "mostly disciplined" task contract into an enforced one.
 ### Primary Hotspots
 
 - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt`
 - any cross-feature consumer still reading task state directly
 
 ### Changes
@@ -481,12 +481,19 @@ Make the module boundary real instead of nominal.
 - `feature/map-runtime/build.gradle.kts`
 - runtime files importing task, forecast, profile, weather, traffic, or other higher-level feature policy types
 
-### Likely First-Move Candidates
+### Current Cut (2026-04-06)
 
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt`
-- task-performance / glide coordination classes that depend on task coordinators directly
-- forecast / weather integration adapters that mix runtime rendering with feature policy
-- other map runtime adapters that depend on concrete higher-level feature modules rather than narrow contracts
+- `feature/map/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt`
+  is the first confirmed move candidate and is treated as map-shell code.
+- `TaskRenderSnapshot` remains in `feature:map-runtime` because runtime owners
+  (`TaskRenderSyncCoordinator`, `MapCameraRuntimePort`) still consume it there.
+- Compile proof showed the current `feature:map-runtime` dependency on
+  `:feature:igc` and `:feature:profile` is still real through replay/session and
+  profile-owned runtime types; those dependencies are not Phase 5A removals.
+- `feature/traffic/.../TrafficOverlayRuntimeState.kt` remains the accepted
+  traffic overlay handle seam. Moving it into `feature:map-runtime` would create
+  a `feature:traffic <-> feature:map-runtime` cycle and conflicts with the
+  accepted traffic overlay change plans.
 
 ### Changes
 
@@ -498,7 +505,9 @@ Make the module boundary real instead of nominal.
 - Move higher-level orchestration and feature policy adaptation back to:
   - `feature:map`, or
   - the owning feature module through narrow contracts.
-- Reduce Gradle dependencies so `feature:map-runtime` no longer directly depends on broad feature slices for orchestration work.
+- Reduce Gradle dependencies only when compile proof shows they are truly stale;
+  do not remove `:feature:igc` / `:feature:profile` until their runtime-owned
+  types are extracted or rewired.
 - Prefer moving integration wrappers over inventing a new abstraction layer unless a small contract is clearly required.
 
 ### Guardrails
@@ -506,6 +515,8 @@ Make the module boundary real instead of nominal.
 - No rename-only package motion to simulate progress.
 - Do not create a generic "god bridge" module to avoid making real boundary decisions.
 - Keep render/runtime code in `feature:map-runtime`; do not push low-level rendering concerns upward into `feature:map`.
+- Do not force traffic overlay runtime contracts into `feature:map-runtime`
+  while `feature:traffic` still owns the concrete overlay implementations.
 
 ### Acceptance
 

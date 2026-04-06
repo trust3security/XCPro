@@ -937,6 +937,9 @@ Weather rain overlay path:
   - Consumes shell-supplied refresh closures from `MapOverlayManager.kt` so `:feature:map-runtime` does not depend back on shell-owned airspace/waypoint helpers.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeShellPorts.kt`
   - Runtime-facing contracts for shell-owned overlay lifecycle/status collaborators.
+- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
+  - Map-free cross-module traffic overlay handle seam consumed by `feature:map-runtime`.
+  - Stays in `feature:traffic` because traffic owns the concrete overlay implementations; moving this seam into `feature:map-runtime` would create a module cycle.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeCounters.kt`
   - Runtime-side counters model shared between the overlay runtime owner and shell-owned status reporting.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
@@ -1011,8 +1014,11 @@ Card configuration + hydration (current):
 - `SnailTrailRuntimeState` now lives in `feature/map-runtime` as the narrow
   shell/runtime trail-handle contract implemented by `MapScreenState` in
   `feature:map`.
-- `MapTasksUseCase`, `TaskRenderSyncCoordinator`, `MapFeatureFlags`, and map UI model
+- `TaskRenderSnapshot`, `TaskRenderSyncCoordinator`, `MapFeatureFlags`, and map UI model
   types now live in `feature/map-runtime` as part of the retained shell/runtime split.
+- `MapTasksUseCase` now lives in `feature:map` as the map-shell adapter over
+  `TaskManagerCoordinator`, reusing the runtime-owned `TaskRenderSnapshot`
+  model instead of making `feature:map-runtime` the shell task owner.
 - `DisplayPoseSnapshot` now lives in `feature/map-runtime` as the runtime-facing
   display-pose frame contract used by shell effects and trail/runtime consumers.
   It now carries explicit display-clock timebase metadata so trail/runtime
@@ -1313,7 +1319,7 @@ Task map rendering bridge (2026-02-12):
     `MapScreenState` in `feature:map`
 - `MapScreenViewModel` delegates task gesture creation and AAT edit forwarding to
   `feature/map/src/main/java/com/example/xcpro/map/MapScreenTaskShellCoordinator.kt`,
-  which consumes `MapTasksUseCase`.
+  which consumes the map-shell-owned `MapTasksUseCase`.
 - Map runtime effects consume ViewModel-bound task type and AAT edit-mode state
   instead of reading coordinator state directly in Composables.
 - Task gesture/runtime ownership now splits cleanly between the map shell and `feature:map-runtime`:
@@ -1329,6 +1335,8 @@ Task map rendering bridge (2026-02-12):
   seam (`TaskManagerCoordinator.taskSnapshotFlow` /
   `TaskManagerCoordinator.currentSnapshot()`), and AAT edit-mode shell reads
   derive from `TaskManagerCoordinator.aatEditWaypointIndexFlow`.
+  `MapTasksUseCase` now lives in `feature:map`; `TaskRenderSnapshot` remains in
+  `feature:map-runtime` as the runtime-facing task render model.
 - `TaskSheetViewModel` no longer calls manual `sync()` after task mutations. It collects the coordinator snapshot flow and routes AAT target param/lock edits through coordinator-owned mutations.
 - AAT service-backed autosave and named-task persistence now run through a canonical JSON store in
   `feature/tasks/src/main/java/com/example/xcpro/tasks/data/persistence/AATCanonicalTaskStorage.kt`.
