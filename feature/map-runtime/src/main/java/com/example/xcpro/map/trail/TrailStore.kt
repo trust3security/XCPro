@@ -47,7 +47,10 @@ class TrailStore(
 
     fun latestTimestampMillis(): Long? = points.lastOrNull()?.timestampMillis
 
-    fun addSample(sample: TrailSample): Boolean {
+    fun addSample(
+        sample: TrailSample,
+        minDeltaMillisOverride: Long? = null
+    ): Boolean {
         if (!TrailGeo.isValidCoordinate(sample.latitude, sample.longitude)) {
             return false
         }
@@ -58,13 +61,14 @@ class TrailStore(
         val last = points.lastOrNull()
         if (last != null) {
             val dt = sample.timestampMillis - last.timestampMillis
+            val effectiveMinDeltaMillis = minDeltaMillisOverride ?: minDeltaMillis
             if (dt < 0) {
                 if (sample.timestampMillis + clearThresholdMillis < last.timestampMillis) {
                     clear()
                     return false
                 }
                 trimLaterThan(sample.timestampMillis - fixThresholdMillis)
-            } else if (dt < minDeltaMillis) {
+            } else if (dt < effectiveMinDeltaMillis) {
                 return false
             }
         }

@@ -18,13 +18,25 @@ Read Order
 
 Related Docs
 - `docs/refactor/REFACTOR_SNAIL_TRAIL.md`
+- `docs/SNAIL/CHANGE_PLAN_SYNTHETIC_THERMAL_REPLAY_VALIDATION_2026-04-06.md`
 - `docs/ARCHITECTURE/ARCHITECTURE.md`
 - `docs/ARCHITECTURE/CODING_RULES.md`
 - `docs/ARCHITECTURE/PIPELINE.md`
+- `scripts/qa/scaffold_snail_ground_validation.ps1`
+
+Ground Validation
+- Use `scripts/qa/scaffold_snail_ground_validation.ps1` or
+  `scripts/qa/run_snail_ground_validation_scaffold.bat` to create the
+  repeatable manual ground-test artifact pack under
+  `artifacts/snail/ground/<timestamp>/`.
+- Preferred deterministic baseline:
+  - use the debug replay lane synthetic thermal actions (`THR` clean, `THN`
+    wind-noisy) before falling back to a real thermal `.igc`.
+- Attach the paired `pkg-f1` run id when available so lifecycle/cadence proof
+  and manual trail validation stay linked.
 
 Non-Negotiables
 - Keep MVVM + UDF + SSOT boundaries.
 - Keep replay deterministic.
 - Keep time-base rules explicit (live monotonic/replay IGC).
 - Keep map rendering logic in UI/runtime layer; keep business logic in domain/use-cases.
-

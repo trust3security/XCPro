@@ -23,7 +23,9 @@ import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayDisplayPose
+import com.example.xcpro.map.replay.SyntheticThermalReplayMode
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
+import com.example.xcpro.map.replay.SyntheticThermalReplayLogBuilder
 import com.example.xcpro.thermalling.ThermallingModeAction
 import com.example.xcpro.thermalling.ThermallingModeCoordinator
 import com.example.xcpro.thermalling.ThermallingModeInput
@@ -176,7 +178,8 @@ class MapReplayUseCase @Inject constructor(
     private val waypointNavigationRepository: WaypointNavigationRepository,
     private val taskPerformanceRepository: TaskPerformanceRepository,
     private val controller: IgcReplayController,
-    private val racingReplayLogBuilder: RacingReplayLogBuilder
+    private val racingReplayLogBuilder: RacingReplayLogBuilder,
+    private val syntheticThermalReplayLogBuilder: SyntheticThermalReplayLogBuilder
 ) {
     val replaySession: StateFlow<com.example.xcpro.replay.SessionState> = controller.session
 
@@ -195,6 +198,7 @@ class MapReplayUseCase @Inject constructor(
         flightDataManager: FlightDataManager,
         mapStateStore: MapStateReader,
         trailSettingsFlow: StateFlow<TrailSettings>,
+        syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
         liveDataReady: MutableStateFlow<Boolean>,
         containerReady: MutableStateFlow<Boolean>,
         uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -208,6 +212,7 @@ class MapReplayUseCase @Inject constructor(
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         trailSettingsFlow = trailSettingsFlow,
+        syntheticReplayMode = syntheticReplayMode,
         liveDataReady = liveDataReady,
         containerReady = containerReady,
         uiEffects = uiEffects,
@@ -223,6 +228,7 @@ class MapReplayUseCase @Inject constructor(
         featureFlags: MapFeatureFlags,
         mapStateStore: MapStateStore,
         mapStateActions: MapStateActions,
+        syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
         uiEffects: MutableSharedFlow<MapUiEffect>,
         replaySessionState: StateFlow<com.example.xcpro.replay.SessionState>,
         scope: CoroutineScope
@@ -232,9 +238,11 @@ class MapReplayUseCase @Inject constructor(
         flightDataFlow = flightDataFlow,
         igcReplayController = controller,
         racingReplayLogBuilder = racingReplayLogBuilder,
+        syntheticThermalReplayLogBuilder = syntheticThermalReplayLogBuilder,
         featureFlags = featureFlags,
         mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
+        syntheticReplayMode = syntheticReplayMode,
         uiEffects = uiEffects,
         replaySessionState = replaySessionState,
         scope = scope

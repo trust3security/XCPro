@@ -4,6 +4,7 @@ import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.map.replay.SyntheticThermalReplayMode
 import com.example.xcpro.navigation.WaypointNavigationSnapshot
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.sensors.CompleteFlightData
@@ -30,6 +31,7 @@ internal class FlightDataUiAdapter(
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateReader,
     trailSettingsFlow: StateFlow<TrailSettings>,
+    syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
     liveDataReady: MutableStateFlow<Boolean>,
     containerReady: MutableStateFlow<Boolean>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -48,6 +50,7 @@ internal class FlightDataUiAdapter(
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         trailSettingsFlow = trailSettingsFlow,
+        syntheticReplayMode = syntheticReplayMode,
         liveDataReady = liveDataReady,
         containerReady = containerReady,
         uiEffects = uiEffects,

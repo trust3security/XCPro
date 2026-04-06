@@ -2,12 +2,15 @@ package com.example.xcpro.map
 
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.replay.DemoReplayLauncher
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
+import com.example.xcpro.map.replay.SyntheticThermalReplayLogBuilder
+import com.example.xcpro.map.replay.SyntheticThermalReplayLauncher
+import com.example.xcpro.map.replay.SyntheticThermalReplayMode
+import com.example.xcpro.map.replay.SyntheticThermalReplayVariant
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayCadenceProfile
-import com.example.xcpro.replay.ReplayInterpolation
 import com.example.xcpro.replay.ReplayMode
-import com.example.xcpro.replay.ReplayNoiseProfile
 import com.example.xcpro.replay.ReplayEvent
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -17,6 +20,7 @@ import com.example.xcpro.tasks.TaskNavigationController
 import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
@@ -30,9 +34,11 @@ internal class MapScreenReplayCoordinator(
     private val flightDataFlow: StateFlow<CompleteFlightData?>,
     private val igcReplayController: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder,
+    private val syntheticThermalReplayLogBuilder: SyntheticThermalReplayLogBuilder,
     private val featureFlags: MapFeatureFlags,
     private val mapStateStore: MapStateStore,
     private val mapStateActions: MapStateActions,
+    private val syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
     private val replaySessionState: StateFlow<SessionState>,
     private val scope: CoroutineScope
@@ -54,6 +60,21 @@ internal class MapScreenReplayCoordinator(
         igcReplayController = igcReplayController,
         featureFlags = featureFlags,
         replaySessionState = replaySessionState
+    )
+    private val demoReplayLauncher = DemoReplayLauncher(
+        demoReplaySnapshots = demoReplaySnapshots,
+        igcReplayController = igcReplayController,
+        featureFlags = featureFlags,
+        mapStateActions = mapStateActions,
+        uiEffects = uiEffects
+    )
+    private val syntheticThermalReplayLauncher = SyntheticThermalReplayLauncher(
+        demoReplaySnapshots = demoReplaySnapshots,
+        igcReplayController = igcReplayController,
+        syntheticThermalReplayLogBuilder = syntheticThermalReplayLogBuilder,
+        syntheticReplayMode = syntheticReplayMode,
+        mapStateActions = mapStateActions,
+        uiEffects = uiEffects
     )
     private var racingReplayActive = false
     @Volatile
@@ -89,137 +110,61 @@ internal class MapScreenReplayCoordinator(
 
     fun onVarioDemoReplay() {
         scope.launch {
-            try {
-                demoReplaySnapshots.captureUiIfNeeded()
-                igcReplayController.setAutoStopAfterFinish(true)
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REFERENCE, resetAfterSession = true)
-                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
-                mapStateActions.setHasInitiallyCentered(false)
-                mapStateActions.setShowReturnButton(false)
-                mapStateActions.setTrackingLocation(true)
-                igcReplayController.play()
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
-            } catch (t: Throwable) {
-                demoReplaySnapshots.restoreIfCaptured()
-                AppLogger.e(TAG, "Failed to start vario demo replay", t)
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
-            }
+            clearSyntheticReplayInspectionIfNeeded()
+            demoReplayLauncher.startReference()
         }
     }
 
     fun onVarioDemoReplaySim() {
         scope.launch {
-            try {
-                demoReplaySnapshots.captureUiIfNeeded()
-                igcReplayController.setAutoStopAfterFinish(true)
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
-                igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo (sim)")
-                mapStateActions.setHasInitiallyCentered(false)
-                mapStateActions.setShowReturnButton(false)
-                mapStateActions.setTrackingLocation(true)
-                igcReplayController.play()
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay started"))
-            } catch (t: Throwable) {
-                demoReplaySnapshots.restoreIfCaptured()
-                AppLogger.e(TAG, "Failed to start vario demo replay (sim)", t)
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim) replay failed"))
-            }
+            clearSyntheticReplayInspectionIfNeeded()
+            demoReplayLauncher.startRealtimeSim()
         }
     }
 
     fun onVarioDemoReplaySimLive() {
         scope.launch {
-            try {
-                demoReplaySnapshots.captureUiIfNeeded()
-                demoReplaySnapshots.setDisplayPoseOverride(DisplayPoseMode.SMOOTHED)
-                mapStateActions.setDisplayPoseMode(DisplayPoseMode.SMOOTHED)
-                demoReplaySnapshots.captureRuntimeReplaySettingsIfNeeded()
-                demoReplaySnapshots.captureFeatureFlagSettingsIfNeeded()
-                featureFlags.forceReplayTrackHeading = true
-                featureFlags.maxTrackBearingStepDeg = SIM2_BASELINE_BEARING_STEP_DEG
-                featureFlags.useIconHeadingSmoothing = false
-                featureFlags.useRuntimeReplayHeading = true
-                featureFlags.useRenderFrameSync = true
-                featureFlags.sim2FrameLogIntervalMs = 0L
-                val cadenceMs = SIM2_BASELINE_STEP_MS
-                val accuracyM = SIM2_BASELINE_ACCURACY_M
-                igcReplayController.setSpeed(SIM2_REPLAY_SPEED_MULTIPLIER)
-                igcReplayController.setAutoStopAfterFinish(true)
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
-                igcReplayController.setReplayCadence(
-                    ReplayCadenceProfile(
-                        referenceStepMs = cadenceMs,
-                        gpsStepMs = cadenceMs
-                    )
-                )
-                igcReplayController.setReplayBaroStepMs(cadenceMs)
-                igcReplayController.setReplayNoiseProfile(
-                    ReplayNoiseProfile(
-                        pressureNoiseSigmaHpa = 0.0,
-                        gpsAltitudeNoiseSigmaM = 0.0,
-                        jitterMs = 0L
-                    )
-                )
-                igcReplayController.setReplayGpsAccuracyMeters(accuracyM)
-                igcReplayController.setReplayInterpolation(ReplayInterpolation.CATMULL_ROM_RUNTIME)
-                igcReplayController.loadAsset(VARIO_DEMO_SIM2_ASSET_PATH, "Vario demo (sim2)")
-                mapStateActions.setHasInitiallyCentered(false)
-                mapStateActions.setShowReturnButton(false)
-                mapStateActions.setTrackingLocation(true)
-                igcReplayController.play()
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim2) replay started"))
-            } catch (t: Throwable) {
-                demoReplaySnapshots.restoreIfCaptured()
-                AppLogger.e(TAG, "Failed to start vario demo replay (sim2)", t)
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim2) replay failed"))
-            }
+            clearSyntheticReplayInspectionIfNeeded()
+            demoReplayLauncher.startSmoothedRealtimeSim()
         }
     }
 
     fun onVarioDemoReplaySim3() {
         scope.launch {
-            try {
-                demoReplaySnapshots.captureUiIfNeeded()
-                demoReplaySnapshots.captureRuntimeReplaySettingsIfNeeded()
-                igcReplayController.setSpeed(SIM3_REPLAY_SPEED_MULTIPLIER)
-                igcReplayController.setAutoStopAfterFinish(true)
-                igcReplayController.stopAndWait(emitCancelledEvent = false)
-                igcReplayController.setReplayMode(ReplayMode.REALTIME_SIM, resetAfterSession = true)
-                igcReplayController.setReplayCadence(
-                    ReplayCadenceProfile(
-                        referenceStepMs = SIM3_STEP_MS,
-                        gpsStepMs = SIM3_STEP_MS
-                    )
-                )
-                igcReplayController.setReplayBaroStepMs(SIM3_STEP_MS)
-                igcReplayController.setReplayNoiseProfile(
-                    ReplayNoiseProfile(
-                        pressureNoiseSigmaHpa = 0.0,
-                        gpsAltitudeNoiseSigmaM = 0.0,
-                        jitterMs = 0L
-                    )
-                )
-                igcReplayController.setReplayGpsAccuracyMeters(SIM3_ACCURACY_M)
-                igcReplayController.setReplayInterpolation(ReplayInterpolation.LINEAR)
-                igcReplayController.loadAsset(VARIO_DEMO_SIM3_ASSET_PATH, "Vario demo (sim3)")
-                mapStateActions.setHasInitiallyCentered(false)
-                mapStateActions.setShowReturnButton(false)
-                mapStateActions.setTrackingLocation(true)
-                igcReplayController.play()
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim3) replay started"))
-            } catch (t: Throwable) {
-                demoReplaySnapshots.restoreIfCaptured()
-                AppLogger.e(TAG, "Failed to start vario demo replay (sim3)", t)
-                uiEffects.emit(MapUiEffect.ShowToast("Vario demo (sim3) replay failed"))
-            }
+            clearSyntheticReplayInspectionIfNeeded()
+            demoReplayLauncher.startLinearRealtimeSim()
+        }
+    }
+
+    fun onSyntheticThermalReplay() {
+        scope.launch {
+            clearSyntheticReplayInspectionIfNeeded()
+            syntheticThermalReplayLauncher.start(
+                variant = SyntheticThermalReplayVariant.CLEAN,
+                replayMode = SyntheticThermalReplayMode.CLEAN,
+                displayName = "Synthetic thermal (clean)",
+                successMessage = "Synthetic thermal replay started",
+                failureMessage = "Synthetic thermal replay failed"
+            )
+        }
+    }
+
+    fun onSyntheticThermalReplayWindNoisy() {
+        scope.launch {
+            clearSyntheticReplayInspectionIfNeeded()
+            syntheticThermalReplayLauncher.start(
+                variant = SyntheticThermalReplayVariant.WIND_NOISY,
+                replayMode = SyntheticThermalReplayMode.WIND_NOISY,
+                displayName = "Synthetic thermal (wind-noisy)",
+                successMessage = "Synthetic thermal wind-noisy replay started",
+                failureMessage = "Synthetic thermal wind-noisy replay failed"
+            )
         }
     }
 
     fun onRacingTaskReplay() {
         scope.launch {
+            clearSyntheticReplayInspectionIfNeeded()
             racingReplayActive = true
             suppressRacingFixes = true
             racingReplayLogger.reset()
@@ -269,6 +214,25 @@ internal class MapScreenReplayCoordinator(
     private fun observeReplayEvents() {
         igcReplayController.events
             .onEach { event ->
+                if (syntheticReplayMode.value.isActive) {
+                    when (event) {
+                        is ReplayEvent.Completed -> {
+                            igcReplayController.seekTo(1f)
+                        }
+                        is ReplayEvent.Failed -> {
+                            syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
+                            igcReplayController.setAutoStopAfterFinish(false)
+                            igcReplayController.stopAndWait(emitCancelledEvent = false)
+                            demoReplaySnapshots.restoreIfCaptured()
+                        }
+                        ReplayEvent.Cancelled -> {
+                            syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
+                            igcReplayController.setAutoStopAfterFinish(false)
+                            demoReplaySnapshots.restoreIfCaptured()
+                        }
+                    }
+                    return@onEach
+                }
                 if (demoReplaySnapshots.hasSnapshot) {
                     demoReplaySnapshots.restoreIfCaptured()
                     when (event) {
@@ -300,6 +264,15 @@ internal class MapScreenReplayCoordinator(
                 }
             }
             .launchIn(scope)
+    }
+
+    private suspend fun clearSyntheticReplayInspectionIfNeeded() {
+        if (!syntheticReplayMode.value.isActive) {
+            return
+        }
+        syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
+        igcReplayController.stopAndWait(emitCancelledEvent = false)
+        demoReplaySnapshots.restoreIfCaptured()
     }
 
     private fun observeReplayDisplayPoseMode() {
@@ -347,17 +320,7 @@ internal class MapScreenReplayCoordinator(
 
     private companion object {
         private const val TAG = "MapScreenReplayCoord"
-        private const val VARIO_DEMO_ASSET_PATH = "replay/vario-demo-0-10-0-60s.igc"
-        private const val VARIO_DEMO_SIM2_ASSET_PATH = "replay/vario-demo-0-10-0-120s.igc"
-        private const val VARIO_DEMO_SIM3_ASSET_PATH = "replay/vario-demo-const-120s.igc"
         private const val RACING_REPLAY_SPEED_MULTIPLIER = 1.0
         private val RACING_REPLAY_CADENCE_PROFILE = ReplayCadenceProfile.LIVE_100MS
-        private const val SIM2_BASELINE_STEP_MS = 1_000L
-        private const val SIM2_BASELINE_ACCURACY_M = 1f
-        private const val SIM2_BASELINE_BEARING_STEP_DEG = 360.0
-        private const val SIM2_REPLAY_SPEED_MULTIPLIER = 1.0
-        private const val SIM3_STEP_MS = 1_000L
-        private const val SIM3_ACCURACY_M = 1f
-        private const val SIM3_REPLAY_SPEED_MULTIPLIER = 1.0
     }
 }

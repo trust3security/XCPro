@@ -157,11 +157,10 @@ internal fun MapScreenRoot(
         onExitAATEditMode = mapViewModel::exitAATEditMode,
         snailTrailManager = managers.snailTrailManager,
         locationManager = managers.locationManager,
-        featureFlags = runtimeDependencies.featureFlags,
         trailUpdateResult = sessionBindings.trailUpdateResult,
         trailSettings = sessionBindings.trailSettings,
         currentZoomFlow = hotPathBindings.currentZoom,
-        suppressLiveGps = sessionBindings.suppressLiveGps,
+        renderLocalOwnship = renderLocalOwnship,
         currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
         orientationManager = orientationManager
     )

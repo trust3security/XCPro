@@ -144,6 +144,8 @@ internal fun MapScreenContent(
 
     val replayState = replayInputs.replayState
     val showVarioDemoFab = replayInputs.showVarioDemoFab
+    val onSyntheticThermalReplayClick = replayInputs.onSyntheticThermalReplayClick
+    val onSyntheticThermalReplayWindNoisyClick = replayInputs.onSyntheticThermalReplayWindNoisyClick
     val onVarioDemoReferenceClick = replayInputs.onVarioDemoReferenceClick
     val onVarioDemoSimClick = replayInputs.onVarioDemoSimClick
     val onVarioDemoSim2Click = replayInputs.onVarioDemoSim2Click
@@ -192,8 +194,6 @@ internal fun MapScreenContent(
     val windTapUiState = rememberMapScreenWindTapUiState(
         isForecastWindArrowOverlayActive = forecastWeatherState.isForecastWindArrowOverlayActive
     )
-    // Temporarily suppress replay/debug FABs on MapScreen (REF/SIM/SIM2/SIM3/TASK).
-    val hideReplayDebugFabs = true
     val auxiliaryPanelsInputs = MapAuxiliaryPanelsInputs(
         mapState = mapState,
         density = density,
@@ -342,11 +342,13 @@ internal fun MapScreenContent(
             renderLocalOwnship = renderLocalOwnship,
             showRecenterButton = showRecenterButton,
             showReturnButton = showReturnButton,
-            showVarioDemoFab = showVarioDemoFab && !hideReplayDebugFabs,
+            showVarioDemoFab = showVarioDemoFab,
             showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
-            showRacingReplayFab = showRacingReplayFab && !hideReplayDebugFabs,
+            showRacingReplayFab = showRacingReplayFab,
             onRecenter = locationManager::recenterOnCurrentLocation,
             onReturn = { locationManager.returnToSavedLocation() },
+            onSyntheticThermalReplayClick = onSyntheticThermalReplayClick,
+            onSyntheticThermalReplayWindNoisyClick = onSyntheticThermalReplayWindNoisyClick,
             onVarioDemoReferenceClick = onVarioDemoReferenceClick,
             onVarioDemoSimClick = onVarioDemoSimClick,
             onVarioDemoSim2Click = onVarioDemoSim2Click,

@@ -18,6 +18,7 @@ import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.map.replay.SyntheticThermalReplayMode
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.qnh.CalibrateQnhUseCase
@@ -169,6 +170,7 @@ class MapScreenViewModel @Inject constructor(
     private val _isMapVisible = MutableStateFlow(false)
     private val adsbFilterStates: AdsbFilterStateFlows = createAdsbFilterStateFlows(viewModelScope, adsbTrafficFacade)
     val cardHydrationReady: StateFlow<Boolean> = createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
+    private val syntheticReplayMode = MutableStateFlow(SyntheticThermalReplayMode.NONE)
     private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
         mapReplayUseCase = mapReplayUseCase,
         scope = viewModelScope,
@@ -179,6 +181,7 @@ class MapScreenViewModel @Inject constructor(
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         trailSettingsFlow = mapStateStore.trailSettings,
+        syntheticReplayMode = syntheticReplayMode,
         liveDataReady = _liveDataReady,
         containerReady = _containerReady,
         uiEffects = _uiEffects,
@@ -190,6 +193,7 @@ class MapScreenViewModel @Inject constructor(
         featureFlags = runtimeDependencies.featureFlags,
         mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
+        syntheticReplayMode = syntheticReplayMode,
         uiEffects = _uiEffects,
         replaySessionState = replaySessionState,
         scope = viewModelScope
@@ -290,6 +294,8 @@ class MapScreenViewModel @Inject constructor(
     fun onVarioDemoReplaySim() = replayCoordinator.onVarioDemoReplaySim()
     fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
     fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
+    fun onSyntheticThermalReplay() = replayCoordinator.onSyntheticThermalReplay()
+    fun onSyntheticThermalReplayWindNoisy() = replayCoordinator.onSyntheticThermalReplayWindNoisy()
     fun updateSafeContainerSize(size: MapSize) = mapStateStore.updateSafeContainerSize(size)
     fun setMapStyle(styleName: String) = emitEffectiveStyleCommandIfChanged(mapStateStore.setBaseMapStyle(styleName).effectiveStyleChanged)
     fun persistMapStyle(styleName: String) = profileSessionCoordinator.persistMapStyle(styleName)

@@ -469,6 +469,9 @@ Observers:
     `RealTimeFlightData`.
   - Pushes to `FlightDataManager` and the `feature:map-runtime` trail
     processor.
+  - Threads full trail settings into the trail runtime path so
+    `TrailUpdateInput.windDriftEnabled` stays a domain-owned render-policy
+    input instead of a UI-local decision.
   - Gates trail processing by trail settings (`TrailLength.OFF` resets trail processor and clears trail updates).
 
 Final glide runtime contract:
@@ -1006,6 +1009,8 @@ Card configuration + hydration (current):
   types now live in `feature/map-runtime` as part of the retained shell/runtime split.
 - `DisplayPoseSnapshot` now lives in `feature/map-runtime` as the runtime-facing
   display-pose frame contract used by shell effects and trail/runtime consumers.
+  It now carries explicit display-clock timebase metadata so trail/runtime
+  consumers can reject mismatched live/replay timestamps safely.
 - Camera/location/lifecycle Phase A now exposes explicit shell-facing runtime ports
   from `feature/map-runtime`:
   - `MapCameraRuntimePort`
@@ -1088,6 +1093,13 @@ Card configuration + hydration (current):
   `MapRenderSurfaceDiagnostics`. The live ticker cadence remains `25 ms` while
   replay stays at `16.7 ms`; cadence ownership remains in
   `DisplayPoseRenderCadence`.
+- `MapScreenTrailRuntimeEffects` now forwards display-pose snapshots to
+  `SnailTrailManager` for both live and replay tail refresh by subscribing to
+  the existing runtime-owned display-pose frame listener. The shell maps
+  `DisplayPoseSnapshot.timeBase` to `TrailTimeBase`, while
+  `SnailTrailManager` only applies tail refresh when the display-pose timebase
+  matches the current trail render-state timebase. The trail shell no longer
+  owns a parallel `withFrameNanos` cadence loop.
 
 Card cadence (current):
 - `FlightDataManager.cardFlightDataFlow`: bucketed, unthrottled (near pass-through).
@@ -1283,6 +1295,9 @@ Task map rendering bridge (2026-02-12):
   - trail render helpers plus the trail-domain runtime path
     (`TrailProcessor`, `TrailUpdateInput`, `TrailUpdateResult`,
     `TrailRenderState`, `TrailTimeBase`)
+  - `TrailProcessor` owns adaptive live sample cadence, live wind smoothing,
+    and trail rerender invalidation for circling/drift changes; shell code only
+    forwards authoritative inputs and render settings
   - `SnailTrailRuntimeState` is the narrow shell/runtime bridge implemented by
     `MapScreenState` in `feature:map`
 - `MapScreenViewModel` delegates task gesture creation and AAT edit forwarding to
@@ -1435,12 +1450,20 @@ Replay pipeline:
   - Forwards fused `CompleteFlightData` into `FlightDataRepository` with Source.REPLAY.
   - Observes `LevoVarioPreferencesRepository` and pushes replay audio settings and TE compensation enabled flag.
   - Suspends/resumes live sensors via `VarioServiceManager`.
+- `feature/map/src/main/java/com/example/xcpro/map/replay/SyntheticThermalReplayLogBuilder.kt`
+  - builds deterministic in-memory thermal `IgcLog` fixtures for snail-trail validation.
+  - keeps replay input standard `IgcLog` data; sub-second behavior stays in replay cadence/densification, not parser/file semantics.
 
 Controller:
 - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
   - Implements `IgcReplayControllerPort` for `feature:igc`.
   - Owns runtime session state, sample emission, and source gating.
   - Clears repository on stop to avoid stale UI data.
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`
+  - debug replay entrypoint owner for asset-based demo replay, racing replay, and synthetic thermal replay loaded through `loadLog(...)`.
+  - keeps synthetic thermal validation mode scoped to `THR` / `THN`, reseeks the final replay frame on completion so the finished thermal stays inspectable, and clears that mode before any later replay launch.
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt`
+  - keeps normal live/reference replay retention unchanged, but switches synthetic validation replay to a larger replay-only trail budget so the full thermal remains visible during `THR` / `THN` inspection.
 
 ## 9) Time Base Rules (Enforced by Design)
 

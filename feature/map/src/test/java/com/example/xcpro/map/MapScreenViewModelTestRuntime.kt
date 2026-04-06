@@ -65,6 +65,7 @@ import kotlinx.coroutines.runBlocking
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
+import com.example.xcpro.map.replay.SyntheticThermalReplayLogBuilder
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.orientation.HeadingResolver
@@ -362,7 +363,8 @@ abstract class MapScreenViewModelTestBase {
                 distanceProjector = TaskPerformanceDistanceProjector()
             ),
             controller = replayController,
-            racingReplayLogBuilder = RacingReplayLogBuilder()
+            racingReplayLogBuilder = RacingReplayLogBuilder(),
+            syntheticThermalReplayLogBuilder = SyntheticThermalReplayLogBuilder()
         )
         val mapTasksUseCase = MapTasksUseCase(localTaskManager)
         mapFeatureFlags.loadSavedTasksOnInit = false

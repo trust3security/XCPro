@@ -6,7 +6,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.MapLocationRuntimePort
-import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
@@ -21,11 +20,10 @@ internal fun MapScreenRuntimeEffects(
     onExitAATEditMode: () -> Unit,
     snailTrailManager: SnailTrailManager,
     locationManager: MapLocationRuntimePort,
-    featureFlags: MapFeatureFlags,
     trailUpdateResult: TrailUpdateResult?,
     trailSettings: TrailSettings,
     currentZoomFlow: StateFlow<Float>,
-    suppressLiveGps: Boolean,
+    renderLocalOwnship: Boolean,
     currentFlightModeSelection: FlightModeSelection,
     orientationManager: MapOrientationManager
 ) {
@@ -39,11 +37,10 @@ internal fun MapScreenRuntimeEffects(
     MapScreenTrailRuntimeEffects(
         snailTrailManager = snailTrailManager,
         locationManager = locationManager,
-        featureFlags = featureFlags,
         trailUpdateResult = trailUpdateResult,
         trailSettings = trailSettings,
         currentZoom = currentZoom,
-        suppressLiveGps = suppressLiveGps
+        renderLocalOwnship = renderLocalOwnship
     )
     MapScreenOrientationRuntimeEffects(
         currentFlightModeSelection = currentFlightModeSelection,

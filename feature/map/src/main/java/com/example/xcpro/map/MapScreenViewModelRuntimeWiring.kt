@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.model.MapLocationUiModel
+import com.example.xcpro.map.replay.SyntheticThermalReplayMode
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.replay.SessionState
@@ -23,6 +24,7 @@ internal fun createFlightDataUiAdapterForViewModel(
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateStore,
     trailSettingsFlow: StateFlow<TrailSettings>,
+    syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
     liveDataReady: MutableStateFlow<Boolean>,
     containerReady: MutableStateFlow<Boolean>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -36,6 +38,7 @@ internal fun createFlightDataUiAdapterForViewModel(
     flightDataManager = flightDataManager,
     mapStateStore = mapStateStore,
     trailSettingsFlow = trailSettingsFlow,
+    syntheticReplayMode = syntheticReplayMode,
     liveDataReady = liveDataReady,
     containerReady = containerReady,
     uiEffects = uiEffects,
@@ -48,6 +51,7 @@ internal fun createReplayCoordinatorForViewModel(
     featureFlags: com.example.xcpro.map.config.MapFeatureFlags,
     mapStateStore: MapStateStore,
     mapStateActions: MapStateActions,
+    syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
     replaySessionState: StateFlow<SessionState>,
     scope: CoroutineScope
@@ -56,6 +60,7 @@ internal fun createReplayCoordinatorForViewModel(
     featureFlags = featureFlags,
     mapStateStore = mapStateStore,
     mapStateActions = mapStateActions,
+    syntheticReplayMode = syntheticReplayMode,
     uiEffects = uiEffects,
     replaySessionState = replaySessionState,
     scope = scope

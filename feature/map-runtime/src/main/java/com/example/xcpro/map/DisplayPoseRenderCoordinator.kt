@@ -22,6 +22,7 @@ internal class DisplayPoseRenderCoordinator(
     @Volatile private var lastDisplayPoseLocation: LatLng? = null
     @Volatile private var lastDisplayPoseTimestampMs: Long = 0L
     @Volatile private var lastDisplayPoseFrameId: Long = 0L
+    @Volatile private var lastDisplayPoseTimeBase: DisplayClock.TimeBase? = null
     @Volatile private var displayPoseFrameListener: ((DisplayPoseSnapshot) -> Unit)? = null
     private var displayFrameCounter: Long = 0L
     private var lastRenderedFrameSnapshot: DisplayPoseRenderSnapshot? = null
@@ -41,7 +42,8 @@ internal class DisplayPoseRenderCoordinator(
         if (timestamp <= 0L) return null
         val frameId = lastDisplayPoseFrameId
         if (frameId <= 0L) return null
-        return DisplayPoseSnapshot(location, timestamp, frameId)
+        val timeBase = lastDisplayPoseTimeBase ?: return null
+        return DisplayPoseSnapshot(location, timestamp, frameId, timeBase)
     }
 
     fun setDisplayPoseFrameListener(listener: ((DisplayPoseSnapshot) -> Unit)?) {
@@ -53,6 +55,7 @@ internal class DisplayPoseRenderCoordinator(
         lastDisplayPoseLocation = null
         lastDisplayPoseTimestampMs = 0L
         lastDisplayPoseFrameId = 0L
+        lastDisplayPoseTimeBase = null
         displayFrameCounter = 0L
         lastRenderedFrameSnapshot = null
     }
@@ -63,9 +66,10 @@ internal class DisplayPoseRenderCoordinator(
         val smoothingProfile = mapStateReader.displaySmoothingProfile.value
         val pose = poseCoordinator.selectPose(nowMs, mode, smoothingProfile) ?: return
         if (!surfacePort.isMapReady()) return
+        val poseTimeBase = poseCoordinator.timeBase ?: return
         val orientation = latestOrientation
         val forceTrackHeading = featureFlags.forceReplayTrackHeading &&
-            poseCoordinator.timeBase == DisplayClock.TimeBase.REPLAY
+            poseTimeBase == DisplayClock.TimeBase.REPLAY
         val runtimeFix = if (forceTrackHeading && featureFlags.useRuntimeReplayHeading) {
             replayFixProvider?.invoke(nowMs)
         } else {
@@ -108,7 +112,7 @@ internal class DisplayPoseRenderCoordinator(
             cameraTargetBearingDeg = cameraTargetBearing,
             orientationMode = orientation.mode,
             speedMs = speedMs,
-            timeBase = poseCoordinator.timeBase
+            timeBase = poseTimeBase
         )
         if (DisplayPoseFrameDiffPolicy.isNoOp(lastRenderedFrameSnapshot, currentFrameSnapshot)) {
             diagnostics.recordDisplayFrameNoOpSkipped()
@@ -119,6 +123,7 @@ internal class DisplayPoseRenderCoordinator(
         lastDisplayPoseFrameId = displayFrameCounter
         lastDisplayPoseLocation = poseLocation
         lastDisplayPoseTimestampMs = poseTimestampMs
+        lastDisplayPoseTimeBase = poseTimeBase
         if (featureFlags.useRenderFrameSync) {
             frameLogger.logIfDue(
                 frameId = lastDisplayPoseFrameId,
@@ -129,16 +134,6 @@ internal class DisplayPoseRenderCoordinator(
                 cameraTargetBearing = cameraTargetBearing
             )
         }
-        if (featureFlags.useRenderFrameSync) {
-            displayPoseFrameListener?.invoke(
-                DisplayPoseSnapshot(
-                    location = poseLocation,
-                    timestampMs = poseTimestampMs,
-                    frameId = lastDisplayPoseFrameId
-                )
-            )
-        }
-
         val trackingResult = trackingCameraController.updateCamera(
             MapTrackingCameraController.FrameInput(
                 location = poseLocation,
@@ -146,7 +141,7 @@ internal class DisplayPoseRenderCoordinator(
                 cameraTargetBearing = cameraTargetBearing,
                 speedMs = speedMs,
                 orientationMode = orientation.mode,
-                timeBase = poseCoordinator.timeBase,
+                timeBase = poseTimeBase,
                 nowMs = nowMs
             )
         )
@@ -172,5 +167,27 @@ internal class DisplayPoseRenderCoordinator(
             frameId = lastDisplayPoseFrameId
         )
         lastRenderedFrameSnapshot = currentFrameSnapshot.copy(mapBearingDeg = overlayBearing)
+        emitDisplayPoseFrameSnapshot(
+            location = poseLocation,
+            timestampMs = poseTimestampMs,
+            frameId = lastDisplayPoseFrameId,
+            timeBase = poseTimeBase
+        )
+    }
+
+    private fun emitDisplayPoseFrameSnapshot(
+        location: LatLng,
+        timestampMs: Long,
+        frameId: Long,
+        timeBase: DisplayClock.TimeBase
+    ) {
+        displayPoseFrameListener?.invoke(
+            DisplayPoseSnapshot(
+                location = location,
+                timestampMs = timestampMs,
+                frameId = frameId,
+                timeBase = timeBase
+            )
+        )
     }
 }

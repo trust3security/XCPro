@@ -4,6 +4,7 @@ package com.example.xcpro.map.trail
 
 import android.content.Context
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.trail.domain.TrailTimeBase
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -88,10 +89,11 @@ class SnailTrailManager(
             windSpeedMs = renderState.windSpeedMs,
             windDirectionFromDeg = renderState.windDirectionFromDeg,
             isCircling = renderState.isCircling,
-            currentZoom = currentZoom
+            currentZoom = currentZoom,
+            timeBase = renderState.timeBase
         )
 
-        if (overlay != null && (update.sampleAdded || settingsChanged || zoomChanged || update.modeChanged || update.storeReset)) {
+        if (overlay != null && (update.requiresFullRender || settingsChanged || zoomChanged)) {
             render(overlay)
         }
     }
@@ -99,11 +101,12 @@ class SnailTrailManager(
     fun updateDisplayPose(
         displayLocation: LatLng?,
         displayTimeMillis: Long?,
+        displayTimeBase: TrailTimeBase?,
         frameId: Long? = null
     ) {
-        if (lastIsReplay != true) return
         val overlay = runtimeState.snailTrailOverlay ?: return
         val context = lastContext ?: return
+        if (displayTimeBase == null || displayTimeBase != context.timeBase) return
         val location = displayLocation
             ?.takeIf { TrailGeo.isValidCoordinate(it.latitude, it.longitude) }
             ?: return
@@ -113,12 +116,12 @@ class SnailTrailManager(
         if (frameId != null && lastRenderPoseFrameId == frameId) return
 
         val prevLocation = lastRenderPoseLocation
-        val minStepMs = if (featureFlags.useRenderFrameSync && lastIsReplay == true) {
+        val minStepMs = if (featureFlags.useRenderFrameSync) {
             0L
         } else {
             DISPLAY_RENDER_MIN_STEP_MS
         }
-        val minDistanceM = if (featureFlags.useRenderFrameSync && lastIsReplay == true) {
+        val minDistanceM = if (featureFlags.useRenderFrameSync) {
             0.0
         } else {
             DISPLAY_RENDER_MIN_DISTANCE_M
@@ -223,7 +226,8 @@ class SnailTrailManager(
         val windSpeedMs: Double,
         val windDirectionFromDeg: Double,
         val isCircling: Boolean,
-        val currentZoom: Float
+        val currentZoom: Float,
+        val timeBase: TrailTimeBase
     )
 
     private companion object {
