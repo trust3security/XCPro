@@ -54,6 +54,7 @@ private const val THERMALLING_ZOOM_STEP = 0.1f
 internal const val THERMALLING_TAG_SWITCH_ENABLED = "thermalling_switch_enabled"
 internal const val THERMALLING_TAG_SWITCH_THERMAL_MODE = "thermalling_switch_thermal_mode"
 internal const val THERMALLING_TAG_SWITCH_APPLY_ZOOM = "thermalling_switch_apply_zoom"
+internal const val THERMALLING_TAG_SWITCH_CONTRAST_MAP = "thermalling_switch_contrast_map"
 internal const val THERMALLING_TAG_SWITCH_REMEMBER_ZOOM = "thermalling_switch_remember_zoom"
 internal const val THERMALLING_TAG_ENTER_DELAY_SLIDER = "thermalling_enter_delay_slider"
 internal const val THERMALLING_TAG_EXIT_DELAY_SLIDER = "thermalling_exit_delay_slider"
@@ -112,6 +113,7 @@ fun ThermallingSettingsScreen(
                     onSetEnterDelaySeconds = viewModel::setEnterDelaySeconds,
                     onSetExitDelaySeconds = viewModel::setExitDelaySeconds,
                     onSetApplyZoomOnEnter = viewModel::setApplyZoomOnEnter,
+                    onSetApplyContrastMapOnEnter = viewModel::setApplyContrastMapOnEnter,
                     onSetThermalZoomLevel = viewModel::setThermalZoomLevel,
                     onSetRememberManualThermalZoomInSession = viewModel::setRememberManualThermalZoomInSession,
                     onSetRestorePreviousModeOnExit = viewModel::setRestorePreviousModeOnExit,
@@ -131,6 +133,7 @@ internal fun ThermallingSettingsContent(
     onSetEnterDelaySeconds: (Int) -> Unit,
     onSetExitDelaySeconds: (Int) -> Unit,
     onSetApplyZoomOnEnter: (Boolean) -> Unit,
+    onSetApplyContrastMapOnEnter: (Boolean) -> Unit,
     onSetThermalZoomLevel: (Float) -> Unit,
     onSetRememberManualThermalZoomInSession: (Boolean) -> Unit,
     onSetRestorePreviousModeOnExit: (Boolean) -> Unit,
@@ -325,6 +328,15 @@ internal fun ThermallingSettingsContent(
                     enabled = uiState.enabled,
                     switchTestTag = THERMALLING_TAG_SWITCH_APPLY_ZOOM,
                     onCheckedChange = onSetApplyZoomOnEnter
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                ThermallingSwitchRow(
+                    title = stringResource(R.string.thermalling_switch_contrast_map_title),
+                    description = stringResource(R.string.thermalling_switch_contrast_map_description),
+                    checked = uiState.applyContrastMapOnEnter,
+                    enabled = uiState.enabled,
+                    switchTestTag = THERMALLING_TAG_SWITCH_CONTRAST_MAP,
+                    onCheckedChange = onSetApplyContrastMapOnEnter
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(

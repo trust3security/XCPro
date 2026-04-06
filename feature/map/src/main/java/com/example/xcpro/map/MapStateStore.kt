@@ -17,7 +17,26 @@ class MapStateStore(
     private val _safeContainerSize = MutableStateFlow(MapSize.Zero)
     override val safeContainerSize: StateFlow<MapSize> = _safeContainerSize.asStateFlow()
 
-    private val _mapStyleName = MutableStateFlow(initialStyleName)
+    private val _baseMapStyleName = MutableStateFlow(
+        MapStyleCatalog.normalizeBaseStyleKey(initialStyleName)
+    )
+    val baseMapStyleName: StateFlow<String> = _baseMapStyleName.asStateFlow()
+
+    private val _forecastSatelliteOverrideEnabled = MutableStateFlow(false)
+    val forecastSatelliteOverrideEnabled: StateFlow<Boolean> =
+        _forecastSatelliteOverrideEnabled.asStateFlow()
+
+    private val _thermallingContrastOverrideEnabled = MutableStateFlow(false)
+    val thermallingContrastOverrideEnabled: StateFlow<Boolean> =
+        _thermallingContrastOverrideEnabled.asStateFlow()
+
+    private val _mapStyleName = MutableStateFlow(
+        resolveEffectiveMapStyleKey(
+            baseStyleKey = _baseMapStyleName.value,
+            forecastSatelliteOverrideEnabled = _forecastSatelliteOverrideEnabled.value,
+            thermallingContrastOverrideEnabled = _thermallingContrastOverrideEnabled.value
+        )
+    )
     override val mapStyleName: StateFlow<String> = _mapStyleName.asStateFlow()
 
     private val _showRecenterButton = MutableStateFlow(false)
@@ -85,9 +104,44 @@ class MapStateStore(
         }
     }
 
-    fun updateMapStyleName(styleName: String): Boolean {
-        if (_mapStyleName.value == styleName) return false
-        _mapStyleName.value = styleName
+    internal fun setBaseMapStyle(styleName: String): MapStyleMutation {
+        val normalizedStyle = MapStyleCatalog.normalizeBaseStyleKey(styleName)
+        val baseStyleChanged = if (_baseMapStyleName.value != normalizedStyle) {
+            _baseMapStyleName.value = normalizedStyle
+            true
+        } else {
+            false
+        }
+        if (_thermallingContrastOverrideEnabled.value) {
+            _thermallingContrastOverrideEnabled.value = false
+        }
+        val effectiveStyleChanged = refreshEffectiveMapStyle()
+        return MapStyleMutation(
+            baseStyleChanged = baseStyleChanged,
+            effectiveStyleChanged = effectiveStyleChanged
+        )
+    }
+
+    fun setForecastSatelliteOverrideEnabled(enabled: Boolean): Boolean {
+        if (_forecastSatelliteOverrideEnabled.value == enabled) return false
+        _forecastSatelliteOverrideEnabled.value = enabled
+        return refreshEffectiveMapStyle()
+    }
+
+    fun setThermallingContrastOverrideEnabled(enabled: Boolean): Boolean {
+        if (_thermallingContrastOverrideEnabled.value == enabled) return false
+        _thermallingContrastOverrideEnabled.value = enabled
+        return refreshEffectiveMapStyle()
+    }
+
+    private fun refreshEffectiveMapStyle(): Boolean {
+        val effectiveStyle = resolveEffectiveMapStyleKey(
+            baseStyleKey = _baseMapStyleName.value,
+            forecastSatelliteOverrideEnabled = _forecastSatelliteOverrideEnabled.value,
+            thermallingContrastOverrideEnabled = _thermallingContrastOverrideEnabled.value
+        )
+        if (_mapStyleName.value == effectiveStyle) return false
+        _mapStyleName.value = effectiveStyle
         return true
     }
 

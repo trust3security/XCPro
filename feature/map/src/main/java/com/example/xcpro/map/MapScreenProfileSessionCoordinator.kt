@@ -25,8 +25,9 @@ class MapScreenProfileSessionCoordinator(
         activeProfileId = resolved
         dependencies.mapStyleUseCase.setActiveProfileId(resolved)
         val profileStyle = dependencies.mapStyleUseCase.readProfileStyle(resolved)
-        if (mapStateStore.updateMapStyleName(profileStyle)) {
-            emitMapCommand(MapCommand.SetStyle(profileStyle))
+        val styleMutation = mapStateStore.setBaseMapStyle(profileStyle)
+        if (styleMutation.effectiveStyleChanged) {
+            emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value))
         }
         dependencies.unitsUseCase.setActiveProfileId(resolved)
         dependencies.orientationSettingsUseCase.setActiveProfileId(resolved)

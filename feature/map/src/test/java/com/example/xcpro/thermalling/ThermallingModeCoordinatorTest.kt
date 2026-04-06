@@ -329,6 +329,53 @@ class ThermallingModeCoordinatorTest {
         assertEquals(ThermallingModePhase.ACTIVE, coordinator.state().phase)
     }
 
+    @Test
+    fun contrastMap_settingAddsEnterAndExitActions() {
+        val clock = FakeClock(monoMs = 0L, wallMs = 0L)
+        val coordinator = ThermallingModeCoordinator(clock)
+        val settings = enabledSettings(
+            enterDelaySeconds = 0,
+            exitDelaySeconds = 0,
+            applyContrastMapOnEnter = true
+        )
+
+        val enter = coordinator.update(
+            input(
+                isCircling = true,
+                settings = settings,
+                currentMode = FlightMode.CRUISE,
+                currentZoom = 10f,
+                thermalModeVisible = true
+            )
+        )
+        assertEquals(
+            listOf(
+                ThermallingModeAction.SwitchFlightMode(FlightMode.THERMAL),
+                ThermallingModeAction.SetZoom(13.0f),
+                ThermallingModeAction.SetContrastMapEnabled(true)
+            ),
+            enter
+        )
+
+        val exit = coordinator.update(
+            input(
+                isCircling = false,
+                settings = settings,
+                currentMode = FlightMode.THERMAL,
+                currentZoom = 13f,
+                thermalModeVisible = true
+            )
+        )
+        assertEquals(
+            listOf(
+                ThermallingModeAction.SwitchFlightMode(FlightMode.CRUISE),
+                ThermallingModeAction.SetZoom(10.0f),
+                ThermallingModeAction.SetContrastMapEnabled(false)
+            ),
+            exit
+        )
+    }
+
     private fun input(
         isCircling: Boolean,
         settings: ThermallingModeSettings,
@@ -348,6 +395,7 @@ class ThermallingModeCoordinatorTest {
         exitDelaySeconds: Int = 8,
         switchToThermalMode: Boolean = true,
         applyZoomOnEnter: Boolean = true,
+        applyContrastMapOnEnter: Boolean = false,
         zoomOnlyFallbackWhenThermalHidden: Boolean = true,
         rememberManualThermalZoomInSession: Boolean = true
     ): ThermallingModeSettings = ThermallingModeSettings(
@@ -357,6 +405,7 @@ class ThermallingModeCoordinatorTest {
         enterDelaySeconds = enterDelaySeconds,
         exitDelaySeconds = exitDelaySeconds,
         applyZoomOnEnter = applyZoomOnEnter,
+        applyContrastMapOnEnter = applyContrastMapOnEnter,
         thermalZoomLevel = 13.0f,
         rememberManualThermalZoomInSession = rememberManualThermalZoomInSession,
         restorePreviousModeOnExit = true,

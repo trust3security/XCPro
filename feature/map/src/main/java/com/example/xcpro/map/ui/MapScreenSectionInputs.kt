@@ -61,8 +61,8 @@ internal data class MapScreenMapContentInputs(
     val currentMode: FlightMode,
     val currentZoom: StateFlow<Float>,
     val onModeChange: (FlightMode) -> Unit,
-    val currentMapStyleName: String,
-    val onTransientMapStyleSelected: (String) -> Unit,
+    val forecastSatelliteOverrideEnabled: Boolean,
+    val onForecastSatelliteOverrideChanged: (Boolean) -> Unit,
     val currentLocation: StateFlow<MapLocationUiModel?>
 )
 

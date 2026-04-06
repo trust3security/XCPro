@@ -42,6 +42,10 @@
     <string name="thermalling_switch_apply_zoom_description">
         Set the map zoom when thermalling activates.
     </string>
+    <string name="thermalling_switch_contrast_map_title">Apply contrast map on thermal entry</string>
+    <string name="thermalling_switch_contrast_map_description">
+        Temporarily switch to a light basemap while thermalling to make the snail trail easier to read.
+    </string>
     <string name="thermalling_zoom_value">Thermal zoom: %1$.1f</string>
     <string name="thermalling_zoom_range">Zoom range %1$.1f to %2$.1f.</string>
     <string name="thermalling_switch_remember_zoom_title">

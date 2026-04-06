@@ -17,6 +17,13 @@ class MapStyleUrlResolverTest {
     fun resolve_unknownStyle_fallsBackToTerrain() {
         val url = MapStyleUrlResolver.resolve("UnknownStyle")
 
-        assertTrue(url.contains("/maps/outdoor/style.json"))
+        assertTrue(url.contains("/maps/topo/style.json"))
+    }
+
+    @Test
+    fun resolve_thermallingContrast_returnsDatavizLightStyle() {
+        val url = MapStyleUrlResolver.resolve(MapStyleCatalog.THERMALLING_CONTRAST)
+
+        assertTrue(url.contains("/maps/dataviz-light/style.json"))
     }
 }

@@ -18,8 +18,6 @@ internal data class WindArrowTapCallout(
 
 internal const val WIND_ARROW_SPEED_TAP_DISPLAY_MS = 4_000L
 internal const val DEFAULT_WIND_SPEED_UNIT_LABEL = "kt"
-internal const val SATELLITE_MAP_STYLE_NAME = "Satellite"
-internal const val DEFAULT_NON_SATELLITE_MAP_STYLE_NAME = "Topo"
 internal const val WIND_TAP_LABEL_EDGE_PADDING_DP = 8
 internal const val WIND_TAP_LABEL_ANCHOR_GAP_DP = 10
 internal const val WIND_TAP_LABEL_ESTIMATED_WIDTH_DP = 136

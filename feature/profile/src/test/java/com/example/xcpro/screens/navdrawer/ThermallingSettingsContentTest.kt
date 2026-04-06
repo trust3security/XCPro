@@ -29,6 +29,7 @@ class ThermallingSettingsContentTest {
 
         composeRule.onNodeWithTag(THERMALLING_TAG_SWITCH_THERMAL_MODE).assertIsNotEnabled()
         composeRule.onNodeWithTag(THERMALLING_TAG_SWITCH_APPLY_ZOOM).assertIsNotEnabled()
+        composeRule.onNodeWithTag(THERMALLING_TAG_SWITCH_CONTRAST_MAP).assertIsNotEnabled()
         composeRule.onNodeWithTag(THERMALLING_TAG_SWITCH_REMEMBER_ZOOM).assertIsNotEnabled()
         composeRule.onNodeWithTag(THERMALLING_TAG_ENTER_DELAY_SLIDER).assertIsNotEnabled()
         composeRule.onNodeWithTag(THERMALLING_TAG_EXIT_DELAY_SLIDER).assertIsNotEnabled()
@@ -62,6 +63,7 @@ class ThermallingSettingsContentTest {
                     onSetEnterDelaySeconds = {},
                     onSetExitDelaySeconds = {},
                     onSetApplyZoomOnEnter = {},
+                    onSetApplyContrastMapOnEnter = {},
                     onSetThermalZoomLevel = {},
                     onSetRememberManualThermalZoomInSession = {},
                     onSetRestorePreviousModeOnExit = {},

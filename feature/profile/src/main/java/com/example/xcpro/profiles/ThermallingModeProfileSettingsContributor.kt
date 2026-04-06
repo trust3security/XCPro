@@ -33,6 +33,7 @@ class ThermallingModeProfileSettingsContributor @Inject constructor(
                 enterDelaySeconds = settings.enterDelaySeconds,
                 exitDelaySeconds = settings.exitDelaySeconds,
                 applyZoomOnEnter = settings.applyZoomOnEnter,
+                applyContrastMapOnEnter = settings.applyContrastMapOnEnter,
                 thermalZoomLevel = settings.thermalZoomLevel,
                 rememberManualThermalZoomInSession = settings.rememberManualThermalZoomInSession,
                 restorePreviousModeOnExit = settings.restorePreviousModeOnExit,
@@ -56,6 +57,9 @@ class ThermallingModeProfileSettingsContributor @Inject constructor(
         thermallingModePreferencesRepository.setEnterDelaySeconds(section.enterDelaySeconds)
         thermallingModePreferencesRepository.setExitDelaySeconds(section.exitDelaySeconds)
         thermallingModePreferencesRepository.setApplyZoomOnEnter(section.applyZoomOnEnter)
+        thermallingModePreferencesRepository.setApplyContrastMapOnEnter(
+            section.applyContrastMapOnEnter
+        )
         thermallingModePreferencesRepository.setThermalZoomLevel(section.thermalZoomLevel)
         thermallingModePreferencesRepository.setRememberManualThermalZoomInSession(
             section.rememberManualThermalZoomInSession

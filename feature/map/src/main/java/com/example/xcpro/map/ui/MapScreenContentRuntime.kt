@@ -76,8 +76,8 @@ internal fun MapScreenContent(
     val cameraManager = mapInputs.cameraManager
     val currentMode = mapInputs.currentMode
     val onModeChange = mapInputs.onModeChange
-    val currentMapStyleName = mapInputs.currentMapStyleName
-    val onTransientMapStyleSelected = mapInputs.onTransientMapStyleSelected
+    val skySightSatViewEnabled = mapInputs.forecastSatelliteOverrideEnabled
+    val onForecastSatelliteOverrideChanged = mapInputs.onForecastSatelliteOverrideChanged
     val currentZoomFlow = mapInputs.currentZoom
     val currentLocationFlow = mapInputs.currentLocation
 
@@ -187,7 +187,6 @@ internal fun MapScreenContent(
     val bottomTabsUiState = rememberMapScreenBottomTabsUiState(
         taskScreenManager = taskScreenManager,
         hasTrafficDetailsOpen = trafficContentUiState.hasTrafficDetailsOpen,
-        currentMapStyleName = currentMapStyleName,
         isGeneralSettingsVisible = isGeneralSettingsVisible
     )
     val windTapUiState = rememberMapScreenWindTapUiState(
@@ -383,11 +382,8 @@ internal fun MapScreenContent(
             forecastViewModel = forecastWeatherState.forecastViewModel,
             skySightWarningMessage = forecastWeatherState.skySightWarningMessage,
             skySightErrorMessage = forecastWeatherState.skySightErrorMessage,
-            skySightSatViewEnabled = bottomTabsUiState.skySightSatViewEnabled,
-            currentMapStyleName = currentMapStyleName,
-            lastNonSatelliteMapStyleName = bottomTabsUiState.lastNonSatelliteMapStyleName,
-            setLastNonSatelliteMapStyleName = bottomTabsUiState.setLastNonSatelliteMapStyleName,
-            onTransientMapStyleSelected = onTransientMapStyleSelected
+            skySightSatViewEnabled = skySightSatViewEnabled,
+            onSkySightSatViewEnabledChanged = onForecastSatelliteOverrideChanged
         )
 
         MapAuxiliaryPanelsAndSheetsSection(inputs = auxiliaryPanelsInputs)

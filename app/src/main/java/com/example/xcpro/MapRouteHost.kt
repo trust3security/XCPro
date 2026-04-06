@@ -29,7 +29,6 @@ import org.json.JSONObject
 internal fun SharedMapRouteHost(
     navController: NavHostController,
     drawerState: androidx.compose.material3.DrawerState,
-    initialMapStyle: String,
     config: JSONObject?,
     allowFlightSensorStart: Boolean,
     viewModelOwnerEntry: NavBackStackEntry,
@@ -77,7 +76,6 @@ internal fun SharedMapRouteHost(
                             ?: true
                     )
                 },
-                initialMapStyle = initialMapStyle,
                 allowFlightSensorStart = allowFlightSensorStart,
                 isGeneralSettingsVisible = showGeneralSettings,
                 onOpenGeneralSettings = {

@@ -16,7 +16,7 @@ internal data class MapScreenScaffoldChromeInputs(
     val profileExpanded: MutableState<Boolean>,
     val mapStyleExpanded: MutableState<Boolean>,
     val settingsExpanded: MutableState<Boolean>,
-    val initialMapStyle: String,
+    val selectedMapStyle: String,
     val onDrawerItemSelected: (String) -> Unit,
     val onMapStyleSelected: (String) -> Unit,
     val gpsStatus: GpsStatusUiModel,

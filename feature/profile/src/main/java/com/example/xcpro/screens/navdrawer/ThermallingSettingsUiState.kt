@@ -1,6 +1,7 @@
 package com.example.xcpro.screens.navdrawer
 
 import com.example.xcpro.thermalling.THERMALLING_APPLY_ZOOM_ON_ENTER_DEFAULT
+import com.example.xcpro.thermalling.THERMALLING_APPLY_CONTRAST_MAP_ON_ENTER_DEFAULT
 import com.example.xcpro.thermalling.THERMALLING_ENABLED_DEFAULT
 import com.example.xcpro.thermalling.THERMALLING_ENTER_DELAY_DEFAULT_SECONDS
 import com.example.xcpro.thermalling.THERMALLING_EXIT_DELAY_DEFAULT_SECONDS
@@ -19,6 +20,7 @@ data class ThermallingSettingsUiState(
     val enterDelaySeconds: Int = THERMALLING_ENTER_DELAY_DEFAULT_SECONDS,
     val exitDelaySeconds: Int = THERMALLING_EXIT_DELAY_DEFAULT_SECONDS,
     val applyZoomOnEnter: Boolean = THERMALLING_APPLY_ZOOM_ON_ENTER_DEFAULT,
+    val applyContrastMapOnEnter: Boolean = THERMALLING_APPLY_CONTRAST_MAP_ON_ENTER_DEFAULT,
     val thermalZoomLevel: Float = THERMALLING_ZOOM_LEVEL_DEFAULT,
     val rememberManualThermalZoomInSession: Boolean =
         THERMALLING_REMEMBER_MANUAL_ZOOM_IN_SESSION_DEFAULT,

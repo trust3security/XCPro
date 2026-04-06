@@ -48,10 +48,7 @@ internal fun MapBottomTabsSection(
     skySightWarningMessage: String?,
     skySightErrorMessage: String?,
     skySightSatViewEnabled: Boolean,
-    currentMapStyleName: String,
-    lastNonSatelliteMapStyleName: String?,
-    setLastNonSatelliteMapStyleName: (String?) -> Unit,
-    onTransientMapStyleSelected: (String) -> Unit
+    onSkySightSatViewEnabledChanged: (Boolean) -> Unit
 ) {
     if (!showMapBottomNavigation) return
 
@@ -112,21 +109,7 @@ internal fun MapBottomTabsSection(
         skySightWarningMessage = skySightWarningMessage,
         skySightErrorMessage = skySightErrorMessage,
         skySightSatViewEnabled = skySightSatViewEnabled,
-        onSkySightSatViewEnabledChanged = { enabled ->
-            if (enabled) {
-                if (!skySightSatViewEnabled) {
-                    setLastNonSatelliteMapStyleName(currentMapStyleName)
-                    onTransientMapStyleSelected(SATELLITE_MAP_STYLE_NAME)
-                }
-            } else {
-                val restoreStyle = lastNonSatelliteMapStyleName
-                    ?.takeIf { style ->
-                        !style.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)
-                    }
-                    ?: DEFAULT_NON_SATELLITE_MAP_STYLE_NAME
-                onTransientMapStyleSelected(restoreStyle)
-            }
-        }
+        onSkySightSatViewEnabledChanged = onSkySightSatViewEnabledChanged
     )
 }
 

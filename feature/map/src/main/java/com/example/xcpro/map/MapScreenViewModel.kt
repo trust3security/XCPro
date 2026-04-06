@@ -62,6 +62,9 @@ class MapScreenViewModel @Inject constructor(
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore
     val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
+    val baseMapStyleName: StateFlow<String> = mapStateStore.baseMapStyleName
+    val forecastSatelliteOverrideEnabled: StateFlow<Boolean> = mapStateStore.forecastSatelliteOverrideEnabled
+    val thermallingContrastOverrideEnabled: StateFlow<Boolean> = mapStateStore.thermallingContrastOverrideEnabled
     private val featureFlags = mapFeatureFlagsUseCase.featureFlags
     val cardPreferences = mapCardPreferencesUseCase.cardPreferences
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
@@ -76,23 +79,14 @@ class MapScreenViewModel @Inject constructor(
     )
     private val ballastController = uiControllers.ballastController
     private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
-    val windArrowState: StateFlow<WindArrowUiState> =
-        createWindArrowState(
-            scope = viewModelScope,
-            flightDataManager = flightDataManager,
-            orientationManager = orientationManager
-        )
+    val windArrowState: StateFlow<WindArrowUiState> = createWindArrowState(scope = viewModelScope, flightDataManager = flightDataManager, orientationManager = orientationManager)
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val windState: StateFlow<WindState> = windStateUseCase.windState
-    val showWindSpeedOnVario: StateFlow<Boolean> = mapVarioPreferencesUseCase.showWindSpeedOnVario
-        .eagerState(scope = viewModelScope, initial = true)
-    val showHawkCard: StateFlow<Boolean> = mapVarioPreferencesUseCase.showHawkCard
-        .eagerState(scope = viewModelScope, initial = false)
-    val hawkVarioUiState: StateFlow<HawkVarioUiState> = hawkVarioUseCase.hawkVarioUiState
-        .eagerState(scope = viewModelScope, initial = HawkVarioUiState())
+    val showWindSpeedOnVario: StateFlow<Boolean> = mapVarioPreferencesUseCase.showWindSpeedOnVario.eagerState(scope = viewModelScope, initial = true)
+    val showHawkCard: StateFlow<Boolean> = mapVarioPreferencesUseCase.showHawkCard.eagerState(scope = viewModelScope, initial = false)
+    val hawkVarioUiState: StateFlow<HawkVarioUiState> = hawkVarioUseCase.hawkVarioUiState.eagerState(scope = viewModelScope, initial = HawkVarioUiState())
     val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
-    val taskFlightSurfaceUiState: StateFlow<TaskFlightSurfaceUiState> = taskFlightSurfaceUseCase.uiState
-        .eagerState(scope = viewModelScope, initial = TaskFlightSurfaceUiState())
+    val taskFlightSurfaceUiState: StateFlow<TaskFlightSurfaceUiState> = taskFlightSurfaceUseCase.uiState.eagerState(scope = viewModelScope, initial = TaskFlightSurfaceUiState())
     val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
     val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
     val gpsStatusFlow: StateFlow<GpsStatusUiModel> = createGpsStatusUiState(viewModelScope, sensorsUseCase)
@@ -100,28 +94,20 @@ class MapScreenViewModel @Inject constructor(
     val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
     val allowSensorStart: StateFlow<Boolean> = replaySensorGates.allowSensorStart
     val mapLocation: StateFlow<MapLocationUiModel?> = createMapLocationState(viewModelScope, flightDataUseCase)
-    private val isFlying: StateFlow<Boolean> = sensorsUseCase.flightStateFlow
-        .map { state -> state.isFlying }
+    private val isFlying: StateFlow<Boolean> = sensorsUseCase.flightStateFlow.map { state -> state.isFlying }
         .eagerState(scope = viewModelScope, initial = false)
     val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
-    val overlayOwnshipAltitudeMeters: StateFlow<Double?> =
-        createOverlayOwnshipAltitudeState(viewModelScope, flightDataUseCase)
+    val overlayOwnshipAltitudeMeters: StateFlow<Double?> = createOverlayOwnshipAltitudeState(viewModelScope, flightDataUseCase)
     private val ownshipIsCircling: StateFlow<Boolean> = createOwnshipCirclingState(viewModelScope, flightDataUseCase)
     private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> = createCirclingFeatureEnabledState(viewModelScope, thermallingModeUseCase)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficFacade.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficFacade.snapshot
-    val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficFacade.overlayEnabled
-        .eagerState(scope = viewModelScope, initial = false)
-    val ognIconSizePx: StateFlow<Int> = ognTrafficFacade.iconSizePx
-        .eagerState(scope = viewModelScope, initial = OGN_ICON_SIZE_DEFAULT_PX)
-    val ognDisplayUpdateMode: StateFlow<OgnDisplayUpdateMode> = ognTrafficFacade.displayUpdateMode
-        .eagerState(scope = viewModelScope, initial = OgnDisplayUpdateMode.DEFAULT)
-    val showOgnSciaEnabled: StateFlow<Boolean> = ognTrafficFacade.showSciaEnabled
-        .eagerState(scope = viewModelScope, initial = false)
-    val ognTargetEnabled: StateFlow<Boolean> = ognTrafficFacade.targetEnabled
-        .eagerState(scope = viewModelScope, initial = false)
-    val ognTargetAircraftKey: StateFlow<String?> = ognTrafficFacade.targetAircraftKey
-        .eagerState(scope = viewModelScope, initial = null)
+    val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficFacade.overlayEnabled.eagerState(scope = viewModelScope, initial = false)
+    val ognIconSizePx: StateFlow<Int> = ognTrafficFacade.iconSizePx.eagerState(scope = viewModelScope, initial = OGN_ICON_SIZE_DEFAULT_PX)
+    val ognDisplayUpdateMode: StateFlow<OgnDisplayUpdateMode> = ognTrafficFacade.displayUpdateMode.eagerState(scope = viewModelScope, initial = OgnDisplayUpdateMode.DEFAULT)
+    val showOgnSciaEnabled: StateFlow<Boolean> = ognTrafficFacade.showSciaEnabled.eagerState(scope = viewModelScope, initial = false)
+    val ognTargetEnabled: StateFlow<Boolean> = ognTrafficFacade.targetEnabled.eagerState(scope = viewModelScope, initial = false)
+    val ognTargetAircraftKey: StateFlow<String?> = ognTrafficFacade.targetAircraftKey.eagerState(scope = viewModelScope, initial = null)
     val ognResolvedTarget: StateFlow<OgnTrafficTarget?> =
         createSelectedOgnTargetState(scope = viewModelScope, selectedOgnId = ognTargetAircraftKey, ognTargets = ognTargets)
     val ognThermalHotspots: StateFlow<List<OgnThermalHotspot>> = ognTrafficFacade.thermalHotspots
@@ -279,12 +265,21 @@ class MapScreenViewModel @Inject constructor(
             mapStateStore = mapStateStore
         )
         trafficCoordinator.bind()
-        bindThermallingRuntimeWiring(viewModelScope, thermallingModeUseCase, thermallingModeUseCase.settingsFlow, flightDataUseCase.flightData, flightDataManager.visibleModesFlow, mapStateStore, mapStateActions, ::setFlightMode)
+        startMapScreenThermallingRuntime(
+            scope = viewModelScope,
+            thermallingController = thermallingModeUseCase,
+            settingsFlow = thermallingModeUseCase.settingsFlow,
+            flightData = flightDataUseCase.flightData,
+            visibleModes = flightDataManager.visibleModesFlow,
+            replaySessionState = replaySessionState,
+            mapStateStore = mapStateStore,
+            mapStateActions = mapStateActions,
+            applyFlightMode = ::setFlightMode,
+            applyContrastMap = ::setThermallingContrastOverrideEnabled
+        )
         flightDataUiAdapter.start()
         replayCoordinator.start()
-        weGlidePromptBridge.bind(viewModelScope) { promptUiState ->
-            _weGlideUploadPrompt.value = promptUiState
-        }
+        weGlidePromptBridge.bind(viewModelScope) { promptUiState -> _weGlideUploadPrompt.value = promptUiState }
         viewModelScope.launch { adsbTrafficFacade.bootstrapMetadataSync() }
         if (featureFlags.loadSavedTasksOnInit) viewModelScope.launch { mapTasksUseCase.loadSavedTasks() }
         onEvent(MapUiEvent.RefreshWaypoints)
@@ -296,8 +291,10 @@ class MapScreenViewModel @Inject constructor(
     fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
     fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
     fun updateSafeContainerSize(size: MapSize) = mapStateStore.updateSafeContainerSize(size)
-    fun setMapStyle(styleName: String) { if (mapStateStore.updateMapStyleName(styleName)) emitMapCommand(MapCommand.SetStyle(styleName)) }
+    fun setMapStyle(styleName: String) = emitEffectiveStyleCommandIfChanged(mapStateStore.setBaseMapStyle(styleName).effectiveStyleChanged)
     fun persistMapStyle(styleName: String) = profileSessionCoordinator.persistMapStyle(styleName)
+    fun setForecastSatelliteOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setForecastSatelliteOverrideEnabled(enabled))
+    fun setThermallingContrastOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setThermallingContrastOverrideEnabled(enabled))
     fun setFlightMode(newMode: FlightMode) { mapStateStore.setCurrentMode(newMode); mapStateStore.setCurrentFlightMode(newMode.toCardFlightModeSelection()); flightDataManager.updateFlightModeFromEnum(newMode); sensorsUseCase.setFlightMode(newMode) }
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
     fun setMapVisible(isVisible: Boolean) {
@@ -339,11 +336,11 @@ class MapScreenViewModel @Inject constructor(
     fun submitBallastCommand(command: BallastCommand) = ballastController.submit(command)
     fun onAutoCalibrateQnh() = waypointQnhCoordinator.onAutoCalibrateQnh()
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
-    fun onConfirmWeGlideUploadPrompt() {
-        viewModelScope.launch {
-            weGlidePromptBridge.confirmCurrentPrompt(_uiEffects::emit)
-        }
-    }
+    fun onConfirmWeGlideUploadPrompt() { viewModelScope.launch { weGlidePromptBridge.confirmCurrentPrompt(_uiEffects::emit) } }
     fun onDismissWeGlideUploadPrompt() = weGlidePromptBridge.dismissCurrentPrompt()
     override fun onCleared() { ognTrafficFacade.stop(); adsbTrafficFacade.stop(); thermallingModeUseCase.reset(); ballastController.dispose(); super.onCleared() }
+
+    private fun emitEffectiveStyleCommandIfChanged(styleChanged: Boolean) {
+        if (styleChanged) emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value))
+    }
 }

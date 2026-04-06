@@ -1,12 +1,13 @@
 package com.example.xcpro.map
 
 object MapStyleUrlResolver {
+    private const val MAPTILER_STYLE_URL_PREFIX = "https://api.maptiler.com/maps/"
+    private const val MAPTILER_STYLE_URL_SUFFIX = "/style.json?key=nYDScLfnBm52GAc3jXEZ"
+
     fun resolve(styleName: String): String {
-        return when (styleName) {
-            "Topo" -> "https://api.maptiler.com/maps/topo/style.json?key=nYDScLfnBm52GAc3jXEZ"
-            "Satellite" -> "https://api.maptiler.com/maps/hybrid/style.json?key=nYDScLfnBm52GAc3jXEZ"
-            "Terrain" -> "https://api.maptiler.com/maps/outdoor/style.json?key=nYDScLfnBm52GAc3jXEZ"
-            else -> "https://api.maptiler.com/maps/outdoor/style.json?key=nYDScLfnBm52GAc3jXEZ"
-        }
+        val definition = MapStyleCatalog.definitionFor(styleName)
+        return MAPTILER_STYLE_URL_PREFIX +
+            definition.mapTilerStyleId +
+            MAPTILER_STYLE_URL_SUFFIX
     }
 }

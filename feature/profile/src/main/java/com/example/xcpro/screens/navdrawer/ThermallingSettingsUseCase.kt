@@ -16,6 +16,7 @@ class ThermallingSettingsUseCase @Inject constructor(
     val enterDelaySecondsFlow: Flow<Int> = repository.enterDelaySecondsFlow
     val exitDelaySecondsFlow: Flow<Int> = repository.exitDelaySecondsFlow
     val applyZoomOnEnterFlow: Flow<Boolean> = repository.applyZoomOnEnterFlow
+    val applyContrastMapOnEnterFlow: Flow<Boolean> = repository.applyContrastMapOnEnterFlow
     val thermalZoomLevelFlow: Flow<Float> = repository.thermalZoomLevelFlow
     val rememberManualThermalZoomInSessionFlow: Flow<Boolean> =
         repository.rememberManualThermalZoomInSessionFlow
@@ -44,6 +45,10 @@ class ThermallingSettingsUseCase @Inject constructor(
 
     suspend fun setApplyZoomOnEnter(enabled: Boolean) {
         repository.setApplyZoomOnEnter(enabled)
+    }
+
+    suspend fun setApplyContrastMapOnEnter(enabled: Boolean) {
+        repository.setApplyContrastMapOnEnter(enabled)
     }
 
     suspend fun setThermalZoomLevel(zoomLevel: Float) {

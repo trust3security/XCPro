@@ -23,6 +23,7 @@ class ThermallingSettingsViewModel @Inject constructor(
                 enterDelaySeconds = settings.enterDelaySeconds,
                 exitDelaySeconds = settings.exitDelaySeconds,
                 applyZoomOnEnter = settings.applyZoomOnEnter,
+                applyContrastMapOnEnter = settings.applyContrastMapOnEnter,
                 thermalZoomLevel = settings.thermalZoomLevel,
                 rememberManualThermalZoomInSession = settings.rememberManualThermalZoomInSession,
                 restorePreviousModeOnExit = settings.restorePreviousModeOnExit,
@@ -68,6 +69,12 @@ class ThermallingSettingsViewModel @Inject constructor(
     fun setApplyZoomOnEnter(enabled: Boolean) {
         viewModelScope.launch {
             useCase.setApplyZoomOnEnter(enabled)
+        }
+    }
+
+    fun setApplyContrastMapOnEnter(enabled: Boolean) {
+        viewModelScope.launch {
+            useCase.setApplyContrastMapOnEnter(enabled)
         }
     }
 

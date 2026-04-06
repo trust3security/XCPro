@@ -28,7 +28,6 @@ class MapScreenBottomTabsUiStateRememberTest {
     fun generalSettingsOpenThenClose_restoresBottomTabsSheet() {
         val taskScreenManager = createManager()
         var hasTrafficDetailsOpen by mutableStateOf(false)
-        var currentMapStyleName by mutableStateOf("Terrain")
         var isGeneralSettingsVisible by mutableStateOf(false)
         lateinit var uiState: MapScreenBottomTabsUiState
 
@@ -36,7 +35,6 @@ class MapScreenBottomTabsUiStateRememberTest {
             uiState = rememberMapScreenBottomTabsUiState(
                 taskScreenManager = taskScreenManager,
                 hasTrafficDetailsOpen = hasTrafficDetailsOpen,
-                currentMapStyleName = currentMapStyleName,
                 isGeneralSettingsVisible = isGeneralSettingsVisible
             )
         }
@@ -67,7 +65,6 @@ class MapScreenBottomTabsUiStateRememberTest {
 
         composeTestRule.runOnIdle {
             hasTrafficDetailsOpen = false
-            currentMapStyleName = "Topo"
         }
     }
 
@@ -81,7 +78,6 @@ class MapScreenBottomTabsUiStateRememberTest {
             uiState = rememberMapScreenBottomTabsUiState(
                 taskScreenManager = taskScreenManager,
                 hasTrafficDetailsOpen = false,
-                currentMapStyleName = "Terrain",
                 isGeneralSettingsVisible = isGeneralSettingsVisible
             )
         }

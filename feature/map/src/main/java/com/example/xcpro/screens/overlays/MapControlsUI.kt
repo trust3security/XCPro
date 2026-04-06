@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerInputScope
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
+import com.example.xcpro.map.MapStyleCatalog
 import com.example.xcpro.map.MapStyleUrlResolver
 
 // Helper function to get default flight data template for a given mode
@@ -34,11 +35,11 @@ fun getMapStyleUrl(style: String): String {
 
 // Map style constants
 object MapStyles {
-    const val TOPO = "Topo"
-    const val SATELLITE = "Satellite"
-    const val TERRAIN = "Terrain"
+    const val TOPO = MapStyleCatalog.TOPO
+    const val SATELLITE = MapStyleCatalog.SATELLITE
+    const val TERRAIN = MapStyleCatalog.TERRAIN
 
-    val ALL_STYLES = listOf(TOPO, SATELLITE, TERRAIN)
+    val ALL_STYLES = MapStyleCatalog.selectableDefinitions.map { definition -> definition.key }
 }
 
 // Map interaction constants

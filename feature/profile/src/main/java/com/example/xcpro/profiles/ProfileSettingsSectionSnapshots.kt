@@ -137,6 +137,7 @@ internal data class ThermallingModeSectionSnapshot(
     val enterDelaySeconds: Int,
     val exitDelaySeconds: Int,
     val applyZoomOnEnter: Boolean,
+    val applyContrastMapOnEnter: Boolean = false,
     val thermalZoomLevel: Float,
     val rememberManualThermalZoomInSession: Boolean,
     val restorePreviousModeOnExit: Boolean,

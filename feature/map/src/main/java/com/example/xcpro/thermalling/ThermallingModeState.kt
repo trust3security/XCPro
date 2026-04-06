@@ -10,7 +10,8 @@ enum class ThermallingModePhase {
 data class ThermallingModeSessionSnapshot(
     val preThermalMode: com.example.xcpro.common.flight.FlightMode,
     val preThermalZoom: Float,
-    val activeThermalZoom: Float?
+    val activeThermalZoom: Float?,
+    val contrastMapApplied: Boolean
 )
 
 data class ThermallingModeState(
@@ -33,4 +34,6 @@ sealed interface ThermallingModeAction {
         ThermallingModeAction
 
     data class SetZoom(val zoom: Float) : ThermallingModeAction
+
+    data class SetContrastMapEnabled(val enabled: Boolean) : ThermallingModeAction
 }

@@ -387,8 +387,10 @@ ViewModel:
   - Binds live thermalling runtime automation through
     `bindThermallingRuntimeWiring(...)`:
     `flightData.isCircling` + thermalling settings repository flow +
-    thermal-mode visibility -> `ThermallingModeCoordinator` ->
-    existing `setFlightMode(...)` and map zoom target actions.
+    thermal-mode visibility + replay-session state -> `ThermallingModeCoordinator` ->
+    existing `setFlightMode(...)`, map zoom target actions, and a transient
+    thermalling contrast-map override. Replay suppresses the thermalling runtime
+    and clears only the transient thermalling style override.
   - Exposes a separate `feature:weglide`-owned WeGlide prompt flow for UI rendering,
     instead of threading the prompt through `MapUiState`.
 - `feature/profile/src/main/java/com/example/xcpro/thermalling/ThermallingModePreferencesRepository.kt`
@@ -993,6 +995,10 @@ Card configuration + hydration (current):
 - `MapStateReader` / `MapStateActions` now live in `feature/map-runtime` as the
   runtime-facing map-state contracts, while `TrailSettings` remains outside that contract;
   shell/runtime trail wiring is threaded separately from `MapScreenViewModel.trailSettings`.
+- `MapStateStore` owns the authoritative base map style plus transient runtime
+  style overrides. `MapStateReader.mapStyleName` remains the effective runtime style,
+  while forecast satellite and thermalling contrast are modeled as explicit overrides
+  instead of UI-local remembered style swaps.
 - `SnailTrailRuntimeState` now lives in `feature/map-runtime` as the narrow
   shell/runtime trail-handle contract implemented by `MapScreenState` in
   `feature:map`.

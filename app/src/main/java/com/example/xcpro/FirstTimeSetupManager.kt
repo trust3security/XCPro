@@ -27,7 +27,10 @@ class FirstTimeSetupManager @Inject constructor(
         private const val PREFS_NAME = "first_time_setup"
         private const val KEY_FIRST_LAUNCH = "is_first_launch"
         private const val KEY_SETUP_VERSION = "setup_version"
-        private const val CURRENT_SETUP_VERSION = 1
+        private const val CURRENT_SETUP_VERSION = 2
+        // AI-NOTE: MapScreenPrefs is legacy write-only bootstrap state after map-style ownership
+        // moved to profile-backed configuration; clear it once on upgrade to avoid drift.
+        private const val LEGACY_MAP_SCREEN_PREFS = "MapScreenPrefs"
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -51,7 +54,6 @@ class FirstTimeSetupManager @Inject constructor(
         try {
             clearPreviousCache()
             setupDefaultNavigationDrawer()
-            setupDefaultMapSettings()
             markSetupComplete()
             Log.i(TAG, "First-time setup completed successfully")
         } catch (e: Exception) {
@@ -62,7 +64,8 @@ class FirstTimeSetupManager @Inject constructor(
     private suspend fun clearPreviousCache() = withContext(ioDispatcher) {
         Log.d(TAG, "Clearing previous cache...")
         val prefsToClean = listOf(
-            "drawer_config_prefs"
+            "drawer_config_prefs",
+            LEGACY_MAP_SCREEN_PREFS
         )
 
         prefsToClean.forEach { prefName ->
@@ -93,20 +96,6 @@ class FirstTimeSetupManager @Inject constructor(
             })
         }
         configFile.writeText(jsonObject.toString(2))
-    }
-
-    private suspend fun setupDefaultMapSettings() = withContext(ioDispatcher) {
-        Log.d(TAG, "Setting up default map settings...")
-        val mapPrefs = context.getSharedPreferences("MapScreenPrefs", Context.MODE_PRIVATE)
-        mapPrefs.edit().apply {
-            putString("map_style", "Topo")
-            putFloat("default_zoom", 10f)
-            putFloat("min_zoom", 3f)
-            putFloat("max_zoom", 18f)
-            putFloat("default_lat", 20.0f)
-            putFloat("default_lon", 0.0f)
-            apply()
-        }
     }
 
     private suspend fun markSetupComplete() = withContext(ioDispatcher) {

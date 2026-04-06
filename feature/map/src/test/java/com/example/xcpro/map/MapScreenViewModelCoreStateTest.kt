@@ -347,7 +347,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
         drainMain()
 
         viewModel.setActiveProfileId("pilot-b")
-        viewModel.persistMapStyle("Map4")
+        viewModel.persistMapStyle("Terrain")
         drainMain()
 
         viewModel.setActiveProfileId("pilot-a")
@@ -357,8 +357,19 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
 
         viewModel.setActiveProfileId("pilot-b")
         drainMain()
-        assertEquals("Map4", mapStyleRepository.readProfileStyle("pilot-b"))
-        assertEquals("Map4", viewModel.mapState.mapStyleName.value)
+        assertEquals("Terrain", mapStyleRepository.readProfileStyle("pilot-b"))
+        assertEquals("Terrain", viewModel.mapState.mapStyleName.value)
+    }
+
+    @Test
+    fun persistMapStyle_normalizesUnknownStyleToDefaultBaseStyle() = runBlocking {
+        val viewModel = createViewModel()
+
+        viewModel.setActiveProfileId("pilot-a")
+        viewModel.persistMapStyle("Map4")
+        drainMain()
+
+        assertEquals(MapStyleCatalog.defaultSelectableKey(), mapStyleRepository.readProfileStyle("pilot-a"))
     }
 
     @Test

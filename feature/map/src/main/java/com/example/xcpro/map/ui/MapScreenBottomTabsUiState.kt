@@ -14,27 +14,13 @@ internal data class MapScreenBottomTabsUiState(
     val selectedBottomTab: MapBottomTab,
     val isBottomTabsSheetVisible: Boolean,
     val isTaskPanelVisible: Boolean,
-    val skySightSatViewEnabled: Boolean,
-    val lastNonSatelliteMapStyleName: String?,
     val setSelectedBottomTabName: (String) -> Unit,
-    val setBottomTabsSheetVisible: (Boolean) -> Unit,
-    val setLastNonSatelliteMapStyleName: (String?) -> Unit
+    val setBottomTabsSheetVisible: (Boolean) -> Unit
 )
 
 internal fun resolveMapBottomTab(selectedBottomTabName: String): MapBottomTab =
     runCatching { MapBottomTab.valueOf(selectedBottomTabName) }
         .getOrDefault(MapBottomTab.SKYSIGHT)
-
-internal fun resolveLastNonSatelliteMapStyleName(
-    currentMapStyleName: String,
-    previousLastNonSatelliteMapStyleName: String?
-): String? {
-    return if (currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)) {
-        previousLastNonSatelliteMapStyleName
-    } else {
-        currentMapStyleName
-    }
-}
 
 internal fun shouldHideBottomTabsSheet(
     isTaskPanelVisible: Boolean,
@@ -64,12 +50,10 @@ internal fun shouldRestoreBottomTabsSheetAfterGeneralSettings(
 internal fun rememberMapScreenBottomTabsUiState(
     taskScreenManager: MapTaskScreenManager,
     hasTrafficDetailsOpen: Boolean,
-    currentMapStyleName: String,
     isGeneralSettingsVisible: Boolean
 ): MapScreenBottomTabsUiState {
     var selectedBottomTabName by rememberSaveable { mutableStateOf(MapBottomTab.SKYSIGHT.name) }
     var isBottomTabsSheetVisible by rememberSaveable { mutableStateOf(false) }
-    var lastNonSatelliteMapStyleName by rememberSaveable { mutableStateOf<String?>(null) }
     var restoreBottomTabsSheetAfterGeneralSettings by rememberSaveable { mutableStateOf(false) }
 
     val selectedBottomTab = remember(selectedBottomTabName) {
@@ -77,14 +61,6 @@ internal fun rememberMapScreenBottomTabsUiState(
     }
     val taskPanelState by taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
     val isTaskPanelVisible = taskPanelState != MapTaskScreenManager.TaskPanelState.HIDDEN
-    val skySightSatViewEnabled = currentMapStyleName.equals(SATELLITE_MAP_STYLE_NAME, ignoreCase = true)
-
-    LaunchedEffect(currentMapStyleName) {
-        lastNonSatelliteMapStyleName = resolveLastNonSatelliteMapStyleName(
-            currentMapStyleName = currentMapStyleName,
-            previousLastNonSatelliteMapStyleName = lastNonSatelliteMapStyleName
-        )
-    }
     LaunchedEffect(isTaskPanelVisible, hasTrafficDetailsOpen, isGeneralSettingsVisible) {
         if (shouldHideBottomTabsSheet(isTaskPanelVisible, hasTrafficDetailsOpen)) {
             isBottomTabsSheetVisible = false
@@ -116,10 +92,7 @@ internal fun rememberMapScreenBottomTabsUiState(
         selectedBottomTab = selectedBottomTab,
         isBottomTabsSheetVisible = isBottomTabsSheetVisible,
         isTaskPanelVisible = isTaskPanelVisible,
-        skySightSatViewEnabled = skySightSatViewEnabled,
-        lastNonSatelliteMapStyleName = lastNonSatelliteMapStyleName,
         setSelectedBottomTabName = { selectedBottomTabName = it },
-        setBottomTabsSheetVisible = { isBottomTabsSheetVisible = it },
-        setLastNonSatelliteMapStyleName = { lastNonSatelliteMapStyleName = it }
+        setBottomTabsSheetVisible = { isBottomTabsSheetVisible = it }
     )
 }

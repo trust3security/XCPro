@@ -78,7 +78,6 @@ import kotlinx.coroutines.launch
 fun AppNavGraph(
     navController: NavHostController,
     drawerState: DrawerState,
-    initialMapStyle: String,
     config: org.json.JSONObject?,
     profileUiState: ProfileUiState,
     allowFlightSensorStart: Boolean,
@@ -124,7 +123,6 @@ fun AppNavGraph(
             SharedMapRouteHost(
                 navController = navController,
                 drawerState = drawerState,
-                initialMapStyle = initialMapStyle,
                 config = config,
                 allowFlightSensorStart = allowFlightSensorStart,
                 viewModelOwnerEntry = backStackEntry
@@ -239,7 +237,6 @@ fun AppNavGraph(
             SharedMapRouteHost(
                 navController = navController,
                 drawerState = drawerState,
-                initialMapStyle = initialMapStyle,
                 config = config,
                 allowFlightSensorStart = false,
                 viewModelOwnerEntry = mapEntry

@@ -131,7 +131,8 @@ class ThermallingModeCoordinator @Inject constructor(
         val session = ThermallingModeSessionSnapshot(
             preThermalMode = input.currentMode,
             preThermalZoom = currentZoom,
-            activeThermalZoom = null
+            activeThermalZoom = null,
+            contrastMapApplied = input.settings.applyContrastMapOnEnter
         )
         val actions = mutableListOf<ThermallingModeAction>()
 
@@ -145,6 +146,10 @@ class ThermallingModeCoordinator @Inject constructor(
             if (input.currentZoom != clampedTarget) {
                 actions += ThermallingModeAction.SetZoom(clampedTarget)
             }
+        }
+
+        if (session.contrastMapApplied) {
+            actions += ThermallingModeAction.SetContrastMapEnabled(true)
         }
 
         state = ThermallingModeState(
@@ -174,6 +179,9 @@ class ThermallingModeCoordinator @Inject constructor(
             }
             if (input.settings.restorePreviousZoomOnExit && input.currentZoom != snapshot.preThermalZoom) {
                 actions += ThermallingModeAction.SetZoom(snapshot.preThermalZoom)
+            }
+            if (snapshot.contrastMapApplied) {
+                actions += ThermallingModeAction.SetContrastMapEnabled(false)
             }
         }
         state = ThermallingModeState()
