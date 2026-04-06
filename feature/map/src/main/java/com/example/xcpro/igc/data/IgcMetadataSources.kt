@@ -45,7 +45,7 @@ class TaskRepositoryIgcTaskDeclarationSource @Inject constructor(
         sessionId: Long,
         capturedAtUtcMs: Long
     ): IgcTaskDeclarationStartSnapshot {
-        val task = taskCoordinator.taskSnapshotFlow.value.task
+        val task = taskCoordinator.currentSnapshot().task
         if (task.waypoints.isEmpty()) {
             return IgcTaskDeclarationStartSnapshot.Absent
         }

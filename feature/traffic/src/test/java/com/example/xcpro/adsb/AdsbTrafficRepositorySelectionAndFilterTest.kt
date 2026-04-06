@@ -36,7 +36,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -80,7 +80,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -126,7 +126,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -180,7 +180,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -290,7 +290,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -321,7 +321,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
     fun updateDisplayFilters_clampsMaxDistance_andPropagatesToProviderBbox() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = CapturingBboxProvider()
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -412,7 +412,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -469,7 +469,7 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -504,3 +504,4 @@ class AdsbTrafficRepositorySelectionAndFilterTest : AdsbTrafficRepositoryTestBas
         repository.stop()
     }
 }
+

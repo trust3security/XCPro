@@ -59,13 +59,13 @@ class ProfileRepositoryDeleteCascadeTest {
                 )
             }
         }
-        val repository = ProfileRepository(
+        val repository = createTestProfileRepository(
             storage = storage,
+            scope = scope,
             profileBackupSink = NoOpProfileBackupSink(),
             profileSettingsSnapshotProvider = NoOpProfileSettingsSnapshotProvider(),
             profileSettingsRestoreApplier = NoOpProfileSettingsRestoreApplier(),
             profileScopedDataCleaner = cleaner,
-            internalScope = scope
         )
     }
 

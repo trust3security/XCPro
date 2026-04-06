@@ -52,7 +52,7 @@ class AdsbTrafficRepositoryEmergencyRolloutAndRollbackTest : AdsbTrafficReposito
         val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),
             clock = clock,
@@ -145,7 +145,7 @@ class AdsbTrafficRepositoryEmergencyRolloutAndRollbackTest : AdsbTrafficReposito
         val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),
             clock = clock,
@@ -210,7 +210,7 @@ class AdsbTrafficRepositoryEmergencyRolloutAndRollbackTest : AdsbTrafficReposito
             masterEnabled = false,
             shadowModeEnabled = false
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = SequenceProvider(emptyList()),
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -242,3 +242,4 @@ class AdsbTrafficRepositoryEmergencyRolloutAndRollbackTest : AdsbTrafficReposito
         }
     }
 }
+

@@ -39,12 +39,12 @@ class MapTasksUseCase @Inject constructor(
 
     suspend fun saveTask(taskName: String): Boolean = taskManager.saveTask(taskName)
 
-    fun currentTaskSnapshot(): Task = taskManager.taskSnapshotFlow.value.task
+    fun currentTaskSnapshot(): Task = taskManager.currentSnapshot().task
 
-    fun currentWaypointCount(): Int = taskManager.taskSnapshotFlow.value.task.waypoints.size
+    fun currentWaypointCount(): Int = taskManager.currentSnapshot().task.waypoints.size
 
     fun taskRenderSnapshot(): TaskRenderSnapshot {
-        val snapshot = taskManager.taskSnapshotFlow.value
+        val snapshot = taskManager.currentSnapshot()
         return TaskRenderSnapshot(
             task = snapshot.task,
             taskType = snapshot.taskType,

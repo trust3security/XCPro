@@ -79,7 +79,9 @@ Required:
 
 ### Costs
 - `TaskManagerCoordinator` gains snapshot publication responsibility.
-- Compatibility accessors still exist temporarily while later phases remove old seams.
+- Compatibility accessors existed temporarily; follow-on
+  `ADR_TASK_SYNC_READ_SEAM_2026-04-06.md` removes the remaining public raw
+  task/leg accessors in favor of `currentSnapshot()`.
 - The coordinator bridge now also owns autosave triggering for task-content mutations.
 
 ### Risks

@@ -5,7 +5,6 @@ import android.hardware.SensorManager
 import android.location.LocationManager
 import com.example.xcpro.core.time.Clock
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,10 +17,9 @@ import kotlinx.coroutines.delay
  */
 class UnifiedSensorManager(
     private val context: Context,
-    private val clock: Clock
+    private val clock: Clock,
+    private val scope: CoroutineScope
 ) : SensorDataSource {
-
-    private val scope = CoroutineScope(Dispatchers.Default)
 
     private val _gpsFlow = MutableStateFlow<GPSData?>(null)
     override val gpsFlow: StateFlow<GPSData?> = _gpsFlow.asStateFlow()

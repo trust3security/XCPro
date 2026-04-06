@@ -34,7 +34,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -84,7 +84,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -134,7 +134,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "token", hasCredentials = true),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -164,7 +164,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -196,7 +196,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -242,7 +242,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -293,7 +293,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 }
             }
         }
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -336,7 +336,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -387,7 +387,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -435,7 +435,7 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -480,3 +480,4 @@ class AdsbTrafficRepositoryConnectivityTest : AdsbTrafficRepositoryTestBase() {
     }
 
 }
+

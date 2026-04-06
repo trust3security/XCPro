@@ -24,31 +24,11 @@ internal class AdsbTrafficRepositoryRuntime(
     internal val clock: Clock,
     @IoDispatcher dispatcher: CoroutineDispatcher,
     internal val networkAvailabilityPort: AdsbNetworkAvailabilityPort,
-    internal val emergencyAudioSettingsPort: AdsbEmergencyAudioSettingsPort =
-        DisabledEmergencyAudioSettingsPort(),
+    internal val emergencyAudioSettingsPort: AdsbEmergencyAudioSettingsPort,
     internal val emergencyAudioRolloutPort: AdsbEmergencyAudioRolloutPort? = null,
-    internal val emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort =
-        NoOpAdsbEmergencyAudioOutputPort,
-    emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags =
-        AdsbEmergencyAudioFeatureFlags()
+    internal val emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort,
+    emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags
 ) : AdsbTrafficRepository {
-
-    internal constructor(
-        providerClient: AdsbProviderClient,
-        tokenRepository: OpenSkyTokenRepository,
-        clock: Clock,
-        dispatcher: CoroutineDispatcher
-    ) : this(
-        providerClient = providerClient,
-        tokenRepository = tokenRepository,
-        clock = clock,
-        dispatcher = dispatcher,
-        networkAvailabilityPort = AlwaysOnlineNetworkAvailabilityPort,
-        emergencyAudioSettingsPort = DisabledEmergencyAudioSettingsPort(),
-        emergencyAudioRolloutPort = null,
-        emergencyAudioOutputPort = NoOpAdsbEmergencyAudioOutputPort,
-        emergencyAudioFeatureFlags = AdsbEmergencyAudioFeatureFlags()
-    )
 
     internal val singleWriterDispatcher: CoroutineDispatcher = dispatcher.limitedParallelism(1)
     internal val scope = CoroutineScope(SupervisorJob() + singleWriterDispatcher)
@@ -387,19 +367,7 @@ internal class AdsbTrafficRepositoryRuntime(
         val ownshipSpeedMps: Double?
     )
 
-    private class DisabledEmergencyAudioSettingsPort : AdsbEmergencyAudioSettingsPort {
-        override val emergencyAudioEnabledFlow: StateFlow<Boolean> =
-            MutableStateFlow(false).asStateFlow()
-        override val emergencyAudioCooldownMsFlow: StateFlow<Long> =
-            MutableStateFlow(ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS).asStateFlow()
-    }
-
     private companion object {
-        internal val AlwaysOnlineNetworkAvailabilityPort = object : AdsbNetworkAvailabilityPort {
-            override val isOnline: StateFlow<Boolean> =
-                MutableStateFlow(true).asStateFlow()
-        }
-
         internal const val TAG = "AdsbTrafficRepository"
         internal const val POSITION_SOURCE_FLARM = 3
         internal const val MIN_AIRBORNE_ALTITUDE_M = 30.48 // 100 ft

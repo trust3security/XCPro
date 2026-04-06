@@ -29,7 +29,8 @@ class MapScreenTaskShellCoordinatorTest {
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
         )
         val mapTasksUseCase = MapTasksUseCase(taskManager)
         val shellScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
@@ -67,7 +68,8 @@ class MapScreenTaskShellCoordinatorTest {
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
         )
         val mapTasksUseCase = MapTasksUseCase(taskManager)
         val shellScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())

@@ -24,7 +24,7 @@ class AdsbTrafficRepositoryAuthAndEnableQueueTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(
                 fixedState = OpenSkyTokenAccessState.TransientFailure("UnknownHostException")
@@ -46,7 +46,7 @@ class AdsbTrafficRepositoryAuthAndEnableQueueTest : AdsbTrafficRepositoryTestBas
     fun queuedMutations_beforeEnable_areAppliedInOrderForInitialPoll() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = CapturingBboxProvider()
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -85,3 +85,4 @@ class AdsbTrafficRepositoryAuthAndEnableQueueTest : AdsbTrafficRepositoryTestBas
         repository.stop()
     }
 }
+

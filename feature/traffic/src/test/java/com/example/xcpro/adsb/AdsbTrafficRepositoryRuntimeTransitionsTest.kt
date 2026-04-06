@@ -32,7 +32,7 @@ class AdsbTrafficRepositoryRuntimeTransitionsTest : AdsbTrafficRepositoryTestBas
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(token = "test-token"),
             clock = clock,
@@ -58,7 +58,7 @@ class AdsbTrafficRepositoryRuntimeTransitionsTest : AdsbTrafficRepositoryTestBas
     @Test
     fun networkError_snapshotProjectsDegradedFailureFields() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = SequenceProvider(
                 listOf(
                     ProviderResult.NetworkError(
@@ -109,7 +109,7 @@ class AdsbTrafficRepositoryRuntimeTransitionsTest : AdsbTrafficRepositoryTestBas
                 }
             }
         }
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -137,3 +137,4 @@ class AdsbTrafficRepositoryRuntimeTransitionsTest : AdsbTrafficRepositoryTestBas
         repository.stop()
     }
 }
+

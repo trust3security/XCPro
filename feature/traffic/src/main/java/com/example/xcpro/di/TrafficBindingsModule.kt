@@ -3,6 +3,7 @@ package com.example.xcpro.di
 import com.example.xcpro.adsb.AdsbEmergencyAudioOutputPort
 import com.example.xcpro.adsb.AdsbEmergencyAudioRolloutPort
 import com.example.xcpro.adsb.AdsbEmergencyAudioSettingsPort
+import com.example.xcpro.adsb.AdsbEmergencyAudioFeatureFlags
 import com.example.xcpro.adsb.AdsbProviderClient
 import com.example.xcpro.adsb.AdsbTrafficPreferencesRepository
 import com.example.xcpro.adsb.AdsbTrafficRepository
@@ -27,8 +28,10 @@ import com.example.xcpro.ogn.data.AndroidOgnNetworkAvailabilityAdapter
 import com.example.xcpro.ogn.domain.OgnNetworkAvailabilityPort
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -87,4 +90,13 @@ abstract class AdsbBindingsModule {
 
     @Binds
     abstract fun bindAdsbTrafficRepository(impl: AdsbTrafficRepositoryImpl): AdsbTrafficRepository
+
+    companion object {
+        @Provides
+        @Singleton
+        fun provideAdsbEmergencyAudioFeatureFlags(): AdsbEmergencyAudioFeatureFlags =
+            // AI-NOTE: Production bootstrap policy is explicit in DI; test-only fallback wiring
+            // stays in test support rather than a main-source convenience constructor.
+            AdsbEmergencyAudioFeatureFlags.bootstrap()
+    }
 }

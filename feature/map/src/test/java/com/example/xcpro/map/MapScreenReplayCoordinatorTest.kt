@@ -63,7 +63,7 @@ class MapScreenReplayCoordinatorTest {
             fixture.coordinator.onRacingTaskReplay()
             advanceUntilIdle()
 
-            assertEquals(2, fixture.taskManager.currentLeg)
+            assertEquals(2, fixture.taskManager.currentSnapshot().activeLeg)
             assertEquals(2, fixture.taskNavigationController.racingState.value.currentLegIndex)
             assertEquals(RacingNavigationStatus.IN_PROGRESS, fixture.taskNavigationController.racingState.value.status)
             assertEquals(RacingAdvanceState.ArmState.TURN_DISARMED, fixture.taskNavigationController.snapshot().armState)
@@ -91,7 +91,7 @@ class MapScreenReplayCoordinatorTest {
             fixture.replayEvents.emit(ReplayEvent.Cancelled)
             advanceUntilIdle()
 
-            assertEquals(2, fixture.taskManager.currentLeg)
+            assertEquals(2, fixture.taskManager.currentSnapshot().activeLeg)
             assertEquals(2, fixture.taskNavigationController.racingState.value.currentLegIndex)
             assertEquals(RacingNavigationStatus.IN_PROGRESS, fixture.taskNavigationController.racingState.value.status)
             assertEquals(RacingAdvanceState.ArmState.TURN_DISARMED, fixture.taskNavigationController.snapshot().armState)
@@ -126,7 +126,7 @@ class MapScreenReplayCoordinatorTest {
             )
             advanceUntilIdle()
 
-            assertEquals(0, fixture.taskManager.currentLeg)
+            assertEquals(0, fixture.taskManager.currentSnapshot().activeLeg)
             assertEquals(0, fixture.taskNavigationController.racingState.value.currentLegIndex)
             assertEquals(
                 RacingNavigationStatus.PENDING_START,
@@ -227,12 +227,14 @@ class MapScreenReplayCoordinatorTest {
     }
 
     private fun createFixture(dispatcher: TestDispatcher): Fixture {
+        val taskScope = CoroutineScope(SupervisorJob() + dispatcher)
         val taskManager = TaskManagerCoordinator(
             taskEnginePersistenceService = null,
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = taskScope
         )
         taskManager.initializeTask(sampleWaypoints())
 
@@ -302,7 +304,7 @@ class MapScreenReplayCoordinatorTest {
     private fun TestScope.primePreReplayState(fixture: Fixture) {
         fixture.taskManager.setActiveLeg(2)
         advanceUntilIdle()
-        assertEquals(2, fixture.taskManager.currentLeg)
+        assertEquals(2, fixture.taskManager.currentSnapshot().activeLeg)
         assertEquals(2, fixture.taskNavigationController.racingState.value.currentLegIndex)
         assertEquals(RacingNavigationStatus.IN_PROGRESS, fixture.taskNavigationController.racingState.value.status)
         assertEquals(RacingAdvanceState.ArmState.TURN_DISARMED, fixture.taskNavigationController.snapshot().armState)

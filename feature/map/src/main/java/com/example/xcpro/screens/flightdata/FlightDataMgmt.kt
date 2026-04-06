@@ -41,7 +41,7 @@ import com.example.ui1.screens.flightmgmt.FlightDataScreensTab
 import com.example.xcpro.airspace.AirspaceViewModel
 import com.example.xcpro.flightdata.WaypointsViewModel
 import com.example.xcpro.flightdata.FlightMgmtPreferencesViewModel
-import com.example.xcpro.map.FlightDataManager
+import com.example.xcpro.map.FlightDataMgmtPort
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.profiles.UserProfile
@@ -58,7 +58,7 @@ fun FlightMgmt(
     initialTab: String = "screens",
     autoFocusHome: Boolean = false,
     activeProfile: UserProfile? = null,
-    flightDataManager: FlightDataManager
+    flightDataMgmtPort: FlightDataMgmtPort
 ) {
     val scope = rememberCoroutineScope()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -69,8 +69,8 @@ fun FlightMgmt(
     val airspaceViewModel: AirspaceViewModel = hiltViewModel()
     val prefsViewModel: FlightMgmtPreferencesViewModel = hiltViewModel()
 
-    LaunchedEffect(flightViewModel) {
-        mapViewModel.cardIngestionCoordinator.bindCards(flightViewModel)
+    LaunchedEffect(flightViewModel, flightDataMgmtPort) {
+        flightDataMgmtPort.bindCards(flightViewModel)
     }
 
     val activeTab by prefsViewModel.activeTab.collectAsStateWithLifecycle()
@@ -80,7 +80,7 @@ fun FlightMgmt(
     var editingTemplate by remember { mutableStateOf<FlightTemplate?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
-    val liveFlightData by flightDataManager.liveFlightDataFlow.collectAsStateWithLifecycle()
+    val liveFlightData by flightDataMgmtPort.liveFlightDataFlow.collectAsStateWithLifecycle()
     val waypointUiState by waypointsViewModel.uiState.collectAsStateWithLifecycle()
     val airspaceUiState by airspaceViewModel.uiState.collectAsStateWithLifecycle()
 

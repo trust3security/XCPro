@@ -165,7 +165,7 @@ fun AppNavGraph(
                 initialTab = "waypoints",
                 autoFocusHome = autoFocusHome,
                 activeProfile = profileUiState.activeProfile,
-                flightDataManager = mapViewModel.runtimeDependencies.flightDataManager
+                flightDataMgmtPort = mapViewModel.flightDataMgmtPort
             )
         }
         composable("flight_data") { backStackEntry ->
@@ -175,7 +175,7 @@ fun AppNavGraph(
                 navController = navController,
                 drawerState = drawerState,
                 activeProfile = profileUiState.activeProfile,
-                flightDataManager = mapViewModel.runtimeDependencies.flightDataManager
+                flightDataMgmtPort = mapViewModel.flightDataMgmtPort
             )
         }
         composable(SettingsRoutes.FILES) { FilesScreen(navController, drawerState) }

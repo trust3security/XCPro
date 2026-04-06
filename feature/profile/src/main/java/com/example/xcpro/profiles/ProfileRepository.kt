@@ -2,12 +2,9 @@ package com.example.xcpro.profiles
 
 import android.util.Log
 import com.example.xcpro.core.time.Clock
-import com.example.xcpro.core.time.DefaultClockProvider
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,70 +17,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ProfileRepository(
+class ProfileRepository @Inject constructor(
     private val storage: ProfileStorage,
     private val profileBackupSink: ProfileBackupSink,
     private val profileSettingsSnapshotProvider: ProfileSettingsSnapshotProvider,
     private val profileSettingsRestoreApplier: ProfileSettingsRestoreApplier,
-    private val profileScopedDataCleaner: ProfileScopedDataCleaner = NoOpProfileScopedDataCleaner(),
-    private val profileDiagnosticsReporter: ProfileDiagnosticsReporter = LogcatProfileDiagnosticsReporter(),
-    private val clock: Clock = DefaultClockProvider(),
-    private val profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator(),
-    private val internalScope: CoroutineScope
+    private val profileScopedDataCleaner: ProfileScopedDataCleaner,
+    private val profileDiagnosticsReporter: ProfileDiagnosticsReporter,
+    private val clock: Clock,
+    private val profileIdGenerator: ProfileIdGenerator,
+    @ProfileRepositoryScope private val internalScope: CoroutineScope
 ) {
-    @Inject
-    constructor(
-        storage: ProfileStorage,
-        profileBackupSink: ProfileBackupSink,
-        profileSettingsSnapshotProvider: ProfileSettingsSnapshotProvider,
-        profileSettingsRestoreApplier: ProfileSettingsRestoreApplier,
-        profileScopedDataCleaner: ProfileScopedDataCleaner,
-        profileDiagnosticsReporter: ProfileDiagnosticsReporter,
-        clock: Clock,
-        profileIdGenerator: ProfileIdGenerator
-    ) : this(
-        storage,
-        profileBackupSink,
-        profileSettingsSnapshotProvider,
-        profileSettingsRestoreApplier,
-        profileScopedDataCleaner,
-        profileDiagnosticsReporter,
-        clock,
-        profileIdGenerator,
-        CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    )
-    constructor(
-        storage: ProfileStorage,
-        clock: Clock = DefaultClockProvider(),
-        profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator()
-    ) : this(
-        storage,
-        NoOpProfileBackupSink(),
-        NoOpProfileSettingsSnapshotProvider(),
-        NoOpProfileSettingsRestoreApplier(),
-        NoOpProfileScopedDataCleaner(),
-        NoOpProfileDiagnosticsReporter(),
-        clock,
-        profileIdGenerator,
-        CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    )
-    constructor(
-        storage: ProfileStorage,
-        internalScope: CoroutineScope,
-        profileDiagnosticsReporter: ProfileDiagnosticsReporter = NoOpProfileDiagnosticsReporter(),
-        clock: Clock = DefaultClockProvider(),
-        profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator()
-    ) : this(
-        storage,
-        NoOpProfileBackupSink(),
-        NoOpProfileSettingsSnapshotProvider(),
-        NoOpProfileSettingsRestoreApplier(),
-        NoOpProfileScopedDataCleaner(),
-        profileDiagnosticsReporter,
-        clock,
-        profileIdGenerator,
-        internalScope
-    )
     private val gson = GsonBuilder().create()
     private companion object {
         private const val TAG = "ProfileRepository"

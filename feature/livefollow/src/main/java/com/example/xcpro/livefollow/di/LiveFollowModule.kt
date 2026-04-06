@@ -64,13 +64,20 @@ object LiveFollowDataModule {
 
     @Provides
     @Singleton
+    @LiveFollowRuntimeScope
+    fun provideLiveFollowRuntimeScope(
+        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+    ): CoroutineScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
+
+    @Provides
+    @Singleton
     fun provideLiveOwnshipSnapshotSource(
         flightDataRepository: FlightDataRepository,
         ognTrafficPreferencesRepository: OgnTrafficPreferencesRepository,
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        @LiveFollowRuntimeScope scope: CoroutineScope
     ): LiveOwnshipSnapshotSource {
         return FlightDataLiveOwnshipSnapshotSource(
-            scope = liveFollowScope(defaultDispatcher),
+            scope = scope,
             flightDataRepository = flightDataRepository,
             ownFlarmHexFlow = ognTrafficPreferencesRepository.ownFlarmHexFlow,
             ownIcaoHexFlow = ognTrafficPreferencesRepository.ownIcaoHexFlow
@@ -83,10 +90,10 @@ object LiveFollowDataModule {
         ownshipSnapshotSource: LiveOwnshipSnapshotSource,
         taskSnapshotSource: LiveFollowTaskSnapshotSource,
         gateway: LiveFollowSessionGateway,
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        @LiveFollowRuntimeScope scope: CoroutineScope
     ): LiveFollowSessionRepository {
         return LiveFollowSessionRepository(
-            scope = liveFollowScope(defaultDispatcher),
+            scope = scope,
             ownshipSnapshotSource = ownshipSnapshotSource,
             taskSnapshotSource = taskSnapshotSource,
             gateway = gateway
@@ -101,10 +108,10 @@ object LiveFollowDataModule {
         xcAccountRepository: XcAccountRepository,
         @LiveFollowHttpClient httpClient: OkHttpClient,
         @IoDispatcher ioDispatcher: CoroutineDispatcher,
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        @LiveFollowRuntimeScope scope: CoroutineScope
     ): DirectWatchTrafficSource {
         return CurrentApiDirectWatchTrafficSource(
-            scope = liveFollowScope(defaultDispatcher),
+            scope = scope,
             clock = clock,
             sessionState = sessionRepository.state,
             xcAccountRepository = xcAccountRepository,
@@ -120,10 +127,10 @@ object LiveFollowDataModule {
         sessionRepository: LiveFollowSessionRepository,
         ognTrafficRepository: OgnTrafficRepository,
         directWatchTrafficSource: DirectWatchTrafficSource,
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        @LiveFollowRuntimeScope scope: CoroutineScope
     ): WatchTrafficRepository {
         return WatchTrafficRepository(
-            scope = liveFollowScope(defaultDispatcher),
+            scope = scope,
             clock = clock,
             sessionState = sessionRepository.state,
             ognTrafficRepository = ognTrafficRepository,
@@ -148,10 +155,10 @@ object LiveFollowDataModule {
     fun provideFriendsFlyingRepository(
         ownshipSnapshotSource: LiveOwnshipSnapshotSource,
         activePilotsDataSource: ActivePilotsDataSource,
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        @LiveFollowRuntimeScope scope: CoroutineScope
     ): FriendsFlyingRepository {
         return FriendsFlyingRepository(
-            scope = liveFollowScope(defaultDispatcher),
+            scope = scope,
             runtimeModeSource = ownshipSnapshotSource,
             dataSource = activePilotsDataSource
         )
@@ -177,17 +184,13 @@ object LiveFollowDataModule {
         ownshipSnapshotSource: LiveOwnshipSnapshotSource,
         xcAccountRepository: XcAccountRepository,
         followingActivePilotsDataSource: FollowingActivePilotsDataSource,
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        @LiveFollowRuntimeScope scope: CoroutineScope
     ): FollowingLiveRepository {
         return FollowingLiveRepository(
-            scope = liveFollowScope(defaultDispatcher),
+            scope = scope,
             runtimeModeSource = ownshipSnapshotSource,
             accountRepository = xcAccountRepository,
             dataSource = followingActivePilotsDataSource
         )
     }
-
-    private fun liveFollowScope(
-        defaultDispatcher: CoroutineDispatcher
-    ): CoroutineScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
 }

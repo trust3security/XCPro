@@ -27,6 +27,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 
@@ -55,7 +58,8 @@ class TaskManagerCoordinatorTest {
             racingTaskEngine = racingTaskEngine,
             aatTaskEngine = aatTaskEngine,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         )
         coordinator.replaceAATDelegateForTesting(aatDelegate)
         coordinator.replaceRacingDelegateForTesting(racingDelegate)
@@ -117,13 +121,13 @@ class TaskManagerCoordinatorTest {
         coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
         coordinator.addWaypoint(searchWaypoint("tp1", 0.1, 0.1))
         coordinator.addWaypoint(searchWaypoint("finish", 0.2, 0.2))
-        assertEquals(listOf("start", "tp1", "finish"), coordinator.currentTask.waypoints.map { it.id })
+        assertEquals(listOf("start", "tp1", "finish"), coordinator.currentSnapshot().task.waypoints.map { it.id })
 
         coordinator.removeWaypoint(1)
-        assertEquals(listOf("start", "finish"), coordinator.currentTask.waypoints.map { it.id })
+        assertEquals(listOf("start", "finish"), coordinator.currentSnapshot().task.waypoints.map { it.id })
 
         coordinator.reorderWaypoints(1, 0)
-        assertEquals(listOf("finish", "start"), coordinator.currentTask.waypoints.map { it.id })
+        assertEquals(listOf("finish", "start"), coordinator.currentSnapshot().task.waypoints.map { it.id })
     }
 
     @Test
@@ -133,13 +137,13 @@ class TaskManagerCoordinatorTest {
         coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
         coordinator.addWaypoint(searchWaypoint("tp1", 0.1, 0.1))
         coordinator.addWaypoint(searchWaypoint("finish", 0.2, 0.2))
-        assertEquals(listOf("start", "tp1", "finish"), coordinator.currentTask.waypoints.map { it.id })
+        assertEquals(listOf("start", "tp1", "finish"), coordinator.currentSnapshot().task.waypoints.map { it.id })
 
         coordinator.reorderWaypoints(2, 1)
-        assertEquals(listOf("start", "finish", "tp1"), coordinator.currentTask.waypoints.map { it.id })
+        assertEquals(listOf("start", "finish", "tp1"), coordinator.currentSnapshot().task.waypoints.map { it.id })
 
         coordinator.removeWaypoint(1)
-        assertEquals(listOf("start", "tp1"), coordinator.currentTask.waypoints.map { it.id })
+        assertEquals(listOf("start", "tp1"), coordinator.currentSnapshot().task.waypoints.map { it.id })
     }
 
     @Test
@@ -148,18 +152,18 @@ class TaskManagerCoordinatorTest {
         localCoordinator.setTaskTypeForTesting(TaskType.RACING)
         localCoordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
         localCoordinator.addWaypoint(searchWaypoint("finish", 0.3, 0.3))
-        val expectedIds = localCoordinator.currentTask.waypoints.map { it.id }
+        val expectedIds = localCoordinator.currentSnapshot().task.waypoints.map { it.id }
 
         localCoordinator.setTaskType(TaskType.AAT)
         assertEquals(TaskType.AAT, localCoordinator.taskType)
-        val transferredTaskId = localCoordinator.currentTask.id
+        val transferredTaskId = localCoordinator.currentSnapshot().task.id
         assertTrue(transferredTaskId.isNotBlank())
-        assertEquals(expectedIds, localCoordinator.currentTask.waypoints.map { it.id })
+        assertEquals(expectedIds, localCoordinator.currentSnapshot().task.waypoints.map { it.id })
 
         localCoordinator.setTaskType(TaskType.RACING)
         assertEquals(TaskType.RACING, localCoordinator.taskType)
-        assertEquals(transferredTaskId, localCoordinator.currentTask.id)
-        assertEquals(expectedIds, localCoordinator.currentTask.waypoints.map { it.id })
+        assertEquals(transferredTaskId, localCoordinator.currentSnapshot().task.id)
+        assertEquals(expectedIds, localCoordinator.currentSnapshot().task.waypoints.map { it.id })
     }
 
     @Test
@@ -356,8 +360,8 @@ class TaskManagerCoordinatorTest {
         localCoordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
         localCoordinator.addWaypoint(searchWaypoint("next", 0.0, 1.0))
 
-        val start = localCoordinator.currentTask.waypoints.first()
-        val next = localCoordinator.currentTask.waypoints[1]
+        val start = localCoordinator.currentSnapshot().task.waypoints.first()
+        val next = localCoordinator.currentSnapshot().task.waypoints[1]
         val crossing = localCoordinator.calculateOptimalStartLineCrossingPoint(start, next)
         val offsetMeters = RacingGeometryUtils.haversineDistanceMeters(
             start.lat,
@@ -479,7 +483,8 @@ class TaskManagerCoordinatorTest {
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         )
 
     private fun searchWaypoint(id: String, lat: Double, lon: Double): SearchWaypoint =

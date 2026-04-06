@@ -69,14 +69,10 @@ class MapScreenViewModel @Inject constructor(
     private val featureFlags = mapFeatureFlagsUseCase.featureFlags
     val cardPreferences = mapCardPreferencesUseCase.cardPreferences
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
-    val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
-        flightDataManager = uiControllers.flightDataManager,
-        orientationManager = uiControllers.orientationManager,
-        sensorsUseCase = sensorsUseCase,
-        tasksUseCase = mapTasksUseCase,
-        airspaceUseCase = mapAirspaceUseCase,
-        waypointFilesUseCase = mapWaypointFilesUseCase,
-        featureFlags = featureFlags
+    internal val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
+        flightDataManager = uiControllers.flightDataManager, orientationManager = uiControllers.orientationManager,
+        sensorsUseCase = sensorsUseCase, tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase,
+        waypointFilesUseCase = mapWaypointFilesUseCase, featureFlags = featureFlags
     )
     private val ballastController = uiControllers.ballastController
     private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
@@ -255,6 +251,7 @@ class MapScreenViewModel @Inject constructor(
     val trailSettings: StateFlow<TrailSettings> = mapStateStore.trailSettings
     val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
     val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, cardPreferences = cardPreferences) }
+    val flightDataMgmtPort: FlightDataMgmtPort by lazy { createFlightDataMgmtPort(flightDataManager) { cardIngestionCoordinator.bindCards(it) } }
     init {
         mapStateStore.setTrailSettings(profileSessionDependencies.trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)

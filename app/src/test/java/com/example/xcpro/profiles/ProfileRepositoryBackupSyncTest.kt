@@ -95,12 +95,12 @@ class ProfileRepositoryBackupSyncTest {
         }
         val backupSink = RecordingProfileBackupSink()
         val snapshotProvider = RecordingSnapshotProvider()
-        val repository = ProfileRepository(
+        val repository = createTestProfileRepository(
             storage = storage,
+            scope = scope,
             profileBackupSink = backupSink,
             profileSettingsSnapshotProvider = snapshotProvider,
-            profileSettingsRestoreApplier = NoOpProfileSettingsRestoreApplier(),
-            internalScope = scope
+            profileSettingsRestoreApplier = NoOpProfileSettingsRestoreApplier()
         )
     }
 
@@ -136,12 +136,12 @@ class ProfileRepositoryBackupSyncTest {
         }
         val backupSink = RecordingProfileBackupSink()
         val snapshotProvider = RecordingSnapshotProvider()
-        val repository = ProfileRepository(
+        val repository = createTestProfileRepository(
             storage = storage,
+            scope = scope,
             profileBackupSink = backupSink,
             profileSettingsSnapshotProvider = snapshotProvider,
-            profileSettingsRestoreApplier = NoOpProfileSettingsRestoreApplier(),
-            internalScope = scope
+            profileSettingsRestoreApplier = NoOpProfileSettingsRestoreApplier()
         )
     }
 

@@ -2,6 +2,9 @@ package com.example.xcpro.livefollow.account
 
 import com.example.xcpro.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -30,7 +33,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = mock(),
-            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+            scope = testScope(testScheduler)
         )
 
         advanceUntilIdle()
@@ -64,7 +67,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
-            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+            scope = testScope(testScheduler)
         )
 
         advanceUntilIdle()
@@ -107,7 +110,7 @@ class XcAccountRepositoryTest {
             ),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
-            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+            scope = testScope(testScheduler)
         )
         advanceUntilIdle()
 
@@ -148,7 +151,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
-            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+            scope = testScope(testScheduler)
         )
         advanceUntilIdle()
 
@@ -199,7 +202,7 @@ class XcAccountRepositoryTest {
                 )
             ),
             remoteDataSource = remoteDataSource,
-            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+            scope = testScope(testScheduler)
         )
 
         advanceUntilIdle()
@@ -275,7 +278,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
-            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+            scope = testScope(testScheduler)
         )
         advanceUntilIdle()
 
@@ -331,7 +334,7 @@ class XcAccountRepositoryTest {
             authProvider = FakeAuthProvider(),
             googleAuthGateway = FakeGoogleAuthGateway(),
             remoteDataSource = remoteDataSource,
-            defaultDispatcher = UnconfinedTestDispatcher(testScheduler)
+            scope = testScope(testScheduler)
         )
         advanceUntilIdle()
 
@@ -420,4 +423,7 @@ class XcAccountRepositoryTest {
             XcAccountRemoteResult.Success(emptyList())
         )
     }
+
+    private fun testScope(testScheduler: TestCoroutineScheduler): CoroutineScope =
+        CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
 }

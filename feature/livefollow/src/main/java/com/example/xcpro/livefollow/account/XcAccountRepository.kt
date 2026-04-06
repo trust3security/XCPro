@@ -1,11 +1,9 @@
 package com.example.xcpro.livefollow.account
 
-import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.livefollow.di.XcAccountScope
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +17,7 @@ class XcAccountRepository @Inject constructor(
     private val authProvider: XcAccountAuthProvider,
     private val googleAuthGateway: XcGoogleAuthGateway,
     private val remoteDataSource: CurrentApiXcAccountDataSource,
-    @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+    @XcAccountScope private val scope: CoroutineScope
 ) {
     private val signInCapabilities = buildSignInCapabilities()
     private val mutableState = MutableStateFlow(
@@ -31,8 +29,6 @@ class XcAccountRepository @Inject constructor(
     private val operationMutex = Mutex()
 
     // Repository owns the private-follow account SSOT across screens and restores persisted auth state.
-    private val scope = CoroutineScope(SupervisorJob() + defaultDispatcher)
-
     val state: StateFlow<XcAccountSnapshot> = mutableState.asStateFlow()
 
     init {
