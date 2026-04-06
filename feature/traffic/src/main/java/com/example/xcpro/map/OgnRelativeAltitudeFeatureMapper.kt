@@ -6,12 +6,14 @@ import com.example.xcpro.common.units.AltitudeUnit
 data class OgnRelativeAltitudeFeatureMapperInput(
     val targetAltitudeMeters: Double?,
     val ownshipAltitudeMeters: Double?,
+    val distanceMeters: Double?,
     val altitudeUnit: AltitudeUnit,
     val icon: OgnAircraftIcon,
     val defaultIconStyleImageId: String,
     val gliderAboveIconStyleImageId: String,
     val gliderBelowIconStyleImageId: String,
     val gliderNearIconStyleImageId: String,
+    val gliderCloseRedIconStyleImageId: String,
     val secondaryLabelText: String,
     val speedText: String? = null
 )
@@ -31,6 +33,11 @@ object OgnRelativeAltitudeFeatureMapper {
             targetAltitudeMeters = input.targetAltitudeMeters,
             ownshipAltitudeMeters = input.ownshipAltitudeMeters
         )
+        val useCloseRedIcon = input.icon == OgnAircraftIcon.Glider &&
+            OgnGliderCloseProximityColorPolicy.shouldUseRed(
+                distanceMeters = input.distanceMeters,
+                deltaMeters = deltaMeters
+            )
         val band = OgnRelativeAltitudeColorPolicy.resolveBand(deltaMeters)
         val deltaText = OgnRelativeAltitudeLabelFormatter.formatDelta(
             deltaMeters = deltaMeters,
@@ -55,6 +62,7 @@ object OgnRelativeAltitudeFeatureMapper {
         }
 
         val iconStyleImageId = when {
+            useCloseRedIcon -> input.gliderCloseRedIconStyleImageId
             input.icon != OgnAircraftIcon.Glider -> input.defaultIconStyleImageId
             band == OgnRelativeAltitudeBand.ABOVE -> input.gliderAboveIconStyleImageId
             band == OgnRelativeAltitudeBand.BELOW -> input.gliderBelowIconStyleImageId

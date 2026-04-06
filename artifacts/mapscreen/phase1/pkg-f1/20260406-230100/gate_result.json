@@ -1,0 +1,46 @@
+﻿{
+    "package_id":  "pkg-f1",
+    "phase":  "phase1",
+    "generated_at":  "2026-04-06T12:21:17.9325821+10:00",
+    "command_gates":  [
+                          {
+                              "label":  "enforceRules",
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "testDebugUnitTest",
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "status":  "pass",
+                              "exit_code":  0
+                          },
+                          {
+                              "label":  "assembleDebug",
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "status":  "pass",
+                              "exit_code":  0
+                          }
+                      ],
+    "slo_gates":  [
+                      {
+                          "slo_id":  "MS-ENG-06",
+                          "status":  "not_evaluated",
+                          "reason":  "status is pending_perf_capture"
+                      },
+                      {
+                          "slo_id":  "MS-ENG-10",
+                          "status":  "not_evaluated",
+                          "reason":  "status is pending_perf_capture"
+                      }
+                  ],
+    "promotion_decision":  "blocked_pending_perf_evidence",
+    "rollback_recommendation":  "Complete tier_a/tier_b perf evidence and rerun threshold verification.",
+    "determinism_gates":  [
+                              {
+                                  "det_id":  "DET-04",
+                                  "status":  "pass",
+                                  "evidence":  "MapLifecycleManagerResumeSyncTest, LocationManagerRenderSyncTest, DisplayPoseRenderCoordinatorTest"
+                              }
+                          ]
+}

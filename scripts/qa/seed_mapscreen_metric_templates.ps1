@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
+    [ValidateSet("pkg-f1", "pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
     [string[]]$PackageIds = @("pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1"),
     [string]$RunId
 )
@@ -47,6 +47,7 @@ function Resolve-RunDirectory {
     )
 
     $phaseByPackage = @{
+        "pkg-f1" = "phase1"
         "pkg-d1" = "phase2"
         "pkg-g1" = "phase2"
         "pkg-w1" = "phase2"
@@ -59,13 +60,13 @@ function Resolve-RunDirectory {
 
     $packageRoot = Join-Path $RepoRoot "artifacts/mapscreen/$phase/$PackageId"
     if (-not (Test-Path $packageRoot)) {
-        throw "Package root not found: $packageRoot"
+        throw "Package root not found: $packageRoot. Run scripts/qa/run_mapscreen_$PackageId`_evidence_capture.ps1 first and wait for '[mapscreen-evidence] Completed package capture scaffold.' before seeding metrics."
     }
 
     if (-not [string]::IsNullOrWhiteSpace($SpecificRunId)) {
         $candidate = Join-Path $packageRoot $SpecificRunId
         if (-not (Test-Path $candidate)) {
-            throw "RunId '$SpecificRunId' not found for $PackageId"
+            throw "RunId '$SpecificRunId' not found for $PackageId. Wait for the package capture wrapper to finish creating artifacts before seeding metrics."
         }
         return (Resolve-Path $candidate).Path
     }
@@ -89,11 +90,13 @@ function New-TierTemplate {
 $requiredKeysBySlo = @{
     "MS-UX-01" = @("frame_time_p95_ms", "frame_time_p99_ms", "jank_percent")
     "MS-UX-05" = @("scrub_latency_p95_ms", "scrub_latency_p99_ms", "noop_recompute_count")
+    "MS-ENG-06" = @("lifecycle_sync_invocations_per_transition")
     "MS-ENG-03" = @("adsb_feature_build_p95_ms")
     "MS-ENG-07" = @("adsb_retarget_window_p95_ms", "zero_seeded_window_count")
     "MS-ENG-08" = @("tile_size_mismatch_rebuild_miss_count")
     "MS-ENG-04" = @("unconditional_full_sort_on_unchanged_keys")
     "MS-ENG-05" = @("scia_dense_trail_render_p95_ms")
+    "MS-ENG-10" = @("duplicate_frame_owner_count_per_5min")
     "MS-ENG-11" = @("ogn_selection_alloc_bytes_ratio_vs_baseline", "ogn_selection_alloc_count_ratio_vs_baseline")
 }
 

@@ -201,6 +201,7 @@ class OgnTrafficOverlay(
                 style.removeImage(icon.styleImageId)
             }
             style.removeImage(SATELLITE_GLIDER_ICON_IMAGE_ID)
+            style.removeImage(RELATIVE_GLIDER_CLOSE_RED_ICON_IMAGE_ID)
             style.removeImage(RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID)
             style.removeImage(RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID)
             style.removeImage(RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID)

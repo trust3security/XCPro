@@ -36,6 +36,25 @@ class OgnTrafficOverlayFeatureTargetsTest {
     }
 
     @Test
+    fun featureGeneration_usesCloseRedIconForCloseGlider() {
+        val feature = buildFeatures(
+            targets = listOf(
+                target(
+                    id = "A1",
+                    altitudeMeters = 1040.0,
+                    distanceMeters = 800.0,
+                    aircraftTypeCode = 1
+                )
+            )
+        ).single()
+
+        assertEquals(
+            RELATIVE_GLIDER_CLOSE_RED_ICON_IMAGE_ID,
+            feature.getStringProperty(PROP_ICON_ID)
+        )
+    }
+
+    @Test
     fun featureGeneration_skipsOffscreenTargetsAndRespectsMaxTargets() {
         val visibleBounds = visibleBounds()
         val features = buildFeatures(
@@ -119,14 +138,17 @@ class OgnTrafficOverlayFeatureTargetsTest {
 
     private fun target(
         id: String,
-        latitude: Double = -35.0
+        latitude: Double = -35.0,
+        altitudeMeters: Double = 1_050.0,
+        distanceMeters: Double = 1_200.0,
+        aircraftTypeCode: Int? = null
     ): OgnTrafficTarget = OgnTrafficTarget(
         id = id,
         callsign = "CALL$id",
         destination = "APRS",
         latitude = latitude,
         longitude = 149.0,
-        altitudeMeters = 1_050.0,
+        altitudeMeters = altitudeMeters,
         trackDegrees = 90.0,
         groundSpeedMps = 35.0,
         verticalSpeedMps = 1.2,
@@ -139,13 +161,13 @@ class OgnTrafficOverlayFeatureTargetsTest {
             aircraftModel = "Glider",
             tracked = true,
             identified = true,
-            aircraftTypeCode = null
+            aircraftTypeCode = aircraftTypeCode
         ),
         rawComment = null,
         rawLine = "raw-$id",
         timestampMillis = 10_000L,
         lastSeenMillis = 10_000L,
-        distanceMeters = 1_200.0,
+        distanceMeters = distanceMeters,
         addressType = OgnAddressType.FLARM,
         addressHex = id,
         canonicalKey = "FLARM:$id"

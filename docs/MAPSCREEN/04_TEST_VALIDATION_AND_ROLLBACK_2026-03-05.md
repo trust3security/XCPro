@@ -70,9 +70,10 @@ Required path convention:
 ## 2B) One-Command Package Capture (Windows)
 
 Use these commands to scaffold Tier A/B trace folders and generate
-checkpoint evidence files for Phase 2/3 packages:
+checkpoint evidence files for Phase 1/2/3 packages:
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File scripts/qa/run_mapscreen_pkg_f1_evidence_capture.ps1
 powershell -ExecutionPolicy Bypass -File scripts/qa/run_mapscreen_pkg_d1_evidence_capture.ps1
 powershell -ExecutionPolicy Bypass -File scripts/qa/run_mapscreen_pkg_g1_evidence_capture.ps1
 powershell -ExecutionPolicy Bypass -File scripts/qa/run_mapscreen_pkg_w1_evidence_capture.ps1
@@ -84,8 +85,17 @@ Optional flags:
 - `-RunId <yyyyMMdd-HHmmss>` to force a deterministic artifact directory name.
 - `-DryRun` to generate scaffold files without executing required gates.
 - `-SkipRequiredGates` to scaffold only.
+- `-SkipPostCaptureThresholdCheck` to opt out of the default sequential metric-template seed + threshold verifier pass.
 - `-RunConnectedAppTests` and/or `-RunConnectedAllModulesAtEnd` when a device is attached.
 - `-RequireConnectedDevice` to fail fast if no device/emulator is detected.
+
+By default, each package wrapper now runs the follow-up steps sequentially after scaffold generation:
+
+1. `seed_mapscreen_metric_templates.ps1`
+2. `verify_mapscreen_package_evidence.ps1 -UpdateGateResult -AllowPending`
+
+This prevents seed/verify from racing ahead of scaffold creation and ensures `threshold_check.json`
+is emitted for the new run before any manual perf metrics are attached.
 
 Each command creates:
 
@@ -97,7 +107,8 @@ Each command creates:
 
 ## 2C) Automated Threshold Verification (MAPSCREEN-007)
 
-Use the threshold verifier after Tier A/B metrics are filled in `metrics.json`:
+The package wrappers above already seed templates and run an initial threshold pass sequentially.
+Use the threshold verifier manually after Tier A/B metrics are filled in `metrics.json`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/qa/verify_mapscreen_package_evidence.ps1 -PackageId pkg-e1 -UpdateGateResult

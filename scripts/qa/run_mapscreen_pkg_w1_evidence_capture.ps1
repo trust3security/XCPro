@@ -2,6 +2,7 @@ param(
     [string]$RunId,
     [switch]$DryRun,
     [switch]$SkipRequiredGates,
+    [switch]$SkipPostCaptureThresholdCheck,
     [switch]$RunConnectedAppTests,
     [switch]$RunConnectedAllModulesAtEnd,
     [switch]$RequireConnectedDevice
@@ -18,6 +19,7 @@ $invokeArgs = @{
 if ($PSBoundParameters.ContainsKey("RunId")) { $invokeArgs["RunId"] = $RunId }
 if ($DryRun) { $invokeArgs["DryRun"] = $true }
 if ($SkipRequiredGates) { $invokeArgs["SkipRequiredGates"] = $true }
+if ($SkipPostCaptureThresholdCheck) { $invokeArgs["SkipPostCaptureThresholdCheck"] = $true }
 if ($RunConnectedAppTests) { $invokeArgs["RunConnectedAppTests"] = $true }
 if ($RunConnectedAllModulesAtEnd) { $invokeArgs["RunConnectedAllModulesAtEnd"] = $true }
 if ($RequireConnectedDevice) { $invokeArgs["RequireConnectedDevice"] = $true }

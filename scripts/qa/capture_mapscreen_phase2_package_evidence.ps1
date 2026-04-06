@@ -1,10 +1,11 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
+    [ValidateSet("pkg-f1", "pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
     [string]$PackageId,
     [string]$RunId,
     [switch]$DryRun,
     [switch]$SkipRequiredGates,
+    [switch]$SkipPostCaptureThresholdCheck,
     [switch]$RunConnectedAppTests,
     [switch]$RunConnectedAllModulesAtEnd,
     [switch]$RequireConnectedDevice
@@ -137,6 +138,26 @@ function New-TierCaptureChecklist {
 }
 
 $packageConfig = @{
+    "pkg-f1" = [ordered]@{
+        phase = "phase1"
+        work_package = "WP-03"
+        mapscreen_items = @("MAPSCREEN-008")
+        scenario_ids = @(
+            "scenario-6-replay-render-sync-overlays",
+            "scenario-8-mixed-load-stress"
+        )
+        slo_ids = @("MS-ENG-06", "MS-ENG-10")
+        determinism_ids = @("DET-04")
+        determinism_evidence_by_id = @{
+            "DET-04" = "MapLifecycleManagerResumeSyncTest, LocationManagerRenderSyncTest, DisplayPoseRenderCoordinatorTest"
+        }
+        focused_tests = @(
+            "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
+            "com.example.xcpro.map.LocationManagerRenderSyncTest",
+            "com.example.xcpro.map.DisplayPoseRenderCoordinatorTest",
+            "com.example.xcpro.map.ui.MapScreenTrailRuntimeEffectsPolicyTest"
+        )
+    }
     "pkg-d1" = [ordered]@{
         phase = "phase2"
         work_package = "WP-04+WP-07"
@@ -467,6 +488,7 @@ Required citations:
 
 Package focus:
 
+- `pkg-f1`: lifecycle and cadence-owner proof remains runtime-scoped; replay/live display-frame ownership stays explicit and timebase-safe.
 - `pkg-d1`: ADS-B visual smoothing and OGN selection/allocation hot paths use monotonic and deterministic runtime contracts.
 - `pkg-g1`: replay selection projection and dense SCIA trail rendering paths remain semantic and avoid wall-time coupling.
 - `pkg-w1`: weather rain cache identity and frame transitions remain visual-layer behavior with no fusion/replay timebase coupling.
@@ -485,8 +507,9 @@ $runbook = @(
     "   - tier_a/traces/macrobenchmark/",
     "   - tier_a/traces/profiler/",
     "2. Repeat for Tier B in tier_b/... folders.",
-    "3. Update metrics.json with p50/p95/p99 and CI values.",
-    "4. Update gate_result.json with SLO pass/fail decision.",
+    "3. Initial metric template seeding and threshold verification already ran sequentially after scaffold creation.",
+    "4. Update metrics.json with Tier A/B measured values.",
+    "5. Rerun verify_mapscreen_package_evidence.ps1 to refresh threshold_check.json and gate_result.json.",
     "",
     "Current status: blocked_pending_perf_evidence"
 ) -join "`r`n"
@@ -509,6 +532,7 @@ $verificationSummary = @(
     "Gate execution:",
     $gateExecutionLine,
     "",
+    "Post-capture metric seeding and threshold verification run sequentially unless skipped by flags.",
     "Promotion is blocked until Tier A/B performance evidence is attached."
 ) -join "`r`n"
 
@@ -520,6 +544,23 @@ $archGateText | Set-Content -Path (Join-Path $artifactRoot "arch_gate_result.txt
 $timebaseCitations | Set-Content -Path (Join-Path $artifactRoot "timebase_citations.md") -Encoding UTF8
 $runbook | Set-Content -Path (Join-Path $artifactRoot "RUNBOOK.md") -Encoding UTF8
 $verificationSummary | Set-Content -Path (Join-Path $artifactRoot "verification_summary.md") -Encoding UTF8
+
+if ($SkipPostCaptureThresholdCheck) {
+    Write-Host "[mapscreen-evidence] Skipping post-capture metric seeding and threshold verification by request."
+} elseif ($DryRun) {
+    Write-Host "[mapscreen-evidence] Skipping post-capture metric seeding and threshold verification because -DryRun was used."
+} elseif ($SkipRequiredGates) {
+    Write-Host "[mapscreen-evidence] Skipping post-capture metric seeding and threshold verification because required gates were skipped."
+} else {
+    $seedScriptPath = Join-Path $PSScriptRoot "seed_mapscreen_metric_templates.ps1"
+    $verifyScriptPath = Join-Path $PSScriptRoot "verify_mapscreen_package_evidence.ps1"
+
+    Write-Host "[mapscreen-evidence] Running post-capture metric template seeding sequentially."
+    & $seedScriptPath -PackageIds $PackageId -RunId $RunId
+
+    Write-Host "[mapscreen-evidence] Running post-capture threshold verification sequentially."
+    & $verifyScriptPath -PackageId $PackageId -RunId $RunId -UpdateGateResult -AllowPending
+}
 
 Write-Host ""
 Write-Host "[mapscreen-evidence] Completed package capture scaffold."

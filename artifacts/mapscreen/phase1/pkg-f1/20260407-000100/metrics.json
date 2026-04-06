@@ -1,0 +1,71 @@
+﻿{
+    "package_id":  "pkg-f1",
+    "generated_at":  "2026-04-06T12:26:01.2151164+10:00",
+    "slo_targets":  [
+                        {
+                            "slo_id":  "MS-ENG-06",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        },
+                        {
+                            "slo_id":  "MS-ENG-10",
+                            "status":  "pending_perf_capture",
+                            "baseline":  null,
+                            "post_change":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture."
+                        }
+                    ],
+    "unit_evidence":  {
+                          "focused_tests":  [
+                                                "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
+                                                "com.example.xcpro.map.LocationManagerRenderSyncTest",
+                                                "com.example.xcpro.map.DisplayPoseRenderCoordinatorTest",
+                                                "com.example.xcpro.map.ui.MapScreenTrailRuntimeEffectsPolicyTest"
+                                            ],
+                          "status":  "pass"
+                      },
+    "command_gates":  [
+                          {
+                              "command":  ".\\gradlew.bat enforceRules",
+                              "label":  "enforceRules",
+                              "startedAt":  "2026-04-06T12:26:01.2933928+10:00",
+                              "finishedAt":  "2026-04-06T12:26:01.3114214+10:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat testDebugUnitTest",
+                              "label":  "testDebugUnitTest",
+                              "startedAt":  "2026-04-06T12:26:01.3146685+10:00",
+                              "finishedAt":  "2026-04-06T12:26:01.3156690+10:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          },
+                          {
+                              "command":  ".\\gradlew.bat assembleDebug",
+                              "label":  "assembleDebug",
+                              "startedAt":  "2026-04-06T12:26:01.3216696+10:00",
+                              "finishedAt":  "2026-04-06T12:26:01.3216696+10:00",
+                              "status":  "dry_run",
+                              "exitCode":  0,
+                              "output":  [
+                                             "DRY_RUN"
+                                         ]
+                          }
+                      ],
+    "determinism_targets":  [
+                                {
+                                    "det_id":  "DET-04",
+                                    "status":  "unit_validated",
+                                    "evidence":  "MapLifecycleManagerResumeSyncTest, LocationManagerRenderSyncTest, DisplayPoseRenderCoordinatorTest"
+                                }
+                            ]
+}

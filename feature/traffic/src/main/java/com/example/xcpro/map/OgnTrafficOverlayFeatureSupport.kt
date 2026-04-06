@@ -72,6 +72,7 @@ internal fun buildOgnTrafficOverlayFeatures(
             OgnRelativeAltitudeFeatureMapperInput(
                 targetAltitudeMeters = target.altitudeMeters,
                 ownshipAltitudeMeters = ownshipAltitudeMeters,
+                distanceMeters = target.distanceMeters,
                 altitudeUnit = altitudeUnit,
                 icon = icon,
                 defaultIconStyleImageId = resolveOgnStyleImageId(
@@ -81,6 +82,7 @@ internal fun buildOgnTrafficOverlayFeatures(
                 gliderAboveIconStyleImageId = RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID,
                 gliderBelowIconStyleImageId = RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID,
                 gliderNearIconStyleImageId = RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID,
+                gliderCloseRedIconStyleImageId = RELATIVE_GLIDER_CLOSE_RED_ICON_IMAGE_ID,
                 secondaryLabelText = secondaryLabel.text,
                 speedText = formatOgnGroundSpeedText(
                     groundSpeedMps = target.groundSpeedMps,
