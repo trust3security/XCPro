@@ -1220,7 +1220,10 @@ Module ownership after compile-speed extraction (2026-03-12):
 - `app` still owns the singleton task graph providers and now depends directly on `feature:tasks`.
 
 Current persistence startup bridge (2026-02-11):
-- `MapScreenViewModel` startup
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelLifecycle.kt`
+  - owns the stateless map-screen startup/teardown orchestration invoked by
+    `MapScreenViewModel`, without creating a second long-lived screen owner.
+  - startup path includes:
   -> `MapTasksUseCase.loadSavedTasks()`
   -> `TaskManagerCoordinator.loadSavedTasks()` (suspend)
   -> `TaskEnginePersistenceService.restore()` for task type + autosaved engine state
