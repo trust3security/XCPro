@@ -34,7 +34,7 @@ internal fun MapScreenScaffold(
         profileExpanded = scaffold.profileExpanded,
         mapStyleExpanded = scaffold.mapStyleExpanded,
         settingsExpanded = scaffold.settingsExpanded,
-        initialMapStyle = scaffold.initialMapStyle,
+        selectedMapStyle = scaffold.selectedMapStyle,
         onItemSelected = scaffold.onDrawerItemSelected,
         onMapStyleSelected = scaffold.onMapStyleSelected,
         onOpenGeneralSettings = scaffold.onOpenGeneralSettingsFromDrawer,

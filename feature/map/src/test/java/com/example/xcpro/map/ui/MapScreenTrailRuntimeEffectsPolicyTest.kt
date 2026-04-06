@@ -1,7 +1,9 @@
 package com.example.xcpro.map.ui
 
+import com.example.xcpro.map.DisplayClock
 import com.example.xcpro.map.DisplayPoseSnapshot
 import com.example.xcpro.map.trail.SnailTrailManager
+import com.example.xcpro.map.trail.domain.TrailTimeBase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -14,9 +16,13 @@ class MapScreenTrailRuntimeEffectsPolicyTest {
     @Test
     fun resolveTrailDisplayPoseSeed_liveModeClearsDisplayPoseSeed() {
         val seed = resolveTrailDisplayPoseSeed(
-            suppressLiveGps = false,
-            displayLocation = LatLng(-35.3, 149.1),
-            displayTimeMillis = 1234L
+            isReplay = false,
+            snapshot = DisplayPoseSnapshot(
+                location = LatLng(-35.3, 149.1),
+                timestampMs = 1234L,
+                frameId = 1L,
+                timeBase = DisplayClock.TimeBase.MONOTONIC
+            )
         )
 
         assertNull(seed.displayLocation)
@@ -27,9 +33,13 @@ class MapScreenTrailRuntimeEffectsPolicyTest {
     fun resolveTrailDisplayPoseSeed_suppressedModeKeepsDisplayPoseSeed() {
         val location = LatLng(-35.3, 149.1)
         val seed = resolveTrailDisplayPoseSeed(
-            suppressLiveGps = true,
-            displayLocation = location,
-            displayTimeMillis = 1234L
+            isReplay = true,
+            snapshot = DisplayPoseSnapshot(
+                location = location,
+                timestampMs = 1234L,
+                frameId = 2L,
+                timeBase = DisplayClock.TimeBase.REPLAY
+            )
         )
 
         assertEquals(location, seed.displayLocation)
@@ -37,34 +47,71 @@ class MapScreenTrailRuntimeEffectsPolicyTest {
     }
 
     @Test
-    fun resolveDisplayPoseUpdateMode_returnsOff_whenLiveGpsIsNotSuppressed() {
+    fun shouldListenForDisplayPose_returnsFalse_whenTrailIsDisabled() {
         assertEquals(
-            DisplayPoseUpdateMode.OFF,
-            resolveDisplayPoseUpdateMode(
-                suppressLiveGps = false,
-                useRenderFrameSync = false
+            false,
+            shouldListenForDisplayPose(
+                renderLocalOwnship = true,
+                trailEnabled = false
             )
         )
     }
 
     @Test
-    fun resolveDisplayPoseUpdateMode_returnsFrameLoop_whenReplayUsesLegacyLoop() {
+    fun shouldListenForDisplayPose_returnsFalse_whenLocalOwnshipIsDisabled() {
         assertEquals(
-            DisplayPoseUpdateMode.FRAME_LOOP,
-            resolveDisplayPoseUpdateMode(
-                suppressLiveGps = true,
-                useRenderFrameSync = false
+            false,
+            shouldListenForDisplayPose(
+                renderLocalOwnship = false,
+                trailEnabled = true
             )
         )
     }
 
     @Test
-    fun resolveDisplayPoseUpdateMode_returnsFrameListener_whenRenderFrameSyncIsEnabled() {
+    fun shouldListenForDisplayPose_returnsTrue_whenTrailIsEnabledAndOwnshipIsRendered() {
         assertEquals(
-            DisplayPoseUpdateMode.FRAME_LISTENER,
-            resolveDisplayPoseUpdateMode(
-                suppressLiveGps = true,
-                useRenderFrameSync = true
+            true,
+            shouldListenForDisplayPose(
+                renderLocalOwnship = true,
+                trailEnabled = true
+            )
+        )
+    }
+
+    @Test
+    fun resolveDisplayPoseTrailTimeBase_mapsSnapshotTimeBase() {
+        assertEquals(
+            TrailTimeBase.LIVE_MONOTONIC,
+            resolveDisplayPoseTrailTimeBase(
+                DisplayPoseSnapshot(
+                    location = LatLng(-35.3, 149.1),
+                    timestampMs = 100L,
+                    frameId = 3L,
+                    timeBase = DisplayClock.TimeBase.MONOTONIC
+                )
+            )
+        )
+        assertEquals(
+            TrailTimeBase.LIVE_WALL,
+            resolveDisplayPoseTrailTimeBase(
+                DisplayPoseSnapshot(
+                    location = LatLng(-35.3, 149.1),
+                    timestampMs = 100L,
+                    frameId = 4L,
+                    timeBase = DisplayClock.TimeBase.WALL
+                )
+            )
+        )
+        assertEquals(
+            TrailTimeBase.REPLAY_IGC,
+            resolveDisplayPoseTrailTimeBase(
+                DisplayPoseSnapshot(
+                    location = LatLng(-35.3, 149.1),
+                    timestampMs = 100L,
+                    frameId = 5L,
+                    timeBase = DisplayClock.TimeBase.REPLAY
+                )
             )
         )
     }
@@ -75,7 +122,8 @@ class MapScreenTrailRuntimeEffectsPolicyTest {
         val snapshot = DisplayPoseSnapshot(
             location = LatLng(-35.3, 149.1),
             timestampMs = 1234L,
-            frameId = 77L
+            frameId = 77L,
+            timeBase = DisplayClock.TimeBase.REPLAY
         )
 
         forwardDisplayPoseSnapshot(
@@ -86,6 +134,7 @@ class MapScreenTrailRuntimeEffectsPolicyTest {
         verify(snailTrailManager).updateDisplayPose(
             displayLocation = snapshot.location,
             displayTimeMillis = snapshot.timestampMs,
+            displayTimeBase = TrailTimeBase.REPLAY_IGC,
             frameId = snapshot.frameId
         )
     }
@@ -102,6 +151,7 @@ class MapScreenTrailRuntimeEffectsPolicyTest {
         verify(snailTrailManager).updateDisplayPose(
             displayLocation = null,
             displayTimeMillis = null,
+            displayTimeBase = null,
             frameId = null
         )
     }

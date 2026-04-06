@@ -7,6 +7,7 @@ import com.example.xcpro.map.trail.TrailStore
 import com.example.xcpro.sensors.domain.FlightMetricsConstants
 import com.example.xcpro.sensors.domain.LiveWindValidityPolicy
 import com.example.xcpro.weather.wind.model.WindState
+import kotlin.math.abs
 
 /**
  * Owns trail point storage and transforms sensor data into renderable trail state.
@@ -19,20 +20,37 @@ class TrailProcessor {
         tauMs = REPLAY_WIND_SMOOTH_MS,
         minValidSpeedMs = REPLAY_WIND_VALID_MIN_SPEED_MS
     )
+    private val liveWindSmoother = TrailWindSmoother(
+        tauMs = LIVE_WIND_SMOOTH_MS,
+        minValidSpeedMs = LIVE_WIND_VALID_MIN_SPEED_MS
+    )
     private val liveStore = TrailStore(minDeltaMillis = LIVE_MIN_DELTA_MS)
     private val replayStore = TrailStore(minDeltaMillis = 0L)
+    private val syntheticReplayStore = TrailStore(
+        maxSize = SYNTHETIC_REPLAY_MAX_SIZE,
+        minDeltaMillis = 0L,
+        noThinMillis = SYNTHETIC_REPLAY_NO_THIN_MS
+    )
 
     private var lastIsReplay: Boolean? = null
     private var lastLiveTimeBase: TrailTimeBase? = null
+    private var lastReplayRetentionMode: TrailReplayRetentionMode? = null
+    private var lastRenderCircling: Boolean? = null
+    private var lastRenderableWind: TrailWindSample? = null
 
     fun resetAll() {
         liveStore.clear()
         replayStore.clear()
+        syntheticReplayStore.clear()
         replayInterpolator.reset()
         replayWindSmoother.reset()
+        liveWindSmoother.reset()
         circlingResolver.reset()
         lastIsReplay = null
         lastLiveTimeBase = null
+        lastReplayRetentionMode = null
+        lastRenderCircling = null
+        lastRenderableWind = null
     }
 
     fun update(input: TrailUpdateInput): TrailUpdateResult? {
@@ -74,20 +92,38 @@ class TrailProcessor {
                 timestampMs = timestamp
             )
         } else {
-            baseWind
+            liveWindSmoother.update(
+                speedMs = baseWind.speedMs,
+                directionFromDeg = baseWind.directionFromDeg,
+                timestampMs = timestamp
+            )
         }
 
-        val store = if (input.isReplay) replayStore else liveStore
         var storeReset = false
         if (!input.isReplay) {
             val liveTimeBaseChanged = lastLiveTimeBase != null && lastLiveTimeBase != sampleTime.timeBase
             if (liveTimeBaseChanged) {
                 liveStore.clear()
+                liveWindSmoother.reset()
                 storeReset = true
             }
             lastLiveTimeBase = sampleTime.timeBase
+            lastReplayRetentionMode = null
         } else {
             lastLiveTimeBase = null
+            val replayRetentionChanged = lastReplayRetentionMode != null &&
+                lastReplayRetentionMode != input.replayRetentionMode
+            if (replayRetentionChanged) {
+                clearReplayState()
+                storeReset = true
+            }
+            lastReplayRetentionMode = input.replayRetentionMode
+        }
+        val store = when {
+            input.isReplay && input.replayRetentionMode == TrailReplayRetentionMode.SYNTHETIC_VALIDATION ->
+                syntheticReplayStore
+            input.isReplay -> replayStore
+            else -> liveStore
         }
         var sampleAdded = false
         if ((input.isFlying || input.isReplay) && timestamp > 0L) {
@@ -102,9 +138,7 @@ class TrailProcessor {
             )
             if (input.isReplay) {
                 if (replayInterpolator.shouldReset(sample)) {
-                    replayStore.clear()
-                    replayInterpolator.reset()
-                    replayWindSmoother.reset()
+                    clearReplayState()
                     storeReset = true
                 }
                 val expanded = replayInterpolator.expand(sample)
@@ -114,9 +148,31 @@ class TrailProcessor {
                     }
                 }
             } else {
-                sampleAdded = store.addSample(sample)
+                sampleAdded = store.addSample(
+                    sample = sample,
+                    minDeltaMillisOverride = resolveLiveMinDeltaMillis(isCircling)
+                )
             }
         }
+
+        val circlingChanged = lastRenderCircling?.let { it != isCircling } ?: false
+        val windChanged = hasMeaningfulWindChange(
+            previous = lastRenderableWind,
+            current = wind,
+            windDriftEnabled = input.windDriftEnabled,
+            isCircling = isCircling
+        )
+        val invalidationReason = when {
+            modeChanged -> TrailRenderInvalidationReason.MODE_CHANGED
+            storeReset -> TrailRenderInvalidationReason.STORE_RESET
+            sampleAdded -> TrailRenderInvalidationReason.SAMPLE_ADDED
+            circlingChanged -> TrailRenderInvalidationReason.CIRCLING_CHANGED
+            windChanged -> TrailRenderInvalidationReason.WIND_CHANGED
+            else -> null
+        }
+        val requiresFullRender = invalidationReason != null
+        lastRenderCircling = isCircling
+        lastRenderableWind = wind
 
         val renderState = TrailRenderState(
             points = store.snapshot(),
@@ -132,17 +188,28 @@ class TrailProcessor {
             renderState = renderState,
             sampleAdded = sampleAdded,
             storeReset = storeReset,
-            modeChanged = modeChanged
+            modeChanged = modeChanged,
+            requiresFullRender = requiresFullRender,
+            invalidationReason = invalidationReason
         )
     }
 
     private fun resetForModeChange() {
         liveStore.clear()
-        replayStore.clear()
-        replayInterpolator.reset()
-        replayWindSmoother.reset()
+        clearReplayState()
+        liveWindSmoother.reset()
         circlingResolver.reset()
         lastLiveTimeBase = null
+        lastReplayRetentionMode = null
+        lastRenderCircling = null
+        lastRenderableWind = null
+    }
+
+    private fun clearReplayState() {
+        replayStore.clear()
+        syntheticReplayStore.clear()
+        replayInterpolator.reset()
+        replayWindSmoother.reset()
     }
 
     private fun resolveSampleTime(input: TrailUpdateInput): SampleTime {
@@ -196,6 +263,41 @@ class TrailProcessor {
         return TrailWindSample(vector.speed, directionFrom)
     }
 
+    private fun resolveLiveMinDeltaMillis(isCircling: Boolean): Long =
+        if (isCircling) LIVE_CIRCLING_MIN_DELTA_MS else LIVE_MIN_DELTA_MS
+
+    private fun hasMeaningfulWindChange(
+        previous: TrailWindSample?,
+        current: TrailWindSample,
+        windDriftEnabled: Boolean,
+        isCircling: Boolean
+    ): Boolean {
+        if (!windDriftEnabled || !isCircling) {
+            return false
+        }
+        val last = previous ?: return false
+        val lastValid = isRenderableWind(last)
+        val currentValid = isRenderableWind(current)
+        if (lastValid != currentValid) {
+            return true
+        }
+        if (!currentValid) {
+            return false
+        }
+        if (abs(last.speedMs - current.speedMs) >= WIND_SPEED_CHANGE_EPS_MS) {
+            return true
+        }
+        return angularDistanceDeg(last.directionFromDeg, current.directionFromDeg) >= WIND_DIRECTION_CHANGE_EPS_DEG
+    }
+
+    private fun isRenderableWind(sample: TrailWindSample): Boolean =
+        sample.speedMs > WIND_VALID_MIN_SPEED_MS && sample.directionFromDeg.isFinite()
+
+    private fun angularDistanceDeg(first: Double, second: Double): Double {
+        val normalized = ((second - first + 540.0) % 360.0) - 180.0
+        return abs(normalized)
+    }
+
     private data class SampleTime(
         val timestampMillis: Long,
         val timeBase: TrailTimeBase
@@ -203,9 +305,16 @@ class TrailProcessor {
 
     private companion object {
         private const val LIVE_MIN_DELTA_MS = 2_000L
+        private const val LIVE_CIRCLING_MIN_DELTA_MS = 500L
+        private const val LIVE_WIND_SMOOTH_MS = 1_000L
         private const val REPLAY_WIND_SMOOTH_MS = 4_000L
+        private const val SYNTHETIC_REPLAY_MAX_SIZE = 8_192
+        private const val SYNTHETIC_REPLAY_NO_THIN_MS = 12 * 60_000L
+        private const val LIVE_WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
         private const val REPLAY_WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
         private const val WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
+        private const val WIND_SPEED_CHANGE_EPS_MS = 0.25
+        private const val WIND_DIRECTION_CHANGE_EPS_DEG = 5.0
     }
 }
 

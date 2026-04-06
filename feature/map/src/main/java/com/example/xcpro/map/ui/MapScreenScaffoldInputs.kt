@@ -36,7 +36,6 @@ internal fun rememberMapScreenScaffoldInputs(
     profileExpanded: MutableState<Boolean>,
     mapStyleExpanded: MutableState<Boolean>,
     settingsExpanded: MutableState<Boolean>,
-    initialMapStyle: String,
     onMapStyleSelected: (String) -> Unit,
     onOpenGeneralSettings: () -> Unit,
     allowFlightSensorStart: Boolean,
@@ -83,8 +82,8 @@ internal fun rememberMapScreenScaffoldInputs(
         Log.d(MapScreenScaffoldInputsTag, "Map style selected: $style")
         onMapStyleSelected(style)
     }
-    val onTransientMapStyleSelected: (String) -> Unit = { style ->
-        mapViewModel.setMapStyle(style)
+    val onForecastSatelliteOverrideChanged: (Boolean) -> Unit = { enabled ->
+        mapViewModel.setForecastSatelliteOverrideEnabled(enabled)
     }
     val onMapReady: (MapLibreMap) -> Unit = { map ->
         mapRuntimeController.onMapReady(map)
@@ -119,7 +118,7 @@ internal fun rememberMapScreenScaffoldInputs(
             profileExpanded = profileExpanded,
             mapStyleExpanded = mapStyleExpanded,
             settingsExpanded = settingsExpanded,
-            initialMapStyle = initialMapStyle,
+            selectedMapStyle = mapBindings.baseMapStyleName,
             onDrawerItemSelected = onDrawerItemSelected,
             onMapStyleSelected = onResolvedMapStyleSelected,
             gpsStatus = mapBindings.gpsStatus,
@@ -146,8 +145,8 @@ internal fun rememberMapScreenScaffoldInputs(
                 currentMode = mapBindings.currentMode,
                 currentZoom = hotPathBindings.currentZoom,
                 onModeChange = mapViewModel::setFlightMode,
-                currentMapStyleName = mapBindings.mapStyleName,
-                onTransientMapStyleSelected = onTransientMapStyleSelected,
+                forecastSatelliteOverrideEnabled = mapBindings.forecastSatelliteOverrideEnabled,
+                onForecastSatelliteOverrideChanged = onForecastSatelliteOverrideChanged,
                 currentLocation = hotPathBindings.currentLocation
             ),
             overlays = MapScreenOverlayContentInputs(
@@ -249,6 +248,8 @@ internal fun rememberMapScreenScaffoldInputs(
             replay = MapScreenReplayContentInputs(
                 replayState = mapViewModel.replaySessionState,
                 showVarioDemoFab = mapViewModel.showVarioDemoFab,
+                onSyntheticThermalReplayClick = mapViewModel::onSyntheticThermalReplay,
+                onSyntheticThermalReplayWindNoisyClick = mapViewModel::onSyntheticThermalReplayWindNoisy,
                 onVarioDemoReferenceClick = mapViewModel::onVarioDemoReplay,
                 onVarioDemoSimClick = mapViewModel::onVarioDemoReplaySim,
                 onVarioDemoSim2Click = mapViewModel::onVarioDemoReplaySimLive,

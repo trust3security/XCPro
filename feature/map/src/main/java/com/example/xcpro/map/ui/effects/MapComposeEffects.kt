@@ -227,16 +227,6 @@ object MapComposeEffects {
     }
 
     @Composable
-    fun MapStyleAndConfigurationEffects(
-        initialMapStyle: String,
-        onStyleResolved: (String) -> Unit
-    ) {
-        LaunchedEffect(initialMapStyle) {
-            onStyleResolved(initialMapStyle)
-        }
-    }
-
-    @Composable
     fun AllMapEffects(
         locationManager: MapLocationRuntimePort,
         locationPermissionRequester: MapLocationPermissionRequester,
@@ -253,8 +243,6 @@ object MapComposeEffects {
         profileModeCards: Map<String, Map<FlightModeSelection, List<String>>>,
         profileModeTemplates: Map<String, Map<FlightModeSelection, String>>,
         activeTemplateId: String?,
-        initialMapStyle: String,
-        onMapStyleResolved: (String) -> Unit,
         replaySessionState: SessionState,
         useRenderFrameSync: Boolean,
         suppressLiveGps: Boolean = false,
@@ -302,11 +290,6 @@ object MapComposeEffects {
             replaySessionState = replaySessionState,
             useRenderFrameSync = useRenderFrameSync,
             renderLocalOwnship = renderLocalOwnship
-        )
-
-        MapStyleAndConfigurationEffects(
-            initialMapStyle = initialMapStyle,
-            onStyleResolved = onMapStyleResolved
         )
     }
 }

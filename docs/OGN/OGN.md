@@ -195,6 +195,13 @@ Course parsing:
     an immediate OGN traffic overlay rerender.
   - On disable, glider icon mapping returns to default through the same immediate
     forced rerender path.
+- Close-proximity red override (runtime rendering only):
+  - Applies to glider icons only.
+  - Condition: target distance `<= 1 km` and relative altitude within `+-300 ft` (inclusive).
+  - Effect: glider icon uses ADS-B red `#FF1744`.
+  - Precedence: overrides the normal glider altitude-band green/blue/black icon variants.
+  - Labels remain unchanged.
+  - Targets without a valid relative-altitude delta do not enter the red override.
 - OGN trails:
   - Source/layer IDs:
     - `ogn-glider-trail-source`

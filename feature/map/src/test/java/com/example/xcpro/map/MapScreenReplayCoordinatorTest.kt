@@ -3,11 +3,16 @@ package com.example.xcpro.map
 import com.example.xcpro.common.documents.DocumentRef
 import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.replay.SyntheticThermalReplayMode
 import com.example.xcpro.map.replay.RacingReplayLogBuilder
+import com.example.xcpro.map.replay.SyntheticThermalReplayLogBuilder
 import com.example.xcpro.replay.IgcReplayController
+import com.example.xcpro.replay.IgcLog
 import com.example.xcpro.replay.ReplayCadenceProfile
 import com.example.xcpro.replay.ReplayEvent
+import com.example.xcpro.replay.ReplayInterpolation
 import com.example.xcpro.replay.ReplayMode
+import com.example.xcpro.replay.ReplayNoiseProfile
 import com.example.xcpro.replay.Selection
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.replay.SessionStatus
@@ -132,6 +137,95 @@ class MapScreenReplayCoordinatorTest {
         }
     }
 
+    @Test
+    fun syntheticThermalReplay_setsLiveCadenceAndLoadsCleanSyntheticLog() = runTest {
+        val fixture = createFixture(StandardTestDispatcher(testScheduler))
+        try {
+            fixture.coordinator.onSyntheticThermalReplay()
+            advanceUntilIdle()
+
+            Mockito.verify(fixture.replayController).setReplayMode(ReplayMode.REFERENCE, true)
+            Mockito.verify(fixture.replayController).setReplayCadence(ReplayCadenceProfile.LIVE_100MS)
+            Mockito.verify(fixture.replayController).setAutoStopAfterFinish(false)
+            val loadLogInvocation = Mockito.mockingDetails(fixture.replayController).invocations.single {
+                it.method.name == "loadLog"
+            }
+            val log = loadLogInvocation.arguments[0] as IgcLog
+            val displayName = loadLogInvocation.arguments[1] as String
+            assertEquals("Synthetic thermal (clean)", displayName)
+            assertEquals(601, log.points.size)
+            assertTrue(log.points.first().trueAirspeedKmh!! > 0.0)
+            assertTrue(log.points.last().latitude > log.points.first().latitude)
+            assertEquals(SyntheticThermalReplayMode.CLEAN, fixture.syntheticReplayMode.value)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun syntheticThermalReplayWindNoisy_loadsDistinctSyntheticVariant() = runTest {
+        val fixture = createFixture(StandardTestDispatcher(testScheduler))
+        try {
+            fixture.coordinator.onSyntheticThermalReplayWindNoisy()
+            advanceUntilIdle()
+
+            val loadLogInvocation = Mockito.mockingDetails(fixture.replayController).invocations.single {
+                it.method.name == "loadLog"
+            }
+            val log = loadLogInvocation.arguments[0] as IgcLog
+            val displayName = loadLogInvocation.arguments[1] as String
+            assertEquals("Synthetic thermal (wind-noisy)", displayName)
+            assertEquals(601, log.points.size)
+            assertTrue(log.points.last().longitude != log.points.first().longitude)
+            assertTrue(log.points.last().latitude > log.points.first().latitude)
+            assertEquals(SyntheticThermalReplayMode.WIND_NOISY, fixture.syntheticReplayMode.value)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun syntheticThermalReplay_completionSeeksFinalFrameWithoutRestoringSnapshot() = runTest {
+        val fixture = createFixture(StandardTestDispatcher(testScheduler))
+        try {
+            fixture.coordinator.onSyntheticThermalReplay()
+            advanceUntilIdle()
+
+            fixture.mapStateStore.setTrackingLocation(false)
+            fixture.replayEvents.emit(ReplayEvent.Completed(samples = 601))
+            advanceUntilIdle()
+
+            Mockito.verify(fixture.replayController).seekTo(1f)
+            assertEquals(SyntheticThermalReplayMode.CLEAN, fixture.syntheticReplayMode.value)
+            assertFalse(fixture.mapStateStore.isTrackingLocation.value)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun syntheticThermalReplay_cancelClearsSyntheticModeAndRestoresSnapshot() = runTest {
+        val fixture = createFixture(StandardTestDispatcher(testScheduler))
+        try {
+            fixture.mapStateStore.setTrackingLocation(false)
+            fixture.mapStateStore.setShowReturnButton(true)
+
+            fixture.coordinator.onSyntheticThermalReplay()
+            advanceUntilIdle()
+
+            fixture.mapStateStore.setTrackingLocation(true)
+            fixture.mapStateStore.setShowReturnButton(false)
+            fixture.replayEvents.emit(ReplayEvent.Cancelled)
+            advanceUntilIdle()
+
+            assertEquals(SyntheticThermalReplayMode.NONE, fixture.syntheticReplayMode.value)
+            assertFalse(fixture.mapStateStore.isTrackingLocation.value)
+            assertTrue(fixture.mapStateStore.showReturnButton.value)
+        } finally {
+            fixture.close()
+        }
+    }
+
     private fun createFixture(dispatcher: TestDispatcher): Fixture {
         val taskManager = TaskManagerCoordinator(
             taskEnginePersistenceService = null,
@@ -153,10 +247,21 @@ class MapScreenReplayCoordinatorTest {
         val replaySession = MutableStateFlow(SessionState(speedMultiplier = 2.0))
         val replayEvents = MutableSharedFlow<ReplayEvent>(extraBufferCapacity = 4)
         val flightDataFlow = MutableStateFlow<CompleteFlightData?>(null)
+        val syntheticReplayMode = MutableStateFlow(SyntheticThermalReplayMode.NONE)
         Mockito.`when`(replayController.session).thenReturn(replaySession)
         Mockito.`when`(replayController.events).thenReturn(replayEvents)
         Mockito.`when`(replayController.getReplayCadence()).thenReturn(ReplayCadenceProfile.DEFAULT)
         Mockito.`when`(replayController.getReplayMode()).thenReturn(ReplayMode.REALTIME_SIM)
+        Mockito.`when`(replayController.getReplayBaroStepMs()).thenReturn(20L)
+        Mockito.`when`(replayController.getReplayNoiseProfile()).thenReturn(
+            ReplayNoiseProfile(
+                pressureNoiseSigmaHpa = 0.04,
+                gpsAltitudeNoiseSigmaM = 1.5,
+                jitterMs = 8L
+            )
+        )
+        Mockito.`when`(replayController.getReplayGpsAccuracyMeters()).thenReturn(5f)
+        Mockito.`when`(replayController.getReplayInterpolation()).thenReturn(ReplayInterpolation.LINEAR)
         Mockito.`when`(replayController.isAutoStopAfterFinishEnabled()).thenReturn(false)
 
         val mapStateStore = MapStateStore(initialStyleName = "Topo")
@@ -170,9 +275,11 @@ class MapScreenReplayCoordinatorTest {
             flightDataFlow = flightDataFlow,
             igcReplayController = replayController,
             racingReplayLogBuilder = RacingReplayLogBuilder(),
+            syntheticThermalReplayLogBuilder = SyntheticThermalReplayLogBuilder(),
             featureFlags = MapFeatureFlags(),
             mapStateStore = mapStateStore,
             mapStateActions = mapStateActions,
+            syntheticReplayMode = syntheticReplayMode,
             uiEffects = uiEffects,
             replaySessionState = replaySession,
             scope = scope
@@ -186,6 +293,7 @@ class MapScreenReplayCoordinatorTest {
             replayEvents = replayEvents,
             flightDataFlow = flightDataFlow,
             mapStateStore = mapStateStore,
+            syntheticReplayMode = syntheticReplayMode,
             coordinator = coordinator,
             scope = scope
         )
@@ -215,6 +323,7 @@ class MapScreenReplayCoordinatorTest {
         val replayEvents: MutableSharedFlow<ReplayEvent>,
         val flightDataFlow: MutableStateFlow<CompleteFlightData?>,
         val mapStateStore: MapStateStore,
+        val syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
         val coordinator: MapScreenReplayCoordinator,
         val scope: CoroutineScope
     ) {

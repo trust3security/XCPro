@@ -22,6 +22,8 @@ import com.example.xcpro.tasks.core.TaskType
 
 internal data class MapScreenMapBindings(
     val mapStyleName: String,
+    val baseMapStyleName: String,
+    val forecastSatelliteOverrideEnabled: Boolean,
     val gpsStatus: GpsStatusUiModel,
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
@@ -53,6 +55,9 @@ internal fun rememberMapScreenMapBindings(
     mapStateReader: MapStateReader
 ): MapScreenMapBindings {
     val mapStyleName by mapStateReader.mapStyleName.collectAsStateWithLifecycle()
+    val baseMapStyleName by mapViewModel.baseMapStyleName.collectAsStateWithLifecycle()
+    val forecastSatelliteOverrideEnabled by mapViewModel.forecastSatelliteOverrideEnabled
+        .collectAsStateWithLifecycle()
     val gpsStatus by mapViewModel.gpsStatusFlow.collectAsStateWithLifecycle()
     val showRecenterButton by mapStateReader.showRecenterButton.collectAsStateWithLifecycle()
     val showReturnButton by mapStateReader.showReturnButton.collectAsStateWithLifecycle()
@@ -61,6 +66,8 @@ internal fun rememberMapScreenMapBindings(
 
     return MapScreenMapBindings(
         mapStyleName = mapStyleName,
+        baseMapStyleName = baseMapStyleName,
+        forecastSatelliteOverrideEnabled = forecastSatelliteOverrideEnabled,
         gpsStatus = gpsStatus,
         showRecenterButton = showRecenterButton,
         showReturnButton = showReturnButton,

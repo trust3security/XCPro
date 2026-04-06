@@ -24,6 +24,10 @@ This project uses:
 - **Dependency Injection (Hilt)**
 - **Coroutines + Flow** for concurrency
 
+Reference visuals:
+- `APPLICATION_WIRING.svg` for the app shell, module relationships, and major runtime ownership seams.
+- `PIPELINE.svg` for the detailed live/replay flight-data pipeline.
+
 No deviations without explicit agreement.
 
 ---

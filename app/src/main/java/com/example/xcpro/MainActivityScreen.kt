@@ -68,7 +68,6 @@ fun MainActivityScreen(
     LaunchedEffect(Unit) {
         configViewModel.loadConfig()
     }
-    val initialMapStyle = configUiState.config?.optJSONObject("app")?.optString("mapStyle") ?: "Topo"
     var navigationBarHeight by remember { mutableStateOf(56.dp) }
     val density = LocalDensity.current
     val currentRoute by navController.currentBackStackEntryAsState()
@@ -129,7 +128,6 @@ fun MainActivityScreen(
             AppNavGraph(
                 navController = navController,
                 drawerState = drawerState,
-                initialMapStyle = initialMapStyle,
                 config = configUiState.config,
                 profileUiState = profileUiState,
                 allowFlightSensorStart = allowFlightSensorStart,

@@ -61,8 +61,8 @@ internal data class MapScreenMapContentInputs(
     val currentMode: FlightMode,
     val currentZoom: StateFlow<Float>,
     val onModeChange: (FlightMode) -> Unit,
-    val currentMapStyleName: String,
-    val onTransientMapStyleSelected: (String) -> Unit,
+    val forecastSatelliteOverrideEnabled: Boolean,
+    val onForecastSatelliteOverrideChanged: (Boolean) -> Unit,
     val currentLocation: StateFlow<MapLocationUiModel?>
 )
 
@@ -134,6 +134,8 @@ internal data class MapScreenWidgetContentInputs(
 internal data class MapScreenReplayContentInputs(
     val replayState: StateFlow<SessionState>,
     val showVarioDemoFab: Boolean,
+    val onSyntheticThermalReplayClick: () -> Unit,
+    val onSyntheticThermalReplayWindNoisyClick: () -> Unit,
     val onVarioDemoReferenceClick: () -> Unit,
     val onVarioDemoSimClick: () -> Unit,
     val onVarioDemoSim2Click: () -> Unit,

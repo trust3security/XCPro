@@ -21,6 +21,7 @@ import com.example.ui1.icons.Task
 import com.example.xcpro.common.orientation.MapOrientationMode
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.xcpro.livefollow.LiveFollowRoutes
+import com.example.xcpro.map.MapStyleCatalog
 import com.example.xcpro.navigation.SettingsRoutes
 import com.example.xcpro.screens.flightdata.HomeWaypointViewModel
 import com.example.xcpro.profiles.ProfileViewModel
@@ -218,18 +219,23 @@ fun MapStyleSection(
         isExpanded = isExpanded,
         onToggle = onToggle
     ) {
-        listOf(
-            "Topo" to Icons.Outlined.Terrain,
-            "Satellite" to Icons.Outlined.Satellite,
-            "Terrain" to Icons.Outlined.Landscape
-        ).forEach { (style, icon) ->
+        MapStyleCatalog.selectableDefinitions.forEach { definition ->
             ModernRadioItem(
-                title = style,
-                icon = icon,
-                isSelected = selectedMapStyle == style,
-                onClick = { onMapStyleSelected(style) }
+                title = definition.label,
+                icon = mapStyleIcon(definition.key),
+                isSelected = selectedMapStyle == definition.key,
+                onClick = { onMapStyleSelected(definition.key) }
             )
         }
+    }
+}
+
+private fun mapStyleIcon(styleKey: String): ImageVector {
+    return when (styleKey) {
+        MapStyleCatalog.TOPO -> Icons.Outlined.Terrain
+        MapStyleCatalog.SATELLITE -> Icons.Outlined.Satellite
+        MapStyleCatalog.TERRAIN -> Icons.Outlined.Landscape
+        else -> Icons.Outlined.Map
     }
 }
 

@@ -249,6 +249,13 @@ private fun ensureOgnRelativeGliderStyleImages(style: Style, context: Context) {
     ensureOgnTintedStyleImage(
         style = style,
         context = context,
+        imageId = RELATIVE_GLIDER_CLOSE_RED_ICON_IMAGE_ID,
+        drawableId = OgnAircraftIcon.Glider.resId,
+        tintColor = RELATIVE_GLIDER_CLOSE_RED_TINT
+    )
+    ensureOgnTintedStyleImage(
+        style = style,
+        context = context,
         imageId = RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID,
         drawableId = OgnAircraftIcon.Glider.resId,
         tintColor = RELATIVE_GLIDER_ABOVE_TINT

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
+    [ValidateSet("pkg-f1", "pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
     [string[]]$PackageIds = @("pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1"),
     [switch]$UpdateGateResults,
     [switch]$AllowPending

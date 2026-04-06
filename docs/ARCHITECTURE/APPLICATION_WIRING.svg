@@ -1,0 +1,199 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1600" viewBox="0 0 1800 1600">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155" />
+    </marker>
+    <style>
+      .title { font-family: "Segoe UI", Arial, sans-serif; font-size: 30px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-family: "Segoe UI", Arial, sans-serif; font-size: 15px; fill: #475569; }
+      .panel { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 2; rx: 18; }
+      .panel-title { font-family: "Segoe UI", Arial, sans-serif; font-size: 20px; font-weight: 700; fill: #0f172a; }
+      .legend-text { font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; fill: #334155; }
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 2; rx: 14; }
+      .box-app { fill: #e8f1ff; stroke: #35538a; stroke-width: 2; rx: 14; }
+      .box-hub { fill: #eef6ff; stroke: #35538a; stroke-width: 2; rx: 14; }
+      .box-ssot { fill: #fff4e5; stroke: #8a5a00; stroke-width: 2; rx: 14; }
+      .box-foundation { fill: #edf7ed; stroke: #3f7a46; stroke-width: 2; rx: 14; }
+      .box-external { fill: #fff1f2; stroke: #9f1239; stroke-width: 2; rx: 14; }
+      .box-note { fill: #f8fafc; stroke: #64748b; stroke-width: 2; stroke-dasharray: 7 5; rx: 14; }
+      .box-title { font-family: "Segoe UI", Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #0f172a; }
+      .box-text { font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; fill: #1e293b; }
+      .box-note-text { font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; fill: #334155; }
+      .arrow { stroke: #334155; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .arrow-dashed { stroke: #64748b; stroke-width: 2; fill: none; stroke-dasharray: 7 5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1600" fill="#ffffff" />
+
+  <text class="title" x="900" y="56" text-anchor="middle">XCPro Application Wiring Overview</text>
+  <text class="subtitle" x="900" y="84" text-anchor="middle">Composition root, module relationships, authoritative runtime seams, and where the map-centered app integrates its feature slices.</text>
+
+  <rect x="120" y="106" width="28" height="18" class="box-app" />
+  <text class="legend-text" x="160" y="120">app shell / runtime hub</text>
+  <rect x="430" y="106" width="28" height="18" class="box-ssot" />
+  <text class="legend-text" x="470" y="120">authoritative owner / SSOT</text>
+  <rect x="820" y="106" width="28" height="18" class="box-foundation" />
+  <text class="legend-text" x="860" y="120">shared foundation</text>
+  <rect x="1120" y="106" width="28" height="18" class="box-external" />
+  <text class="legend-text" x="1160" y="120">external boundary</text>
+  <line class="arrow-dashed" x1="1510" y1="116" x2="1565" y2="116" />
+  <text class="legend-text" x="1585" y="120">integration / config seam</text>
+
+  <rect x="40" y="150" width="1720" height="620" class="panel" />
+  <text class="panel-title" x="72" y="188">1. Composition Root and Module Wiring</text>
+
+  <rect x="715" y="220" width="370" height="96" class="box-app" />
+  <text class="box-title" x="900" y="252" text-anchor="middle">app</text>
+  <text class="box-text" x="900" y="278" text-anchor="middle">XCProApplication, MainActivity, MainActivityScreen</text>
+  <text class="box-text" x="900" y="298" text-anchor="middle">AppNavGraph, SharedMapRouteHost, Hilt composition root</text>
+
+  <rect x="325" y="370" width="310" height="110" class="box-ssot" />
+  <text class="box-title" x="480" y="402" text-anchor="middle">feature:flight-runtime</text>
+  <text class="box-text" x="480" y="428" text-anchor="middle">FlightDataCalculatorEngine</text>
+  <text class="box-text" x="480" y="448" text-anchor="middle">FlightDataRepository, FlightStateRepository</text>
+  <text class="box-text" x="480" y="468" text-anchor="middle">Wind runtime and replay foundations</text>
+
+  <rect x="745" y="370" width="310" height="110" class="box-hub" />
+  <text class="box-title" x="900" y="402" text-anchor="middle">feature:map</text>
+  <text class="box-text" x="900" y="428" text-anchor="middle">Map route, sensor/replay owners, MapScreenViewModel</text>
+  <text class="box-text" x="900" y="448" text-anchor="middle">Main integration hub for runtime slices</text>
+  <text class="box-text" x="900" y="468" text-anchor="middle">Consumes most feature modules directly</text>
+
+  <rect x="1165" y="370" width="310" height="110" class="box" />
+  <text class="box-title" x="1320" y="402" text-anchor="middle">feature:map-runtime</text>
+  <text class="box-text" x="1320" y="428" text-anchor="middle">MapLibre runtime primitives and controllers</text>
+  <text class="box-text" x="1320" y="448" text-anchor="middle">Overlays, trail, scale, task rendering, gestures</text>
+
+  <rect x="325" y="535" width="310" height="104" class="box-ssot" />
+  <text class="box-title" x="480" y="567" text-anchor="middle">feature:tasks</text>
+  <text class="box-text" x="480" y="593" text-anchor="middle">TaskManagerCoordinator</text>
+  <text class="box-text" x="480" y="613" text-anchor="middle">taskSnapshotFlow is the cross-feature read seam</text>
+
+  <rect x="745" y="535" width="310" height="104" class="box-ssot" />
+  <text class="box-title" x="900" y="567" text-anchor="middle">feature:profile</text>
+  <text class="box-text" x="900" y="593" text-anchor="middle">ProfileRepository, hydration, active-profile gate</text>
+  <text class="box-text" x="900" y="613" text-anchor="middle">Settings and prefs consumed across runtime features</text>
+
+  <rect x="1165" y="535" width="310" height="104" class="box" />
+  <text class="box-title" x="1320" y="567" text-anchor="middle">feature:igc</text>
+  <text class="box-text" x="1320" y="593" text-anchor="middle">Replay UI/use case, recording/finalize/files flow</text>
+  <text class="box-text" x="1320" y="613" text-anchor="middle">Map owns replay controller implementation</text>
+
+  <rect x="325" y="670" width="560" height="72" class="box-note" />
+  <text class="box-title" x="605" y="700" text-anchor="middle">Supporting slices</text>
+  <text class="box-note-text" x="605" y="723" text-anchor="middle">feature:livefollow, feature:traffic, feature:weather, feature:forecast, feature:variometer, feature:weglide, dfcards-library</text>
+
+  <rect x="915" y="670" width="560" height="72" class="box-foundation" />
+  <text class="box-title" x="1195" y="700" text-anchor="middle">Shared foundation</text>
+  <text class="box-note-text" x="1195" y="723" text-anchor="middle">core:time, core:common, core:geometry, core:ui</text>
+
+  <line class="arrow" x1="900" y1="316" x2="900" y2="370" />
+  <line class="arrow-soft" x1="835" y1="316" x2="540" y2="370" />
+  <line class="arrow-soft" x1="965" y1="316" x2="1260" y2="370" />
+  <line class="arrow-soft" x1="855" y1="316" x2="540" y2="535" />
+  <line class="arrow-soft" x1="900" y1="316" x2="900" y2="535" />
+  <line class="arrow-soft" x1="945" y1="316" x2="1260" y2="535" />
+  <line class="arrow-dashed" x1="1005" y1="316" x2="560" y2="670" />
+  <line class="arrow-dashed" x1="1085" y1="425" x2="1165" y2="425" />
+  <line class="arrow" x1="635" y1="425" x2="745" y2="425" />
+  <line class="arrow-soft" x1="900" y1="480" x2="900" y2="535" />
+  <line class="arrow-soft" x1="820" y1="480" x2="590" y2="535" />
+  <line class="arrow-soft" x1="980" y1="480" x2="1210" y2="535" />
+  <line class="arrow-dashed" x1="1055" y1="590" x2="1165" y2="590" />
+  <line class="arrow-dashed" x1="745" y1="590" x2="635" y2="590" />
+  <line class="arrow-dashed" x1="885" y1="706" x2="915" y2="706" />
+
+  <text class="box-note-text" x="1480" y="456">Map route is the runtime hub.</text>
+  <text class="box-note-text" x="1480" y="476">Profile, replay, and map-attached slices also expose</text>
+  <text class="box-note-text" x="1480" y="496">their own screens through the app nav graph.</text>
+
+  <rect x="40" y="800" width="1720" height="760" class="panel" />
+  <text class="panel-title" x="72" y="838">2. Runtime Ownership Seams</text>
+  <text class="subtitle" x="72" y="864">This complements PIPELINE.svg: the detailed live/replay pipeline still lives in PIPELINE.md and PIPELINE.svg.</text>
+
+  <rect x="80" y="920" width="250" height="88" class="box-external" />
+  <text class="box-title" x="205" y="952" text-anchor="middle">Android sensors and OS hosts</text>
+  <text class="box-text" x="205" y="978" text-anchor="middle">Location, baro, IMU, compass</text>
+  <text class="box-text" x="205" y="998" text-anchor="middle">VarioForegroundService lifecycle host</text>
+
+  <rect x="80" y="1045" width="250" height="88" class="box-external" />
+  <text class="box-title" x="205" y="1077" text-anchor="middle">IGC logs and replay files</text>
+  <text class="box-text" x="205" y="1103" text-anchor="middle">Parser input, file browser, replay assets</text>
+
+  <rect x="80" y="1170" width="250" height="88" class="box-external" />
+  <text class="box-title" x="205" y="1202" text-anchor="middle">Network and device integrations</text>
+  <text class="box-text" x="205" y="1228" text-anchor="middle">LiveFollow, traffic, weather, forecast, WeGlide, HAWK</text>
+
+  <rect x="400" y="930" width="350" height="200" class="box-hub" />
+  <text class="box-title" x="575" y="962" text-anchor="middle">feature:map</text>
+  <text class="box-text" x="575" y="988" text-anchor="middle">SensorRegistry and UnifiedSensorManager</text>
+  <text class="box-text" x="575" y="1008" text-anchor="middle">VarioServiceManager forwards live data into SSOT</text>
+  <text class="box-text" x="575" y="1028" text-anchor="middle">IgcReplayController and ReplayPipeline own replay source swap</text>
+  <text class="box-text" x="575" y="1048" text-anchor="middle">MapScreenViewModel and MapScreen consume runtime state</text>
+  <text class="box-text" x="575" y="1068" text-anchor="middle">Map shell binds overlays, cards, task viewport, settings</text>
+
+  <rect x="810" y="930" width="350" height="200" class="box-ssot" />
+  <text class="box-title" x="985" y="962" text-anchor="middle">feature:flight-runtime</text>
+  <text class="box-text" x="985" y="988" text-anchor="middle">FlightDataCalculatorEngine runs fusion and metrics</text>
+  <text class="box-text" x="985" y="1008" text-anchor="middle">FlightDataRepository is the fused-flight-data SSOT</text>
+  <text class="box-text" x="985" y="1028" text-anchor="middle">FlightStateRepository and WindSensorFusionRepository</text>
+  <text class="box-text" x="985" y="1048" text-anchor="middle">Live and replay foundations stay deterministic and time-aware</text>
+
+  <rect x="400" y="1185" width="350" height="146" class="box" />
+  <text class="box-title" x="575" y="1217" text-anchor="middle">feature:map-runtime</text>
+  <text class="box-text" x="575" y="1243" text-anchor="middle">MapRuntimeController, camera, trail, scale bar</text>
+  <text class="box-text" x="575" y="1263" text-anchor="middle">TaskRenderSyncCoordinator, overlays, gesture handlers</text>
+  <text class="box-text" x="575" y="1283" text-anchor="middle">Owns MapLibre-typed runtime primitives</text>
+
+  <rect x="810" y="1185" width="350" height="146" class="box" />
+  <text class="box-title" x="985" y="1217" text-anchor="middle">feature:variometer</text>
+  <text class="box-text" x="985" y="1243" text-anchor="middle">VarioAudioController and VarioAudioEngine</text>
+  <text class="box-text" x="985" y="1263" text-anchor="middle">Concrete audio and HAWK-side implementations</text>
+  <text class="box-text" x="985" y="1283" text-anchor="middle">Driven through shared runtime ports</text>
+
+  <rect x="1240" y="900" width="460" height="104" class="box-ssot" />
+  <text class="box-title" x="1470" y="932" text-anchor="middle">feature:profile</text>
+  <text class="box-text" x="1470" y="958" text-anchor="middle">ProfileRepository and hydration own active-profile truth</text>
+  <text class="box-text" x="1470" y="978" text-anchor="middle">MainActivityScreen gates normal entry on hydrated profile state</text>
+
+  <rect x="1240" y="1030" width="460" height="118" class="box-ssot" />
+  <text class="box-title" x="1470" y="1062" text-anchor="middle">feature:tasks</text>
+  <text class="box-text" x="1470" y="1088" text-anchor="middle">TaskManagerCoordinator owns cross-feature task runtime state</text>
+  <text class="box-text" x="1470" y="1108" text-anchor="middle">taskSnapshotFlow feeds map task rendering, LiveFollow, and IGC declaration export</text>
+
+  <rect x="1240" y="1176" width="460" height="104" class="box" />
+  <text class="box-title" x="1470" y="1208" text-anchor="middle">feature:igc</text>
+  <text class="box-text" x="1470" y="1234" text-anchor="middle">IgcRecordingUseCase, finalize/files flows, replay UI/use case</text>
+  <text class="box-text" x="1470" y="1254" text-anchor="middle">Map implements the replay controller port and source gating</text>
+
+  <rect x="1240" y="1310" width="460" height="180" class="box-note" />
+  <text class="box-title" x="1470" y="1342" text-anchor="middle">Map-attached feature consumers</text>
+  <text class="box-text" x="1470" y="1368" text-anchor="middle">feature:livefollow reads flight and task seams for pilot/watch flows</text>
+  <text class="box-text" x="1470" y="1388" text-anchor="middle">feature:traffic, feature:weather, and feature:forecast attach overlays through map runtime</text>
+  <text class="box-text" x="1470" y="1408" text-anchor="middle">dfcards-library renders cards from the mapped flight-data stream</text>
+  <text class="box-text" x="1470" y="1428" text-anchor="middle">feature:weglide consumes profile and IGC seams for post-flight flows</text>
+
+  <line class="arrow" x1="330" y1="964" x2="400" y2="964" />
+  <line class="arrow" x1="330" y1="1089" x2="1240" y2="1228" />
+  <line class="arrow-dashed" x1="330" y1="1214" x2="1240" y2="1400" />
+
+  <line class="arrow" x1="750" y1="1010" x2="810" y2="1010" />
+  <line class="arrow" x1="810" y1="1060" x2="750" y2="1060" />
+  <line class="arrow-soft" x1="985" y1="1130" x2="985" y2="1185" />
+  <line class="arrow" x1="750" y1="1258" x2="1240" y2="1088" />
+  <line class="arrow-dashed" x1="1160" y1="1258" x2="1240" y2="1400" />
+
+  <line class="arrow-soft" x1="1240" y1="952" x2="750" y2="952" />
+  <line class="arrow-dashed" x1="1240" y1="972" x2="1160" y2="1243" />
+  <line class="arrow" x1="1240" y1="1228" x2="750" y2="1089" />
+  <line class="arrow-dashed" x1="1240" y1="1088" x2="750" y2="1260" />
+  <line class="arrow-soft" x1="1160" y1="988" x2="1240" y2="1400" />
+  <line class="arrow-dashed" x1="1700" y1="1400" x2="750" y2="1285" />
+
+  <text class="box-note-text" x="400" y="1375">Authoritative seams called out here:</text>
+  <text class="box-note-text" x="400" y="1398">FlightDataRepository is the fused-flight-data SSOT.</text>
+  <text class="box-note-text" x="400" y="1421">TaskManagerCoordinator.taskSnapshotFlow is the task-runtime export seam.</text>
+  <text class="box-note-text" x="400" y="1444">Map runtime stays render-only; domain and repository owners keep the truth.</text>
+</svg>

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
+    [ValidateSet("pkg-f1", "pkg-d1", "pkg-g1", "pkg-w1", "pkg-e1")]
     [string]$PackageId,
     [string]$RunId,
     [string]$ArtifactRoot,
@@ -58,6 +58,7 @@ function Resolve-ArtifactRoot {
     }
 
     $phaseByPackage = @{
+        "pkg-f1" = "phase1"
         "pkg-d1" = "phase2"
         "pkg-g1" = "phase2"
         "pkg-w1" = "phase2"
@@ -70,13 +71,13 @@ function Resolve-ArtifactRoot {
 
     $packageRoot = Join-Path $RepoRoot "artifacts/mapscreen/$phase/$Package"
     if (-not (Test-Path $packageRoot)) {
-        throw "Package artifact root not found: $packageRoot"
+        throw "Package artifact root not found: $packageRoot. Run scripts/qa/run_mapscreen_$Package`_evidence_capture.ps1 first and wait for '[mapscreen-evidence] Completed package capture scaffold.' before verifying thresholds."
     }
 
     if (-not [string]::IsNullOrWhiteSpace($Run)) {
         $candidate = Join-Path $packageRoot $Run
         if (-not (Test-Path $candidate)) {
-            throw "Run id '$Run' not found under $packageRoot"
+            throw "Run id '$Run' not found under $packageRoot. Wait for the package capture wrapper to finish creating artifacts before verifying thresholds."
         }
         return (Resolve-Path $candidate).Path
     }
@@ -357,7 +358,7 @@ $gateResultPath = Join-Path $artifactRootResolved "gate_result.json"
 
 foreach ($requiredPath in @($manifestPath, $metricsPath, $gateResultPath)) {
     if (-not (Test-Path $requiredPath)) {
-        throw "Required artifact file missing: $requiredPath"
+        throw "Required artifact file missing: $requiredPath. The capture scaffold is incomplete; rerun the package capture wrapper and wait for it to finish before threshold verification."
     }
 }
 

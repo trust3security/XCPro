@@ -1,6 +1,8 @@
 package com.example.xcpro.map.trail
 
 import com.example.xcpro.map.trail.domain.TrailProcessor
+import com.example.xcpro.map.trail.domain.TrailReplayRetentionMode
+import com.example.xcpro.map.trail.domain.TrailRenderInvalidationReason
 import com.example.xcpro.map.trail.domain.TrailTimeBase
 import com.example.xcpro.map.trail.domain.TrailUpdateInput
 import com.example.xcpro.weather.wind.model.WindSource
@@ -32,6 +34,91 @@ class TrailProcessorTest {
         val render = result!!.renderState
         assertEquals(TrailTimeBase.LIVE_MONOTONIC, render.timeBase)
         assertEquals(42_000L, render.currentTimeMillis)
+    }
+
+    @Test
+    fun live_sampling_keepsCruiseCadenceAtTwoSeconds() {
+        val processor = TrailProcessor()
+
+        val first = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 10_000L, timestampMillis = 1_000L),
+                    isCircling = false,
+                    timestampMillis = 1_000L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+        val second = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 11_000L, timestampMillis = 2_000L),
+                    isCircling = false,
+                    timestampMillis = 2_000L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+
+        assertNotNull(first)
+        assertNotNull(second)
+        assertEquals(true, first!!.sampleAdded)
+        assertEquals(false, second!!.sampleAdded)
+        assertEquals(null, second.invalidationReason)
+    }
+
+    @Test
+    fun live_sampling_usesDenserCadenceWhileCircling() {
+        val processor = TrailProcessor()
+
+        val first = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 10_000L, timestampMillis = 1_000L),
+                    isCircling = true,
+                    timestampMillis = 1_000L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+        val blocked = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 10_400L, timestampMillis = 1_400L),
+                    isCircling = true,
+                    timestampMillis = 1_400L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+        val accepted = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 10_500L, timestampMillis = 1_500L),
+                    isCircling = true,
+                    timestampMillis = 1_500L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+
+        assertNotNull(first)
+        assertNotNull(blocked)
+        assertNotNull(accepted)
+        assertEquals(true, first!!.sampleAdded)
+        assertEquals(false, blocked!!.sampleAdded)
+        assertEquals(true, accepted!!.sampleAdded)
     }
 
     @Test
@@ -201,7 +288,7 @@ class TrailProcessorTest {
             confidence = 1.0
         )
 
-        val result = processor.update(
+        val first = processor.update(
             TrailUpdateInput(
                 data = buildCompleteFlightData(
                     gps = defaultGps(monotonicTimestampMillis = 6_000L, timestampMillis = 6_000L),
@@ -213,9 +300,187 @@ class TrailProcessorTest {
                 isReplay = false
             )
         )
+        val second = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 7_000L, timestampMillis = 7_000L),
+                    airspeedSource = "WIND",
+                    timestampMillis = 7_000L
+                ),
+                windState = wind,
+                isFlying = true,
+                isReplay = false
+            )
+        )
 
-        assertNotNull(result)
-        assertTrue(result!!.renderState.windSpeedMs > 0.0)
+        assertNotNull(first)
+        assertNotNull(second)
+        assertEquals(0.0, first!!.renderState.windSpeedMs, 1e-6)
+        assertTrue(second!!.renderState.windSpeedMs > 0.0)
+    }
+
+    @Test
+    fun circling_transition_requiresFullRender_evenWithoutNewSample() {
+        val processor = TrailProcessor()
+
+        val first = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 20_000L, timestampMillis = 20_000L),
+                    isCircling = false,
+                    timestampMillis = 20_000L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+        val second = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 20_100L, timestampMillis = 20_100L),
+                    isCircling = true,
+                    timestampMillis = 20_100L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+
+        assertNotNull(first)
+        assertNotNull(second)
+        assertEquals(false, second!!.sampleAdded)
+        assertEquals(true, second.requiresFullRender)
+        assertEquals(TrailRenderInvalidationReason.CIRCLING_CHANGED, second.invalidationReason)
+    }
+
+    @Test
+    fun live_wind_change_requiresFullRender_whenDriftIsActive() {
+        val processor = TrailProcessor()
+        val initialWind = WindState(
+            vector = WindVector(east = 0.0, north = 4.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+        val strongerWind = initialWind.copy(
+            vector = WindVector(east = 0.0, north = 10.0)
+        )
+
+        val first = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 30_000L, timestampMillis = 30_000L),
+                    airspeedSource = "WIND",
+                    isCircling = true,
+                    timestampMillis = 30_000L
+                ),
+                windState = initialWind,
+                isFlying = true,
+                isReplay = false,
+                windDriftEnabled = true
+            )
+        )
+        val second = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 30_300L, timestampMillis = 30_300L),
+                    airspeedSource = "WIND",
+                    isCircling = true,
+                    timestampMillis = 30_300L
+                ),
+                windState = strongerWind,
+                isFlying = true,
+                isReplay = false,
+                windDriftEnabled = true
+            )
+        )
+
+        assertNotNull(first)
+        assertNotNull(second)
+        assertEquals(false, second!!.sampleAdded)
+        assertEquals(true, second.requiresFullRender)
+        assertEquals(TrailRenderInvalidationReason.WIND_CHANGED, second.invalidationReason)
+    }
+
+    @Test
+    fun live_wind_isSmoothed_beforeRenderState() {
+        val processor = TrailProcessor()
+        val wind = WindState(
+            vector = WindVector(east = 0.0, north = 10.0),
+            source = WindSource.MANUAL,
+            quality = 5,
+            stale = false,
+            confidence = 1.0
+        )
+
+        val first = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 40_000L, timestampMillis = 40_000L),
+                    airspeedSource = "WIND",
+                    timestampMillis = 40_000L
+                ),
+                windState = wind,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+        val second = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 41_000L, timestampMillis = 41_000L),
+                    airspeedSource = "WIND",
+                    timestampMillis = 41_000L
+                ),
+                windState = wind,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+
+        assertNotNull(first)
+        assertNotNull(second)
+        assertTrue(second!!.renderState.windSpeedMs > 0.0)
+        assertTrue(second.renderState.windSpeedMs < 10.0)
+    }
+
+    @Test
+    fun syntheticReplayValidation_retainsFullThermalHistory() {
+        val defaultReplayCount = replayPointCountForRetentionMode(TrailReplayRetentionMode.DEFAULT)
+        val syntheticReplayCount = replayPointCountForRetentionMode(TrailReplayRetentionMode.SYNTHETIC_VALIDATION)
+
+        assertTrue(defaultReplayCount < syntheticReplayCount)
+        assertEquals(1_201, syntheticReplayCount)
+    }
+
+    private fun replayPointCountForRetentionMode(mode: TrailReplayRetentionMode): Int {
+        val processor = TrailProcessor()
+        var lastCount = 0
+        repeat(301) { index ->
+            val timestampMillis = 1_000L + (index * 1_000L)
+            val result = processor.update(
+                TrailUpdateInput(
+                    data = buildCompleteFlightData(
+                        gps = defaultGps(
+                            latitude = 46.0,
+                            longitude = 7.0 + (index * 0.00001),
+                            monotonicTimestampMillis = 0L,
+                            timestampMillis = timestampMillis
+                        ),
+                        timestampMillis = timestampMillis
+                    ),
+                    windState = null,
+                    isFlying = true,
+                    isReplay = true,
+                    replayRetentionMode = mode
+                )
+            )
+            lastCount = result!!.renderState.points.size
+        }
+        return lastCount
     }
 }
 

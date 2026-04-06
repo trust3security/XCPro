@@ -29,6 +29,8 @@ private val KEY_ZOOM_ONLY_FALLBACK_WHEN_THERMAL_HIDDEN =
 private val KEY_ENTER_DELAY_SECONDS = intPreferencesKey("thermalling_enter_delay_seconds")
 private val KEY_EXIT_DELAY_SECONDS = intPreferencesKey("thermalling_exit_delay_seconds")
 private val KEY_APPLY_ZOOM_ON_ENTER = booleanPreferencesKey("thermalling_apply_zoom_on_enter")
+private val KEY_APPLY_CONTRAST_MAP_ON_ENTER =
+    booleanPreferencesKey("thermalling_apply_contrast_map_on_enter")
 private val KEY_THERMAL_ZOOM_LEVEL = floatPreferencesKey("thermalling_thermal_zoom_level")
 private val KEY_REMEMBER_MANUAL_THERMAL_ZOOM_IN_SESSION =
     booleanPreferencesKey("thermalling_remember_manual_zoom_in_session")
@@ -79,6 +81,10 @@ class ThermallingModePreferencesRepository constructor(
 
     val applyZoomOnEnterFlow: Flow<Boolean> = settingsFlow
         .map { settings -> settings.applyZoomOnEnter }
+        .distinctUntilChanged()
+
+    val applyContrastMapOnEnterFlow: Flow<Boolean> = settingsFlow
+        .map { settings -> settings.applyContrastMapOnEnter }
         .distinctUntilChanged()
 
     val thermalZoomLevelFlow: Flow<Float> = settingsFlow
@@ -133,6 +139,12 @@ class ThermallingModePreferencesRepository constructor(
         }
     }
 
+    suspend fun setApplyContrastMapOnEnter(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_APPLY_CONTRAST_MAP_ON_ENTER] = enabled
+        }
+    }
+
     suspend fun setThermalZoomLevel(zoomLevel: Float) {
         dataStore.edit { preferences ->
             preferences[KEY_THERMAL_ZOOM_LEVEL] = clampThermallingZoomLevel(zoomLevel)
@@ -172,6 +184,8 @@ class ThermallingModePreferencesRepository constructor(
             ),
             applyZoomOnEnter = preferences[KEY_APPLY_ZOOM_ON_ENTER]
                 ?: THERMALLING_APPLY_ZOOM_ON_ENTER_DEFAULT,
+            applyContrastMapOnEnter = preferences[KEY_APPLY_CONTRAST_MAP_ON_ENTER]
+                ?: THERMALLING_APPLY_CONTRAST_MAP_ON_ENTER_DEFAULT,
             thermalZoomLevel = clampThermallingZoomLevel(
                 preferences[KEY_THERMAL_ZOOM_LEVEL] ?: THERMALLING_ZOOM_LEVEL_DEFAULT
             ),

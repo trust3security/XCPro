@@ -39,6 +39,8 @@ import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.flightdata.WaypointsViewModel
 import com.example.xcpro.loadAndApplyAirspace
 import com.example.xcpro.loadAndApplyWaypoints
+import com.example.xcpro.map.MapStyleCatalog
+import com.example.xcpro.map.MapStyleUrlResolver
 import com.example.xcpro.map.ui.documentRefForUri
 import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomBar
 import com.example.xcpro.screens.navdrawer.tasks.TaskFilesBottomSheetContent
@@ -193,7 +195,9 @@ fun TaskRouteScreen(
                         AppLogger.d(TAG, "Creating MapView for Task screen")
                         getMapAsync { map: MapLibreMap ->
                             mapLibreMap = map
-                            map.setStyle("https://api.maptiler.com/maps/streets-v2/style.json?key=nYDScLfnBm52GAc3jXEZ") {
+                            map.setStyle(
+                                MapStyleUrlResolver.resolve(MapStyleCatalog.defaultSelectableKey())
+                            ) {
                                 map.uiSettings.isZoomGesturesEnabled = true
                                 map.uiSettings.isRotateGesturesEnabled = false
                                 map.uiSettings.isTiltGesturesEnabled = false

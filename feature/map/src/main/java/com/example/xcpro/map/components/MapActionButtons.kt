@@ -19,6 +19,8 @@ fun MapActionButtons(
     onReturn: () -> Unit,
     showVarioDemoFab: Boolean,
     showAatEditFab: Boolean,
+    onSyntheticThermalReplayClick: () -> Unit,
+    onSyntheticThermalReplayWindNoisyClick: () -> Unit,
     onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
@@ -38,8 +40,10 @@ fun MapActionButtons(
     val demoSimBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
     val demoSim2BottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
     val demoRefBottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
+    val demoThermalCleanBottomPadding = demoRefBottomPadding + demoFabSize + demoSpacing
+    val demoThermalWindNoisyBottomPadding = demoThermalCleanBottomPadding + demoFabSize + demoSpacing
     val demoTaskBottomPadding = if (showVarioDemoFab) {
-        demoRefBottomPadding + demoFabSize + demoSpacing
+        demoThermalWindNoisyBottomPadding + demoFabSize + demoSpacing
     } else {
         demoSim3BottomPadding
     }
@@ -87,6 +91,24 @@ fun MapActionButtons(
         }
 
         if (showVarioDemoFab) {
+            VarioDemoButton(
+                onClick = onSyntheticThermalReplayWindNoisyClick,
+                badgeText = "THN",
+                badgeColor = MaterialTheme.colorScheme.primary,
+                contentDescription = "Run synthetic thermal replay (wind-noisy)",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = demoLaneEndPadding, bottom = demoThermalWindNoisyBottomPadding)
+            )
+            VarioDemoButton(
+                onClick = onSyntheticThermalReplayClick,
+                badgeText = "THR",
+                badgeColor = MaterialTheme.colorScheme.primaryContainer,
+                contentDescription = "Run synthetic thermal replay (clean)",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = demoLaneEndPadding, bottom = demoThermalCleanBottomPadding)
+            )
             VarioDemoButton(
                 onClick = onVarioDemoReferenceClick,
                 badgeText = "REF",

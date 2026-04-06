@@ -41,10 +41,13 @@ class ThermallingModeRuntimeWiringTest {
         )
         val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
         val thermalModeVisible = MutableStateFlow(true)
+        val replayActive = MutableStateFlow(false)
         val currentMode = MutableStateFlow(FlightMode.CRUISE)
         val currentZoom = MutableStateFlow(10f)
+        val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
         val modeActions = mutableListOf<FlightMode>()
         val zoomActions = mutableListOf<Float>()
+        val contrastMapActions = mutableListOf<Boolean>()
 
         val wiring = ThermallingModeRuntimeWiring(
             scope = this,
@@ -52,8 +55,10 @@ class ThermallingModeRuntimeWiringTest {
             settings = settings,
             flightData = flightData,
             thermalModeVisible = thermalModeVisible,
+            replayActive = replayActive,
             currentMode = currentMode,
             currentZoom = currentZoom,
+            currentBaseStyle = currentBaseStyle,
             applyFlightMode = { mode ->
                 modeActions += mode
                 currentMode.value = mode
@@ -61,7 +66,8 @@ class ThermallingModeRuntimeWiringTest {
             applyZoom = { zoom ->
                 zoomActions += zoom
                 currentZoom.value = zoom
-            }
+            },
+            applyContrastMap = { enabled -> contrastMapActions += enabled }
         )
         try {
             wiring.bind()
@@ -78,6 +84,7 @@ class ThermallingModeRuntimeWiringTest {
 
             assertEquals(listOf(FlightMode.THERMAL, FlightMode.CRUISE), modeActions)
             assertEquals(listOf(13.0f, 10.0f), zoomActions)
+            assertTrue(contrastMapActions.isEmpty())
         } finally {
             coroutineContext.cancelChildren()
         }
@@ -96,8 +103,10 @@ class ThermallingModeRuntimeWiringTest {
         )
         val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
         val thermalModeVisible = MutableStateFlow(true)
+        val replayActive = MutableStateFlow(false)
         val currentMode = MutableStateFlow(FlightMode.CRUISE)
         val currentZoom = MutableStateFlow(10f)
+        val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
 
         val wiring = ThermallingModeRuntimeWiring(
             scope = this,
@@ -105,10 +114,13 @@ class ThermallingModeRuntimeWiringTest {
             settings = settings,
             flightData = flightData,
             thermalModeVisible = thermalModeVisible,
+            replayActive = replayActive,
             currentMode = currentMode,
             currentZoom = currentZoom,
+            currentBaseStyle = currentBaseStyle,
             applyFlightMode = { mode -> currentMode.value = mode },
-            applyZoom = { zoom -> currentZoom.value = zoom }
+            applyZoom = { zoom -> currentZoom.value = zoom },
+            applyContrastMap = {}
         )
         try {
             wiring.bind()
@@ -143,8 +155,10 @@ class ThermallingModeRuntimeWiringTest {
         )
         val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
         val thermalModeVisible = MutableStateFlow(true)
+        val replayActive = MutableStateFlow(false)
         val currentMode = MutableStateFlow(FlightMode.CRUISE)
         val currentZoom = MutableStateFlow(10f)
+        val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
         val modeActions = mutableListOf<FlightMode>()
 
         val wiring = ThermallingModeRuntimeWiring(
@@ -153,13 +167,16 @@ class ThermallingModeRuntimeWiringTest {
             settings = settings,
             flightData = flightData,
             thermalModeVisible = thermalModeVisible,
+            replayActive = replayActive,
             currentMode = currentMode,
             currentZoom = currentZoom,
+            currentBaseStyle = currentBaseStyle,
             applyFlightMode = { mode ->
                 modeActions += mode
                 currentMode.value = mode
             },
-            applyZoom = { zoom -> currentZoom.value = zoom }
+            applyZoom = { zoom -> currentZoom.value = zoom },
+            applyContrastMap = {}
         )
         try {
             wiring.bind()
@@ -171,6 +188,103 @@ class ThermallingModeRuntimeWiringTest {
 
             assertEquals(1, modeActions.size)
             assertEquals(FlightMode.THERMAL, modeActions.first())
+        } finally {
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
+    fun replayActive_resetsThermallingAndClearsContrastOverride() = runTest {
+        val controller = TestRuntimeController()
+        val settings = MutableStateFlow(
+            ThermallingModeSettings(
+                enabled = true,
+                enterDelaySeconds = 0,
+                exitDelaySeconds = 0,
+                applyContrastMapOnEnter = true
+            )
+        )
+        val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
+        val thermalModeVisible = MutableStateFlow(true)
+        val replayActive = MutableStateFlow(false)
+        val currentMode = MutableStateFlow(FlightMode.CRUISE)
+        val currentZoom = MutableStateFlow(10f)
+        val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
+        val contrastMapActions = mutableListOf<Boolean>()
+
+        val wiring = ThermallingModeRuntimeWiring(
+            scope = this,
+            controller = controller,
+            settings = settings,
+            flightData = flightData,
+            thermalModeVisible = thermalModeVisible,
+            replayActive = replayActive,
+            currentMode = currentMode,
+            currentZoom = currentZoom,
+            currentBaseStyle = currentBaseStyle,
+            applyFlightMode = { mode -> currentMode.value = mode },
+            applyZoom = { zoom -> currentZoom.value = zoom },
+            applyContrastMap = { enabled -> contrastMapActions += enabled }
+        )
+        try {
+            wiring.bind()
+            advanceUntilIdle()
+
+            flightData.value = flightSample(isCircling = true)
+            advanceUntilIdle()
+            assertEquals(listOf(true), contrastMapActions)
+
+            replayActive.value = true
+            advanceUntilIdle()
+
+            assertEquals(listOf(true, false), contrastMapActions)
+            assertEquals(ThermallingModeState(), controller.state())
+        } finally {
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
+    fun satelliteBaseStyle_blocksContrastEnableAction() = runTest {
+        val controller = TestRuntimeController()
+        val settings = MutableStateFlow(
+            ThermallingModeSettings(
+                enabled = true,
+                enterDelaySeconds = 0,
+                exitDelaySeconds = 0,
+                applyContrastMapOnEnter = true
+            )
+        )
+        val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
+        val thermalModeVisible = MutableStateFlow(true)
+        val replayActive = MutableStateFlow(false)
+        val currentMode = MutableStateFlow(FlightMode.CRUISE)
+        val currentZoom = MutableStateFlow(10f)
+        val currentBaseStyle = MutableStateFlow(MapStyleCatalog.SATELLITE)
+        val contrastMapActions = mutableListOf<Boolean>()
+
+        val wiring = ThermallingModeRuntimeWiring(
+            scope = this,
+            controller = controller,
+            settings = settings,
+            flightData = flightData,
+            thermalModeVisible = thermalModeVisible,
+            replayActive = replayActive,
+            currentMode = currentMode,
+            currentZoom = currentZoom,
+            currentBaseStyle = currentBaseStyle,
+            applyFlightMode = { mode -> currentMode.value = mode },
+            applyZoom = { zoom -> currentZoom.value = zoom },
+            applyContrastMap = { enabled -> contrastMapActions += enabled }
+        )
+        try {
+            wiring.bind()
+            advanceUntilIdle()
+
+            flightData.value = flightSample(isCircling = true)
+            advanceUntilIdle()
+
+            assertTrue(contrastMapActions.isEmpty())
         } finally {
             coroutineContext.cancelChildren()
         }

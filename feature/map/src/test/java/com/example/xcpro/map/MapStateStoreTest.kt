@@ -20,12 +20,42 @@ class MapStateStoreTest {
     }
 
     @Test
-    fun updateMapStyleName_reportsChanges() {
+    fun setBaseMapStyle_reportsBaseAndEffectiveChanges() {
         val store = MapStateStore(initialStyleName = "Topo")
 
-        assertFalse(store.updateMapStyleName("Topo"))
-        assertTrue(store.updateMapStyleName("Satellite"))
+        val unchanged = store.setBaseMapStyle("Topo")
+        val changed = store.setBaseMapStyle("Satellite")
+
+        assertFalse(unchanged.baseStyleChanged)
+        assertFalse(unchanged.effectiveStyleChanged)
+        assertTrue(changed.baseStyleChanged)
+        assertTrue(changed.effectiveStyleChanged)
         assertEquals("Satellite", store.mapStyleName.value)
+    }
+
+    @Test
+    fun forecastSatelliteOverride_usesEffectiveStyleWithoutChangingBaseStyle() {
+        val store = MapStateStore(initialStyleName = "Topo")
+
+        assertTrue(store.setForecastSatelliteOverrideEnabled(true))
+
+        assertEquals("Topo", store.baseMapStyleName.value)
+        assertEquals("Satellite", store.mapStyleName.value)
+    }
+
+    @Test
+    fun selectingBaseStyle_clearsThermallingContrastOverride() {
+        val store = MapStateStore(initialStyleName = "Topo")
+
+        store.setThermallingContrastOverrideEnabled(true)
+
+        val result = store.setBaseMapStyle("Terrain")
+
+        assertTrue(result.baseStyleChanged)
+        assertTrue(result.effectiveStyleChanged)
+        assertFalse(store.thermallingContrastOverrideEnabled.value)
+        assertEquals("Terrain", store.baseMapStyleName.value)
+        assertEquals("Terrain", store.mapStyleName.value)
     }
 
     @Test

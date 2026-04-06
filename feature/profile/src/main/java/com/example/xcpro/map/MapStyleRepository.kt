@@ -21,7 +21,7 @@ class MapStyleRepository @Inject constructor(
     }
 
     fun readProfileStyle(profileId: String): String {
-        val defaultStyle = "Topo"
+        val defaultStyle = MapStyleCatalog.defaultSelectableKey()
         val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
         val cached = configurationRepository.getCachedConfig()
         val app = cached?.optJSONObject("app")
@@ -30,13 +30,15 @@ class MapStyleRepository @Inject constructor(
             ?.optString(resolvedProfileId)
             ?.takeUnless { it.isNullOrBlank() }
         if (scopedStyle != null) {
-            return scopedStyle
+            return MapStyleCatalog.normalizeBaseStyleKey(scopedStyle)
         }
         if (isLegacyFallbackEligible(resolvedProfileId)) {
-            return app
+            return MapStyleCatalog.normalizeBaseStyleKey(
+                app
                 ?.optString(KEY_LEGACY_MAP_STYLE)
                 ?.takeUnless { it.isNullOrBlank() }
-                ?: defaultStyle
+                    ?: defaultStyle
+            )
         }
         return defaultStyle
     }
@@ -47,13 +49,14 @@ class MapStyleRepository @Inject constructor(
 
     suspend fun writeProfileStyle(profileId: String, style: String) {
         val resolvedProfileId = ProfileSettingsProfileIds.canonicalOrDefault(profileId)
+        val normalizedStyle = MapStyleCatalog.normalizeBaseStyleKey(style)
         configurationRepository.updateConfig { json ->
             val appObject = json.optJSONObject("app") ?: JSONObject()
             val byProfile = appObject.optJSONObject(KEY_MAP_STYLE_BY_PROFILE) ?: JSONObject()
-            byProfile.put(resolvedProfileId, style)
+            byProfile.put(resolvedProfileId, normalizedStyle)
             appObject.put(KEY_MAP_STYLE_BY_PROFILE, byProfile)
             if (isLegacyFallbackEligible(resolvedProfileId)) {
-                appObject.put(KEY_LEGACY_MAP_STYLE, style)
+                appObject.put(KEY_LEGACY_MAP_STYLE, normalizedStyle)
             }
             json.put("app", appObject)
         }

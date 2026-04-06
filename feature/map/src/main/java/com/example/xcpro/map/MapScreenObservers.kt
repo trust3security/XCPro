@@ -7,9 +7,11 @@ import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.trail.TrailLength
 import com.example.xcpro.map.trail.domain.TrailProcessor
+import com.example.xcpro.map.trail.domain.TrailReplayRetentionMode
 import com.example.xcpro.map.trail.domain.TrailUpdateInput
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.map.replay.SyntheticThermalReplayMode
 import com.example.xcpro.navigation.WaypointNavigationSnapshot
 import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.ReplayEvent
@@ -41,6 +43,7 @@ internal class MapScreenObservers(
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
     private val trailSettingsFlow: StateFlow<TrailSettings>,
+    private val syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
     private val liveDataReady: MutableStateFlow<Boolean>,
     private val containerReady: MutableStateFlow<Boolean>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -103,7 +106,7 @@ internal class MapScreenObservers(
                 tuple.seventh,
                 taskPerformance
             )
-        }.combine(trailSettingsFlow.map { it.length != TrailLength.OFF }) { tuple, trailEnabled ->
+        }.combine(trailSettingsFlow) { tuple, trailSettings ->
             Nonuple(
                 tuple.first,
                 tuple.second,
@@ -113,11 +116,25 @@ internal class MapScreenObservers(
                 tuple.sixth,
                 tuple.seventh,
                 tuple.eighth,
-                trailEnabled
+                trailSettings
+            )
+        }.combine(syntheticReplayMode) { tuple, replayMode ->
+            Decuple(
+                tuple.first,
+                tuple.second,
+                tuple.third,
+                tuple.fourth,
+                tuple.fifth,
+                tuple.sixth,
+                tuple.seventh,
+                tuple.eighth,
+                tuple.ninth,
+                replayMode
             )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, taskPerformance, trailEnabled) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, taskPerformance, trailSettings, replayMode) ->
                 if (data != null) {
+                    val trailEnabled = trailSettings.length != TrailLength.OFF
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
                     }
@@ -161,7 +178,13 @@ internal class MapScreenObservers(
                                 data = data,
                                 windState = wind,
                                 isFlying = flightState.isFlying,
-                                isReplay = isReplay
+                                isReplay = isReplay,
+                                windDriftEnabled = trailSettings.windDriftEnabled,
+                                replayRetentionMode = if (isReplay && replayMode.isActive) {
+                                    TrailReplayRetentionMode.SYNTHETIC_VALIDATION
+                                } else {
+                                    TrailReplayRetentionMode.DEFAULT
+                                }
                             )
                         )
                         if (trailResult != null) {
@@ -307,4 +330,17 @@ private data class Nonuple<A, B, C, D, E, F, G, H, I>(
     val seventh: G,
     val eighth: H,
     val ninth: I
+)
+
+private data class Decuple<A, B, C, D, E, F, G, H, I, J>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+    val sixth: F,
+    val seventh: G,
+    val eighth: H,
+    val ninth: I,
+    val tenth: J
 )

@@ -5,5 +5,6 @@ import org.maplibre.android.geometry.LatLng
 data class DisplayPoseSnapshot(
     val location: LatLng,
     val timestampMs: Long,
-    val frameId: Long
+    val frameId: Long,
+    val timeBase: DisplayClock.TimeBase
 )

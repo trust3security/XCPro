@@ -15,6 +15,7 @@ internal const val SATELLITE_GLIDER_ICON_IMAGE_ID = "ogn_icon_glider_satellite"
 internal const val RELATIVE_GLIDER_ABOVE_ICON_IMAGE_ID = "ogn_icon_glider_rel_above"
 internal const val RELATIVE_GLIDER_BELOW_ICON_IMAGE_ID = "ogn_icon_glider_rel_below"
 internal const val RELATIVE_GLIDER_NEAR_ICON_IMAGE_ID = "ogn_icon_glider_rel_near"
+internal const val RELATIVE_GLIDER_CLOSE_RED_ICON_IMAGE_ID = "ogn_icon_glider_rel_close_red"
 
 internal const val PROP_TOP_LABEL = "label_top"
 internal const val PROP_BOTTOM_LABEL = "label_bottom"
@@ -44,6 +45,7 @@ internal val LABEL_FONT_STACK = arrayOf(
     "Open Sans Regular",
     "Arial Unicode MS Regular"
 )
+internal val RELATIVE_GLIDER_CLOSE_RED_TINT: Int = Color.parseColor(AdsbProximityColorPolicy.RED_HEX)
 internal val RELATIVE_GLIDER_ABOVE_TINT: Int = Color.parseColor("#09CF00")
 internal val RELATIVE_GLIDER_BELOW_TINT: Int = Color.parseColor("#0009CF")
 internal val RELATIVE_GLIDER_NEAR_TINT: Int = Color.parseColor("#101010")

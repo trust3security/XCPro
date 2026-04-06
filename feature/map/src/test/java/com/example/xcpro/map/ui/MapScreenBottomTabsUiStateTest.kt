@@ -13,28 +13,6 @@ class MapScreenBottomTabsUiStateTest {
     }
 
     @Test
-    fun resolveLastNonSatelliteMapStyleName_satellite_keepsPreviousStyle() {
-        assertEquals(
-            "Topo",
-            resolveLastNonSatelliteMapStyleName(
-                currentMapStyleName = SATELLITE_MAP_STYLE_NAME,
-                previousLastNonSatelliteMapStyleName = "Topo"
-            )
-        )
-    }
-
-    @Test
-    fun resolveLastNonSatelliteMapStyleName_nonSatellite_usesCurrentStyle() {
-        assertEquals(
-            "Terrain",
-            resolveLastNonSatelliteMapStyleName(
-                currentMapStyleName = "Terrain",
-                previousLastNonSatelliteMapStyleName = "Topo"
-            )
-        )
-    }
-
-    @Test
     fun shouldHideBottomTabsSheet_trueWhenTaskPanelVisible() {
         assertTrue(
             shouldHideBottomTabsSheet(

@@ -32,7 +32,7 @@ fun NavigationDrawer(
     profileExpanded: MutableState<Boolean>,
     mapStyleExpanded: MutableState<Boolean>,
     settingsExpanded: MutableState<Boolean>,
-    initialMapStyle: String,
+    selectedMapStyle: String,
     onItemSelected: (String) -> Unit = {},
     onMapStyleSelected: (String) -> Unit = {},
     onOpenGeneralSettings: (() -> Unit)? = null,
@@ -42,14 +42,6 @@ fun NavigationDrawer(
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val navDrawerViewModel: NavDrawerViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
-
-    var selectedMapStyle by remember { mutableStateOf(initialMapStyle) }
-
-    val mapStyleSelectedCallback: (String) -> Unit = { style ->
-        selectedMapStyle = style
-        onMapStyleSelected(style)
-        Log.d(TAG, "Map style updated: $style")
-    }
 
     Log.d(TAG, " DismissibleNavigationDrawer rendering with state: ${drawerState.currentValue}")
     DismissibleNavigationDrawer(
@@ -116,7 +108,10 @@ fun NavigationDrawer(
                             )
                         },
                         selectedMapStyle = selectedMapStyle,
-                        onMapStyleSelected = mapStyleSelectedCallback
+                        onMapStyleSelected = { style ->
+                            onMapStyleSelected(style)
+                            Log.d(TAG, "Map style updated: $style")
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))

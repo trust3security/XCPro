@@ -63,6 +63,7 @@ fun ThermallingSettingsSubSheet(
                     onSetEnterDelaySeconds = viewModel::setEnterDelaySeconds,
                     onSetExitDelaySeconds = viewModel::setExitDelaySeconds,
                     onSetApplyZoomOnEnter = viewModel::setApplyZoomOnEnter,
+                    onSetApplyContrastMapOnEnter = viewModel::setApplyContrastMapOnEnter,
                     onSetThermalZoomLevel = viewModel::setThermalZoomLevel,
                     onSetRememberManualThermalZoomInSession = viewModel::setRememberManualThermalZoomInSession,
                     onSetRestorePreviousModeOnExit = viewModel::setRestorePreviousModeOnExit,
