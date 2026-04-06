@@ -33,6 +33,10 @@ Diagram: `PIPELINE.svg`.
   - own canonical first-launch completion through `completeFirstLaunch(...)`.
   - create `default-profile` named `Default` using the selected aircraft type
     and set it active atomically.
+  - runtime collection and backup-sync coordination use the DI-owned
+    `@ProfileRepositoryScope` from
+    `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryRuntimeModule.kt`
+    rather than a constructor-created fallback scope.
   - delay managed backup sync until at least one real profile exists and an
     active profile ID is present, so pristine startup does not emit empty public
     backup artifacts.
@@ -799,7 +803,7 @@ ADS-b lifecycle/visibility semantics:
     - low-speed fixes keep speed but suppress heading track.
   - Ownship altitude and ADS-b filter settings flows are forwarded to the ADS-b repository runtime.
   - Explicit ADS-b FAB off triggers immediate repository target clear.
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
   - Disabling streaming pauses polling without clearing last-known targets.
   - Polling is connectivity-aware via `AdsbNetworkAvailabilityPort`; retries pause while offline and resume on network restoration.
   - While waiting offline, repository housekeeping ticks keep stale/expiry progression active (targets dim/expire on monotonic time even without new fetches).
@@ -813,10 +817,12 @@ ADS-b lifecycle/visibility semantics:
   - Ownship motion vectors (track/speed) are used for projected CPA/TCPA emergency gating when available; explicit low-motion context disables geometry emergency escalation.
   - Evaluates EMERGENCY-only audio policy FSM in repository SSOT path (feature-flag + setting-gated),
     including cooldown anti-nuisance telemetry publication in `AdsbTrafficSnapshot`.
+  - Production emergency-audio settings/output/bootstrap wiring is explicit in DI;
+    disabled/test fallback collaborators live only in test support.
   - EMERGENCY audio rollout master/shadow gates are sourced from ADS-B preferences SSOT via rollout port wiring.
   - Emits one-shot EMERGENCY alert side effects only on FSM trigger transitions through
     `AdsbEmergencyAudioOutputPort` (master-flag gated; shadow mode never plays audio).
-- `feature/map/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
+- `feature/traffic/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
   - Android connectivity callback adapter bound to the ADS-B network-availability port.
   - Callback events are normalized by `AdsbNetworkAvailabilityTracker` (including fail-open registration fallback).
 - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
@@ -931,6 +937,9 @@ Weather rain overlay path:
   - Consumes shell-supplied refresh closures from `MapOverlayManager.kt` so `:feature:map-runtime` does not depend back on shell-owned airspace/waypoint helpers.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeShellPorts.kt`
   - Runtime-facing contracts for shell-owned overlay lifecycle/status collaborators.
+- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
+  - Map-free cross-module traffic overlay handle seam consumed by `feature:map-runtime`.
+  - Stays in `feature:traffic` because traffic owns the concrete overlay implementations; moving this seam into `feature:map-runtime` would create a module cycle.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayRuntimeCounters.kt`
   - Runtime-side counters model shared between the overlay runtime owner and shell-owned status reporting.
 - `feature/map-runtime/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
@@ -1005,8 +1014,11 @@ Card configuration + hydration (current):
 - `SnailTrailRuntimeState` now lives in `feature/map-runtime` as the narrow
   shell/runtime trail-handle contract implemented by `MapScreenState` in
   `feature:map`.
-- `MapTasksUseCase`, `TaskRenderSyncCoordinator`, `MapFeatureFlags`, and map UI model
+- `TaskRenderSnapshot`, `TaskRenderSyncCoordinator`, `MapFeatureFlags`, and map UI model
   types now live in `feature/map-runtime` as part of the retained shell/runtime split.
+- `MapTasksUseCase` now lives in `feature:map` as the map-shell adapter over
+  `TaskManagerCoordinator`, reusing the runtime-owned `TaskRenderSnapshot`
+  model instead of making `feature:map-runtime` the shell task owner.
 - `DisplayPoseSnapshot` now lives in `feature/map-runtime` as the runtime-facing
   display-pose frame contract used by shell effects and trail/runtime consumers.
   It now carries explicit display-clock timebase metadata so trail/runtime
@@ -1108,12 +1120,17 @@ Card cadence (current):
 - Owner: dfcards tiers (single cadence gate).
 
 Card previews (FlightDataMgmt, current):
-- No cardFlow collector; previews use `FlightDataManager.liveFlightDataFlow` (read-only) for CardsGrid/TemplateEditor.
+- `FlightMgmt` consumes the narrow `FlightDataMgmtPort` route seam owned by
+  `feature:map`.
+- The port exposes `liveFlightDataFlow` for CardsGrid/TemplateEditor previews
+  and delegates card hydration binding to the existing map-owned
+  `CardIngestionCoordinator`.
 
 Key files:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
 - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+- `feature/map/src/main/java/com/example/xcpro/map/FlightDataMgmtPort.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenHotPathBindings.kt`
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenHotPathEffects.kt`
@@ -1203,7 +1220,10 @@ Module ownership after compile-speed extraction (2026-03-12):
 - `app` still owns the singleton task graph providers and now depends directly on `feature:tasks`.
 
 Current persistence startup bridge (2026-02-11):
-- `MapScreenViewModel` startup
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelLifecycle.kt`
+  - owns the stateless map-screen startup/teardown orchestration invoked by
+    `MapScreenViewModel`, without creating a second long-lived screen owner.
+  - startup path includes:
   -> `MapTasksUseCase.loadSavedTasks()`
   -> `TaskManagerCoordinator.loadSavedTasks()` (suspend)
   -> `TaskEnginePersistenceService.restore()` for task type + autosaved engine state
@@ -1302,7 +1322,7 @@ Task map rendering bridge (2026-02-12):
     `MapScreenState` in `feature:map`
 - `MapScreenViewModel` delegates task gesture creation and AAT edit forwarding to
   `feature/map/src/main/java/com/example/xcpro/map/MapScreenTaskShellCoordinator.kt`,
-  which consumes `MapTasksUseCase`.
+  which consumes the map-shell-owned `MapTasksUseCase`.
 - Map runtime effects consume ViewModel-bound task type and AAT edit-mode state
   instead of reading coordinator state directly in Composables.
 - Task gesture/runtime ownership now splits cleanly between the map shell and `feature:map-runtime`:
@@ -1314,9 +1334,12 @@ Task map rendering bridge (2026-02-12):
     are the runtime owners for task gesture creation, AAT drag/hit-test behavior, and coordinate conversion.
   - `MapScreenTaskShellCoordinator.createTaskGestureHandler(...)` is the map-shell creation owner and uses `MapTasksUseCase` task snapshots.
   - `TaskManagerCoordinator` no longer constructs MapLibre gesture handlers.
-- `MapTasksUseCase` task read helpers now derive from `TaskManagerCoordinator.taskSnapshotFlow`
-  for runtime task/task-type reads, and AAT edit-mode shell reads derive from
-  `TaskManagerCoordinator.aatEditWaypointIndexFlow`.
+- `MapTasksUseCase` task read helpers now derive from the coordinator snapshot
+  seam (`TaskManagerCoordinator.taskSnapshotFlow` /
+  `TaskManagerCoordinator.currentSnapshot()`), and AAT edit-mode shell reads
+  derive from `TaskManagerCoordinator.aatEditWaypointIndexFlow`.
+  `MapTasksUseCase` now lives in `feature:map`; `TaskRenderSnapshot` remains in
+  `feature:map-runtime` as the runtime-facing task render model.
 - `TaskSheetViewModel` no longer calls manual `sync()` after task mutations. It collects the coordinator snapshot flow and routes AAT target param/lock edits through coordinator-owned mutations.
 - AAT service-backed autosave and named-task persistence now run through a canonical JSON store in
   `feature/tasks/src/main/java/com/example/xcpro/tasks/data/persistence/AATCanonicalTaskStorage.kt`.
@@ -1346,9 +1369,11 @@ Task navigation/replay bridge (2026-02-11):
   start failure or terminal replay completion/cancel/failure after replay
   cleanup.
 - `feature:map` replay/task helpers consume the approved task-definition seam
-  (`TaskManagerCoordinator.taskSnapshotFlow`) for replay-task validation,
-  replay snapshot capture, and racing event labelling; map replay code does not
-  read coordinator `currentTask`/`currentLeg` as cross-feature state.
+  (`TaskManagerCoordinator.taskSnapshotFlow`) plus the narrow synchronous
+  wrapper `TaskManagerCoordinator.currentSnapshot()` for replay-task
+  validation, replay snapshot capture, and racing event labelling; map replay
+  code does not read coordinator `currentTask`/`currentLeg` as cross-feature
+  state.
 
 Non-negotiable boundaries:
 - Composables do not call task managers/coordinators directly for mutation or business queries.

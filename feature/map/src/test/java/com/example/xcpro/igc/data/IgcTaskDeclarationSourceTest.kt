@@ -138,15 +138,13 @@ class IgcTaskDeclarationSourceTest {
 
     private fun coordinatorWith(task: Task): TaskManagerCoordinator {
         val taskCoordinator: TaskManagerCoordinator = mock()
-        whenever(taskCoordinator.taskSnapshotFlow).thenReturn(
-            MutableStateFlow(
-                TaskRuntimeSnapshot(
-                    taskType = TaskType.RACING,
-                    task = task,
-                    activeLeg = 0
-                )
-            )
+        val snapshot = TaskRuntimeSnapshot(
+            taskType = TaskType.RACING,
+            task = task,
+            activeLeg = 0
         )
+        whenever(taskCoordinator.taskSnapshotFlow).thenReturn(MutableStateFlow(snapshot))
+        whenever(taskCoordinator.currentSnapshot()).thenReturn(snapshot)
         return taskCoordinator
     }
 }

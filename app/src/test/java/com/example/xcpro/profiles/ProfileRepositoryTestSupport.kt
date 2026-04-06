@@ -58,6 +58,28 @@ internal class RecordingProfileDiagnosticsReporter : ProfileDiagnosticsReporter 
     }
 }
 
+internal fun createTestProfileRepository(
+    storage: ProfileStorage,
+    scope: CoroutineScope,
+    profileBackupSink: ProfileBackupSink = NoOpProfileBackupSink(),
+    profileSettingsSnapshotProvider: ProfileSettingsSnapshotProvider = NoOpProfileSettingsSnapshotProvider(),
+    profileSettingsRestoreApplier: ProfileSettingsRestoreApplier = NoOpProfileSettingsRestoreApplier(),
+    profileScopedDataCleaner: ProfileScopedDataCleaner = NoOpProfileScopedDataCleaner(),
+    profileDiagnosticsReporter: ProfileDiagnosticsReporter = NoOpProfileDiagnosticsReporter(),
+    clock: FakeClock = FakeClock(),
+    profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator()
+): ProfileRepository = ProfileRepository(
+    storage = storage,
+    profileBackupSink = profileBackupSink,
+    profileSettingsSnapshotProvider = profileSettingsSnapshotProvider,
+    profileSettingsRestoreApplier = profileSettingsRestoreApplier,
+    profileScopedDataCleaner = profileScopedDataCleaner,
+    profileDiagnosticsReporter = profileDiagnosticsReporter,
+    clock = clock,
+    profileIdGenerator = profileIdGenerator,
+    internalScope = scope
+)
+
 internal class ProfileRepositoryTestHarness private constructor(
     val storage: RecordingProfileStorage,
     val repository: ProfileRepository,
@@ -87,8 +109,9 @@ internal class ProfileRepositoryTestHarness private constructor(
             profileIdGenerator: ProfileIdGenerator = ProfileIdGenerator()
         ): ProfileRepositoryTestHarness {
             val storage = RecordingProfileStorage(initialSnapshot)
-            val repository = ProfileRepository(
+            val repository = createTestProfileRepository(
                 storage = storage,
+                scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()),
                 clock = clock,
                 profileIdGenerator = profileIdGenerator
             )
@@ -109,9 +132,9 @@ internal class ProfileRepositoryTestHarness private constructor(
         ): ProfileRepositoryTestHarness {
             val storage = RecordingProfileStorage(initialSnapshot)
             val diagnosticsReporter = RecordingProfileDiagnosticsReporter()
-            val repository = ProfileRepository(
+            val repository = createTestProfileRepository(
                 storage = storage,
-                internalScope = scope,
+                scope = scope,
                 profileDiagnosticsReporter = diagnosticsReporter,
                 clock = clock,
                 profileIdGenerator = profileIdGenerator

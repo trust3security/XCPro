@@ -92,13 +92,13 @@ internal class ProfileRepositoryBundleHarness(scope: CoroutineScope) {
             diagnosticsEvents += event to attributes
         }
     }
-    val repository = ProfileRepository(
+    val repository = createTestProfileRepository(
         storage = storage,
+        scope = scope,
         profileBackupSink = NoOpProfileBackupSink(),
         profileSettingsSnapshotProvider = snapshotProvider,
         profileSettingsRestoreApplier = restoreApplier,
         profileDiagnosticsReporter = diagnosticsReporter,
-        clock = clock,
-        internalScope = scope
+        clock = clock
     )
 }

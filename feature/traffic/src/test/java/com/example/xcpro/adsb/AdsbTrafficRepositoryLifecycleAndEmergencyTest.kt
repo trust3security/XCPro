@@ -26,7 +26,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(
                 fixedState = OpenSkyTokenAccessState.CredentialsRejected("HTTP 401")
@@ -48,7 +48,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
     fun rapidDisableEnable_keepsPollingActive() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = DelayedSuccessProvider(delayMs = 3_000L)
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -123,7 +123,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
         val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -221,7 +221,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
         val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             // Use authenticated mode so test cadence follows the 10s hot poll interval.
             tokenRepository = FakeTokenRepository(token = "test-token"),
@@ -317,7 +317,7 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
         val featureFlags = AdsbEmergencyAudioFeatureFlags.bootstrap(
             emergencyAudioEnabled = true
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -385,3 +385,4 @@ class AdsbTrafficRepositoryLifecycleAndEmergencyTest : AdsbTrafficRepositoryTest
     }
 
 }
+

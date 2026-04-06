@@ -1,6 +1,5 @@
 package com.example.xcpro.adsb
 
-import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
@@ -14,12 +13,6 @@ class AdsbEmergencyAudioFeatureFlags private constructor(
     val emergencyAudioEnabled: Boolean,
     val emergencyAudioShadowMode: Boolean
 ) {
-    @Inject
-    constructor() : this(
-        emergencyAudioEnabled = false,
-        emergencyAudioShadowMode = false
-    )
-
     companion object {
         fun bootstrap(
             emergencyAudioEnabled: Boolean = false,

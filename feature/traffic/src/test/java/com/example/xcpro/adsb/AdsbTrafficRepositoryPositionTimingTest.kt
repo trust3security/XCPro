@@ -43,7 +43,7 @@ class AdsbTrafficRepositoryPositionTimingTest : AdsbTrafficRepositoryTestBase() 
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -85,7 +85,7 @@ class AdsbTrafficRepositoryPositionTimingTest : AdsbTrafficRepositoryTestBase() 
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -109,3 +109,4 @@ class AdsbTrafficRepositoryPositionTimingTest : AdsbTrafficRepositoryTestBase() 
         repository.stop()
     }
 }
+

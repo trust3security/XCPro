@@ -169,7 +169,7 @@ internal class MapScreenReplayCoordinator(
             suppressRacingFixes = true
             racingReplayLogger.reset()
             try {
-                val task = currentRacingTaskOrNull(taskManager.taskSnapshotFlow.value)
+                val task = currentRacingTaskOrNull(taskManager.currentSnapshot())
                 if (task == null) {
                     racingReplayActive = false
                     suppressRacingFixes = false
@@ -301,7 +301,7 @@ internal class MapScreenReplayCoordinator(
                 if (!racingEventDebouncer.shouldEmit(event)) return@onEach
                 uiEffects.emit(
                     MapUiEffect.ShowToast(
-                        buildRacingEventMessage(taskManager.taskSnapshotFlow.value, event)
+                        buildRacingEventMessage(taskManager.currentSnapshot(), event)
                     )
                 )
             }

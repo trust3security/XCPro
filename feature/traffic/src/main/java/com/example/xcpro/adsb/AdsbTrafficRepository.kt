@@ -2,29 +2,11 @@ package com.example.xcpro.adsb
 
 import com.example.xcpro.adsb.domain.AdsbNetworkAvailabilityPort
 import com.example.xcpro.common.di.IoDispatcher
-import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.math.abs
-import kotlin.random.Random
 
 
 interface AdsbTrafficRepository {
@@ -60,31 +42,13 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     clock: Clock,
     @IoDispatcher dispatcher: CoroutineDispatcher,
     networkAvailabilityPort: AdsbNetworkAvailabilityPort,
-    emergencyAudioSettingsPort: AdsbEmergencyAudioSettingsPort =
-        DisabledEmergencyAudioSettingsPort(),
+    emergencyAudioSettingsPort: AdsbEmergencyAudioSettingsPort,
     emergencyAudioRolloutPort: AdsbEmergencyAudioRolloutPort? = null,
-    emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort =
-        NoOpAdsbEmergencyAudioOutputPort,
-    emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags =
-        AdsbEmergencyAudioFeatureFlags()
+    emergencyAudioOutputPort: AdsbEmergencyAudioOutputPort,
+    emergencyAudioFeatureFlags: AdsbEmergencyAudioFeatureFlags
 ) : AdsbTrafficRepository {
-
-    internal constructor(
-        providerClient: AdsbProviderClient,
-        tokenRepository: OpenSkyTokenRepository,
-        clock: Clock,
-        dispatcher: CoroutineDispatcher
-    ) : this(
-        providerClient = providerClient,
-        tokenRepository = tokenRepository,
-        clock = clock,
-        dispatcher = dispatcher,
-        networkAvailabilityPort = AlwaysOnlineNetworkAvailabilityPort,
-        emergencyAudioSettingsPort = DisabledEmergencyAudioSettingsPort(),
-        emergencyAudioRolloutPort = null,
-        emergencyAudioOutputPort = NoOpAdsbEmergencyAudioOutputPort,
-        emergencyAudioFeatureFlags = AdsbEmergencyAudioFeatureFlags()
-    )
+    // AI-NOTE: Production ADS-B wiring is always explicit. Disabled/test fallback
+    // collaborators belong in test support, not as silent main-source defaults.
 
     private val runtime = AdsbTrafficRepositoryRuntime(
         providerClient = providerClient,
@@ -146,18 +110,4 @@ class AdsbTrafficRepositoryImpl @Inject constructor(
     override fun start() = runtime.start()
 
     override fun stop() = runtime.stop()
-
-    private class DisabledEmergencyAudioSettingsPort : AdsbEmergencyAudioSettingsPort {
-        override val emergencyAudioEnabledFlow: StateFlow<Boolean> =
-            MutableStateFlow(false).asStateFlow()
-        override val emergencyAudioCooldownMsFlow: StateFlow<Long> =
-            MutableStateFlow(ADSB_EMERGENCY_AUDIO_DEFAULT_COOLDOWN_MS).asStateFlow()
-    }
-
-    private companion object {
-        private val AlwaysOnlineNetworkAvailabilityPort = object : AdsbNetworkAvailabilityPort {
-            override val isOnline: StateFlow<Boolean> =
-                MutableStateFlow(true).asStateFlow()
-        }
-    }
 }

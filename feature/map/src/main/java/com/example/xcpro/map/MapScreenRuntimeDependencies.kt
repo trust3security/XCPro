@@ -7,9 +7,9 @@ import com.example.xcpro.map.config.MapFeatureFlags
 
 /**
  * Runtime-only collaborators needed by map UI orchestration.
- * Keeps the ViewModel boundary narrow by exposing one grouped contract.
+ * Internal to the map shell; not a cross-module route contract.
  */
-data class MapScreenRuntimeDependencies(
+internal data class MapScreenRuntimeDependencies(
     val flightDataManager: FlightDataManager,
     val orientationManager: MapOrientationManager,
     val sensorsUseCase: MapSensorsUseCase,

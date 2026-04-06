@@ -32,7 +32,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(
                 fixedState = OpenSkyTokenAccessState.CredentialsRejected("HTTP 401")
@@ -80,7 +80,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             }
         }
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -134,7 +134,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             }
         }
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -184,7 +184,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -261,7 +261,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -319,7 +319,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = clock,
@@ -369,7 +369,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -413,7 +413,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -460,7 +460,7 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -486,3 +486,4 @@ class AdsbTrafficRepositoryOfflineTransitionTest : AdsbTrafficRepositoryTestBase
     }
 
 }
+

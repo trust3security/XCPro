@@ -1,16 +1,16 @@
 package com.example.xcpro.map
+
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 
-data class TaskRenderSnapshot(
-    val task: Task,
-    val taskType: TaskType,
-    val aatEditWaypointIndex: Int?
-)
-
+/**
+ * Map-shell adapter over the task coordinator.
+ * Keeps map route/task shell orchestration out of feature:map-runtime while
+ * reusing the runtime-owned TaskRenderSnapshot model.
+ */
 class MapTasksUseCase @Inject constructor(
     private val taskManager: TaskManagerCoordinator
 ) {
@@ -39,12 +39,12 @@ class MapTasksUseCase @Inject constructor(
 
     suspend fun saveTask(taskName: String): Boolean = taskManager.saveTask(taskName)
 
-    fun currentTaskSnapshot(): Task = taskManager.taskSnapshotFlow.value.task
+    fun currentTaskSnapshot(): Task = taskManager.currentSnapshot().task
 
-    fun currentWaypointCount(): Int = taskManager.taskSnapshotFlow.value.task.waypoints.size
+    fun currentWaypointCount(): Int = taskManager.currentSnapshot().task.waypoints.size
 
     fun taskRenderSnapshot(): TaskRenderSnapshot {
-        val snapshot = taskManager.taskSnapshotFlow.value
+        val snapshot = taskManager.currentSnapshot()
         return TaskRenderSnapshot(
             task = snapshot.task,
             taskType = snapshot.taskType,

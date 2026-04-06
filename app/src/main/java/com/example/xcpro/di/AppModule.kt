@@ -14,7 +14,9 @@ import com.example.xcpro.igc.AppIgcRecoveryDiagnosticsReporter
 import com.example.xcpro.igc.domain.IgcRecoveryDiagnosticsReporter
 import com.example.xcpro.ogn.OgnSciaStartupResetCoordinator
 import com.example.xcpro.tasks.aat.AATTaskManager
+import com.example.xcpro.common.di.IoDispatcher
 import com.example.xcpro.tasks.TaskManagerCoordinator
+import com.example.xcpro.tasks.TaskCoordinatorScope
 import com.example.xcpro.tasks.domain.engine.AATTaskEngine
 import com.example.xcpro.tasks.domain.engine.RacingTaskEngine
 import com.example.xcpro.tasks.domain.persistence.TaskEnginePersistenceService
@@ -32,6 +34,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -47,18 +52,27 @@ object AppModule {
 
     @Provides
     @Singleton
+    @TaskCoordinatorScope
+    fun provideTaskCoordinatorScope(
+        @IoDispatcher dispatcher: CoroutineDispatcher
+    ): CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher)
+
+    @Provides
+    @Singleton
     fun provideTaskManagerCoordinator(
         taskEnginePersistenceService: TaskEnginePersistenceService,
         racingTaskEngine: RacingTaskEngine,
         aatTaskEngine: AATTaskEngine,
         racingTaskManager: RacingTaskManager,
-        aatTaskManager: AATTaskManager
+        aatTaskManager: AATTaskManager,
+        @TaskCoordinatorScope coordinatorScope: CoroutineScope
     ): TaskManagerCoordinator = TaskManagerCoordinator(
         taskEnginePersistenceService = taskEnginePersistenceService,
         racingTaskEngine = racingTaskEngine,
         aatTaskEngine = aatTaskEngine,
         racingTaskManager = racingTaskManager,
-        aatTaskManager = aatTaskManager
+        aatTaskManager = aatTaskManager,
+        coordinatorScope = coordinatorScope
     )
 
     @Provides

@@ -69,14 +69,10 @@ class MapScreenViewModel @Inject constructor(
     private val featureFlags = mapFeatureFlagsUseCase.featureFlags
     val cardPreferences = mapCardPreferencesUseCase.cardPreferences
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
-    val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
-        flightDataManager = uiControllers.flightDataManager,
-        orientationManager = uiControllers.orientationManager,
-        sensorsUseCase = sensorsUseCase,
-        tasksUseCase = mapTasksUseCase,
-        airspaceUseCase = mapAirspaceUseCase,
-        waypointFilesUseCase = mapWaypointFilesUseCase,
-        featureFlags = featureFlags
+    internal val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
+        flightDataManager = uiControllers.flightDataManager, orientationManager = uiControllers.orientationManager,
+        sensorsUseCase = sensorsUseCase, tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase,
+        waypointFilesUseCase = mapWaypointFilesUseCase, featureFlags = featureFlags
     )
     private val ballastController = uiControllers.ballastController
     private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
@@ -255,10 +251,11 @@ class MapScreenViewModel @Inject constructor(
     val trailSettings: StateFlow<TrailSettings> = mapStateStore.trailSettings
     val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
     val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, cardPreferences = cardPreferences) }
+    val flightDataMgmtPort: FlightDataMgmtPort by lazy { createFlightDataMgmtPort(flightDataManager) { cardIngestionCoordinator.bindCards(it) } }
     init {
         mapStateStore.setTrailSettings(profileSessionDependencies.trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
-        bindMapStateObservers(
+        startMapScreenViewModelLifecycle(
             scope = viewModelScope,
             unitsState = unitsState,
             uiState = _uiState,
@@ -266,27 +263,23 @@ class MapScreenViewModel @Inject constructor(
             gliderConfigUseCase = profileSessionDependencies.gliderConfigUseCase,
             qnhUseCase = profileSessionDependencies.qnhUseCase,
             trailSettingsUseCase = profileSessionDependencies.trailSettingsUseCase,
-            mapStateStore = mapStateStore
-        )
-        trafficCoordinator.bind()
-        startMapScreenThermallingRuntime(
-            scope = viewModelScope,
-            thermallingController = thermallingModeUseCase,
-            settingsFlow = thermallingModeUseCase.settingsFlow,
-            flightData = flightDataUseCase.flightData,
-            visibleModes = flightDataManager.visibleModesFlow,
-            replaySessionState = replaySessionState,
             mapStateStore = mapStateStore,
+            trafficCoordinator = trafficCoordinator,
+            thermallingModeUseCase = thermallingModeUseCase,
+            flightDataUseCase = flightDataUseCase,
+            replaySessionState = replaySessionState,
             mapStateActions = mapStateActions,
             applyFlightMode = ::setFlightMode,
-            applyContrastMap = ::setThermallingContrastOverrideEnabled
+            applyContrastMap = ::setThermallingContrastOverrideEnabled,
+            flightDataUiAdapter = flightDataUiAdapter,
+            replayCoordinator = replayCoordinator,
+            weGlidePromptBridge = weGlidePromptBridge,
+            onPromptChanged = { promptUiState -> _weGlideUploadPrompt.value = promptUiState },
+            adsbTrafficFacade = adsbTrafficFacade,
+            featureFlags = featureFlags,
+            mapTasksUseCase = mapTasksUseCase,
+            refreshWaypoints = ::loadWaypoints
         )
-        flightDataUiAdapter.start()
-        replayCoordinator.start()
-        weGlidePromptBridge.bind(viewModelScope) { promptUiState -> _weGlideUploadPrompt.value = promptUiState }
-        viewModelScope.launch { adsbTrafficFacade.bootstrapMetadataSync() }
-        if (featureFlags.loadSavedTasksOnInit) viewModelScope.launch { mapTasksUseCase.loadSavedTasks() }
-        onEvent(MapUiEvent.RefreshWaypoints)
     }
     fun emitMapCommand(command: MapCommand) = _mapCommands.tryEmit(command)
     fun onVarioDemoReplay() = replayCoordinator.onVarioDemoReplay()
@@ -344,7 +337,15 @@ class MapScreenViewModel @Inject constructor(
     fun onSetManualQnh(hpa: Double) = waypointQnhCoordinator.onSetManualQnh(hpa)
     fun onConfirmWeGlideUploadPrompt() { viewModelScope.launch { weGlidePromptBridge.confirmCurrentPrompt(_uiEffects::emit) } }
     fun onDismissWeGlideUploadPrompt() = weGlidePromptBridge.dismissCurrentPrompt()
-    override fun onCleared() { ognTrafficFacade.stop(); adsbTrafficFacade.stop(); thermallingModeUseCase.reset(); ballastController.dispose(); super.onCleared() }
+    override fun onCleared() {
+        stopMapScreenViewModelLifecycle(
+            ognTrafficFacade = ognTrafficFacade,
+            adsbTrafficFacade = adsbTrafficFacade,
+            thermallingModeUseCase = thermallingModeUseCase,
+            ballastController = ballastController
+        )
+        super.onCleared()
+    }
 
     private fun emitEffectiveStyleCommandIfChanged(styleChanged: Boolean) {
         if (styleChanged) emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value))

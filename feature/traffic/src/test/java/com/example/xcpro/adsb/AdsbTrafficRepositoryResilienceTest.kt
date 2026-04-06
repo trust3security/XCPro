@@ -27,7 +27,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -68,7 +68,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -112,7 +112,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -167,7 +167,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -210,7 +210,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -256,7 +256,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -283,7 +283,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
     fun unexpectedProviderException_doesNotKillPollingLoop() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val provider = ThrowThenSuccessProvider()
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -315,7 +315,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -384,7 +384,7 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
                 )
             )
         )
-        val repository = AdsbTrafficRepositoryImpl(
+        val repository = createAdsbTrafficRepository(
             providerClient = provider,
             tokenRepository = FakeTokenRepository(),
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
@@ -401,3 +401,4 @@ class AdsbTrafficRepositoryResilienceTest : AdsbTrafficRepositoryTestBase() {
     }
 
 }
+

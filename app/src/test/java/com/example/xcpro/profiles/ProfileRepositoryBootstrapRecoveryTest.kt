@@ -216,7 +216,10 @@ class ProfileRepositoryBootstrapRecoveryTest {
             override suspend fun writeState(profilesJson: String?, activeProfileId: String?) = Unit
         }
 
-        val localRepository = ProfileRepository(failingStorage, backgroundScope)
+        val localRepository = createTestProfileRepository(
+            storage = failingStorage,
+            scope = backgroundScope
+        )
         assertTrue(localRepository.bootstrapComplete.first { it })
         assertNotNull(localRepository.bootstrapError.first { it != null })
     }

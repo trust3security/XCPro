@@ -1,5 +1,6 @@
 package com.example.xcpro.livefollow.di
 
+import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.livefollow.BuildConfig
 import com.example.xcpro.livefollow.account.ConfiguredBuildTokenXcAccountAuthProvider
 import com.example.xcpro.livefollow.account.ServerExchangeXcGoogleAuthGateway
@@ -13,6 +14,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Qualifier
+import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -43,5 +48,12 @@ abstract class LiveFollowAccountBindingsModule {
         fun provideConfiguredDevBearerToken(): String {
             return BuildConfig.XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN.trim()
         }
+
+        @Provides
+        @Singleton
+        @XcAccountScope
+        fun provideXcAccountScope(
+            @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        ): CoroutineScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
     }
 }

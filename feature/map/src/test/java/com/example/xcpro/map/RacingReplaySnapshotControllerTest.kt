@@ -15,6 +15,9 @@ import com.example.xcpro.tasks.racing.navigation.RacingNavigationEngine
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStateStore
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -54,7 +57,7 @@ class RacingReplaySnapshotControllerTest {
             coordinator.setActiveLeg(2)
             advanceUntilIdle()
 
-            assertEquals(2, coordinator.currentLeg)
+            assertEquals(2, coordinator.currentSnapshot().activeLeg)
             assertEquals(2, controller.racingState.value.currentLegIndex)
             assertEquals(RacingNavigationStatus.IN_PROGRESS, controller.racingState.value.status)
 
@@ -66,7 +69,7 @@ class RacingReplaySnapshotControllerTest {
 
             snapshotController.restoreIfCaptured()
 
-            assertEquals(2, coordinator.currentLeg)
+            assertEquals(2, coordinator.currentSnapshot().activeLeg)
             assertEquals(2, controller.racingState.value.currentLegIndex)
             assertEquals(RacingNavigationStatus.IN_PROGRESS, controller.racingState.value.status)
         } finally {
@@ -130,7 +133,8 @@ class RacingReplaySnapshotControllerTest {
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         )
 
     private fun createController(

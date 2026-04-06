@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-class MapScreenProfileSessionCoordinator(
+internal class MapScreenProfileSessionCoordinator(
     private val scope: CoroutineScope,
     private val dependencies: MapScreenProfileSessionDependencies,
     private val mapStateStore: MapStateStore,

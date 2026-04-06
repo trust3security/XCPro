@@ -6,6 +6,9 @@ import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.racing.RacingTaskManager
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -82,7 +85,8 @@ class RacingReplayTaskHelpersTest {
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         )
 
     private fun searchWaypoint(id: String, lat: Double, lon: Double): SearchWaypoint =

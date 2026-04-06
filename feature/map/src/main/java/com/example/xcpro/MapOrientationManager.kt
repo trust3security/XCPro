@@ -15,10 +15,8 @@ import com.example.xcpro.orientation.OrientationEngine
 import com.example.xcpro.orientation.SystemOrientationClock
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +29,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 class MapOrientationManager(
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+    private val scope: CoroutineScope,
     orientationDataSourceFactory: OrientationDataSourceFactory,
     private val settingsRepository: MapOrientationSettingsRepository,
     private val clock: OrientationClock = SystemOrientationClock(),

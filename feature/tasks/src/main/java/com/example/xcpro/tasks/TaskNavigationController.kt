@@ -61,7 +61,7 @@ class TaskNavigationController(
             return
         }
 
-        val task = taskManager.currentTask
+        val task = taskManager.currentSnapshot().task
         val startRules = task.waypoints.firstOrNull()?.let { waypoint ->
             RacingStartCustomParams.from(waypoint.customParameters)
         } ?: RacingStartCustomParams()
@@ -109,7 +109,7 @@ class TaskNavigationController(
         if (taskManager.taskType != TaskType.RACING) {
             return
         }
-        val maxIndex = taskManager.currentTask.waypoints.lastIndex
+        val maxIndex = taskManager.currentSnapshot().task.waypoints.lastIndex
         val clampedIndex = if (maxIndex >= 0) newLegIndex.coerceIn(0, maxIndex) else 0
         val status = if (clampedIndex <= 0) {
             taskManager.resetRacingAdvanceToStartPhase()
@@ -170,7 +170,7 @@ class TaskNavigationController(
         if (taskManager.taskType != TaskType.RACING) {
             return
         }
-        val maxIndex = taskManager.currentTask.waypoints.lastIndex
+        val maxIndex = taskManager.currentSnapshot().task.waypoints.lastIndex
         val clampedSelectedLeg = if (maxIndex >= 0) {
             selectedLeg.coerceIn(0, maxIndex)
         } else {

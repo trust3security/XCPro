@@ -305,7 +305,8 @@ abstract class MapScreenViewModelTestBase {
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         )
         val localTaskFeatureFlags = TaskFeatureFlags()
         val localTaskNavigationController = TaskNavigationController(

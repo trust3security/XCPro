@@ -25,8 +25,6 @@ import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.tasks.racing.navigation.RacingNavigationEventType
 import com.example.xcpro.tasks.racing.toRacingWaypoints
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,10 +37,9 @@ class TaskManagerCoordinator(
     private val racingTaskEngine: RacingTaskEngine? = null,
     private val aatTaskEngine: AATTaskEngine? = null,
     private val racingTaskManager: RacingTaskManager,
-    private val aatTaskManager: AATTaskManager
+    private val aatTaskManager: AATTaskManager,
+    private val coordinatorScope: CoroutineScope
 ) {
-    private val coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     private var racingDelegate = createRacingDelegate()
     private var aatDelegate = createAATDelegate()
     private var proximityHandler: ((Boolean, Boolean) -> Unit)? = null
@@ -98,26 +95,21 @@ class TaskManagerCoordinator(
         log = ::log
     )
 
-    val currentTask: Task
-        get() = if (_taskType.value == TaskType.RACING) racingTaskManager.getCoreTask() else aatTaskManager.getCoreTask()
+    private fun currentCoreTask(taskType: TaskType = _taskType.value): Task =
+        if (taskType == TaskType.RACING) racingTaskManager.getCoreTask() else aatTaskManager.getCoreTask()
 
-    val currentLeg: Int
-        get() = if (_taskType.value == TaskType.RACING) racingTaskManager.currentLeg else aatTaskManager.currentLeg
+    private fun currentActiveLeg(taskType: TaskType = _taskType.value): Int =
+        if (taskType == TaskType.RACING) racingTaskManager.currentLeg else aatTaskManager.currentLeg
+
+    // Narrow synchronous read seam for callers that cannot collect the flow.
+    fun currentSnapshot(): TaskRuntimeSnapshot = taskSnapshotFlow.value
 
     private fun buildSnapshot(taskType: TaskType = _taskType.value): TaskRuntimeSnapshot =
-        if (taskType == TaskType.RACING) {
-            TaskRuntimeSnapshot(
-                taskType = TaskType.RACING,
-                task = racingTaskManager.getCoreTask(),
-                activeLeg = racingTaskManager.currentLeg
-            )
-        } else {
-            TaskRuntimeSnapshot(
-                taskType = TaskType.AAT,
-                task = aatTaskManager.getCoreTask(),
-                activeLeg = aatTaskManager.currentLeg
-            )
-        }
+        TaskRuntimeSnapshot(
+            taskType = taskType,
+            task = currentCoreTask(taskType),
+            activeLeg = currentActiveLeg(taskType)
+        )
 
     private fun clearAatEditMode() {
         if (aatDelegate.isInEditMode()) {
@@ -154,7 +146,7 @@ class TaskManagerCoordinator(
         if (newTaskType == _taskType.value) {
             log("Already using ${newTaskType.name} task type"); return
         }
-        val sourceTask = currentTask
+        val sourceTask = currentCoreTask()
         val hasWaypoints = sourceTask.waypoints.isNotEmpty()
         log("Switching from ${_taskType.value.name} to ${newTaskType.name} (preserveWaypoints=$hasWaypoints)")
 
@@ -204,8 +196,6 @@ class TaskManagerCoordinator(
 
     fun isTaskValid(): Boolean = withCurrentManager(racingBlock = { isRacingTaskValid() }, aatBlock = { isAATTaskValid() })
 
-    fun getCurrentLegWaypoint(): TaskWaypoint? = currentTask.waypoints.getOrNull(currentLeg)
-
     fun reorderWaypoints(fromIndex: Int, toIndex: Int) =
         withCurrentManager(
             racingBlock = { reorderRacingWaypoints(fromIndex, toIndex) },
@@ -252,9 +242,9 @@ class TaskManagerCoordinator(
     }
 
     fun advanceToNextLeg() {
-        val before = currentLeg
+        val before = currentActiveLeg()
         withCurrentManager(racingBlock = { advanceToNextLeg() }, aatBlock = { advanceToNextLeg() })
-        val after = currentLeg
+        val after = currentActiveLeg()
         if (after != before) {
             updateTaskSnapshot()
             legChangeHandlers.forEach { handler -> handler.invoke(after) }
@@ -262,9 +252,9 @@ class TaskManagerCoordinator(
     }
 
     fun goToPreviousLeg() {
-        val before = currentLeg
+        val before = currentActiveLeg()
         withCurrentManager(racingBlock = { goToPreviousLeg() }, aatBlock = { goToPreviousLeg() })
-        val after = currentLeg
+        val after = currentActiveLeg()
         if (after != before) {
             updateTaskSnapshot()
             legChangeHandlers.forEach { handler -> handler.invoke(after) }
@@ -275,10 +265,8 @@ class TaskManagerCoordinator(
         aatBlock = { setAATLeg(index) }
     ).also {
         updateTaskSnapshot()
-        legChangeHandlers.forEach { handler -> handler.invoke(currentLeg) }
+        legChangeHandlers.forEach { handler -> handler.invoke(currentActiveLeg()) }
     }
-
-    fun getActiveLeg(): Int = currentLeg
 
     fun calculateTaskDistanceForTaskMeters(task: Task): Double {
         if (task.waypoints.size < 2) {

@@ -14,6 +14,9 @@ import com.example.xcpro.tasks.racing.boundary.RacingBoundaryEvidenceSource
 import com.example.xcpro.tasks.racing.boundary.RacingBoundaryPoint
 import com.example.xcpro.tasks.aat.AATTaskManager
 import com.example.xcpro.tasks.racing.RacingTaskManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -40,7 +43,7 @@ class TaskNavigationControllerTest {
             advanceUntilIdle()
 
             // Start should advance to turnpoint index 1
-            assertEquals(1, coordinator.currentLeg)
+            assertEquals(1, coordinator.currentSnapshot().activeLeg)
         } finally {
             job.cancel()
         }
@@ -63,7 +66,7 @@ class TaskNavigationControllerTest {
                 fixes.emit(RacingNavigationFix(lat = 0.0, lon = 0.001, timestampMillis = 2_000L))
                 advanceUntilIdle()
 
-                assertEquals(0, coordinator.currentLeg)
+                assertEquals(0, coordinator.currentSnapshot().activeLeg)
             } finally {
                 job.cancel()
             }
@@ -85,7 +88,7 @@ class TaskNavigationControllerTest {
             fixes.emit(RacingNavigationFix(lat = 0.0, lon = 0.001, timestampMillis = 2_000L))
             advanceUntilIdle()
 
-            assertEquals(0, coordinator.currentLeg)
+            assertEquals(0, coordinator.currentSnapshot().activeLeg)
             assertEquals(RacingNavigationStatus.PENDING_START, controller.racingState.value.status)
             assertEquals(null, controller.racingState.value.creditedStart)
         } finally {
@@ -108,7 +111,7 @@ class TaskNavigationControllerTest {
             fixes.emit(RacingNavigationFix(lat = 0.0, lon = 0.001, timestampMillis = 2_000L))
             advanceUntilIdle()
 
-            assertEquals(0, coordinator.currentLeg)
+            assertEquals(0, coordinator.currentSnapshot().activeLeg)
             assertEquals(RacingNavigationStatus.PENDING_START, controller.racingState.value.status)
         } finally {
             job.cancel()
@@ -209,7 +212,7 @@ class TaskNavigationControllerTest {
             )
             advanceUntilIdle()
 
-            assertEquals(1, coordinator.currentLeg)
+            assertEquals(1, coordinator.currentSnapshot().activeLeg)
             assertEquals(restoredState, controller.racingState.value)
             assertEquals(restoredAdvance, controller.snapshot())
         } finally {
@@ -239,6 +242,7 @@ class TaskNavigationControllerTest {
             racingTaskEngine = null,
             aatTaskEngine = null,
             racingTaskManager = RacingTaskManager(),
-            aatTaskManager = AATTaskManager()
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         )
 }
