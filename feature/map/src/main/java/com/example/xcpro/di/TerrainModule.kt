@@ -1,6 +1,6 @@
 package com.example.xcpro.di
 
-import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
+import com.example.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.example.xcpro.terrain.OfflineTerrainSource
 import com.example.xcpro.terrain.OnlineTerrainSource
 import com.example.xcpro.terrain.OpenMeteoTerrainDataSource

@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import android.util.Log
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.map.config.MapFeatureFlags
@@ -280,8 +279,8 @@ class LocationManager(
         }
     }
 
-    override fun updateLocationFromFlightData(
-        liveData: RealTimeFlightData,
+    override fun updateLocationFromReplayFrame(
+        replayFrame: ReplayLocationFrame,
         orientation: OrientationData
     ) {
         if (!localOwnshipRenderEnabled) {
@@ -290,28 +289,28 @@ class LocationManager(
         logLocationDebug {
             val groundSpeedKnots = String.format(
                 "%.1f",
-                UnitsConverter.msToKnots(liveData.groundSpeed)
+                UnitsConverter.msToKnots(replayFrame.groundSpeedMs)
             )
-            "Replay/live GPS: lat=${liveData.latitude}, lon=${liveData.longitude}, " +
-                "accuracy=${liveData.accuracy}, gpsAlt=${liveData.gpsAltitude}m, " +
-                "gs=${groundSpeedKnots}kt, track=${liveData.track}"
+            "Replay frame: lat=${replayFrame.latitude}, lon=${replayFrame.longitude}, " +
+                "accuracy=${replayFrame.accuracyMeters}, gpsAlt=${replayFrame.gpsAltitudeMeters}m, " +
+                "gs=${groundSpeedKnots}kt, track=${replayFrame.trackDeg}"
         }
 
-        if (liveData.latitude == 0.0 || liveData.longitude == 0.0) {
+        if (replayFrame.latitude == 0.0 || replayFrame.longitude == 0.0) {
             logLocationDebug {
-                "Replay feed: invalid coordinates (lat=${liveData.latitude}, lon=${liveData.longitude})"
+                "Replay feed: invalid coordinates (lat=${replayFrame.latitude}, lon=${replayFrame.longitude})"
             }
             return
         }
-        if (!isValidCoordinate(liveData.latitude, liveData.longitude)) {
+        if (!isValidCoordinate(replayFrame.latitude, replayFrame.longitude)) {
             logLocationDebug {
-                "Replay feed: invalid coordinates (lat=${liveData.latitude}, lon=${liveData.longitude})"
+                "Replay feed: invalid coordinates (lat=${replayFrame.latitude}, lon=${replayFrame.longitude})"
             }
             return
         }
 
         displayPoseRenderer.updateOrientation(orientation)
-        val envelope = feedAdapter.fromFlightData(liveData, orientation)
+        val envelope = feedAdapter.fromReplayFrame(replayFrame, orientation)
         pushRawFix(envelope)
     }
 

@@ -1,7 +1,7 @@
 package com.example.xcpro.sensors.domain
 
-import com.example.dfcards.calculations.BarometricAltitudeData
-import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
+import com.example.xcpro.core.flight.filters.ModernVarioResult
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM

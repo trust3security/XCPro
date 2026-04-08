@@ -1,7 +1,7 @@
 package com.example.xcpro.sensors
 
 import android.location.Location
-import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.xcpro.core.flight.calculations.SimpleAglCalculator
 import com.example.xcpro.glider.StillAirSinkProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -296,10 +296,11 @@ class FlightCalculationHelpers internal constructor(
         val altitudeLost = (lastLDAltitude - currentAltitude).toFloat()
 
         if (altitudeLost > 0.5f && distanceTraveled > 10f) {
-            currentLD = distanceTraveled / altitudeLost
+            val rawLD = distanceTraveled / altitudeLost
+            currentLD = rawLD.coerceIn(5f, 100f)
             lastLDAltitude = currentAltitude
             lastLDCalculationTime = currentTime
-            return currentLD.coerceIn(5f, 100f)
+            return currentLD
         }
 
         return currentLD

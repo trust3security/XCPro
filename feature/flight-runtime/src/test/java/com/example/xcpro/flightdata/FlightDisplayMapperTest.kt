@@ -1,6 +1,6 @@
 package com.example.xcpro.flightdata
 
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.SpeedMs
@@ -33,6 +33,8 @@ class FlightDisplayMapperTest {
             speedToFlyHasPolar = true,
             calculatedLD = 31f,
             currentLDValid = true,
+            currentLDAir = 13.5f,
+            currentLDAirValid = true,
             polarLdCurrentSpeed = 27.5f,
             polarLdCurrentSpeedValid = true,
             polarBestLd = 41.5f,
@@ -93,6 +95,8 @@ class FlightDisplayMapperTest {
         assertEquals(0.25, mapped.macCreadyRisk, 1e-6)
         assertEquals(metrics.calculatedLD, mapped.currentLD, 1e-6f)
         assertEquals(metrics.currentLDValid, mapped.currentLDValid)
+        assertEquals(metrics.currentLDAir, mapped.currentLDAir, 1e-6f)
+        assertEquals(metrics.currentLDAirValid, mapped.currentLDAirValid)
         assertEquals(metrics.polarLdCurrentSpeed, mapped.polarLdCurrentSpeed, 1e-6f)
         assertEquals(metrics.polarLdCurrentSpeedValid, mapped.polarLdCurrentSpeedValid)
         assertEquals(metrics.polarBestLd, mapped.polarBestLd, 1e-6f)
@@ -152,6 +156,8 @@ class FlightDisplayMapperTest {
         speedToFlyHasPolar: Boolean = false,
         calculatedLD: Float = 0f,
         currentLDValid: Boolean = false,
+        currentLDAir: Float = 0f,
+        currentLDAirValid: Boolean = false,
         polarLdCurrentSpeed: Float = 0f,
         polarLdCurrentSpeedValid: Boolean = false,
         polarBestLd: Float = 0f,
@@ -196,6 +202,8 @@ class FlightDisplayMapperTest {
         currentThermalValid = false,
         calculatedLD = calculatedLD,
         currentLDValid = currentLDValid,
+        currentLDAir = currentLDAir,
+        currentLDAirValid = currentLDAirValid,
         polarLdCurrentSpeed = polarLdCurrentSpeed,
         polarLdCurrentSpeedValid = polarLdCurrentSpeedValid,
         polarBestLd = polarBestLd,

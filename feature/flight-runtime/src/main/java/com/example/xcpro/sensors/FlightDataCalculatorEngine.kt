@@ -1,7 +1,7 @@
 package com.example.xcpro.sensors
-import com.example.dfcards.calculations.BarometricAltitudeCalculator
-import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
-import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
+import com.example.xcpro.core.flight.calculations.BarometricAltitudeCalculator
+import com.example.xcpro.core.flight.calculations.SimpleAglCalculator
+import com.example.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.example.xcpro.audio.VarioAudioControllerPort
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.common.flight.FlightMode
@@ -119,8 +119,8 @@ internal class FlightDataCalculatorEngine(
     @Volatile internal var cachedGPSLon = 0.0  // Reserved for terrain-aware metrics
     @Volatile internal var cachedGPS: GPSData? = null  // Full GPS data for calculations
     // Cached results from vario loop for GPS loop to use
-    @Volatile internal var cachedVarioResult: com.example.dfcards.filters.ModernVarioResult? = null
-    @Volatile internal var cachedBaroResult: com.example.dfcards.calculations.BarometricAltitudeData? = null
+    @Volatile internal var cachedVarioResult: com.example.xcpro.core.flight.filters.ModernVarioResult? = null
+    @Volatile internal var cachedBaroResult: com.example.xcpro.core.flight.calculations.BarometricAltitudeData? = null
     @Volatile internal var cachedBaroData: BaroData? = null
     @Volatile internal var cachedCompassData: CompassData? = null
     @Volatile internal var lastDiagnosticsEmitTime: Long = 0L

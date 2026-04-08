@@ -20,7 +20,7 @@ internal class MapScreenTaskShellCoordinator(
     fun createTaskGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler =
         TaskGestureHandlerFactory.create(
             taskType = mapTasksUseCase.taskTypeFlow.value,
-            waypointsProvider = { mapTasksUseCase.currentTaskSnapshot().waypoints },
+            waypointsProvider = { mapTasksUseCase.currentRuntimeSnapshot().task.waypoints },
             callbacks = callbacks
         )
 

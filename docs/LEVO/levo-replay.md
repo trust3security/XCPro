@@ -24,6 +24,9 @@ KEY RULES
 ENTRY POINTS
 ------------------------------------------------------------------------------
 - `IgcReplayController` orchestrates replay start/stop and state.
+- `ReplayPipeline` pauses and resumes live sensors through
+  `VarioRuntimeControlPort`, which routes runtime control back to
+  `VarioForegroundService`.
 - `ReplaySensorSource` emits sensor flows.
 - `ReplaySampleEmitter` converts IGC points to sensor samples.
   - Emits replay airspeed samples into `ReplayAirspeedRepository`.

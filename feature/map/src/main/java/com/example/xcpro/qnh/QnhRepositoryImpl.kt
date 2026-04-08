@@ -1,14 +1,12 @@
 package com.example.xcpro.qnh
 
-import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.core.time.Clock
+import com.example.xcpro.di.QnhRuntimeScope
 import com.example.xcpro.map.QnhPreferencesRepository
 import com.example.xcpro.vario.VarioServiceManager
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,11 +16,11 @@ import kotlinx.coroutines.launch
 class QnhRepositoryImpl @Inject constructor(
     private val qnhPreferencesRepository: QnhPreferencesRepository,
     private val varioServiceManager: VarioServiceManager,
-    @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
+    @QnhRuntimeScope private val scope: CoroutineScope,
     private val clock: Clock
 ) : QnhRepository {
 
-    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    // Singleton runtime owner; lifetime is provided explicitly via DI.
     private val sensorFusionRepository = varioServiceManager.sensorFusionRepository
 
     private val _qnhState = MutableStateFlow(

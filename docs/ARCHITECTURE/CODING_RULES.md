@@ -38,6 +38,8 @@ The following checks must fail the build when violated:
 - ViewModel boundaries: no business geospatial math/policy (distance/radius/zone-entry logic) in ViewModels.
 - Compose lifecycle: use collectAsStateWithLifecycle for UI state collection.
 - Task UDF boundaries: no direct TaskManagerCoordinator mutation/query calls from Composables.
+- Task sync-read seam: cross-feature production task reads must use `TaskManagerCoordinator.taskSnapshotFlow` or `TaskManagerCoordinator.currentSnapshot()`; direct `currentTask`/`currentLeg`/`currentRacingTask`/`currentAATTask` reads outside `feature:tasks` are forbidden.
+- Vario runtime ownership: live variometer start/stop requests from feature/replay code must go through `VarioRuntimeControlPort`; direct `VarioServiceManager.start/stop` is reserved to `VarioForegroundService`, and direct `VarioForegroundService` control is app-only.
 - UseCase boundary: use-case wrappers must not expose raw manager/controller handles that bypass use-case APIs.
 - Manager state model: non-UI managers/domain classes must not use Compose runtime state (mutableStateOf, derivedStateOf, remember).
 - Racing task runtime IDs: no `UUID.randomUUID()` in racing runtime initialization paths; use deterministic IDs.

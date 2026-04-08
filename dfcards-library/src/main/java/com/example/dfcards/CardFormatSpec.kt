@@ -11,6 +11,7 @@ import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.core.flight.RealTimeFlightData
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -249,6 +250,14 @@ internal object CardFormatSpecs {
             KnownCardId.LD_CURR -> {
                 if (liveData.currentLDValid) {
                     Pair("${liveData.currentLD.roundToInt()}:1", strings.live)
+                } else {
+                    Pair("--:1", strings.noData)
+                }
+            }
+
+            KnownCardId.LD_VARIO -> {
+                if (liveData.currentLDAirValid) {
+                    Pair("${liveData.currentLDAir.roundToInt()}:1", strings.live)
                 } else {
                     Pair("--:1", strings.noData)
                 }

@@ -28,8 +28,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":dfcards-library"))
     implementation(project(":core:common"))
+    implementation(project(":core:flight"))
     implementation(project(":core:time"))
 
     implementation(libs.kotlinx.coroutines.core)
@@ -40,6 +40,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.androidx.test.core)
+    testImplementation(project(":core:flight"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation("org.mockito:mockito-core:5.2.0")

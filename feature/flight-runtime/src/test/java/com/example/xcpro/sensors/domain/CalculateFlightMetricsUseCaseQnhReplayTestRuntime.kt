@@ -1,7 +1,7 @@
 package com.example.xcpro.sensors.domain
 
-import com.example.dfcards.calculations.BarometricAltitudeData
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

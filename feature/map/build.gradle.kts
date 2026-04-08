@@ -6,30 +6,6 @@ plugins {
     alias(libs.plugins.dagger.hilt)
 }
 
-import java.util.Properties
-
-fun String.asBuildConfigString(): String {
-    val escaped = this.replace("\\", "\\\\").replace("\"", "\\\"")
-    return "\"$escaped\""
-}
-
-val localProperties: Properties by lazy {
-    Properties().apply {
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { load(it) }
-        }
-    }
-}
-
-fun readSecretProperty(name: String): String {
-    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
-    if (gradleValue.isNotEmpty()) return gradleValue
-    return localProperties.getProperty(name)?.trim().orEmpty()
-}
-
-val openSkyClientId = readSecretProperty("OPENSKY_CLIENT_ID")
-val openSkyClientSecret = readSecretProperty("OPENSKY_CLIENT_SECRET")
 android {
     namespace = "com.example.xcpro.map"
     compileSdk = 35
@@ -37,25 +13,6 @@ android {
     defaultConfig {
         minSdk = 30
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        debug {
-            buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
-            buildConfigField(
-                "String",
-                "OPENSKY_CLIENT_SECRET",
-                openSkyClientSecret.asBuildConfigString()
-            )
-        }
-        release {
-            buildConfigField("String", "OPENSKY_CLIENT_ID", openSkyClientId.asBuildConfigString())
-            buildConfigField(
-                "String",
-                "OPENSKY_CLIENT_SECRET",
-                openSkyClientSecret.asBuildConfigString()
-            )
-        }
     }
 
     buildFeatures {
@@ -78,6 +35,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:flight"))
     implementation(project(":dfcards-library"))
     implementation(project(":core:common"))
     implementation(project(":core:geometry"))
@@ -122,6 +80,7 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(project(":core:flight"))
     testImplementation(project(":dfcards-library"))
     testImplementation(project(":core:common"))
     testImplementation(libs.androidx.test.core)

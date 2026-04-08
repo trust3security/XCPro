@@ -1,8 +1,8 @@
 package com.example.xcpro.sensors.domain
 
-import com.example.dfcards.calculations.BarometricAltitudeData
-import com.example.dfcards.calculations.ConfidenceLevel
-import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.filters.ModernVarioResult
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.weather.wind.model.AirspeedSample
@@ -68,6 +68,8 @@ data class FlightMetricsResult(
     val currentThermalValid: Boolean,
     val calculatedLD: Float,
     val currentLDValid: Boolean = false,
+    val currentLDAir: Float = 0f,
+    val currentLDAirValid: Boolean = false,
     val polarLdCurrentSpeed: Float,
     val polarLdCurrentSpeedValid: Boolean = false,
     val polarBestLd: Float,

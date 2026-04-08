@@ -4,7 +4,6 @@ import com.example.xcpro.audio.AudioFocusManager
 import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.igc.IgcRecordingActionSink
-import com.example.xcpro.igc.NoopIgcRecordingActionSink
 import com.example.xcpro.igc.data.IgcFinalizeResult
 import com.example.xcpro.igc.domain.IgcSessionStateMachine
 import com.example.xcpro.igc.usecase.IgcRecordingUseCase
@@ -27,7 +26,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -49,12 +47,12 @@ open class VarioServiceManager @Inject constructor(
     private val hawkConfigRepository: HawkConfigRepository,
     private val hawkVarioRepository: HawkVarioRepository,
     val flightStateSource: FlightStateSource,
-    @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
-    private val igcRecordingUseCase: IgcRecordingUseCase? = null,
-    private val igcRecordingActionSink: IgcRecordingActionSink = NoopIgcRecordingActionSink,
-    private val evaluateWeGlidePostFlightPromptUseCase: EvaluateWeGlidePostFlightPromptUseCase? = null,
-    private val weGlidePostFlightPromptCoordinator: WeGlidePostFlightPromptCoordinator? = null,
-    private val weGlidePostFlightPromptNotificationController: WeGlidePostFlightPromptNotificationController? = null
+    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+    private val igcRecordingUseCase: IgcRecordingUseCase,
+    private val igcRecordingActionSink: IgcRecordingActionSink,
+    private val evaluateWeGlidePostFlightPromptUseCase: EvaluateWeGlidePostFlightPromptUseCase,
+    private val weGlidePostFlightPromptCoordinator: WeGlidePostFlightPromptCoordinator,
+    private val weGlidePostFlightPromptNotificationController: WeGlidePostFlightPromptNotificationController
 ) {
 
     companion object {
@@ -65,17 +63,15 @@ open class VarioServiceManager @Inject constructor(
         private const val GPS_UPDATE_INTERVAL_FAST_MS = 200L
     }
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
-
     private var running = false
     private var collectionJob: Job? = null
     private var configJob: Job? = null
     private var gpsCadenceJob: Job? = null
     private var igcActionJob: Job? = null
     private var lastGpsIntervalMs: Long? = null
-    private val sensorRetryCoordinator = SensorRetryCoordinator(serviceScope, SENSOR_RETRY_DELAY_MS)
+    private var sensorRetryCoordinator: SensorRetryCoordinator? = null
 
-    open suspend fun start(): Boolean {
+    open suspend fun start(ownerScope: CoroutineScope): Boolean {
         // Always reset the data source to LIVE so live sensor updates are not gated out after a replay.
         flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
 
@@ -85,11 +81,12 @@ open class VarioServiceManager @Inject constructor(
 
         if (!running) {
             running = true
-            observeLevoPreferences()
-            startCollection()
-            observeIgcSessionActions()
+            sensorRetryCoordinator = SensorRetryCoordinator(ownerScope, defaultDispatcher, SENSOR_RETRY_DELAY_MS)
+            observeLevoPreferences(ownerScope)
+            startCollection(ownerScope)
+            observeIgcSessionActions(ownerScope)
             hawkVarioRepository.start()
-            observeGpsCadence()
+            observeGpsCadence(ownerScope)
         }
 
         cancelSensorRetry()
@@ -122,24 +119,25 @@ open class VarioServiceManager @Inject constructor(
         gpsCadenceJob = null
         igcActionJob?.cancel()
         igcActionJob = null
+        sensorRetryCoordinator = null
         lastGpsIntervalMs = null
         flightDataRepository.update(null, FlightDataRepository.Source.LIVE)
         collectionJob?.cancel()
         collectionJob = null
     }
 
-    private fun startCollection() {
+    private fun startCollection(ownerScope: CoroutineScope) {
         if (collectionJob != null) return
-        collectionJob = serviceScope.launch {
+        collectionJob = ownerScope.launch(defaultDispatcher) {
             sensorFusionRepository.flightDataFlow.collectLatest { data ->
                 flightDataRepository.update(data, FlightDataRepository.Source.LIVE)
             }
         }
     }
 
-    private fun observeLevoPreferences() {
+    private fun observeLevoPreferences(ownerScope: CoroutineScope) {
         if (configJob != null) return
-        configJob = serviceScope.launch {
+        configJob = ownerScope.launch(defaultDispatcher) {
             levoVarioPreferencesRepository.config.collectLatest { config ->
                 sensorFusionRepository.setMacCreadySetting(config.macCready)
                 sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
@@ -156,9 +154,9 @@ open class VarioServiceManager @Inject constructor(
         sensorFusionRepository.setFlightMode(mode)
     }
 
-    private fun observeGpsCadence() {
+    private fun observeGpsCadence(ownerScope: CoroutineScope) {
         if (gpsCadenceJob != null) return
-        gpsCadenceJob = serviceScope.launch {
+        gpsCadenceJob = ownerScope.launch(defaultDispatcher) {
             combine(flightDataRepository.activeSource, flightStateSource.flightState) { source, state ->
                 GpsCadencePolicy.select(source, state)
             }
@@ -173,14 +171,13 @@ open class VarioServiceManager @Inject constructor(
         }
     }
 
-    private fun observeIgcSessionActions() {
-        val useCase = igcRecordingUseCase ?: return
+    private fun observeIgcSessionActions(ownerScope: CoroutineScope) {
         if (igcActionJob != null) return
-        igcActionJob = serviceScope.launch {
+        igcActionJob = ownerScope.launch(defaultDispatcher) {
             // IGC actions are ordered runtime side effects. Keep sequential
             // collection so later terminal actions cannot cancel in-flight
             // finalize work before callbacks complete.
-            useCase.actions.collect { action ->
+            igcRecordingUseCase.actions.collect { action ->
                 when (action) {
                     is IgcSessionStateMachine.Action.EnterArmed -> {
                         igcRecordingActionSink.onSessionArmed(action.monoTimeMs)
@@ -204,10 +201,10 @@ open class VarioServiceManager @Inject constructor(
                                     sessionId = action.sessionId,
                                     finalizeResult = finalizeResult
                                 )
-                                useCase.onFinalizeSucceeded()
+                                igcRecordingUseCase.onFinalizeSucceeded()
                             }
                             is IgcFinalizeResult.Failure -> {
-                                useCase.onFinalizeFailed(finalizeResult.message)
+                                igcRecordingUseCase.onFinalizeFailed(finalizeResult.message)
                             }
                         }
                     }
@@ -223,7 +220,7 @@ open class VarioServiceManager @Inject constructor(
     }
 
     private fun scheduleSensorRetry() {
-        sensorRetryCoordinator.schedule {
+        sensorRetryCoordinator?.schedule {
             startSensorsOnMainThread()
             val status = unifiedSensorManager.getSensorStatus()
             val ready = isPipelineReady(status)
@@ -239,7 +236,7 @@ open class VarioServiceManager @Inject constructor(
     }
 
     private fun cancelSensorRetry() {
-        sensorRetryCoordinator.cancel()
+        sensorRetryCoordinator?.cancel()
     }
 
     private suspend fun startSensorsOnMainThread(): Boolean {
@@ -284,14 +281,12 @@ open class VarioServiceManager @Inject constructor(
         sessionId: Long,
         finalizeResult: IgcFinalizeResult
     ) {
-        val promptUseCase = evaluateWeGlidePostFlightPromptUseCase ?: return
-        val promptCoordinator = weGlidePostFlightPromptCoordinator ?: return
         val entry = when (finalizeResult) {
             is IgcFinalizeResult.Published -> finalizeResult.entry
             is IgcFinalizeResult.AlreadyPublished -> finalizeResult.entry
             is IgcFinalizeResult.Failure -> return
         }
-        val prompt = promptUseCase(
+        val prompt = evaluateWeGlidePostFlightPromptUseCase(
             WeGlideFinalizedFlightUploadRequest(
                 localFlightId = sessionId.toString(),
                 document = entry.document,
@@ -299,8 +294,8 @@ open class VarioServiceManager @Inject constructor(
             )
         )
         if (prompt != null) {
-            promptCoordinator.show(prompt)
-            weGlidePostFlightPromptNotificationController?.onPromptPublished(prompt)
+            weGlidePostFlightPromptCoordinator.show(prompt)
+            weGlidePostFlightPromptNotificationController.onPromptPublished(prompt)
             AppLogger.d(TAG, "WeGlide prompt published")
         }
     }

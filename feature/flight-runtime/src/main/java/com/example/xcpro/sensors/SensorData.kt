@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
@@ -159,6 +159,8 @@ data class CompleteFlightData(
     // Calculated L/D ratio
     val currentLD: Float,       // Distance traveled / altitude lost (glide ratio)
     val currentLDValid: Boolean = false,
+    val currentLDAir: Float = 0f,
+    val currentLDAirValid: Boolean = false,
     val polarLdCurrentSpeed: Float = 0f,
     val polarLdCurrentSpeedValid: Boolean = false,
     val polarBestLd: Float = 0f,

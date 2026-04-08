@@ -1,12 +1,10 @@
 package com.example.xcpro.igc.usecase
 
-import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.di.IgcRuntimeScope
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.igc.IgcRecordingActionSink
-import com.example.xcpro.igc.NoopIgcRecordingActionSink
 import com.example.xcpro.igc.data.IgcFlightLogRepository
-import com.example.xcpro.igc.data.NoopIgcFlightLogRepository
 import com.example.xcpro.igc.data.IgcSessionStateSnapshotStore
 import com.example.xcpro.igc.domain.IgcBRecordCadencePolicy
 import com.example.xcpro.igc.domain.IgcLiveSample
@@ -18,9 +16,7 @@ import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.FlightStateSource
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -40,7 +36,7 @@ class IgcRecordingUseCase private constructor(
     private val flightDataRepository: FlightDataRepository,
     private val clock: Clock,
     private val snapshotStore: IgcSessionStateSnapshotStore,
-    defaultDispatcher: CoroutineDispatcher,
+    private val scope: CoroutineScope,
     config: IgcSessionStateMachine.Config,
     private val bRecordCadencePolicy: IgcBRecordCadencePolicy,
     private val bRecordMapper: IgcSampleToBRecordMapper,
@@ -59,13 +55,13 @@ class IgcRecordingUseCase private constructor(
         recordingActionSink: IgcRecordingActionSink,
         flightLogRepository: IgcFlightLogRepository,
         recoveryBootstrapUseCase: IgcRecoveryBootstrapUseCase,
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        @IgcRuntimeScope scope: CoroutineScope
     ) : this(
         flightStateSource = flightStateSource,
         flightDataRepository = flightDataRepository,
         clock = clock,
         snapshotStore = snapshotStore,
-        defaultDispatcher = defaultDispatcher,
+        scope = scope,
         config = IgcSessionStateMachine.Config(),
         bRecordCadencePolicy = IgcBRecordCadencePolicy(),
         bRecordMapper = IgcSampleToBRecordMapper(),
@@ -75,76 +71,32 @@ class IgcRecordingUseCase private constructor(
         recoveryBootstrapUseCase = recoveryBootstrapUseCase
     )
 
-    constructor(
+    internal constructor(
         flightStateSource: FlightStateSource,
         flightDataRepository: FlightDataRepository,
         clock: Clock,
         snapshotStore: IgcSessionStateSnapshotStore,
-        defaultDispatcher: CoroutineDispatcher,
-        config: IgcSessionStateMachine.Config
-    ) : this(
-        flightStateSource = flightStateSource,
-        flightDataRepository = flightDataRepository,
-        clock = clock,
-        snapshotStore = snapshotStore,
-        defaultDispatcher = defaultDispatcher,
-        config = config,
-        bRecordCadencePolicy = IgcBRecordCadencePolicy(),
-        bRecordMapper = IgcSampleToBRecordMapper(),
-        formatter = IgcRecordFormatter(),
-        recordingActionSink = NoopIgcRecordingActionSink,
-        flightLogRepository = NoopIgcFlightLogRepository,
-        recoveryBootstrapUseCase = IgcRecoveryBootstrapUseCase(NoopIgcFlightLogRepository)
-    )
-
-    constructor(
-        flightStateSource: FlightStateSource,
-        flightDataRepository: FlightDataRepository,
-        clock: Clock,
-        snapshotStore: IgcSessionStateSnapshotStore,
-        defaultDispatcher: CoroutineDispatcher,
-        config: IgcSessionStateMachine.Config,
-        recordingActionSink: IgcRecordingActionSink
-    ) : this(
-        flightStateSource = flightStateSource,
-        flightDataRepository = flightDataRepository,
-        clock = clock,
-        snapshotStore = snapshotStore,
-        defaultDispatcher = defaultDispatcher,
-        config = config,
-        bRecordCadencePolicy = IgcBRecordCadencePolicy(),
-        bRecordMapper = IgcSampleToBRecordMapper(),
-        formatter = IgcRecordFormatter(),
-        recordingActionSink = recordingActionSink,
-        flightLogRepository = NoopIgcFlightLogRepository,
-        recoveryBootstrapUseCase = IgcRecoveryBootstrapUseCase(NoopIgcFlightLogRepository)
-    )
-
-    constructor(
-        flightStateSource: FlightStateSource,
-        flightDataRepository: FlightDataRepository,
-        clock: Clock,
-        snapshotStore: IgcSessionStateSnapshotStore,
-        defaultDispatcher: CoroutineDispatcher,
+        scope: CoroutineScope,
         config: IgcSessionStateMachine.Config,
         recordingActionSink: IgcRecordingActionSink,
-        flightLogRepository: IgcFlightLogRepository
+        flightLogRepository: IgcFlightLogRepository,
+        recoveryBootstrapUseCase: IgcRecoveryBootstrapUseCase
     ) : this(
         flightStateSource = flightStateSource,
         flightDataRepository = flightDataRepository,
         clock = clock,
         snapshotStore = snapshotStore,
-        defaultDispatcher = defaultDispatcher,
+        scope = scope,
         config = config,
         bRecordCadencePolicy = IgcBRecordCadencePolicy(),
         bRecordMapper = IgcSampleToBRecordMapper(),
         formatter = IgcRecordFormatter(),
         recordingActionSink = recordingActionSink,
         flightLogRepository = flightLogRepository,
-        recoveryBootstrapUseCase = IgcRecoveryBootstrapUseCase(flightLogRepository)
+        recoveryBootstrapUseCase = recoveryBootstrapUseCase
     )
 
-    private val scope = CoroutineScope(SupervisorJob() + defaultDispatcher)
+    // Singleton runtime owner; lifetime is provided explicitly via DI.
     private val stateMachine: IgcSessionStateMachine = restoreOrCreateStateMachine(config)
 
     private val _state = MutableStateFlow(stateMachine.currentState())

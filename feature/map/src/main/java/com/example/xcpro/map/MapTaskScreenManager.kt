@@ -74,7 +74,7 @@ class MapTaskScreenManager(
      * Handle task save operation
      */
     fun handleTaskSave() {
-        val task = tasksUseCase.currentTaskSnapshot()
+        val task = tasksUseCase.currentRuntimeSnapshot().task
         if (task.waypoints.isEmpty()) {
             return
         }
@@ -114,7 +114,7 @@ class MapTaskScreenManager(
     }
 
     fun collapseTaskPanel() {
-        _taskPanelState.value = if (tasksUseCase.currentWaypointCount() > 0) {
+        _taskPanelState.value = if (tasksUseCase.currentRuntimeSnapshot().task.waypoints.isNotEmpty()) {
             TaskPanelState.COLLAPSED
         } else {
             TaskPanelState.HIDDEN
@@ -155,7 +155,10 @@ class MapTaskScreenManager(
     }
 
     private fun normalizeState(state: TaskPanelState): TaskPanelState {
-        return if (state == TaskPanelState.COLLAPSED && tasksUseCase.currentWaypointCount() == 0) {
+        return if (
+            state == TaskPanelState.COLLAPSED &&
+            tasksUseCase.currentRuntimeSnapshot().task.waypoints.isEmpty()
+        ) {
             TaskPanelState.HIDDEN
         } else {
             state

@@ -1,6 +1,6 @@
 package com.example.xcpro.qnh
 
-import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
+import com.example.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository

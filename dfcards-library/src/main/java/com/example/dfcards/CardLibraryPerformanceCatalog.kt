@@ -89,6 +89,16 @@ internal val performanceCards = listOf(
         unitFontSize = 8
     ),
     CardDefinition(
+        id = "ld_vario",
+        title = "L/D VARIO",
+        description = "Measured through-air glide ratio from true airspeed and TE vario",
+        category = CardCategory.PERFORMANCE,
+        icon = Icons.Filled.Timeline,
+        unit = ":1",
+        primaryFontSize = 13,
+        unitFontSize = 8
+    ),
+    CardDefinition(
         id = "polar_ld",
         title = "POLAR L/D",
         description = "Theoretical still-air glide ratio at the current indicated airspeed",

@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors.domain
 
-import com.example.dfcards.calculations.BarometricAltitudeData
+import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
 import com.example.xcpro.sensors.FixedSampleAverageWindow
 import com.example.xcpro.sensors.TimedAverageWindow
 import com.example.xcpro.sensors.addSamplesForElapsedSeconds

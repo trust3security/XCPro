@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.model.MapLocationUiModel
 
@@ -37,17 +36,20 @@ class LocationFeedAdapter {
         return RawFixEnvelope(fix, timeBase)
     }
 
-    fun fromFlightData(liveData: RealTimeFlightData, orientation: OrientationData): RawFixEnvelope {
+    fun fromReplayFrame(
+        replayFrame: ReplayLocationFrame,
+        orientation: OrientationData
+    ): RawFixEnvelope {
         val fix = DisplayPoseSmoother.RawFix(
-            latitude = liveData.latitude,
-            longitude = liveData.longitude,
-            speedMs = liveData.groundSpeed,
-            trackDeg = liveData.track,
+            latitude = replayFrame.latitude,
+            longitude = replayFrame.longitude,
+            speedMs = replayFrame.groundSpeedMs,
+            trackDeg = replayFrame.trackDeg,
             headingDeg = orientation.headingDeg,
-            accuracyM = liveData.accuracy,
+            accuracyM = replayFrame.accuracyMeters,
             bearingAccuracyDeg = null,
             speedAccuracyMs = null,
-            timestampMs = liveData.timestamp,
+            timestampMs = replayFrame.replayTimestampMs,
             orientationMode = orientation.mode
         )
         return RawFixEnvelope(fix, DisplayClock.TimeBase.REPLAY)

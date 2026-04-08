@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.profiles.ProfileIdResolver

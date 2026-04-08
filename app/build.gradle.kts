@@ -4,24 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
+    id("xcpro.secret-properties")
 }
 
-import java.util.Properties
-
-val localProperties: Properties by lazy {
-    Properties().apply {
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { load(it) }
-        }
-    }
-}
-
-fun readSecretProperty(name: String): String {
-    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
-    if (gradleValue.isNotEmpty()) return gradleValue
-    return localProperties.getProperty(name)?.trim().orEmpty()
-}
+val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPropertiesExtension>()
 
 android {
     namespace = "com.example.xcpro"
@@ -37,11 +23,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Expose the MapLibre token via BuildConfig; supply through gradle.properties/local.properties
         val mapLibreKey: String = providers.gradleProperty("MAPLIBRE_API_KEY").orElse("").get()
-        val openSkyClientId: String = readSecretProperty("OPENSKY_CLIENT_ID")
-        val openSkyClientSecret: String = readSecretProperty("OPENSKY_CLIENT_SECRET")
+        val openSkyClientId = xcproSecrets.read("OPENSKY_CLIENT_ID")
+        val openSkyClientSecret = xcproSecrets.read("OPENSKY_CLIENT_SECRET")
         buildConfigField("String", "MAPLIBRE_API_KEY", "\"$mapLibreKey\"")
-        buildConfigField("String", "OPENSKY_CLIENT_ID", "\"$openSkyClientId\"")
-        buildConfigField("String", "OPENSKY_CLIENT_SECRET", "\"$openSkyClientSecret\"")
+        buildConfigField("String", "OPENSKY_CLIENT_ID", xcproSecrets.asBuildConfigString(openSkyClientId))
+        buildConfigField("String", "OPENSKY_CLIENT_SECRET", xcproSecrets.asBuildConfigString(openSkyClientSecret))
 
     }
 

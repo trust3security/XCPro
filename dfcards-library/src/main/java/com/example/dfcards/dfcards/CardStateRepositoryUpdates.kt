@@ -2,11 +2,11 @@ package com.example.dfcards.dfcards
 
 import com.example.dfcards.CardLibrary
 import com.example.dfcards.CardStrings
-import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.dfcards.CardState
 import com.example.dfcards.dfcards.FlightData
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.flight.RealTimeFlightData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

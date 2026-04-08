@@ -7,8 +7,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
-import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.MapOrientationManagerFactory
 import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.OrientationDataSourceFactory
@@ -202,7 +201,6 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
         viewModel.setFlightMode(com.example.xcpro.common.flight.FlightMode.THERMAL)
 
         assertEquals(com.example.xcpro.common.flight.FlightMode.THERMAL, viewModel.mapState.currentMode.value)
-        assertEquals(FlightModeSelection.THERMAL, viewModel.mapState.currentFlightMode.value)
     }
 
     @Test

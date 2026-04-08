@@ -4,7 +4,7 @@
 
 - Title: Shared terrain read port lives in `dfcards-library`, with a canonical terrain repository in `feature:map` and replay-safe live AGL wiring
 - Date: 2026-03-16
-- Status: Accepted
+- Status: Superseded
 - Owner: Codex
 - Reviewers: TBD
 - Related issue/PR: RULES-20260316-18
@@ -15,7 +15,7 @@
 - Supersedes:
   - none
 - Superseded by:
-  - none
+  - `docs/ARCHITECTURE/ADR_CORE_FLIGHT_SHARED_RUNTIME_OWNER_2026-04-06.md`
 
 ## Context
 

@@ -1,8 +1,8 @@
 package com.example.xcpro.map
 
 import android.util.Log
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.convertToRealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.trail.TrailLength

@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.model.MapLocationUiModel
@@ -43,14 +42,15 @@ class LocationFeedAdapterTest {
     }
 
     @Test
-    fun fromFlightData_usesReplayTimeBase() {
-        val liveData = RealTimeFlightData(
+    fun fromReplayFrame_usesReplayTimeBase() {
+        val replayFrame = ReplayLocationFrame(
             latitude = -33.0,
             longitude = 151.0,
-            groundSpeed = 25.0,
-            track = 90.0,
-            accuracy = 4.0,
-            timestamp = 9_999L
+            groundSpeedMs = 25.0,
+            trackDeg = 90.0,
+            accuracyMeters = 4.0,
+            gpsAltitudeMeters = 400.0,
+            replayTimestampMs = 9_999L
         )
         val orientation = OrientationData(
             mode = MapOrientationMode.HEADING_UP,
@@ -58,7 +58,7 @@ class LocationFeedAdapterTest {
             headingValid = true
         )
 
-        val envelope = adapter.fromFlightData(liveData, orientation)
+        val envelope = adapter.fromReplayFrame(replayFrame, orientation)
 
         assertEquals(DisplayClock.TimeBase.REPLAY, envelope.timeBase)
         assertEquals(9_999L, envelope.fix.timestampMs)

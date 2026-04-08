@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors.domain
 
-import com.example.dfcards.calculations.BarometricAltitudeData
+import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
 
 private const val MIN_GATE_DT_SECONDS = 0.02  // reject duplicate/too-fast timestamps

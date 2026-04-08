@@ -101,7 +101,13 @@ class TaskManagerCoordinator(
     private fun currentActiveLeg(taskType: TaskType = _taskType.value): Int =
         if (taskType == TaskType.RACING) racingTaskManager.currentLeg else aatTaskManager.currentLeg
 
-    // Narrow synchronous read seam for callers that cannot collect the flow.
+    /**
+     * Canonical synchronous cross-feature read seam.
+     *
+     * Callers outside `feature:tasks` must derive task and active-leg state
+     * from this snapshot instead of reading lower manager task/leg fields
+     * directly.
+     */
     fun currentSnapshot(): TaskRuntimeSnapshot = taskSnapshotFlow.value
 
     private fun buildSnapshot(taskType: TaskType = _taskType.value): TaskRuntimeSnapshot =

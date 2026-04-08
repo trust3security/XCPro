@@ -8,7 +8,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.content.Context
 import android.content.Intent
-import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -32,9 +31,12 @@ class VarioForegroundService : Service() {
         private const val CHANNEL_ID = "vario_foreground_channel"
         private const val NOTIFICATION_ID = 42
         private const val TAG = "VarioForegroundService"
+        private const val ACTION_ENSURE_RUNNING = "com.example.xcpro.service.action.ENSURE_RUNNING"
 
         fun start(context: Context) {
-            val intent = Intent(context, VarioForegroundService::class.java)
+            val intent = Intent(context, VarioForegroundService::class.java).apply {
+                action = ACTION_ENSURE_RUNNING
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -54,41 +56,42 @@ class VarioForegroundService : Service() {
             start(context)
             return true
         }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, VarioForegroundService::class.java))
+        }
     }
 
     @Inject lateinit var manager: VarioServiceManager
 
-    inner class VarioBinder : Binder() {
-        fun getManager(): VarioServiceManager = manager
-    }
-
-    private val binder = VarioBinder()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
-        serviceScope.launch {
-            val sensorsStarted = runCatching { manager.start() }
-                .onFailure { error ->
-                    if (error is CancellationException) {
-                        throw error
-                    }
-                    Log.e(TAG, "Failed to start sensor pipeline from foreground service", error)
-                }
-                .getOrDefault(false)
-            if (!sensorsStarted) {
-                Log.w(
-                    TAG,
-                    "Foreground service active but waiting for GPS permission before publishing data"
-                )
-            }
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Service is already started in onCreate, just ensure foreground notification persists.
+        val action = intent?.action ?: ACTION_ENSURE_RUNNING
+        if (action == ACTION_ENSURE_RUNNING) {
+            serviceScope.launch {
+                val sensorsStarted = runCatching { manager.start(serviceScope) }
+                    .onFailure { error ->
+                        if (error is CancellationException) {
+                            throw error
+                        }
+                        Log.e(TAG, "Failed to start sensor pipeline from foreground service", error)
+                    }
+                    .getOrDefault(false)
+                if (!sensorsStarted) {
+                    Log.w(
+                        TAG,
+                        "Foreground service active but waiting for GPS permission before publishing data"
+                    )
+                }
+            }
+        }
         return START_STICKY
     }
 
@@ -97,7 +100,7 @@ class VarioForegroundService : Service() {
         stopSelf()
     }
 
-    override fun onBind(intent: Intent?): IBinder = binder
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {

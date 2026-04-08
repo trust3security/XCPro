@@ -1,5 +1,5 @@
 package com.example.xcpro.sensors.domain
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.CirclingDetector
 import com.example.xcpro.sensors.FlightCalculationHelpers
@@ -89,17 +89,20 @@ internal class CalculateFlightMetricsRuntime(
             teSpeed != null &&
             chosenAirspeed.source.energyHeightEligible &&
             teSpeed > TE_MIN_SPEED_MS &&
-            prevTeSpeed > TE_MIN_SPEED_MS &&
             request.deltaTimeSeconds > TE_MIN_DT_SECONDS
         ) {
-            val teVerticalSpeed = flightHelpers.calculateTotalEnergy(
-                rawVario = varioResult.verticalSpeed,
-                currentSpeed = teSpeed,
-                previousSpeed = prevTeSpeed,
-                deltaTime = request.deltaTimeSeconds
-            )
+            val teVerticalSpeed = if (prevTeSpeed > TE_MIN_SPEED_MS) {
+                flightHelpers.calculateTotalEnergy(
+                    rawVario = varioResult.verticalSpeed,
+                    currentSpeed = teSpeed,
+                    previousSpeed = prevTeSpeed,
+                    deltaTime = request.deltaTimeSeconds
+                )
+            } else {
+                null
+            }
             prevTeSpeed = teSpeed
-            teVerticalSpeed.takeIf { currentTime <= request.varioValidUntil }
+            teVerticalSpeed?.takeIf { currentTime <= request.varioValidUntil }
         } else {
             prevTeSpeed = 0.0
             null
@@ -149,6 +152,15 @@ internal class CalculateFlightMetricsRuntime(
         // AI-NOTE: currentLD uses 0f as the helper's bootstrap/reset sentinel, so validity must
         // originate upstream from that owner contract rather than from formatter thresholds.
         val currentLDValid = calculatedLD.isFinite() && calculatedLD > 0f
+        val currentAirLd = calculateCurrentAirLd(
+            isFlying = request.isFlying,
+            tasValid = tasValid,
+            airspeedSourceLabel = airspeedSourceLabel,
+            trueAirspeedMs = trueAirspeedMs,
+            teVario = teVario,
+            isCircling = isCircling,
+            isTurning = isTurning
+        )
         val polarLdCurrentSpeedRaw = sinkProvider.ldAtSpeed(indicatedAirspeedMs)?.toFloat()
         val polarLdCurrentSpeedValid = polarLdCurrentSpeedRaw?.let { it.isFinite() && it > 0f } == true
         val polarLdCurrentSpeed = polarLdCurrentSpeedRaw?.takeIf { polarLdCurrentSpeedValid } ?: 0f
@@ -315,6 +327,8 @@ internal class CalculateFlightMetricsRuntime(
             currentThermalValid = currentThermalValid,
             calculatedLD = calculatedLD,
             currentLDValid = currentLDValid,
+            currentLDAir = currentAirLd.value,
+            currentLDAirValid = currentAirLd.valid,
             polarLdCurrentSpeed = polarLdCurrentSpeed,
             polarLdCurrentSpeedValid = polarLdCurrentSpeedValid,
             polarBestLd = polarBestLd,

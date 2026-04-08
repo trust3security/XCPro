@@ -8,6 +8,7 @@ import com.example.xcpro.common.units.VerticalSpeedUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.IntSizePx
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.core.time.FakeClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking

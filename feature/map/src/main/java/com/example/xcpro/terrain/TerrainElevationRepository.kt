@@ -1,6 +1,6 @@
 package com.example.xcpro.terrain
 
-import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
+import com.example.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
 import javax.inject.Inject

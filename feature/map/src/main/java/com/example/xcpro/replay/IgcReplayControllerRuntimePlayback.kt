@@ -72,7 +72,7 @@ internal fun IgcReplayControllerRuntime.suspendSensors() {
     pipeline.suspendSensors()
 }
 
-internal suspend fun IgcReplayControllerRuntime.resumeSensors() {
+internal fun IgcReplayControllerRuntime.resumeSensors() {
     pipeline.resumeSensors()
 }
 

@@ -1,7 +1,9 @@
 package com.example.xcpro
 
 import android.content.Context
+import android.net.Uri
 import com.example.xcpro.common.documents.DocumentRef
+import com.example.xcpro.common.waypoint.WaypointData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -40,7 +42,9 @@ class WaypointOverlayRepository(
                 }
 
                 val geoJsonData = cached?.geoJson ?: run {
-                    val parsed = parseCupToGeoJson(file.readText())
+                    val parsed = buildGeoJsonFromWaypoints(
+                        WaypointParser.parseWaypointFile(appContext, Uri.fromFile(file))
+                    )
                     synchronized(cacheLock) {
                         geoJsonCache[fileName] = GeoJsonCacheEntry(lastModified, parsed)
                     }
@@ -58,4 +62,39 @@ class WaypointOverlayRepository(
                 put("features", features)
             }.toString()
         }
+
+    private fun buildGeoJsonFromWaypoints(waypoints: List<WaypointData>): String {
+        val features = JSONArray()
+        waypoints.forEach { waypoint ->
+            features.put(
+                JSONObject().apply {
+                    put("type", "Feature")
+                    put(
+                        "geometry",
+                        JSONObject().apply {
+                            put("type", "Point")
+                            put(
+                                "coordinates",
+                                JSONArray().apply {
+                                    put(waypoint.longitude)
+                                    put(waypoint.latitude)
+                                }
+                            )
+                        }
+                    )
+                    put(
+                        "properties",
+                        JSONObject().apply {
+                            put("name", waypoint.name)
+                            put("elevation", waypoint.elevation)
+                        }
+                    )
+                }
+            )
+        }
+        return JSONObject().apply {
+            put("type", "FeatureCollection")
+            put("features", features)
+        }.toString()
+    }
 }

@@ -1,7 +1,7 @@
 package com.example.xcpro.vario
 
-import com.example.dfcards.filters.Modern3StateKalmanFilter
-import com.example.dfcards.filters.VarioFilterDiagnostics
+import com.example.xcpro.core.flight.filters.Modern3StateKalmanFilter
+import com.example.xcpro.core.flight.filters.VarioFilterDiagnostics
 
 /**
  * Optimized Kalman Filter Vario (Priority 1: VARIO_IMPROVEMENTS.md)

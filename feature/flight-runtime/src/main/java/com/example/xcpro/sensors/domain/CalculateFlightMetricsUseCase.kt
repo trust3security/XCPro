@@ -1,9 +1,9 @@
 package com.example.xcpro.sensors.domain
 import com.example.xcpro.sensors.DisplayVarioSmoother
 import com.example.xcpro.sensors.NeedleVarioDynamics
-import com.example.dfcards.calculations.BarometricAltitudeData
-import com.example.dfcards.calculations.ConfidenceLevel
-import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.filters.ModernVarioResult
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.CirclingDetector
 import com.example.xcpro.sensors.FlightCalculationHelpers

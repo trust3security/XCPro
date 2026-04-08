@@ -40,7 +40,7 @@ class IgcRecordingUseCaseBRecordStreamTest {
         val clock = FakeClock(monoMs = 0L)
         val flightStateFlow = MutableStateFlow(FlyingState())
         val flightDataRepository = FlightDataRepository()
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(flightStateFlow),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -90,7 +90,7 @@ class IgcRecordingUseCaseBRecordStreamTest {
         val flightStateFlow = MutableStateFlow(FlyingState())
         val flightDataRepository = FlightDataRepository()
         val sink = CapturingSink()
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(flightStateFlow),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -130,7 +130,7 @@ class IgcRecordingUseCaseBRecordStreamTest {
         val clock = FakeClock(monoMs = 0L)
         val flightStateFlow = MutableStateFlow(FlyingState())
         val flightDataRepository = FlightDataRepository()
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(flightStateFlow),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -189,7 +189,7 @@ class IgcRecordingUseCaseBRecordStreamTest {
         val clock = FakeClock(monoMs = 0L)
         val flightStateFlow = MutableStateFlow(FlyingState())
         val flightDataRepository = FlightDataRepository()
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(flightStateFlow),
             flightDataRepository = flightDataRepository,
             clock = clock,

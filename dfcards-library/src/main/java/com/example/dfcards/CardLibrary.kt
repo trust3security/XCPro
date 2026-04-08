@@ -1,6 +1,7 @@
 package com.example.dfcards
 
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.flight.RealTimeFlightData
 
 object CardLibrary {
     val allCards: List<CardDefinition> = allCardDefinitions

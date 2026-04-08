@@ -1,5 +1,7 @@
 package com.example.xcpro.sensors.domain
 
+import com.example.xcpro.common.flight.FlightMode
+
 import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.sensors.FlightCalculationHelpers
@@ -158,6 +160,286 @@ class CalculateFlightMetricsUseCaseGlideMetricsTest {
         assertEquals(0f, result.polarBestLd, 1e-6f)
     }
 
+    @Test
+    fun owner_path_marks_current_ld_invalid_when_runtime_value_is_non_finite() {
+        val useCase = newUseCaseForMetricValidity(
+            currentLd = Float.POSITIVE_INFINITY,
+            polarLdCurrentSpeed = null,
+            polarBestLd = null
+        )
+
+        val result = executeMetricsRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            deltaTimeSeconds = 1.0,
+            varioMs = 1.0,
+            altitude = 1_000.0
+        )
+
+        assertFalse(result.currentLDValid)
+        assertTrue(result.calculatedLD.isInfinite())
+    }
+
+    @Test
+    fun owner_path_computes_current_ld_air_from_non_gps_true_airspeed_and_te_vario() {
+        val useCase = newUseCase()
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertTrue(result.currentLDAirValid)
+        assertEquals(13f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_warms_up_te_vario_on_first_eligible_sample_then_enables_ld_vario() {
+        val useCase = newUseCase()
+
+        val first = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0
+        )
+        val second = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0
+        )
+
+        assertEquals("SENSOR", first.airspeedSourceLabel)
+        assertEquals(null, first.teVario)
+        assertFalse(first.currentLDAirValid)
+        assertEquals(0f, first.currentLDAir, 1e-6f)
+
+        assertEquals("SENSOR", second.airspeedSourceLabel)
+        assertEquals(-2.0, second.teVario!!, 1e-6)
+        assertTrue(second.currentLDAirValid)
+        assertEquals(13f, second.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_on_gps_fallback_airspeed() {
+        val useCase = newUseCase()
+
+        val result = executeMetricsRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            deltaTimeSeconds = 1.0,
+            varioMs = -2.0,
+            altitude = 1_000.0,
+            speedMs = 20.0
+        )
+
+        assertEquals("GPS", result.airspeedSourceLabel)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_keeps_ld_curr_valid_when_ld_vario_is_invalid_on_same_frame() {
+        val useCase = newUseCaseForMetricValidity(
+            currentLd = 32f,
+            polarLdCurrentSpeed = null,
+            polarBestLd = null
+        )
+
+        val result = executeMetricsRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            deltaTimeSeconds = 1.0,
+            varioMs = -2.0,
+            altitude = 1_000.0,
+            speedMs = 20.0
+        )
+
+        assertTrue(result.currentLDValid)
+        assertEquals(32f, result.calculatedLD, 1e-6f)
+        assertEquals("GPS", result.airspeedSourceLabel)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_when_tas_is_not_authoritative() {
+        val useCase = newUseCase()
+
+        val result = executeMetricsRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            deltaTimeSeconds = 1.0,
+            varioMs = -2.0,
+            altitude = 1_000.0,
+            speedMs = 0.0
+        )
+
+        assertFalse(result.tasValid)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_when_te_vario_is_non_finite() {
+        val useCase = newUseCase { Double.NaN }
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0
+        )
+
+        assertTrue(result.teVario!!.isNaN())
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_when_true_airspeed_is_too_low() {
+        val useCase = newUseCase()
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0,
+            externalAirspeedSample = airspeedSample(trueMs = 5.0, indicatedMs = 5.0, clockMillis = 900L)
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0,
+            externalAirspeedSample = airspeedSample(trueMs = 5.0, indicatedMs = 5.0, clockMillis = 1_900L)
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_when_te_sink_is_too_small() {
+        val useCase = newUseCase()
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0,
+            varioMs = -0.15
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0,
+            varioMs = -0.15
+        )
+
+        assertEquals(-0.15, result.teVario!!, 1e-6)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_while_turning() {
+        val useCase = newUseCase()
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 20.0
+        )
+
+        assertFalse(result.isCircling)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_while_circling() {
+        val useCase = newUseCase()
+        var result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0
+        )
+        var time = 1_000L
+        var bearing = 0.0
+
+        repeat(18) {
+            time += 1_000L
+            bearing = (bearing + 12.0) % 360.0
+            result = executeAirLdRequest(
+                useCase = useCase,
+                currentTimeMillis = time,
+                bearing = bearing
+            )
+        }
+
+        assertTrue(result.isCircling)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_when_not_flying() {
+        val useCase = newUseCase()
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0,
+            isFlying = false
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0,
+            isFlying = false
+        )
+
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
+    @Test
+    fun owner_path_marks_current_ld_air_invalid_when_te_is_disabled() {
+        val useCase = newUseCase()
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0,
+            teCompensationEnabled = false
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0,
+            teCompensationEnabled = false
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertEquals(null, result.teVario)
+        assertFalse(result.currentLDAirValid)
+        assertEquals(0f, result.currentLDAir, 1e-6f)
+    }
+
     private fun newUseCaseForMetricValidity(
         currentLd: Float,
         polarLdCurrentSpeed: Double?,
@@ -191,6 +473,42 @@ class CalculateFlightMetricsUseCaseGlideMetricsTest {
             flightHelpers = helpers,
             sinkProvider = sinkProvider,
             windEstimator = WindEstimator()
+        )
+    }
+
+    private fun executeAirLdRequest(
+        useCase: CalculateFlightMetricsUseCase,
+        currentTimeMillis: Long,
+        bearing: Double,
+        varioMs: Double = -2.0,
+        altitude: Double = 1_000.0,
+        externalAirspeedSample: com.example.xcpro.weather.wind.model.AirspeedSample = airspeedSample(
+            trueMs = 26.0,
+            indicatedMs = 24.0,
+            clockMillis = currentTimeMillis - 100L
+        ),
+        isFlying: Boolean = true,
+        teCompensationEnabled: Boolean = true
+    ): FlightMetricsResult {
+        return useCase.execute(
+            FlightMetricsRequest(
+                gps = gpsSample(timeMs = currentTimeMillis, speedMs = 20.0).copy(bearing = bearing),
+                currentTimeMillis = currentTimeMillis,
+                wallTimeMillis = currentTimeMillis,
+                gpsTimestampMillis = currentTimeMillis,
+                deltaTimeSeconds = 1.0,
+                varioResult = varioSample(varioMs, altitude),
+                varioGpsValue = varioMs,
+                baroResult = null,
+                windState = null,
+                externalAirspeedSample = externalAirspeedSample,
+                varioValidUntil = currentTimeMillis + 1_000L,
+                isFlying = isFlying,
+                macCreadySetting = 0.0,
+                autoMcEnabled = false,
+                teCompensationEnabled = teCompensationEnabled,
+                flightMode = FlightMode.CRUISE
+            )
         )
     }
 }

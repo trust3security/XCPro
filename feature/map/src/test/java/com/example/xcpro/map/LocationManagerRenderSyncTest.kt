@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.orientation.BearingSource
 import com.example.xcpro.common.orientation.OrientationData
@@ -242,6 +241,7 @@ class LocationManagerRenderSyncTest {
             displayPoseSurfacePort = object : MapDisplayPoseSurfacePort {
                 override fun isMapReady(): Boolean = true
                 override fun currentCameraBearing(): Double? = 0.0
+                override fun distancePerPixelMetersAt(latitude: Double): Double? = null
             },
             renderSurfaceDiagnostics = renderSurfaceDiagnostics
         )
@@ -261,8 +261,6 @@ class LocationManagerRenderSyncTest {
         override val savedBearing: StateFlow<Double?> = MutableStateFlow(null)
         override val lastCameraSnapshot: StateFlow<CameraSnapshot?> = MutableStateFlow(null)
         override val currentMode: StateFlow<FlightMode> = MutableStateFlow(FlightMode.CRUISE)
-        override val currentFlightMode: StateFlow<FlightModeSelection> =
-            MutableStateFlow(FlightModeSelection.CRUISE)
         override val currentZoom: StateFlow<Float> = MutableStateFlow(10f)
         override val targetLatLng: StateFlow<MapPoint?> = MutableStateFlow(null)
         override val targetZoom: StateFlow<Float?> = MutableStateFlow(null)

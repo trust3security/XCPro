@@ -6,10 +6,10 @@ import com.example.dfcards.CardStrings
 import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.IntSizePx
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.core.time.DefaultClockProvider
 import kotlinx.coroutines.CoroutineScope

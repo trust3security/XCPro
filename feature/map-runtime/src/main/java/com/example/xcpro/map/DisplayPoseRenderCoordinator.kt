@@ -103,6 +103,7 @@ internal class DisplayPoseRenderCoordinator(
         }
         val currentFrameSnapshot = DisplayPoseRenderSnapshot(
             location = poseLocation,
+            distancePerPixelMeters = surfacePort.distancePerPixelMetersAt(poseLocation.latitude),
             trackDeg = trackDeg,
             headingDeg = headingDeg,
             headingValid = headingValid,
@@ -114,7 +115,12 @@ internal class DisplayPoseRenderCoordinator(
             speedMs = speedMs,
             timeBase = poseTimeBase
         )
-        if (DisplayPoseFrameDiffPolicy.isNoOp(lastRenderedFrameSnapshot, currentFrameSnapshot)) {
+        if (DisplayPoseFrameDiffPolicy.isNoOp(
+                previous = lastRenderedFrameSnapshot,
+                current = currentFrameSnapshot,
+                locationThresholdPx = featureFlags.locationJitterThresholdPx
+            )
+        ) {
             diagnostics.recordDisplayFrameNoOpSkipped()
             return
         }

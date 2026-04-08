@@ -17,6 +17,7 @@ import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLocationPermissionRequester
 import com.example.xcpro.map.MapLocationRuntimePort
+import com.example.xcpro.map.toReplayLocationFrame
 import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
@@ -168,8 +169,8 @@ object MapComposeEffects {
                     // must see the latest orientation and replay/live toggle values.
                     if (renderLocalOwnshipState.value && suppressLiveGpsState.value) {
                         // Replay/IGC: use flight data for map updates when GPS is suppressed.
-                        locationManager.updateLocationFromFlightData(
-                            liveData,
+                        locationManager.updateLocationFromReplayFrame(
+                            liveData.toReplayLocationFrame(),
                             orientationFlow.value
                         )
                     }

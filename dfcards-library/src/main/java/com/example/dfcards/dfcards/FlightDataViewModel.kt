@@ -9,11 +9,11 @@ import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.FlightTemplates
-import com.example.dfcards.RealTimeFlightData
 import com.example.dfcards.dfcards.di.DfCardsIoDispatcher
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.IntSizePx
+import com.example.xcpro.core.flight.RealTimeFlightData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher

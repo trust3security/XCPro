@@ -4,21 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
+    id("xcpro.secret-properties")
 }
 
-import java.util.Properties
-
-fun readSecretProperty(name: String): String {
-    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
-    if (gradleValue.isNotEmpty()) return gradleValue
-    val localProperties = Properties().apply {
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { load(it) }
-        }
-    }
-    return localProperties.getProperty(name)?.trim().orEmpty()
-}
+val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPropertiesExtension>()
 
 android {
     namespace = "com.example.xcpro.livefollow"
@@ -29,12 +18,12 @@ android {
         buildConfigField(
             "String",
             "XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN",
-            "\"${readSecretProperty("XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN")}\""
+            xcproSecrets.readBuildConfigString("XCPRO_PRIVATE_FOLLOW_DEV_BEARER_TOKEN")
         )
         buildConfigField(
             "String",
             "XCPRO_GOOGLE_SERVER_CLIENT_ID",
-            "\"${readSecretProperty("XCPRO_GOOGLE_SERVER_CLIENT_ID")}\""
+            xcproSecrets.readBuildConfigString("XCPRO_GOOGLE_SERVER_CLIENT_ID")
         )
     }
 
@@ -55,8 +44,8 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":core:flight"))
     implementation(project(":core:time"))
-    implementation(project(":dfcards-library"))
     implementation(project(":feature:flight-runtime"))
     implementation(project(":feature:traffic"))
     implementation(libs.androidx.core.ktx)
@@ -67,6 +56,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)

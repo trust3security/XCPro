@@ -60,6 +60,8 @@ class FlightDisplayMapper {
             currentThermalValid = metrics.currentThermalValid,
             currentLD = metrics.calculatedLD,
             currentLDValid = metrics.currentLDValid,
+            currentLDAir = metrics.currentLDAir,
+            currentLDAirValid = metrics.currentLDAirValid,
             polarLdCurrentSpeed = metrics.polarLdCurrentSpeed,
             polarLdCurrentSpeedValid = metrics.polarLdCurrentSpeedValid,
             polarBestLd = metrics.polarBestLd,

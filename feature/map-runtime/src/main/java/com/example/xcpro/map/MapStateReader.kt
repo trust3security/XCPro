@@ -4,8 +4,6 @@ package com.example.xcpro.map
  * Invariants: no mutation APIs are exposed.
  */
 
-
-import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
 import kotlinx.coroutines.flow.StateFlow
 
@@ -26,7 +24,6 @@ interface MapStateReader {
     val savedBearing: StateFlow<Double?>
     val lastCameraSnapshot: StateFlow<CameraSnapshot?>
     val currentMode: StateFlow<FlightMode>
-    val currentFlightMode: StateFlow<FlightModeSelection>
     val currentZoom: StateFlow<Float>
     val targetLatLng: StateFlow<MapPoint?>
     val targetZoom: StateFlow<Float?>

@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.map.AdsbConnectionState
 import com.example.xcpro.map.AdsbProximityTier
 import com.example.xcpro.map.AdsbTrafficRepository

@@ -21,6 +21,9 @@ import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.sensors.domain.FlyingState
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.testing.MainDispatcherRule
+import com.example.xcpro.weglide.domain.EvaluateWeGlidePostFlightPromptUseCase
+import com.example.xcpro.weglide.domain.WeGlidePostFlightPromptCoordinator
+import com.example.xcpro.weglide.notifications.WeGlidePostFlightPromptNotificationController
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -95,10 +98,15 @@ class VarioServiceManagerConstructionTest {
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
-            defaultDispatcher = serviceDispatcher
+            defaultDispatcher = serviceDispatcher,
+            igcRecordingUseCase = idleIgcRecordingUseCase(),
+            igcRecordingActionSink = mock(),
+            evaluateWeGlidePostFlightPromptUseCase = disabledPromptUseCase(),
+            weGlidePostFlightPromptCoordinator = WeGlidePostFlightPromptCoordinator(),
+            weGlidePostFlightPromptNotificationController = mock()
         )
 
-        val started = manager.start()
+        val started = manager.start(this)
         assertTrue(started)
 
         manager.stop()
@@ -151,10 +159,15 @@ class VarioServiceManagerConstructionTest {
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
-            defaultDispatcher = serviceDispatcher
+            defaultDispatcher = serviceDispatcher,
+            igcRecordingUseCase = idleIgcRecordingUseCase(),
+            igcRecordingActionSink = mock(),
+            evaluateWeGlidePostFlightPromptUseCase = disabledPromptUseCase(),
+            weGlidePostFlightPromptCoordinator = WeGlidePostFlightPromptCoordinator(),
+            weGlidePostFlightPromptNotificationController = mock()
         )
 
-        val started = manager.start()
+        val started = manager.start(this)
         assertEquals(false, started)
 
         manager.stop()
@@ -209,10 +222,13 @@ class VarioServiceManagerConstructionTest {
             flightStateSource = flightStateSource,
             defaultDispatcher = serviceDispatcher,
             igcRecordingUseCase = recordingUseCase,
-            igcRecordingActionSink = actionSink
+            igcRecordingActionSink = actionSink,
+            evaluateWeGlidePostFlightPromptUseCase = disabledPromptUseCase(),
+            weGlidePostFlightPromptCoordinator = WeGlidePostFlightPromptCoordinator(),
+            weGlidePostFlightPromptNotificationController = mock()
         )
 
-        val started = manager.start()
+        val started = manager.start(this)
         assertTrue(started)
 
         withTimeout(1_000L) {
@@ -302,10 +318,13 @@ class VarioServiceManagerConstructionTest {
             flightStateSource = flightStateSource,
             defaultDispatcher = serviceDispatcher,
             igcRecordingUseCase = recordingUseCase,
-            igcRecordingActionSink = actionSink
+            igcRecordingActionSink = actionSink,
+            evaluateWeGlidePostFlightPromptUseCase = disabledPromptUseCase(),
+            weGlidePostFlightPromptCoordinator = WeGlidePostFlightPromptCoordinator(),
+            weGlidePostFlightPromptNotificationController = mock()
         )
 
-        assertTrue(manager.start())
+        assertTrue(manager.start(this))
         withTimeout(1_000L) {
             actionFlow.subscriptionCount.filter { it > 0 }.first()
         }
@@ -363,5 +382,16 @@ class VarioServiceManagerConstructionTest {
             ),
             fileName = "2026-03-09-XCP-000011-01.IGC"
         )
+    }
+
+    private fun idleIgcRecordingUseCase(): IgcRecordingUseCase {
+        val actionFlow = MutableSharedFlow<IgcSessionStateMachine.Action>(extraBufferCapacity = 1)
+        return mock<IgcRecordingUseCase>().also { useCase ->
+            whenever(useCase.actions).thenReturn(actionFlow.asSharedFlow())
+        }
+    }
+
+    private fun disabledPromptUseCase(): EvaluateWeGlidePostFlightPromptUseCase {
+        return mock()
     }
 }

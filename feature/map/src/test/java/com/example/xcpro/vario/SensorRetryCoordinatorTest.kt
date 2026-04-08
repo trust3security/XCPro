@@ -18,7 +18,7 @@ class SensorRetryCoordinatorTest {
     @Test
     fun retriesUntilActionSucceeds() = scope.runTest {
         var attempts = 0
-        val coordinator = SensorRetryCoordinator(this, retryDelayMs = 1_000L)
+        val coordinator = SensorRetryCoordinator(this, dispatcher, retryDelayMs = 1_000L)
 
         coordinator.schedule {
             attempts++
@@ -45,7 +45,7 @@ class SensorRetryCoordinatorTest {
     @Test
     fun cancelStopsFurtherRetries() = scope.runTest {
         var attempts = 0
-        val coordinator = SensorRetryCoordinator(this, retryDelayMs = 1_000L)
+        val coordinator = SensorRetryCoordinator(this, dispatcher, retryDelayMs = 1_000L)
 
         coordinator.schedule {
             attempts++

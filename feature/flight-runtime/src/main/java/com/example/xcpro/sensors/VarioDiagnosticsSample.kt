@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.filters.VarioFilterDiagnostics
+import com.example.xcpro.core.flight.filters.VarioFilterDiagnostics
 
 data class VarioDiagnosticsSample(
     val timestamp: Long,

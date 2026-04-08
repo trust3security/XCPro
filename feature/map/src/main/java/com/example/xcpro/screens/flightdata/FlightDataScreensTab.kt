@@ -18,7 +18,7 @@ import com.example.dfcards.CardsGridSection
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightModeSelectionSection
 import com.example.dfcards.FlightTemplate
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.dfcards.TemplatesForModeSection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.UnitsPreferences

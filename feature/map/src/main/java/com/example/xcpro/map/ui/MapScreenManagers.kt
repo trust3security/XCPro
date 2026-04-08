@@ -113,7 +113,7 @@ internal fun rememberMapScreenManagers(
             mapState,
             mapStateReader,
             taskRenderSyncCoordinator,
-            tasksUseCase::currentWaypointCount,
+            { tasksUseCase.currentRuntimeSnapshot().task.waypoints.size },
             mapStateActions,
             snailTrailManager,
             coroutineScope,
