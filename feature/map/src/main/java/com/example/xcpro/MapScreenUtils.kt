@@ -1,7 +1,7 @@
 package com.example.xcpro
 
 import android.hardware.SensorManager
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.PressureUnit
@@ -141,6 +141,8 @@ internal fun convertToRealTimeFlightData(
         currentThermalValid = completeData.currentThermalValid,
         currentLD = completeData.currentLD,
         currentLDValid = completeData.currentLDValid,
+        currentLDAir = completeData.currentLDAir,
+        currentLDAirValid = completeData.currentLDAirValid,
         polarLdCurrentSpeed = completeData.polarLdCurrentSpeed,
         polarLdCurrentSpeedValid = completeData.polarLdCurrentSpeedValid,
         polarBestLd = completeData.polarBestLd,

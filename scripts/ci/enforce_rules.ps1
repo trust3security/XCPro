@@ -261,6 +261,42 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "Task coordinator manager escape hatches in production source" -RgArgs $taskBoundaryArgs
 
+    # 6A) Task snapshot seam: no raw coordinator task/leg reads outside feature:tasks.
+    $taskSnapshotCoordinatorBypassArgs = @(
+        "-n",
+        '\b(taskManager|taskCoordinator|coordinator)\.(currentTask|currentLeg)\b',
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "!feature/tasks/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Task snapshot seam bypass via coordinator raw task/leg reads" -RgArgs $taskSnapshotCoordinatorBypassArgs
+
+    # 6B) Task snapshot seam: no lower-manager raw task/leg reads outside feature:tasks.
+    $taskSnapshotManagerBypassArgs = @(
+        "-n",
+        '\b(racingTaskManager)\.(currentTask|currentLeg|currentRacingTask)\b|\b(aatTaskManager)\.(currentLeg|currentAATTask)\b',
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "!feature/tasks/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Task snapshot seam bypass via lower-manager raw task/leg reads" -RgArgs $taskSnapshotManagerBypassArgs
+
+    # 6C) Vario runtime ownership: direct manager start/stop is reserved to the foreground-service owner.
+    $varioManagerOwnerBypassArgs = @(
+        "-n",
+        '\b(VarioServiceManager|varioServiceManager)\.(start|stop)\(',
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "!app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt"
+    )
+    Assert-NoMatches -Name "Vario runtime ownership bypass via direct VarioServiceManager start/stop" -RgArgs $varioManagerOwnerBypassArgs
+
+    # 6D) Vario runtime ownership: direct foreground-service control stays app-owned.
+    $varioServiceBoundaryBypassArgs = @(
+        "-n",
+        '\bVarioForegroundService\.(startIfPermitted|start|stop)\(',
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "!app/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Vario runtime boundary bypass via direct foreground-service control outside app" -RgArgs $varioServiceBoundaryBypassArgs
+
     # 7) Task manager boundary: no MapLibre imports in AAT/Racing task managers.
     $taskManagerMapLibreImportsArgs = @(
         "-n",

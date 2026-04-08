@@ -1,6 +1,8 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import org.junit.Assert.assertEquals
@@ -102,8 +104,13 @@ class MapTaskScreenManagerTest {
 
     private fun createManager(task: Task): MapTaskScreenManager {
         val tasksUseCase: MapTasksUseCase = mock()
-        whenever(tasksUseCase.currentTaskSnapshot()).thenReturn(task)
-        whenever(tasksUseCase.currentWaypointCount()).thenReturn(task.waypoints.size)
+        whenever(tasksUseCase.currentRuntimeSnapshot()).thenReturn(
+            TaskRuntimeSnapshot(
+                taskType = TaskType.RACING,
+                task = task,
+                activeLeg = 0
+            )
+        )
         val mapState = MapScreenState()
         return MapTaskScreenManager(
             mapState = mapState,

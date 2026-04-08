@@ -4,13 +4,13 @@ import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.map.VarioRuntimeControlPort
 import com.example.xcpro.sensors.CompleteFlightData
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.SensorFusionRepositoryFactory
 import com.example.xcpro.sensors.VarioDiagnosticsSample
 import com.example.xcpro.vario.LevoVarioConfig
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -87,9 +87,43 @@ class ReplayPipelineOwnershipTest {
         rebuiltRuntime.scope.cancel()
     }
 
+    @Test
+    fun resumeSensors_requests_live_runtime_through_control_port() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val sensorFusionFactory = mock<SensorFusionRepositoryFactory>()
+        val runtimeControlPort = mock<VarioRuntimeControlPort>()
+        val pipeline = buildPipeline(
+            dispatcher = dispatcher,
+            sensorFusionRepositoryFactory = sensorFusionFactory,
+            runtimeControlPort = runtimeControlPort
+        )
+
+        pipeline.suspendSensors()
+        pipeline.resumeSensors()
+
+        verify(runtimeControlPort).ensureRunningIfPermitted()
+    }
+
+    @Test
+    fun suspendSensors_requests_stop_through_control_port() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val sensorFusionFactory = mock<SensorFusionRepositoryFactory>()
+        val runtimeControlPort = mock<VarioRuntimeControlPort>()
+        val pipeline = buildPipeline(
+            dispatcher = dispatcher,
+            sensorFusionRepositoryFactory = sensorFusionFactory,
+            runtimeControlPort = runtimeControlPort
+        )
+
+        pipeline.suspendSensors()
+
+        verify(runtimeControlPort).requestStop()
+    }
+
     private fun buildPipeline(
         dispatcher: CoroutineDispatcher,
-        sensorFusionRepositoryFactory: SensorFusionRepositoryFactory
+        sensorFusionRepositoryFactory: SensorFusionRepositoryFactory,
+        runtimeControlPort: VarioRuntimeControlPort = mock()
     ): ReplayPipeline {
         val levoRepository = mock<LevoVarioPreferencesRepository>()
         whenever(levoRepository.config).thenReturn(MutableStateFlow(LevoVarioConfig()))
@@ -99,7 +133,7 @@ class ReplayPipelineOwnershipTest {
 
         return ReplayPipeline(
             flightDataRepository = FlightDataRepository(),
-            varioServiceManager = mock<VarioServiceManager>(),
+            varioRuntimeControlPort = runtimeControlPort,
             windRepository = windRepository,
             replaySensorSource = ReplaySensorSource(),
             sensorFusionRepositoryFactory = sensorFusionRepositoryFactory,

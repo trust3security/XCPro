@@ -2,7 +2,7 @@ package com.example.xcpro.map.ui
 
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.forecast.ForecastPointCallout
 import com.example.xcpro.map.MapScreenState

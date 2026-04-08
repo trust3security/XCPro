@@ -5,7 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
 import com.example.dfcards.dfcards.FlightDataTemplateManagerFactory
 import com.example.dfcards.dfcards.FlightDataViewModel

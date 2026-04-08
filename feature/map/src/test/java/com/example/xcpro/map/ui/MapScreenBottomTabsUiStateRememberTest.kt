@@ -7,6 +7,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.map.MapTasksUseCase
+import com.example.xcpro.tasks.TaskRuntimeSnapshot
+import com.example.xcpro.tasks.core.Task
+import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.tasks.core.TaskWaypoint
+import com.example.xcpro.tasks.core.WaypointRole
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertFalse
@@ -107,7 +112,25 @@ class MapScreenBottomTabsUiStateRememberTest {
 
     private fun createManager(): MapTaskScreenManager {
         val tasksUseCase: MapTasksUseCase = mock()
-        whenever(tasksUseCase.currentWaypointCount()).thenReturn(1)
+        whenever(tasksUseCase.currentRuntimeSnapshot()).thenReturn(
+            TaskRuntimeSnapshot(
+                taskType = TaskType.RACING,
+                task = Task(
+                    id = "task_with_points",
+                    waypoints = listOf(
+                        TaskWaypoint(
+                            id = "wp-1",
+                            title = "Start",
+                            subtitle = "Start Line",
+                            lat = 40.0,
+                            lon = -105.0,
+                            role = WaypointRole.START
+                        )
+                    )
+                ),
+                activeLeg = 0
+            )
+        )
 
         return MapTaskScreenManager(
             mapState = MapScreenState(),

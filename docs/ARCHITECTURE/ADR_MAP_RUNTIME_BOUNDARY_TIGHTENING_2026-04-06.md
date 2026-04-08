@@ -32,6 +32,15 @@ A third boundary check also matters:
 - Existing accepted OGN/traffic change plans already treat that seam as
   feature:traffic-owned.
 
+A fourth boundary check landed in the seam-hardening pass:
+
+- `feature:map-runtime` had a real but low-value dependency on
+  `:dfcards-library` only because runtime-facing contracts exposed
+  `FlightModeSelection`.
+- Replay ownship ingestion also accepted `RealTimeFlightData` directly instead
+  of a runtime-owned replay DTO.
+- Those seams were shell/UI leakage, not durable runtime/render requirements.
+
 ## Decision
 
 1. `MapTasksUseCase` moves to `feature:map`.
@@ -54,10 +63,18 @@ A third boundary check also matters:
      implementation seam.
    - Phase 5 does not force a contract move that would create a cycle.
 
+5. `feature:map-runtime` must not depend on `:dfcards-library`.
+   - Runtime-facing camera/state contracts use app-owned `FlightMode`.
+   - Replay ownship ingestion uses runtime-owned `ReplayLocationFrame`.
+   - Any `FlightModeSelection` conversion stays in `feature:map` at the
+     card/UI boundary.
+
 ## Consequences
 
 - Phase 5 still narrows the boundary by removing one clear shell-owned adapter
   from `feature:map-runtime`.
+- The runtime module also drops a card/UI dependency that was only present for
+  runtime-facing enum/DTO leakage.
 - Phase 5 does not claim false progress by removing dependencies that compile
   proof shows are still required.
 - Traffic overlay contract ownership remains intentionally asymmetric until a
@@ -68,6 +85,9 @@ A third boundary check also matters:
 - `./gradlew :feature:map-runtime:compileDebugKotlin :feature:map:compileDebugKotlin`
   passed after moving `MapTasksUseCase` and retaining the real `igc` / `profile`
   dependencies.
+- `./gradlew :feature:map:testDebugUnitTest :feature:map-runtime:testDebugUnitTest`
+  passed after replacing the runtime-facing `FlightModeSelection` and replay
+  ownship seams.
 
 ## Follow-up
 

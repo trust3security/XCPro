@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.filters.AdvancedBarometricFilter
+import com.example.xcpro.core.flight.filters.AdvancedBarometricFilter
 import com.example.xcpro.sensors.PressureKalmanFilter
 
 internal class FlightFilters {

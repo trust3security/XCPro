@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.dfcards.calculations.TerrainElevationReadPort
+import com.example.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.example.xcpro.audio.VarioAudioControllerFactory
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.core.time.Clock

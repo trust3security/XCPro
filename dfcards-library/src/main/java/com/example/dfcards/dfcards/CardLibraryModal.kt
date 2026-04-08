@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.xcpro.core.flight.RealTimeFlightData
 
 //  NEW: Flight Mode enum to match your existing FlightMode
 enum class FlightModeSelection(

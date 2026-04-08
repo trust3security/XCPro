@@ -9,6 +9,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 
 class MapSensorsUseCase @Inject constructor(
+    private val varioRuntimeControlPort: VarioRuntimeControlPort,
     private val varioServiceManager: VarioServiceManager
 ) {
     val gpsStatusFlow: StateFlow<GpsStatus> = varioServiceManager.unifiedSensorManager.gpsStatusFlow
@@ -18,10 +19,10 @@ class MapSensorsUseCase @Inject constructor(
         varioServiceManager.setFlightMode(mode)
     }
 
-    suspend fun startSensors(): Boolean = varioServiceManager.start()
+    fun startSensors(): Boolean = varioRuntimeControlPort.ensureRunningIfPermitted()
 
     fun stopSensors() {
-        varioServiceManager.stop()
+        varioRuntimeControlPort.requestStop()
     }
 
     fun sensorStatus(): SensorStatus = varioServiceManager.unifiedSensorManager.getSensorStatus()

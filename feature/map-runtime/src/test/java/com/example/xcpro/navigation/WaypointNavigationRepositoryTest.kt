@@ -1,6 +1,6 @@
 package com.example.xcpro.navigation
 
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa

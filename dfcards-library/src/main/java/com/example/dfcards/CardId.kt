@@ -52,6 +52,7 @@ internal value class CardId(val raw: String) {
         const val NETTO_AVG30 = "netto_avg30"
         const val LEVO_NETTO = "levo_netto"
         const val LD_CURR = "ld_curr"
+        const val LD_VARIO = "ld_vario"
         const val POLAR_LD = "polar_ld"
         const val BEST_LD = "best_ld"
         const val MC_SPEED = "mc_speed"
@@ -106,6 +107,7 @@ internal value class CardId(val raw: String) {
             NETTO_AVG30,
             LEVO_NETTO,
             LD_CURR,
+            LD_VARIO,
             POLAR_LD,
             BEST_LD,
             MC_SPEED,

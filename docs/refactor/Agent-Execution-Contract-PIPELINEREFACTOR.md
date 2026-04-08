@@ -151,7 +151,7 @@ Quality ladder:
 - Update docs:
   - docs/flightdata.md
   - docs/RULES/PIPELINE.md + PIPELINE.svg
-  - TC30s.md and docs/Cards/Netto30s.md if they reference MapComposeEffects ingestion.
+  - `docs/Cards/thermal_avg/TC30s.md` and `docs/Cards/netto_avg30/Netto30s.md` if they reference MapComposeEffects ingestion.
 - Optional: confirm FlightDataProvider is unused; delete or mark legacy.
 
 **Gate:** `./gradlew testDebugUnitTest` + `./gradlew lintDebug` green; docs updated and consistent.

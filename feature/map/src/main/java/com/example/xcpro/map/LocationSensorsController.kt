@@ -18,7 +18,7 @@ internal class LocationSensorsController(
         private const val TAG = "LocationManager"
     }
 
-    private var sensorsStarted = false
+    private var startRequested = false
     private var restartJob: Job? = null
 
     override fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
@@ -172,7 +172,7 @@ internal class LocationSensorsController(
 
     override fun isGpsEnabled(): Boolean = sensorsUseCase.isGpsEnabled()
 
-    private suspend fun safeStartSensors(): Boolean {
+    private fun safeStartSensors(): Boolean {
         return runCatching { sensorsUseCase.startSensors() }
             .onFailure { error ->
                 if (error is CancellationException) {
@@ -189,25 +189,19 @@ internal class LocationSensorsController(
 
     private suspend fun ensureSensorsRunning() {
         val status = sensorsUseCase.sensorStatus()
-        if (sensorsStarted && status.gpsStarted) {
+        if (startRequested && status.gpsStarted) {
             return
         }
-        if (!sensorsStarted && status.gpsStarted) {
-            // Sensors might still be producing data from a previous session, but
-            // the vario service (flight data collection, MacCready observers, etc.)
-            // is not running. Make sure we spin it up so cards receive data.
-            val startedNow = safeStartSensors()
-            val statusAfterStart = sensorsUseCase.sensorStatus()
-            sensorsStarted = startedNow || statusAfterStart.gpsStarted
-            if (sensorsStarted) {
-                return
-            }
+        if (!startRequested && status.gpsStarted) {
+            // GPS may already be active from a prior runtime session. Reissue the
+            // service-owned start request so the background collectors are live.
+            startRequested = safeStartSensors()
+            return
         }
 
-        val started = safeStartSensors()
-        val statusAfterStart = sensorsUseCase.sensorStatus()
-        sensorsStarted = started || statusAfterStart.gpsStarted
-        if (!sensorsStarted) {
+        val requestAccepted = safeStartSensors()
+        startRequested = requestAccepted
+        if (!requestAccepted) {
             warnRateLimited(
                 key = "start_deferred",
                 message = "Sensor start deferred (likely waiting on location permission)"
@@ -248,8 +242,13 @@ internal class LocationSensorsController(
 
     private fun stopSensors() {
         val status = sensorsUseCase.sensorStatus()
-        if (!sensorsStarted && !status.gpsStarted) return
+        val runtimeActive = status.gpsStarted ||
+            status.baroStarted ||
+            status.accelStarted ||
+            status.compassStarted ||
+            status.rotationStarted
+        if (!startRequested && !runtimeActive) return
         sensorsUseCase.stopSensors()
-        sensorsStarted = false
+        startRequested = false
     }
 }

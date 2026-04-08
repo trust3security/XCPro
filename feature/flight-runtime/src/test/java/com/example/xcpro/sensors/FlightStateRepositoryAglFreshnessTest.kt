@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.common.geo.GeoPoint

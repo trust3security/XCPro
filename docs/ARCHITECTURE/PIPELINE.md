@@ -101,9 +101,18 @@ Audio taps the pipeline inside FlightDataCalculatorEngine:
 
 Entry point:
 - `app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt`
-  - starts the background pipeline and keeps it alive.
+  - owns the foreground-service runtime scope for live sensor collection.
+  - handles repeated `ACTION_ENSURE_RUNNING` start commands and passes the
+    service-owned scope into `VarioServiceManager.start(...)`.
 - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
   - orchestrates sensors, fusion repo, and repository updates.
+  - launches its long-lived collectors in the caller-owned service scope while
+    keeping execution on the injected default dispatcher.
+  - Production wiring is explicit through DI; mandatory IGC and WeGlide
+    collaborators are not installed through silent constructor defaults.
+- `feature/map/src/main/java/com/example/xcpro/map/VarioRuntimeControlPort.kt`
+  - app-independent runtime control seam used by map and replay code.
+  - implemented in `app` by the foreground-service runtime controller.
 
 Live sensor wiring:
 - `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt`
@@ -133,7 +142,7 @@ Fusion entry:
     - `StillAirSinkProvider`
     - `VarioAudioControllerFactory`
     - `HawkAudioVarioReadPort`
-    - `TerrainElevationReadPort`
+    - `TerrainElevationReadPort` from `:core:flight`
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
   - thin wrapper around `FlightDataCalculatorEngine`.
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
@@ -147,6 +156,8 @@ Fusion entry:
   - canonical live terrain implementation bound to `TerrainElevationReadPort`.
   - owns terrain source policy (`SRTM` offline-first, `Open-Meteo` fallback),
     cache lifecycle, retry/backoff, and rate-limited terrain diagnostics.
+  - the shared read contract now lives in `:core:flight`, not in
+    `dfcards-library`.
 - `feature/map/src/main/java/com/example/xcpro/terrain/SrtmTerrainDataSource.kt`
   and `feature/map/src/main/java/com/example/xcpro/terrain/OpenMeteoTerrainDataSource.kt`
   - focused terrain source adapters used only by the repository.
@@ -174,6 +185,7 @@ Metrics use case:
   - TE/netto, display smoothing, circling detection, LD, thermal metrics.
   - Flight-only polar-derived metrics now include:
     - measured glide ratio (`currentLD`)
+    - measured through-air glide ratio (`currentLDAir`)
     - theoretical still-air glide ratio at current IAS (`polarLdCurrentSpeed`)
     - best still-air glide ratio from the active polar (`polarBestLd`)
   - airspeed selection priority is now:
@@ -242,6 +254,9 @@ Flight-state detector feed:
   - Subscribes to `FlightDataRepository.flightData` (LIVE source only) and maps samples to B-record lines in `Recording`/`Finalizing` phases.
   - On production startup, inspects persisted `Recording`/`Finalizing` snapshots and invokes `IgcRecoveryBootstrapUseCase` before restoring live session state; `Recording` snapshots resume existing live state, while `Finalizing` snapshots route terminal recovery through `IgcFlightLogRepository`.
   - `IgcRecoveryBootstrapUseCase` publishes typed startup recovery diagnostics through `IgcRecoveryDiagnosticsReporter` so operators can distinguish `resume`, `recovered`, `unsupported`, repository-classified failure, and bootstrap exception paths.
+  - Production construction is explicit only: recording sink, recovery bootstrap,
+    and flight-log collaborators are required inputs rather than `NoOp`
+    constructor fallbacks.
   - Applies Phase 3 cadence/validity/dropout/fallback domain policies before emitting B lines.
   - Exposes `bRecordLines` stream (`SharedFlow<String>`) for diagnostics and regression validation.
   - Forwards each emitted B line to `IgcRecordingActionSink.onBRecord(sessionId, line, sampleWallTimeMs)` using active session state and sample UTC wall timestamp.
@@ -283,6 +298,9 @@ Flight-state detector feed:
   - Recorder metadata source: firmware/hardware/sensor-derived header inputs and altitude datum policy defaults.
 - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
   - Observes `IgcSessionStateMachine.Action`, dispatches lifecycle actions to `IgcRecordingActionSink`, and routes finalize publish success/failure back to `IgcRecordingUseCase` (`onFinalizeSucceeded` / `onFinalizeFailed`).
+  - Production construction requires explicit `IgcRecordingUseCase`,
+    `IgcRecordingActionSink`, and WeGlide prompt collaborators; disabled or
+    test-only behavior must be chosen outside the production constructor path.
 
 ## 3A) LiveFollow Pilot + Watch Runtime
 
@@ -470,7 +488,7 @@ Observers:
   - Consumes `WaypointNavigationRepository.waypointNavigation`; it does not
     compute waypoint route math in the observer layer.
   - Converts `CompleteFlightData` + upstream runtime snapshots to
-    `RealTimeFlightData`.
+    `RealTimeFlightData` from `:core:flight`.
   - Pushes to `FlightDataManager` and the `feature:map-runtime` trail
     processor.
   - Threads full trail settings into the trail runtime path so
@@ -534,9 +552,11 @@ Final glide runtime contract:
 
 Mapping for cards:
 - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
-  - `convertToRealTimeFlightData(...)` maps SSOT to card-friendly model.
+  - `convertToRealTimeFlightData(...)` maps SSOT to the card-friendly
+    `RealTimeFlightData` projection now owned by `:core:flight`.
   - Flight-only polar metrics mapped for cards:
     - `currentLD`
+    - `currentLDAir`
     - `polarLdCurrentSpeed`
     - `polarBestLd`
     - `netto`
@@ -554,7 +574,9 @@ Mapping for cards:
     - `glideDegradedReason`
     - `glideInvalidReason`
   - Semantics:
-    - `ld_curr`, `polar_ld`, `best_ld` remain flight-only
+    - `ld_curr` remains the measured over-ground glide card
+    - `ld_vario` is the measured through-air glide card
+    - `polar_ld`, `best_ld` remain flight-only theoretical polar cards
     - `final_gld`, `arr_alt`, `req_alt`, `arr_mc0` are racing-task finish cards
     - glide outputs are `VALID`, `DEGRADED` (still-air assumption because no
       usable wind exists), or `INVALID`
@@ -947,7 +969,8 @@ Weather rain overlay path:
 
 ## 5A) Cards (dfcards-library) sub-pipeline
 
-Cards do not read sensors directly. They consume `RealTimeFlightData` produced by the app module.
+Cards do not read sensors directly. They consume `RealTimeFlightData` from
+`:core:flight`, produced by the app/map adapter path.
 
 Current wiring:
 - `FlightDataRepository`
@@ -958,6 +981,14 @@ Current wiring:
   -> `CardIngestionCoordinator`
   -> `dfcards` `FlightDataViewModel.updateCardsWithLiveData(...)`
   -> `CardLibrary` / `CardContainer` / `EnhancedFlightDataCard`
+
+Replay ownship map-runtime seam:
+- `feature/map-runtime/src/main/java/com/example/xcpro/map/ReplayLocationFrame.kt`
+  - runtime-owned replay ownship DTO used only by the map runtime layer.
+- `feature/map/src/main/java/com/example/xcpro/map/ReplayLocationFrameMapper.kt`
+  - shell-owned conversion from `RealTimeFlightData` to `ReplayLocationFrame`.
+- runtime-facing map contracts in `feature:map-runtime` use app-owned
+  `FlightMode`, not card-owned `FlightModeSelection`.
 
 Current glide-computer production card scope:
 - finish/arrival cards live now:
@@ -980,6 +1011,7 @@ Current glide-computer production card scope:
   - `tas`
   - `ground_speed`
   - `ld_curr`
+  - `ld_vario`
   - `polar_ld`
   - `best_ld`
   - `netto`
@@ -1019,6 +1051,9 @@ Card configuration + hydration (current):
 - `MapTasksUseCase` now lives in `feature:map` as the map-shell adapter over
   `TaskManagerCoordinator`, reusing the runtime-owned `TaskRenderSnapshot`
   model instead of making `feature:map-runtime` the shell task owner.
+  Cross-feature shell reads stay on the coordinator snapshot seam through
+  `TaskManagerCoordinator.taskSnapshotFlow` and
+  `TaskManagerCoordinator.currentSnapshot()`.
 - `DisplayPoseSnapshot` now lives in `feature/map-runtime` as the runtime-facing
   display-pose frame contract used by shell effects and trail/runtime consumers.
   It now carries explicit display-clock timebase metadata so trail/runtime
@@ -1044,8 +1079,10 @@ Card configuration + hydration (current):
   `MapLocationOverlayAdapter`, `MapDisplayPoseSurfaceAdapter`,
   `MapLibreCameraControllerProvider`, `MapScreenSizeProvider`, and
   `MapCameraUpdateGateAdapter` bridges used by `MapScreenManagers`.
-- `MapSensorsUseCase` remains in `feature:map` for now because it still depends on the
-  shell-owned `VarioServiceManager`.
+- `MapSensorsUseCase` remains in `feature:map` for now because it bridges
+  map-side sensor start/stop requests through `VarioRuntimeControlPort` while
+  reading live status, flight state, and flight-mode controls from
+  `VarioServiceManager`.
 - Camera/location/lifecycle Phase E now moves the lifecycle runtime owner:
   `MapLifecycleManager` lives in `:feature:map-runtime`, while `feature:map`
   retains the shell-local `MapLifecycleSurfaceAdapter`,
@@ -1100,7 +1137,10 @@ Card configuration + hydration (current):
   `DisplaySmoothingProfile` and reactivates on real pose/orientation/config
   changes, while `DisplayPoseRenderCoordinator` still compares the current
   rendered pose snapshot against the last rendered snapshot and skips
-  materially unchanged frames before camera or blue-overlay mutation. Both the
+  materially unchanged frames before camera or blue-overlay mutation. The
+  location portion of that late no-op check is screen-space based, using the
+  current map surface meters-per-pixel plus the shared jitter threshold; only
+  missing/invalid projection metrics fall back to a small meter floor. Both the
   pre-dispatch suppressions and late no-op skips are recorded in
   `MapRenderSurfaceDiagnostics`. The live ticker cadence remains `25 ms` while
   replay stays at `16.7 ms`; cadence ownership remains in
@@ -1338,6 +1378,9 @@ Task map rendering bridge (2026-02-12):
   seam (`TaskManagerCoordinator.taskSnapshotFlow` /
   `TaskManagerCoordinator.currentSnapshot()`), and AAT edit-mode shell reads
   derive from `TaskManagerCoordinator.aatEditWaypointIndexFlow`.
+  `MapTasksUseCase` exposes snapshot-based shell reads
+  (`currentRuntimeSnapshot()` and `taskRenderSnapshot()`) rather than
+  piecemeal task-only helpers.
   `MapTasksUseCase` now lives in `feature:map`; `TaskRenderSnapshot` remains in
   `feature:map-runtime` as the runtime-facing task render model.
 - `TaskSheetViewModel` no longer calls manual `sync()` after task mutations. It collects the coordinator snapshot flow and routes AAT target param/lock edits through coordinator-owned mutations.
@@ -1403,6 +1446,13 @@ Flight runtime foundations (2026-03-16):
 - `app` now depends directly on `feature:flight-runtime` at the composition
   root because generated Hilt component sources import moved runtime owners
   directly.
+- `:core:flight` now owns the shared non-UI flight DTO and pure flight math
+  surface consumed by both runtime and card modules:
+  - `RealTimeFlightData`
+  - `TerrainElevationReadPort`
+  - `SimpleAglCalculator`
+  - `BarometricAltitudeCalculator`
+  - shared baro/vario filter value and math types
 - `feature:flight-runtime` now owns the reusable runtime foundations:
   - sensor contracts/models
   - `FlightDataRepository` / `FlightDisplayMapper`
@@ -1431,6 +1481,8 @@ Flight runtime foundations (2026-03-16):
   DI composition, thin live-orientation adapters, and the map-specific
   orientation controller path (`MapOrientationManager`, `OrientationEngine`,
   `HeadingJitterLogger`) for those runtime foundations.
+- `dfcards-library` consumes `:core:flight` but no longer owns shared flight
+  runtime DTOs, terrain seams, or filter math.
 - `feature:profile` keeps the concrete still-air sink implementation.
 - `feature:variometer` keeps the concrete audio engine/controller and HAWK
   repository implementations behind the shared runtime ports.
@@ -1474,7 +1526,8 @@ Replay pipeline:
   - Creates a replay `SensorFusionRepository` (isReplayMode = true).
   - Forwards fused `CompleteFlightData` into `FlightDataRepository` with Source.REPLAY.
   - Observes `LevoVarioPreferencesRepository` and pushes replay audio settings and TE compensation enabled flag.
-  - Suspends/resumes live sensors via `VarioServiceManager`.
+  - Suspends and resumes live sensors through `VarioRuntimeControlPort`, which
+    routes those requests back to `VarioForegroundService`.
 - `feature/map/src/main/java/com/example/xcpro/map/replay/SyntheticThermalReplayLogBuilder.kt`
   - builds deterministic in-memory thermal `IgcLog` fixtures for snail-trail validation.
   - keeps replay input standard `IgcLog` data; sub-second behavior stays in replay cadence/densification, not parser/file semantics.

@@ -38,7 +38,7 @@ class IgcRecordingUseCaseTest {
             recoveryResult = IgcRecoveryResult.Recovered("2025-03-09-XCP-000021-01.IGC")
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -71,7 +71,7 @@ class IgcRecordingUseCaseTest {
             )
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -103,7 +103,7 @@ class IgcRecordingUseCaseTest {
             )
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -132,7 +132,7 @@ class IgcRecordingUseCaseTest {
             recoveryResult = IgcRecoveryResult.NoRecoveryWork("repository unsupported")
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -162,7 +162,7 @@ class IgcRecordingUseCaseTest {
             recoveryResult = IgcRecoveryResult.NoRecoveryWork("test restores snapshot")
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -204,7 +204,7 @@ class IgcRecordingUseCaseTest {
             )
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -249,7 +249,7 @@ class IgcRecordingUseCaseTest {
             finalizeTimeoutMs = 1_000L
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -312,7 +312,7 @@ class IgcRecordingUseCaseTest {
         val source = MutableStateFlow(FlyingState())
         val flightDataRepository = FlightDataRepository()
         val store = InMemorySnapshotStore().also { it.saveSnapshot(finalizingSnapshot) }
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,
@@ -343,7 +343,7 @@ class IgcRecordingUseCaseTest {
             recoveryResult = IgcRecoveryResult.Recovered("2025-03-09-XCP-000071-01.IGC")
         )
 
-        val useCase = IgcRecordingUseCase(
+        val useCase = buildIgcRecordingUseCase(
             flightStateSource = flightStateSource(source),
             flightDataRepository = flightDataRepository,
             clock = clock,

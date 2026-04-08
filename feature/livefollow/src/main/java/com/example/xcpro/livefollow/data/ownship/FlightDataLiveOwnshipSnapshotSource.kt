@@ -1,6 +1,6 @@
 package com.example.xcpro.livefollow.data.ownship
 
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.example.xcpro.livefollow.model.LiveFollowAircraftIdentityType

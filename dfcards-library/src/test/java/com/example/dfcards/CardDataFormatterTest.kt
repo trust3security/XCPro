@@ -1,6 +1,7 @@
 package com.example.dfcards
 
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.flight.RealTimeFlightData
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Locale

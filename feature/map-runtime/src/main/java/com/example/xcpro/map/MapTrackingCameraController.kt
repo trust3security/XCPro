@@ -144,7 +144,7 @@ class MapTrackingCameraController(
             mapBearing = mapBearing,
             speedMs = speedMs,
             orientationMode = orientationMode,
-            flightMode = mapStateReader.currentFlightMode.value,
+            flightMode = mapStateReader.currentMode.value,
             biasMode = preferenceReader.getMapShiftBiasMode(),
             biasStrength = preferenceReader.getMapShiftBiasStrength(),
             minSpeedMs = featureFlags.mapShiftBiasMinSpeedMs,

@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.MapOrientationManagerFactory
 import com.example.xcpro.MapOrientationHeadingPolicy
 import com.example.xcpro.MapOrientationSensorInputSource
@@ -324,7 +324,10 @@ abstract class MapScreenViewModelTestBase {
         val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
         val mapAirspaceUseCase = Mockito.mock(AirspaceUseCase::class.java)
         val mapWaypointFilesUseCase = Mockito.mock(WaypointFilesUseCase::class.java)
-        val mapSensorsUseCase = MapSensorsUseCase(varioServiceManager)
+        val mapSensorsUseCase = MapSensorsUseCase(
+            varioRuntimeControlPort = object : VarioRuntimeControlPort { override fun ensureRunningIfPermitted(): Boolean = true; override fun requestStop() = Unit },
+            varioServiceManager = varioServiceManager
+        )
         val orientationSettingsUseCase = MapOrientationSettingsUseCase(orientationSettingsRepository)
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,

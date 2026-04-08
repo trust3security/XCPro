@@ -191,7 +191,7 @@ Implementation steps:
      - Add LEVO_NETTO cases for footer formatting and NO WIND/NO POLAR fallbacks.
 
 6) Docs
-   - Add docs/Cards/LevoNetto.md (end-to-end flow + UI display rules).
+   - Add `docs/Cards/levo_netto/LevoNetto.md` (end-to-end flow + UI display rules).
 
 
 

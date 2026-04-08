@@ -4,9 +4,9 @@ import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.flightdata.FlightDataRepository
+import com.example.xcpro.map.VarioRuntimeControlPort
 import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.SensorFusionRepositoryFactory
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -29,7 +29,7 @@ internal class ReplayPipelineRuntime(
 
 class ReplayPipeline(
     private val flightDataRepository: FlightDataRepository,
-    private val varioServiceManager: VarioServiceManager,
+    private val varioRuntimeControlPort: VarioRuntimeControlPort,
     private val windRepository: WindSensorFusionRepository,
     private val replaySensorSource: ReplaySensorSource,
     private val sensorFusionRepositoryFactory: SensorFusionRepositoryFactory,
@@ -80,14 +80,14 @@ class ReplayPipeline(
     fun suspendSensors() {
         if (!sensorsSuspended) {
             sensorsSuspended = true
-            varioServiceManager.stop()
+            varioRuntimeControlPort.requestStop()
         }
     }
 
-    suspend fun resumeSensors() {
+    fun resumeSensors() {
         if (sensorsSuspended) {
             sensorsSuspended = false
-            varioServiceManager.start()
+            varioRuntimeControlPort.ensureRunningIfPermitted()
         }
     }
 

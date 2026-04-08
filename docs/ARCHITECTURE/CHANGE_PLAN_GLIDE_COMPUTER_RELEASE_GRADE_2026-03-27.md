@@ -332,7 +332,7 @@ Finish with a release-grade proof bundle and final branch-truth docs.
 
 ### Implemented Phase 5 decisions
 - production glide-computer cards now ship only when the authoritative runtime path and validity/source semantics exist end to end:
-  - core glide/performance: `ias`, `tas`, `ground_speed`, `ld_curr`, `polar_ld`, `best_ld`, `netto`, `netto_avg30`, `mc_speed`
+  - core glide/performance: `ias`, `tas`, `ground_speed`, `ld_curr`, `ld_vario`, `polar_ld`, `best_ld`, `netto`, `netto_avg30`, `mc_speed`
   - finish/arrival + waypoint navigation: `final_gld`, `arr_alt`, `req_alt`, `arr_mc0`, `wpt_dist`, `wpt_brg`, `wpt_eta`
   - task performance: `task_spd`, `task_dist`, `task_remain_dist`, `task_remain_time`, `start_alt`
 - unsupported or deferred glide-computer metrics stay uncataloged instead of being exposed behind placeholder cards or a production hidden-card filter.

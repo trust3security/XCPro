@@ -294,7 +294,7 @@ class MapScreenViewModel @Inject constructor(
     fun persistMapStyle(styleName: String) = profileSessionCoordinator.persistMapStyle(styleName)
     fun setForecastSatelliteOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setForecastSatelliteOverrideEnabled(enabled))
     fun setThermallingContrastOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setThermallingContrastOverrideEnabled(enabled))
-    fun setFlightMode(newMode: FlightMode) { mapStateStore.setCurrentMode(newMode); mapStateStore.setCurrentFlightMode(newMode.toCardFlightModeSelection()); flightDataManager.updateFlightModeFromEnum(newMode); sensorsUseCase.setFlightMode(newMode) }
+    fun setFlightMode(newMode: FlightMode) { mapStateStore.setCurrentMode(newMode); flightDataManager.updateFlightModeFromEnum(newMode); sensorsUseCase.setFlightMode(newMode) }
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
     fun setMapVisible(isVisible: Boolean) {
         trafficCoordinator.setMapVisible(isVisible)

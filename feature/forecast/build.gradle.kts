@@ -1,34 +1,14 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
+    id("xcpro.secret-properties")
 }
 
-fun String.asBuildConfigString(): String {
-    val escaped = this.replace("\\", "\\\\").replace("\"", "\\\"")
-    return "\"$escaped\""
-}
-
-val localProperties: Properties by lazy {
-    Properties().apply {
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { load(it) }
-        }
-    }
-}
-
-fun readSecretProperty(name: String): String {
-    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
-    if (gradleValue.isNotEmpty()) return gradleValue
-    return localProperties.getProperty(name)?.trim().orEmpty()
-}
-
-val skySightApiKey = readSecretProperty("SKYSIGHT_API_KEY")
+val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPropertiesExtension>()
+val skySightApiKey = xcproSecrets.read("SKYSIGHT_API_KEY")
 
 android {
     namespace = "com.example.xcpro.forecast"
@@ -40,7 +20,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "SKYSIGHT_API_KEY", skySightApiKey.asBuildConfigString())
+            buildConfigField("String", "SKYSIGHT_API_KEY", xcproSecrets.asBuildConfigString(skySightApiKey))
         }
         release {
             buildConfigField("String", "SKYSIGHT_API_KEY", "\"\"")

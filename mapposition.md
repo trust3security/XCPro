@@ -93,6 +93,9 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
 - Prediction is gated by speed + speed accuracy; poor speed accuracy disables
   dead reckoning to avoid wobble while stationary or walking.
 - Bearing accuracy scales prediction horizon to reduce over-shoot on noisy headings.
+- Steady-state rendered-frame suppression is screen-space based: the render coordinator
+  skips frames only when ownship movement stays below the current jitter threshold in
+  pixels. If map projection metrics are unavailable, it falls back to a small meter floor.
 
 ## Camera updates
 - The camera is updated only when tracking is enabled and the return button is not shown.
@@ -177,6 +180,7 @@ Use these knobs to tune feel without breaking SSOT or fusion:
   - `CAMERA_BEARING_EPS_DEG`: bearing change required to trigger camera updates.
 - `MapLocationFilter` threshold:
   - `MapFeatureFlags.locationJitterThresholdPx`: higher = more stability, lower = more responsive.
+  - The same threshold is reused by steady-state ownship rendered-frame no-op suppression.
 
 Guidelines:
 - Start by tuning `POS_SMOOTH_MS` and `CAMERA_ANIMATION_MS` together.

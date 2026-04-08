@@ -7,6 +7,7 @@ import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.units.VerticalSpeedUnit
+import com.example.xcpro.core.flight.RealTimeFlightData
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt

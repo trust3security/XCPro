@@ -79,6 +79,7 @@ class CardIdCoverageTest {
                 "netto_avg30",
                 "levo_netto",
                 "ld_curr",
+                "ld_vario",
                 "polar_ld",
                 "best_ld",
                 "mc_speed"

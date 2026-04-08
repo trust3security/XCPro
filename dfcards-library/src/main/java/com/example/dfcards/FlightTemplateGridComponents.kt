@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.flight.RealTimeFlightData
 import kotlin.math.max
 
 /**

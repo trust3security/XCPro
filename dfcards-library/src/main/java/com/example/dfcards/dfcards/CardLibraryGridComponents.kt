@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.xcpro.core.flight.RealTimeFlightData
 import kotlin.math.max
 import kotlin.math.roundToInt
 

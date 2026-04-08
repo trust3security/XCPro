@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dfcards.*
+import com.example.xcpro.core.flight.RealTimeFlightData
 
 @Composable
 fun TemplateEditorModal(

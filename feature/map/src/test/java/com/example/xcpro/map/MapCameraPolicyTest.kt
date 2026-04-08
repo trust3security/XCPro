@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.domain.MapShiftBiasCalculator
 import com.example.xcpro.map.domain.MapShiftBiasMode
@@ -53,7 +53,7 @@ class MapCameraPolicyTest {
         val policy = MapCameraPolicy(TestOffsetAverager(), MapShiftBiasCalculator())
 
         val offset = policy.computeBiasOffset(
-            baseBiasInput(flightMode = FlightModeSelection.THERMAL)
+            baseBiasInput(flightMode = FlightMode.THERMAL)
         )
 
         assertEquals(0.0, offset.dxPx, 0.0)
@@ -145,7 +145,7 @@ class MapCameraPolicyTest {
     private fun baseBiasInput(
         biasMode: MapShiftBiasMode = MapShiftBiasMode.TRACK,
         orientationMode: MapOrientationMode = MapOrientationMode.NORTH_UP,
-        flightMode: FlightModeSelection = FlightModeSelection.CRUISE,
+        flightMode: FlightMode = FlightMode.CRUISE,
         trackDeg: Double = 45.0,
         mapBearing: Double = 10.0,
         speedMs: Double = 10.0,

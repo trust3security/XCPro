@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.trail.TrailSettings
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,9 +70,6 @@ class MapStateStore(
 
     private val _currentMode = MutableStateFlow(FlightMode.CRUISE)
     override val currentMode: StateFlow<FlightMode> = _currentMode.asStateFlow()
-
-    private val _currentFlightMode = MutableStateFlow(FlightModeSelection.CRUISE)
-    override val currentFlightMode: StateFlow<FlightModeSelection> = _currentFlightMode.asStateFlow()
 
     private val _currentZoom = MutableStateFlow(10f)
     override val currentZoom: StateFlow<Float> = _currentZoom.asStateFlow()
@@ -199,12 +195,6 @@ class MapStateStore(
     fun setCurrentMode(mode: FlightMode) {
         if (_currentMode.value != mode) {
             _currentMode.value = mode
-        }
-    }
-
-    fun setCurrentFlightMode(mode: FlightModeSelection) {
-        if (_currentFlightMode.value != mode) {
-            _currentFlightMode.value = mode
         }
     }
 

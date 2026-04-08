@@ -1,7 +1,7 @@
 package com.example.xcpro.map
 
 import com.example.dfcards.FlightModeSelection
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.common.flight.FlightMode
 import kotlin.math.abs
 

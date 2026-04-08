@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.orientation.MapOrientationMode
 import com.example.xcpro.map.domain.MapShiftBiasCalculator
 import com.example.xcpro.map.domain.MapShiftBiasConfig
@@ -32,7 +32,7 @@ class MapCameraPolicy(
         val mapBearing: Double,
         val speedMs: Double,
         val orientationMode: MapOrientationMode,
-        val flightMode: FlightModeSelection,
+        val flightMode: FlightMode,
         val biasMode: MapShiftBiasMode,
         val biasStrength: Double,
         val minSpeedMs: Double,
@@ -78,7 +78,7 @@ class MapCameraPolicy(
             biasCalculator.reset()
             return ScreenOffset.ZERO
         }
-        if (input.flightMode == FlightModeSelection.THERMAL) {
+        if (input.flightMode == FlightMode.THERMAL) {
             biasCalculator.reset()
             return ScreenOffset.ZERO
         }

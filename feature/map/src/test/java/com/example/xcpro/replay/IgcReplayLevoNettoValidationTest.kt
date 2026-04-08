@@ -1,6 +1,6 @@
 package com.example.xcpro.replay
 
-import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.core.flight.filters.ModernVarioResult
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.geo.GeoPoint

@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.filters.VarioFilterDiagnostics
+import com.example.xcpro.core.flight.filters.VarioFilterDiagnostics
 import com.example.xcpro.vario.ComplementaryVario
 import com.example.xcpro.vario.GPSVario
 import com.example.xcpro.vario.LegacyKalmanVario

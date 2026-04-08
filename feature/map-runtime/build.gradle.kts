@@ -28,7 +28,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":dfcards-library"))
+    implementation(project(":core:flight"))
     implementation(project(":core:common"))
     implementation(project(":core:time"))
     implementation(project(":feature:flight-runtime"))

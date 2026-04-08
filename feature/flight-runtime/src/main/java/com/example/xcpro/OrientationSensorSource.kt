@@ -1,6 +1,6 @@
 package com.example.xcpro
 
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.OrientationSensorData
 import kotlinx.coroutines.flow.StateFlow

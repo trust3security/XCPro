@@ -119,18 +119,23 @@ ENTRY POINTS AND LIFECYCLE
    File: app/src/main/java/com/example/xcpro/MainActivity.kt
 
 2) VarioForegroundService owns the lifecycle of the vario pipeline.
-   - On create, it creates a foreground notification and calls manager.start().
+   - On create, it creates the foreground notification only.
+   - On start command, it handles repeated ensure-running requests and calls
+     `manager.start(serviceScope)`.
    - On destroy, it stops the sensor pipeline.
    File: app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt
 
-3) VarioServiceManager is the application-wide owner of the sensor pipeline.
-   It is injected into the service and UI.
+3) VarioServiceManager is the service-owned pipeline orchestrator.
+   It is injected into the service and map/replay helpers, but it no longer
+   creates its own long-lived scope.
    File: feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt
 
 Responsibilities:
 - Build the SensorFusionRepository (FlightDataCalculator)
 - Start and stop sensors on the main thread
 - Retry sensor start if permission is missing (SensorRetryCoordinator)
+- Launch long-lived collectors in the caller-owned service scope on the
+  injected default dispatcher
 - Collect flightDataFlow and push into FlightDataRepository
 - Observe Levo config (MacCready, audio, TE enabled) and push into the fusion engine
 - Keep source-aware live/replay airspeed repositories wired into the fusion engine
@@ -335,7 +340,8 @@ File: feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt
 
 Key behaviors:
 - Creates a replay SensorFusionRepository with isReplayMode = true.
-- Suspends live sensors via VarioServiceManager.stop().
+- Suspends and resumes live sensors through the `VarioRuntimeControlPort`
+  seam, which routes requests back to `VarioForegroundService`.
 - Uses ReplaySensorSource as the SensorDataSource.
 - Uses ReplaySampleEmitter to emit baro, GPS, compass samples at
   configured cadence, with optional noise and jitter.

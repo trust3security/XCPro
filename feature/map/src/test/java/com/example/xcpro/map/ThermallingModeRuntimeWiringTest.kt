@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM

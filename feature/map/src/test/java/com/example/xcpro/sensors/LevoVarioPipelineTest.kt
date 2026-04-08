@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.filters.ModernVarioResult
+import com.example.xcpro.core.flight.filters.ModernVarioResult
 import com.example.xcpro.audio.AudioMode
 import com.example.xcpro.audio.VarioFrequencyMapper
 import com.example.xcpro.common.units.AltitudeM

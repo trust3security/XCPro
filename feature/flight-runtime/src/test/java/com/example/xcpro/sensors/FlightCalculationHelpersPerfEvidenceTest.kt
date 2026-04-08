@@ -1,6 +1,6 @@
 package com.example.xcpro.sensors
 
-import com.example.dfcards.dfcards.calculations.SimpleAglCalculator
+import com.example.xcpro.core.flight.calculations.SimpleAglCalculator
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.SpeedMs

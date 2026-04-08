@@ -1,7 +1,7 @@
 package com.example.xcpro
 
 import android.hardware.SensorManager
-import com.example.dfcards.calculations.ConfidenceLevel
+import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
@@ -86,6 +86,8 @@ class ConvertToRealTimeFlightDataTest {
             currentThermalValid = true,
             currentLD = 35f,
             currentLDValid = true,
+            currentLDAir = 13f,
+            currentLDAirValid = true,
             polarLdCurrentSpeed = 38f,
             polarLdCurrentSpeedValid = true,
             polarBestLd = 44f,
@@ -130,6 +132,8 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(0.9, result.nettoAverage30s, 1e-6)
         assertEquals(true, result.nettoAverage30sValid)
         assertEquals(true, result.currentLDValid)
+        assertEquals(13f, result.currentLDAir, 1e-6f)
+        assertEquals(true, result.currentLDAirValid)
         assertEquals(38f, result.polarLdCurrentSpeed, 1e-6f)
         assertEquals(true, result.polarLdCurrentSpeedValid)
         assertEquals(44f, result.polarBestLd, 1e-6f)

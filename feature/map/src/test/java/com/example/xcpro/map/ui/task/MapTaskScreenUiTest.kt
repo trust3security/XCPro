@@ -12,6 +12,7 @@ import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTasksUseCase
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.tasks.TaskFlightSurfaceUiState
+import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -139,8 +140,13 @@ class MapTaskScreenUiTest {
 
     private fun createManager(task: Task): MapTaskScreenManager {
         val tasksUseCase: MapTasksUseCase = mock()
-        whenever(tasksUseCase.currentTaskSnapshot()).thenReturn(task)
-        whenever(tasksUseCase.currentWaypointCount()).thenReturn(task.waypoints.size)
+        whenever(tasksUseCase.currentRuntimeSnapshot()).thenReturn(
+            TaskRuntimeSnapshot(
+                taskType = TaskType.RACING,
+                task = task,
+                activeLeg = 0
+            )
+        )
 
         val mapState = MapScreenState()
 

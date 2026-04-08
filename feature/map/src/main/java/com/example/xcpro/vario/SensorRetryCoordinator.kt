@@ -1,5 +1,6 @@
 package com.example.xcpro.vario
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -8,6 +9,7 @@ import kotlinx.coroutines.launch
 
 internal class SensorRetryCoordinator(
     private val scope: CoroutineScope,
+    private val dispatcher: CoroutineDispatcher,
     private val retryDelayMs: Long
 ) {
 
@@ -15,7 +17,7 @@ internal class SensorRetryCoordinator(
 
     fun schedule(action: suspend () -> Boolean) {
         if (retryJob?.isActive == true) return
-        val job = scope.launch {
+        val job = scope.launch(dispatcher) {
             while (isActive) {
                 delay(retryDelayMs)
                 if (action()) {

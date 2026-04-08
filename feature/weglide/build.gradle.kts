@@ -4,21 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
+    id("xcpro.secret-properties")
 }
 
-import java.util.Properties
-
-fun readSecretProperty(name: String): String {
-    val gradleValue = providers.gradleProperty(name).orNull?.trim().orEmpty()
-    if (gradleValue.isNotEmpty()) return gradleValue
-    val localProperties = Properties().apply {
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { load(it) }
-        }
-    }
-    return localProperties.getProperty(name)?.trim().orEmpty()
-}
+val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPropertiesExtension>()
 
 android {
     namespace = "com.example.xcpro.weglide"
@@ -30,32 +19,34 @@ android {
         buildConfigField(
             "String",
             "WEGLIDE_AUTHORIZATION_ENDPOINT",
-            "\"${readSecretProperty("WEGLIDE_AUTHORIZATION_ENDPOINT")}\""
+            xcproSecrets.readBuildConfigString("WEGLIDE_AUTHORIZATION_ENDPOINT")
         )
         buildConfigField(
             "String",
             "WEGLIDE_TOKEN_ENDPOINT",
-            "\"${readSecretProperty("WEGLIDE_TOKEN_ENDPOINT")}\""
+            xcproSecrets.readBuildConfigString("WEGLIDE_TOKEN_ENDPOINT")
         )
         buildConfigField(
             "String",
             "WEGLIDE_CLIENT_ID",
-            "\"${readSecretProperty("WEGLIDE_CLIENT_ID")}\""
+            xcproSecrets.readBuildConfigString("WEGLIDE_CLIENT_ID")
         )
         buildConfigField(
             "String",
             "WEGLIDE_REDIRECT_URI",
-            "\"${readSecretProperty("WEGLIDE_REDIRECT_URI").ifBlank { "xcpro://weglide-auth/callback" }}\""
+            xcproSecrets.asBuildConfigString(
+                xcproSecrets.read("WEGLIDE_REDIRECT_URI").ifBlank { "xcpro://weglide-auth/callback" }
+            )
         )
         buildConfigField(
             "String",
             "WEGLIDE_SCOPE",
-            "\"${readSecretProperty("WEGLIDE_SCOPE")}\""
+            xcproSecrets.readBuildConfigString("WEGLIDE_SCOPE")
         )
         buildConfigField(
             "String",
             "WEGLIDE_USERINFO_ENDPOINT",
-            "\"${readSecretProperty("WEGLIDE_USERINFO_ENDPOINT")}\""
+            xcproSecrets.readBuildConfigString("WEGLIDE_USERINFO_ENDPOINT")
         )
     }
 

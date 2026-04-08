@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -23,6 +24,7 @@ rootProject.name = "XCPro"
 include(":app")
 include(":dfcards-library")
 include(":core:common")
+include(":core:flight")
 include(":core:geometry")
 include(":core:time")
 include(":core:ui")

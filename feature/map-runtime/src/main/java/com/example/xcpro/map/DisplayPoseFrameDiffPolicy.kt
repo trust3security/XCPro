@@ -9,6 +9,7 @@ import kotlin.math.sqrt
 
 internal data class DisplayPoseRenderSnapshot(
     val location: LatLng,
+    val distancePerPixelMeters: Double?,
     val trackDeg: Double,
     val headingDeg: Double,
     val headingValid: Boolean,
@@ -23,20 +24,23 @@ internal data class DisplayPoseRenderSnapshot(
 
 internal object DisplayPoseFrameDiffPolicy {
     private const val EARTH_RADIUS_M = 6_371_000.0
-    private const val LOCATION_EPS_METERS = 0.75
+    // Keep a small no-op floor so stationary jitter still coalesces, but do not
+    // quantize zoomed-in ownship motion into ~meter jumps.
+    private const val LOCATION_EPS_METERS_FALLBACK = 0.10
     private const val ANGLE_EPS_DEG = 0.5
     private const val SPEED_EPS_MS = 0.1
     private const val ACCURACY_EPS = 0.25
 
     fun isNoOp(
         previous: DisplayPoseRenderSnapshot?,
-        current: DisplayPoseRenderSnapshot
+        current: DisplayPoseRenderSnapshot,
+        locationThresholdPx: Float
     ): Boolean {
         val last = previous ?: return false
         if (last.orientationMode != current.orientationMode) return false
         if (last.timeBase != current.timeBase) return false
         if (last.headingValid != current.headingValid) return false
-        if (!sameLocation(last.location, current.location)) return false
+        if (!sameLocation(last, current, locationThresholdPx)) return false
         if (!sameAngle(last.trackDeg, current.trackDeg)) return false
         if (!sameAngle(last.mapBearingDeg, current.mapBearingDeg)) return false
         if (!sameAngle(last.cameraTargetBearingDeg, current.cameraTargetBearingDeg)) return false
@@ -49,8 +53,22 @@ internal object DisplayPoseFrameDiffPolicy {
         return true
     }
 
-    private fun sameLocation(first: LatLng, second: LatLng): Boolean =
-        distanceMeters(first, second) <= LOCATION_EPS_METERS
+    private fun sameLocation(
+        previous: DisplayPoseRenderSnapshot,
+        current: DisplayPoseRenderSnapshot,
+        locationThresholdPx: Float
+    ): Boolean {
+        val distanceMeters = distanceMeters(previous.location, current.location)
+        val distancePerPixelMeters =
+            current.distancePerPixelMeters.takeIf(::isValidDistancePerPixelMeters)
+                ?: previous.distancePerPixelMeters.takeIf(::isValidDistancePerPixelMeters)
+        val thresholdPx = locationThresholdPx.takeIf { it.isFinite() && it > 0f }
+        if (distancePerPixelMeters != null && thresholdPx != null) {
+            val distancePx = distanceMeters / distancePerPixelMeters
+            return distancePx <= thresholdPx.toDouble()
+        }
+        return distanceMeters <= LOCATION_EPS_METERS_FALLBACK
+    }
 
     private fun sameAngle(first: Double, second: Double): Boolean =
         angularDistanceDeg(first, second) <= ANGLE_EPS_DEG
@@ -80,4 +98,7 @@ internal object DisplayPoseFrameDiffPolicy {
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return EARTH_RADIUS_M * c
     }
+
+    private fun isValidDistancePerPixelMeters(value: Double?): Boolean =
+        value != null && value.isFinite() && value > 0.0
 }

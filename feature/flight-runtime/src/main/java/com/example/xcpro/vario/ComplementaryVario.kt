@@ -1,6 +1,6 @@
 package com.example.xcpro.vario
 
-import com.example.dfcards.filters.ComplementaryVarioFilter
+import com.example.xcpro.core.flight.filters.ComplementaryVarioFilter
 
 /**
  * Complementary Filter Vario (Priority 3: VARIO_IMPROVEMENTS.md)

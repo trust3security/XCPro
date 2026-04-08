@@ -1,6 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import kotlinx.coroutines.flow.StateFlow
 

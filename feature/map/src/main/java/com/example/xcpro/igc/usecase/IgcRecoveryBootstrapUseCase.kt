@@ -5,20 +5,12 @@ import com.example.xcpro.igc.domain.IgcRecoveryDiagnosticsReporter
 import com.example.xcpro.igc.domain.IgcRecoveryErrorCode
 import com.example.xcpro.igc.domain.IgcRecoveryResult
 import com.example.xcpro.igc.domain.IgcSessionStateMachine
-import com.example.xcpro.igc.domain.NoOpIgcRecoveryDiagnosticsReporter
 import javax.inject.Inject
 
 class IgcRecoveryBootstrapUseCase @Inject constructor(
     private val flightLogRepository: IgcFlightLogRepository,
     private val diagnosticsReporter: IgcRecoveryDiagnosticsReporter
 ) {
-
-    constructor(
-        flightLogRepository: IgcFlightLogRepository
-    ) : this(
-        flightLogRepository = flightLogRepository,
-        diagnosticsReporter = NoOpIgcRecoveryDiagnosticsReporter
-    )
 
     fun bootstrap(
         snapshot: IgcSessionStateMachine.Snapshot

@@ -122,7 +122,7 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
         gpsAccuracy = cachedGPSAccuracy,
         timestampMillis = currentTime
     )
-    val varioResult = com.example.dfcards.filters.ModernVarioResult(
+    val varioResult = com.example.xcpro.core.flight.filters.ModernVarioResult(
         altitude = filteredBaro.displayAltitude,
         verticalSpeed = filteredBaro.verticalSpeed,
         acceleration = 0.0,
@@ -287,7 +287,7 @@ internal fun FlightDataCalculatorEngine.updateGPSData(gps: GPSData?, compass: Co
         // Fallback: if the baro/IMU loop hasn't produced a vario yet, drive the UI with GPS vario
         // so the needle doesn't stick at zero during startup or brief baro gaps.
         val gpsFallbackVario = varioSuite.gpsVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
-        val varioResultInput = cachedVarioResult ?: com.example.dfcards.filters.ModernVarioResult(
+        val varioResultInput = cachedVarioResult ?: com.example.xcpro.core.flight.filters.ModernVarioResult(
             altitude = gps.altitude.value,
             verticalSpeed = gpsFallbackVario,
             acceleration = 0.0,

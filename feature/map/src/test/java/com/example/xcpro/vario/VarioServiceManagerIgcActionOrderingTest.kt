@@ -43,6 +43,7 @@ import com.example.xcpro.weglide.domain.WeGlidePreferencesStore
 import com.example.xcpro.weglide.domain.WeGlideUploadPreferences
 import com.example.xcpro.weglide.domain.WeGlideUploadQueueRecord
 import com.example.xcpro.weglide.domain.WeGlideUploadQueueRepository
+import com.example.xcpro.weglide.notifications.WeGlidePostFlightPromptNotificationController
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -170,10 +171,11 @@ class VarioServiceManagerIgcActionOrderingTest {
             igcRecordingUseCase = recordingUseCase,
             igcRecordingActionSink = actionSink,
             evaluateWeGlidePostFlightPromptUseCase = promptUseCase,
-            weGlidePostFlightPromptCoordinator = promptCoordinator
+            weGlidePostFlightPromptCoordinator = promptCoordinator,
+            weGlidePostFlightPromptNotificationController = mock<WeGlidePostFlightPromptNotificationController>()
         )
 
-        assertTrue(manager.start())
+        assertTrue(manager.start(this))
         withTimeout(1_000L) {
             actionFlow.subscriptionCount.filter { it > 0 }.first()
         }

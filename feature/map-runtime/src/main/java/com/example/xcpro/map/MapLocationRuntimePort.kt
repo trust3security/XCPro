@@ -1,6 +1,5 @@
 package com.example.xcpro.map
 
-import com.example.dfcards.RealTimeFlightData
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.model.MapLocationUiModel
 import org.maplibre.android.geometry.LatLng
@@ -29,8 +28,8 @@ interface MapLocationRuntimePort {
 
     fun onDisplayFrame()
 
-    fun updateLocationFromFlightData(
-        liveData: RealTimeFlightData,
+    fun updateLocationFromReplayFrame(
+        replayFrame: ReplayLocationFrame,
         orientation: OrientationData
     )
 

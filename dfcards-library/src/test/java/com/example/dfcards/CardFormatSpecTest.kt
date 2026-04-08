@@ -5,6 +5,7 @@ import com.example.xcpro.common.units.DistanceM
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.UnitsFormatter
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.core.flight.RealTimeFlightData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -130,6 +131,59 @@ class CardFormatSpecTest {
         val formatter = StubTimeFormatter()
 
         val spec = CardFormatSpecs.specs[KnownCardId.LD_CURR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("--:1", primary)
+        assertEquals(strings.noData, secondary)
+    }
+
+    @Test
+    fun ldCurr_formatting_is_isolated_from_ldVario_fields() {
+        val liveData = RealTimeFlightData(
+            currentLD = 35f,
+            currentLDValid = true,
+            currentLDAir = 13f,
+            currentLDAirValid = false
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_CURR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("35:1", primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun ldVario_formats_live_value() {
+        val liveData = RealTimeFlightData(
+            currentLDAir = 13f,
+            currentLDAirValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_VARIO]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("13:1", primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun ldVario_requires_explicit_valid_flag() {
+        val liveData = RealTimeFlightData(
+            currentLDAir = 13f,
+            currentLDAirValid = false
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_VARIO]
         assertNotNull(spec)
 
         val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)

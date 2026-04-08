@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.dfcards.RealTimeFlightData
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.MapTaskScreenManager

@@ -1,5 +1,6 @@
 package com.example.xcpro.di
 
+import com.example.xcpro.common.di.DefaultDispatcher
 import com.example.xcpro.igc.data.AndroidIgcRecorderMetadataSource
 import com.example.xcpro.igc.data.ProfileUseCaseIgcProfileMetadataSource
 import com.example.xcpro.igc.data.TaskRepositoryIgcTaskDeclarationSource
@@ -10,9 +11,13 @@ import com.example.xcpro.replay.IgcReplayController
 import com.example.xcpro.replay.IgcReplayControllerPort
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -40,4 +45,13 @@ abstract class IgcMapBindingsModule {
     abstract fun bindIgcReplayControllerPort(
         impl: IgcReplayController
     ): IgcReplayControllerPort
+
+    companion object {
+        @Provides
+        @Singleton
+        @IgcRuntimeScope
+        fun provideIgcRuntimeScope(
+            @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
+        ): CoroutineScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
+    }
 }
