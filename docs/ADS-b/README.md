@@ -30,9 +30,7 @@ is smaller and clearer.
     - Position freshness and stale-geometry hardening plan.
 12. `docs/ADS-b/CHANGE_PLAN_ADSB_CATEGORY_METADATA_ICON_REFINEMENT_PHASED_IP_2026-03-16.md`
     - Category plus metadata/typecode icon refinement plan.
-13. `docs/ADS-b/ADSB_Improvement_Plan.md`
-    - Historical completed plan kept for audit context.
-14. `docs/ADS-b/archive/README.md`
+13. `docs/ADS-b/archive/README.md`
     - Archive index for retired ADS-B prompt/execution docs.
 
 ## Notes
@@ -43,5 +41,7 @@ is smaller and clearer.
   transition-recovery and release-coverage closure work.
 - Use `CHANGE_NOTE_ADSB_STALE_OFFLINE_RECOVERY_2026-03-28.md` for the March 28
   field-reported recovery bug and the verification status of that fix.
+- Historical completed plans such as `archive/ADSB_Improvement_Plan.md` now live
+  under the archive folder rather than the active index.
 - If ADS-B runtime wiring changes, update `docs/ARCHITECTURE/PIPELINE.md` in the
   same change.

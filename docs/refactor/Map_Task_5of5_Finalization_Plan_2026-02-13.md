@@ -115,7 +115,7 @@ Additional misses found after another repository-wide sweep:
 1. High: Core deviations doc still references superseded remediation contract.
    - `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md`:
      - active remediation plan still points to
-       `Task_Architecture_Compliance_Refactor_Plan.md`.
+       `archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md`.
      - resolved note still says `TaskManagerCompat` uses Hilt entry point lookup.
    - Risk: governance/audit guidance is stale against current wiring.
 
@@ -189,7 +189,7 @@ Additional misses found in a full pass-through audit:
 
 5. Low: Additional contract doc drift in RULES execution contract.
    - `docs/RULES/Agent-Execution-Contract.md` still points to
-     `Task_Architecture_Compliance_Refactor_Plan.md`.
+     `archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md`.
    - Risk: another agent entrypoint can pick a superseded plan.
 
 6. Low: ADS-B asset/doc hygiene drift.

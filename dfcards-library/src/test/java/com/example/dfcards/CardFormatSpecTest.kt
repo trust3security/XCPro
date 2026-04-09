@@ -125,8 +125,8 @@ class CardFormatSpecTest {
     @Test
     fun ldCurr_requires_explicit_valid_flag() {
         val liveData = RealTimeFlightData(
-            currentLD = 35f,
-            currentLDValid = false
+            pilotCurrentLD = 35f,
+            pilotCurrentLDValid = false
         )
         val formatter = StubTimeFormatter()
 
@@ -140,10 +140,67 @@ class CardFormatSpecTest {
     }
 
     @Test
-    fun ldCurr_formatting_is_isolated_from_ldVario_fields() {
+    fun ldCurr_shows_thermal_when_held_during_circling() {
         val liveData = RealTimeFlightData(
-            currentLD = 35f,
+            pilotCurrentLD = 35f,
+            pilotCurrentLDValid = true,
+            pilotCurrentLDSource = "HELD",
+            isCircling = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_CURR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("35:1", primary)
+        assertEquals(strings.thermal, secondary)
+    }
+
+    @Test
+    fun ldCurr_shows_thermal_when_held_during_turning() {
+        val liveData = RealTimeFlightData(
+            pilotCurrentLD = 34f,
+            pilotCurrentLDValid = true,
+            pilotCurrentLDSource = "HELD",
+            isTurning = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_CURR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("34:1", primary)
+        assertEquals(strings.thermal, secondary)
+    }
+
+    @Test
+    fun ldCurr_shows_thermal_when_invalid_during_thermal_timeout() {
+        val liveData = RealTimeFlightData(
+            pilotCurrentLDValid = false,
+            isTurning = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.LD_CURR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("--:1", primary)
+        assertEquals(strings.thermal, secondary)
+    }
+
+    @Test
+    fun ldCurr_formats_fused_pilot_metric_without_using_raw_fields() {
+        val liveData = RealTimeFlightData(
+            currentLD = 18f,
             currentLDValid = true,
+            pilotCurrentLD = 35f,
+            pilotCurrentLDValid = true,
             currentLDAir = 13f,
             currentLDAirValid = false
         )

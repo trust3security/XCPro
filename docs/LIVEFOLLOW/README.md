@@ -7,6 +7,12 @@ the private-follow lane.
 Any doc in this folder that is not listed below should be treated as supporting
 context or historical material rather than a current owner.
 
+Supporting but not canonical:
+- `XCPro_Private_Follow_Post_Rollout_Phased_Pack_2026-03-25/`
+  - future private-follow backlog pack for post-rollout phases 4A-4D
+  - keep as supporting planning context only; do not treat it as the current
+    private-follow owner set
+
 ## Public LiveFollow current canon
 
 1. `LiveFollow_Current_State_and_Next_Slice_2026-03-23.md`
@@ -41,6 +47,9 @@ behavior.
 owner for what exists in this repo now.
 The Google setup note stays active because it still owns unique external setup
 requirements that are not duplicated elsewhere in the folder.
+The post-rollout phased pack is intentionally not part of the active canon
+because the current repo-state/change-plan docs remain the live owners until a
+later post-rollout slice is explicitly promoted.
 
 ## Related architecture / refactor docs
 

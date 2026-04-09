@@ -37,6 +37,7 @@ internal fun RealTimeFlightData.toDisplayBucket(
         windSpeed = windSpeed.takeIf { it.isFinite() }?.bucket(windSpeedBucketKt) ?: 0f,
         windDirection = windDirection.takeIf { it.isFinite() }?.bucket(windDirBucketDeg) ?: 0f,
         currentLD = currentLD.takeIf { it.isFinite() }?.bucket(ldBucket) ?: 0f,
+        pilotCurrentLD = pilotCurrentLD.takeIf { it.isFinite() }?.bucket(ldBucket) ?: 0f,
         polarLdCurrentSpeed = polarLdCurrentSpeed.takeIf { it.isFinite() }?.bucket(ldBucket) ?: 0f,
         polarBestLd = polarBestLd.takeIf { it.isFinite() }?.bucket(ldBucket) ?: 0f
     )

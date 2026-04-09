@@ -27,6 +27,7 @@ class AndroidCardStrings(private val context: Context) : CardStrings {
     override val invalid: String = context.getString(R.string.card_label_invalid)
     override val prestart: String = context.getString(R.string.card_label_prestart)
     override val live: String = context.getString(R.string.card_label_live)
+    override val thermal: String = context.getString(R.string.card_label_thermal)
     override val gps: String = context.getString(R.string.card_label_gps)
     override val est: String = context.getString(R.string.card_label_est)
     override val mag: String = context.getString(R.string.card_label_mag)

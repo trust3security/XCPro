@@ -85,6 +85,7 @@ Sensors
      -> FlightDataUiAdapter (MapScreenObservers)
         + GlideComputationRepository.glide
         + WaypointNavigationRepository.waypointNavigation
+        + PilotCurrentLdRepository.pilotCurrentLd
         + TaskPerformanceRepository.taskPerformance
         -> convertToRealTimeFlightData
         -> FlightDataManager
@@ -574,12 +575,30 @@ Mapping for cards:
     - `glideDegradedReason`
     - `glideInvalidReason`
   - Semantics:
-    - `ld_curr` remains the measured over-ground glide card
-    - `ld_vario` is the measured through-air glide card
+    - raw `currentLD/currentLDValid` remain the measured over-ground glide metric
+    - raw `currentLDAir/currentLDAirValid` remain the measured through-air glide metric
+    - visible `ld_curr` now formats map-runtime fused `pilotCurrentLD/pilotCurrentLDValid`
+    - `ld_vario` remains the measured through-air glide card
     - `polar_ld`, `best_ld` remain flight-only theoretical polar cards
     - `final_gld`, `arr_alt`, `req_alt`, `arr_mc0` are racing-task finish cards
     - glide outputs are `VALID`, `DEGRADED` (still-air assumption because no
       usable wind exists), or `INVALID`
+
+Pilot Current L/D join:
+- `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdRepository.kt`
+  - authoritative owner of the fused pilot-facing Current L/D metric.
+  - combines `FlightDataRepository.flightData`, `WindSensorFusionRepository.windState`,
+    `FlightStateSource.flightState`, `WaypointNavigationRepository.waypointNavigation`,
+    and `StillAirSinkProvider`.
+  - owns the replay-safe rolling matched window, short-gap polar support,
+    zero-wind fallback, and thermal hold policy for:
+    - `pilotCurrentLD`
+    - `pilotCurrentLDValid`
+    - `pilotCurrentLDSource`
+- `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
+  - maps the fused snapshot into `RealTimeFlightData`.
+- `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
+  - formats `ld_curr` from `pilotCurrentLD/pilotCurrentLDValid`.
 
 UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
@@ -1020,6 +1039,9 @@ Current glide-computer production card scope:
 - intentionally absent from the production catalogs:
   - standalone `final distance`
   - unsupported future target-kind / AAT glide cards
+- visible-card note:
+  - `ld_curr` is now the fused pilot-facing Current L/D card
+  - raw `currentLD/currentLDValid` remain internal/runtime diagnostics and degraded fallback inputs
 - current release limitation:
   - finish-glide validity currently requires a racing finish altitude rule
     (`RacingFinishCustomParams.minAltitudeMeters`)

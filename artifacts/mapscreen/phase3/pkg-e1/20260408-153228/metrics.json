@@ -1,0 +1,51 @@
+﻿{
+    "package_id":  "pkg-e1",
+    "generated_at":  "2026-04-08T15:32:35.3940826+10:00",
+    "slo_targets":  [
+                        {
+                            "slo_id":  "MS-UX-01",
+                            "status":  "captured",
+                            "baseline":  null,
+                            "note":  "Attach tier_a/tier_b measured values after device capture.",
+                            "post_change":  {
+                                                "tier_a":  {
+                                                               "frame_time_p95_ms":  32,
+                                                               "frame_time_p99_ms":  77,
+                                                               "jank_percent":  27.35
+                                                           },
+                                                "tier_b":  {
+                                                               "frame_time_p95_ms":  4950,
+                                                               "frame_time_p99_ms":  4950,
+                                                               "jank_percent":  100
+                                                           }
+                                            }
+                        }
+                    ],
+    "unit_evidence":  {
+                          "focused_tests":  [
+                                                "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
+                                                "com.example.xcpro.map.TaskRenderSyncCoordinatorTest"
+                                            ],
+                          "status":  "not_run"
+                      },
+    "command_gates":  [
+                          {
+                              "command":  "required_gates",
+                              "label":  "required_gates",
+                              "startedAt":  "2026-04-08T15:32:35.4789053+10:00",
+                              "finishedAt":  "2026-04-08T15:32:35.4789053+10:00",
+                              "status":  "skipped",
+                              "exitCode":  0,
+                              "output":  [
+                                             "Required gates skipped by -SkipRequiredGates."
+                                         ]
+                          }
+                      ],
+    "determinism_targets":  [
+                                {
+                                    "det_id":  "DET-04",
+                                    "status":  "not_evaluated",
+                                    "evidence":  "MapLifecycleManagerResumeSyncTest"
+                                }
+                            ]
+}

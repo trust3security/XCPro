@@ -1,6 +1,7 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.glide.GlideSolution
+import com.example.xcpro.currentld.PilotCurrentLdSnapshot
 import com.example.xcpro.map.trail.domain.TrailProcessor
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.map.trail.TrailSettings
@@ -38,6 +39,7 @@ internal class FlightDataUiAdapter(
     igcReplayController: IgcReplayController,
     glideSolutionFlow: Flow<GlideSolution>,
     waypointNavigationFlow: Flow<WaypointNavigationSnapshot>,
+    pilotCurrentLdFlow: Flow<PilotCurrentLdSnapshot>,
     taskPerformanceFlow: Flow<TaskPerformanceSnapshot>,
     trailUpdates: MutableStateFlow<TrailUpdateResult?>
 ) {
@@ -57,6 +59,7 @@ internal class FlightDataUiAdapter(
         igcReplayController = igcReplayController,
         glideSolutionFlow = glideSolutionFlow,
         waypointNavigationFlow = waypointNavigationFlow,
+        pilotCurrentLdFlow = pilotCurrentLdFlow,
         taskPerformanceFlow = taskPerformanceFlow,
         trailProcessor = TrailProcessor(),
         trailUpdates = trailUpdates

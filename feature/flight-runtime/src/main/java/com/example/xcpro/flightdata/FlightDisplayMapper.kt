@@ -83,6 +83,7 @@ class FlightDisplayMapper {
             macCready = snapshot.macCready,
             macCreadyRisk = snapshot.macCreadyRisk,
             isCircling = metrics.isCircling,
+            isTurning = metrics.isTurning,
             thermalAverageValid = metrics.thermalAverage30sValid,
             timestamp = snapshot.timestamp,
             dataQuality = snapshot.dataQuality,

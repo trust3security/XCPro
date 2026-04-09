@@ -23,7 +23,6 @@ import com.example.xcpro.common.units.VerticalSpeedMs
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.common.units.UnitsRepository
-import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.glider.GliderRepository
 import com.example.xcpro.glide.GlideComputationRepository
@@ -88,6 +87,7 @@ import com.example.xcpro.variometer.layout.VariometerWidgetRepository
 import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.ConfigurationRepository
+import com.example.xcpro.currentld.PilotCurrentLdRepository
 import com.example.xcpro.map.AdsbProximityTier
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
@@ -240,13 +240,6 @@ abstract class MapScreenViewModelTestBase {
         // Avoid per-test DataStore writes here because they can stall Robolectric workers on Windows.
     }
 
-    protected class SuccessfulWaypointLoader(private val waypoints: List<WaypointData>) : WaypointLoader {
-        override suspend fun load(): List<WaypointData> = waypoints
-    }
-    protected class FailingWaypointLoader(private val throwable: Throwable) : WaypointLoader {
-        override suspend fun load(): List<WaypointData> = throw throwable
-    }
-
     protected fun drainMain() {
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         shadowOf(Looper.getMainLooper()).idle()
@@ -262,7 +255,6 @@ abstract class MapScreenViewModelTestBase {
             drainMain()
         }
     }
-
     protected fun ensureAdsbOverlayEnabled(viewModel: MapScreenViewModel) {
         viewModel.setMapVisible(true)
         drainMain()
@@ -272,7 +264,6 @@ abstract class MapScreenViewModelTestBase {
         awaitCondition(maxIterations = 5_000) { viewModel.adsbOverlayEnabled.value }
         drainMain()
     }
-
     protected fun awaitCondition(maxIterations: Int = 500, condition: () -> Boolean) {
         repeat(maxIterations) {
             drainMain()
@@ -281,7 +272,6 @@ abstract class MapScreenViewModelTestBase {
         }
         throw AssertionError("Timed out waiting for condition")
     }
-
     protected fun newTestPreferencesDataStore(prefix: String): DataStore<Preferences> {
         val uniqueId = testPrefsCounter.incrementAndGet()
         val backingFile = File(context.cacheDir, "${prefix}_${uniqueId}.preferences_pb")
@@ -291,7 +281,6 @@ abstract class MapScreenViewModelTestBase {
             produceFile = { backingFile }
         )
     }
-
     protected fun createViewModel(
         waypointLoader: WaypointLoader = SuccessfulWaypointLoader(emptyList()),
         ognRepositoryOverride: OgnTrafficRepository? = null,
@@ -315,6 +304,7 @@ abstract class MapScreenViewModelTestBase {
             engine = RacingNavigationEngine(),
             featureFlags = localTaskFeatureFlags
         )
+        val stillAirSinkProvider = testStillAirSinkProvider()
         val taskFlightSurfaceUseCase = TaskFlightSurfaceUseCase(
             taskManager = localTaskManager,
             taskNavigationController = localTaskNavigationController
@@ -334,6 +324,9 @@ abstract class MapScreenViewModelTestBase {
             orientationManagerFactory = orientationManagerFactory,
             ballastControllerFactory = ballastControllerFactory
         )
+        val waypointNavigationRepository = WaypointNavigationRepository(
+            flightDataRepository = flightDataRepository, navigationRouteRepository = localNavigationRouteRepository
+        )
         val mapReplayUseCase = MapReplayUseCase(
             taskManager = localTaskManager,
             taskNavigationController = localTaskNavigationController,
@@ -344,20 +337,16 @@ abstract class MapScreenViewModelTestBase {
                 navigationRouteRepository = localNavigationRouteRepository,
                 glideTargetProjector = GlideTargetProjector(),
                 finalGlideUseCase = FinalGlideUseCase(
-                    sinkProvider = object : StillAirSinkProvider {
-                        override fun sinkAtSpeed(airspeedMs: Double): Double {
-                            val centered = airspeedMs - 17.0
-                            return 0.55 + (centered * centered * 0.01)
-                        }
-
-                        override fun iasBoundsMs(): SpeedBoundsMs =
-                            SpeedBoundsMs(minMs = 12.0, maxMs = 25.0)
-                    }
+                    sinkProvider = stillAirSinkProvider
                 )
             ),
-            waypointNavigationRepository = WaypointNavigationRepository(
+            waypointNavigationRepository = waypointNavigationRepository,
+            pilotCurrentLdRepository = createPilotCurrentLdRepositoryForTest(
                 flightDataRepository = flightDataRepository,
-                navigationRouteRepository = localNavigationRouteRepository
+                windStateFlow = windStateFlow,
+                flightStateFlow = flightStateFlow,
+                waypointNavigationRepository = waypointNavigationRepository,
+                sinkProvider = stillAirSinkProvider
             ),
             taskPerformanceRepository = TaskPerformanceRepository(
                 flightDataRepository = flightDataRepository,

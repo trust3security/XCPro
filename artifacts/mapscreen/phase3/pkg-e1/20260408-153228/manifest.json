@@ -1,0 +1,32 @@
+﻿{
+    "package_id":  "pkg-e1",
+    "phase":  "phase3",
+    "work_package":  "WP-08",
+    "mapscreen_items":  [
+                            "MAPSCREEN-006",
+                            "MAPSCREEN-007"
+                        ],
+    "generated_at":  "2026-04-08T15:32:35.3940826+10:00",
+    "commit_sha":  "4c965e7c4f81e63088f3673115c635c396f08b35",
+    "branch":  "refactor/phase6-map-viewmodel-lifecycle",
+    "dirty_worktree":  true,
+    "build_variant":  "debug",
+    "scenario_ids":  [
+                         "scenario-8-mixed-load-stress",
+                         "scenario-3-panzoom-ogn-adsb-rain",
+                         "scenario-4-aat-edit-drag"
+                     ],
+    "device_tiers":  [
+                         "tier_a",
+                         "tier_b"
+                     ],
+    "run_count":  {
+                      "unit":  1,
+                      "integration":  0,
+                      "perf":  0
+                  },
+    "focused_tests":  [
+                          "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
+                          "com.example.xcpro.map.TaskRenderSyncCoordinatorTest"
+                      ]
+}

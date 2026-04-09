@@ -17,6 +17,7 @@
     <string name="card_label_invalid">INVALID</string>
     <string name="card_label_prestart">PRESTART</string>
     <string name="card_label_live">LIVE</string>
+    <string name="card_label_thermal">THERMAL</string>
     <string name="card_label_gps">GPS</string>
     <string name="card_label_est">EST</string>
     <string name="card_label_mag">MAG</string>

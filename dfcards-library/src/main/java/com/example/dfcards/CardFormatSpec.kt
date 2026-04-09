@@ -248,11 +248,7 @@ internal object CardFormatSpecs {
             }
 
             KnownCardId.LD_CURR -> {
-                if (liveData.currentLDValid) {
-                    Pair("${liveData.currentLD.roundToInt()}:1", strings.live)
-                } else {
-                    Pair("--:1", strings.noData)
-                }
+                formatCurrentLdCard(liveData, strings)
             }
 
             KnownCardId.LD_VARIO -> {

@@ -76,6 +76,7 @@ data class FlightMetricsResult(
     val polarBestLdValid: Boolean = false,
     val teAltitude: Double,
     val isCircling: Boolean,
+    val isTurning: Boolean = false,
     val thermalAverage30sValid: Boolean,
     val levoNettoMs: Double,
     val levoNettoValid: Boolean,

@@ -213,7 +213,7 @@ After:
 - Files:
   - `docs/ADS-b/ADSB.md`
   - `docs/ADS-b/README.md`
-  - `docs/ADS-b/ADSB_Improvement_Plan.md`
+  - `docs/ADS-b/archive/ADSB_Improvement_Plan.md`
   - `docs/ARCHITECTURE/PIPELINE.md` (only if runtime wiring changes in implementation)
 - Tests:
   - Full ADS-B unit suite and required repo checks.

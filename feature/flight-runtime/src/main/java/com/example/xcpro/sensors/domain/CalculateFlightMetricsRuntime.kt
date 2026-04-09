@@ -335,6 +335,7 @@ internal class CalculateFlightMetricsRuntime(
             polarBestLdValid = polarBestLdValid,
             teAltitude = teAltitude,
             isCircling = isCircling,
+            isTurning = isTurning,
             thermalAverage30sValid = thermalAvg30sValid,
             levoNettoMs = levoNettoResult.valueMs,
             levoNettoValid = levoNettoResult.valid,

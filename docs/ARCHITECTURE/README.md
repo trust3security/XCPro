@@ -44,7 +44,7 @@ Pipeline overview: `PIPELINE.md` (diagram: `PIPELINE.svg`).
 
 Compliance is tracked in `KNOWN_DEVIATIONS.md`.
 This README intentionally does not duplicate deviation status.
-Refactor checklist: `../refactor/Agent-Execution-Contract-LevoCompliance.md`.
+Refactor index: `../refactor/README.md`.
 
 Repository rule script (local debugging only):
 ```

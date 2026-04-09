@@ -6,7 +6,7 @@ Interim migration step after Phase 3 extraction:
 - keep existing manager/UI behavior intact as compatibility during phased migration.
 
 This is preparatory work toward coordinator refactor items in
-`docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md` (Phase 5/6 track).
+`docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md` (Phase 5/6 track).
 
 ## Implemented
 
