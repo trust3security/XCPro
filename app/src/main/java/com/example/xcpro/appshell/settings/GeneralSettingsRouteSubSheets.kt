@@ -14,6 +14,7 @@ import com.example.ui1.screens.HotspotsSettingsSubSheet
 import com.example.ui1.screens.OgnSettingsSubSheet
 import com.example.ui1.screens.ProfilesScreen
 import com.example.ui1.screens.WeGlideSettingsSubSheet
+import com.example.xcpro.screens.navdrawer.BluetoothVarioSettingsScreen
 import com.example.xcpro.screens.navdrawer.ForecastSettingsScreen
 import com.example.xcpro.screens.navdrawer.HawkVarioSettingsScreen
 import com.example.xcpro.screens.navdrawer.LayoutScreen
@@ -165,6 +166,25 @@ internal fun HawkVarioSettingsSubSheet(
 ) {
     SettingsRouteSubSheetContainer(onDismiss = onDismiss) {
         HawkVarioSettingsScreen(
+            navController = navController,
+            drawerState = drawerState,
+            onNavigateUp = onDismiss,
+            onSecondaryNavigate = onNavigateToDrawer,
+            onNavigateToMap = onNavigateToMap
+        )
+    }
+}
+
+@Composable
+internal fun BluetoothVarioSettingsSubSheet(
+    navController: NavHostController,
+    drawerState: DrawerState,
+    onDismiss: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
+    onNavigateToMap: () -> Unit
+) {
+    SettingsRouteSubSheetContainer(onDismiss = onDismiss) {
+        BluetoothVarioSettingsScreen(
             navController = navController,
             drawerState = drawerState,
             onNavigateUp = onDismiss,

@@ -461,6 +461,14 @@ ViewModel:
   - Profile owns the HAWK settings route shell plus the
     `HawkVarioSettingsViewModel` / `HawkVarioSettingsUseCase` used for HAWK
     preference writes and live-preview consumption.
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/BluetoothVarioSettingsScreen.kt`
+  - Profile owns the Bluetooth settings route shell plus the
+    `BluetoothVarioSettingsViewModel` / `BluetoothVarioSettingsUseCase` used
+    to map variometer-owned control state into UI and forward explicit
+    permission-result, selection, connect, and disconnect intents.
+  - The settings screen is a consumer only; it does not own Bluetooth
+    permission truth, bonded-device enumeration, selected-device persistence,
+    or runtime session lifecycle.
 - `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioPreviewReadPort.kt`
   - Variometer owns the read-only HAWK preview contract
     (`HawkVarioPreviewReadPort`, `HawkVarioUiState`, `HawkConfidence`) shared
@@ -476,6 +484,14 @@ ViewModel:
   - Only external `pressureAltitudeM` and `totalEnergyVarioMps` participate in
     fused truth in Phase 4; `airspeedKph` and device metadata remain
     variometer-local / diagnostics-only.
+- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/control/LxBluetoothControlPort.kt`
+  and `LxBluetoothControlUseCase.kt`
+  - Variometer owns the Bluetooth settings/control seam over transport
+    connection state, permission truth, bonded-device refresh, install-wide
+    selected-device persistence, and explicit connect/disconnect delegation into
+    `LxExternalRuntimeRepository`.
+  - This seam derives UI/control state from the transport and selected-device
+    owners; it is not a second Bluetooth session lifecycle source of truth.
 - `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt`
   - `feature:map` keeps the temporary app theme runtime read path over the
     profile-owned theme use case; the colors owner move does not leave writes
@@ -487,6 +503,11 @@ ViewModel:
   - Bluetooth LXNAV transport/parsing/runtime ownership does not land in
     `feature:map`; it crosses into fused truth only through the narrow
     `ExternalInstrumentReadPort` seam.
+- `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettings*.kt`
+  - `:app` remains host-only for the General Settings bottom-sheet registry.
+  - Bluetooth logic in this phase is limited to surfacing the
+    `BluetoothVarioSettingsScreen`; app does not own selected-device
+    persistence, bonded-device enumeration, or connect/disconnect behavior.
 - `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutViewModel.kt`
   - `feature:map` keeps the widget drag/resize runtime owner; the layout
     settings route move does not change widget runtime ownership.

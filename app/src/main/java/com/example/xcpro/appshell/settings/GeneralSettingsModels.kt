@@ -10,6 +10,7 @@ internal enum class GeneralSubSheet {
     POLAR,
     LEVO_VARIO,
     HAWK_VARIO,
+    BLUETOOTH_VARIO,
     LAYOUTS,
     SKYSIGHT,
     OGN,

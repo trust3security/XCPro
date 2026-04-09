@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -128,11 +129,27 @@ internal fun GeneralSettingsCategoryGrid(
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
+                            title = "Bluetooth Vario",
+                            icon = Icons.Default.Speed,
+                            onClick = { onSubSheetSelected(GeneralSubSheet.BLUETOOTH_VARIO) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CategoryItem(
                             title = "Orientation",
                             icon = Icons.Default.Explore,
                             onClick = { onSubSheetSelected(GeneralSubSheet.ORIENTATION) },
                             modifier = Modifier.weight(1f)
                         )
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
                 item {
