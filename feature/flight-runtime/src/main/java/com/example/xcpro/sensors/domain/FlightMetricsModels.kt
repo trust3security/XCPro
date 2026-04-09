@@ -4,6 +4,7 @@ import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
 import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.core.flight.filters.ModernVarioResult
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.weather.wind.model.WindState
@@ -19,13 +20,15 @@ data class FlightMetricsRequest(
     val baroResult: BarometricAltitudeData?,
     val windState: WindState?,
     val externalAirspeedSample: AirspeedSample? = null,
+    val externalInstrumentSnapshot: ExternalInstrumentFlightSnapshot = ExternalInstrumentFlightSnapshot(),
     val allowOnlineTerrainLookup: Boolean = true,
     val varioValidUntil: Long,
     val isFlying: Boolean,
     val macCreadySetting: Double,
     val autoMcEnabled: Boolean,
     val teCompensationEnabled: Boolean = true,
-    val flightMode: FlightMode
+    val flightMode: FlightMode,
+    val isReplayMode: Boolean = false
 )
 
 data class FlightMetricsResult(

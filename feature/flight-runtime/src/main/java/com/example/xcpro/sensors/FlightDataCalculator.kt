@@ -4,6 +4,7 @@ import com.example.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.example.xcpro.audio.VarioAudioControllerFactory
 import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.core.time.Clock
+import com.example.xcpro.external.ExternalInstrumentReadPort
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.hawk.HawkAudioVarioReadPort
 import com.example.xcpro.weather.wind.data.AirspeedDataSource
@@ -24,6 +25,7 @@ class FlightDataCalculator(
     audioControllerFactory: VarioAudioControllerFactory,
     clock: Clock,
     hawkAudioVarioReadPort: HawkAudioVarioReadPort,
+    externalInstrumentReadPort: ExternalInstrumentReadPort,
     terrainElevationReadPort: TerrainElevationReadPort,
     enableAudio: Boolean = true,
     isReplayMode: Boolean = false
@@ -39,6 +41,7 @@ class FlightDataCalculator(
         audioController = audioControllerFactory.create(scope = scope, enableAudio = enableAudio),
         clock = clock,
         hawkAudioVarioReadPort = hawkAudioVarioReadPort,
+        externalInstrumentReadPort = externalInstrumentReadPort,
         terrainElevationReadPort = terrainElevationReadPort,
         isReplayMode = isReplayMode
     )

@@ -1,6 +1,7 @@
 package com.example.xcpro.sensors.domain
 
 import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
+import com.example.xcpro.external.TimedExternalValue
 import com.example.xcpro.sensors.domain.FlightMetricsConstants.GRAVITY
 
 private const val MIN_GATE_DT_SECONDS = 0.02  // reject duplicate/too-fast timestamps
@@ -47,6 +48,7 @@ internal class SensorFrontEnd(
         teVario: Double?,
         airspeedEstimate: AirspeedEstimate?,
         currentTime: Long,
+        externalPressureAltitudeSample: TimedExternalValue<Double>? = null,
         pressureVarioOverride: Double? = null
     ): SensorSnapshot {
         val navAltitude = when {
@@ -71,16 +73,21 @@ internal class SensorFrontEnd(
         } else 0.0
         val teAltitude = navAltitude + energyHeight
 
-        val pressureAltitudeVario = baroResult?.pressureAltitudeMeters
-            ?.takeIf { it.isFinite() }
-            ?.let { pressureAltitude ->
-                deriveVario(
-                    pressureAltitude = pressureAltitude,
-                    currentTime = currentTime,
-                    altitudeType = AltitudeType.PRESSURE
-                )
-            }
-            ?: Double.NaN
+        val pressureAltitudeVario = when {
+            externalPressureAltitudeSample?.value?.isFinite() == true -> deriveVario(
+                pressureAltitude = externalPressureAltitudeSample.value,
+                currentTime = externalPressureAltitudeSample.receivedMonoMs,
+                altitudeType = AltitudeType.EXTERNAL_PRESSURE
+            )
+
+            baroResult?.pressureAltitudeMeters?.isFinite() == true -> deriveVario(
+                pressureAltitude = baroResult.pressureAltitudeMeters,
+                currentTime = currentTime,
+                altitudeType = AltitudeType.PRESSURE
+            )
+
+            else -> Double.NaN
+        }
 
         val pressureVario = pressureVarioOverride
             ?.takeIf { it.isFinite() }
@@ -128,11 +135,14 @@ internal class SensorFrontEnd(
         )
     }
 
-    private enum class AltitudeType { PRESSURE, BARO, GPS }
+    private enum class AltitudeType { PRESSURE, EXTERNAL_PRESSURE, BARO, GPS }
 
     private var prevPressureAltitude: Double? = null
     private var prevPressureTime: Long = -1L
     private var lastPressureVario: Double? = null
+    private var prevExternalPressureAltitude: Double? = null
+    private var prevExternalPressureTime: Long = -1L
+    private var lastExternalPressureVario: Double? = null
     private var prevBaroAltitude: Double? = null
     private var prevBaroTime: Long = -1L
     private var lastBaroVario: Double? = null
@@ -146,6 +156,11 @@ internal class SensorFrontEnd(
 
         val (prevAlt, prevTime, lastVario) = when (altitudeType) {
             AltitudeType.PRESSURE -> Triple(prevPressureAltitude, prevPressureTime, lastPressureVario)
+            AltitudeType.EXTERNAL_PRESSURE -> Triple(
+                prevExternalPressureAltitude,
+                prevExternalPressureTime,
+                lastExternalPressureVario
+            )
             AltitudeType.BARO -> Triple(prevBaroAltitude, prevBaroTime, lastBaroVario)
             AltitudeType.GPS -> Triple(prevGpsAltitude, prevGpsTime, lastGpsVario)
         }
@@ -176,6 +191,11 @@ internal class SensorFrontEnd(
                 prevPressureTime = time
                 lastPressureVario = vario
             }
+            AltitudeType.EXTERNAL_PRESSURE -> {
+                prevExternalPressureAltitude = altitude
+                prevExternalPressureTime = time
+                lastExternalPressureVario = vario
+            }
             AltitudeType.BARO -> {
                 prevBaroAltitude = altitude
                 prevBaroTime = time
@@ -193,6 +213,9 @@ internal class SensorFrontEnd(
         prevPressureAltitude = null
         prevPressureTime = -1L
         lastPressureVario = null
+        prevExternalPressureAltitude = null
+        prevExternalPressureTime = -1L
+        lastExternalPressureVario = null
         prevBaroAltitude = null
         prevBaroTime = -1L
         lastBaroVario = null

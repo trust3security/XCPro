@@ -143,14 +143,19 @@ Fusion entry:
     - `StillAirSinkProvider`
     - `VarioAudioControllerFactory`
     - `HawkAudioVarioReadPort`
+    - `ExternalInstrumentReadPort`
     - `TerrainElevationReadPort` from `:core:flight`
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
   - thin wrapper around `FlightDataCalculatorEngine`.
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
   - owns fusion loops, filters, metrics use case, and the shared audio port.
   - caches latest external/replay airspeed sample from `AirspeedDataSource`.
+  - caches the latest narrow external-instrument snapshot from
+    `ExternalInstrumentReadPort`.
   - consumes HAWK audio vario samples through `HawkAudioVarioReadPort` rather
     than depending on the full HAWK repository.
+  - keeps external-vs-phone arbitration in `feature:flight-runtime`; replay
+    bypasses live external Bluetooth truth.
   - constructs `SimpleAglCalculator` with the injected shared `TerrainElevationReadPort`;
     the calculator no longer constructs terrain adapters directly.
 - `feature/map/src/main/java/com/example/xcpro/terrain/TerrainElevationRepository.kt`
@@ -463,6 +468,14 @@ ViewModel:
 - `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt`
   - Variometer owns the live HAWK runtime owner plus its repository/config
     stack and implements the variometer-owned `HawkVarioPreviewReadPort`.
+- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/runtime/LxExternalRuntimeRepository.kt`
+  - Variometer owns Bluetooth transport/parsing consumption plus the long-lived
+    LXNAV external runtime snapshot owner.
+  - Implements the narrow `ExternalInstrumentReadPort` bridge into
+    `feature:flight-runtime`.
+  - Only external `pressureAltitudeM` and `totalEnergyVarioMps` participate in
+    fused truth in Phase 4; `airspeedKph` and device metadata remain
+    variometer-local / diagnostics-only.
 - `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt`
   - `feature:map` keeps the temporary app theme runtime read path over the
     profile-owned theme use case; the colors owner move does not leave writes
@@ -471,6 +484,9 @@ ViewModel:
   - `feature:map` keeps only the temporary HAWK sensor/source adapters that
     feed the variometer-owned runtime until Parent Phase 2B moves those
     upstream owners behind the future flight-runtime boundary.
+  - Bluetooth LXNAV transport/parsing/runtime ownership does not land in
+    `feature:map`; it crosses into fused truth only through the narrow
+    `ExternalInstrumentReadPort` seam.
 - `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutViewModel.kt`
   - `feature:map` keeps the widget drag/resize runtime owner; the layout
     settings route move does not change widget runtime ownership.

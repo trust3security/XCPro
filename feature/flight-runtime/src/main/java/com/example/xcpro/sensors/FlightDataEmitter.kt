@@ -3,6 +3,7 @@ package com.example.xcpro.sensors
 import com.example.xcpro.core.flight.calculations.BarometricAltitudeData
 import com.example.xcpro.core.flight.filters.ModernVarioResult
 import com.example.xcpro.core.common.logging.AppLogger
+import com.example.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.example.xcpro.flightdata.FlightDisplayMapper
 import com.example.xcpro.flightdata.FlightDisplaySnapshot
 import com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase
@@ -43,6 +44,7 @@ internal class FlightDataEmitter(
         cachedVarioResult: ModernVarioResult?,
         windState: WindState?,
         externalAirspeedSample: AirspeedSample?,
+        externalInstrumentSnapshot: ExternalInstrumentFlightSnapshot,
         isFlying: Boolean,
         replayRealVarioMs: Double?,
         replayRealVarioTimestamp: Long,
@@ -83,13 +85,15 @@ internal class FlightDataEmitter(
                 baroResult = baroResult,
                 windState = windState,
                 externalAirspeedSample = externalAirspeedSample,
+                externalInstrumentSnapshot = externalInstrumentSnapshot,
                 allowOnlineTerrainLookup = !isReplayMode,
                 varioValidUntil = state.varioValidUntil,
                 isFlying = isFlying,
                 macCreadySetting = macCreadySetting,
                 autoMcEnabled = autoMcEnabled,
                 teCompensationEnabled = teCompensationEnabled,
-                flightMode = flightMode
+                flightMode = flightMode,
+                isReplayMode = isReplayMode
             )
         )
 

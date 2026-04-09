@@ -7,6 +7,8 @@ import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.core.time.FakeClock
+import com.example.xcpro.external.ExternalInstrumentFlightSnapshot
+import com.example.xcpro.external.ExternalInstrumentReadPort
 import com.example.xcpro.glider.SpeedBoundsMs
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.hawk.HawkAudioVarioReadPort
@@ -46,6 +48,7 @@ class FlightDataCalculatorEngineReplayTerrainGateTest {
             audioController = FakeVarioAudioController(),
             clock = FakeClock(monoMs = 1_000L, wallMs = 1_000L),
             hawkAudioVarioReadPort = NoOpHawkAudioVarioReadPort,
+            externalInstrumentReadPort = NoOpExternalInstrumentReadPort,
             terrainElevationReadPort = terrainPort,
             isReplayMode = true
         )
@@ -108,6 +111,11 @@ class FlightDataCalculatorEngineReplayTerrainGateTest {
 
     private object NoOpHawkAudioVarioReadPort : HawkAudioVarioReadPort {
         override val audioVarioMps: Flow<Double?> = emptyFlow()
+    }
+
+    private object NoOpExternalInstrumentReadPort : ExternalInstrumentReadPort {
+        override val externalFlightSnapshot: StateFlow<ExternalInstrumentFlightSnapshot> =
+            MutableStateFlow(ExternalInstrumentFlightSnapshot())
     }
 
     private fun gpsSample(timestampMillis: Long): GPSData =
