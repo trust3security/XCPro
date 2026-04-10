@@ -38,9 +38,16 @@ internal class CalculateFlightMetricsRuntime(
 
         val baroAltitude = varioResult.altitude
         val baroResult = request.baroResult
+        val externalInputs = resolveExternalInstrumentInputs(
+            snapshot = request.externalInstrumentSnapshot,
+            currentMonoMs = currentTime,
+            isReplayMode = request.isReplayMode
+        )
         val qnh = baroResult?.qnh ?: DEFAULT_QNH_HPA
         val isQnhCalibrated = baroResult?.isCalibrated ?: false
-        val pressureAltitude = baroResult?.pressureAltitudeMeters ?: baroAltitude
+        val pressureAltitude = externalInputs.pressureAltitudeM?.value
+            ?: baroResult?.pressureAltitudeMeters
+            ?: baroAltitude
         val baroGpsDelta = baroResult?.gpsDeltaMeters
             ?: gps.altitude.value.takeIf { !it.isNaN() }?.let { baroAltitude - it }
         val baroConfidence = baroResult?.confidenceLevel ?: ConfidenceLevel.LOW
@@ -84,7 +91,7 @@ internal class CalculateFlightMetricsRuntime(
         recordWindTransitions(airspeedSourceStabilityController.drainTransitionEvents())
 
         val teSpeed = chosenAirspeed?.trueMs
-        val teVario = if (
+        val computedTeVario = if (
             request.teCompensationEnabled &&
             teSpeed != null &&
             chosenAirspeed.source.energyHeightEligible &&
@@ -107,6 +114,7 @@ internal class CalculateFlightMetricsRuntime(
             prevTeSpeed = 0.0
             null
         }
+        val teVario = externalInputs.totalEnergyVarioMps?.value ?: computedTeVario
 
         val pressureVarioOverride = varioResult.verticalSpeed.takeIf {
             it.isFinite() && currentTime <= request.varioValidUntil
@@ -122,6 +130,7 @@ internal class CalculateFlightMetricsRuntime(
             teVario = teVario,
             airspeedEstimate = chosenAirspeed,
             currentTime = currentTime,
+            externalPressureAltitudeSample = externalInputs.pressureAltitudeM,
             pressureVarioOverride = pressureVarioOverride
         )
         val navAltitude = snapshot.navAltitude
@@ -335,6 +344,7 @@ internal class CalculateFlightMetricsRuntime(
             polarBestLdValid = polarBestLdValid,
             teAltitude = teAltitude,
             isCircling = isCircling,
+            isTurning = isTurning,
             thermalAverage30sValid = thermalAvg30sValid,
             levoNettoMs = levoNettoResult.valueMs,
             levoNettoValid = levoNettoResult.valid,

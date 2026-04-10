@@ -75,6 +75,13 @@ internal fun GeneralSettingsSubSheetContent(
             onNavigateToDrawer = onNavigateToDrawer,
             onNavigateToMap = onNavigateToMap
         )
+        GeneralSubSheet.BLUETOOTH_VARIO -> BluetoothVarioSettingsSubSheet(
+            navController = navController,
+            drawerState = drawerState,
+            onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
+            onNavigateToDrawer = onNavigateToDrawer,
+            onNavigateToMap = onNavigateToMap
+        )
         GeneralSubSheet.LAYOUTS -> LayoutSettingsSubSheet(
             navController = navController,
             drawerState = drawerState,

@@ -1,7 +1,7 @@
 # Task Phase 2 - Pure Engines (2026-02-11)
 
 ## Scope
-Phase 2 goal from `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`:
+Phase 2 goal from `docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md`:
 - create pure `AATTaskEngine` and `RacingTaskEngine`,
 - back state with `StateFlow`,
 - add engine-level unit tests.

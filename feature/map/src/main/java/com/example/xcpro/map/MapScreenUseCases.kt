@@ -18,6 +18,7 @@ import com.example.xcpro.map.ballast.BallastControllerFactory
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.glide.GlideComputationRepository
 import com.example.xcpro.navigation.WaypointNavigationRepository
+import com.example.xcpro.currentld.PilotCurrentLdRepository
 import com.example.xcpro.taskperformance.TaskPerformanceRepository
 import com.example.xcpro.tasks.TaskManagerCoordinator
 import com.example.xcpro.tasks.TaskNavigationController
@@ -176,6 +177,7 @@ class MapReplayUseCase @Inject constructor(
     private val taskNavigationController: TaskNavigationController,
     private val glideComputationRepository: GlideComputationRepository,
     private val waypointNavigationRepository: WaypointNavigationRepository,
+    private val pilotCurrentLdRepository: PilotCurrentLdRepository,
     private val taskPerformanceRepository: TaskPerformanceRepository,
     private val controller: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder,
@@ -219,6 +221,7 @@ class MapReplayUseCase @Inject constructor(
         igcReplayController = controller,
         glideSolutionFlow = glideComputationRepository.glide,
         waypointNavigationFlow = waypointNavigationRepository.waypointNavigation,
+        pilotCurrentLdFlow = pilotCurrentLdRepository.pilotCurrentLd,
         taskPerformanceFlow = taskPerformanceRepository.taskPerformance,
         trailUpdates = trailUpdates
     )

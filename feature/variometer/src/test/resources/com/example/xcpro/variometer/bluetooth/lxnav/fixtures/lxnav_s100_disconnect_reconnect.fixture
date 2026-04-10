@@ -1,0 +1,11 @@
+# Sanitized LXNAV S100 disconnect/reconnect capture.
+# LXWP1 serial values use synthetic placeholders like SN0001; any real serial
+# was replaced and the checksum was recomputed after substitution.
+@session start
+100|$LXWP1,S100,SN0001,1.2.3,2.0*40
+200|$LXWP0,Y,90.0,700.0,1.50*5E
+@event monoMs=250 type=error error=STREAM_CLOSED
+@session end
+@session start
+500|$LXWP0,Y,91.0,710.0,1.60*5D
+@session end

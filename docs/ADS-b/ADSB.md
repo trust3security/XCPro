@@ -277,6 +277,6 @@ Still open:
 - `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_UX_STALE_HOUSEKEEPING_OBSERVABILITY_2026-03-01.md`
 - `docs/ADS-b/CHANGE_PLAN_ADSB_SOCKET_ERROR_HARDENING_2026-03-01.md`
 - `docs/ADS-b/CHANGE_PLAN_ADSB_MAINTAINABILITY_SCORE_LIFT_2026-03-08.md`
-- `docs/ADS-b/ADSB_Improvement_Plan.md`
+- `docs/ADS-b/archive/ADSB_Improvement_Plan.md`
 - `docs/ADS-b/ADSB_AircraftMetadata.md`
 - `docs/ADS-b/ADSB_CategoryIconMapping.md`

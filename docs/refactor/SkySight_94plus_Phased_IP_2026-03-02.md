@@ -244,7 +244,8 @@ First phase where each category reaches >=94 (planned):
 15. Tooling/docs confidence gap:
 - Connected instrumentation gates for this slice remain optional/pending.
 - Multiple SkySight plan docs exist; status drift risk remains.
-- `docs/03_Features/SkySight_Weather.md` documents non-existent components.
+- archived `docs/03_Features/archive/2026-04-doc-pass/SkySight_Weather.md`
+  documents non-existent components.
 
 16. Forecast apply exception-isolation gap (newly confirmed):
 - Forecast apply/reapply calls are not wrapped in failure isolation (`runCatching`/error-state channel) unlike satellite/weather paths.
@@ -485,7 +486,8 @@ Expected score after phase:
 Work:
 - Consolidate SkySight docs to one canonical IP and one status source.
 - Update `PIPELINE.md` and `docs/TABS/2Tab.md` with final runtime/auth/network contract truth.
-- Retire or archive stale SkySight docs that reference non-existent components (`docs/03_Features/SkySight_Weather.md`).
+- Retire or archive stale SkySight docs that reference non-existent components
+  (`docs/03_Features/archive/2026-04-doc-pass/SkySight_Weather.md`).
 - Add/refresh operational runbook for SkySight evidence capture and failure triage.
 - Enforce required SkySight verification block in preflight flow.
 

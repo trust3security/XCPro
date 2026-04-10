@@ -25,6 +25,7 @@ interface CardStrings {
     val invalid: String
     val prestart: String
     val live: String
+    val thermal: String
     val gps: String
     val est: String
     val mag: String
@@ -67,6 +68,7 @@ internal class DefaultCardStrings : CardStrings {
     override val invalid: String = "INVALID"
     override val prestart: String = "PRESTART"
     override val live: String = "LIVE"
+    override val thermal: String = "THERMAL"
     override val gps: String = "GPS"
     override val est: String = "EST"
     override val mag: String = "MAG"

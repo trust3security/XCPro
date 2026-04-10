@@ -134,7 +134,7 @@ In scope:
 
 Planned files:
 - `docs/ADS-b/ADSB.md` (append implementation invariants if needed)
-- `docs/ADS-b/ADSB_Improvement_Plan.md` (cross-reference to this plan)
+- `docs/ADS-b/archive/ADSB_Improvement_Plan.md` (historical baseline for this plan)
 - ADS-B test files under `feature/map/src/test/java/com/example/xcpro/adsb/` and `.../map/`
 
 Exit criteria:

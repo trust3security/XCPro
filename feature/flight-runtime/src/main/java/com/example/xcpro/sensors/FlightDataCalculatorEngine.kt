@@ -7,6 +7,8 @@ import com.example.xcpro.audio.VarioAudioSettings
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.core.time.Clock
+import com.example.xcpro.external.ExternalInstrumentFlightSnapshot
+import com.example.xcpro.external.ExternalInstrumentReadPort
 import com.example.xcpro.flightdata.FlightDisplayMapper
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.hawk.HawkAudioVarioReadPort
@@ -40,6 +42,7 @@ internal class FlightDataCalculatorEngine(
     internal val audioController: VarioAudioControllerPort,
     internal val clock: Clock,
     private val hawkAudioVarioReadPort: HawkAudioVarioReadPort,
+    private val externalInstrumentReadPort: ExternalInstrumentReadPort,
     private val terrainElevationReadPort: TerrainElevationReadPort,
     internal val isReplayMode: Boolean = false
 ): SensorFusionRepository {
@@ -79,6 +82,8 @@ internal class FlightDataCalculatorEngine(
     @Volatile internal var latestWindState: WindState? = null
     @Volatile internal var latestFlightState: FlyingState? = null
     @Volatile internal var latestAirspeedSample: AirspeedSample? = null
+    @Volatile internal var latestExternalInstrumentSnapshot: ExternalInstrumentFlightSnapshot =
+        ExternalInstrumentFlightSnapshot()
     @Volatile internal var lastGpsFixTimestampForGpsVario: Long = 0L
     internal val varioSuite = VarioSuite()
     internal val flightDisplayMapper = FlightDisplayMapper()
@@ -136,6 +141,11 @@ internal class FlightDataCalculatorEngine(
         scope.launch { windStateFlow.collect { latestWindState = it } }
         scope.launch { flightStateSource.flightState.collect { latestFlightState = it } }
         scope.launch { airspeedDataSource.airspeedFlow.collect { latestAirspeedSample = it } }
+        scope.launch {
+            externalInstrumentReadPort.externalFlightSnapshot.collect { snapshot ->
+                latestExternalInstrumentSnapshot = snapshot
+            }
+        }
         scope.launch {
             hawkAudioVarioReadPort.audioVarioMps.collect { sample ->
                 hawkAudioVarioMps = sample?.takeIf { it.isFinite() }
@@ -219,6 +229,7 @@ internal class FlightDataCalculatorEngine(
         latestWindState = null
         latestFlightState = null
         latestAirspeedSample = null
+        latestExternalInstrumentSnapshot = ExternalInstrumentFlightSnapshot()
         lastGpsFixTimestampForGpsVario = 0L
         smoothedVerticalAccel = null
         lastAccelTimestamp = 0L

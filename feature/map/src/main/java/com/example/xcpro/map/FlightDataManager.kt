@@ -166,7 +166,7 @@ class FlightDataManager(
 
     val glideRatioDisplayFlow: StateFlow<Float> =
         liveFlightDataFlow
-            .map { (it?.currentLD ?: 0f).bucket(LD_BUCKET) }
+            .map { (it?.pilotCurrentLD ?: 0f).bucket(LD_BUCKET) }
             .distinctUntilChanged()
             .throttleFrame(UI_NUMERIC_FRAME_MS)
             .stateIn(

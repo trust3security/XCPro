@@ -5,6 +5,7 @@ import com.example.xcpro.audio.VarioAudioControllerFactory
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.di.LiveSource
 import com.example.xcpro.di.ReplaySource
+import com.example.xcpro.external.ExternalInstrumentReadPort
 import com.example.xcpro.glider.StillAirSinkProvider
 import com.example.xcpro.hawk.HawkAudioVarioReadPort
 import com.example.xcpro.weather.wind.data.AirspeedDataSource
@@ -24,6 +25,7 @@ class SensorFusionRepositoryFactory @Inject constructor(
     private val audioControllerFactory: VarioAudioControllerFactory,
     private val clock: Clock,
     private val hawkAudioVarioReadPort: HawkAudioVarioReadPort,
+    private val externalInstrumentReadPort: ExternalInstrumentReadPort,
     private val terrainElevationReadPort: TerrainElevationReadPort
 ) {
     fun create(
@@ -43,6 +45,7 @@ class SensorFusionRepositoryFactory @Inject constructor(
             audioControllerFactory = audioControllerFactory,
             clock = clock,
             hawkAudioVarioReadPort = hawkAudioVarioReadPort,
+            externalInstrumentReadPort = externalInstrumentReadPort,
             terrainElevationReadPort = terrainElevationReadPort,
             enableAudio = enableAudio,
             isReplayMode = isReplayMode

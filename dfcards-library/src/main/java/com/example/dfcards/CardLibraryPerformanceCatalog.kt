@@ -81,7 +81,7 @@ internal val performanceCards = listOf(
     CardDefinition(
         id = "ld_curr",
         title = "L/D CURR",
-        description = "Measured glide ratio over the recent flight path",
+        description = "Fused pilot-facing current glide ratio with wind-aware zero-wind fallback",
         category = CardCategory.PERFORMANCE,
         icon = Icons.Filled.Timeline,
         unit = ":1",

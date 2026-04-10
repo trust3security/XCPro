@@ -2,6 +2,9 @@
 
 Purpose: single entry point for ADS-B smart proximity behavior, ownership, and tests.
 
+Historical execution docs:
+- `docs/PROXIMITY/archive/2026-04-doc-pass/README.md`
+
 ## Current Behavior Contract
 
 - Proximity is ownship-relative only (current glider/phone position).
@@ -200,4 +203,4 @@ scripts\qa\run_proximity_phase_gates.bat
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_PROXIMITY_PRODUCTION_GRADE_2026-03-03.md`
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_CIRCLING_1KM_RED_EMERGENCY_AUDIO_2026-03-04.md`
 - `docs/PROXIMITY/CHANGE_PLAN_ADSB_TURN_AWARE_EMERGENCY_HARDENING_2026-03-06.md`
-- `docs/PROXIMITY/AGENT_EXECUTION_CONTRACT_PROXIMITY_PHASED_FAST_THEN_FULL_2026-03-04.md`
+- `docs/PROXIMITY/archive/2026-04-doc-pass/README.md`

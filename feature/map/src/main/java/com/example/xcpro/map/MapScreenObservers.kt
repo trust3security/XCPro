@@ -3,6 +3,7 @@ package com.example.xcpro.map
 import android.util.Log
 import com.example.xcpro.convertToRealTimeFlightData
 import com.example.xcpro.core.flight.RealTimeFlightData
+import com.example.xcpro.currentld.PilotCurrentLdSnapshot
 import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.map.trail.TrailLength
@@ -50,6 +51,7 @@ internal class MapScreenObservers(
     private val igcReplayController: IgcReplayController,
     private val glideSolutionFlow: Flow<GlideSolution>,
     private val waypointNavigationFlow: Flow<WaypointNavigationSnapshot>,
+    private val pilotCurrentLdFlow: Flow<PilotCurrentLdSnapshot>,
     private val taskPerformanceFlow: Flow<TaskPerformanceSnapshot>,
     private val trailProcessor: TrailProcessor,
     private val trailUpdates: MutableStateFlow<TrailUpdateResult?>
@@ -95,7 +97,7 @@ internal class MapScreenObservers(
                 tuple.sixth,
                 waypointNavigation
             )
-        }.combine(taskPerformanceFlow) { tuple, taskPerformance ->
+        }.combine(pilotCurrentLdFlow) { tuple, pilotCurrentLd ->
             Octuple(
                 tuple.first,
                 tuple.second,
@@ -104,9 +106,9 @@ internal class MapScreenObservers(
                 tuple.fifth,
                 tuple.sixth,
                 tuple.seventh,
-                taskPerformance
+                pilotCurrentLd
             )
-        }.combine(trailSettingsFlow) { tuple, trailSettings ->
+        }.combine(taskPerformanceFlow) { tuple, taskPerformance ->
             Nonuple(
                 tuple.first,
                 tuple.second,
@@ -116,9 +118,9 @@ internal class MapScreenObservers(
                 tuple.sixth,
                 tuple.seventh,
                 tuple.eighth,
-                trailSettings
+                taskPerformance
             )
-        }.combine(syntheticReplayMode) { tuple, replayMode ->
+        }.combine(trailSettingsFlow) { tuple, trailSettings ->
             Decuple(
                 tuple.first,
                 tuple.second,
@@ -129,10 +131,24 @@ internal class MapScreenObservers(
                 tuple.seventh,
                 tuple.eighth,
                 tuple.ninth,
+                trailSettings
+            )
+        }.combine(syntheticReplayMode) { tuple, replayMode ->
+            Undecuple(
+                tuple.first,
+                tuple.second,
+                tuple.third,
+                tuple.fourth,
+                tuple.fifth,
+                tuple.sixth,
+                tuple.seventh,
+                tuple.eighth,
+                tuple.ninth,
+                tuple.tenth,
                 replayMode
             )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, taskPerformance, trailSettings, replayMode) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, pilotCurrentLd, taskPerformance, trailSettings, replayMode) ->
                 if (data != null) {
                     val trailEnabled = trailSettings.length != TrailLength.OFF
                     if (!liveDataReady.value) {
@@ -156,6 +172,7 @@ internal class MapScreenObservers(
                         isFlying = flightState.isFlying,
                         glideSolution = glideSolution,
                         waypointNavigation = waypointNavigation,
+                        pilotCurrentLd = pilotCurrentLd,
                         taskPerformance = taskPerformance,
                         hawkVarioUiState = hawkUiState,
                         flightTime = formattedFlightTime,
@@ -343,4 +360,18 @@ private data class Decuple<A, B, C, D, E, F, G, H, I, J>(
     val eighth: H,
     val ninth: I,
     val tenth: J
+)
+
+private data class Undecuple<A, B, C, D, E, F, G, H, I, J, K>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+    val sixth: F,
+    val seventh: G,
+    val eighth: H,
+    val ninth: I,
+    val tenth: J,
+    val eleventh: K
 )

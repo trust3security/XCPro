@@ -1,7 +1,7 @@
 # Task Phase 3 - Data Layer Extraction (2026-02-11)
 
 ## Scope
-Phase 3 goal from `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`:
+Phase 3 goal from `docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md`:
 - add task persistence interfaces,
 - implement adapters using existing racing/AAT storage components,
 - add task-type settings repository,

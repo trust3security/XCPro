@@ -1,7 +1,7 @@
 # Task Phase 0 Baseline and Safety Net (2026-02-11)
 
 Parent plan:
-- `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`
+- `docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md`
 
 Phase:
 - Phase 0 - Baseline + Safety Net

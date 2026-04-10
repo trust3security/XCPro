@@ -4,270 +4,232 @@ This file is the shortest single-file brief to hand to an external reviewer.
 
 It answers:
 
-- what XCPro ships today
-- what `ld_curr` actually uses
-- what wind / bugs / ballast / polar affect today
-- what is still missing if the product goal is a more "real-world" current
-  glide-efficiency metric
+- what XCPro now shows to the pilot as `Current L/D`
+- which raw glide metrics still exist underneath that visible card
+- how wind, active polar, bugs, and ballast matter today
+- what is still intentionally out of scope
 
 ## What XCPro ships today
 
-XCPro ships two different measured glide cards:
+XCPro now ships one fused pilot-facing `Current L/D` card plus two raw glide
+metrics underneath it.
+
+Visible pilot-facing card:
 
 - `ld_curr`
   - title: `L/D CURR`
-  - meaning: recent measured over-ground glide ratio
-  - runtime fields: `currentLD` and `currentLDValid`
+  - visible meaning: current effective glide ratio for the pilot
+  - visible runtime fields: `pilotCurrentLD` and `pilotCurrentLDValid`
+
+Raw metrics still kept internally and in DTOs:
+
+- `currentLD`
+  - raw recent measured over-ground glide ratio
+- `currentLDAir`
+  - raw recent measured through-air glide ratio from chosen true airspeed and
+    TE vario
+
+Selectable advanced card:
+
 - `ld_vario`
   - title: `L/D VARIO`
-  - meaning: measured through-air glide ratio from chosen true airspeed and
-    TE vario
+  - visible meaning: raw measured through-air glide ratio
   - runtime fields: `currentLDAir` and `currentLDAirValid`
 
-XCPro also ships separate theoretical polar metrics:
+Separate theoretical polar metrics still exist:
 
 - `polar_ld`
   - theoretical still-air L/D at current IAS
 - `best_ld`
   - best theoretical still-air L/D from the active polar
 
-And it ships separate glide-solver / required-glide outputs for final-glide
-and arrival calculations.
+`currentVsPolar` is still not implemented.
 
-## What `ld_curr` uses today
+## What the visible `ld_curr` card means now
 
-`ld_curr` is still the old measured over-ground metric.
+The visible `ld_curr` card is no longer a direct display of the old raw
+ground-only `currentLD` metric.
 
-Owner path:
+It now means:
+
+- current effective glide ratio for the pilot
+- wind-aware when wind is valid and trustworthy
+- zero-wind fallback when wind is unavailable, stale, or low-confidence
+- protected against circling/turning/climbing geometry
+- stabilized by the active polar seam without turning into a pure polar number
+
+This is the one pilot-facing Current L/D number.
+
+## What powers the visible `ld_curr` card now
+
+New visible owner path:
+
+1. `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdCalculator.kt`
+2. `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdRepository.kt`
+3. `feature/map/src/main/java/com/example/xcpro/map/FlightDataUiAdapter.kt`
+4. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+5. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
+6. `core/flight/src/main/java/com/example/xcpro/core/flight/RealTimeFlightData.kt`
+7. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
+
+High-level behavior:
+
+- rolling matched-window estimator
+- default live window: `20 s`
+- minimum publish fill: `8 s`
+- hold timeout during thermal/turn/climb: `20 s`
+- short TE-gap active-polar sink support: `3 s` max contiguous gap
+
+Matched-window math:
+
+- `effectiveDistance = Σ(effectiveForwardSpeed_i * dt_i)`
+- `heightLost = Σ(sink_i * dt_i)`
+- `pilotCurrentLD = effectiveDistance / heightLost`
+
+Preferred straight-flight sample math:
+
+- `sink_i = max(-teVario_i, 0.15)`
+- `windAlong_i = projected wind along glide direction when wind is valid`
+- `windAlong_i = 0` when wind is not trustworthy
+- `effectiveForwardSpeed_i = trueAirspeedMs_i + windAlong_i`
+
+Direction priority:
+
+1. active target/course bearing from `WaypointNavigationRepository`
+2. smoothed recent straight-flight GPS track
+3. freeze the last valid glide direction during thermalling/turning/climbing
+
+The visible card does not average instantaneous L/D values.
+
+## What the raw metrics still mean
+
+### Raw over-ground metric
+
+`currentLD/currentLDValid` still exist and still mean:
+
+- recent measured over-ground glide ratio
+- recent GPS-path displacement divided by barometric altitude loss
+
+That raw metric is still owned by:
 
 1. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
 2. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
 3. `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
 4. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
-5. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
 
-Current branch math:
+It remains available for diagnostics, replay verification, and degraded
+fallback inside the fused pilot metric path.
 
-- recent GPS-path displacement
-- divided by barometric altitude loss
+### Raw through-air metric
 
-Branch-truth details:
+`currentLDAir/currentLDAirValid` still exist and still mean:
 
-- recompute interval: `5000 ms`
-- requires:
-  - distance traveled `> 10 m`
-  - altitude lost `> 0.5 m`
-- helper stores and returns a clamped value in `5f..100f`
-- validity is:
-  - `currentLDValid = calculatedLD.isFinite() && calculatedLD > 0f`
+- measured through-air glide ratio from chosen true airspeed and TE sink
 
-This means `ld_curr` is:
-
-- measured
-- recent
-- over-ground
-- path-based
-- not theoretical
-
-## What `ld_curr` does NOT use today
-
-Current `ld_curr` does not directly use:
-
-- wind speed
-- wind direction
-- `WindState`
-- IAS
-- TAS
-- `teVario`
-- `PolarStillAirSinkProvider`
-- `polar_ld`
-- `best_ld`
-- `bugsPercent`
-- `waterBallastKg`
-- `threePointPolar`
-- `referenceWeightKg`
-- `userCoefficients`
-- final-glide / required-glide math
-
-So the current displayed `ld_curr` value is not a polar-aware or
-configuration-aware performance metric.
-
-## What `ld_vario` uses today
-
-`ld_vario` is a separate additive measured air-data metric.
-
-Owner path:
-
-1. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CurrentAirLdCalculator.kt`
-2. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
-3. `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
-4. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
-5. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
-
-Current branch math:
+Math:
 
 - `currentLDAir = trueAirspeedMs / (-teVario)`
 
-Current validity gates:
+That raw metric remains the backing metric for:
 
-- aircraft is flying
-- `tasValid == true`
-- chosen airspeed source is not GPS fallback
-- `trueAirspeedMs` is finite and `> 5`
-- `teVario` is finite
-- `teSinkMs = -teVario` is finite and `> 0.15`
-- not circling
-- not turning
+- `ld_vario`
 
-This means `ld_vario` is:
+## How wind matters today
 
-- measured
-- recent
-- through-air
-- air-data based
-- still non-polar
+Wind is still a separate authoritative seam.
 
-It also does not directly use bugs, ballast, or active-polar math.
-
-## Where wind lives today
-
-Wind is a separate seam.
-
-Authoritative owner:
+Owners:
 
 - `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
-
-Model:
-
 - `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt`
-
-Overrides:
-
 - `feature/profile/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideRepository.kt`
 
-What wind affects today:
+Wind now affects the visible `ld_curr` card through the fused pilot metric:
 
-- wind-aware chosen airspeed selection
-- glide solving / final-glide consumers
-- map/UI wind display fields
-- sometimes `ld_vario` indirectly, because `ld_vario` uses the already chosen
-  authoritative airspeed seam
+- if wind is valid/fresh/confident, it is projected along the glide direction
+- if wind is missing, stale, or low-confidence, the metric stays valid and
+  falls back to `windAlong = 0`
 
-What wind does not affect today:
+Wind is still not patched into the old raw `currentLD` helper.
 
-- `ld_curr` directly
+## How bugs / ballast / active polar matter today
 
-So if the product wants wind to be part of "Current L/D", that is a semantic
-change, not a bug fix.
-
-## Where bugs / ballast / polar live today
-
-Active-polar owner path:
+Active-polar owner path remains:
 
 1. `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
 2. `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt`
 3. `core/common/src/main/java/com/example/xcpro/glider/PolarCalculator.kt`
 4. `core/common/src/main/java/com/example/xcpro/glider/GliderSpeedBounds.kt`
 
-Active runtime configuration fields:
+Operative setup concepts:
 
 - `threePointPolar`
 - effective model polar
 - `bugsPercent`
 - `waterBallastKg`
-- `iasMinMs`
-- `iasMaxMs`
+- IAS bounds
 
-Stored but currently deferred from authoritative runtime polar math:
+The visible fused `ld_curr` card may use the active polar seam only for:
 
-- `referenceWeightKg`
-- `userCoefficients`
+- plausibility bounds
+- stabilization
+- tightly bounded short-gap sink support when TE is briefly missing
 
-What bugs / ballast / polar affect today:
+It does not:
 
-- `sinkAtSpeed(...)`
-- `ldAtSpeed(...)`
-- `bestLd()`
-- final-glide and other still-air glide computations
+- directly multiply the displayed ratio by bugs or ballast factors
+- directly inject raw polar values into the displayed ratio as ad hoc terms
+- change the raw `currentLD` or raw `currentLDAir` formulas
 
-What they do not affect today:
+## What happens while thermalling
 
-- `ld_curr`
-- `ld_vario`
+The visible `ld_curr` card does not recompute from circling geometry.
 
-So if the goal is "Current L/D should react to bugs, ballast, and active
-polar," that is not the current metric contract. That would be a new metric or
-an explicit redesign.
+Instead:
 
-## What this means for a more "real" Current L/D
+- while you first enter a thermal/turn/climb:
+  - freeze the last valid straight-flight glide direction
+  - hold the last valid `pilotCurrentLD`
+  - keep the visible card subtitle at `THERMAL`
+- if the non-gliding state persists past the hold timeout:
+  - publish no data
+  - keep the visible card subtitle at `THERMAL`
+- when straight glide resumes:
+  - rebuild the rolling window from fresh eligible samples
+  - publish again once minimum fill is reached
 
-There are three different concepts and they should stay separate:
+So the card avoids nonsense from circles and climbs.
 
-- measured over-ground glide ratio
-  - current XCPro `ld_curr`
-- measured through-air glide ratio
-  - current XCPro `ld_vario`
-- current performance versus active polar
-  - not implemented yet
+## What XCPro is intentionally not doing
 
-If the product goal is a more real-world test harness, that is reasonable.
-But the harness should not pretend that current `ld_curr` already uses bugs,
-ballast, wind, and polar internally, because it does not.
+XCPro still keeps these concepts separate:
 
-The realistic way to test current glide behavior would be:
+- fused visible pilot Current L/D
+- raw over-ground measured glide ratio
+- raw through-air measured glide ratio
+- theoretical polar L/D
+- final-glide / required-glide outputs
 
-- simulate a glide path from A to B with:
-  - start height
-  - distance
-  - wind
-  - chosen glider profile
-  - bugs
-  - ballast
-  - active polar
-- run that through replay/runtime
-- observe:
-  - `ld_curr`
-  - `ld_vario`
-  - `polar_ld`
-  - `best_ld`
-  - final-glide outputs
+XCPro is still not shipping:
 
-In that setup:
+- `currentVsPolar`
+- a pure polar efficiency percentage card
+- a current L/D number computed directly from circling geometry
 
-- wind, bugs, ballast, and polar matter because they shape the simulated flight
-  path and sink behavior
-- but `ld_curr` still remains a measured over-ground output from the resulting
-  path
+## Questions For External Review
 
-So the missing product question is not "does XCPro already use those inputs in
-Current L/D?"
-
-The real question is:
-
-- should XCPro keep `ld_curr` as measured over-ground glide ratio
-- and add a separate current-vs-polar or glide-efficiency metric for the pilot
-  concept you actually want?
-
-## Questions For ChatGPT Pro
-
-Please answer these from the branch truth above:
-
-1. Should XCPro keep `ld_curr` exactly as a measured over-ground glide ratio?
-2. Should a more "real" pilot-facing efficiency metric be additive rather than
-   changing `ld_curr`?
-3. If the product wants wind / bugs / ballast / polar to matter directly, is
-   the correct concept:
-   - a through-air measured metric
-   - a current-vs-polar metric
-   - or both?
-4. What is the best pilot-facing distinction between:
-   - `ld_curr`
-   - `ld_vario`
+1. Does the visible fused `ld_curr` meaning now align with what a pilot
+   expects from a release-grade Current L/D card?
+2. Is the fallback ladder clear enough:
+   - fused wind
+   - fused zero-wind
+   - short-gap polar support
+   - raw ground fallback
+   - hold then no data?
+3. Is the current separation still correct between:
+   - visible `ld_curr`
+   - raw `ld_vario`
    - `polar_ld`
    - `best_ld`
-   - any future current-vs-polar metric?
-5. For a realistic validation harness, what should be asserted separately for:
-   - over-ground measured glide
-   - through-air measured glide
-   - polar prediction
-   - current-vs-polar comparison?
+4. Should future work keep `currentVsPolar` separate from the visible Current
+   L/D card?

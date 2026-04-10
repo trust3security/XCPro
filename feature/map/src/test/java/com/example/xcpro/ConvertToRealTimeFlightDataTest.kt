@@ -7,6 +7,8 @@ import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.SpeedMs
 import com.example.xcpro.common.units.VerticalSpeedMs
+import com.example.xcpro.currentld.PilotCurrentLdSnapshot
+import com.example.xcpro.currentld.PilotCurrentLdSource
 import com.example.xcpro.glide.GlideDegradedReason
 import com.example.xcpro.glide.GlideSolution
 import com.example.xcpro.navigation.WaypointEtaSource
@@ -88,6 +90,7 @@ class ConvertToRealTimeFlightDataTest {
             currentLDValid = true,
             currentLDAir = 13f,
             currentLDAirValid = true,
+            isTurning = true,
             polarLdCurrentSpeed = 38f,
             polarLdCurrentSpeedValid = true,
             polarBestLd = 44f,
@@ -118,6 +121,11 @@ class ConvertToRealTimeFlightDataTest {
                 arrivalHeightMc0Meters = 170.0,
                 distanceRemainingMeters = 12_345.0
             ),
+            pilotCurrentLd = PilotCurrentLdSnapshot(
+                pilotCurrentLD = 32f,
+                pilotCurrentLDValid = true,
+                pilotCurrentLDSource = PilotCurrentLdSource.FUSED_ZERO_WIND
+            ),
             flightTime = "12:34",
             lastUpdateTimeMillis = 9_999L
         )
@@ -134,6 +142,10 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(true, result.currentLDValid)
         assertEquals(13f, result.currentLDAir, 1e-6f)
         assertEquals(true, result.currentLDAirValid)
+        assertEquals(32f, result.pilotCurrentLD, 1e-6f)
+        assertEquals(true, result.pilotCurrentLDValid)
+        assertEquals("FUSED_ZERO_WIND", result.pilotCurrentLDSource)
+        assertEquals(true, result.isTurning)
         assertEquals(38f, result.polarLdCurrentSpeed, 1e-6f)
         assertEquals(true, result.polarLdCurrentSpeedValid)
         assertEquals(44f, result.polarBestLd, 1e-6f)
@@ -148,6 +160,66 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(12_345L, result.timestamp)
         assertEquals(9_999L, result.lastUpdateTime)
         assertEquals("TE", result.varioSource)
+    }
+
+    @Test
+    fun pilot_current_ld_mapping_does_not_overwrite_raw_ld_metrics() {
+        val complete = CompleteFlightData(
+            gps = GPSData(
+                position = GeoPoint(latitude = 37.5, longitude = -122.4),
+                altitude = AltitudeM(1000.0),
+                speed = SpeedMs(30.0),
+                bearing = 123.0,
+                accuracy = 5f,
+                timestamp = 1_000L,
+                monotonicTimestampMillis = 1_000L
+            ),
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(1200.0),
+            qnh = PressureHpa(1015.0),
+            isQNHCalibrated = true,
+            verticalSpeed = VerticalSpeedMs(1.2),
+            bruttoVario = VerticalSpeedMs(1.2),
+            pressureAltitude = AltitudeM(1100.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.HIGH,
+            qnhCalibrationAgeSeconds = 12L,
+            agl = AltitudeM(100.0),
+            thermalAverage = VerticalSpeedMs(2.5),
+            currentLD = 35f,
+            currentLDValid = true,
+            currentLDAir = 13f,
+            currentLDAirValid = true,
+            netto = VerticalSpeedMs(-0.5),
+            trueAirspeed = SpeedMs(25.0),
+            indicatedAirspeed = SpeedMs(23.0),
+            airspeedSource = "TAS",
+            tasValid = true,
+            timestamp = 12_345L,
+            dataQuality = "GPS+BARO",
+            thermalAverageValid = true
+        )
+
+        val result = convertToRealTimeFlightData(
+            completeData = complete,
+            windState = null,
+            isFlying = true,
+            pilotCurrentLd = PilotCurrentLdSnapshot(
+                pilotCurrentLD = 29f,
+                pilotCurrentLDValid = true,
+                pilotCurrentLDSource = PilotCurrentLdSource.FUSED_WIND
+            )
+        )
+
+        assertEquals(35f, result.currentLD, 1e-6f)
+        assertEquals(true, result.currentLDValid)
+        assertEquals(13f, result.currentLDAir, 1e-6f)
+        assertEquals(true, result.currentLDAirValid)
+        assertEquals(29f, result.pilotCurrentLD, 1e-6f)
+        assertEquals(true, result.pilotCurrentLDValid)
+        assertEquals("FUSED_WIND", result.pilotCurrentLDSource)
+        assertEquals(false, result.isTurning)
     }
 
     @Test

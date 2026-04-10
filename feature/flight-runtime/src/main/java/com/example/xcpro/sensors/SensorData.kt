@@ -190,6 +190,7 @@ data class CompleteFlightData(
 
     // Flight mode flags
     val isCircling: Boolean = false,
+    val isTurning: Boolean = false,
     val thermalAverageValid: Boolean = false,
 
     // Metadata

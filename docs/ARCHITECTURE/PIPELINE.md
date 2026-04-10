@@ -85,6 +85,7 @@ Sensors
      -> FlightDataUiAdapter (MapScreenObservers)
         + GlideComputationRepository.glide
         + WaypointNavigationRepository.waypointNavigation
+        + PilotCurrentLdRepository.pilotCurrentLd
         + TaskPerformanceRepository.taskPerformance
         -> convertToRealTimeFlightData
         -> FlightDataManager
@@ -142,14 +143,19 @@ Fusion entry:
     - `StillAirSinkProvider`
     - `VarioAudioControllerFactory`
     - `HawkAudioVarioReadPort`
+    - `ExternalInstrumentReadPort`
     - `TerrainElevationReadPort` from `:core:flight`
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
   - thin wrapper around `FlightDataCalculatorEngine`.
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
   - owns fusion loops, filters, metrics use case, and the shared audio port.
   - caches latest external/replay airspeed sample from `AirspeedDataSource`.
+  - caches the latest narrow external-instrument snapshot from
+    `ExternalInstrumentReadPort`.
   - consumes HAWK audio vario samples through `HawkAudioVarioReadPort` rather
     than depending on the full HAWK repository.
+  - keeps external-vs-phone arbitration in `feature:flight-runtime`; replay
+    bypasses live external Bluetooth truth.
   - constructs `SimpleAglCalculator` with the injected shared `TerrainElevationReadPort`;
     the calculator no longer constructs terrain adapters directly.
 - `feature/map/src/main/java/com/example/xcpro/terrain/TerrainElevationRepository.kt`
@@ -455,6 +461,14 @@ ViewModel:
   - Profile owns the HAWK settings route shell plus the
     `HawkVarioSettingsViewModel` / `HawkVarioSettingsUseCase` used for HAWK
     preference writes and live-preview consumption.
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/BluetoothVarioSettingsScreen.kt`
+  - Profile owns the Bluetooth settings route shell plus the
+    `BluetoothVarioSettingsViewModel` / `BluetoothVarioSettingsUseCase` used
+    to map variometer-owned control state into UI and forward explicit
+    permission-result, selection, connect, and disconnect intents.
+  - The settings screen is a consumer only; it does not own Bluetooth
+    permission truth, bonded-device enumeration, selected-device persistence,
+    or runtime session lifecycle.
 - `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioPreviewReadPort.kt`
   - Variometer owns the read-only HAWK preview contract
     (`HawkVarioPreviewReadPort`, `HawkVarioUiState`, `HawkConfidence`) shared
@@ -462,6 +476,28 @@ ViewModel:
 - `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt`
   - Variometer owns the live HAWK runtime owner plus its repository/config
     stack and implements the variometer-owned `HawkVarioPreviewReadPort`.
+- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/runtime/LxExternalRuntimeRepository.kt`
+  - Variometer owns Bluetooth transport/parsing consumption plus the long-lived
+    LXNAV external runtime snapshot owner.
+  - Implements the narrow `ExternalInstrumentReadPort` bridge into
+    `feature:flight-runtime`.
+  - Only external `pressureAltitudeM` and `totalEnergyVarioMps` participate in
+    fused truth in Phase 4; `airspeedKph` and device metadata remain
+    variometer-local / diagnostics-only.
+  - Owns session-local Bluetooth diagnostics such as last-received monotonic
+    time, rolling sentence rate, accepted/rejected counts, checksum/parse
+    failures, and the last transport error observed for the session.
+- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/control/LxBluetoothControlPort.kt`
+  and `LxBluetoothControlUseCase.kt`
+  - Variometer owns the Bluetooth settings/control seam over transport
+    connection state, permission truth, bonded-device refresh, install-wide
+    selected-device persistence, and explicit connect/disconnect delegation into
+    `LxExternalRuntimeRepository`.
+  - This seam derives UI/control state from the transport and selected-device
+    owners; it is not a second Bluetooth session lifecycle source of truth.
+  - Controlled reconnect/backoff also stays in this seam and is limited to a
+    previously user-initiated session that has connected successfully at least
+    once; app start, permission grant, and device selection do not auto-connect.
 - `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt`
   - `feature:map` keeps the temporary app theme runtime read path over the
     profile-owned theme use case; the colors owner move does not leave writes
@@ -470,6 +506,14 @@ ViewModel:
   - `feature:map` keeps only the temporary HAWK sensor/source adapters that
     feed the variometer-owned runtime until Parent Phase 2B moves those
     upstream owners behind the future flight-runtime boundary.
+  - Bluetooth LXNAV transport/parsing/runtime ownership does not land in
+    `feature:map`; it crosses into fused truth only through the narrow
+    `ExternalInstrumentReadPort` seam.
+- `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettings*.kt`
+  - `:app` remains host-only for the General Settings bottom-sheet registry.
+  - Bluetooth logic in this phase is limited to surfacing the
+    `BluetoothVarioSettingsScreen`; app does not own selected-device
+    persistence, bonded-device enumeration, or connect/disconnect behavior.
 - `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutViewModel.kt`
   - `feature:map` keeps the widget drag/resize runtime owner; the layout
     settings route move does not change widget runtime ownership.
@@ -574,12 +618,30 @@ Mapping for cards:
     - `glideDegradedReason`
     - `glideInvalidReason`
   - Semantics:
-    - `ld_curr` remains the measured over-ground glide card
-    - `ld_vario` is the measured through-air glide card
+    - raw `currentLD/currentLDValid` remain the measured over-ground glide metric
+    - raw `currentLDAir/currentLDAirValid` remain the measured through-air glide metric
+    - visible `ld_curr` now formats map-runtime fused `pilotCurrentLD/pilotCurrentLDValid`
+    - `ld_vario` remains the measured through-air glide card
     - `polar_ld`, `best_ld` remain flight-only theoretical polar cards
     - `final_gld`, `arr_alt`, `req_alt`, `arr_mc0` are racing-task finish cards
     - glide outputs are `VALID`, `DEGRADED` (still-air assumption because no
       usable wind exists), or `INVALID`
+
+Pilot Current L/D join:
+- `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdRepository.kt`
+  - authoritative owner of the fused pilot-facing Current L/D metric.
+  - combines `FlightDataRepository.flightData`, `WindSensorFusionRepository.windState`,
+    `FlightStateSource.flightState`, `WaypointNavigationRepository.waypointNavigation`,
+    and `StillAirSinkProvider`.
+  - owns the replay-safe rolling matched window, short-gap polar support,
+    zero-wind fallback, and thermal hold policy for:
+    - `pilotCurrentLD`
+    - `pilotCurrentLDValid`
+    - `pilotCurrentLDSource`
+- `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
+  - maps the fused snapshot into `RealTimeFlightData`.
+- `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
+  - formats `ld_curr` from `pilotCurrentLD/pilotCurrentLDValid`.
 
 UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
@@ -1020,6 +1082,9 @@ Current glide-computer production card scope:
 - intentionally absent from the production catalogs:
   - standalone `final distance`
   - unsupported future target-kind / AAT glide cards
+- visible-card note:
+  - `ld_curr` is now the fused pilot-facing Current L/D card
+  - raw `currentLD/currentLDValid` remain internal/runtime diagnostics and degraded fallback inputs
 - current release limitation:
   - finish-glide validity currently requires a racing finish altitude rule
     (`RacingFinishCustomParams.minAltitudeMeters`)

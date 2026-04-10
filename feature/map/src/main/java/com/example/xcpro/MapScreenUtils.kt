@@ -2,6 +2,7 @@ package com.example.xcpro
 
 import android.hardware.SensorManager
 import com.example.xcpro.core.flight.RealTimeFlightData
+import com.example.xcpro.currentld.PilotCurrentLdSnapshot
 import com.example.xcpro.common.units.AltitudeM
 import com.example.xcpro.common.units.PressureHpa
 import com.example.xcpro.common.units.PressureUnit
@@ -63,6 +64,7 @@ internal fun convertToRealTimeFlightData(
     isFlying: Boolean,
     glideSolution: GlideSolution? = null,
     waypointNavigation: WaypointNavigationSnapshot? = null,
+    pilotCurrentLd: PilotCurrentLdSnapshot? = null,
     taskPerformance: TaskPerformanceSnapshot? = null,
     hawkVarioUiState: HawkVarioUiState = HawkVarioUiState(),
     flightTime: String = "00:00",
@@ -143,6 +145,9 @@ internal fun convertToRealTimeFlightData(
         currentLDValid = completeData.currentLDValid,
         currentLDAir = completeData.currentLDAir,
         currentLDAirValid = completeData.currentLDAirValid,
+        pilotCurrentLD = pilotCurrentLd?.pilotCurrentLD ?: 0f,
+        pilotCurrentLDValid = pilotCurrentLd?.pilotCurrentLDValid ?: false,
+        pilotCurrentLDSource = pilotCurrentLd?.pilotCurrentLDSource?.name.orEmpty(),
         polarLdCurrentSpeed = completeData.polarLdCurrentSpeed,
         polarLdCurrentSpeedValid = completeData.polarLdCurrentSpeedValid,
         polarBestLd = completeData.polarBestLd,
@@ -177,6 +182,7 @@ internal fun convertToRealTimeFlightData(
         varioSource = completeData.varioSource,
         varioValid = completeData.varioValid,
         isCircling = completeData.isCircling,
+        isTurning = completeData.isTurning,
         thermalAverageValid = completeData.thermalAverageValid,
 
         // Metadata

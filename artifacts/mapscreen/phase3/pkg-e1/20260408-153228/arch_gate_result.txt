@@ -1,0 +1,6 @@
+﻿command: ./gradlew enforceRules
+arch_gate_owner: included_in_enforceRules
+result: SKIPPED
+captured_at: 2026-04-08T15:32:35.3940826+10:00
+commit_sha: 4c965e7c4f81e63088f3673115c635c396f08b35
+branch: refactor/phase6-map-viewmodel-lifecycle

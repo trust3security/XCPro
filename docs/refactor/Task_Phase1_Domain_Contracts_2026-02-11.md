@@ -1,7 +1,7 @@
 # Task Phase 1 - Domain Contracts (2026-02-11)
 
 ## Scope
-Phase 1 goal from `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`:
+Phase 1 goal from `docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md`:
 - define pure domain interfaces for task engines and persistence,
 - define minimal engine state models,
 - do this with no runtime wiring changes.

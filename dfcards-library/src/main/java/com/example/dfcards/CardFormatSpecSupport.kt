@@ -16,6 +16,7 @@ private const val VARIO_NOISE_FLOOR = 1e-3
 private const val VARIO_ZERO_THRESHOLD = 0.05
 private const val VARIO_DECIMALS = 1
 private const val ALT_DECIMALS = 0
+private const val PILOT_CURRENT_LD_SOURCE_HELD = "HELD"
 
 internal fun placeholderFor(
     cardId: KnownCardId?,
@@ -201,6 +202,26 @@ internal fun glideStatusLabel(
         degradedLabel
     } else {
         "$base $degradedLabel"
+    }
+}
+
+internal fun formatCurrentLdCard(
+    liveData: RealTimeFlightData,
+    strings: CardStrings
+): Pair<String, String> {
+    val inThermalContext = liveData.isCircling || liveData.isTurning
+    return when {
+        liveData.pilotCurrentLDValid &&
+            inThermalContext &&
+            liveData.pilotCurrentLDSource == PILOT_CURRENT_LD_SOURCE_HELD -> {
+            Pair("${liveData.pilotCurrentLD.roundToInt()}:1", strings.thermal)
+        }
+
+        liveData.pilotCurrentLDValid -> Pair("${liveData.pilotCurrentLD.roundToInt()}:1", strings.live)
+
+        inThermalContext -> Pair("--:1", strings.thermal)
+
+        else -> Pair("--:1", strings.noData)
     }
 }
 

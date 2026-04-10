@@ -1,284 +1,97 @@
-# Wind And Current L/D Release-Grade Decision Brief
-
-This file is the wind-specific handoff brief for external review.
-
-Use it when the product question is:
-
-- "how should wind be part of Current L/D?"
-- "what is the professional release-grade way to start?"
-- "how do we avoid a churn-heavy or ad hoc implementation?"
-
-## Branch truth first
-
-Current XCPro already ships two different measured glide metrics:
-
-- `ld_curr`
-  - title: `L/D CURR`
-  - meaning: recent measured over-ground glide ratio
-  - owner path:
-    1. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
-    2. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
-    3. `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
-    4. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
-    5. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
-  - branch math:
-    - recent GPS-path displacement
-    - divided by barometric altitude loss
-- `ld_vario`
-  - title: `L/D VARIO`
-  - meaning: measured through-air glide ratio
-  - owner path:
-    1. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CurrentAirLdCalculator.kt`
-    2. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
-    3. `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
-    4. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
-    5. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
-  - branch math:
-    - `currentLDAir = trueAirspeedMs / (-teVario)`
-
-Wind, bugs, ballast, and active-polar math are still separate seams:
-
-- wind owner:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt`
-- active-polar owner:
-  - `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt`
-  - `core/common/src/main/java/com/example/xcpro/glider/PolarCalculator.kt`
-  - `core/common/src/main/java/com/example/xcpro/glider/GliderSpeedBounds.kt`
+# Wind And Current L/D Release-Grade Brief
 
-## What `ld_curr` does not use today
+This file records the implemented release-grade rule for wind and visible
+Current L/D.
 
-Current `ld_curr` does not directly use:
+## Current product decision
 
-- wind speed
-- wind direction
-- raw `WindState`
-- IAS
-- TAS
-- `teVario`
-- `PolarStillAirSinkProvider`
-- `polar_ld`
-- `best_ld`
-- `bugsPercent`
-- `waterBallastKg`
-- `threePointPolar`
-- `referenceWeightKg`
-- `userCoefficients`
+XCPro now uses wind in the visible `ld_curr` card, but not by patching wind
+into the old raw ground helper.
 
-So "add wind into Current L/D" is not a small bug fix.
-It is a product-semantic change.
+Implemented rule:
 
-## What "add wind into Current L/D" can mean
+- the visible pilot-facing `ld_curr` card reads the fused upstream metric
+  `pilotCurrentLD/pilotCurrentLDValid`
+- raw `currentLD/currentLDValid` still remain the old over-ground metric
+- raw `currentLDAir/currentLDAirValid` still remain the air-data metric used
+  by `ld_vario`
 
-This phrase can mean two different things:
+## Wind rule
 
-### Option 1: redefine shipped `ld_curr`
+Wind is used when it is trustworthy.
 
-This would mean:
+Trustworthy wind means:
 
-- the existing `L/D CURR` card stops being over-ground measured glide ratio
-- wind or air-relative logic gets folded into the shipped card
-- the existing owner path changes meaning in place
+- vector available
+- `isAvailable == true`
+- not stale
+- confidence above the live wind-entry threshold
 
-### Option 2: keep `ld_curr` and add a separate wind-aware concept
+When wind is trustworthy:
 
-This would mean:
+- project the wind vector along the glide direction
+- use that projected component in the rolling fused estimator
 
-- `ld_curr` stays the measured over-ground recent glide ratio
-- wind-aware or air-relative behavior stays additive
-- the existing measured ground metric and card semantics remain stable
+When wind is not trustworthy:
 
-These options are not equivalent.
+- do not invalidate the metric
+- use `windAlong = 0`
 
-## Direct comparison
+That zero-wind fallback is mandatory and implemented.
 
-| Topic | Redefine `ld_curr` | Keep `ld_curr`, add separate wind-aware concept |
-|---|---|---|
-| Pilot meaning | changes shipped meaning in place | preserves existing meaning |
-| Backward compatibility | high risk | low risk |
-| Review churn | high | lower |
-| Architecture churn | high because seams get mixed | lower because seams stay separate |
-| Replay/test burden | higher because existing expected outputs change | lower because existing outputs remain stable |
-| Risk of confusion | high unless labels and docs all change | lower if metrics stay distinct |
-| Fit with current branch | poor | strong |
-| Release-grade recommendation | no | yes |
+## Direction rule
 
-## Release-grade recommendation
+Wind only matters after projection onto a direction.
 
-The professional no-churn starting point is:
+Direction priority is:
 
-- do not patch raw wind into `FlightCalculationHelpers.calculateCurrentLD(...)`
-- do not silently change the meaning of shipped `ld_curr`
-- do not mix wind ownership into the old helper-owned ground metric
-- keep `ld_curr` as the measured over-ground metric
-- keep wind-aware behavior additive and upstream-owned
+1. active target/course bearing from `WaypointNavigationRepository`
+2. smoothed recent straight-flight track
+3. freeze the last valid glide direction during turn/thermal/climb
 
-In current branch terms, the release-grade starting point is:
+If wind is valid but there is no reliable direction:
 
-- use `ld_curr` for measured over-ground glide ratio
-- use `ld_vario` for measured through-air glide ratio
-- if product still wants a third concept, define it explicitly instead of
-  mutating either metric in place
+- degrade to zero-wind behavior
+- do not invalidate the metric
 
-## Why raw wind speed and direction are not enough
+## Circling / thermal rule
 
-Wind speed and direction matter, but they are not sufficient by themselves for
-a professional Current L/D metric.
+The fused metric must not recompute from circling geometry.
 
-By themselves they do not define:
+Implemented behavior:
 
-- whether the pilot wants an over-ground metric or a through-air metric
-- whether the metric should be measured or polar-comparison based
-- whether the metric should react to vertical air movement
-- whether stale or low-confidence wind should invalidate the result
-- whether GPS fallback should be allowed
+- circling, turning, and climbing samples do not enter the rolling estimator
+- the last valid straight-flight value is held briefly
+- while that held value is shown, the visible `ld_curr` subtitle should read
+  `THERMAL`
+- if the non-gliding state lasts past the timeout, the card shows no data and
+  the visible subtitle should still read `THERMAL`
+- when straight flight resumes, the window refills from fresh eligible samples
 
-So a release-grade design should not start from:
+## Why this is release-grade
 
-- "just subtract wind from groundspeed"
-- "just add wind speed and direction into `currentLD`"
-- "just reuse the polar and call that Current L/D"
+This avoids the two bad extremes:
 
-## Where wind, bugs, ballast, and polar belong today
+- bad option 1:
+  - keep showing nonsense from circle geometry
+- bad option 2:
+  - kill Current L/D whenever wind or TE is imperfect
 
-### Wind
+Instead XCPro now does:
 
-Wind is already owned separately.
+- wind-aware when wind is good
+- zero-wind graceful degradation when wind is weak/missing
+- no circling contamination
+- active-polar support only through the authoritative polar seam
 
-It currently affects:
+## What wind does not do
 
-- wind display
-- wind-aware chosen airspeed selection
-- glide/final-glide consumers
-- sometimes `ld_vario` indirectly, because `ld_vario` uses the chosen
-  authoritative airspeed seam
+Wind still does not:
 
-It does not directly affect:
+- change the raw `currentLD` helper formula
+- directly change `ld_vario`
+- override active-polar ownership
+- create a `currentVsPolar` metric
 
-- `ld_curr`
-
-### Bugs and ballast
-
-Bugs and ballast are already part of the active-polar seam.
-
-Active runtime fields include:
-
-- `bugsPercent`
-- `waterBallastKg`
-- `threePointPolar`
-- effective model polar
-- `iasMinMs`
-- `iasMaxMs`
-
-They currently affect:
-
-- `sinkAtSpeed(...)`
-- `ldAtSpeed(...)`
-- `bestLd()`
-- final-glide and still-air glide computations
-
-They do not directly affect:
-
-- `ld_curr`
-- `ld_vario`
-
-### What this means
-
-If the goal is:
-
-- "Current L/D should change because wind changes"
-- "Current L/D should change because bugs or ballast changed"
-- "Current L/D should show how well I am doing versus my glider polar"
-
-then the likely target concept is not current branch `ld_curr`.
-
-It is either:
-
-- through-air measured glide ratio
-- or current performance versus active polar
-- or both
-
-## Professional / no-churn rules
-
-If Codex is later asked to implement this professionally, the implementation
-should follow these rules:
-
-- do not semantically mutate shipped `ld_curr` without an explicit product
-  decision
-- do not pull raw `WindState` math into `FlightCalculationHelpers`
-- do not pull bugs, ballast, or active-polar math into `currentLD`
-- do not compute metric math in cards or UI formatting
-- do not add per-screen wind correction logic
-- keep all new metric ownership upstream in runtime/domain seams
-- preserve replay determinism and explicit validity/no-data behavior
-- keep measured metrics separate from theoretical polar metrics
-
-## What a more real wind-aware glide metric needs
-
-If the product still wants a more "real" Current L/D, the minimum release-grade
-inputs are closer to:
-
-- chosen non-GPS airspeed source
-- `trueAirspeedMs`
-- `tasValid`
-- `teVario`
-- flying state
-- straight-flight gates
-- explicit no-data behavior when air-data or wind-quality contracts are not
-  authoritative
-
-What is not sufficient on its own:
-
-- raw wind speed
-- raw wind direction
-- GPS groundspeed alone
-- polar L/D alone
-- bugs/ballast config alone
-
-## Testing strategy for a real glide simulation
-
-If XCPro later builds a realistic glide validation harness, the harness should:
-
-- simulate A-to-B glide geometry
-- simulate barometric altitude decay
-- simulate airspeed and TE availability
-- simulate wind
-- apply chosen glider profile, bugs, ballast, and active polar to the flight
-  model
-- run the result through the normal replay/runtime path
-
-The assertions should stay split by concept:
-
-- `ld_curr`
-  - measured over-ground glide from resulting path geometry
-- `ld_vario`
-  - measured through-air glide from chosen airspeed and TE sink
-- `polar_ld` / `best_ld`
-  - theoretical still-air polar outputs
-- future current-vs-polar metric
-  - only if product explicitly adds it
-
-The harness should not pretend that current branch `ld_curr` already reads
-wind, bugs, ballast, or polar directly.
-
-## Questions for ChatGPT Pro
-
-Please answer these from the branch truth above:
-
-1. Should XCPro keep `ld_curr` exactly as the measured over-ground metric?
-2. If wind must influence pilot-facing glide efficiency, should that stay
-   additive rather than mutating `ld_curr`?
-3. Is the current split between `ld_curr` and `ld_vario` already the correct
-   release-grade foundation?
-4. If product still wants a more "real" Current L/D, should that be defined as:
-   - over-ground measured glide ratio
-   - through-air measured glide ratio
-   - current performance versus active polar
-   - or a deliberate pair of separate metrics?
-5. For a realistic glide simulation harness, what should XCPro assert
-   separately for:
-   - over-ground measured glide
-   - through-air measured glide
-   - active-polar prediction
-   - any future current-vs-polar comparison?
+Wind is one input to the fused visible pilot Current L/D. It is not a reason to
+collapse wind, polar, and setup ownership into one mixed helper.

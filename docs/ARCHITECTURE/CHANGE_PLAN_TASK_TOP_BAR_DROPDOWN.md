@@ -21,8 +21,8 @@ Read first:
 
 ### 0.0 Plan Linkage
 
-- Parent active compliance plan:
-  `docs/refactor/Task_Architecture_Compliance_Refactor_Plan.md`
+- Historical parent compliance plan:
+  `docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Compliance_Refactor_Plan.md`
 - This sub-plan is limited to UI container/state interactions.
 - Parent plan owns full closure for all RULES-20260211-* architecture issues.
 
