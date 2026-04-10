@@ -21,6 +21,8 @@ data class BluetoothVarioSettingsUiState(
     val selectedDeviceWarningText: String? = null,
     val activeDeviceLabel: String = "No active device",
     val statusText: String = "Disconnected",
+    val healthText: String? = null,
+    val reconnectText: String? = null,
     val failureText: String? = null,
     val connectEnabled: Boolean = false,
     val disconnectEnabled: Boolean = false

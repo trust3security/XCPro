@@ -77,6 +77,22 @@ class BluetoothVarioSettingsScreenTest {
         assertEquals(1, disconnectClicks)
     }
 
+    @Test
+    fun health_and_reconnect_projection_render_when_present() {
+        setContent(
+            BluetoothVarioSettingsUiState(
+                statusText = "Reconnecting",
+                healthText = "Last stream sample, last data 250 ms ago, 2.5 sentences/s.",
+                reconnectText = "Reconnect scheduled: attempt 2/3 in 2s."
+            )
+        )
+
+        composeRule.onNodeWithText("Last stream sample, last data 250 ms ago, 2.5 sentences/s.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Reconnect scheduled: attempt 2/3 in 2s.")
+            .assertIsDisplayed()
+    }
+
     private fun setContent(
         uiState: BluetoothVarioSettingsUiState,
         onRequestPermission: () -> Unit = {},

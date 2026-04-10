@@ -1,5 +1,6 @@
 package com.example.xcpro.variometer.bluetooth.lxnav.runtime
 
+import com.example.xcpro.core.time.FakeClock
 import com.example.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.example.xcpro.variometer.bluetooth.BluetoothConnectionError
 import com.example.xcpro.variometer.bluetooth.BluetoothConnectionState
@@ -28,9 +29,58 @@ import org.junit.Test
 class LxExternalRuntimeRepositoryTest {
 
     @Test
+    fun diagnostics_update_from_chunks_outcomes_and_reset_on_disconnect() = runTest {
+        val clock = FakeClock(monoMs = 10L)
+        val transport = FakeBluetoothTransport()
+        val repository = repository(
+            transport = transport,
+            clock = clock,
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+        transport.enqueue(
+            SessionScript.AwaitClose(
+                chunks = listOf(
+                    chunk("\$LXWP1,S100,SN123,1.2.3,2.0", 100L),
+                    chunk("\$PLXVF,1,2,3", 200L),
+                    chunk("\$PGRMZ,1,2,3", 300L),
+                    chunk("\$LXWP0,LOGGER,120.0,1234.0,2.5*00", 400L)
+                )
+            )
+        )
+
+        repository.connect(TEST_DEVICE_A)
+        advanceUntilIdle()
+
+        val diagnostics = repository.runtimeSnapshot.value.diagnostics
+        assertEquals(10L, diagnostics.sessionStartMonoMs)
+        assertEquals(400L, diagnostics.lastReceivedMonoMs)
+        assertEquals(1, diagnostics.acceptedSentenceCount)
+        assertEquals(3, diagnostics.rejectedSentenceCount)
+        assertEquals(1, diagnostics.checksumFailureCount)
+        assertEquals(1, diagnostics.parseFailureCount)
+        assertEquals(4.0, diagnostics.rollingSentenceRatePerSecond, 1e-6)
+
+        repository.disconnect()
+        advanceUntilIdle()
+
+        val cleared = repository.runtimeSnapshot.value.diagnostics
+        assertNull(cleared.sessionStartMonoMs)
+        assertNull(cleared.lastReceivedMonoMs)
+        assertEquals(0, cleared.acceptedSentenceCount)
+        assertEquals(0, cleared.rejectedSentenceCount)
+        assertEquals(0, cleared.checksumFailureCount)
+        assertEquals(0, cleared.parseFailureCount)
+        assertEquals(0.0, cleared.rollingSentenceRatePerSecond, 0.0)
+    }
+
+    @Test
     fun accepted_lxwp0_updates_timed_fields_with_per_field_timestamps_from_outcomes() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.AwaitClose(
                 chunks = listOf(
@@ -59,7 +109,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun accepted_lxwp1_updates_device_metadata_only() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.AwaitClose(
                 chunks = listOf(chunk("\$LXWP1,S100,SN123,1.2.3,2.0", 300L))
@@ -85,7 +139,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun unsupported_unknown_and_rejected_outcomes_do_not_mutate_runtime_state() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.AwaitClose(
                 chunks = listOf(
@@ -114,7 +172,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun external_flight_snapshot_exposes_only_pressure_altitude_and_total_energy_vario() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.AwaitClose(
                 chunks = listOf(
@@ -143,7 +205,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun explicit_disconnect_clears_runtime_fields_and_narrow_read_port_snapshot() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.AwaitClose(
                 chunks = listOf(
@@ -173,7 +239,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun eof_clears_runtime_fields_and_narrow_read_port_snapshot() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.EmitThenTerminalState(
                 chunks = listOf(chunk("\$LXWP0,LOGGER,115.0,1250.0,2.0", 100L)),
@@ -189,13 +259,21 @@ class LxExternalRuntimeRepositoryTest {
             repository.runtimeSnapshot.value.connectionState
         )
         assertNull(repository.runtimeSnapshot.value.pressureAltitudeM)
+        assertEquals(
+            BluetoothConnectionError.STREAM_CLOSED,
+            repository.runtimeSnapshot.value.diagnostics.lastTransportError
+        )
         assertEquals(ExternalInstrumentFlightSnapshot(), repository.externalFlightSnapshot.value)
     }
 
     @Test
     fun transport_error_clears_runtime_fields_and_narrow_read_port_snapshot() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.EmitThenTerminalState(
                 chunks = listOf(chunk("\$LXWP0,LOGGER,115.0,1250.0,2.0", 100L)),
@@ -211,13 +289,21 @@ class LxExternalRuntimeRepositoryTest {
             repository.runtimeSnapshot.value.connectionState
         )
         assertNull(repository.runtimeSnapshot.value.pressureAltitudeM)
+        assertEquals(
+            BluetoothConnectionError.READ_FAILED,
+            repository.runtimeSnapshot.value.diagnostics.lastTransportError
+        )
         assertEquals(ExternalInstrumentFlightSnapshot(), repository.externalFlightSnapshot.value)
     }
 
     @Test
     fun same_device_reconnect_starts_empty_repopulates_and_increments_session_ordinal() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.EmitThenTerminalState(
                 chunks = listOf(chunk("\$LXWP0,LOGGER,120.0,1234.0,2.5", 100L)),
@@ -254,7 +340,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun different_device_reconnect_clears_prior_metadata_and_measurements_before_repopulating() = runTest {
         val transport = FakeBluetoothTransport()
-        val repository = repository(transport, StandardTestDispatcher(testScheduler))
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
         transport.enqueue(
             SessionScript.EmitThenTerminalState(
                 chunks = listOf(
@@ -293,10 +383,12 @@ class LxExternalRuntimeRepositoryTest {
 
     private fun repository(
         transport: FakeBluetoothTransport,
+        clock: FakeClock,
         dispatcher: CoroutineDispatcher
     ): LxExternalRuntimeRepository {
         return LxExternalRuntimeRepository(
             transport = transport,
+            clock = clock,
             dispatcher = dispatcher
         )
     }

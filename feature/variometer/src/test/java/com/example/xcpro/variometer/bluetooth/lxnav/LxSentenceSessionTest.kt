@@ -154,6 +154,29 @@ class LxSentenceSessionTest {
         assertEquals(LxDeviceSnapshot(), session.currentSnapshot)
     }
 
+    @Test
+    fun malformed_burst_does_not_prevent_later_valid_recovery() {
+        val session = LxSentenceSession()
+
+        val outcomes = session.onChunk(
+            chunk(
+                text = buildString {
+                    append("\$LXWP0,Y,not-a-number,654.1,1.12\n")
+                    append("\$LXWP0,Y,88.4,654.1,1.12*00\n")
+                    append(withChecksum("LXWP0,Y,90.0,700.0,1.50"))
+                    append('\n')
+                },
+                receivedMonoMs = 800L
+            )
+        )
+
+        assertEquals(3, outcomes.size)
+        assertEquals(90.0, session.currentSnapshot.airspeedKph ?: Double.NaN, 0.0)
+        assertEquals(700.0, session.currentSnapshot.pressureAltitudeM ?: Double.NaN, 0.0)
+        assertEquals(1.5, session.currentSnapshot.totalEnergyVarioMps ?: Double.NaN, 0.0)
+        assertEquals(800L, session.currentSnapshot.lastAcceptedMonoMs ?: -1L)
+    }
+
     private fun chunk(text: String, receivedMonoMs: Long): BluetoothReadChunk =
         BluetoothReadChunk(
             bytes = text.toByteArray(Charsets.US_ASCII),

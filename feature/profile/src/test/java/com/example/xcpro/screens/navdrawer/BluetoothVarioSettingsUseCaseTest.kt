@@ -3,6 +3,8 @@ package com.example.xcpro.screens.navdrawer
 import com.example.xcpro.variometer.bluetooth.BluetoothConnectionError
 import com.example.xcpro.variometer.bluetooth.BluetoothConnectionState
 import com.example.xcpro.variometer.bluetooth.lxnav.control.BluetoothBondedDeviceItem
+import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDisconnectReason
+import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothReconnectState
 import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothControlPort
 import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothControlState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,6 +62,7 @@ class BluetoothVarioSettingsUseCaseTest {
         assertEquals("LXNAV S100 (AA:BB)", uiState.selectedDeviceLabel)
         assertEquals("LXNAV S100 (AA:BB)", uiState.activeDeviceLabel)
         assertEquals("Connected", uiState.statusText)
+        assertEquals("Stream waiting for first sentence.", uiState.healthText)
         assertEquals(1, uiState.bondedDevices.size)
         assertFalse(uiState.connectEnabled)
         assertTrue(uiState.disconnectEnabled)
@@ -92,7 +95,69 @@ class BluetoothVarioSettingsUseCaseTest {
         assertTrue(uiState.permissionRequired)
         assertEquals("Bluetooth permission required", uiState.statusText)
         assertEquals("Selected device is not currently bonded.", uiState.selectedDeviceWarningText)
-        assertEquals("Bluetooth permission is required.", uiState.failureText)
+        assertEquals(null, uiState.failureText)
+    }
+
+    @Test
+    fun reconnect_and_health_projection_map_cleanly() = runTest {
+        val controlPort = mock<LxBluetoothControlPort>()
+        whenever(controlPort.state).thenReturn(
+            MutableStateFlow(
+                LxBluetoothControlState(
+                    selectedDeviceAddress = "AA:BB",
+                    selectedDeviceDisplayName = "LXNAV S100",
+                    selectedDeviceAvailable = true,
+                    connectionState = BluetoothConnectionState.Disconnected,
+                    lastDisconnectReason = LxBluetoothDisconnectReason.RETRIES_EXHAUSTED,
+                    reconnectState = LxBluetoothReconnectState.Waiting(
+                        attemptNumber = 2,
+                        maxAttempts = 3,
+                        delayMs = 2_000L
+                    ),
+                    reconnectCount = 1,
+                    streamAlive = false,
+                    lastReceivedAgeMs = 250L,
+                    rollingSentenceRatePerSecond = 2.5,
+                    canConnect = false,
+                    canDisconnect = true
+                )
+            )
+        )
+
+        val useCase = BluetoothVarioSettingsUseCase(controlPort)
+        val uiState = useCase.uiState.first()
+
+        assertEquals("Reconnecting", uiState.statusText)
+        assertEquals(
+            "Last stream sample, last data 250 ms ago, 2.5 sentences/s.",
+            uiState.healthText
+        )
+        assertEquals(
+            "Reconnect scheduled: attempt 2/3 in 2s.",
+            uiState.reconnectText
+        )
+        assertEquals("Reconnect attempts exhausted.", uiState.failureText)
+    }
+
+    @Test
+    fun internal_transport_error_does_not_project_without_disconnect_reason_or_reconnect_state() = runTest {
+        val controlPort = mock<LxBluetoothControlPort>()
+        whenever(controlPort.state).thenReturn(
+            MutableStateFlow(
+                LxBluetoothControlState(
+                    connectionState = BluetoothConnectionState.Disconnected,
+                    lastError = BluetoothConnectionError.READ_FAILED,
+                    canConnect = true,
+                    canDisconnect = false
+                )
+            )
+        )
+
+        val useCase = BluetoothVarioSettingsUseCase(controlPort)
+        val uiState = useCase.uiState.first()
+
+        assertEquals("No bonded devices", uiState.statusText)
+        assertEquals(null, uiState.failureText)
     }
 
     @Test

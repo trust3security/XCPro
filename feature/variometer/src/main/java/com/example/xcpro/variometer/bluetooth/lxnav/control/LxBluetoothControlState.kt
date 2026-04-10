@@ -18,6 +18,13 @@ data class LxBluetoothControlState(
     val activeDeviceName: String? = null,
     val connectionState: BluetoothConnectionState = BluetoothConnectionState.Disconnected,
     val lastError: BluetoothConnectionError? = null,
+    val lastDisconnectReason: LxBluetoothDisconnectReason? = null,
+    val reconnectState: LxBluetoothReconnectState = LxBluetoothReconnectState.Idle,
+    val reconnectCount: Int = 0,
+    val streamAlive: Boolean = false,
+    val lastReceivedMonoMs: Long? = null,
+    val lastReceivedAgeMs: Long? = null,
+    val rollingSentenceRatePerSecond: Double = 0.0,
     val canConnect: Boolean = false,
     val canDisconnect: Boolean = false
 )

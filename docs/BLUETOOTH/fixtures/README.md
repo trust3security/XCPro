@@ -1,20 +1,34 @@
-# Bluetooth Fixture Placeholder
+# Bluetooth Fixture Notes
 
-This directory is reserved for future sanitized raw-capture fixtures for the
-LXNAV S100 Bluetooth work.
+This directory remains the documentation-side placeholder for sanitized
+Bluetooth capture notes for the LXNAV S100 work.
 
-Phase 0 intentionally keeps this as docs-only baseline state:
+Committed executable fixture files now live under:
 
-- no raw fixture files are committed yet
-- no tests consume this directory yet
-- no production code reads this directory
+- `feature/variometer/src/test/resources/com/example/xcpro/variometer/bluetooth/lxnav/fixtures/`
 
-When real hardware capture is added in a later phase:
+Those resources are consumed only by JVM/unit fixture replay tests in
+`:feature:variometer`; production code does not read this directory.
+
+Fixture rules:
 
 - keep one sentence per line
+- prefix each sentence line with monotonic receive time as `<monoMs>|<raw sentence>`
+- use `@session start` / `@session end` to preserve session boundaries
+- use `@event monoMs=<n> type=error error=<ENUM>` for terminal reconnect/error markers
 - normalize line endings to LF
 - sanitize MAC addresses, serial numbers, and any pilot-identifying metadata
 - keep sentence order and checksums intact
+- serial placeholders in committed fixtures use synthetic tokens such as
+  `SN0001`, `SN0002`, ... after sanitization; recompute the checksum after
+  substitution
+- if a sanitization rule changes sentence payload, recompute the checksum and
+  document the rule beside the fixture or in the PR notes
+
+Hard stop:
+
+- if real capture proves parser or transport expansion is required for the v1
+  fused fields, record the evidence and re-scope instead of widening Phase 6
 
 See `../RAW_CAPTURE_AND_HARDWARE_VALIDATION_BLUETOOTH.md` for the validation and
 sanitization rules that govern future fixture files.

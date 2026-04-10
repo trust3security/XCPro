@@ -22,7 +22,8 @@ Capture:
 - whether XCPro connects through bonded-device RFCOMM/SPP
 - whether the stream is newline-delimited ASCII
 - whether there are any binary bytes or framing quirks
-- whether reconnect after power-cycle behaves cleanly
+- whether reconnect after power-cycle behaves cleanly once the pilot has already
+  started a live session manually
 
 ### 1.3 Sentence inventory
 Capture at least 30 to 60 seconds of raw output and list:
@@ -30,6 +31,8 @@ Capture at least 30 to 60 seconds of raw output and list:
 - approximate update rate of each sentence
 - whether checksums are always present
 - whether some sentences contain blank optional fields
+- whether `LXWP0` + `LXWP1` alone are sufficient for the currently fused fields
+  (`pressureAltitudeM`, `totalEnergyVarioMps`)
 
 ### 1.4 Field sanity
 Confirm with bench observation where practical:
@@ -49,6 +52,7 @@ Confirm with bench observation where practical:
 5. If possible, also capture:
    - a disconnect/reconnect cycle,
    - a device power-cycle reconnect,
+   - a permission-loss or unbonded-device stop condition if bench setup allows,
    - a short period with no useful motion change,
    - a period with changing altitude/vario if bench simulation is available.
 
@@ -64,9 +68,18 @@ If raw capture is added to the repo as parser fixtures:
 - do not hand-edit fields unless the sanitization rule is explicit and documented
 
 Preferred fixture format:
-- one sentence per line
+- executable fixtures live under
+  `feature/variometer/src/test/resources/com/example/xcpro/variometer/bluetooth/lxnav/fixtures/`
+- use `@session start` / `@session end` markers for session boundaries
+- use `@event monoMs=<n> type=error error=<ENUM>` markers for terminal transport
+  errors observed during capture
+- record sentences as `<monoMs>|<raw sentence>`
 - original line endings normalized to LF in fixture files
 - accompanying short note describing source hardware and firmware version if known
+- if a real serial number is sanitized, replace it with a synthetic placeholder
+  token such as `SN0001`, `SN0002`, ... and recompute the checksum
+- if sanitization changes a sentence payload, document the rule and recompute the
+  checksum rather than checking in an invalid line by accident
 
 ---
 
@@ -82,6 +95,9 @@ After the first real capture, check whether the parser or transport needs adjust
 
 Do not widen scope casually.
 Only add parser support for newly observed sentences if they are actually needed for v1 behavior.
+If real capture shows `PLXVF`, `PLXVS`, `LXWP2`, or `LXWP3` are required for the
+currently fused fields, stop the Phase 6 slice and re-plan instead of widening
+the parser in the same change.
 
 ---
 
@@ -93,6 +109,7 @@ The hardware validation passes when all are true:
 - parser handles the real capture without crashing
 - at least one sanitized fixture from real hardware backs tests if feasible
 - disconnect fallback works cleanly
+- controlled reconnect only happens after a prior user-initiated successful session
 - connection-state and diagnostics UI reflect reality during bench validation
 
 ---

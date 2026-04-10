@@ -1,11 +1,14 @@
 package com.example.xcpro.screens.navdrawer
 
-import com.example.xcpro.variometer.bluetooth.BluetoothConnectionError
 import com.example.xcpro.variometer.bluetooth.BluetoothConnectionState
 import com.example.xcpro.variometer.bluetooth.lxnav.control.BluetoothBondedDeviceItem
+import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDisconnectReason
+import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothReconnectBlockReason
 import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothControlPort
 import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothControlState
+import com.example.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothReconnectState
 import javax.inject.Inject
+import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -59,7 +62,9 @@ class BluetoothVarioSettingsUseCase @Inject constructor(
                 emptyLabel = "No active device"
             ),
             statusText = state.toStatusText(),
-            failureText = state.lastError?.toFailureText(),
+            healthText = state.toHealthText(),
+            reconnectText = state.toReconnectText(),
+            failureText = state.toFailureText(),
             connectEnabled = state.canConnect,
             disconnectEnabled = state.canDisconnect
         )
@@ -77,6 +82,18 @@ class BluetoothVarioSettingsUseCase @Inject constructor(
 
     private fun LxBluetoothControlState.toStatusText(): String {
         if (permissionRequired) return "Bluetooth permission required"
+        when (reconnectState) {
+            is LxBluetoothReconnectState.Waiting,
+            is LxBluetoothReconnectState.Attempting -> return "Reconnecting"
+            is LxBluetoothReconnectState.Blocked -> {
+                val blockedState = reconnectState as LxBluetoothReconnectState.Blocked
+                if (blockedState.reason == LxBluetoothReconnectBlockReason.DEVICE_NOT_BONDED) {
+                    return "Selected device unavailable"
+                }
+            }
+            is LxBluetoothReconnectState.Exhausted,
+            LxBluetoothReconnectState.Idle -> Unit
+        }
         return when (connectionState) {
             is BluetoothConnectionState.Connecting -> "Connecting"
             is BluetoothConnectionState.Connected -> "Connected"
@@ -90,15 +107,90 @@ class BluetoothVarioSettingsUseCase @Inject constructor(
         }
     }
 
-    private fun BluetoothConnectionError.toFailureText(): String =
+    private fun LxBluetoothControlState.toHealthText(): String? {
+        if (connectionState is BluetoothConnectionState.Connected && lastReceivedAgeMs == null) {
+            return "Stream waiting for first sentence."
+        }
+        if (lastReceivedAgeMs == null && rollingSentenceRatePerSecond <= 0.0) return null
+
+        val linkText = when {
+            streamAlive -> "Stream alive"
+            connectionState is BluetoothConnectionState.Connected -> "Stream stale"
+            else -> "Last stream sample"
+        }
+        val ageText = lastReceivedAgeMs?.let { "${it} ms ago" } ?: "not yet received"
+        val rateText = String.format(Locale.US, "%.1f sentences/s", rollingSentenceRatePerSecond)
+        return "$linkText, last data $ageText, $rateText."
+    }
+
+    private fun LxBluetoothControlState.toReconnectText(): String? =
+        when (val state = reconnectState) {
+            is LxBluetoothReconnectState.Waiting ->
+                "Reconnect scheduled: attempt ${state.attemptNumber}/${state.maxAttempts} in ${state.delayMs / 1_000}s."
+
+            is LxBluetoothReconnectState.Attempting ->
+                "Reconnect attempt ${state.attemptNumber}/${state.maxAttempts} in progress."
+
+            is LxBluetoothReconnectState.Blocked -> when (state.reason) {
+                LxBluetoothReconnectBlockReason.PERMISSION_REQUIRED ->
+                    "Reconnect stopped: Bluetooth permission required."
+
+                LxBluetoothReconnectBlockReason.DEVICE_NOT_BONDED ->
+                    "Reconnect stopped: selected device is not bonded."
+
+                LxBluetoothReconnectBlockReason.SELECTION_CHANGED,
+                LxBluetoothReconnectBlockReason.DIFFERENT_DEVICE_REQUESTED -> null
+            }
+
+            is LxBluetoothReconnectState.Exhausted ->
+                "Reconnect stopped after ${state.attempts} attempts."
+
+            LxBluetoothReconnectState.Idle -> null
+        }
+
+    private fun LxBluetoothControlState.toFailureText(): String? =
+        when (val disconnectReason = lastDisconnectReason) {
+            null -> when {
+                reconnectState is LxBluetoothReconnectState.Blocked ->
+                    (reconnectState as LxBluetoothReconnectState.Blocked).reason.toFailureText()
+                reconnectState is LxBluetoothReconnectState.Exhausted ->
+                    "Reconnect attempts exhausted."
+                else -> null
+            }
+            else -> disconnectReason.toFailureText()
+        }
+
+    private fun LxBluetoothDisconnectReason.toFailureText(): String =
         when (this) {
-            BluetoothConnectionError.PERMISSION_REQUIRED -> "Bluetooth permission is required."
-            BluetoothConnectionError.DEVICE_NOT_BONDED -> "Selected device is not bonded."
-            BluetoothConnectionError.ALREADY_OPEN -> "A Bluetooth session is already open."
-            BluetoothConnectionError.CONNECT_FAILED -> "Could not connect to the selected device."
-            BluetoothConnectionError.STREAM_CLOSED -> "Bluetooth stream closed."
-            BluetoothConnectionError.READ_FAILED -> "Bluetooth read failed."
-            BluetoothConnectionError.CANCELLED -> "Bluetooth session cancelled."
+            LxBluetoothDisconnectReason.PERMISSION_REQUIRED ->
+                "Bluetooth permission is required."
+
+            LxBluetoothDisconnectReason.DEVICE_NOT_BONDED ->
+                "Selected device is not bonded."
+
+            LxBluetoothDisconnectReason.CONNECT_FAILED ->
+                "Could not connect to the selected device."
+
+            LxBluetoothDisconnectReason.STREAM_CLOSED ->
+                "Bluetooth stream closed."
+
+            LxBluetoothDisconnectReason.READ_FAILED ->
+                "Bluetooth read failed."
+
+            LxBluetoothDisconnectReason.RETRIES_EXHAUSTED ->
+                "Reconnect attempts exhausted."
+        }
+
+    private fun LxBluetoothReconnectBlockReason.toFailureText(): String? =
+        when (this) {
+            LxBluetoothReconnectBlockReason.PERMISSION_REQUIRED ->
+                "Bluetooth permission is required."
+
+            LxBluetoothReconnectBlockReason.DEVICE_NOT_BONDED ->
+                "Selected device is not bonded."
+
+            LxBluetoothReconnectBlockReason.SELECTION_CHANGED,
+            LxBluetoothReconnectBlockReason.DIFFERENT_DEVICE_REQUESTED -> null
         }
 
     private fun formatDeviceLabel(

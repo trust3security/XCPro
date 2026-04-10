@@ -1,6 +1,7 @@
 package com.example.xcpro.variometer.bluetooth.lxnav.runtime
 
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.core.time.Clock
 import com.example.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.example.xcpro.external.ExternalInstrumentReadPort
 import com.example.xcpro.external.TimedExternalValue
@@ -32,6 +33,7 @@ import kotlinx.coroutines.sync.withLock
 @Singleton
 class LxExternalRuntimeRepository @Inject constructor(
     private val transport: BluetoothTransport,
+    private val clock: Clock,
     @DefaultDispatcher dispatcher: CoroutineDispatcher
 ) : ExternalInstrumentReadPort {
 
@@ -42,6 +44,8 @@ class LxExternalRuntimeRepository @Inject constructor(
 
     private var activeTransportJob: Job? = null
     private var activeSentenceSession: LxSentenceSession = LxSentenceSession()
+    private var diagnosticsAccumulator: LxSentenceDiagnosticsAccumulator =
+        LxSentenceDiagnosticsAccumulator()
 
     internal val runtimeSnapshot: StateFlow<LxExternalRuntimeSnapshot> =
         mutableRuntimeSnapshot.asStateFlow()
@@ -53,8 +57,24 @@ class LxExternalRuntimeRepository @Inject constructor(
         scope.launch {
             transport.connectionState.collect { connectionState ->
                 stateMutex.withLock {
+                    val updatedDiagnostics = when (connectionState) {
+                        is BluetoothConnectionState.Error -> diagnosticsAccumulator.withTransportError(
+                            mutableRuntimeSnapshot.value.diagnostics,
+                            connectionState.error
+                        )
+
+                        is BluetoothConnectionState.Connected -> diagnosticsAccumulator.clearTransportError(
+                            mutableRuntimeSnapshot.value.diagnostics
+                        )
+
+                        BluetoothConnectionState.Disconnected,
+                        is BluetoothConnectionState.Connecting -> mutableRuntimeSnapshot.value.diagnostics
+                    }
                     publishLocked(
-                        mutableRuntimeSnapshot.value.copy(connectionState = connectionState)
+                        mutableRuntimeSnapshot.value.copy(
+                            connectionState = connectionState,
+                            diagnostics = updatedDiagnostics
+                        )
                     )
                 }
             }
@@ -66,13 +86,16 @@ class LxExternalRuntimeRepository @Inject constructor(
 
         val nextSession = stateMutex.withLock {
             val sessionOrdinal = mutableRuntimeSnapshot.value.sessionOrdinal + 1L
+            val sessionStartMonoMs = clock.nowMonoMs()
             activeSentenceSession = LxSentenceSession()
+            diagnosticsAccumulator = LxSentenceDiagnosticsAccumulator()
             publishLocked(
                 LxExternalRuntimeSnapshot(
                     activeDeviceAddress = device.address,
                     activeDeviceName = device.displayName,
                     sessionOrdinal = sessionOrdinal,
-                    connectionState = transport.connectionState.value
+                    connectionState = transport.connectionState.value,
+                    diagnostics = diagnosticsAccumulator.reset(sessionStartMonoMs)
                 )
             )
             sessionOrdinal
@@ -116,6 +139,14 @@ class LxExternalRuntimeRepository @Inject constructor(
             if (mutableRuntimeSnapshot.value.sessionOrdinal != sessionOrdinal) {
                 emptyList()
             } else {
+                publishLocked(
+                    mutableRuntimeSnapshot.value.copy(
+                        diagnostics = diagnosticsAccumulator.onChunkReceived(
+                            mutableRuntimeSnapshot.value.diagnostics,
+                            chunk.receivedMonoMs
+                        )
+                    )
+                )
                 activeSentenceSession.onChunk(chunk)
             }
         }
@@ -129,6 +160,12 @@ class LxExternalRuntimeRepository @Inject constructor(
             outcomes.forEach { outcome ->
                 snapshot = applyOutcome(snapshot, outcome)
             }
+            snapshot = snapshot.copy(
+                diagnostics = diagnosticsAccumulator.onOutcomes(
+                    snapshot.diagnostics,
+                    outcomes
+                )
+            )
             publishLocked(snapshot)
         }
     }
@@ -188,6 +225,7 @@ class LxExternalRuntimeRepository @Inject constructor(
     private fun clearRuntimeStateLocked(
         connectionState: BluetoothConnectionState
     ) {
+        val preservedTransportError = mutableRuntimeSnapshot.value.diagnostics.lastTransportError
         publishLocked(
             mutableRuntimeSnapshot.value.copy(
                 activeDeviceAddress = null,
@@ -197,7 +235,8 @@ class LxExternalRuntimeRepository @Inject constructor(
                 totalEnergyVarioMps = null,
                 airspeedKph = null,
                 deviceInfo = null,
-                lastAcceptedMonoMs = null
+                lastAcceptedMonoMs = null,
+                diagnostics = diagnosticsAccumulator.clearSession(preservedTransportError)
             )
         )
     }

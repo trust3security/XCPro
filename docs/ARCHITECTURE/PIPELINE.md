@@ -484,6 +484,9 @@ ViewModel:
   - Only external `pressureAltitudeM` and `totalEnergyVarioMps` participate in
     fused truth in Phase 4; `airspeedKph` and device metadata remain
     variometer-local / diagnostics-only.
+  - Owns session-local Bluetooth diagnostics such as last-received monotonic
+    time, rolling sentence rate, accepted/rejected counts, checksum/parse
+    failures, and the last transport error observed for the session.
 - `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/control/LxBluetoothControlPort.kt`
   and `LxBluetoothControlUseCase.kt`
   - Variometer owns the Bluetooth settings/control seam over transport
@@ -492,6 +495,9 @@ ViewModel:
     `LxExternalRuntimeRepository`.
   - This seam derives UI/control state from the transport and selected-device
     owners; it is not a second Bluetooth session lifecycle source of truth.
+  - Controlled reconnect/backoff also stays in this seam and is limited to a
+    previously user-initiated session that has connected successfully at least
+    once; app start, permission grant, and device selection do not auto-connect.
 - `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt`
   - `feature:map` keeps the temporary app theme runtime read path over the
     profile-owned theme use case; the colors owner move does not leave writes

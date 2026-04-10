@@ -136,6 +136,18 @@ internal fun BluetoothVarioSettingsContent(
                     text = "Status: ${uiState.statusText}",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                uiState.healthText?.let { healthText ->
+                    Text(
+                        text = healthText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                uiState.reconnectText?.let { reconnectText ->
+                    Text(
+                        text = reconnectText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 Text(
                     text = "Selected: ${uiState.selectedDeviceLabel}",
                     style = MaterialTheme.typography.bodyMedium
