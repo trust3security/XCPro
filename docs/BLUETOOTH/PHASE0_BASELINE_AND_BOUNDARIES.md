@@ -1,8 +1,9 @@
 # Bluetooth Phase 0 Baseline and Boundaries
 
 Date: 2026-04-09
-Status: Phase 0 baseline only
-Scope: docs, contract freeze, and baseline
+Status: Historical baseline snapshot recorded on 2026-04-09
+Scope: docs, contract freeze, and pre-implementation baseline
+Superseded by: `CURRENT_STATUS_BLUETOOTH_2026-04-11.md`
 
 ## Purpose
 
@@ -10,8 +11,12 @@ Freeze the Bluetooth implementation boundaries before any transport, parser,
 runtime, or UI wiring lands.
 
 This file is the Phase 0 baseline note for the LXNAV S100 Bluetooth work.
-It exists to make later phases decision-complete without adding production
-Bluetooth behavior in this slice.
+It exists to preserve the pre-implementation audit and ownership freeze that
+existed before production Bluetooth wiring landed.
+
+This file is not the current repo state.
+Production Bluetooth transport/parser/runtime/settings code has since landed in
+the repo. Use `CURRENT_STATUS_BLUETOOTH_2026-04-11.md` for the current state.
 
 ## Authoritative documents
 
@@ -54,8 +59,10 @@ Related settings-side owner that remains unchanged:
 
 ## Baseline repo state
 
-Phase 0 confirms the current repo still has no production Bluetooth wiring for
-the LXNAV S100 slice.
+This section describes the repo as audited on 2026-04-09.
+
+On that date, Phase 0 confirmed the repo still had no production Bluetooth
+wiring for the LXNAV S100 slice.
 
 ### Audit commands and results
 

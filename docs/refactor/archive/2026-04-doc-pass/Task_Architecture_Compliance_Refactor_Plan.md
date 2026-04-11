@@ -12,7 +12,7 @@ Historical tracking issues (from `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` baselin
 - RULES-20260211-07
 
 Linked sub-plans:
-- `docs/ARCHITECTURE/CHANGE_PLAN_TASK_TOP_BAR_DROPDOWN.md` (UI container migration only; primarily RULES-20260211-02/03 subset)
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_TASK_TOP_BAR_DROPDOWN.md` (UI container migration only; primarily RULES-20260211-02/03 subset)
 - `docs/refactor/UI_Domain_Boundary_Compliance_Plan.md` (parallel boundary cleanup for non-task modules)
 
 ## Purpose
@@ -255,3 +255,4 @@ Allowed dependency direction: UI -> domain -> data.
 
 ## Implementation Rule
 Code changes must follow this phased plan unless a newer approved plan explicitly replaces it.
+

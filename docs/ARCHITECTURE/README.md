@@ -38,6 +38,41 @@ Start with `../../AGENTS.md` for agent/contributor entry instructions.
 See `CONTRIBUTING.md` for contributor workflow details.
 Pipeline overview: `PIPELINE.md` (diagram: `PIPELINE.svg`).
 
+## Architecture Folder Layout
+
+This directory now keeps only the material that is still part of the live
+architecture contract or an active cross-feature read path.
+
+Root-level docs are reserved for:
+- canonical repo contracts:
+  `ARCHITECTURE.md`, `CODING_RULES.md`, `PIPELINE.md`, `PIPELINE_INDEX.md`,
+  `CODEBASE_CONTEXT_AND_INTENT.md`, `CONTRIBUTING.md`, `KNOWN_DEVIATIONS.md`
+- execution entrypoints and templates:
+  `AGENT.md`, `PLAN_MODE_START_HERE.md`, `CHANGE_PLAN_TEMPLATE.md`,
+  `ADR_TEMPLATE.md`, `README_FOR_CODEX.md`
+- durable architecture records:
+  `ADR_*.md`
+- current cross-feature workstream docs that are still referenced directly from
+  active feature packs:
+  `CHANGE_PLAN_AAT_LIVE_SCORING_2026-03-16.md`,
+  `CHANGE_PLAN_CURRENT_LD_FUSED_2026-04-08.md`,
+  `CHANGE_PLAN_CURRENT_LD_THERMAL_STATE_POLISH_2026-04-09.md`,
+  `CHANGE_PLAN_FINAL_GLIDE_ROUTE_AND_RUNTIME_MIGRATION_2026-03-25.md`,
+  `CHANGE_PLAN_GLIDE_COMPUTER_RELEASE_GRADE_2026-03-27.md`,
+  `CHANGE_PLAN_HOTSPOTS_THERMALS_2026-02-24.md`,
+  `GLIDE_COMPUTER_METRIC_CONTRACT_MATRIX_2026-03-27.md`
+- supporting repo-wide assets and setup notes:
+  `APPLICATION_WIRING.svg`, `PIPELINE.svg`, `LOCAL_SECRETS_SETUP.md`
+
+Historical one-off plans, execution contracts, and superseded support notes
+were moved to:
+- `archive/2026-04-11-root-cleanup/README.md`
+
+Rule of thumb for new docs:
+- durable contract or active cross-feature source of truth -> keep in root
+- completed slice plan, temporary execution brief, or historical support note ->
+  archive it once the newer contract docs exist
+
 ---
 
 ## Compliance Status (tracked)

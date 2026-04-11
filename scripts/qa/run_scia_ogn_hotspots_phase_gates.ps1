@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateRange(0, 4)]
     [int]$FromPhase = 0,
     [ValidateRange(0, 4)]
@@ -172,7 +172,7 @@ if ([string]::IsNullOrWhiteSpace($StateFile)) {
     $StateFile = Join-Path -Path $repoRoot -ChildPath "logs/phase-runner/scia-ogn-hotspots-phase-state.json"
 }
 
-$contractPath = "docs/ARCHITECTURE/AGENT_EXECUTION_CONTRACT_SCIA_GENERAL_OGN_HOTSPOTS_2026-03-05.md"
+$contractPath = "docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/AGENT_EXECUTION_CONTRACT_SCIA_GENERAL_OGN_HOTSPOTS_2026-03-05.md"
 $phaseNames = [ordered]@{
     0 = "Phase 0 - Baseline lock and test net"
     1 = "Phase 1 - OGN settings state and intent wiring"
@@ -405,3 +405,4 @@ catch {
     Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/qa/run_scia_ogn_hotspots_phase_gates.ps1 -Resume"
     exit 1
 }
+

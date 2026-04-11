@@ -1,4 +1,4 @@
-# LiveFollow Phase 3 — Codex Prompts
+﻿# LiveFollow Phase 3 â€” Codex Prompts
 
 Use a **new Codex task/agent** for Phase 3.
 Do Phase 3 in **two passes**:
@@ -7,7 +7,7 @@ Do Phase 3 in **two passes**:
 
 ---
 
-## Pass 1 — seam / audit prompt
+## Pass 1 â€” seam / audit prompt
 
 ```text
 Review the current LiveFollow state after Phase 2 and propose the repo-native Phase 3 UI/route wiring plan only.
@@ -17,7 +17,7 @@ Read and follow:
 - docs/LIVEFOLLOW/livefollow_v2.md
 - docs/LIVEFOLLOW/LiveFollow_Next_Steps_v4.md
 - docs/LIVEFOLLOW/PHASE3_REVIEW_CHECKLIST.md
-- docs/ARCHITECTURE/PIPELINE_LiveFollow_Addendum.md
+- docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md
 - AGENTS.md
 - AGENT.md
 - ARCHITECTURE.md
@@ -68,7 +68,7 @@ Deliver:
 
 ---
 
-## Pass 2 — implementation prompt
+## Pass 2 â€” implementation prompt
 
 ```text
 Implement Phase 3 for LiveFollow exactly according to the approved seam/contract plan.
@@ -78,7 +78,7 @@ Read and follow:
 - docs/LIVEFOLLOW/livefollow_v2.md
 - docs/LIVEFOLLOW/LiveFollow_Next_Steps_v4.md
 - docs/LIVEFOLLOW/PHASE3_REVIEW_CHECKLIST.md
-- docs/ARCHITECTURE/PIPELINE_LiveFollow_Addendum.md
+- docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md
 - AGENTS.md
 - AGENT.md
 - ARCHITECTURE.md
@@ -135,3 +135,4 @@ Deliver:
 4. any architecture risks found
 5. whether any docs should be updated after Phase 3
 ```
+

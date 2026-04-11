@@ -1,4 +1,4 @@
-# CHANGE_PLAN_GENERAL_BOTTOM_SHEET_2026-03-02.md
+﻿# CHANGE_PLAN_GENERAL_BOTTOM_SHEET_2026-03-02.md
 
 ## 0) Metadata
 
@@ -10,7 +10,7 @@
 
 Follow-up (2026-03-03):
 - Requested next step is map-hosted General sheet (no route transition on open/close).
-- Tracked in: `docs/ARCHITECTURE/CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`.
+- Tracked in: `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`.
 - Re-pass status: route-hosted General remains active in code; migration is not yet applied.
 
 ## 1) Scope
@@ -289,3 +289,4 @@ After:
 - Keep extracted content if safe, otherwise revert extraction too.
 - Keep route constants and entrypoints unchanged.
 - Re-run required verification commands.
+

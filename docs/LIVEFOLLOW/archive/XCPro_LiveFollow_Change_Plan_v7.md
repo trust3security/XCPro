@@ -1,4 +1,4 @@
-# XCPro LiveFollow Change Plan v7
+﻿# XCPro LiveFollow Change Plan v7
 
 Date: 2026-03-18
 Status: Active baseline after Phase 1 green run
@@ -25,7 +25,7 @@ Use these docs together:
 - `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v7.md`
 - `docs/LIVEFOLLOW/PHASE1_REVIEW_CHECKLIST_v3.md`
 - `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v3.md`
-- `docs/ARCHITECTURE/PIPELINE_LiveFollow_Addendum.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md`
 
 Treat older plan files as historical context only.
 
@@ -231,4 +231,5 @@ Do not jump straight to map/UI just because Phase 1 is green.
 Do not let LiveFollow become a disguised patch to `feature:map`.
 
 If the feature only works when ordinary OGN overlay prefs are enabled, or if it requires task manager/coordinator internals directly, the design is wrong.
+
 
