@@ -22,13 +22,15 @@ internal class ThermallingModeRuntimeWiring(
     private val currentMode: StateFlow<FlightMode>,
     private val currentZoom: StateFlow<Float>,
     private val currentBaseStyle: StateFlow<String>,
-    private val applyFlightMode: (FlightMode) -> Unit,
+    private val applyRuntimeFlightMode: (FlightMode) -> Unit,
+    private val clearRuntimeFlightModeOverride: () -> Unit,
     private val applyZoom: (Float) -> Unit,
     private val applyContrastMap: (Boolean) -> Unit
 ) {
     private var isBound = false
     private var lastObservedZoom: Float = currentZoom.value
     private var replaySuppressionActive = false
+    private var thermalVisibilitySuppressionActive = false
 
     fun bind() {
         if (isBound) return
@@ -63,12 +65,19 @@ internal class ThermallingModeRuntimeWiring(
                 if (!replaySuppressionActive) {
                     replaySuppressionActive = true
                     controller.reset()
+                    clearRuntimeFlightModeOverride()
                     applyContrastMap(false)
                 }
                 lastObservedZoom = frame.currentZoom
                 return@onEach
             }
             replaySuppressionActive = false
+            if (!frame.thermalModeVisible && !thermalVisibilitySuppressionActive) {
+                thermalVisibilitySuppressionActive = true
+                clearRuntimeFlightModeOverride()
+            } else if (frame.thermalModeVisible) {
+                thermalVisibilitySuppressionActive = false
+            }
             maybeRememberManualZoom(frame.currentZoom, frame.settings)
             val actions = controller.update(
                 input = ThermallingModeInput(
@@ -97,7 +106,13 @@ internal class ThermallingModeRuntimeWiring(
     private fun applyActions(actions: List<ThermallingModeAction>, currentBaseStyle: String) {
         actions.forEach { action ->
             when (action) {
-                is ThermallingModeAction.SwitchFlightMode -> applyFlightMode(action.mode)
+                is ThermallingModeAction.SwitchFlightMode -> {
+                    if (action.mode == FlightMode.THERMAL) {
+                        applyRuntimeFlightMode(action.mode)
+                    } else {
+                        clearRuntimeFlightModeOverride()
+                    }
+                }
                 is ThermallingModeAction.SetZoom -> applyZoom(action.zoom)
                 is ThermallingModeAction.SetContrastMapEnabled -> {
                     if (action.enabled && MapStyleCatalog.isSatellite(currentBaseStyle)) {

@@ -11,7 +11,6 @@ import com.example.dfcards.dfcards.toIntSizePx
 import com.example.xcpro.toOrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.MapOrientationManager
-import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS
 import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS
 import com.example.xcpro.map.FlightDataManager
@@ -96,9 +95,6 @@ object MapComposeEffects {
     @Composable
     fun ProfileAndConfigurationEffects(
         uiState: ProfileUiState,
-        flightDataManager: FlightDataManager,
-        currentMode: FlightMode,
-        onModeChange: (FlightMode) -> Unit,
         currentFlightModeSelection: FlightModeSelection,
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
@@ -108,15 +104,6 @@ object MapComposeEffects {
         activeTemplateId: String?
     ) {
         val lastCardPrepareMonoMs = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0L) }
-
-        LaunchedEffect(uiState.activeProfile?.id) {
-            flightDataManager.loadVisibleModes(uiState.activeProfile?.id, uiState.activeProfile?.name)
-
-            if (!flightDataManager.isCurrentModeVisible(currentMode)) {
-                val fallback = flightDataManager.getFallbackMode()
-                onModeChange(fallback)
-            }
-        }
 
         LaunchedEffect(
             currentFlightModeSelection,
@@ -137,7 +124,6 @@ object MapComposeEffects {
             }
             lastCardPrepareMonoMs.value = TimeBridge.nowMonoMs()
 
-            flightDataManager.updateFlightMode(currentFlightModeSelection)
             flightViewModel.prepareCardsForProfile(
                 profileId = uiState.activeProfile?.id,
                 flightMode = currentFlightModeSelection,
@@ -236,8 +222,6 @@ object MapComposeEffects {
         orientationManager: MapOrientationManager,
         uiState: ProfileUiState,
         flightDataManager: FlightDataManager,
-        currentMode: FlightMode,
-        onModeChange: (FlightMode) -> Unit,
         currentFlightModeSelection: FlightModeSelection,
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
@@ -264,9 +248,6 @@ object MapComposeEffects {
 
         ProfileAndConfigurationEffects(
             uiState = uiState,
-            flightDataManager = flightDataManager,
-            currentMode = currentMode,
-            onModeChange = onModeChange,
             currentFlightModeSelection = currentFlightModeSelection,
             safeContainerSize = safeContainerSize,
             flightViewModel = flightViewModel,

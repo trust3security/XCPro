@@ -68,6 +68,20 @@ class MapStateStore(
     private val _lastCameraSnapshot = MutableStateFlow<CameraSnapshot?>(null)
     override val lastCameraSnapshot: StateFlow<CameraSnapshot?> = _lastCameraSnapshot.asStateFlow()
 
+    private val _requestedFlightMode = MutableStateFlow(FlightMode.CRUISE)
+    val requestedFlightMode: StateFlow<FlightMode> = _requestedFlightMode.asStateFlow()
+
+    private val _runtimeFlightModeOverride = MutableStateFlow<FlightMode?>(null)
+    val runtimeFlightModeOverride: StateFlow<FlightMode?> = _runtimeFlightModeOverride.asStateFlow()
+
+    private val _visibleFlightModes = MutableStateFlow(orderedMapFlightModes)
+    val visibleFlightModes: StateFlow<List<FlightMode>> = _visibleFlightModes.asStateFlow()
+
+    private val _effectiveFlightModeSource = MutableStateFlow(MapFlightModeSource.REQUESTED)
+    internal val effectiveFlightModeSource: StateFlow<MapFlightModeSource> =
+        _effectiveFlightModeSource.asStateFlow()
+
+    // Compatibility read path: currentMode now means effective mode, not requested mode.
     private val _currentMode = MutableStateFlow(FlightMode.CRUISE)
     override val currentMode: StateFlow<FlightMode> = _currentMode.asStateFlow()
 
@@ -192,9 +206,21 @@ class MapStateStore(
         }
     }
 
-    fun setCurrentMode(mode: FlightMode) {
-        if (_currentMode.value != mode) {
-            _currentMode.value = mode
+    internal fun applyFlightModeUiState(state: MapFlightModeUiState) {
+        if (_requestedFlightMode.value != state.requestedMode) {
+            _requestedFlightMode.value = state.requestedMode
+        }
+        if (_runtimeFlightModeOverride.value != state.runtimeOverrideMode) {
+            _runtimeFlightModeOverride.value = state.runtimeOverrideMode
+        }
+        if (_visibleFlightModes.value != state.visibleModes) {
+            _visibleFlightModes.value = state.visibleModes
+        }
+        if (_currentMode.value != state.effectiveMode) {
+            _currentMode.value = state.effectiveMode
+        }
+        if (_effectiveFlightModeSource.value != state.effectiveModeSource) {
+            _effectiveFlightModeSource.value = state.effectiveModeSource
         }
     }
 

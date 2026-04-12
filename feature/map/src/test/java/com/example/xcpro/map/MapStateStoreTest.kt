@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.common.flight.FlightMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -80,5 +81,27 @@ class MapStateStoreTest {
         store.setTrailSettings(settings)
 
         assertEquals(settings, store.trailSettings.value)
+    }
+
+    @Test
+    fun applyFlightModeUiState_updatesRequestedRuntimeVisibleAndEffectiveMode() {
+        val store = MapStateStore(initialStyleName = "Topo")
+        val state = MapFlightModeUiState(
+            requestedMode = FlightMode.FINAL_GLIDE,
+            runtimeOverrideMode = FlightMode.THERMAL,
+            effectiveMode = FlightMode.THERMAL,
+            effectiveModeSource = MapFlightModeSource.RUNTIME_OVERRIDE,
+            visibleModes = listOf(FlightMode.CRUISE, FlightMode.THERMAL),
+            requestedModeVisible = false,
+            runtimeOverrideVisible = true
+        )
+
+        store.applyFlightModeUiState(state)
+
+        assertEquals(FlightMode.FINAL_GLIDE, store.requestedFlightMode.value)
+        assertEquals(FlightMode.THERMAL, store.runtimeFlightModeOverride.value)
+        assertEquals(listOf(FlightMode.CRUISE, FlightMode.THERMAL), store.visibleFlightModes.value)
+        assertEquals(FlightMode.THERMAL, store.currentMode.value)
+        assertEquals(MapFlightModeSource.RUNTIME_OVERRIDE, store.effectiveFlightModeSource.value)
     }
 }

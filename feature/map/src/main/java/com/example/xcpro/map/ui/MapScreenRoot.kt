@@ -53,10 +53,7 @@ internal fun MapScreenRoot(
     val runtimeDependencies = mapViewModel.runtimeDependencies
     val flightDataManager = runtimeDependencies.flightDataManager
     val orientationManager = runtimeDependencies.orientationManager
-    val rootUiBinding = rememberMapScreenRootUiBinding(
-        mapViewModel = mapViewModel,
-        flightDataManager = flightDataManager
-    )
+    val rootUiBinding = rememberMapScreenRootUiBinding(mapViewModel = mapViewModel)
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
         drawerState = drawerState,
@@ -188,8 +185,6 @@ internal fun MapScreenRoot(
         orientationManager = orientationManager,
         profileUiState = profileLookAndFeelBinding.profileUiState,
         flightDataManager = flightDataManager,
-        currentMode = mapBindings.currentMode,
-        onModeChange = mapViewModel::setFlightMode,
         currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
         safeContainerSize = safeContainerSize,
         flightCardsBinding = flightCardsBinding,

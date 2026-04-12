@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.UnitsPreferences
@@ -7,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class CardIngestionCoordinator(
@@ -16,7 +18,9 @@ class CardIngestionCoordinator(
     private val consumeBufferedCardSample: () -> RealTimeFlightData?,
     private val unitsPreferencesFlow: StateFlow<UnitsPreferences>,
     private val initializeCardPreferences: (FlightDataViewModel) -> Unit,
-    private val startIndependentClock: (FlightDataViewModel) -> Unit
+    private val startIndependentClock: (FlightDataViewModel) -> Unit,
+    private val onProfileModeVisibilitiesChanged:
+        (String?, Map<String, Map<FlightModeSelection, Boolean>>) -> Unit = { _, _ -> }
 ) {
     @Volatile
     private var cardsReady: Boolean = false
@@ -24,6 +28,7 @@ class CardIngestionCoordinator(
     private var hydrationJob: Job? = null
     private var cardsJob: Job? = null
     private var unitsJob: Job? = null
+    private var profileVisibilityJob: Job? = null
 
     @Synchronized
     fun bindCards(flightViewModel: FlightDataViewModel) {
@@ -60,6 +65,17 @@ class CardIngestionCoordinator(
                 flightViewModel.updateUnitsPreferences(preferences)
             }
         }
+
+        profileVisibilityJob = scope.launch {
+            combine(
+                flightViewModel.activeProfileId,
+                flightViewModel.profileModeVisibilities
+            ) { activeProfileId, visibilities ->
+                activeProfileId to visibilities
+            }.collectLatest { (activeProfileId, visibilities) ->
+                onProfileModeVisibilitiesChanged(activeProfileId, visibilities)
+            }
+        }
     }
 
     @Synchronized
@@ -73,8 +89,10 @@ class CardIngestionCoordinator(
         hydrationJob?.cancel()
         cardsJob?.cancel()
         unitsJob?.cancel()
+        profileVisibilityJob?.cancel()
         hydrationJob = null
         cardsJob = null
         unitsJob = null
+        profileVisibilityJob = null
     }
 }

@@ -31,7 +31,9 @@ internal fun startMapScreenViewModelLifecycle(
     flightDataUseCase: FlightDataUseCase,
     replaySessionState: StateFlow<SessionState>,
     mapStateActions: MapStateActions,
-    applyFlightMode: (FlightMode) -> Unit,
+    visibleModes: StateFlow<List<FlightMode>>,
+    applyRuntimeFlightMode: (FlightMode) -> Unit,
+    clearRuntimeFlightModeOverride: () -> Unit,
     applyContrastMap: (Boolean) -> Unit,
     flightDataUiAdapter: FlightDataUiAdapter,
     replayCoordinator: MapScreenReplayCoordinator,
@@ -58,11 +60,12 @@ internal fun startMapScreenViewModelLifecycle(
         thermallingController = thermallingModeUseCase,
         settingsFlow = thermallingModeUseCase.settingsFlow,
         flightData = flightDataUseCase.flightData,
-        visibleModes = flightDataManager.visibleModesFlow,
+        visibleModes = visibleModes,
         replaySessionState = replaySessionState,
         mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
-        applyFlightMode = applyFlightMode,
+        applyRuntimeFlightMode = applyRuntimeFlightMode,
+        clearRuntimeFlightModeOverride = clearRuntimeFlightModeOverride,
         applyContrastMap = applyContrastMap
     )
     flightDataUiAdapter.start()
@@ -79,10 +82,12 @@ internal fun stopMapScreenViewModelLifecycle(
     ognTrafficFacade: OgnTrafficFacade,
     adsbTrafficFacade: AdsbTrafficFacade,
     thermallingModeUseCase: ThermallingModeRuntimeUseCase,
-    ballastController: BallastController
+    ballastController: BallastController,
+    clearRuntimeFlightModeOverride: () -> Unit
 ) {
     ognTrafficFacade.stop()
     adsbTrafficFacade.stop()
     thermallingModeUseCase.reset()
+    clearRuntimeFlightModeOverride()
     ballastController.dispose()
 }

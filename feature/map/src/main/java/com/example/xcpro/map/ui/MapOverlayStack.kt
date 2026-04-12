@@ -63,6 +63,7 @@ internal fun MapOverlayStack(
     showWindSpeedOnVario: Boolean,
     cameraManager: MapCameraRuntimePort,
     currentMode: FlightMode,
+    visibleModes: List<FlightMode>,
     currentZoomFlow: StateFlow<Float>,
     unitsPreferences: UnitsPreferences,
     onModeChange: (FlightMode) -> Unit,
@@ -120,7 +121,6 @@ internal fun MapOverlayStack(
     replayState: StateFlow<SessionState>
 ) {
     val gestureRegions by widgetManager.gestureRegions.collectAsStateWithLifecycle()
-    val visibleModes by flightDataManager.visibleModesFlow.collectAsStateWithLifecycle()
 
     DisposableEffect(Unit) {
         onDispose {

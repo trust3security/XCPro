@@ -1,33 +1,26 @@
 package com.example.xcpro.map
 
-import android.content.Context
 import android.util.Log
-import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.profiles.ProfileIdResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 /**
  * Bridge between the map-layer UI and the flight-card SSOT ViewModel. It keeps UI-facing,
- * short-lived state (live vario data, smoothing, visibility) while delegating template/card
+ * short-lived state (live vario data, smoothing) while delegating template/card
  * ownership to [FlightDataViewModel].
  */
 class FlightDataManager(
-    private val context: Context,
-  	private val cardPreferences: CardPreferences,
-  	private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope
 ) {
     companion object {
         private const val TAG = "FlightDataManager"
@@ -234,20 +227,16 @@ class FlightDataManager(
      */
     var rawFlightData: RealTimeFlightData? = null
         private set
-    private val _currentFlightMode = MutableStateFlow(FlightModeSelection.CRUISE)
-    val currentFlightModeFlow: StateFlow<FlightModeSelection> = _currentFlightMode.asStateFlow()
-    val currentFlightMode: FlightModeSelection
-        get() = _currentFlightMode.value
+    // Compatibility shim: MapScreenViewModel mirrors the resolved effective mode here while
+    // card/display consumers still depend on FlightDataManager as a sink; remove after those
+    // consumers read map-owned effective mode directly.
+    internal var effectiveFlightModeSelection: FlightModeSelection = FlightModeSelection.CRUISE
+        private set
 
     private val _showCardLibrary = MutableStateFlow(false)
     val showCardLibraryFlow: StateFlow<Boolean> = _showCardLibrary.asStateFlow()
     val showCardLibrary: Boolean
         get() = _showCardLibrary.value
-
-    private val _visibleModes = MutableStateFlow(listOf(FlightMode.CRUISE))
-    val visibleModesFlow: StateFlow<List<FlightMode>> = _visibleModes.asStateFlow()
-    val visibleModes: List<FlightMode>
-        get() = _visibleModes.value
 
     private val _unitsPreferences = MutableStateFlow(UnitsPreferences())
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = _unitsPreferences.asStateFlow()
@@ -256,31 +245,9 @@ class FlightDataManager(
 
     private var bufferedCardSample: RealTimeFlightData? = null
 
-    fun mapToFlightModeSelection(mode: FlightMode): FlightModeSelection =
-        mode.toFlightModeSelection()
-
-    fun mapToFlightMode(modeSelection: FlightModeSelection): FlightMode =
-        modeSelection.toFlightMode()
-
-    fun updateFlightMode(newMode: FlightModeSelection) {
-        _currentFlightMode.value = newMode
-        Log.d(TAG, "Flight mode updated to: ${newMode.displayName}")
-    }
-
-    fun updateFlightModeFromEnum(newMode: FlightMode) {
-        _currentFlightMode.value = mapToFlightModeSelection(newMode)
-        Log.d(TAG, "Flight mode updated from enum to: ${currentFlightMode.displayName}")
-    }
-
-    suspend fun loadVisibleModes(profileId: String?, profileName: String?) {
-        val resolvedProfileId = ProfileIdResolver.canonicalOrDefault(profileId)
-        val visibilities = cardPreferences.getProfileAllFlightModeVisibilities(resolvedProfileId).first()
-        val filtered = mutableListOf<FlightMode>()
-        filtered.add(FlightMode.CRUISE)
-        if (visibilities["THERMAL"] != false) filtered.add(FlightMode.THERMAL)
-        if (visibilities["FINAL_GLIDE"] != false) filtered.add(FlightMode.FINAL_GLIDE)
-        _visibleModes.value = filtered
-        Log.d(TAG, "Visible modes for profile '$profileName' ($resolvedProfileId): ${filtered.map { it.name }}")
+    fun updateEffectiveFlightModeFromEnum(newMode: FlightMode) {
+        effectiveFlightModeSelection = newMode.toFlightModeSelection()
+        Log.d(TAG, "Effective flight mode updated to: ${effectiveFlightModeSelection.displayName}")
     }
 
     fun updateUnitsPreferences(preferences: UnitsPreferences) {
@@ -312,8 +279,4 @@ class FlightDataManager(
         _showCardLibrary.value = false
     }
 
-    fun isCurrentModeVisible(currentMode: FlightMode): Boolean =
-        currentMode in _visibleModes.value
-
-    fun getFallbackMode(): FlightMode = FlightMode.CRUISE
 }

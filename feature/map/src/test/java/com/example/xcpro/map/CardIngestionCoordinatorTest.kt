@@ -1,5 +1,6 @@
 package com.example.xcpro.map
 
+import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.xcpro.common.units.PressureUnit
@@ -8,10 +9,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CardIngestionCoordinatorTest {
@@ -21,7 +24,7 @@ class CardIngestionCoordinatorTest {
         val cardHydrationReady = MutableStateFlow(true)
         val cardFlightDataFlow = MutableStateFlow<RealTimeFlightData?>(null)
         val unitsPreferencesFlow = MutableStateFlow(UnitsPreferences())
-        val viewModel = mock<FlightDataViewModel>()
+        val viewModel = mockFlightViewModel()
         val coordinator = CardIngestionCoordinator(
             scope = this,
             cardHydrationReady = cardHydrationReady,
@@ -52,7 +55,7 @@ class CardIngestionCoordinatorTest {
         val cardHydrationReady = MutableStateFlow(false)
         val cardFlightDataFlow = MutableStateFlow<RealTimeFlightData?>(null)
         val unitsPreferencesFlow = MutableStateFlow(UnitsPreferences())
-        val viewModel = mock<FlightDataViewModel>()
+        val viewModel = mockFlightViewModel()
         val expected = RealTimeFlightData(latitude = 2.0)
         var bufferedSample: RealTimeFlightData? = expected
         val coordinator = CardIngestionCoordinator(
@@ -82,7 +85,7 @@ class CardIngestionCoordinatorTest {
         val cardHydrationReady = MutableStateFlow(true)
         val cardFlightDataFlow = MutableStateFlow<RealTimeFlightData?>(null)
         val unitsPreferencesFlow = MutableStateFlow(UnitsPreferences())
-        val viewModel = mock<FlightDataViewModel>()
+        val viewModel = mockFlightViewModel()
         val coordinator = CardIngestionCoordinator(
             scope = this,
             cardHydrationReady = cardHydrationReady,
@@ -112,7 +115,7 @@ class CardIngestionCoordinatorTest {
         val cardHydrationReady = MutableStateFlow(true)
         val cardFlightDataFlow = MutableStateFlow<RealTimeFlightData?>(null)
         val unitsPreferencesFlow = MutableStateFlow(UnitsPreferences())
-        val viewModel = mock<FlightDataViewModel>()
+        val viewModel = mockFlightViewModel()
         val coordinator = CardIngestionCoordinator(
             scope = this,
             cardHydrationReady = cardHydrationReady,
@@ -137,5 +140,60 @@ class CardIngestionCoordinatorTest {
         } finally {
             coordinator.stop()
         }
+    }
+
+    @Test
+    fun forwardsActiveProfileAndVisibilitiesTogether() = runTest {
+        val cardHydrationReady = MutableStateFlow(true)
+        val cardFlightDataFlow = MutableStateFlow<RealTimeFlightData?>(null)
+        val unitsPreferencesFlow = MutableStateFlow(UnitsPreferences())
+        val activeProfileId = MutableStateFlow<String?>(null)
+        val profileModeVisibilities =
+            MutableStateFlow<Map<String, Map<FlightModeSelection, Boolean>>>(emptyMap())
+        val viewModel = mock<FlightDataViewModel>()
+        whenever(viewModel.activeProfileId).thenReturn(activeProfileId)
+        whenever(viewModel.profileModeVisibilities).thenReturn(profileModeVisibilities)
+        val forwarded =
+            mutableListOf<Pair<String?, Map<String, Map<FlightModeSelection, Boolean>>>>()
+        val coordinator = CardIngestionCoordinator(
+            scope = this,
+            cardHydrationReady = cardHydrationReady,
+            cardFlightDataFlow = cardFlightDataFlow,
+            consumeBufferedCardSample = { null },
+            unitsPreferencesFlow = unitsPreferencesFlow,
+            initializeCardPreferences = { },
+            startIndependentClock = { },
+            onProfileModeVisibilitiesChanged = { profileId, visibilities ->
+                forwarded += profileId to visibilities
+            }
+        )
+
+        try {
+            coordinator.bindCards(viewModel)
+            advanceUntilIdle()
+
+            val visibilityUpdate = mapOf(
+                "pilot-a" to mapOf(FlightModeSelection.THERMAL to false)
+            )
+            activeProfileId.value = "pilot-a"
+            profileModeVisibilities.value = visibilityUpdate
+            advanceUntilIdle()
+
+            assertEquals("pilot-a", forwarded.last().first)
+            assertEquals(visibilityUpdate, forwarded.last().second)
+        } finally {
+            coordinator.stop()
+        }
+    }
+
+    private fun mockFlightViewModel(
+        activeProfileId: MutableStateFlow<String?> = MutableStateFlow(null),
+        profileModeVisibilities: MutableStateFlow<Map<String, Map<FlightModeSelection, Boolean>>> =
+            MutableStateFlow(emptyMap())
+    ): FlightDataViewModel {
+        val viewModel = mock<FlightDataViewModel>()
+        whenever(viewModel.activeProfileId).thenReturn(activeProfileId)
+        whenever(viewModel.profileModeVisibilities).thenReturn(profileModeVisibilities)
+        return viewModel
     }
 }

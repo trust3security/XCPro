@@ -75,6 +75,7 @@ internal fun MapScreenContent(
     val showWindSpeedOnVario = mapInputs.showWindSpeedOnVario
     val cameraManager = mapInputs.cameraManager
     val currentMode = mapInputs.currentMode
+    val visibleModes = mapInputs.visibleModes
     val onModeChange = mapInputs.onModeChange
     val skySightSatViewEnabled = mapInputs.forecastSatelliteOverrideEnabled
     val onForecastSatelliteOverrideChanged = mapInputs.onForecastSatelliteOverrideChanged
@@ -260,6 +261,7 @@ internal fun MapScreenContent(
                         showWindSpeedOnVario = showWindSpeedOnVario,
                         cameraManager = cameraManager,
                         currentMode = currentMode,
+                        visibleModes = visibleModes,
                         currentZoomFlow = currentZoomFlow,
                         unitsPreferences = unitsPreferences,
                         onModeChange = onModeChange,
