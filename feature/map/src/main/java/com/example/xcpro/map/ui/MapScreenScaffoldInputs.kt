@@ -143,8 +143,9 @@ internal fun rememberMapScreenScaffoldInputs(
                 showWindSpeedOnVario = rootUiBinding.showWindSpeedOnVario,
                 cameraManager = managers.cameraManager,
                 currentMode = mapBindings.currentMode,
+                visibleModes = mapBindings.visibleModes,
                 currentZoom = hotPathBindings.currentZoom,
-                onModeChange = mapViewModel::setFlightMode,
+                onModeChange = { mode -> mapViewModel.setFlightMode(mode) },
                 forecastSatelliteOverrideEnabled = mapBindings.forecastSatelliteOverrideEnabled,
                 onForecastSatelliteOverrideChanged = onForecastSatelliteOverrideChanged,
                 currentLocation = hotPathBindings.currentLocation

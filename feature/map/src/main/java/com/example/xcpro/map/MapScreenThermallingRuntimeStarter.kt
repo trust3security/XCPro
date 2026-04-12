@@ -17,7 +17,8 @@ internal fun startMapScreenThermallingRuntime(
     replaySessionState: StateFlow<SessionState>,
     mapStateStore: MapStateStore,
     mapStateActions: MapStateActions,
-    applyFlightMode: (FlightMode) -> Unit,
+    applyRuntimeFlightMode: (FlightMode) -> Unit,
+    clearRuntimeFlightModeOverride: () -> Unit,
     applyContrastMap: (Boolean) -> Unit
 ) {
     bindThermallingRuntimeWiring(
@@ -30,7 +31,8 @@ internal fun startMapScreenThermallingRuntime(
         mapStateReader = mapStateStore,
         mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
-        applyFlightMode = applyFlightMode,
+        applyRuntimeFlightMode = applyRuntimeFlightMode,
+        clearRuntimeFlightModeOverride = clearRuntimeFlightModeOverride,
         applyContrastMap = applyContrastMap
     )
 }

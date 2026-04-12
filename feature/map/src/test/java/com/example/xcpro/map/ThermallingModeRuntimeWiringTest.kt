@@ -45,7 +45,8 @@ class ThermallingModeRuntimeWiringTest {
         val currentMode = MutableStateFlow(FlightMode.CRUISE)
         val currentZoom = MutableStateFlow(10f)
         val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
-        val modeActions = mutableListOf<FlightMode>()
+        val runtimeOverrideActions = mutableListOf<FlightMode>()
+        var clearRuntimeOverrideCalls = 0
         val zoomActions = mutableListOf<Float>()
         val contrastMapActions = mutableListOf<Boolean>()
 
@@ -59,9 +60,13 @@ class ThermallingModeRuntimeWiringTest {
             currentMode = currentMode,
             currentZoom = currentZoom,
             currentBaseStyle = currentBaseStyle,
-            applyFlightMode = { mode ->
-                modeActions += mode
+            applyRuntimeFlightMode = { mode ->
+                runtimeOverrideActions += mode
                 currentMode.value = mode
+            },
+            clearRuntimeFlightModeOverride = {
+                clearRuntimeOverrideCalls += 1
+                currentMode.value = FlightMode.CRUISE
             },
             applyZoom = { zoom ->
                 zoomActions += zoom
@@ -76,13 +81,14 @@ class ThermallingModeRuntimeWiringTest {
             flightData.value = flightSample(isCircling = true)
             advanceUntilIdle()
 
-            assertEquals(listOf(FlightMode.THERMAL), modeActions)
+            assertEquals(listOf(FlightMode.THERMAL), runtimeOverrideActions)
             assertEquals(listOf(13.0f), zoomActions)
 
             flightData.value = flightSample(isCircling = false)
             advanceUntilIdle()
 
-            assertEquals(listOf(FlightMode.THERMAL, FlightMode.CRUISE), modeActions)
+            assertEquals(listOf(FlightMode.THERMAL), runtimeOverrideActions)
+            assertEquals(1, clearRuntimeOverrideCalls)
             assertEquals(listOf(13.0f, 10.0f), zoomActions)
             assertTrue(contrastMapActions.isEmpty())
         } finally {
@@ -118,7 +124,8 @@ class ThermallingModeRuntimeWiringTest {
             currentMode = currentMode,
             currentZoom = currentZoom,
             currentBaseStyle = currentBaseStyle,
-            applyFlightMode = { mode -> currentMode.value = mode },
+            applyRuntimeFlightMode = { mode -> currentMode.value = mode },
+            clearRuntimeFlightModeOverride = { currentMode.value = FlightMode.CRUISE },
             applyZoom = { zoom -> currentZoom.value = zoom },
             applyContrastMap = {}
         )
@@ -159,7 +166,8 @@ class ThermallingModeRuntimeWiringTest {
         val currentMode = MutableStateFlow(FlightMode.CRUISE)
         val currentZoom = MutableStateFlow(10f)
         val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
-        val modeActions = mutableListOf<FlightMode>()
+        val runtimeOverrideActions = mutableListOf<FlightMode>()
+        var clearRuntimeOverrideCalls = 0
 
         val wiring = ThermallingModeRuntimeWiring(
             scope = this,
@@ -171,9 +179,13 @@ class ThermallingModeRuntimeWiringTest {
             currentMode = currentMode,
             currentZoom = currentZoom,
             currentBaseStyle = currentBaseStyle,
-            applyFlightMode = { mode ->
-                modeActions += mode
+            applyRuntimeFlightMode = { mode ->
+                runtimeOverrideActions += mode
                 currentMode.value = mode
+            },
+            clearRuntimeFlightModeOverride = {
+                clearRuntimeOverrideCalls += 1
+                currentMode.value = FlightMode.CRUISE
             },
             applyZoom = { zoom -> currentZoom.value = zoom },
             applyContrastMap = {}
@@ -186,8 +198,9 @@ class ThermallingModeRuntimeWiringTest {
             flightData.value = flightSample(isCircling = true)
             advanceUntilIdle()
 
-            assertEquals(1, modeActions.size)
-            assertEquals(FlightMode.THERMAL, modeActions.first())
+            assertEquals(1, runtimeOverrideActions.size)
+            assertEquals(FlightMode.THERMAL, runtimeOverrideActions.first())
+            assertEquals(0, clearRuntimeOverrideCalls)
         } finally {
             coroutineContext.cancelChildren()
         }
@@ -211,6 +224,7 @@ class ThermallingModeRuntimeWiringTest {
         val currentZoom = MutableStateFlow(10f)
         val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
         val contrastMapActions = mutableListOf<Boolean>()
+        var clearRuntimeOverrideCalls = 0
 
         val wiring = ThermallingModeRuntimeWiring(
             scope = this,
@@ -222,7 +236,11 @@ class ThermallingModeRuntimeWiringTest {
             currentMode = currentMode,
             currentZoom = currentZoom,
             currentBaseStyle = currentBaseStyle,
-            applyFlightMode = { mode -> currentMode.value = mode },
+            applyRuntimeFlightMode = { mode -> currentMode.value = mode },
+            clearRuntimeFlightModeOverride = {
+                clearRuntimeOverrideCalls += 1
+                currentMode.value = FlightMode.CRUISE
+            },
             applyZoom = { zoom -> currentZoom.value = zoom },
             applyContrastMap = { enabled -> contrastMapActions += enabled }
         )
@@ -238,6 +256,7 @@ class ThermallingModeRuntimeWiringTest {
             advanceUntilIdle()
 
             assertEquals(listOf(true, false), contrastMapActions)
+            assertEquals(1, clearRuntimeOverrideCalls)
             assertEquals(ThermallingModeState(), controller.state())
         } finally {
             coroutineContext.cancelChildren()
@@ -273,7 +292,8 @@ class ThermallingModeRuntimeWiringTest {
             currentMode = currentMode,
             currentZoom = currentZoom,
             currentBaseStyle = currentBaseStyle,
-            applyFlightMode = { mode -> currentMode.value = mode },
+            applyRuntimeFlightMode = { mode -> currentMode.value = mode },
+            clearRuntimeFlightModeOverride = { currentMode.value = FlightMode.CRUISE },
             applyZoom = { zoom -> currentZoom.value = zoom },
             applyContrastMap = { enabled -> contrastMapActions += enabled }
         )
@@ -285,6 +305,61 @@ class ThermallingModeRuntimeWiringTest {
             advanceUntilIdle()
 
             assertTrue(contrastMapActions.isEmpty())
+        } finally {
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
+    fun hiddenThermalMode_clearsRuntimeOverrideWithoutMutatingRequestedMode() = runTest {
+        val controller = TestRuntimeController()
+        val settings = MutableStateFlow(
+            ThermallingModeSettings(
+                enabled = true,
+                enterDelaySeconds = 0,
+                exitDelaySeconds = 0
+            )
+        )
+        val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = true))
+        val thermalModeVisible = MutableStateFlow(true)
+        val replayActive = MutableStateFlow(false)
+        val currentMode = MutableStateFlow(FlightMode.CRUISE)
+        val currentZoom = MutableStateFlow(10f)
+        val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
+        val runtimeOverrideActions = mutableListOf<FlightMode>()
+        var clearRuntimeOverrideCalls = 0
+
+        val wiring = ThermallingModeRuntimeWiring(
+            scope = this,
+            controller = controller,
+            settings = settings,
+            flightData = flightData,
+            thermalModeVisible = thermalModeVisible,
+            replayActive = replayActive,
+            currentMode = currentMode,
+            currentZoom = currentZoom,
+            currentBaseStyle = currentBaseStyle,
+            applyRuntimeFlightMode = { mode ->
+                runtimeOverrideActions += mode
+                currentMode.value = mode
+            },
+            clearRuntimeFlightModeOverride = {
+                clearRuntimeOverrideCalls += 1
+                currentMode.value = FlightMode.CRUISE
+            },
+            applyZoom = { zoom -> currentZoom.value = zoom },
+            applyContrastMap = {}
+        )
+        try {
+            wiring.bind()
+            advanceUntilIdle()
+            assertEquals(listOf(FlightMode.THERMAL), runtimeOverrideActions)
+
+            thermalModeVisible.value = false
+            advanceUntilIdle()
+
+            assertEquals(1, clearRuntimeOverrideCalls)
+            assertEquals(listOf(FlightMode.THERMAL), runtimeOverrideActions)
         } finally {
             coroutineContext.cancelChildren()
         }

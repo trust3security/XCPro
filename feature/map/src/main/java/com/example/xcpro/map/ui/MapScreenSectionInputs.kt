@@ -59,6 +59,7 @@ internal data class MapScreenMapContentInputs(
     val showWindSpeedOnVario: Boolean,
     val cameraManager: MapCameraRuntimePort,
     val currentMode: FlightMode,
+    val visibleModes: List<FlightMode>,
     val currentZoom: StateFlow<Float>,
     val onModeChange: (FlightMode) -> Unit,
     val forecastSatelliteOverrideEnabled: Boolean,

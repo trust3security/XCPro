@@ -7,10 +7,12 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.core.flight.calculations.ConfidenceLevel
 import com.example.xcpro.MapOrientationManagerFactory
 import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.OrientationDataSourceFactory
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.geo.GeoPoint
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.AltitudeM
@@ -198,9 +200,101 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     fun setFlightMode_updatesStore() {
         val viewModel = createViewModel()
 
-        viewModel.setFlightMode(com.example.xcpro.common.flight.FlightMode.THERMAL)
+        viewModel.setFlightMode(FlightMode.THERMAL)
 
-        assertEquals(com.example.xcpro.common.flight.FlightMode.THERMAL, viewModel.mapState.currentMode.value)
+        assertEquals(FlightMode.THERMAL, viewModel.requestedFlightMode.value)
+        assertEquals(FlightMode.THERMAL, viewModel.effectiveFlightMode.value)
+        assertEquals(MapFlightModeSource.REQUESTED, viewModel.effectiveFlightModeSource.value)
+    }
+
+    @Test
+    fun requestedMode_staysStickyWhenVisibilityHidesAndShowsIt() {
+        val viewModel = createViewModel()
+
+        viewModel.setFlightMode(FlightMode.THERMAL)
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = "pilot-a",
+            allVisibilities = mapOf(
+                "pilot-a" to mapOf(FlightModeSelection.THERMAL to false)
+            )
+        )
+
+        assertEquals(FlightMode.THERMAL, viewModel.requestedFlightMode.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+        assertEquals(MapFlightModeSource.FALLBACK_CRUISE, viewModel.effectiveFlightModeSource.value)
+
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = "pilot-a",
+            allVisibilities = mapOf(
+                "pilot-a" to mapOf(FlightModeSelection.THERMAL to true)
+            )
+        )
+
+        assertEquals(FlightMode.THERMAL, viewModel.requestedFlightMode.value)
+        assertEquals(FlightMode.THERMAL, viewModel.effectiveFlightMode.value)
+        assertEquals(MapFlightModeSource.REQUESTED, viewModel.effectiveFlightModeSource.value)
+    }
+
+    @Test
+    fun runtimeOverride_isSeparateFromRequestedMode() {
+        val viewModel = createViewModel()
+
+        viewModel.setFlightMode(FlightMode.FINAL_GLIDE)
+        viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
+
+        assertEquals(FlightMode.FINAL_GLIDE, viewModel.requestedFlightMode.value)
+        assertEquals(FlightMode.THERMAL, viewModel.runtimeFlightModeOverride.value)
+        assertEquals(FlightMode.THERMAL, viewModel.effectiveFlightMode.value)
+        assertEquals(MapFlightModeSource.RUNTIME_OVERRIDE, viewModel.effectiveFlightModeSource.value)
+
+        viewModel.clearRuntimeFlightModeOverride()
+
+        assertEquals(FlightMode.FINAL_GLIDE, viewModel.requestedFlightMode.value)
+        assertNull(viewModel.runtimeFlightModeOverride.value)
+        assertEquals(FlightMode.FINAL_GLIDE, viewModel.effectiveFlightMode.value)
+        assertEquals(MapFlightModeSource.REQUESTED, viewModel.effectiveFlightModeSource.value)
+    }
+
+    @Test
+    fun clearingRuntimeOverride_preservesRequestedMode() {
+        val viewModel = createViewModel()
+
+        viewModel.setFlightMode(FlightMode.FINAL_GLIDE)
+        viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
+        viewModel.clearRuntimeFlightModeOverride()
+
+        assertEquals(FlightMode.FINAL_GLIDE, viewModel.requestedFlightMode.value)
+        assertNull(viewModel.runtimeFlightModeOverride.value)
+        assertEquals(FlightMode.FINAL_GLIDE, viewModel.effectiveFlightMode.value)
+    }
+
+    @Test
+    fun effectiveMode_propagatesOnlyWhenItChanges() {
+        val viewModel = createViewModel()
+        Mockito.clearInvocations(varioServiceManager)
+
+        viewModel.setFlightMode(FlightMode.THERMAL)
+        viewModel.setFlightMode(FlightMode.THERMAL)
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = "pilot-a",
+            allVisibilities = mapOf(
+                "pilot-a" to mapOf(FlightModeSelection.THERMAL to false)
+            )
+        )
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = "pilot-a",
+            allVisibilities = mapOf(
+                "pilot-a" to mapOf(FlightModeSelection.THERMAL to false)
+            )
+        )
+
+        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.THERMAL)
+        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.CRUISE)
+        Mockito.verifyNoMoreInteractions(varioServiceManager)
+        assertEquals(
+            FlightModeSelection.CRUISE,
+            viewModel.runtimeDependencies.flightDataManager.effectiveFlightModeSelection
+        )
     }
 
     @Test

@@ -151,7 +151,7 @@ abstract class MapScreenViewModelTestBase {
         override fun nowWallMs(): Long = testClock.nowWallMs()
     }
     protected val cardPreferences = CardPreferences(context, testClock)
-    protected val flightDataManagerFactory = FlightDataManagerFactory(context, cardPreferences)
+    protected val flightDataManagerFactory = FlightDataManagerFactory()
     protected val configurationRepository = ConfigurationRepository(context)
     protected val mapStyleRepository = MapStyleRepository(configurationRepository)
     protected val mapStyleUseCase = MapStyleUseCase(mapStyleRepository)

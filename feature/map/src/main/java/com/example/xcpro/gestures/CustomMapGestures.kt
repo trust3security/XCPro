@@ -41,7 +41,7 @@ fun CustomMapGestureHandler(
     currentLocation: MapLocationUiModel?,
     onSaveLocation: (MapLocationUiModel?, Double, Double) -> Unit,
     bottomSheetHeight: Float = 0f,
-    visibleModes: List<FlightMode> = FlightMode.values().toList(),
+    visibleModes: List<FlightMode>,
     taskGestureHandler: TaskGestureHandler? = null,
     gestureRegions: List<MapGestureRegion> = emptyList(),
     onMapTap: (org.maplibre.android.geometry.LatLng) -> Unit = {},
@@ -191,22 +191,16 @@ fun CustomMapGestureHandler(
 
                                 if (abs(totalDragX.value) > abs(totalDragY.value)) {
                                     if (abs(totalDragX.value) > MODE_SWITCH_THRESHOLD_PX && !hasSwitchedMode.value) {
-                                        val availableModes = if (visibleModes.isNotEmpty()) visibleModes else listOf(FlightMode.CRUISE)
-                                        val currentIndex = availableModes.indexOf(currentMode)
-                                        val newMode = if (currentIndex != -1) {
-                                            val nextIndex = if (totalDragX.value > 0) {
-                                                (currentIndex + 1) % availableModes.size
-                                            } else {
-                                                (currentIndex - 1 + availableModes.size) % availableModes.size
-                                            }
-                                            availableModes[nextIndex]
-                                        } else {
-                                            availableModes.first()
+                                        resolveGestureModeSwitchTarget(
+                                            currentMode = currentMode,
+                                            visibleModes = visibleModes,
+                                            dragX = totalDragX.value
+                                        )?.let { newMode ->
+                                            onModeChange(newMode)
+                                            hasSwitchedMode.value = true
+                                            handledGesture = true
+                                            consumeThisFrame = true
                                         }
-                                        onModeChange(newMode)
-                                        hasSwitchedMode.value = true
-                                        handledGesture = true
-                                        consumeThisFrame = true
                                     }
                                 } else {
                                     val previous = firstPointer.previousPosition ?: firstPointer.position
@@ -331,6 +325,22 @@ fun CustomMapGestureHandler(
                 }
             }
     )
+}
+
+internal fun resolveGestureModeSwitchTarget(
+    currentMode: FlightMode,
+    visibleModes: List<FlightMode>,
+    dragX: Float
+): FlightMode? {
+    if (visibleModes.isEmpty()) return null
+    val currentIndex = visibleModes.indexOf(currentMode)
+    if (currentIndex == -1) return null
+    val nextIndex = if (dragX > 0f) {
+        (currentIndex + 1) % visibleModes.size
+    } else {
+        (currentIndex - 1 + visibleModes.size) % visibleModes.size
+    }
+    return visibleModes[nextIndex]
 }
 
 internal fun shouldBypassAttributionTap(

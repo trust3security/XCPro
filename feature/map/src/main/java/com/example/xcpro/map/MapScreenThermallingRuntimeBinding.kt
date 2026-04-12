@@ -19,7 +19,8 @@ internal fun bindThermallingRuntimeWiring(
     mapStateReader: MapStateReader,
     mapStateStore: MapStateStore,
     mapStateActions: MapStateActions,
-    applyFlightMode: (FlightMode) -> Unit,
+    applyRuntimeFlightMode: (FlightMode) -> Unit,
+    clearRuntimeFlightModeOverride: () -> Unit,
     applyContrastMap: (Boolean) -> Unit
 ) {
     val thermalModeVisible = visibleModes
@@ -40,7 +41,8 @@ internal fun bindThermallingRuntimeWiring(
         currentMode = mapStateReader.currentMode,
         currentZoom = mapStateReader.currentZoom,
         currentBaseStyle = mapStateStore.baseMapStyleName,
-        applyFlightMode = applyFlightMode,
+        applyRuntimeFlightMode = applyRuntimeFlightMode,
+        clearRuntimeFlightModeOverride = clearRuntimeFlightModeOverride,
         applyZoom = { zoom ->
             val target = mapStateReader.currentUserLocation.value
                 ?: mapStateReader.lastCameraSnapshot.value?.target

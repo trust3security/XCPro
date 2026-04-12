@@ -438,10 +438,12 @@ ViewModel:
   - Binds live thermalling runtime automation through
     `bindThermallingRuntimeWiring(...)`:
     `flightData.isCircling` + thermalling settings repository flow +
-    thermal-mode visibility + replay-session state -> `ThermallingModeCoordinator` ->
-    existing `setFlightMode(...)`, map zoom target actions, and a transient
-    thermalling contrast-map override. Replay suppresses the thermalling runtime
-    and clears only the transient thermalling style override.
+    map-owned thermal-mode visibility + replay-session state ->
+    `ThermallingModeCoordinator` -> map zoom target actions, transient
+    runtime flight-mode override mutations, and a transient thermalling
+    contrast-map override. Replay suppresses the thermalling runtime and
+    clears the transient runtime mode override plus the transient thermalling
+    style override; it does not overwrite the user-requested flight mode.
   - Exposes a separate `feature:weglide`-owned WeGlide prompt flow for UI rendering,
     instead of threading the prompt through `MapUiState`.
 - `feature/profile/src/main/java/com/example/xcpro/thermalling/ThermallingModePreferencesRepository.kt`
@@ -678,15 +680,30 @@ UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
   - Buckets and throttles UI-facing values (needle vs numeric cadence).
   - Exposes `cardFlightDataFlow` and other overlay flows.
+  - Is no longer an owner of map flight-mode visibility, fallback policy,
+    or requested-vs-runtime mode state.
   - Keeps the MapScreen variometer split explicit:
     `displayVarioFlow` = fused main vario, `needleVarioFlow` =
     fused needle vario, `teArcVarioFlow` = raw TE arc input.
+- `feature/map/src/main/java/com/example/xcpro/map/MapStateStore.kt`
+  - Authoritative map-side owner for requested flight mode, transient runtime
+    flight-mode override, effective flight mode, effective flight-mode source,
+    and visible map flight modes.
+- `feature/map/src/main/java/com/example/xcpro/map/MapFlightModePolicy.kt`
+  - Pure policy for resolving requested mode + runtime override + dfcards-owned
+    visibility inputs into effective map mode state.
 
 UI effects:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
   - Uses `liveFlightDataFlow` for orientation updates and replay map pose.
   - Calls `prepareCardsForProfile(...)` on profile/mode/size changes.
-  - Binds `CardIngestionCoordinator` (single ingestion owner for card updates).
+  - Does not own mode fallback/visibility policy; card preparation uses the
+    map-owned effective mode selection.
+- `feature/map/src/main/java/com/example/xcpro/map/CardIngestionCoordinator.kt`
+  - Single ingestion owner for card updates.
+  - Read-only bridge from dfcards `activeProfileId` +
+    `profileModeVisibilities` into `MapScreenViewModel` so dfcards stays the
+    persistence owner while map owns runtime mode resolution.
 
 Map bindings:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
@@ -1075,6 +1092,8 @@ Current wiring:
   -> `convertToRealTimeFlightData(...)`
   -> `FlightDataManager.cardFlightDataFlow`
   -> `CardIngestionCoordinator`
+  -> `MapScreenViewModel.onProfileModeVisibilitiesChanged(...)` for
+     active-profile visibility bridging only
   -> `dfcards` `FlightDataViewModel.updateCardsWithLiveData(...)`
   -> `CardLibrary` / `CardContainer` / `EnhancedFlightDataCard`
 

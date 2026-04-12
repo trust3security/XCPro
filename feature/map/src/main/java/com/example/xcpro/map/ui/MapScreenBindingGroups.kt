@@ -28,6 +28,7 @@ internal data class MapScreenMapBindings(
     val showRecenterButton: Boolean,
     val showReturnButton: Boolean,
     val currentMode: FlightMode,
+    val visibleModes: List<FlightMode>,
     val showDistanceCircles: Boolean
 )
 
@@ -62,6 +63,7 @@ internal fun rememberMapScreenMapBindings(
     val showRecenterButton by mapStateReader.showRecenterButton.collectAsStateWithLifecycle()
     val showReturnButton by mapStateReader.showReturnButton.collectAsStateWithLifecycle()
     val currentMode by mapStateReader.currentMode.collectAsStateWithLifecycle()
+    val visibleModes by mapViewModel.visibleFlightModes.collectAsStateWithLifecycle()
     val showDistanceCircles by mapStateReader.showDistanceCircles.collectAsStateWithLifecycle()
 
     return MapScreenMapBindings(
@@ -72,6 +74,7 @@ internal fun rememberMapScreenMapBindings(
         showRecenterButton = showRecenterButton,
         showReturnButton = showReturnButton,
         currentMode = currentMode,
+        visibleModes = visibleModes,
         showDistanceCircles = showDistanceCircles
     )
 }

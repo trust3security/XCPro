@@ -13,7 +13,6 @@ import androidx.navigation.NavHostController
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.airspace.AirspaceUiState
-import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLifecycleEffects
@@ -99,8 +98,6 @@ internal fun MapScreenComposeAndLifecycleEffects(
     orientationManager: MapOrientationManager,
     profileUiState: ProfileUiState,
     flightDataManager: FlightDataManager,
-    currentMode: FlightMode,
-    onModeChange: (FlightMode) -> Unit,
     currentFlightModeSelection: FlightModeSelection,
     safeContainerSize: IntSize,
     flightCardsBinding: MapScreenFlightCardsBinding,
@@ -118,8 +115,6 @@ internal fun MapScreenComposeAndLifecycleEffects(
         orientationManager = orientationManager,
         uiState = profileUiState,
         flightDataManager = flightDataManager,
-        currentMode = currentMode,
-        onModeChange = onModeChange,
         currentFlightModeSelection = currentFlightModeSelection,
         safeContainerSize = safeContainerSize,
         flightViewModel = flightCardsBinding.flightViewModel,
