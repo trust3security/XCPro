@@ -1,0 +1,16 @@
+package com.example.xcpro.billing
+
+enum class AppFeature {
+    MAP_CORE,
+    PROFILES,
+    TASKS_BASIC,
+    WEATHER_BASIC,
+    FORECAST_BASIC,
+    IGC_REPLAY,
+    LIVEFOLLOW_VIEW,
+    LIVEFOLLOW_BROADCAST,
+    TRAFFIC_ADSB,
+    VARIO_ADVANCED,
+    WEGLIDE_SYNC,
+    EXPORT_PREMIUM,
+}

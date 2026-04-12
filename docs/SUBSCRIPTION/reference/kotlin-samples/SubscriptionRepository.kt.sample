@@ -1,0 +1,10 @@
+package com.example.xcpro.billing
+
+import kotlinx.coroutines.flow.Flow
+
+interface SubscriptionRepository {
+    fun observeEntitlements(): Flow<EntitlementState>
+    suspend fun refreshEntitlements()
+    suspend fun restorePurchases()
+    suspend fun launchPurchase(tier: PlanTier, basePlanId: String)
+}

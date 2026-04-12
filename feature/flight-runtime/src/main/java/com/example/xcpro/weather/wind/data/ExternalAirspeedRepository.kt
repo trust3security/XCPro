@@ -8,16 +8,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
-class ExternalAirspeedRepository @Inject constructor() : AirspeedDataSource {
+class ExternalAirspeedRepository @Inject constructor() : AirspeedDataSource, ExternalAirspeedWritePort {
 
     private val _airspeedFlow = MutableStateFlow<AirspeedSample?>(null)
     override val airspeedFlow: StateFlow<AirspeedSample?> = _airspeedFlow.asStateFlow()
 
-    fun updateAirspeed(sample: AirspeedSample?) {
+    override fun updateAirspeed(sample: AirspeedSample?) {
         _airspeedFlow.value = sample
     }
 
-    fun clear() {
+    override fun clear() {
         _airspeedFlow.value = null
     }
 }

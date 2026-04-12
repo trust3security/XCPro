@@ -5,6 +5,7 @@ import com.example.xcpro.weather.wind.model.WindSource
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weather.wind.model.WindVector
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CalculateFlightMetricsUseCaseExternalAirspeedTest {
@@ -168,7 +169,7 @@ class CalculateFlightMetricsUseCaseExternalAirspeedTest {
     }
 
     @Test
-    fun invalid_indicated_airspeed_falls_back_to_true_airspeed() {
+    fun tas_only_external_sample_keeps_sensor_tas_without_fabricating_ias() {
         val useCase = newUseCase()
 
         val result = useCase.execute(
@@ -196,7 +197,8 @@ class CalculateFlightMetricsUseCaseExternalAirspeedTest {
         )
 
         assertEquals("SENSOR", result.airspeedSourceLabel)
-        assertEquals(26.0, result.indicatedAirspeedMs, 1e-6)
         assertEquals(26.0, result.trueAirspeedMs, 1e-6)
+        assertTrue(result.indicatedAirspeedMs.isNaN())
+        assertTrue(result.tasValid)
     }
 }

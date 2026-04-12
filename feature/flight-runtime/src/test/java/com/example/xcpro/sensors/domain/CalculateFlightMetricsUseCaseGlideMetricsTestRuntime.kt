@@ -201,6 +201,37 @@ class CalculateFlightMetricsUseCaseGlideMetricsTest {
     }
 
     @Test
+    fun owner_path_computes_current_ld_air_from_tas_only_external_sample_and_te_vario() {
+        val useCase = newUseCase()
+
+        executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            bearing = 0.0,
+            externalAirspeedSample = airspeedSample(
+                trueMs = 26.0,
+                indicatedMs = Double.NaN,
+                clockMillis = 900L
+            )
+        )
+        val result = executeAirLdRequest(
+            useCase = useCase,
+            currentTimeMillis = 2_000L,
+            bearing = 0.0,
+            externalAirspeedSample = airspeedSample(
+                trueMs = 26.0,
+                indicatedMs = Double.NaN,
+                clockMillis = 1_900L
+            )
+        )
+
+        assertEquals("SENSOR", result.airspeedSourceLabel)
+        assertTrue(result.currentLDAirValid)
+        assertEquals(13f, result.currentLDAir, 1e-6f)
+        assertTrue(result.indicatedAirspeedMs.isNaN())
+    }
+
+    @Test
     fun owner_path_warms_up_te_vario_on_first_eligible_sample_then_enables_ld_vario() {
         val useCase = newUseCase()
 

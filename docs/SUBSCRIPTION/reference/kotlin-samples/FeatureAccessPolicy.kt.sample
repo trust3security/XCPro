@@ -1,0 +1,25 @@
+package com.example.xcpro.billing
+
+class FeatureAccessPolicy {
+    fun featuresForTier(tier: PlanTier): Set<AppFeature> = when (tier) {
+        PlanTier.FREE -> setOf(
+            AppFeature.MAP_CORE,
+            AppFeature.PROFILES,
+            AppFeature.TASKS_BASIC,
+        )
+
+        PlanTier.SOAR -> featuresForTier(PlanTier.FREE) + setOf(
+            AppFeature.WEATHER_BASIC,
+            AppFeature.FORECAST_BASIC,
+        )
+
+        PlanTier.XC -> featuresForTier(PlanTier.SOAR) + setOf(
+            AppFeature.IGC_REPLAY,
+            AppFeature.WEGLIDE_SYNC,
+            AppFeature.LIVEFOLLOW_VIEW,
+            AppFeature.EXPORT_PREMIUM,
+        )
+
+        PlanTier.PRO -> AppFeature.entries.toSet()
+    }
+}

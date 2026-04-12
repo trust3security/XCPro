@@ -1,0 +1,48 @@
+{
+  "package_name": "TO_BE_FINALIZED",
+  "plans": [
+    {
+      "tier": "FREE",
+      "play_subscription_id": null,
+      "base_plans": [],
+      "offers": [],
+      "notes": "Default non-paid state"
+    },
+    {
+      "tier": "SOAR",
+      "play_subscription_id": "xcpro_soar",
+      "base_plans": [
+        "monthly",
+        "annual"
+      ],
+      "offers": [
+        "trial7d"
+      ],
+      "notes": "First paid tier"
+    },
+    {
+      "tier": "XC",
+      "play_subscription_id": "xcpro_xc",
+      "base_plans": [
+        "monthly",
+        "annual"
+      ],
+      "offers": [
+        "trial7d"
+      ],
+      "notes": "Cross-country tier"
+    },
+    {
+      "tier": "PRO",
+      "play_subscription_id": "xcpro_pro",
+      "base_plans": [
+        "monthly",
+        "annual"
+      ],
+      "offers": [
+        "trial7d"
+      ],
+      "notes": "Full unlock"
+    }
+  ]
+}

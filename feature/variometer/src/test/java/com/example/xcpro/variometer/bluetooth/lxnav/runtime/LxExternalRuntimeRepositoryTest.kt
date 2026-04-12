@@ -172,9 +172,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun external_flight_snapshot_exposes_only_pressure_altitude_and_total_energy_vario() = runTest {
         val transport = FakeBluetoothTransport()
+        val externalAirspeedWritePort = TestExternalAirspeedWritePort()
         val repository = repository(
             transport = transport,
             clock = FakeClock(),
+            externalAirspeedWritePort = externalAirspeedWritePort,
             dispatcher = StandardTestDispatcher(testScheduler)
         )
         transport.enqueue(
@@ -197,6 +199,9 @@ class LxExternalRuntimeRepositoryTest {
         assertEquals(500L, externalSnapshot.pressureAltitudeM?.receivedMonoMs ?: -1L)
         assertEquals(3.0, externalSnapshot.totalEnergyVarioMps?.value ?: Double.NaN, 1e-6)
         assertEquals(500L, externalSnapshot.totalEnergyVarioMps?.receivedMonoMs ?: -1L)
+        assertEquals(118.0 / 3.6, externalAirspeedWritePort.latestSample?.trueMs ?: Double.NaN, 1e-6)
+        assertTrue(externalAirspeedWritePort.latestSample?.indicatedMs?.isNaN() == true)
+        assertEquals(500L, externalAirspeedWritePort.latestSample?.clockMillis ?: -1L)
 
         repository.disconnect()
         advanceUntilIdle()
@@ -205,9 +210,11 @@ class LxExternalRuntimeRepositoryTest {
     @Test
     fun explicit_disconnect_clears_runtime_fields_and_narrow_read_port_snapshot() = runTest {
         val transport = FakeBluetoothTransport()
+        val externalAirspeedWritePort = TestExternalAirspeedWritePort()
         val repository = repository(
             transport = transport,
             clock = FakeClock(),
+            externalAirspeedWritePort = externalAirspeedWritePort,
             dispatcher = StandardTestDispatcher(testScheduler)
         )
         transport.enqueue(
@@ -222,6 +229,7 @@ class LxExternalRuntimeRepositoryTest {
         repository.connect(TEST_DEVICE_A)
         advanceUntilIdle()
         assertNotNull(repository.runtimeSnapshot.value.pressureAltitudeM)
+        assertNotNull(externalAirspeedWritePort.latestSample)
 
         repository.disconnect()
         advanceUntilIdle()
@@ -234,6 +242,7 @@ class LxExternalRuntimeRepositoryTest {
         assertNull(repository.runtimeSnapshot.value.deviceInfo)
         assertNull(repository.runtimeSnapshot.value.lastAcceptedMonoMs)
         assertEquals(ExternalInstrumentFlightSnapshot(), repository.externalFlightSnapshot.value)
+        assertNull(externalAirspeedWritePort.latestSample)
     }
 
     @Test
@@ -384,11 +393,13 @@ class LxExternalRuntimeRepositoryTest {
     private fun repository(
         transport: FakeBluetoothTransport,
         clock: FakeClock,
+        externalAirspeedWritePort: TestExternalAirspeedWritePort = TestExternalAirspeedWritePort(),
         dispatcher: CoroutineDispatcher
     ): LxExternalRuntimeRepository {
         return LxExternalRuntimeRepository(
             transport = transport,
             clock = clock,
+            externalAirspeedWritePort = externalAirspeedWritePort,
             dispatcher = dispatcher
         )
     }

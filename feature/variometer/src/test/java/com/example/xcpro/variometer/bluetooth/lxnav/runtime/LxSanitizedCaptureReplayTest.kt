@@ -27,6 +27,7 @@ class LxSanitizedCaptureReplayTest {
         val repository = LxExternalRuntimeRepository(
             transport = FixtureReplayBluetoothTransport(fixture),
             clock = FakeClock(monoMs = 10L),
+            externalAirspeedWritePort = TestExternalAirspeedWritePort(),
             dispatcher = StandardTestDispatcher(testScheduler)
         )
 
@@ -54,6 +55,7 @@ class LxSanitizedCaptureReplayTest {
         val repository = LxExternalRuntimeRepository(
             transport = FixtureReplayBluetoothTransport(fixture),
             clock = FakeClock(monoMs = 25L),
+            externalAirspeedWritePort = TestExternalAirspeedWritePort(),
             dispatcher = StandardTestDispatcher(testScheduler)
         )
 

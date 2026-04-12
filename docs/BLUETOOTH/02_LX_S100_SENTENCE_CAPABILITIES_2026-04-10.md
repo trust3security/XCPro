@@ -53,9 +53,9 @@ Field-level reference:
 | Field index | Meaning | XCPro today |
 |---|---|---|
 | `0` | logger stored flag (`Y/N`) | ignored |
-| `1` | airspeed in kph | parsed as `airspeedKph` |
-| `2` | pressure altitude in m | parsed as `pressureAltitudeM` |
-| `3` | vario sample in m/s | parsed as `totalEnergyVarioMps` |
+| `1` | airspeed in kph | parsed as `airspeedKph`; published as TAS-only into the live external airspeed path |
+| `2` | pressure altitude in m | parsed as `pressureAltitudeM`; published into the external instrument pressure seam |
+| `3` | vario sample in m/s | parsed as `totalEnergyVarioMps`; published into the external instrument TE seam, promoted into fused main vario when fresh, and also exposed to the MapScreen TE outer arc |
 | `4..8` | additional recent vario samples | ignored |
 | `9` | heading | ignored |
 | `10` | wind course | ignored |
@@ -67,14 +67,21 @@ Important ambiguity:
 - XCSoar then feeds it into true-airspeed handling
 - for the current XCPro plan slice, this field should be treated as `TAS only`
 
+Important TE ownership note:
+
+- `LXWP0[3]` does drive XCPro's main variometer path when it is the freshest
+  valid TE source
+- the MapScreen Levo secondary label still comes from `levoNetto`, not directly
+  from raw `LXWP0[3]`
+
 ### `LXWP1` - Device info
 
 | Field index | Meaning | XCPro today |
 |---|---|---|
-| `0` | product / instrument ID | parsed |
-| `1` | serial number | parsed |
-| `2` | software version | parsed |
-| `3` | hardware version | parsed |
+| `0` | product / instrument ID | parsed; stored in Bluetooth runtime state |
+| `1` | serial number | parsed; stored in Bluetooth runtime state |
+| `2` | software version | parsed; stored in Bluetooth runtime state |
+| `3` | hardware version | parsed; stored in Bluetooth runtime state |
 | `4` | license string | not parsed |
 
 `LXWP1.product` is the right place to distinguish `S100` vs `S10` in UI and logging.
@@ -154,6 +161,18 @@ Current parser status in `LxSentenceParser.kt`:
 | `LXWP3` | known but unsupported |
 | `PLXVF` | known but unsupported |
 | `PLXVS` | known but unsupported |
+
+Current production-use status:
+
+- `LXWP0`
+  - pressure altitude: used
+  - TE vario: used
+  - airspeed: used as TAS-only live input
+- `LXWP1`
+  - parsed and retained in Bluetooth runtime state
+  - not yet surfaced in Bluetooth settings UI
+- `LXWP2`, `LXWP3`, `PLXVF`, `PLXVS`
+  - not used
 
 ## What The S100 / S10 Family Can Provide
 
