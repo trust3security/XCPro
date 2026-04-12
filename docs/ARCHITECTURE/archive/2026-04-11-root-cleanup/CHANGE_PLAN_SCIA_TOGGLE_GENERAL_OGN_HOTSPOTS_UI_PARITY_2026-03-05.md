@@ -1,4 +1,4 @@
-# CHANGE_PLAN_SCIA_TOGGLE_GENERAL_OGN_HOTSPOTS_UI_PARITY_2026-03-05.md
+﻿# CHANGE_PLAN_SCIA_TOGGLE_GENERAL_OGN_HOTSPOTS_UI_PARITY_2026-03-05.md
 
 ## 0) Metadata
 
@@ -7,7 +7,7 @@
 - Date: 2026-03-05
 - Issue/PR: TBD
 - Status: Draft
-- Execution contract: `docs/ARCHITECTURE/AGENT_EXECUTION_CONTRACT_SCIA_GENERAL_OGN_HOTSPOTS_2026-03-05.md`
+- Execution contract: `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/AGENT_EXECUTION_CONTRACT_SCIA_GENERAL_OGN_HOTSPOTS_2026-03-05.md`
 
 ## 1) Scope
 
@@ -350,3 +350,4 @@ Each score must include:
 - file/test evidence
 - remaining risks
 - explanation if score is below 4.0
+

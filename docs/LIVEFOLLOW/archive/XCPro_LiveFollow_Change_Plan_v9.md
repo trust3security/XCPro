@@ -1,4 +1,4 @@
-# XCPro LiveFollow Change Plan v9
+﻿# XCPro LiveFollow Change Plan v9
 
 Date: 2026-03-19
 Status: Active baseline with Phase 4 hardening seam corrections
@@ -29,7 +29,7 @@ Use these docs together:
 - `docs/ARCHITECTURE/PIPELINE.md`
 
 Treat older phase plans/checklists as historical context only.
-Treat `PIPELINE_LiveFollow_Addendum.md` as historical context now that `PIPELINE.md` contains the real runtime path.
+Treat `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md` as historical context now that `PIPELINE.md` contains the real runtime path.
 
 ---
 
@@ -121,7 +121,7 @@ Phase 4 must confirm:
 - replay still blocks side effects
 - UI wiring does not bypass replay blocking
 - no raw-track persistence was introduced by accident
-- no location logging/diagnostic output violates the repo’s privacy expectations
+- no location logging/diagnostic output violates the repoâ€™s privacy expectations
 
 ### 3. Lifecycle/route behavior must be safe
 Phase 4 must confirm:
@@ -148,7 +148,7 @@ Before merge, docs must reflect:
 
 ## Minimal Phase 4 implementation slices
 
-### Slice A — Unavailable-adapter UX hardening
+### Slice A â€” Unavailable-adapter UX hardening
 Allowed:
 - clearer user-facing unavailable/error text
 - clearer pilot/watch status-state mapping
@@ -158,7 +158,7 @@ Not allowed:
 - adding actual network transports
 - hiding unavailable state behind fake success
 
-### Slice B — Lifecycle and route hardening
+### Slice B â€” Lifecycle and route hardening
 Allowed:
 - route argument validation cleanup
 - explicit stop/leave flow verification
@@ -167,7 +167,7 @@ Allowed:
 Not allowed:
 - widening scope into new navigation surfaces or share-link plumbing
 
-### Slice C — Replay/privacy hardening
+### Slice C â€” Replay/privacy hardening
 Allowed:
 - test additions
 - narrow bug fixes if replay/privacy guarantees are not fully enforced
@@ -177,7 +177,7 @@ Not allowed:
 - new persistence behavior
 - analytics/event logging that exposes sensitive movement data
 
-### Slice D — Final doc and test sync
+### Slice D â€” Final doc and test sync
 Allowed:
 - `PIPELINE.md` corrections if Phase 3/4 clarified runtime ownership
 - `LiveFollow_Next_Steps` status update
@@ -253,3 +253,4 @@ Only then should you choose a next track, for example:
 3. notification/share-link delivery track
 
 Do not mix those into Phase 4.
+

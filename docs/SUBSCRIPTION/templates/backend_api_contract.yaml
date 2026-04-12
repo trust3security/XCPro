@@ -1,0 +1,62 @@
+openapi: 3.0.0
+info:
+  title: XCPro Subscription Backend Contract
+  version: 0.1.0
+paths:
+  /billing/google/verify-subscription:
+    post:
+      summary: Verify a Google Play subscription purchase and sync entitlement state
+      requestBody:
+        required: true
+      responses:
+        "200":
+          description: Verified canonical entitlement result
+  /me/entitlements:
+    get:
+      summary: Read current canonical entitlements for the authenticated XCPro user
+      responses:
+        "200":
+          description: Current entitlement state
+  /billing/google/rtdn:
+    post:
+      summary: Receive Google Play Real-time Developer Notifications
+      responses:
+        "200":
+          description: Notification accepted
+components:
+  schemas:
+    VerifySubscriptionRequest:
+      type: object
+      required:
+        - packageName
+        - productId
+        - purchaseToken
+      properties:
+        packageName:
+          type: string
+        productId:
+          type: string
+        purchaseToken:
+          type: string
+        obfuscatedAccountId:
+          type: string
+          nullable: true
+    EntitlementResponse:
+      type: object
+      properties:
+        tier:
+          type: string
+          enum: [FREE, SOAR, XC, PRO]
+        features:
+          type: array
+          items:
+            type: string
+        expiresAtMs:
+          type: integer
+          format: int64
+          nullable: true
+        fetchedAtMs:
+          type: integer
+          format: int64
+        source:
+          type: string

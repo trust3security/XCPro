@@ -1,9 +1,9 @@
-# AGENT_EXECUTION_CONTRACT_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
+﻿# AGENT_EXECUTION_CONTRACT_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
 
 Date: 2026-03-03
 Owner: XCPro Team / Codex
 Status: Executed (2026-03-03)
-Primary plan reference: `docs/ARCHITECTURE/CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`
+Primary plan reference: `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`
 
 Use with:
 - `AGENTS.md`
@@ -157,7 +157,7 @@ Scope:
 
 Primary files:
 - `docs/ARCHITECTURE/PIPELINE.md`
-- `docs/ARCHITECTURE/CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`
 - this contract
 
 Phase focused checks:
@@ -216,3 +216,4 @@ At final completion, emit:
 - full verification matrix
 - quality rescore (architecture, maintainability, test confidence, release readiness)
 - rollback notes
+

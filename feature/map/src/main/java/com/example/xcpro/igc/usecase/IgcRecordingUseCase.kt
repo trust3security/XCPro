@@ -283,8 +283,8 @@ class IgcRecordingUseCase private constructor(
             horizontalAccuracyMeters = gps?.accuracy?.toDouble(),
             pressureAltitudeMeters = pressureAltitude.value,
             gnssAltitudeMeters = gps?.altitude?.value,
-            indicatedAirspeedMs = indicatedAirspeed.value,
-            trueAirspeedMs = trueAirspeed.value
+            indicatedAirspeedMs = indicatedAirspeed.value.takeIf { it.isFinite() },
+            trueAirspeedMs = trueAirspeed.value.takeIf { it.isFinite() }
         )
     }
 }

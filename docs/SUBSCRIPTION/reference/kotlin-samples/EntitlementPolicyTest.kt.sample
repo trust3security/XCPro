@@ -1,0 +1,19 @@
+package com.example.xcpro.billing
+
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+class EntitlementPolicyTest {
+    private val policy = FeatureAccessPolicy()
+
+    @Test
+    fun `pro unlocks advanced vario`() {
+        assertTrue(policy.featuresForTier(PlanTier.PRO).contains(AppFeature.VARIO_ADVANCED))
+    }
+
+    @Test
+    fun `free does not unlock livefollow broadcast`() {
+        assertFalse(policy.featuresForTier(PlanTier.FREE).contains(AppFeature.LIVEFOLLOW_BROADCAST))
+    }
+}

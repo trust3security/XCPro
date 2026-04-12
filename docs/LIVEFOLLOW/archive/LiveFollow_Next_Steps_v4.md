@@ -1,4 +1,4 @@
-# LiveFollow - What to do next (v4)
+﻿# LiveFollow - What to do next (v4)
 
 Date: 2026-03-18
 Status: Updated after Phase 3 route/runtime wiring landed on the implementation branch
@@ -11,7 +11,7 @@ Use these as the active baseline for LiveFollow work:
 - `docs/LIVEFOLLOW/PHASE3_REVIEW_CHECKLIST.md`
 - `docs/LIVEFOLLOW/LiveFollow_Phase3_Codex_Prompts.md`
 - `docs/ARCHITECTURE/PIPELINE.md`
-- `docs/ARCHITECTURE/PIPELINE_LiveFollow_Addendum.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md`
 
 Treat older phase plans/checklists as historical context only.
 
@@ -85,3 +85,4 @@ For follow-up LiveFollow work:
 - do not bind watch mode to ordinary OGN overlay or SCIA trail preferences
 - keep replay side-effect free
 - keep backend/session transport and direct-watch transport explicit when unavailable
+

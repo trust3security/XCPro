@@ -6,6 +6,9 @@ Each prompt is meant for review only.
 The reviewer must not implement new code in the review pass.
 The reviewer should read the relevant repo docs and return PASS or FAIL with exact reasons.
 
+These prompts follow the historical Phase 0 to Phase 6 rollout plan.
+For current repo status, read `CURRENT_STATUS_BLUETOOTH_2026-04-11.md` first.
+
 ---
 
 ## Generic review prompt template
@@ -45,7 +48,7 @@ Do not implement code. Review only.
 Check that:
 - the docs define one clear authoritative Bluetooth implementation contract
 - scope and non-goals are explicit
-- no production Bluetooth wiring landed yet
+- for the historical Phase 0 review only, no production Bluetooth wiring had landed yet
 - the plan keeps profile as settings owner, variometer as external-vario runtime owner, and map as consumer-only
 - the phase did not introduce broad rename churn
 

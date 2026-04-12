@@ -18,8 +18,52 @@ This plan is intentionally repo-native:
 - Owner: draft for XCPro team
 - Date: 2026-04-09
 - Target repo: trust3security/XCPro
-- Status: Draft execution plan
+- Status: Historical master plan with 2026-04-11 status overlay
 - Scope class: New runtime feature integrated into existing flight pipeline
+
+---
+
+## Current repo status on 2026-04-11
+
+This file remains the master architecture contract for the LX S100 Bluetooth
+slice, but it no longer describes a pre-implementation-only repo.
+
+Production code already includes:
+
+- Bluetooth Classic bonded-device transport
+- line framing
+- `LXWP0` and `LXWP1` parsing
+- LX runtime snapshot/diagnostics/reconnect handling
+- settings UI for bonded-device selection and connect/disconnect
+- fused runtime ingress for external pressure altitude and TE vario
+
+Open follow-up work:
+
+- publish LX airspeed/TAS into the canonical live airspeed path
+- render parsed LX device metadata in Bluetooth settings
+- complete real-device validation and sanitized fixture capture
+
+Phase-status view:
+
+- Phase 0:
+  - historical baseline complete
+- Phase 1:
+  - implemented
+- Phase 2:
+  - implemented
+- Phase 3:
+  - implemented for `LXWP0` and `LXWP1`
+- Phase 4:
+  - partially implemented
+- Phase 5:
+  - partially implemented
+- Phase 6:
+  - still open
+
+Before acting on this plan, read:
+
+- `CURRENT_STATUS_BLUETOOTH_2026-04-11.md`
+- `01_LX_S100_DF_CARD_WIRING_PLAN_2026-04-10.md` for the current TAS/settings follow-up slice
 
 ---
 
@@ -171,55 +215,37 @@ That is the low-churn XCPro-native path.
 
 ## 4) File ownership plan
 
-These names are illustrative. Use the existing repo layout where it already provides the right owner.
+These names are illustrative. Prefer the current repo layout where it already
+provides the right owner.
 
 ### 4.1 Variometer-owned runtime additions
 
-Likely location:
-- `feature/variometer/.../hawk/...`
+Current location:
+- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/`
 
-Recommended additions:
-- Bluetooth transport abstraction
-- bonded-device provider
-- RFCOMM transport implementation
-- line framer / sentence splitter
-- LX sentence parser
-- external instrument repository / diagnostics models
-- selector use case or runtime selector collaborator
-
-Example structure:
-
-```text
-feature/variometer/src/main/java/com/example/xcpro/hawk/
-  bluetooth/
-    BondedBluetoothDevice.kt
-    BluetoothConnectionState.kt
-    BluetoothConnectionError.kt
-    BluetoothTransport.kt
-    BluetoothTransportImpl.kt
-    BluetoothDeviceProvider.kt
-    NmeaLine.kt
-    NmeaLineFramer.kt
-  lxnav/
-    LxSentenceType.kt
-    LxParseResult.kt
-    LxChecksum.kt
-    LxSentenceParser.kt
-    LxExternalInstrumentSnapshot.kt
-    LxExternalInstrumentRepository.kt
-  runtime/
-    ExternalFlightInputSelector.kt
-```
+Current examples already in repo:
+- `BondedBluetoothDevice.kt`
+- `BluetoothConnectionState.kt`
+- `BluetoothConnectionError.kt`
+- `BluetoothTransport.kt`
+- `AndroidBluetoothTransport.kt`
+- `NmeaLine.kt`
+- `NmeaLineFramer.kt`
+- `lxnav/LxSentenceParser.kt`
+- `lxnav/runtime/LxExternalRuntimeRepository.kt`
+- `lxnav/control/LxBluetoothControlUseCase.kt`
+- `lxnav/control/LxBluetoothControlState.kt`
 
 ### 4.2 Profile-owned settings additions
 
-Likely location:
-- `feature/profile/.../navdrawer/...`
+Current location:
+- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/`
 
-Recommended additions:
-- paired-device selection UI state
-- connect/disconnect action wiring
-- diagnostics projection from preview/runtime read port
+Current examples already in repo:
+- `BluetoothVarioSettingsUseCase.kt`
+- `BluetoothVarioSettingsModels.kt`
+- `BluetoothVarioSettingsScreen.kt`
+- `BluetoothVarioSettingsViewModel.kt`
 
 ### 4.3 Flight-runtime integration seam
 

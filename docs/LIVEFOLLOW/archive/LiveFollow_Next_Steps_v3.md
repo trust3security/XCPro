@@ -1,4 +1,4 @@
-# LiveFollow — What to do next (v3)
+﻿# LiveFollow â€” What to do next (v3)
 
 Date: 2026-03-18
 Status: Updated after Phase 1 green run and review
@@ -9,7 +9,7 @@ Use these as the active baseline for LiveFollow work:
 - `docs/LIVEFOLLOW/livefollow_v2.md`
 - `docs/LIVEFOLLOW/XCPro_LiveFollow_Change_Plan_v7.md`
 - `docs/LIVEFOLLOW/PHASE1_REVIEW_CHECKLIST_v3.md`
-- `docs/ARCHITECTURE/PIPELINE_LiveFollow_Addendum.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md`
 
 Do **not** keep implementing from:
 - the old `livefollow.md`
@@ -72,7 +72,7 @@ If Phase 1 review is **not** clean:
 
 ## Phase order from here
 
-### Phase 2 — Contracts / repository seams
+### Phase 2 â€” Contracts / repository seams
 Next after Phase 1 merge:
 - `LiveOwnshipSnapshotSource`
 - `LiveFollowSessionRepository`
@@ -82,13 +82,13 @@ Next after Phase 1 merge:
 
 Still do **not** add UI/map behavior just because the domain core is ready.
 
-### Phase 3 — Viewer/pilot route wiring
+### Phase 3 â€” Viewer/pilot route wiring
 After contracts are stable:
 - pilot controls
 - follower route / entry handling
 - thin map-render consumption
 
-### Phase 4 — Hardening and doc sync
+### Phase 4 â€” Hardening and doc sync
 - `PIPELINE.md` update
 - replay/privacy hardening
 - PR quality rescore and final doc sync
@@ -118,4 +118,5 @@ For Phase 2:
 Do not let LiveFollow become a disguised patch to `feature:map`.
 
 If the feature only works when ordinary OGN overlay prefs are enabled, or if it needs task manager/coordinator internals directly, the design is wrong.
+
 

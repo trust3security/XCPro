@@ -23,7 +23,25 @@ data class AirspeedSample(
     val timestampMillis: Long,
     val clockMillis: Long,
     val valid: Boolean
-)
+) {
+    val hasIndicatedAirspeed: Boolean
+        get() = indicatedMs.isFinite() && indicatedMs > 0.0
+
+    companion object {
+        fun tasOnly(
+            trueMs: Double,
+            clockMillis: Long,
+            timestampMillis: Long = 0L,
+            valid: Boolean = true
+        ): AirspeedSample = AirspeedSample(
+            trueMs = trueMs,
+            indicatedMs = Double.NaN,
+            timestampMillis = timestampMillis,
+            clockMillis = clockMillis,
+            valid = valid
+        )
+    }
+}
 
 data class HeadingSample(
     val headingDeg: Double,

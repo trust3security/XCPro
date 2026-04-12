@@ -2,12 +2,16 @@
 
 Date: 2026-04-09
 Owner: draft for XCPro team
-Status: Ready for phased execution
+Status: Historical phased execution pack with current-state overlay
 Target repo: trust3security/XCPro
 
 ## Purpose
 
 This pack gives Codex a clean, low-churn execution path for adding LXNAV S100 Bluetooth support to XCPro.
+
+As of 2026-04-11, this pack is no longer describing a pre-implementation repo.
+Production Bluetooth wiring has already landed in code. Read
+`CURRENT_STATUS_BLUETOOTH_2026-04-11.md` before using the older phase docs below.
 
 It is intentionally written to match the way XCPro has been handling non-trivial work:
 - explicit architecture contract first,
@@ -24,38 +28,64 @@ This pack assumes the approved direction is:
 
 ## File manifest
 
-1. `CHANGE_PLAN_BLUETOOTH_LXNAV_S100_2026-04-09.md`
+1. `CURRENT_STATUS_BLUETOOTH_2026-04-11.md`
+   - The authoritative current repo-status note.
+   - Read this first.
+
+2. `CHANGE_PLAN_BLUETOOTH_LXNAV_S100_2026-04-09.md`
    - The master implementation contract.
    - This is the main document Codex must follow.
 
-2. `PHASE0_BASELINE_AND_BOUNDARIES.md`
+3. `PHASE0_BASELINE_AND_BOUNDARIES.md`
    - Phase 0 baseline audit and ownership freeze.
-   - Records that Bluetooth production wiring has not landed yet.
+   - Historical snapshot of the repo before Bluetooth production wiring landed.
 
-3. `CODEX_BRIEF_BLUETOOTH_PHASED_EXECUTION.md`
+4. `01_LX_S100_DF_CARD_WIRING_PLAN_2026-04-10.md`
+   - Follow-up implementation slice for LX TAS/DF-card wiring and settings metadata.
+
+5. `GLO2.md`
+   - Garmin GLO 2 external GNSS note.
+   - Records confirmed behavior, likely sentence families, current XCPro seams,
+     and recommended UI/status text for future implementation work.
+
+6. `CODEX_BRIEF_BLUETOOTH_PHASED_EXECUTION.md`
    - The copy-paste brief to start Codex.
-   - Use this to kick off the next phase.
+   - Updated so future work does not restart historical phases by mistake.
 
-4. `BLUETOOTH_PHASE_REVIEW_PROMPTS.md`
+7. `BLUETOOTH_PHASE_REVIEW_PROMPTS.md`
    - Copy-paste review prompts for pass/fail checks after each phase.
    - Use these after Codex finishes a phase.
 
-5. `RAW_CAPTURE_AND_HARDWARE_VALIDATION_BLUETOOTH.md`
+8. `RAW_CAPTURE_AND_HARDWARE_VALIDATION_BLUETOOTH.md`
    - Bench validation plan for a real S100.
    - Use before final signoff and to expand parser fixtures.
 
-6. `fixtures/README.md`
+9. `fixtures/README.md`
    - Docs-only placeholder for future sanitized raw-capture fixtures.
    - No production code or tests consume it in Phase 0.
 
-## Recommended execution order
+## Current repo summary on 2026-04-11
+
+- Phases 1 to 5 have materially landed in production code.
+- Pressure altitude and TE vario are already wired into fused runtime.
+- Settings UI already supports bonded-device selection and connect/disconnect.
+- The main open LX S100 gaps are:
+  - TAS to DF-cards
+  - parsed device metadata in Bluetooth settings
+  - final hardware validation and fixture evidence
+
+## Historical execution order
+
+The sequence below is the original intended rollout order. It is still useful as
+design history, but it should not be read as a claim that the repo is still at
+Phase 0 today.
 
 ### PR 1 - Docs and baseline only
 - Add the change plan.
 - Refresh the pack docs so they match the actual repo layout.
 - Freeze ownership boundaries for later phases.
 - Add baseline notes and fixture placeholders if needed.
-- No production Bluetooth wiring yet.
+- Historical only. Production Bluetooth wiring now exists.
 
 ### PR 2 - Transport contracts and line framing
 - Define Bluetooth transport abstractions.
@@ -88,12 +118,12 @@ This pack assumes the approved direction is:
 ## How to use this pack with Codex
 
 ### Best workflow
-1. Start with `README.md` and `PHASE0_BASELINE_AND_BOUNDARIES.md`.
-2. Paste the brief from `CODEX_BRIEF_BLUETOOTH_PHASED_EXECUTION.md`.
-3. Tell Codex which phase to implement next.
-4. Let Codex complete only that phase.
-5. Run the matching review prompt from `BLUETOOTH_PHASE_REVIEW_PROMPTS.md`.
-6. Paste the result back into ChatGPT for review before moving on.
+1. Start with `CURRENT_STATUS_BLUETOOTH_2026-04-11.md`.
+2. Use `CHANGE_PLAN_BLUETOOTH_LXNAV_S100_2026-04-09.md` for architecture and ownership rules.
+3. If working on LX S100 card/settings follow-up, use `01_LX_S100_DF_CARD_WIRING_PLAN_2026-04-10.md`.
+4. Paste the brief from `CODEX_BRIEF_BLUETOOTH_PHASED_EXECUTION.md`.
+5. Tell Codex the exact open slice to implement next.
+6. Run the matching review prompt from `BLUETOOTH_PHASE_REVIEW_PROMPTS.md` if doing a phase review.
 
 This is the lowest-risk path.
 

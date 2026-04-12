@@ -1,4 +1,4 @@
-# LiveFollow - What to do next
+﻿# LiveFollow - What to do next
 
 Date: 2026-03-17
 
@@ -7,7 +7,7 @@ Date: 2026-03-17
 Use these as the working baseline:
 - `livefollow_v2.md`
 - `XCPro_LiveFollow_Change_Plan_v4.md`
-- `PIPELINE_LiveFollow_Addendum.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md`
 
 Do not keep coding from the old `livefollow.md` or the earlier v2/v3 execution plan without merging the corrections first.
 
@@ -91,3 +91,4 @@ When relevant:
 Do not let LiveFollow become a disguised patch to `feature:map`.
 
 If the feature only works when normal OGN overlay prefs are on, or if it needs raw task manager/coordinator internals, the design is already wrong.
+

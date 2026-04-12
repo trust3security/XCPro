@@ -150,6 +150,9 @@ Fusion entry:
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
   - owns fusion loops, filters, metrics use case, and the shared audio port.
   - caches latest external/replay airspeed sample from `AirspeedDataSource`.
+  - live external TAS-only samples enter that feed through the narrow
+    `ExternalAirspeedWritePort` seam; flight-runtime owns the
+    "TAS may exist without IAS" interpretation.
   - caches the latest narrow external-instrument snapshot from
     `ExternalInstrumentReadPort`.
   - consumes HAWK audio vario samples through `HawkAudioVarioReadPort` rather
@@ -196,6 +199,8 @@ Metrics use case:
     - best still-air glide ratio from the active polar (`polarBestLd`)
   - airspeed selection priority is now:
     `EXTERNAL/REPLAY (fresh+valid) -> stabilized WIND/GPS decision -> GPS_GROUND fallback`.
+  - External live airspeed may be TAS-only; runtime does not fabricate IAS when
+    the upstream external source cannot provide it.
   - Live WIND vs GPS choice is stabilized by domain policy/controller:
     confidence hysteresis (enter/exit), minimum dwell, and transient grace.
   - WIND transient-grace hold is only allowed while a current wind candidate still exists;
@@ -215,12 +220,30 @@ Mapping to SSOT model:
   - maps domain metrics + sensors to `CompleteFlightData`.
 - `feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt`
   - defines `CompleteFlightData` (SSOT for calculated flight data).
+- `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
+  - maps `CompleteFlightData.teVario` and `CompleteFlightData.levoNetto`
+    separately into `RealTimeFlightData`; raw TE and glide-netto do not share a
+    UI ownership path.
 
 Emission:
 - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
   - builds `FlightDisplaySnapshot`, maps to `CompleteFlightData`,
     and publishes to `flightDataFlow`.
   - forwards cached external/replay airspeed sample into `FlightMetricsRequest`.
+
+MapScreen variometer consumption:
+- `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+  - `displayVarioFlow` reads fused `displayVario`; when LX external TE is
+    fresh, this already reflects the promoted external TE main-vario path.
+  - `teArcVarioFlow` reads `RealTimeFlightData.teVario` directly for the outer
+    TE arc.
+- `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt`
+  - `VariometerWidget.displayValue` / `displayLabel` use the fused display
+    vario path.
+  - `VariometerWidget.outerArcValue` uses raw `teVario`.
+  - `VariometerWidget.secondaryLabel` uses `levoNetto`, not raw TE vario.
+    `levoNetto` remains a separate domain output from
+    `CalculateFlightMetricsRuntime`.
 
 ## 3) SSOT Repository + Source Gating
 
@@ -481,9 +504,17 @@ ViewModel:
     LXNAV external runtime snapshot owner.
   - Implements the narrow `ExternalInstrumentReadPort` bridge into
     `feature:flight-runtime`.
-  - Only external `pressureAltitudeM` and `totalEnergyVarioMps` participate in
-    fused truth in Phase 4; `airspeedKph` and device metadata remain
-    variometer-local / diagnostics-only.
+  - Publishes external `pressureAltitudeM` and `totalEnergyVarioMps` through
+    `ExternalInstrumentReadPort`, and publishes `LXWP0` TAS into the
+    flight-runtime-owned `ExternalAirspeedWritePort` / `ExternalAirspeedRepository`
+    seam after converting LX `kph` to SI `m/s`.
+  - `LXWP0.totalEnergyVarioMps` is promoted by
+    `CalculateFlightMetricsRuntime` / `SensorFrontEnd.buildSnapshot(...)` into
+    fused `teVario` and, when fresh, becomes the authoritative `bruttoVario`
+    with `varioSource = "TE"`.
+  - LX live airspeed publication is TAS-only unless a future supported sentence
+    adds authoritative IAS; device metadata remains variometer-local /
+    diagnostics-only.
   - Owns session-local Bluetooth diagnostics such as last-received monotonic
     time, rolling sentence rate, accepted/rejected counts, checksum/parse
     failures, and the last transport error observed for the session.
@@ -647,6 +678,9 @@ UI smoothing/bridging:
 - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
   - Buckets and throttles UI-facing values (needle vs numeric cadence).
   - Exposes `cardFlightDataFlow` and other overlay flows.
+  - Keeps the MapScreen variometer split explicit:
+    `displayVarioFlow` = fused main vario, `needleVarioFlow` =
+    fused needle vario, `teArcVarioFlow` = raw TE arc input.
 
 UI effects:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
@@ -1524,7 +1558,7 @@ Flight runtime foundations (2026-03-16):
   - `FlightStateRepository`
   - `WindSensorFusionRepository` and its pure wind helper/domain contracts
   - `ReplaySensorSource`, `ReplayAirspeedRepository`,
-    `ExternalAirspeedRepository`
+    `ExternalAirspeedRepository`, `ExternalAirspeedWritePort`
   - shared wind override/model contracts (`WindOverrideSource`,
     `WindOverride`, `WindSource`, `WindVector`)
   - shared glider/audio/HAWK runtime contracts:

@@ -1,4 +1,4 @@
-# Terrain Elevation Ownership Release-Grade Phased IP
+﻿# Terrain Elevation Ownership Release-Grade Phased IP
 
 ## 0) Metadata
 
@@ -77,7 +77,7 @@
 
 These plans remain relevant background but do not solve the ownership split by themselves:
 
-- `docs/ARCHITECTURE/CHANGE_PLAN_AGL_PILOT_SAFE_RUNTIME_2026-02-27.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_AGL_PILOT_SAFE_RUNTIME_2026-02-27.md`
   - performance/freshness contract for AGL cadence and stale-state behavior
 - `docs/refactor/Genius_Level_Crash_Stability_Plan_2026-02-26.md`
   - runtime hardening and duplicate AGL fetch cleanup
@@ -613,3 +613,4 @@ Reason:
 - this plan fixes one of the last clearly mixed owner/data-boundary clusters in the repo
 - it improves correctness and reviewability more than generic cleanup would
 - it gives QNH and AGL one professional terrain contract instead of two drifting ones
+

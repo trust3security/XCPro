@@ -1,10 +1,13 @@
 package com.example.xcpro.variometer.bluetooth.lxnav.runtime
 
 import com.example.xcpro.common.di.DefaultDispatcher
+import com.example.xcpro.common.units.UnitsConverter
 import com.example.xcpro.core.time.Clock
 import com.example.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.example.xcpro.external.ExternalInstrumentReadPort
 import com.example.xcpro.external.TimedExternalValue
+import com.example.xcpro.weather.wind.data.ExternalAirspeedWritePort
+import com.example.xcpro.weather.wind.model.AirspeedSample
 import com.example.xcpro.variometer.bluetooth.BluetoothConnectionState
 import com.example.xcpro.variometer.bluetooth.BluetoothReadChunk
 import com.example.xcpro.variometer.bluetooth.BluetoothTransport
@@ -34,6 +37,7 @@ import kotlinx.coroutines.sync.withLock
 class LxExternalRuntimeRepository @Inject constructor(
     private val transport: BluetoothTransport,
     private val clock: Clock,
+    private val externalAirspeedWritePort: ExternalAirspeedWritePort,
     @DefaultDispatcher dispatcher: CoroutineDispatcher
 ) : ExternalInstrumentReadPort {
 
@@ -250,6 +254,19 @@ class LxExternalRuntimeRepository @Inject constructor(
             totalEnergyVarioMps = snapshot.totalEnergyVarioMps?.let {
                 TimedExternalValue(value = it.value, receivedMonoMs = it.receivedMonoMs)
             }
+        )
+        snapshot.toExternalAirspeedSample()
+            ?.let(externalAirspeedWritePort::updateAirspeed)
+            ?: externalAirspeedWritePort.clear()
+    }
+
+    private fun LxExternalRuntimeSnapshot.toExternalAirspeedSample(): AirspeedSample? {
+        val airspeed = airspeedKph ?: return null
+        val tasMs = UnitsConverter.kmhToMs(airspeed.value)
+        if (!tasMs.isFinite() || tasMs <= 0.0) return null
+        return AirspeedSample.tasOnly(
+            trueMs = tasMs,
+            clockMillis = airspeed.receivedMonoMs
         )
     }
 }

@@ -1,0 +1,20 @@
+package com.example.xcpro.billing.ui
+
+import androidx.compose.runtime.Composable
+import com.example.xcpro.billing.AppFeature
+import com.example.xcpro.billing.EntitlementState
+
+@Composable
+fun FeatureGate(
+    entitlements: EntitlementState,
+    requiredFeature: AppFeature,
+    onUpgradeClick: () -> Unit,
+    allowedContent: @Composable () -> Unit,
+    lockedContent: @Composable ((() -> Unit)) -> Unit,
+) {
+    if (entitlements.has(requiredFeature)) {
+        allowedContent()
+    } else {
+        lockedContent(onUpgradeClick)
+    }
+}

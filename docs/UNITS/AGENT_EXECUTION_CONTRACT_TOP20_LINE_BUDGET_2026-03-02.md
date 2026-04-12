@@ -1,9 +1,9 @@
-# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md
+﻿# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md
 
 Date: 2026-03-02
 Owner: XCPro Team / Codex
 Status: Executed (phases 0-5 completed for enforced top-20 scope)
-Primary plan: `docs/ARCHITECTURE/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`
+Primary plan: `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`
 
 Use with:
 - `AGENTS.md`
@@ -42,7 +42,7 @@ Work is done only when:
 # 1) Scope
 
 Target set: the same 20 files listed in
-`docs/ARCHITECTURE/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`.
+`docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`.
 
 Execution model:
 - Phase 0: policy + gate setup
@@ -209,3 +209,4 @@ At final closeout:
 - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`: 5
 - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`: 5
 - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt`: 5
+

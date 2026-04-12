@@ -1,9 +1,9 @@
-# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md -- Autonomous Refactor Contract
+﻿# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md -- Autonomous Refactor Contract
 
 Date: 2026-03-02
 Owner: XCPro Team / Codex
 Status: Active
-Primary plan reference: `docs/ARCHITECTURE/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`
+Primary plan reference: `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`
 
 Use with:
 - `AGENTS.md`
@@ -55,7 +55,7 @@ Work is complete only when:
 - `docs/ARCHITECTURE/CONTRIBUTING.md`
 - `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md`
 - `docs/ARCHITECTURE/AGENT.md`
-- `docs/ARCHITECTURE/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/CHANGE_PLAN_TOP20_KOTLIN_LINE_BUDGET_500_2026-03-02.md`
 
 ---
 
@@ -390,4 +390,5 @@ At final completion:
   2. apply safe partial changes only
   3. mark phase as blocked with required follow-up
 - Never force completion claims without evidence table and scorecard closure.
+
 

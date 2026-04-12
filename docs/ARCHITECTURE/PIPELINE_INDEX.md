@@ -34,7 +34,8 @@ Use these sections when your change touches:
   `7) Parallel Pipelines (Wind + Flight State)`, `9) Time Base Rules`
 - LiveFollow pilot or watch runtime:
   `3A) LiveFollow Pilot + Watch Runtime`
-  Supporting detail only: `PIPELINE_LiveFollow_Addendum.md`
+  Historical supporting detail only:
+  `archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md`
 - use-case to ViewModel wiring:
   `4) Use Case -> ViewModel`
 - map screen UI, overlays, or map-side rendering:

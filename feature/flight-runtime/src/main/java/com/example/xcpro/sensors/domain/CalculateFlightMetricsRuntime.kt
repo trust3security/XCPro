@@ -419,8 +419,8 @@ internal class CalculateFlightMetricsRuntime(
         if (!isFreshExternalSample(sample, currentTimeMillis)) return null
         val trueMs = sample.trueMs.takeIf { it.isFinite() && it > MIN_VALID_AIRSPEED_MS } ?: return null
         val indicatedMs = sample.indicatedMs
-            .takeIf { it.isFinite() && it > MIN_VALID_AIRSPEED_MS }
-            ?: trueMs
+            .takeIf { sample.hasIndicatedAirspeed && it > MIN_VALID_AIRSPEED_MS }
+            ?: Double.NaN
         return AirspeedEstimate(
             indicatedMs = indicatedMs,
             trueMs = trueMs,

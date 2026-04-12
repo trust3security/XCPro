@@ -1,0 +1,12 @@
+package com.example.xcpro.billing
+
+object BillingCatalog {
+    const val SOAR = "xcpro_soar"
+    const val XC = "xcpro_xc"
+    const val PRO = "xcpro_pro"
+
+    const val MONTHLY = "monthly"
+    const val ANNUAL = "annual"
+
+    val paidProductIds = listOf(SOAR, XC, PRO)
+}

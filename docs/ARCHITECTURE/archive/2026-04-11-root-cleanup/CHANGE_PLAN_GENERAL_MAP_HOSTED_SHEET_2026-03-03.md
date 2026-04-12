@@ -1,4 +1,4 @@
-# CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
+﻿# CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
 
 ## 0) Metadata
 
@@ -8,7 +8,7 @@
 - Issue/PR: TBD
 - Status: Implemented (2026-03-03)
 - Agent execution contract:
-  - `docs/ARCHITECTURE/AGENT_EXECUTION_CONTRACT_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`
+  - `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/AGENT_EXECUTION_CONTRACT_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md`
 
 ## 1) Scope
 
@@ -355,3 +355,4 @@ Note:
 - `./gradlew testDebugUnitTest` failed once on
   `ProfileRepositoryTest.ioReadError_preservesLastKnownGoodState`, then passed on immediate rerun.
   The failure was treated as pre-existing/flaky because this change set does not touch profile repository paths.
+

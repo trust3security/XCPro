@@ -10,17 +10,19 @@ Read first, in this order:
 1. `AGENTS.md`
 2. `docs/ARCHITECTURE/ARCHITECTURE.md`
 3. `docs/ARCHITECTURE/PIPELINE.md`
-4. `CHANGE_PLAN_BLUETOOTH_LXNAV_S100_2026-04-09.md`
+4. `CURRENT_STATUS_BLUETOOTH_2026-04-11.md`
+5. `CHANGE_PLAN_BLUETOOTH_LXNAV_S100_2026-04-09.md`
 
 ## Task
 
-Implement the next approved phase only for LXNAV S100 Bluetooth support in XCPro.
+Implement the next approved Bluetooth slice only for LXNAV S100 support in XCPro.
 
 Use the change plan as the implementation contract.
 Do not invent a different architecture.
 Do not widen scope.
 Do not do broad renames.
 Do not move ownership into `feature:map`.
+Do not restart historical phases that are already implemented in the repo.
 
 ## Hard rules
 
@@ -41,12 +43,13 @@ Do not move ownership into `feature:map`.
 
 ## Execution mode
 
-Work phase-by-phase.
-Implement only the next requested phase.
-Stop after that phase.
-Do not continue automatically into later phases.
+Work slice-by-slice.
+Implement only the requested open slice.
+Stop after that slice.
+Do not continue automatically into later slices.
 
-If no phase is specified, start with `Phase 0` from the change plan.
+If no slice is specified, start with the first open item listed in
+`CURRENT_STATUS_BLUETOOTH_2026-04-11.md`.
 
 ## Required output format
 
@@ -94,9 +97,13 @@ If a command fails:
 
 ## Scope reminders by phase
 
+The phase reminders below are the historical rollout plan. Check
+`CURRENT_STATUS_BLUETOOTH_2026-04-11.md` first because some of these phases are
+already implemented.
+
 ### Phase 0
-Docs and baseline only.
-No production Bluetooth wiring.
+Historical baseline only.
+Do not restart this phase unless updating docs.
 
 ### Phase 1
 Transport contracts and line framing only.

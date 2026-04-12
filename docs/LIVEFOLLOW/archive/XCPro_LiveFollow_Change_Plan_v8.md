@@ -1,4 +1,4 @@
-# XCPro LiveFollow Change Plan v8
+﻿# XCPro LiveFollow Change Plan v8
 
 Date: 2026-03-18
 Status: Active baseline after Phase 2 merge
@@ -27,7 +27,7 @@ Use these docs together:
 - `docs/LIVEFOLLOW/PHASE3_REVIEW_CHECKLIST.md`
 - `docs/LIVEFOLLOW/LiveFollow_Next_Steps_v4.md`
 - `docs/ARCHITECTURE/PIPELINE.md`
-- `docs/ARCHITECTURE/PIPELINE_LiveFollow_Addendum.md`
+- `docs/ARCHITECTURE/archive/2026-04-11-root-cleanup/PIPELINE_LiveFollow_Addendum.md`
 
 Treat older phase plans and checklists as historical context only.
 
@@ -184,7 +184,7 @@ Forbidden:
 
 ## Phase 3 implementation slices
 
-### Slice A — ViewModel and UI-state mapping
+### Slice A â€” ViewModel and UI-state mapping
 Add:
 - pilot-facing LiveFollow state mapping
 - follower/watch state mapping
@@ -197,7 +197,7 @@ Required behavior:
 - no fabricated precision when source is degraded
 - controls are disabled when replay blocks side effects
 
-### Slice B — Pilot controls
+### Slice B â€” Pilot controls
 Add pilot entry points to:
 - start a live session
 - stop the current session
@@ -206,7 +206,7 @@ Add pilot entry points to:
 Pilot controls must route through existing Phase 2 owners.
 No direct repository mutation from Composables.
 
-### Slice C — Follower route / entry handling
+### Slice C â€” Follower route / entry handling
 Add route/entry handling for:
 - open a watch session from explicit session args / route input
 - render active watch state
@@ -219,7 +219,7 @@ Not allowed in this phase:
 - full FCM delivery implementation
 - backend notification plumbing
 
-### Slice D — Thin map-render consumption
+### Slice D â€” Thin map-render consumption
 If map integration is needed in Phase 3, it must be thin:
 - consume prepared render state only
 - consume exported task render snapshots only
@@ -328,3 +328,4 @@ After Phase 3 merge, move to **Phase 4** only:
 - quality rescore / PR summary hygiene
 
 Do not treat Phase 3 as the place to sneak backend implementation in.
+

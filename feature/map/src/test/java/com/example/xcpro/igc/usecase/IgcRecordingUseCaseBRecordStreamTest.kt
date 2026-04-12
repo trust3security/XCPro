@@ -125,6 +125,56 @@ class IgcRecordingUseCaseBRecordStreamTest {
     }
 
     @Test
+    fun emitsBRecordLine_whenIasIsUnavailableButTasRemainsFinite() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L)
+        val flightStateFlow = MutableStateFlow(FlyingState())
+        val flightDataRepository = FlightDataRepository()
+        val useCase = buildIgcRecordingUseCase(
+            flightStateSource = flightStateSource(flightStateFlow),
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            snapshotStore = InMemorySnapshotStore(),
+            defaultDispatcher = dispatcher,
+            config = IgcSessionStateMachine.Config(
+                armingDebounceMs = 0L,
+                takeoffDebounceMs = 0L,
+                landingDebounceMs = 0L,
+                baselineWindowMs = 1_000L,
+                finalizeTimeoutMs = 10_000L
+            )
+        )
+
+        clock.setMonoMs(1_000L)
+        flightStateFlow.value = FlyingState(isFlying = false, onGround = true)
+        advanceUntilIdle()
+        clock.setMonoMs(2_000L)
+        flightStateFlow.value = FlyingState(isFlying = true, onGround = false)
+        advanceUntilIdle()
+
+        var emittedLine: String? = null
+        val collectJob = launch(start = CoroutineStart.UNDISPATCHED) {
+            emittedLine = withTimeout(2_000L) {
+                useCase.bRecordLines.first()
+            }
+        }
+        runCurrent()
+
+        flightDataRepository.update(
+            data = liveFlightData(timestampMs = 10_000L).copy(
+                indicatedAirspeed = SpeedMs(Double.NaN),
+                trueAirspeed = SpeedMs(26.0)
+            ),
+            source = FlightDataRepository.Source.LIVE
+        )
+        advanceUntilIdle()
+        collectJob.join()
+
+        assertNotNull(emittedLine)
+        assertTrue(emittedLine!!.startsWith("B"))
+    }
+
+    @Test
     fun dropoutNoPosition_reusesLastPosition_andMarksV() = runTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val clock = FakeClock(monoMs = 0L)
