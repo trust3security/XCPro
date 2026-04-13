@@ -1,8 +1,12 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.map.trail.TrailSettings
+import com.example.xcpro.qnh.QnhCalibrationState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -14,9 +18,9 @@ internal fun bindMapStateObservers(
     unitsState: StateFlow<UnitsPreferences>,
     uiState: MutableStateFlow<MapUiState>,
     flightDataManager: FlightDataManager,
-    gliderConfigUseCase: GliderConfigUseCase,
-    qnhUseCase: QnhUseCase,
-    trailSettingsUseCase: MapTrailSettingsUseCase,
+    gliderConfigFlow: Flow<GliderConfig>,
+    qnhCalibrationState: Flow<QnhCalibrationState>,
+    trailSettingsFlow: Flow<TrailSettings>,
     mapStateStore: MapStateStore
 ) {
     unitsState
@@ -26,15 +30,15 @@ internal fun bindMapStateObservers(
         }
         .launchIn(scope)
 
-    gliderConfigUseCase.config
+    gliderConfigFlow
         .onEach { config -> uiState.update { it.copy(hideBallastPill = config.hideBallastPill) } }
         .launchIn(scope)
 
-    qnhUseCase.calibrationState
+    qnhCalibrationState
         .onEach { state -> uiState.update { it.copy(qnhCalibrationState = state) } }
         .launchIn(scope)
 
-    trailSettingsUseCase.settingsFlow
+    trailSettingsFlow
         .onEach { settings -> mapStateStore.setTrailSettings(settings) }
         .launchIn(scope)
 }

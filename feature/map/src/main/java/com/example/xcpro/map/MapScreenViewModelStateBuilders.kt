@@ -105,25 +105,25 @@ internal fun createReplaySensorGateStates(
 
 internal fun createMapLocationState(
     scope: CoroutineScope,
-    flightDataUseCase: FlightDataUseCase
+    flightData: StateFlow<com.example.xcpro.sensors.CompleteFlightData?>
 ): StateFlow<MapLocationUiModel?> =
-    flightDataUseCase.flightData
+    flightData
         .map { it?.gps?.toUiModel() }
         .stateIn(scope, SharingStarted.Eagerly, null)
 
 internal fun createOwnshipAltitudeState(
     scope: CoroutineScope,
-    flightDataUseCase: FlightDataUseCase
+    flightData: StateFlow<com.example.xcpro.sensors.CompleteFlightData?>
 ): StateFlow<Double?> =
-    flightDataUseCase.flightData
+    flightData
         .map(::resolveOwnshipAltitudeMeters)
         .stateIn(scope, SharingStarted.Eagerly, null)
 
 internal fun createOverlayOwnshipAltitudeState(
     scope: CoroutineScope,
-    flightDataUseCase: FlightDataUseCase
+    flightData: StateFlow<com.example.xcpro.sensors.CompleteFlightData?>
 ): StateFlow<Double?> =
-    flightDataUseCase.flightData
+    flightData
         .map(::resolveOwnshipAltitudeMeters)
         .map(::quantizeOverlayOwnshipAltitudeMeters)
         .distinctUntilChanged()
@@ -131,17 +131,17 @@ internal fun createOverlayOwnshipAltitudeState(
 
 internal fun createOwnshipCirclingState(
     scope: CoroutineScope,
-    flightDataUseCase: FlightDataUseCase
+    flightData: StateFlow<com.example.xcpro.sensors.CompleteFlightData?>
 ): StateFlow<Boolean> =
-    flightDataUseCase.flightData
+    flightData
         .map { sample -> sample?.isCircling == true }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
 internal fun createCirclingFeatureEnabledState(
     scope: CoroutineScope,
-    thermallingModeUseCase: ThermallingModeRuntimeUseCase
+    thermallingSettingsFlow: Flow<com.example.xcpro.thermalling.ThermallingModeSettings>
 ): StateFlow<Boolean> =
-    thermallingModeUseCase.settingsFlow
+    thermallingSettingsFlow
         .map { settings -> settings.enabled }
         .eagerState(scope = scope, initial = false)
 

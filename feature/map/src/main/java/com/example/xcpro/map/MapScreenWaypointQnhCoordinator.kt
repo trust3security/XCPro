@@ -1,10 +1,12 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.map.domain.MapWaypointError
 import com.example.xcpro.map.domain.toUserMessage
 import com.example.xcpro.qnh.CalibrateQnhUseCase
 import com.example.xcpro.qnh.QnhCalibrationFailureReason
 import com.example.xcpro.qnh.QnhCalibrationResult
+import com.example.xcpro.qnh.QnhRepository
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,14 +18,14 @@ internal class MapScreenWaypointQnhCoordinator(
     private val scope: CoroutineScope,
     private val uiState: MutableStateFlow<MapUiState>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
-    private val mapWaypointsUseCase: MapWaypointsUseCase,
-    private val qnhUseCase: QnhUseCase,
+    private val waypointLoader: WaypointLoader,
+    private val qnhRepository: QnhRepository,
     private val calibrateQnhUseCase: CalibrateQnhUseCase
 ) {
     fun loadWaypoints() {
         scope.launch {
             uiState.update { it.copy(isLoadingWaypoints = true, waypointError = null) }
-            val result = runCatching { mapWaypointsUseCase.loadWaypoints() }
+            val result = runCatching { waypointLoader.load() }
             result
                 .onSuccess { waypoints ->
                     uiState.update {
@@ -68,7 +70,7 @@ internal class MapScreenWaypointQnhCoordinator(
 
     fun onSetManualQnh(hpa: Double) {
         scope.launch {
-            qnhUseCase.setManualQnh(hpa)
+            qnhRepository.setManualQnh(hpa)
             val label = String.format(Locale.US, "%.1f", hpa)
             uiEffects.emit(MapUiEffect.ShowToast("QNH set to $label hPa"))
         }

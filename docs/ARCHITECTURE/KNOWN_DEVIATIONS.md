@@ -203,7 +203,7 @@ Last verified: 2026-03-16
 - Issue: RULES-20260204-01
 - Owner: XCPro Team
 - Resolved: 2026-02-04
-- Notes: MapScreenViewModel now depends on use-case wrappers; Context/WaypointLoader moved to MapWaypointsUseCase; Log removed.
+- Notes: MapScreenViewModel now depends on injected map-shell owners and focused runtime use cases; raw platform handles and direct Log usage were removed.
 
 3) TaskSheetViewModel holds UI map handle and constructs dependencies
 - Rule: ViewModels must not reference UI types; dependencies must be injected; use-cases only.
@@ -350,7 +350,7 @@ Last verified: 2026-03-16
 - Owner: XCPro Team
 - Resolved: 2026-02-11
 - Notes:
-  - `MapScreenUseCases` no longer exposes `taskManager`, `taskNavigationController`, `serviceManager`, or replay controller handles.
+  - `MapReplayUseCase` and `MapUiControllersUseCase` expose factory/composition APIs instead of raw `taskManager`, `taskNavigationController`, `serviceManager`, or replay controller handles.
   - `MapScreenViewModel` no longer publishes raw task/sensor/replay manager handles.
   - Replay adapter/coordinator wiring now routes through use-case factory APIs.
 

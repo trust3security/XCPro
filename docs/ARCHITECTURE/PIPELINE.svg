@@ -56,7 +56,7 @@
   </text>
 
   <rect class="box" x="520" y="626" width="360" height="54" />
-  <text class="text title" x="700" y="658" text-anchor="middle">FlightDataUseCase</text>
+  <text class="text title" x="700" y="658" text-anchor="middle">FlightDataRepository.flightData</text>
 
   <rect class="box" x="520" y="704" width="360" height="54" />
   <text class="text title" x="700" y="736" text-anchor="middle">MapScreenViewModel</text>

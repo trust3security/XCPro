@@ -154,11 +154,8 @@ abstract class MapScreenViewModelTestBase {
     protected val flightDataManagerFactory = FlightDataManagerFactory()
     protected val configurationRepository = ConfigurationRepository(context)
     protected val mapStyleRepository = MapStyleRepository(configurationRepository)
-    protected val mapStyleUseCase = MapStyleUseCase(mapStyleRepository)
     protected val unitsRepository = UnitsRepository(context)
-    protected val unitsUseCase = UnitsPreferencesUseCase(unitsRepository)
     protected val qnhRepository = FakeQnhRepository()
-    protected val qnhUseCase = QnhUseCase(qnhRepository)
     protected val calibrateQnhUseCase = Mockito.mock(CalibrateQnhUseCase::class.java)
     protected val trailSettingsUseCase = MapTrailSettingsUseCase(MapTrailPreferences(context))
     protected val variometerLayoutUseCase =
@@ -183,15 +180,12 @@ abstract class MapScreenViewModelTestBase {
         clock = orientationClock
     )
     protected val flightDataRepository = FlightDataRepository()
-    protected val flightDataUseCase = FlightDataUseCase(flightDataRepository)
     protected val windRepository = Mockito.mock(WindSensorFusionRepository::class.java)
-    protected lateinit var windStateUseCase: WindStateUseCase
     protected val windStateFlow = MutableStateFlow(com.example.xcpro.weather.wind.model.WindState())
     protected val replayController = Mockito.mock(IgcReplayController::class.java)
     protected val replaySessionFlow = MutableStateFlow(SessionState())
     protected val replayEventsFlow = MutableSharedFlow<ReplayEvent>()
     protected val gliderRepository = Mockito.mock(GliderRepository::class.java)
-    protected lateinit var gliderConfigUseCase: GliderConfigUseCase
     protected val gliderConfigFlow = MutableStateFlow(GliderConfig())
     protected val gliderModelFlow = MutableStateFlow<GliderModel?>(null)
     protected val gpsStatusFlow = MutableStateFlow<GpsStatus>(GpsStatus.Searching)
@@ -230,8 +224,6 @@ abstract class MapScreenViewModelTestBase {
         Mockito.`when`(gliderRepository.config).thenReturn(gliderConfigFlow)
         Mockito.`when`(gliderRepository.selectedModel).thenReturn(gliderModelFlow)
         Mockito.`when`(hawkVarioUseCase.hawkVarioUiState).thenReturn(hawkVarioUiStateFlow)
-        windStateUseCase = WindStateUseCase(windRepository)
-        gliderConfigUseCase = GliderConfigUseCase(gliderRepository)
     }
 
     @Before
@@ -311,14 +303,12 @@ abstract class MapScreenViewModelTestBase {
         )
         val localNavigationRouteRepository =
             NavigationRouteRepository(taskManager = localTaskManager, taskNavigationController = localTaskNavigationController)
-        val mapWaypointsUseCase = MapWaypointsUseCase(waypointLoader)
         val mapAirspaceUseCase = Mockito.mock(AirspaceUseCase::class.java)
         val mapWaypointFilesUseCase = Mockito.mock(WaypointFilesUseCase::class.java)
         val mapSensorsUseCase = MapSensorsUseCase(
             varioRuntimeControlPort = object : VarioRuntimeControlPort { override fun ensureRunningIfPermitted(): Boolean = true; override fun requestStop() = Unit },
             varioServiceManager = varioServiceManager
         )
-        val orientationSettingsUseCase = MapOrientationSettingsUseCase(orientationSettingsRepository)
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
             orientationManagerFactory = orientationManagerFactory,
@@ -361,9 +351,6 @@ abstract class MapScreenViewModelTestBase {
         )
         val mapTasksUseCase = MapTasksUseCase(localTaskManager)
         mapFeatureFlags.loadSavedTasksOnInit = false
-        val mapFeatureFlagsUseCase = MapFeatureFlagsUseCase(mapFeatureFlags)
-        val mapCardPreferencesUseCase = MapCardPreferencesUseCase(cardPreferences)
-        val mapVarioPreferencesUseCase = MapVarioPreferencesUseCase(levoVarioPreferencesRepository)
         val thermallingPreferencesRepository =
             ThermallingModePreferencesRepository(newTestPreferencesDataStore("thermalling_mode"))
         val thermallingModeUseCase = ThermallingModeRuntimeUseCase(
@@ -463,30 +450,30 @@ abstract class MapScreenViewModelTestBase {
             ioDispatcher = mainDispatcherRule.dispatcher
         )
         val profileSessionDependencies = MapScreenProfileSessionDependencies(
-            mapStyleUseCase = mapStyleUseCase,
-            unitsUseCase = unitsUseCase,
-            orientationSettingsUseCase = orientationSettingsUseCase,
-            gliderConfigUseCase = gliderConfigUseCase,
+            mapStyleRepository = mapStyleRepository,
+            unitsRepository = unitsRepository,
+            orientationSettingsRepository = orientationSettingsRepository,
+            gliderConfigRepository = gliderRepository,
             variometerLayoutUseCase = variometerLayoutUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
-            qnhUseCase = qnhUseCase
+            qnhRepository = qnhRepository
         )
         return MapScreenViewModel(
             profileSessionDependencies = profileSessionDependencies,
-            mapWaypointsUseCase = mapWaypointsUseCase,
+            waypointLoader = waypointLoader,
             mapAirspaceUseCase = mapAirspaceUseCase,
             mapWaypointFilesUseCase = mapWaypointFilesUseCase,
             sensorsUseCase = mapSensorsUseCase,
-            flightDataUseCase = flightDataUseCase,
+            flightDataRepository = flightDataRepository,
             mapUiControllersUseCase = mapUiControllersUseCase,
-            windStateUseCase = windStateUseCase,
+            windSensorFusionRepository = windRepository,
             mapReplayUseCase = mapReplayUseCase,
             mapTasksUseCase = mapTasksUseCase,
             taskFlightSurfaceUseCase = taskFlightSurfaceUseCase,
-            mapFeatureFlagsUseCase = mapFeatureFlagsUseCase,
-            mapCardPreferencesUseCase = mapCardPreferencesUseCase,
+            featureFlags = mapFeatureFlags,
+            cardPreferences = cardPreferences,
             calibrateQnhUseCase = calibrateQnhUseCase,
-            mapVarioPreferencesUseCase = mapVarioPreferencesUseCase,
+            levoVarioPreferencesRepository = levoVarioPreferencesRepository,
             hawkVarioUseCase = hawkVarioUseCase,
             ognTrafficFacade = ognTrafficFacade,
             adsbTrafficFacade = adsbTrafficFacade,
