@@ -69,10 +69,12 @@ class CardIngestionCoordinator(
         profileVisibilityJob = scope.launch {
             combine(
                 flightViewModel.activeProfileId,
-                flightViewModel.profileModeVisibilities
-            ) { activeProfileId, visibilities ->
-                activeProfileId to visibilities
-            }.collectLatest { (activeProfileId, visibilities) ->
+                flightViewModel.profileModeVisibilities,
+                flightViewModel.activeProfileModeVisibilitiesHydrated
+            ) { activeProfileId, visibilities, hydrated ->
+                Triple(activeProfileId, visibilities, hydrated)
+            }.collectLatest { (activeProfileId, visibilities, hydrated) ->
+                if (!hydrated) return@collectLatest
                 onProfileModeVisibilitiesChanged(activeProfileId, visibilities)
             }
         }

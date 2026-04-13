@@ -4,6 +4,7 @@ import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.waypoint.WaypointData
 import com.example.xcpro.map.domain.MapWaypointError
+import com.example.xcpro.profiles.ProfileIdResolver
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -84,6 +85,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     @Test
     fun setFlightMode_updatesStore() {
         val viewModel = createViewModel()
+        hydrateVisibilities(viewModel)
 
         viewModel.setFlightMode(FlightMode.THERMAL)
 
@@ -95,6 +97,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     @Test
     fun requestedMode_staysStickyWhenVisibilityHidesAndShowsIt() {
         val viewModel = createViewModel()
+        hydrateVisibilities(viewModel, activeProfileId = "pilot-a")
 
         viewModel.setFlightMode(FlightMode.THERMAL)
         viewModel.onProfileModeVisibilitiesChanged(
@@ -119,6 +122,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     @Test
     fun runtimeOverride_isSeparateFromRequestedMode() {
         val viewModel = createViewModel()
+        hydrateVisibilities(viewModel)
 
         viewModel.setFlightMode(FlightMode.FINAL_GLIDE)
         viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
@@ -139,6 +143,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     @Test
     fun clearingRuntimeOverride_preservesRequestedMode() {
         val viewModel = createViewModel()
+        hydrateVisibilities(viewModel)
 
         viewModel.setFlightMode(FlightMode.FINAL_GLIDE)
         viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
@@ -152,6 +157,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     @Test
     fun effectiveMode_propagatesOnlyWhenItChanges() {
         val viewModel = createViewModel()
+        hydrateVisibilities(viewModel, activeProfileId = "pilot-a")
         Mockito.clearInvocations(varioServiceManager)
 
         viewModel.setFlightMode(FlightMode.THERMAL)
@@ -172,6 +178,69 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
             FlightModeSelection.CRUISE,
             viewModel.runtimeDependencies.flightDataManager.effectiveFlightModeSelection
         )
+    }
+
+    @Test
+    fun explicitCruiseSelection_clearsRuntimeOverrideImmediately() {
+        val viewModel = createViewModel()
+        hydrateVisibilities(viewModel)
+        Mockito.clearInvocations(varioServiceManager)
+
+        viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
+        viewModel.setFlightMode(FlightMode.CRUISE)
+
+        assertNull(viewModel.runtimeFlightModeOverride.value)
+        assertEquals(FlightMode.CRUISE, viewModel.requestedFlightMode.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.THERMAL)
+        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.CRUISE)
+    }
+
+    @Test
+    fun explicitFinalGlideSelection_clearsRuntimeOverrideImmediately() {
+        val viewModel = createViewModel()
+        hydrateVisibilities(viewModel)
+        Mockito.clearInvocations(varioServiceManager)
+
+        viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
+        viewModel.setFlightMode(FlightMode.FINAL_GLIDE)
+
+        assertNull(viewModel.runtimeFlightModeOverride.value)
+        assertEquals(FlightMode.FINAL_GLIDE, viewModel.requestedFlightMode.value)
+        assertEquals(FlightMode.FINAL_GLIDE, viewModel.effectiveFlightMode.value)
+        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.THERMAL)
+        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.FINAL_GLIDE)
+    }
+
+    @Test
+    fun preHydrationStartup_isConservative() {
+        val viewModel = createViewModel()
+        Mockito.clearInvocations(varioServiceManager)
+
+        viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
+
+        assertEquals(listOf(FlightMode.CRUISE), viewModel.visibleFlightModes.value)
+        assertEquals(FlightMode.THERMAL, viewModel.runtimeFlightModeOverride.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+        Mockito.verifyNoInteractions(varioServiceManager)
+    }
+
+    @Test
+    fun hiddenThermalAfterHydration_staysHiddenFromRuntimeOverride() {
+        val viewModel = createViewModel()
+        hydrateVisibilities(
+            viewModel,
+            activeProfileId = "pilot-a",
+            visibilities = mapOf(FlightModeSelection.THERMAL to false)
+        )
+        Mockito.clearInvocations(varioServiceManager)
+
+        viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
+
+        assertEquals(listOf(FlightMode.CRUISE, FlightMode.FINAL_GLIDE), viewModel.visibleFlightModes.value)
+        assertEquals(FlightMode.THERMAL, viewModel.runtimeFlightModeOverride.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+        Mockito.verifyNoInteractions(varioServiceManager)
     }
 
     @Test
@@ -314,5 +383,20 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
         assertEquals(false, selected.isClosing)
         assertEquals(-0.4, selected.closingRateMps ?: Double.NaN, 1e-6)
         assertEquals(false, selected.isEmergencyCollisionRisk)
+    }
+
+    private fun hydrateVisibilities(
+        viewModel: MapScreenViewModel,
+        activeProfileId: String? = null,
+        visibilities: Map<FlightModeSelection, Boolean> = emptyMap()
+    ) {
+        val resolvedProfileId = activeProfileId ?: ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID
+        viewModel.setActiveProfileId(resolvedProfileId)
+        drainMain()
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = activeProfileId,
+            allVisibilities = mapOf(resolvedProfileId to visibilities)
+        )
+        drainMain()
     }
 }

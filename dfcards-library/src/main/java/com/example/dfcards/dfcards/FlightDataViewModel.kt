@@ -52,6 +52,9 @@ class FlightDataViewModel @Inject constructor(
         _profileModeVisibilities.asStateFlow()
     private val _activeProfileId = MutableStateFlow<ProfileId?>(null)
     val activeProfileId: StateFlow<ProfileId?> = _activeProfileId.asStateFlow()
+    private val _activeProfileModeVisibilitiesHydrated = MutableStateFlow(false)
+    val activeProfileModeVisibilitiesHydrated: StateFlow<Boolean> =
+        _activeProfileModeVisibilitiesHydrated.asStateFlow()
     private val _currentFlightMode = MutableStateFlow(FlightModeSelection.CRUISE)
     val currentFlightMode: StateFlow<FlightModeSelection> = _currentFlightMode.asStateFlow()
     private val _availableTemplates =
@@ -110,6 +113,9 @@ class FlightDataViewModel @Inject constructor(
             scope = viewModelScope
         )
     private var templatesJob: Job? = null
+    private var initialVisibilityHydrationJob: Job? = null
+    private var activeProfileVisibilityLoadJob: Job? = null
+    private val authoritativeVisibilityProfiles = MutableStateFlow<Set<ProfileId>>(emptySet())
 
     fun initializeCardPreferences(preferences: CardPreferences) {
         if (_cardPreferences.value === preferences) return
@@ -117,6 +123,10 @@ class FlightDataViewModel @Inject constructor(
         _cardPreferences.value = preferences
         ingest = FlightDataIngest(preferences, ioDispatcher)
         cardsUseCase.setPreferences(preferences)
+        authoritativeVisibilityProfiles.value = emptySet()
+        _activeProfileModeVisibilitiesHydrated.value = false
+        initialVisibilityHydrationJob?.cancel()
+        activeProfileVisibilityLoadJob?.cancel()
         templatesJob?.cancel()
         templatesJob = viewModelScope.launch(ioDispatcher) {
             preferences.getAllTemplates().collect { templates ->
@@ -127,9 +137,11 @@ class FlightDataViewModel @Inject constructor(
                 }
             }
         }
-        viewModelScope.launch(ioDispatcher) {
-            profileStore.hydrateFromPreferences(preferences)
+        initialVisibilityHydrationJob = viewModelScope.launch(ioDispatcher) {
+            authoritativeVisibilityProfiles.value = profileStore.hydrateFromPreferences(preferences)
+            refreshActiveProfileVisibilityHydrationState()
             syncSelectedIdsWithRepository()
+            maybeLoadActiveProfileVisibilitiesIfNeeded()
         }
     }
     fun updateFlightMode(flightMode: FlightModeSelection) = setFlightMode(flightMode)
@@ -194,10 +206,13 @@ class FlightDataViewModel @Inject constructor(
     fun setActiveProfile(profileId: ProfileId?) {
         if (_activeProfileId.value == profileId) return
         logDebug("setActiveProfile: $profileId")
+        val resolvedProfileId = FlightVisibility.normalizeProfileId(profileId)
         cardsUseCase.setActiveProfile(profileId)
         _activeProfileId.value = profileId
-        profileStore.ensureVisibilityEntry(FlightVisibility.normalizeProfileId(profileId))
+        profileStore.ensureVisibilityEntry(resolvedProfileId)
+        refreshActiveProfileVisibilityHydrationState(resolvedProfileId)
         syncSelectedIdsWithRepository()
+        maybeLoadActiveProfileVisibilitiesIfNeeded(resolvedProfileId)
     }
     fun setFlightMode(mode: FlightModeSelection) {
         cardsUseCase.updateFlightMode(mode)
@@ -258,6 +273,7 @@ class FlightDataViewModel @Inject constructor(
             flightMode = flightMode,
             isVisible = isVisible
         )
+        markProfileVisibilitiesAuthoritative(update.profileId)
         val preferences = _cardPreferences.value ?: return
         viewModelScope.launch(ioDispatcher) {
             preferences.saveProfileFlightModeVisibility(update.profileId, flightMode.name, isVisible)
@@ -300,6 +316,8 @@ class FlightDataViewModel @Inject constructor(
     override fun onCleared() {
         cardsUseCase.onCleared()
         templatesJob?.cancel()
+        initialVisibilityHydrationJob?.cancel()
+        activeProfileVisibilityLoadJob?.cancel()
         super.onCleared()
     }
     suspend fun prepareCardsForProfile(
@@ -401,5 +419,40 @@ class FlightDataViewModel @Inject constructor(
                 setProfileTemplate(targetProfileId, mode, templateId)
             }
         )
+
+    private fun maybeLoadActiveProfileVisibilitiesIfNeeded(
+        profileId: ProfileId = FlightVisibility.normalizeProfileId(_activeProfileId.value)
+    ) {
+        if (initialVisibilityHydrationJob?.isActive == true) return
+        if (authoritativeVisibilityProfiles.value.contains(profileId)) {
+            _activeProfileModeVisibilitiesHydrated.value = true
+            return
+        }
+        val ingestHelper = ingest ?: return
+        activeProfileVisibilityLoadJob?.cancel()
+        _activeProfileModeVisibilitiesHydrated.value = false
+        activeProfileVisibilityLoadJob = viewModelScope.launch(ioDispatcher) {
+            val rawVisibilities = ingestHelper.loadProfileVisibilities(profileId)
+            if (FlightVisibility.normalizeProfileId(_activeProfileId.value) != profileId) return@launch
+            profileStore.applyLoadedVisibilities(profileId, rawVisibilities)
+            authoritativeVisibilityProfiles.value = authoritativeVisibilityProfiles.value + profileId
+            _activeProfileModeVisibilitiesHydrated.value = true
+        }
+    }
+
+    private fun markProfileVisibilitiesAuthoritative(profileId: ProfileId) {
+        authoritativeVisibilityProfiles.value = authoritativeVisibilityProfiles.value + profileId
+        if (FlightVisibility.normalizeProfileId(_activeProfileId.value) == profileId) {
+            _activeProfileModeVisibilitiesHydrated.value = true
+        }
+    }
+
+    private fun refreshActiveProfileVisibilityHydrationState(
+        profileId: ProfileId = FlightVisibility.normalizeProfileId(_activeProfileId.value)
+    ) {
+        _activeProfileModeVisibilitiesHydrated.value =
+            authoritativeVisibilityProfiles.value.contains(profileId)
+    }
+
     private fun logDebug(@Suppress("UNUSED_PARAMETER") message: String) {}
 }

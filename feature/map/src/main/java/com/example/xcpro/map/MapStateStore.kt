@@ -74,7 +74,9 @@ class MapStateStore(
     private val _runtimeFlightModeOverride = MutableStateFlow<FlightMode?>(null)
     val runtimeFlightModeOverride: StateFlow<FlightMode?> = _runtimeFlightModeOverride.asStateFlow()
 
-    private val _visibleFlightModes = MutableStateFlow(orderedMapFlightModes)
+    // Pre-hydration bootstrap: keep startup/profile-switch mode exposure conservative
+    // until the cards bridge delivers authoritative visibilities for the active profile.
+    private val _visibleFlightModes = MutableStateFlow(listOf(FlightMode.CRUISE))
     val visibleFlightModes: StateFlow<List<FlightMode>> = _visibleFlightModes.asStateFlow()
 
     private val _effectiveFlightModeSource = MutableStateFlow(MapFlightModeSource.REQUESTED)
