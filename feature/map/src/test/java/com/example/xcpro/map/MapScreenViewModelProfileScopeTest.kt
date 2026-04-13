@@ -2,6 +2,8 @@ package com.example.xcpro.map
 
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.dfcards.FlightModeSelection
+import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.map.trail.TrailLength
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.TrailType
@@ -121,5 +123,79 @@ class MapScreenViewModelProfileScopeTest : MapScreenViewModelTestBase() {
 
         assertEquals(listOf("pilot-a", "pilot-b"), qnhRepository.activeProfileIds)
         assertEquals("pilot-b", qnhRepository.activeProfileId)
+    }
+
+    @Test
+    fun setActiveProfileId_resetsFlightModeVisibilityToConservativeBootstrap() = runBlocking {
+        val viewModel = createViewModel()
+
+        viewModel.setActiveProfileId("pilot-a")
+        drainMain()
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = "pilot-a",
+            allVisibilities = mapOf("pilot-a" to emptyMap())
+        )
+        drainMain()
+        viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
+        assertEquals(
+            listOf(FlightMode.CRUISE, FlightMode.THERMAL, FlightMode.FINAL_GLIDE),
+            viewModel.visibleFlightModes.value
+        )
+        assertEquals(FlightMode.THERMAL, viewModel.effectiveFlightMode.value)
+
+        viewModel.setActiveProfileId("pilot-b")
+        drainMain()
+
+        assertEquals(listOf(FlightMode.CRUISE), viewModel.visibleFlightModes.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = "pilot-b",
+            allVisibilities = mapOf("pilot-b" to mapOf(FlightModeSelection.THERMAL to false))
+        )
+        drainMain()
+
+        assertEquals(listOf(FlightMode.CRUISE, FlightMode.FINAL_GLIDE), viewModel.visibleFlightModes.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+    }
+
+    @Test
+    fun setActiveProfileId_appliesCachedHydratedVisibilitiesForMatchingProfile() = runBlocking {
+        val viewModel = createViewModel()
+
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = "pilot-a",
+            allVisibilities = mapOf("pilot-a" to mapOf(FlightModeSelection.THERMAL to false))
+        )
+        drainMain()
+        assertEquals(listOf(FlightMode.CRUISE), viewModel.visibleFlightModes.value)
+
+        viewModel.setActiveProfileId("pilot-a")
+        drainMain()
+
+        assertEquals(listOf(FlightMode.CRUISE, FlightMode.FINAL_GLIDE), viewModel.visibleFlightModes.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+    }
+
+    @Test
+    fun preProfileInitialization_cachedDefaultProfileVisibilities_stayBufferedUntilActiveProfileSet() = runBlocking {
+        val viewModel = createViewModel()
+
+        viewModel.onProfileModeVisibilitiesChanged(
+            activeProfileId = null,
+            allVisibilities = mapOf(
+                "default-profile" to mapOf(FlightModeSelection.THERMAL to false)
+            )
+        )
+        drainMain()
+
+        assertEquals(listOf(FlightMode.CRUISE), viewModel.visibleFlightModes.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
+
+        viewModel.setActiveProfileId("default-profile")
+        drainMain()
+
+        assertEquals(listOf(FlightMode.CRUISE, FlightMode.FINAL_GLIDE), viewModel.visibleFlightModes.value)
+        assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
     }
 }

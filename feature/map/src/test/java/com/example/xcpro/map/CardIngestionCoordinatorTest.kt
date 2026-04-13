@@ -150,9 +150,11 @@ class CardIngestionCoordinatorTest {
         val activeProfileId = MutableStateFlow<String?>(null)
         val profileModeVisibilities =
             MutableStateFlow<Map<String, Map<FlightModeSelection, Boolean>>>(emptyMap())
+        val visibilitiesHydrated = MutableStateFlow(true)
         val viewModel = mock<FlightDataViewModel>()
         whenever(viewModel.activeProfileId).thenReturn(activeProfileId)
         whenever(viewModel.profileModeVisibilities).thenReturn(profileModeVisibilities)
+        whenever(viewModel.activeProfileModeVisibilitiesHydrated).thenReturn(visibilitiesHydrated)
         val forwarded =
             mutableListOf<Pair<String?, Map<String, Map<FlightModeSelection, Boolean>>>>()
         val coordinator = CardIngestionCoordinator(
@@ -186,14 +188,63 @@ class CardIngestionCoordinatorTest {
         }
     }
 
+    @Test
+    fun suppressesProfileVisibilitiesUntilHydrated() = runTest {
+        val cardHydrationReady = MutableStateFlow(true)
+        val cardFlightDataFlow = MutableStateFlow<RealTimeFlightData?>(null)
+        val unitsPreferencesFlow = MutableStateFlow(UnitsPreferences())
+        val activeProfileId = MutableStateFlow<String?>("pilot-a")
+        val profileModeVisibilities = MutableStateFlow(
+            mapOf("pilot-a" to mapOf(FlightModeSelection.THERMAL to false))
+        )
+        val visibilitiesHydrated = MutableStateFlow(false)
+        val viewModel = mock<FlightDataViewModel>()
+        whenever(viewModel.activeProfileId).thenReturn(activeProfileId)
+        whenever(viewModel.profileModeVisibilities).thenReturn(profileModeVisibilities)
+        whenever(viewModel.activeProfileModeVisibilitiesHydrated).thenReturn(visibilitiesHydrated)
+        val forwarded =
+            mutableListOf<Pair<String?, Map<String, Map<FlightModeSelection, Boolean>>>>()
+        val coordinator = CardIngestionCoordinator(
+            scope = this,
+            cardHydrationReady = cardHydrationReady,
+            cardFlightDataFlow = cardFlightDataFlow,
+            consumeBufferedCardSample = { null },
+            unitsPreferencesFlow = unitsPreferencesFlow,
+            initializeCardPreferences = { },
+            startIndependentClock = { },
+            onProfileModeVisibilitiesChanged = { profileId, visibilities ->
+                forwarded += profileId to visibilities
+            }
+        )
+
+        try {
+            coordinator.bindCards(viewModel)
+            advanceUntilIdle()
+            assertEquals(emptyList<Pair<String?, Map<String, Map<FlightModeSelection, Boolean>>>>(), forwarded)
+
+            visibilitiesHydrated.value = true
+            advanceUntilIdle()
+
+            assertEquals(1, forwarded.size)
+            assertEquals("pilot-a", forwarded.single().first)
+            assertEquals(profileModeVisibilities.value, forwarded.single().second)
+        } finally {
+            coordinator.stop()
+        }
+    }
+
     private fun mockFlightViewModel(
         activeProfileId: MutableStateFlow<String?> = MutableStateFlow(null),
         profileModeVisibilities: MutableStateFlow<Map<String, Map<FlightModeSelection, Boolean>>> =
-            MutableStateFlow(emptyMap())
+            MutableStateFlow(emptyMap()),
+        activeProfileModeVisibilitiesHydrated: MutableStateFlow<Boolean> =
+            MutableStateFlow(false)
     ): FlightDataViewModel {
         val viewModel = mock<FlightDataViewModel>()
         whenever(viewModel.activeProfileId).thenReturn(activeProfileId)
         whenever(viewModel.profileModeVisibilities).thenReturn(profileModeVisibilities)
+        whenever(viewModel.activeProfileModeVisibilitiesHydrated)
+            .thenReturn(activeProfileModeVisibilitiesHydrated)
         return viewModel
     }
 }

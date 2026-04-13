@@ -84,6 +84,14 @@ class MapStateStoreTest {
     }
 
     @Test
+    fun startupFlightModeState_isConservativeUntilHydrated() {
+        val store = MapStateStore(initialStyleName = "Topo")
+
+        assertEquals(listOf(FlightMode.CRUISE), store.visibleFlightModes.value)
+        assertEquals(FlightMode.CRUISE, store.currentMode.value)
+    }
+
+    @Test
     fun applyFlightModeUiState_updatesRequestedRuntimeVisibleAndEffectiveMode() {
         val store = MapStateStore(initialStyleName = "Topo")
         val state = MapFlightModeUiState(

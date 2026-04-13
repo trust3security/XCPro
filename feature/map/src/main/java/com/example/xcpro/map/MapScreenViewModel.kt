@@ -70,6 +70,11 @@ class MapScreenViewModel @Inject constructor(
     val requestedFlightMode: StateFlow<FlightMode> = mapStateStore.requestedFlightMode; val runtimeFlightModeOverride: StateFlow<FlightMode?> = mapStateStore.runtimeFlightModeOverride
     val visibleFlightModes: StateFlow<List<FlightMode>> = mapStateStore.visibleFlightModes; val effectiveFlightMode: StateFlow<FlightMode> = mapStateStore.currentMode
     internal val effectiveFlightModeSource: StateFlow<MapFlightModeSource> = mapStateStore.effectiveFlightModeSource
+    private var currentProfileId: String = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID
+    private var activeProfileInitialized: Boolean = false
+    private var latestHydratedProfileId: String? = null
+    private var latestAllProfileModeVisibilities: Map<String, Map<FlightModeSelection, Boolean>> = emptyMap()
+    private var profileModeVisibilitiesHydrated: Boolean = false
     private var activeProfileModeVisibilities: Map<FlightModeSelection, Boolean> = emptyMap()
     private val featureFlags = mapFeatureFlagsUseCase.featureFlags
     val cardPreferences = mapCardPreferencesUseCase.cardPreferences
@@ -246,12 +251,15 @@ class MapScreenViewModel @Inject constructor(
     fun persistMapStyle(styleName: String) = profileSessionCoordinator.persistMapStyle(styleName)
     fun setForecastSatelliteOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setForecastSatelliteOverrideEnabled(enabled))
     fun setThermallingContrastOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setThermallingContrastOverrideEnabled(enabled))
-    fun setFlightMode(newMode: FlightMode) = recomputeMapFlightModeState(requestedMode = newMode)
+    fun setFlightMode(newMode: FlightMode) = recomputeMapFlightModeState(requestedMode = newMode, runtimeOverrideMode = null)
     internal fun applyRuntimeFlightMode(mode: FlightMode) = recomputeMapFlightModeState(runtimeOverrideMode = mode)
     internal fun clearRuntimeFlightModeOverride() = recomputeMapFlightModeState(runtimeOverrideMode = null)
     internal fun onProfileModeVisibilitiesChanged(activeProfileId: String?, allVisibilities: Map<String, Map<FlightModeSelection, Boolean>>) {
-        activeProfileModeVisibilities = allVisibilities[ProfileIdResolver.canonicalOrDefault(activeProfileId)].orEmpty()
-        recomputeMapFlightModeState()
+        val resolvedProfileId = ProfileIdResolver.canonicalOrDefault(activeProfileId)
+        latestHydratedProfileId = resolvedProfileId
+        latestAllProfileModeVisibilities = allVisibilities
+        if (!activeProfileInitialized || resolvedProfileId != currentProfileId) return
+        applyHydratedProfileModeVisibilities(resolvedProfileId)
     }
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
     fun setMapVisible(isVisible: Boolean) {
@@ -271,7 +279,21 @@ class MapScreenViewModel @Inject constructor(
     fun dismissSelectedOgnThermal() = trafficCoordinator.dismissSelectedOgnThermal()
     fun dismissSelectedAdsbTarget() = trafficCoordinator.dismissSelectedAdsbTarget()
     private fun loadWaypoints() = waypointQnhCoordinator.loadWaypoints()
-    fun setActiveProfileId(profileId: String) = profileSessionCoordinator.setActiveProfileId(profileId)
+    fun setActiveProfileId(profileId: String) {
+        val resolvedProfileId = ProfileIdResolver.canonicalOrDefault(profileId)
+        val profileChanged = currentProfileId != resolvedProfileId
+        if (!activeProfileInitialized || profileChanged) {
+            activeProfileInitialized = true
+            currentProfileId = resolvedProfileId
+            profileModeVisibilitiesHydrated = false
+            activeProfileModeVisibilities = emptyMap()
+            recomputeMapFlightModeState()
+            if (latestHydratedProfileId == resolvedProfileId) {
+                applyHydratedProfileModeVisibilities(resolvedProfileId)
+            }
+        }
+        profileSessionCoordinator.setActiveProfileId(profileId)
+    }
     fun ensureVariometerLayout(profileId: String, screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) =
         profileSessionCoordinator.ensureVariometerLayout(profileId, screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
     fun ensureVariometerLayout(screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) =
@@ -296,24 +318,32 @@ class MapScreenViewModel @Inject constructor(
     fun onConfirmWeGlideUploadPrompt() { viewModelScope.launch { weGlidePromptBridge.confirmCurrentPrompt(_uiEffects::emit) } }
     fun onDismissWeGlideUploadPrompt() = weGlidePromptBridge.dismissCurrentPrompt()
     override fun onCleared() {
-        stopMapScreenViewModelLifecycle(ognTrafficFacade, adsbTrafficFacade, thermallingModeUseCase, ballastController, ::clearRuntimeFlightModeOverride)
-        super.onCleared()
+        stopMapScreenViewModelLifecycle(ognTrafficFacade, adsbTrafficFacade, thermallingModeUseCase, ballastController, ::clearRuntimeFlightModeOverride); super.onCleared()
     }
-
     private fun recomputeMapFlightModeState(
         requestedMode: FlightMode = mapStateStore.requestedFlightMode.value,
         runtimeOverrideMode: FlightMode? = mapStateStore.runtimeFlightModeOverride.value
     ) {
         val previousEffectiveMode = mapStateStore.currentMode.value
-        val state = resolveMapFlightModeUiState(requestedMode = requestedMode, runtimeOverrideMode = runtimeOverrideMode, modeVisibilities = activeProfileModeVisibilities)
+        val state = resolveMapFlightModeUiState(
+            requestedMode = requestedMode,
+            runtimeOverrideMode = runtimeOverrideMode,
+            modeVisibilities = currentPolicyInputVisibilities()
+        )
         mapStateStore.applyFlightModeUiState(state)
         if (previousEffectiveMode != state.effectiveMode) {
             flightDataManager.updateEffectiveFlightModeFromEnum(state.effectiveMode)
             sensorsUseCase.setFlightMode(state.effectiveMode)
         }
     }
-
-    private fun emitEffectiveStyleCommandIfChanged(styleChanged: Boolean) {
-        if (styleChanged) emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value))
+    private fun currentPolicyInputVisibilities(): Map<FlightModeSelection, Boolean> = activeProfileModeVisibilities.takeIf { profileModeVisibilitiesHydrated } ?: PRE_HYDRATION_BOOTSTRAP_VISIBILITIES
+    private fun applyHydratedProfileModeVisibilities(profileId: String) {
+        profileModeVisibilitiesHydrated = true; activeProfileModeVisibilities = latestAllProfileModeVisibilities[profileId].orEmpty()
+        recomputeMapFlightModeState()
+    }
+    private fun emitEffectiveStyleCommandIfChanged(styleChanged: Boolean) { if (styleChanged) emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value)) }
+    private companion object {
+        val PRE_HYDRATION_BOOTSTRAP_VISIBILITIES: Map<FlightModeSelection, Boolean> =
+            mapOf(FlightModeSelection.THERMAL to false, FlightModeSelection.FINAL_GLIDE to false)
     }
 }

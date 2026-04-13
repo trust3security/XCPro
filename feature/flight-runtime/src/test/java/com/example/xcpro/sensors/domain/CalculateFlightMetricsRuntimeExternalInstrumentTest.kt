@@ -80,7 +80,7 @@ class CalculateFlightMetricsRuntimeExternalInstrumentTest {
                 currentTimeMillis = 1_000L,
                 gpsTimestampMillis = 1_000L,
                 deltaTimeSeconds = 1.0,
-                altitude = 900.0,
+                altitude = 950.0,
                 varioMs = 0.4,
                 baroResult = baro,
                 externalInstrumentSnapshot = ExternalInstrumentFlightSnapshot(
@@ -95,7 +95,7 @@ class CalculateFlightMetricsRuntimeExternalInstrumentTest {
                 currentTimeMillis = 2_000L,
                 gpsTimestampMillis = 2_000L,
                 deltaTimeSeconds = 1.0,
-                altitude = 900.0,
+                altitude = 950.0,
                 varioMs = 0.4,
                 baroResult = baro,
                 externalInstrumentSnapshot = ExternalInstrumentFlightSnapshot(

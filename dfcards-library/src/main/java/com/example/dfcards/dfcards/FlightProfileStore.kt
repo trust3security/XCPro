@@ -26,8 +26,8 @@ internal class FlightProfileStore(
         }
     }
 
-    suspend fun hydrateFromPreferences(preferences: CardPreferences) {
-        val ingestHelper = ingestProvider() ?: return
+    suspend fun hydrateFromPreferences(preferences: CardPreferences): Set<ProfileId> {
+        val ingestHelper = ingestProvider() ?: return emptySet()
         val templateMappingsRaw = ingestHelper.loadProfileTemplates()
         val templateCardsRaw = ingestHelper.loadProfileTemplateCards()
 
@@ -59,8 +59,16 @@ internal class FlightProfileStore(
                 visibilityMappings[profileId] = FlightVisibility.buildVisibilityMap(raw)
             }
             profileModeVisibilities.value = visibilityMappings.toMap()
+            return visibilityMappings.keys.toSet()
         } else {
             profileModeVisibilities.value = emptyMap()
+            return emptySet()
+        }
+    }
+
+    fun applyLoadedVisibilities(profileId: ProfileId, raw: Map<String, Boolean>) {
+        profileModeVisibilities.value = profileModeVisibilities.value.toMutableMap().apply {
+            this[profileId] = FlightVisibility.buildVisibilityMap(raw)
         }
     }
 
