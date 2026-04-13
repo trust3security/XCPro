@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 
@@ -116,6 +117,31 @@ class CalculateFlightMetricsUseCaseQnhReplayTest {
 
         assertTrue(result.verticalSpeed.isFinite())
         verify(helpers, times(0)).updateAGL(any(), any(), any())
+    }
+
+    @Test
+    fun absoluteBaroAltitude_remains_authoritative_when_displayAltitudeDiffers() {
+        val (useCase, helpers) = newUseCaseWithHelpers()
+
+        val result = executeMetricsRequest(
+            useCase = useCase,
+            currentTimeMillis = 1_000L,
+            deltaTimeSeconds = 1.0,
+            varioMs = 0.4,
+            altitude = 1_150.0,
+            baroResult = calibratedBaroResult(
+                altitudeMeters = 1_000.0,
+                qnh = 1013.25,
+                pressureAltitudeMeters = 995.0,
+                lastCalibrationTime = 0L
+            ),
+            varioValidUntil = 2_000L
+        )
+
+        assertEquals(1_000.0, result.baroAltitude, 1e-6)
+        assertEquals(1_000.0, result.navAltitude, 1e-6)
+        verify(helpers).updateAGL(eq(1_000.0), any(), eq(20.0))
+        verify(helpers).calculateCurrentLD(any(), eq(1_000.0), eq(1_000L))
     }
 }
 

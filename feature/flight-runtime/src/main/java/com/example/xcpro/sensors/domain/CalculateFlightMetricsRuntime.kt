@@ -36,8 +36,10 @@ internal class CalculateFlightMetricsRuntime(
         val wallTime = request.wallTimeMillis
         val varioResult = request.varioResult
 
-        val baroAltitude = varioResult.altitude
         val baroResult = request.baroResult
+        // AI-NOTE: absolute baro altitude remains owned by the calculator result; the
+        // vario/display filter altitude is only a display-smoothing fallback when no baro result exists.
+        val baroAltitude = baroResult?.altitudeMeters?.takeIf { it.isFinite() } ?: varioResult.altitude
         val externalInputs = resolveExternalInstrumentInputs(
             snapshot = request.externalInstrumentSnapshot,
             currentMonoMs = currentTime,
