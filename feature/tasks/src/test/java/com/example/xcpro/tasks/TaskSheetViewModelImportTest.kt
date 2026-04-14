@@ -5,6 +5,8 @@ import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
+import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.testing.MainDispatcherRule
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,8 +14,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 
 class TaskSheetViewModelImportTest {
 
@@ -22,8 +28,8 @@ class TaskSheetViewModelImportTest {
 
     @Test
     fun importPersistedTask_aat_appliesTargetsAndObservationZones() {
-        val fixture = mockCoordinator(taskType = TaskType.AAT)
-        val viewModel = createViewModel(fixture.coordinator)
+        val fixture = mockTaskManager(taskType = TaskType.AAT)
+        val viewModel = createViewModel(fixture.taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val persisted = TaskPersistSerializer.PersistedTask(
             taskType = TaskType.AAT,
@@ -71,30 +77,21 @@ class TaskSheetViewModelImportTest {
 
         viewModel.importPersistedTask(Gson().toJson(persisted))
 
-        Mockito.verify(fixture.coordinator).setTaskType(TaskType.AAT)
-        Mockito.verify(fixture.coordinator).clearTask()
-        Mockito.verify(fixture.coordinator).setActiveLeg(0)
-        Mockito.verify(fixture.coordinator).applyAATTargetState(1, 0.62, true, -34.9510, 138.7010)
-        Mockito.verify(fixture.coordinator).updateAATArea(1, 5500.0)
+        Mockito.verify(fixture.taskManager).setTaskType(TaskType.AAT)
+        Mockito.verify(fixture.taskManager).clearTask()
+        Mockito.verify(fixture.taskManager).setActiveLeg(0)
+        Mockito.verify(fixture.taskManager).applyAATTargetState(1, 0.62, true, -34.9510, 138.7010)
+        Mockito.verify(fixture.taskManager).updateAATArea(1, 5500.0)
 
-        val indexCaptor = ArgumentCaptor.forClass(Int::class.javaObjectType)
-        Mockito.verify(fixture.coordinator, Mockito.times(3)).updateAATWaypointPointTypeMeters(
-            indexCaptor.capture(),
-            Mockito.isNull(),
-            Mockito.isNull(),
-            Mockito.isNull(),
-            Mockito.nullable(Double::class.java),
-            Mockito.nullable(Double::class.java),
-            Mockito.nullable(Double::class.java),
-            Mockito.nullable(Double::class.java)
-        )
-        assertEquals(listOf(0, 1, 2), indexCaptor.allValues)
+        val updateCaptor = argumentCaptor<AATWaypointTypeUpdate>()
+        Mockito.verify(fixture.taskManager, Mockito.times(3)).updateAATWaypointPointType(updateCaptor.capture())
+        assertEquals(listOf(0, 1, 2), updateCaptor.allValues.map { it.index })
     }
 
     @Test
     fun importPersistedTask_racing_appliesGateWidthOnlyForTurnpoints() {
-        val fixture = mockCoordinator(taskType = TaskType.RACING)
-        val viewModel = createViewModel(fixture.coordinator)
+        val fixture = mockTaskManager(taskType = TaskType.RACING)
+        val viewModel = createViewModel(fixture.taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val persisted = TaskPersistSerializer.PersistedTask(
             taskType = TaskType.RACING,
@@ -144,43 +141,33 @@ class TaskSheetViewModelImportTest {
 
         viewModel.importPersistedTask(Gson().toJson(persisted))
 
-        Mockito.verify(fixture.coordinator).setTaskType(TaskType.RACING)
-        Mockito.verify(fixture.coordinator).clearTask()
-        Mockito.verify(fixture.coordinator).setActiveLeg(0)
+        Mockito.verify(fixture.taskManager).setTaskType(TaskType.RACING)
+        Mockito.verify(fixture.taskManager).clearTask()
+        Mockito.verify(fixture.taskManager).setActiveLeg(0)
 
-        val indexCaptor = ArgumentCaptor.forClass(Int::class.javaObjectType)
-        val gateWidthCaptor = ArgumentCaptor.forClass(Double::class.java)
-        Mockito.verify(fixture.coordinator, Mockito.times(2)).updateWaypointPointType(
-            indexCaptor.capture(),
-            Mockito.isNull(),
-            Mockito.isNull(),
-            Mockito.isNull(),
-            gateWidthCaptor.capture(),
-            Mockito.isNull(),
-            Mockito.isNull(),
-            Mockito.isNull()
-        )
-        assertEquals(listOf(1, 2), indexCaptor.allValues)
-        assertEquals(listOf(800.0, 1200.0), gateWidthCaptor.allValues)
+        val updateCaptor = argumentCaptor<RacingWaypointTypeUpdate>()
+        Mockito.verify(fixture.taskManager, Mockito.times(2)).updateWaypointPointType(updateCaptor.capture())
+        assertEquals(listOf(1, 2), updateCaptor.allValues.map { it.index })
+        assertEquals(listOf(800.0, 1200.0), updateCaptor.allValues.map { it.gateWidthMeters })
 
-        Mockito.verify(fixture.coordinator, Mockito.times(0)).applyAATTargetState(
-            Mockito.anyInt(),
-            Mockito.anyDouble(),
-            Mockito.anyBoolean(),
-            Mockito.nullable(Double::class.java),
-            Mockito.nullable(Double::class.java)
+        verify(fixture.taskManager, never()).applyAATTargetState(
+            any(),
+            any(),
+            any(),
+            anyOrNull(),
+            anyOrNull()
         )
     }
 
     @Test
     fun uiState_tracks_external_coordinator_snapshot_updates() {
-        val fixture = mockCoordinator(taskType = TaskType.AAT)
-        val viewModel = createViewModel(fixture.coordinator)
+        val fixture = mockTaskManager(taskType = TaskType.AAT)
+        val viewModel = createViewModel(fixture.taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
 
-        fixture.snapshots.value = TaskCoordinatorSnapshot(
-            task = Task(id = "updated-task"),
+        fixture.snapshots.value = TaskRuntimeSnapshot(
             taskType = TaskType.AAT,
+            task = Task(id = "updated-task"),
             activeLeg = 2
         )
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
@@ -191,8 +178,8 @@ class TaskSheetViewModelImportTest {
 
     @Test
     fun onCleared_clearsCoordinatorProximityHandler() {
-        val fixture = mockCoordinator(taskType = TaskType.AAT)
-        val viewModel = createViewModel(fixture.coordinator)
+        val fixture = mockTaskManager(taskType = TaskType.AAT)
+        val viewModel = createViewModel(fixture.taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
 
         TaskSheetViewModel::class.java.getDeclaredMethod("onCleared").apply {
@@ -200,38 +187,48 @@ class TaskSheetViewModelImportTest {
             invoke(viewModel)
         }
 
-        Mockito.verify(fixture.coordinator).clearProximityHandler()
+        Mockito.verify(fixture.taskManager).clearProximityHandler()
     }
 
-    private fun createViewModel(coordinator: TaskSheetCoordinatorUseCase): TaskSheetViewModel {
+    private fun createViewModel(taskManager: TaskManagerCoordinator): TaskSheetViewModel {
+        return TaskSheetViewModel(
+            useCase = createUseCase(taskManager),
+            taskManager = taskManager,
+            persistedTaskImporter = TaskSheetPersistedTaskImporter()
+        )
+    }
+
+    private fun createUseCase(taskManager: TaskManagerCoordinator): TaskSheetUseCase {
         val repository = TaskRepository(
             validator = TaskValidator()
         )
-        val useCase = TaskSheetUseCase(
+        return TaskSheetUseCase(
+            taskManager = taskManager,
             repository = repository,
             proximityEvaluator = TaskProximityEvaluator()
         )
-        return TaskSheetViewModel(
-            taskCoordinator = coordinator,
-            useCase = useCase
-        )
     }
 
-    private fun mockCoordinator(taskType: TaskType): CoordinatorFixture {
-        val coordinator = Mockito.mock(TaskSheetCoordinatorUseCase::class.java)
+    private fun mockTaskManager(taskType: TaskType): TaskManagerFixture {
+        val taskManager = Mockito.mock(TaskManagerCoordinator::class.java)
         val snapshots = MutableStateFlow(
-            TaskCoordinatorSnapshot(
-                task = Task(id = "snapshot-task"),
+            TaskRuntimeSnapshot(
                 taskType = taskType,
+                task = Task(id = "snapshot-task"),
                 activeLeg = 0
             )
         )
-        Mockito.`when`(coordinator.snapshotFlow).thenReturn(snapshots)
-        return CoordinatorFixture(coordinator, snapshots)
+        val racingAdvanceSnapshots = MutableStateFlow(
+            RacingAdvanceState().snapshot()
+        )
+        Mockito.`when`(taskManager.taskSnapshotFlow).thenReturn(snapshots)
+        Mockito.`when`(taskManager.racingAdvanceSnapshotFlow).thenReturn(racingAdvanceSnapshots)
+        Mockito.`when`(taskManager.getRacingValidationProfile()).thenReturn(RacingTaskStructureRules.Profile.FAI_STRICT)
+        return TaskManagerFixture(taskManager, snapshots)
     }
 
-    private data class CoordinatorFixture(
-        val coordinator: TaskSheetCoordinatorUseCase,
-        val snapshots: MutableStateFlow<TaskCoordinatorSnapshot>
+    private data class TaskManagerFixture(
+        val taskManager: TaskManagerCoordinator,
+        val snapshots: MutableStateFlow<TaskRuntimeSnapshot>
     )
 }

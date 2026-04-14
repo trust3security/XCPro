@@ -1,5 +1,6 @@
 package com.example.xcpro.tasks.aat
 
+import com.example.xcpro.tasks.AATWaypointTypeUpdate
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATWaypointRole
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
@@ -27,26 +28,14 @@ internal class AATPointTypeConfigurator {
      * @param waypoint Current waypoint to update
      * @param allWaypoints All waypoints in task (for sector orientation calculation)
      * @param waypointIndex Index of waypoint in task
-     * @param startType New start point type (if waypoint is START)
-     * @param finishType New finish point type (if waypoint is FINISH)
-     * @param turnType New turnpoint type (if waypoint is TURNPOINT)
-     * @param gateWidthMeters Gate width in meters (for cylinders)
-     * @param keyholeInnerRadiusMeters Inner radius in meters (for keyholes)
-     * @param keyholeAngle Sector angle in degrees (for sectors/keyholes)
-     * @param sectorOuterRadiusMeters Outer radius in meters (for sectors/keyholes)
+     * @param update Requested point-type and geometry changes
      * @return Updated waypoint with new geometry, or null if index invalid
      */
     fun updateWaypointPointType(
         waypoint: AATWaypoint,
         allWaypoints: List<AATWaypoint>,
         waypointIndex: Int,
-        startType: com.example.xcpro.tasks.aat.models.AATStartPointType?,
-        finishType: com.example.xcpro.tasks.aat.models.AATFinishPointType?,
-        turnType: com.example.xcpro.tasks.aat.models.AATTurnPointType?,
-        gateWidthMeters: Double?,
-        keyholeInnerRadiusMeters: Double?,
-        keyholeAngle: Double?,
-        sectorOuterRadiusMeters: Double?
+        update: AATWaypointTypeUpdate
     ): AATWaypoint {
 
         //  SSOT FIX: Read current values from assignedArea (single source of truth)
@@ -60,19 +49,19 @@ internal class AATPointTypeConfigurator {
 
         // Use UI-provided values or fall back to current assignedArea values
         val newKeyholeInnerRadiusMeters =
-            (keyholeInnerRadiusMeters ?: currentKeyholeInnerRadiusMeters).let { inner ->
+            (update.keyholeInnerRadiusMeters ?: currentKeyholeInnerRadiusMeters).let { inner ->
                 if (inner > 0) inner else 500.0
         }
-        val newKeyholeAngle = (keyholeAngle ?: 90.0).let { angle ->
+        val newKeyholeAngle = (update.keyholeAngle ?: 90.0).let { angle ->
             if (kotlin.math.abs(angle - 90.0) < 1e-2) 90.0 else angle
         }  // Default and clamp to a clean 90 when within tolerance
-        val newSectorOuterRadiusMeters = sectorOuterRadiusMeters ?: currentSectorOuterRadiusMeters
-        val newGateWidthMeters = gateWidthMeters ?: currentGateWidthMeters
-        val newTurnType = turnType ?: waypoint.turnPointType
+        val newSectorOuterRadiusMeters = update.sectorOuterRadiusMeters ?: currentSectorOuterRadiusMeters
+        val newGateWidthMeters = update.gateWidthMeters ?: currentGateWidthMeters
+        val newTurnType = update.turnType ?: waypoint.turnPointType
 
         //  BUG FIX: Convert TurnPointType to AssignedArea geometry
-        val newAssignedArea = if (waypoint.role == AATWaypointRole.TURNPOINT && turnType != null) {
-            when (turnType) {
+        val newAssignedArea = if (waypoint.role == AATWaypointRole.TURNPOINT && update.turnType != null) {
+            when (update.turnType) {
                 com.example.xcpro.tasks.aat.models.AATTurnPointType.AAT_CYLINDER -> {
                     // Cylinder: Use gateWidth as radius
                     AATAssignedArea(
@@ -148,7 +137,11 @@ internal class AATPointTypeConfigurator {
         }
 
         //  RESET target point to center when turnpoint type changes (like creating new turnpoint)
-        val resetTargetPoint = if (waypoint.role == AATWaypointRole.TURNPOINT && turnType != null && turnType != waypoint.turnPointType) {
+        val resetTargetPoint = if (
+            waypoint.role == AATWaypointRole.TURNPOINT &&
+            update.turnType != null &&
+            update.turnType != waypoint.turnPointType
+        ) {
             // Type changed - reset to center like a new turnpoint
             AATLatLng(waypoint.lat, waypoint.lon)
         } else {
@@ -158,8 +151,8 @@ internal class AATPointTypeConfigurator {
 
         //  SSOT FIX: Only update assignedArea (removed gateWidth, keyholeInnerRadius, etc.)
         val updatedWaypoint = waypoint.copy(
-            startPointType = startType ?: waypoint.startPointType,
-            finishPointType = finishType ?: waypoint.finishPointType,
+            startPointType = update.startType ?: waypoint.startPointType,
+            finishPointType = update.finishType ?: waypoint.finishPointType,
             turnPointType = newTurnType,
             //  SSOT: assignedArea is the ONLY source of truth for geometry (no property sync)
             assignedArea = newAssignedArea,

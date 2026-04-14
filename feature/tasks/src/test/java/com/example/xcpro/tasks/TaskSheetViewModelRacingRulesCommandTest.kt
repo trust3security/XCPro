@@ -26,8 +26,8 @@ class TaskSheetViewModelRacingRulesCommandTest {
 
     @Test
     fun onUpdateRacingStartRules_forwardsTypedCommandToCoordinator() {
-        val coordinator = mockCoordinator()
-        val viewModel = createViewModel(coordinator)
+        val taskManager = mockTaskManager()
+        val viewModel = createViewModel(taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val command = UpdateRacingStartRulesCommand(
             rules = RacingStartCustomParams(
@@ -53,13 +53,13 @@ class TaskSheetViewModelRacingRulesCommandTest {
 
         viewModel.onUpdateRacingStartRules(command)
 
-        Mockito.verify(coordinator).updateRacingStartRules(command)
+        Mockito.verify(taskManager).updateRacingStartRules(command)
     }
 
     @Test
     fun onUpdateRacingFinishRules_forwardsTypedCommandToCoordinator() {
-        val coordinator = mockCoordinator()
-        val viewModel = createViewModel(coordinator)
+        val taskManager = mockTaskManager()
+        val viewModel = createViewModel(taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val command = UpdateRacingFinishRulesCommand(
             rules = RacingFinishCustomParams(
@@ -80,13 +80,13 @@ class TaskSheetViewModelRacingRulesCommandTest {
 
         viewModel.onUpdateRacingFinishRules(command)
 
-        Mockito.verify(coordinator).updateRacingFinishRules(command)
+        Mockito.verify(taskManager).updateRacingFinishRules(command)
     }
 
     @Test
     fun onUpdateRacingValidationRules_forwardsTypedCommandToCoordinator() {
-        val coordinator = mockCoordinator()
-        val viewModel = createViewModel(coordinator)
+        val taskManager = mockTaskManager()
+        val viewModel = createViewModel(taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val command = UpdateRacingValidationRulesCommand(
             profile = RacingTaskStructureRules.Profile.XC_PRO_EXTENDED
@@ -94,57 +94,59 @@ class TaskSheetViewModelRacingRulesCommandTest {
 
         viewModel.onUpdateRacingValidationRules(command)
 
-        Mockito.verify(coordinator).updateRacingValidationRules(command)
+        Mockito.verify(taskManager).updateRacingValidationRules(command)
     }
 
     @Test
     fun onAdvanceMode_forRacing_forwardsToCoordinatorRacingAdvanceOwner() {
-        val coordinator = mockCoordinator()
-        val viewModel = createViewModel(coordinator)
+        val taskManager = mockTaskManager()
+        val viewModel = createViewModel(taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
 
         viewModel.onAdvanceMode(TaskAdvanceUiSnapshot.Mode.MANUAL)
 
-        Mockito.verify(coordinator).setRacingAdvanceMode(RacingAdvanceState.Mode.MANUAL)
+        Mockito.verify(taskManager).setRacingAdvanceMode(RacingAdvanceState.Mode.MANUAL)
     }
 
     @Test
     fun onAdvanceArmToggle_forRacing_forwardsToCoordinatorRacingAdvanceOwner() {
-        val coordinator = mockCoordinator()
-        val viewModel = createViewModel(coordinator)
+        val taskManager = mockTaskManager()
+        val viewModel = createViewModel(taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
 
         viewModel.onAdvanceArmToggle()
 
-        Mockito.verify(coordinator).toggleRacingAdvanceArm()
+        Mockito.verify(taskManager).toggleRacingAdvanceArmed()
     }
 
-    private fun createViewModel(coordinator: TaskSheetCoordinatorUseCase): TaskSheetViewModel {
-        val repository = TaskRepository(
-            validator = TaskValidator()
-        )
+    private fun createViewModel(taskManager: TaskManagerCoordinator): TaskSheetViewModel {
         val useCase = TaskSheetUseCase(
-            repository = repository,
+            taskManager = taskManager,
+            repository = TaskRepository(validator = TaskValidator()),
             proximityEvaluator = TaskProximityEvaluator()
         )
         return TaskSheetViewModel(
-            taskCoordinator = coordinator,
-            useCase = useCase
+            useCase = useCase,
+            taskManager = taskManager,
+            persistedTaskImporter = TaskSheetPersistedTaskImporter()
         )
     }
 
-    private fun mockCoordinator(): TaskSheetCoordinatorUseCase {
-        val coordinator = Mockito.mock(TaskSheetCoordinatorUseCase::class.java)
-        Mockito.`when`(coordinator.snapshotFlow).thenReturn(
+    private fun mockTaskManager(): TaskManagerCoordinator {
+        val taskManager = Mockito.mock(TaskManagerCoordinator::class.java)
+        Mockito.`when`(taskManager.taskSnapshotFlow).thenReturn(
             MutableStateFlow(
-                TaskCoordinatorSnapshot(
-                    task = Task(id = "snapshot-task"),
+                TaskRuntimeSnapshot(
                     taskType = TaskType.RACING,
-                    activeLeg = 0,
-                    racingValidationProfile = RacingTaskStructureRules.Profile.FAI_STRICT
+                    task = Task(id = "snapshot-task"),
+                    activeLeg = 0
                 )
             )
         )
-        return coordinator
+        Mockito.`when`(taskManager.racingAdvanceSnapshotFlow).thenReturn(
+            MutableStateFlow(RacingAdvanceState().snapshot())
+        )
+        Mockito.`when`(taskManager.getRacingValidationProfile()).thenReturn(RacingTaskStructureRules.Profile.FAI_STRICT)
+        return taskManager
     }
 }

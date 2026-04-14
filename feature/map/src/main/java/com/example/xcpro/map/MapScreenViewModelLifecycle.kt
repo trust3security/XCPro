@@ -1,13 +1,19 @@
 package com.example.xcpro.map
 
 import com.example.xcpro.common.flight.FlightMode
+import com.example.xcpro.common.glider.GliderConfig
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.map.ballast.BallastController
 import com.example.xcpro.map.config.MapFeatureFlags
+import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.qnh.QnhCalibrationState
 import com.example.xcpro.replay.SessionState
+import com.example.xcpro.sensors.CompleteFlightData
+import com.example.xcpro.thermalling.ThermallingModeSettings
 import com.example.xcpro.weglide.ui.WeGlideUploadPromptUiState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,13 +28,14 @@ internal fun startMapScreenViewModelLifecycle(
     unitsState: StateFlow<UnitsPreferences>,
     uiState: MutableStateFlow<MapUiState>,
     flightDataManager: FlightDataManager,
-    gliderConfigUseCase: GliderConfigUseCase,
-    qnhUseCase: QnhUseCase,
-    trailSettingsUseCase: MapTrailSettingsUseCase,
+    gliderConfigFlow: Flow<GliderConfig>,
+    qnhCalibrationState: Flow<QnhCalibrationState>,
+    trailSettingsFlow: Flow<TrailSettings>,
     mapStateStore: MapStateStore,
     trafficCoordinator: MapScreenTrafficCoordinator,
-    thermallingModeUseCase: ThermallingModeRuntimeUseCase,
-    flightDataUseCase: FlightDataUseCase,
+    thermallingController: ThermallingModeRuntimeController,
+    thermallingSettingsFlow: Flow<ThermallingModeSettings>,
+    flightData: StateFlow<CompleteFlightData?>,
     replaySessionState: StateFlow<SessionState>,
     mapStateActions: MapStateActions,
     visibleModes: StateFlow<List<FlightMode>>,
@@ -49,17 +56,17 @@ internal fun startMapScreenViewModelLifecycle(
         unitsState = unitsState,
         uiState = uiState,
         flightDataManager = flightDataManager,
-        gliderConfigUseCase = gliderConfigUseCase,
-        qnhUseCase = qnhUseCase,
-        trailSettingsUseCase = trailSettingsUseCase,
+        gliderConfigFlow = gliderConfigFlow,
+        qnhCalibrationState = qnhCalibrationState,
+        trailSettingsFlow = trailSettingsFlow,
         mapStateStore = mapStateStore
     )
     trafficCoordinator.bind()
     startMapScreenThermallingRuntime(
         scope = scope,
-        thermallingController = thermallingModeUseCase,
-        settingsFlow = thermallingModeUseCase.settingsFlow,
-        flightData = flightDataUseCase.flightData,
+        thermallingController = thermallingController,
+        settingsFlow = thermallingSettingsFlow,
+        flightData = flightData,
         visibleModes = visibleModes,
         replaySessionState = replaySessionState,
         mapStateStore = mapStateStore,
@@ -81,13 +88,13 @@ internal fun startMapScreenViewModelLifecycle(
 internal fun stopMapScreenViewModelLifecycle(
     ognTrafficFacade: OgnTrafficFacade,
     adsbTrafficFacade: AdsbTrafficFacade,
-    thermallingModeUseCase: ThermallingModeRuntimeUseCase,
+    thermallingController: ThermallingModeRuntimeController,
     ballastController: BallastController,
     clearRuntimeFlightModeOverride: () -> Unit
 ) {
     ognTrafficFacade.stop()
     adsbTrafficFacade.stop()
-    thermallingModeUseCase.reset()
+    thermallingController.reset()
     clearRuntimeFlightModeOverride()
     ballastController.dispose()
 }

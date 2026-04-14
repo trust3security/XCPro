@@ -208,6 +208,15 @@ class TaskManagerCoordinator(
             aatBlock = { reorderAATWaypoints(fromIndex, toIndex) }
         ).also { publishTaskMutation() }
 
+    fun updateWaypointPointType(update: RacingWaypointTypeUpdate) {
+        if (_taskType.value != TaskType.RACING) {
+            log("Cannot update racing point type - current task type is ${_taskType.value}")
+            return
+        }
+        racingTaskManager.updateRacingWaypointType(update)
+        publishTaskMutation()
+    }
+
     fun updateWaypointPointType(
         index: Int,
         startType: RacingStartPointType?,
@@ -217,12 +226,8 @@ class TaskManagerCoordinator(
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
         faiQuadrantOuterRadiusMeters: Double?
-    ) {
-        if (_taskType.value != TaskType.RACING) {
-            log("Cannot update racing point type - current task type is ${_taskType.value}")
-            return
-        }
-        racingTaskManager.updateRacingWaypointType(
+    ) = updateWaypointPointType(
+        RacingWaypointTypeUpdate(
             index = index,
             startType = startType,
             finishType = finishType,
@@ -232,8 +237,7 @@ class TaskManagerCoordinator(
             keyholeAngle = keyholeAngle,
             faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
         )
-        publishTaskMutation()
-    }
+    )
 
     fun replaceWaypoint(index: Int, newWaypoint: SearchWaypoint) =
         withCurrentManager(
@@ -374,6 +378,14 @@ class TaskManagerCoordinator(
         publishRacingAdvanceSnapshot()
     }
 
+    fun updateAATWaypointPointType(update: AATWaypointTypeUpdate) {
+        if (_taskType.value != TaskType.AAT) {
+            log("Cannot update AAT point type - current task type is ${_taskType.value}"); return
+        }
+        aatDelegate.updateWaypointPointTypeMeters(update)
+        publishTaskMutation()
+    }
+
     fun updateAATWaypointPointTypeMeters(
         index: Int,
         startType: AATStartPointType?,
@@ -383,11 +395,8 @@ class TaskManagerCoordinator(
         keyholeInnerRadiusMeters: Double?,
         keyholeAngle: Double?,
         sectorOuterRadiusMeters: Double?
-    ) {
-        if (_taskType.value != TaskType.AAT) {
-            log("Cannot update AAT point type - current task type is ${_taskType.value}"); return
-        }
-        aatDelegate.updateWaypointPointTypeMeters(
+    ) = updateAATWaypointPointType(
+        AATWaypointTypeUpdate(
             index = index,
             startType = startType,
             finishType = finishType,
@@ -397,8 +406,7 @@ class TaskManagerCoordinator(
             keyholeAngle = keyholeAngle,
             sectorOuterRadiusMeters = sectorOuterRadiusMeters
         )
-        publishTaskMutation()
-    }
+    )
 
     fun updateAATTargetPoint(index: Int, lat: Double, lon: Double) {
         if (_taskType.value != TaskType.AAT) {

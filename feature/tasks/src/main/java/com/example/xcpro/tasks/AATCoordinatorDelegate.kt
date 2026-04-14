@@ -1,9 +1,6 @@
 package com.example.xcpro.tasks
 
 import com.example.xcpro.tasks.aat.AATTaskManager
-import com.example.xcpro.tasks.aat.models.AATFinishPointType
-import com.example.xcpro.tasks.aat.models.AATStartPointType
-import com.example.xcpro.tasks.aat.models.AATTurnPointType
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.core.TaskWaypoint
 import java.time.Duration
@@ -34,41 +31,23 @@ internal class AATCoordinatorDelegate(
 
     private val editController = AATEditController(editOperations, log)
 
-    fun updateWaypointPointTypeMeters(
-        index: Int,
-        startType: AATStartPointType?,
-        finishType: AATFinishPointType?,
-        turnType: AATTurnPointType?,
-        gateWidthMeters: Double?,
-        keyholeInnerRadiusMeters: Double?,
-        keyholeAngle: Double?,
-        sectorOuterRadiusMeters: Double?
-    ) {
-        log("AAT waypoint point type update - Index: $index")
+    fun updateWaypointPointTypeMeters(update: AATWaypointTypeUpdate) {
+        log("AAT waypoint point type update - Index: ${update.index}")
         listOf(
-            "start" to startType,
-            "finish" to finishType,
-            "turn" to turnType,
-            "gateWidthMeters" to gateWidthMeters,
-            "keyholeInnerRadiusMeters" to keyholeInnerRadiusMeters,
-            "keyholeAngle" to keyholeAngle,
-            "sectorOuterRadiusMeters" to sectorOuterRadiusMeters
+            "start" to update.startType,
+            "finish" to update.finishType,
+            "turn" to update.turnType,
+            "gateWidthMeters" to update.gateWidthMeters,
+            "keyholeInnerRadiusMeters" to update.keyholeInnerRadiusMeters,
+            "keyholeAngle" to update.keyholeAngle,
+            "sectorOuterRadiusMeters" to update.sectorOuterRadiusMeters
         ).forEach { (label, value) ->
             if (value != null) {
                 log("AAT point type attr: $label=$value")
             }
         }
 
-        taskManager.updateAATWaypointPointTypeMeters(
-            index = index,
-            startType = startType,
-            finishType = finishType,
-            turnType = turnType,
-            gateWidthMeters = gateWidthMeters,
-            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-            keyholeAngle = keyholeAngle,
-            sectorOuterRadiusMeters = sectorOuterRadiusMeters
-        )
+        taskManager.updateAATWaypointPointTypeMeters(update)
     }
 
     fun updateTargetPoint(index: Int, lat: Double, lon: Double) =

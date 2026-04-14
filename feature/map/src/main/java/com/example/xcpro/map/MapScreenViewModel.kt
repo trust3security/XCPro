@@ -2,14 +2,17 @@ package com.example.xcpro.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
+import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
 import com.example.xcpro.airspace.AirspaceUseCase
+import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.flightdata.WaypointFilesUseCase
 import com.example.xcpro.gestures.TaskGestureCallbacks
 import com.example.xcpro.gestures.TaskGestureHandler
@@ -17,6 +20,7 @@ import com.example.xcpro.hawk.HawkVarioUiState
 import com.example.xcpro.hawk.HawkVarioUseCase
 import com.example.xcpro.map.ballast.BallastCommand
 import com.example.xcpro.map.ballast.BallastUiState
+import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.replay.SyntheticThermalReplayMode
@@ -29,7 +33,9 @@ import com.example.xcpro.replay.SessionState
 import com.example.xcpro.tasks.TaskFlightSurfaceUiState
 import com.example.xcpro.tasks.TaskFlightSurfaceUseCase
 import com.example.xcpro.tasks.core.TaskType
+import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.variometer.layout.VariometerUiState
+import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
 import com.example.xcpro.weglide.ui.WeGlideUploadPromptUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,20 +46,20 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
     private val profileSessionDependencies: MapScreenProfileSessionDependencies,
-    private val mapWaypointsUseCase: MapWaypointsUseCase,
+    private val waypointLoader: WaypointLoader,
     private val mapAirspaceUseCase: AirspaceUseCase,
     private val mapWaypointFilesUseCase: WaypointFilesUseCase,
     private val sensorsUseCase: MapSensorsUseCase,
-    private val flightDataUseCase: FlightDataUseCase,
+    private val flightDataRepository: FlightDataRepository,
     private val mapUiControllersUseCase: MapUiControllersUseCase,
-    private val windStateUseCase: WindStateUseCase,
+    private val windSensorFusionRepository: WindSensorFusionRepository,
     private val mapReplayUseCase: MapReplayUseCase,
     private val mapTasksUseCase: MapTasksUseCase,
     private val taskFlightSurfaceUseCase: TaskFlightSurfaceUseCase,
-    private val mapFeatureFlagsUseCase: MapFeatureFlagsUseCase,
-    private val mapCardPreferencesUseCase: MapCardPreferencesUseCase,
+    private val featureFlags: MapFeatureFlags,
+    private val cardPreferences: CardPreferences,
     private val calibrateQnhUseCase: CalibrateQnhUseCase,
-    private val mapVarioPreferencesUseCase: MapVarioPreferencesUseCase,
+    private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
     private val hawkVarioUseCase: HawkVarioUseCase,
     private val ognTrafficFacade: OgnTrafficFacade,
     private val adsbTrafficFacade: AdsbTrafficFacade,
@@ -61,7 +67,7 @@ class MapScreenViewModel @Inject constructor(
     private val thermallingModeUseCase: ThermallingModeRuntimeUseCase,
     private val weGlidePromptBridge: MapScreenWeGlidePromptBridge
 ) : ViewModel() {
-    private val initialStyleName = profileSessionDependencies.mapStyleUseCase.initialStyle()
+    private val initialStyleName = profileSessionDependencies.mapStyleRepository.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore; val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
     val baseMapStyleName: StateFlow<String> = mapStateStore.baseMapStyleName
@@ -76,8 +82,10 @@ class MapScreenViewModel @Inject constructor(
     private var latestAllProfileModeVisibilities: Map<String, Map<FlightModeSelection, Boolean>> = emptyMap()
     private var profileModeVisibilitiesHydrated: Boolean = false
     private var activeProfileModeVisibilities: Map<FlightModeSelection, Boolean> = emptyMap()
-    private val featureFlags = mapFeatureFlagsUseCase.featureFlags
-    val cardPreferences = mapCardPreferencesUseCase.cardPreferences
+    private val flightData = flightDataRepository.flightData
+    private val windStateFlow = windSensorFusionRepository.windState
+    private val thermallingSettingsFlow = thermallingModeUseCase.settingsFlow
+    private val varioPreferencesConfig = levoVarioPreferencesRepository.config
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
     internal val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
         flightDataManager = uiControllers.flightDataManager, orientationManager = uiControllers.orientationManager, sensorsUseCase = sensorsUseCase,
@@ -87,9 +95,9 @@ class MapScreenViewModel @Inject constructor(
     private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
     val windArrowState: StateFlow<WindArrowUiState> = createWindArrowState(scope = viewModelScope, flightDataManager = flightDataManager, orientationManager = orientationManager)
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
-    val windState: StateFlow<WindState> = windStateUseCase.windState
-    val showWindSpeedOnVario: StateFlow<Boolean> = mapVarioPreferencesUseCase.showWindSpeedOnVario.eagerState(scope = viewModelScope, initial = true)
-    val showHawkCard: StateFlow<Boolean> = mapVarioPreferencesUseCase.showHawkCard.eagerState(scope = viewModelScope, initial = false)
+    val windState: StateFlow<WindState> = windStateFlow
+    val showWindSpeedOnVario: StateFlow<Boolean> = varioPreferencesConfig.map { it.showWindSpeedOnVario }.eagerState(scope = viewModelScope, initial = true)
+    val showHawkCard: StateFlow<Boolean> = varioPreferencesConfig.map { it.showHawkCard }.eagerState(scope = viewModelScope, initial = false)
     val hawkVarioUiState: StateFlow<HawkVarioUiState> = hawkVarioUseCase.hawkVarioUiState.eagerState(scope = viewModelScope, initial = HawkVarioUiState())
     val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
     val taskFlightSurfaceUiState: StateFlow<TaskFlightSurfaceUiState> = taskFlightSurfaceUseCase.uiState.eagerState(scope = viewModelScope, initial = TaskFlightSurfaceUiState())
@@ -99,13 +107,13 @@ class MapScreenViewModel @Inject constructor(
     private val replaySensorGates: MapReplaySensorGateStates = createReplaySensorGateStates(viewModelScope, replaySessionState)
     val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
     val allowSensorStart: StateFlow<Boolean> = replaySensorGates.allowSensorStart
-    val mapLocation: StateFlow<MapLocationUiModel?> = createMapLocationState(viewModelScope, flightDataUseCase)
+    val mapLocation: StateFlow<MapLocationUiModel?> = createMapLocationState(viewModelScope, flightData)
     private val isFlying: StateFlow<Boolean> = sensorsUseCase.flightStateFlow.map { state -> state.isFlying }
         .eagerState(scope = viewModelScope, initial = false)
-    val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightDataUseCase)
-    val overlayOwnshipAltitudeMeters: StateFlow<Double?> = createOverlayOwnshipAltitudeState(viewModelScope, flightDataUseCase)
-    private val ownshipIsCircling: StateFlow<Boolean> = createOwnshipCirclingState(viewModelScope, flightDataUseCase)
-    private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> = createCirclingFeatureEnabledState(viewModelScope, thermallingModeUseCase)
+    val ownshipAltitudeMeters: StateFlow<Double?> = createOwnshipAltitudeState(viewModelScope, flightData)
+    val overlayOwnshipAltitudeMeters: StateFlow<Double?> = createOverlayOwnshipAltitudeState(viewModelScope, flightData)
+    private val ownshipIsCircling: StateFlow<Boolean> = createOwnshipCirclingState(viewModelScope, flightData)
+    private val circlingFeatureEnabledForAdsb: StateFlow<Boolean> = createCirclingFeatureEnabledState(viewModelScope, thermallingSettingsFlow)
     val ognTargets: StateFlow<List<OgnTrafficTarget>> = ognTrafficFacade.targets
     val ognSnapshot: StateFlow<OgnTrafficSnapshot> = ognTrafficFacade.snapshot
     val ognOverlayEnabled: StateFlow<Boolean> = ognTrafficFacade.overlayEnabled.eagerState(scope = viewModelScope, initial = false)
@@ -123,14 +131,10 @@ class MapScreenViewModel @Inject constructor(
         .eagerState(scope = viewModelScope, initial = emptyList())
     val adsbTargets: StateFlow<List<AdsbTrafficUiModel>> = createMergedAdsbTargetsState(scope = viewModelScope, rawAdsbTargets = rawAdsbTargets, enrichedAdsbTargets = enrichedAdsbTargets)
     val adsbSnapshot: StateFlow<AdsbTrafficSnapshot> = adsbTrafficFacade.snapshot
-    val adsbOverlayEnabled: StateFlow<Boolean> = adsbTrafficFacade.overlayEnabled
-        .eagerState(scope = viewModelScope, initial = false)
-    val adsbIconSizePx: StateFlow<Int> = adsbTrafficFacade.iconSizePx
-        .eagerState(scope = viewModelScope, initial = ADSB_ICON_SIZE_DEFAULT_PX)
-    val adsbEmergencyFlashEnabled: StateFlow<Boolean> = adsbTrafficFacade.emergencyFlashEnabled
-        .eagerState(scope = viewModelScope, initial = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
-    val adsbDefaultMediumUnknownIconEnabled: StateFlow<Boolean> = adsbTrafficFacade.defaultMediumUnknownIconEnabled
-        .eagerState(scope = viewModelScope, initial = ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT)
+    val adsbOverlayEnabled: StateFlow<Boolean> = adsbTrafficFacade.overlayEnabled.eagerState(scope = viewModelScope, initial = false)
+    val adsbIconSizePx: StateFlow<Int> = adsbTrafficFacade.iconSizePx.eagerState(scope = viewModelScope, initial = ADSB_ICON_SIZE_DEFAULT_PX)
+    val adsbEmergencyFlashEnabled: StateFlow<Boolean> = adsbTrafficFacade.emergencyFlashEnabled.eagerState(scope = viewModelScope, initial = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
+    val adsbDefaultMediumUnknownIconEnabled: StateFlow<Boolean> = adsbTrafficFacade.defaultMediumUnknownIconEnabled.eagerState(scope = viewModelScope, initial = ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT)
     val variometerUiState: StateFlow<VariometerUiState> = profileSessionDependencies.variometerLayoutUseCase.state
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -154,8 +158,7 @@ class MapScreenViewModel @Inject constructor(
     val selectedOgnTargetKey: StateFlow<String?> = selectedOgnTarget.map { target -> target?.canonicalKey }.eagerState(scope = viewModelScope, initial = null)
     val selectedOgnThermal: StateFlow<OgnThermalHotspot?> = trafficSelectionState.selectedOgnThermal
     val selectedOgnThermalDetailsVisible: StateFlow<Boolean> = trafficSelectionState.selectedThermalDetailsVisible
-    val selectedOgnThermalContext: StateFlow<SelectedOgnThermalContext?> = ognTrafficFacade.selectedThermalContext(trafficSelectionState.selectedThermalId)
-        .eagerState(scope = viewModelScope, initial = null)
+    val selectedOgnThermalContext: StateFlow<SelectedOgnThermalContext?> = ognTrafficFacade.selectedThermalContext(trafficSelectionState.selectedThermalId).eagerState(scope = viewModelScope, initial = null)
     private val _containerReady = MutableStateFlow(false)
     private val _liveDataReady = MutableStateFlow(false)
     private val _isMapVisible = MutableStateFlow(false)
@@ -163,13 +166,13 @@ class MapScreenViewModel @Inject constructor(
     val cardHydrationReady: StateFlow<Boolean> = createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
     private val syntheticReplayMode = MutableStateFlow(SyntheticThermalReplayMode.NONE)
     private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
-        mapReplayUseCase = mapReplayUseCase, scope = viewModelScope, flightDataFlow = flightDataUseCase.flightData, windStateFlow = windStateUseCase.windState,
+        mapReplayUseCase = mapReplayUseCase, scope = viewModelScope, flightDataFlow = flightData, windStateFlow = windStateFlow,
         flightStateFlow = sensorsUseCase.flightStateFlow, hawkVarioUiStateFlow = hawkVarioUiState, flightDataManager = flightDataManager, mapStateStore = mapStateStore,
         trailSettingsFlow = mapStateStore.trailSettings, syntheticReplayMode = syntheticReplayMode, liveDataReady = _liveDataReady, containerReady = _containerReady,
         uiEffects = _uiEffects, trailUpdates = _trailUpdates
     )
     private val replayCoordinator = createReplayCoordinatorForViewModel(
-        mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightDataUseCase.flightData, featureFlags = runtimeDependencies.featureFlags, mapStateStore = mapStateStore,
+        mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightData, featureFlags = runtimeDependencies.featureFlags, mapStateStore = mapStateStore,
         mapStateActions = mapStateActions, syntheticReplayMode = syntheticReplayMode, uiEffects = _uiEffects, replaySessionState = replaySessionState, scope = viewModelScope
     )
     private val uiEventHandler = MapScreenUiEventHandler(
@@ -178,8 +181,8 @@ class MapScreenViewModel @Inject constructor(
         onRefreshWaypoints = ::loadWaypoints
     )
     private val waypointQnhCoordinator = MapScreenWaypointQnhCoordinator(
-        scope = viewModelScope, uiState = _uiState, uiEffects = _uiEffects, mapWaypointsUseCase = mapWaypointsUseCase,
-        qnhUseCase = profileSessionDependencies.qnhUseCase, calibrateQnhUseCase = calibrateQnhUseCase
+        scope = viewModelScope, uiState = _uiState, uiEffects = _uiEffects, waypointLoader = waypointLoader,
+        qnhRepository = profileSessionDependencies.qnhRepository, calibrateQnhUseCase = calibrateQnhUseCase
     )
     private val profileSessionCoordinator = MapScreenProfileSessionCoordinator(
         scope = viewModelScope,
@@ -216,7 +219,7 @@ class MapScreenViewModel @Inject constructor(
     private val taskShellCoordinator = MapScreenTaskShellCoordinator(scope = viewModelScope, mapTasksUseCase = mapTasksUseCase)
     val isAATEditMode: StateFlow<Boolean> = taskShellCoordinator.isAATEditMode
     val taskType: StateFlow<TaskType> = taskShellCoordinator.taskType
-    private val unitsState = profileSessionDependencies.unitsUseCase.unitsFlow
+    private val unitsState = profileSessionDependencies.unitsRepository.unitsFlow
         .inVm(scope = viewModelScope, initial = UnitsPreferences())
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
     val trailSettings: StateFlow<TrailSettings> = mapStateStore.trailSettings
@@ -228,9 +231,9 @@ class MapScreenViewModel @Inject constructor(
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
         startMapScreenViewModelLifecycle(
             scope = viewModelScope, unitsState = unitsState, uiState = _uiState, flightDataManager = flightDataManager,
-            gliderConfigUseCase = profileSessionDependencies.gliderConfigUseCase, qnhUseCase = profileSessionDependencies.qnhUseCase,
-            trailSettingsUseCase = profileSessionDependencies.trailSettingsUseCase, mapStateStore = mapStateStore, trafficCoordinator = trafficCoordinator,
-            thermallingModeUseCase = thermallingModeUseCase, flightDataUseCase = flightDataUseCase, replaySessionState = replaySessionState,
+            gliderConfigFlow = profileSessionDependencies.gliderConfigRepository.config, qnhCalibrationState = profileSessionDependencies.qnhRepository.calibrationState,
+            trailSettingsFlow = profileSessionDependencies.trailSettingsUseCase.settingsFlow, mapStateStore = mapStateStore, trafficCoordinator = trafficCoordinator,
+            thermallingController = thermallingModeUseCase, thermallingSettingsFlow = thermallingSettingsFlow, flightData = flightData, replaySessionState = replaySessionState,
             mapStateActions = mapStateActions, visibleModes = visibleFlightModes, applyRuntimeFlightMode = ::applyRuntimeFlightMode,
             clearRuntimeFlightModeOverride = ::clearRuntimeFlightModeOverride, applyContrastMap = ::setThermallingContrastOverrideEnabled,
             flightDataUiAdapter = flightDataUiAdapter, replayCoordinator = replayCoordinator, weGlidePromptBridge = weGlidePromptBridge,

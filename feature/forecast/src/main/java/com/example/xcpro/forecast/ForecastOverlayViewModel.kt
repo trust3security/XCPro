@@ -14,22 +14,10 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class ForecastOverlayViewModel @Inject constructor(
     observeForecastOverlayStateUseCase: ObserveForecastOverlayStateUseCase,
-    private val setForecastEnabledUseCase: SetForecastEnabledUseCase,
-    private val toggleSkySightPrimaryOverlaySelectionUseCase: ToggleSkySightPrimaryOverlaySelectionUseCase,
-    private val setForecastWindOverlayEnabledUseCase: SetForecastWindOverlayEnabledUseCase,
+    private val preferencesRepository: ForecastPreferencesRepository,
+    private val selectForecastPrimaryParameterUseCase: SelectForecastPrimaryParameterUseCase,
     private val selectForecastWindParameterUseCase: SelectForecastWindParameterUseCase,
-    private val setForecastAutoTimeEnabledUseCase: SetForecastAutoTimeEnabledUseCase,
-    private val setForecastFollowTimeOffsetUseCase: SetForecastFollowTimeOffsetUseCase,
     private val setForecastTimeUseCase: SetForecastTimeUseCase,
-    private val setForecastOpacityUseCase: SetForecastOpacityUseCase,
-    private val setForecastWindOverlayScaleUseCase: SetForecastWindOverlayScaleUseCase,
-    private val setForecastWindDisplayModeUseCase: SetForecastWindDisplayModeUseCase,
-    private val setSkySightSatelliteOverlayEnabledUseCase: SetSkySightSatelliteOverlayEnabledUseCase,
-    private val setSkySightSatelliteImageryEnabledUseCase: SetSkySightSatelliteImageryEnabledUseCase,
-    private val setSkySightSatelliteRadarEnabledUseCase: SetSkySightSatelliteRadarEnabledUseCase,
-    private val setSkySightSatelliteLightningEnabledUseCase: SetSkySightSatelliteLightningEnabledUseCase,
-    private val setSkySightSatelliteAnimateEnabledUseCase: SetSkySightSatelliteAnimateEnabledUseCase,
-    private val setSkySightSatelliteHistoryFramesUseCase: SetSkySightSatelliteHistoryFramesUseCase,
     private val queryForecastValueAtPointUseCase: QueryForecastValueAtPointUseCase
 ) : ViewModel() {
 
@@ -48,19 +36,19 @@ class ForecastOverlayViewModel @Inject constructor(
 
     fun setEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setForecastEnabledUseCase(enabled)
+            preferencesRepository.setOverlayEnabled(enabled)
         }
     }
 
     fun selectSkySightPrimaryParameter(parameterId: ForecastParameterId) {
         viewModelScope.launch {
-            toggleSkySightPrimaryOverlaySelectionUseCase(parameterId)
+            selectForecastPrimaryParameterUseCase(parameterId)
         }
     }
 
     fun setWindOverlayEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setForecastWindOverlayEnabledUseCase(enabled)
+            preferencesRepository.setWindOverlayEnabled(enabled)
         }
     }
 
@@ -78,73 +66,73 @@ class ForecastOverlayViewModel @Inject constructor(
 
     fun setAutoTimeEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setForecastAutoTimeEnabledUseCase(enabled)
+            preferencesRepository.setAutoTimeEnabled(enabled)
         }
     }
 
     fun setFollowTimeOffsetMinutes(offsetMinutes: Int) {
         viewModelScope.launch {
-            setForecastFollowTimeOffsetUseCase(offsetMinutes)
+            preferencesRepository.setFollowTimeOffsetMinutes(offsetMinutes)
         }
     }
 
     fun jumpToNow() {
         viewModelScope.launch {
-            setForecastAutoTimeEnabledUseCase(true)
+            preferencesRepository.setAutoTimeEnabled(true)
         }
     }
 
     fun setOpacity(opacity: Float) {
         viewModelScope.launch {
-            setForecastOpacityUseCase(opacity)
+            preferencesRepository.setOpacity(opacity)
         }
     }
 
     fun setWindOverlayScale(scale: Float) {
         viewModelScope.launch {
-            setForecastWindOverlayScaleUseCase(scale)
+            preferencesRepository.setWindOverlayScale(scale)
         }
     }
 
     fun setWindDisplayMode(mode: ForecastWindDisplayMode) {
         viewModelScope.launch {
-            setForecastWindDisplayModeUseCase(mode)
+            preferencesRepository.setWindDisplayMode(mode)
         }
     }
 
     fun setSkySightSatelliteOverlayEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setSkySightSatelliteOverlayEnabledUseCase(enabled)
+            preferencesRepository.setSkySightSatelliteOverlayEnabled(enabled)
         }
     }
 
     fun setSkySightSatelliteImageryEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setSkySightSatelliteImageryEnabledUseCase(enabled)
+            preferencesRepository.setSkySightSatelliteImageryEnabled(enabled)
         }
     }
 
     fun setSkySightSatelliteRadarEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setSkySightSatelliteRadarEnabledUseCase(enabled)
+            preferencesRepository.setSkySightSatelliteRadarEnabled(enabled)
         }
     }
 
     fun setSkySightSatelliteLightningEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setSkySightSatelliteLightningEnabledUseCase(enabled)
+            preferencesRepository.setSkySightSatelliteLightningEnabled(enabled)
         }
     }
 
     fun setSkySightSatelliteAnimateEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            setSkySightSatelliteAnimateEnabledUseCase(enabled)
+            preferencesRepository.setSkySightSatelliteAnimateEnabled(enabled)
         }
     }
 
     fun setSkySightSatelliteHistoryFrames(frameCount: Int) {
         viewModelScope.launch {
-            setSkySightSatelliteHistoryFramesUseCase(frameCount)
+            preferencesRepository.setSkySightSatelliteHistoryFrames(frameCount)
         }
     }
 

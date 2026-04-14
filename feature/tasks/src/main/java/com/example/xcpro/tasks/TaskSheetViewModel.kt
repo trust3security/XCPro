@@ -6,11 +6,8 @@ import com.example.xcpro.common.waypoint.SearchWaypoint
 import com.example.xcpro.tasks.aat.models.AATFinishPointType
 import com.example.xcpro.tasks.aat.models.AATStartPointType
 import com.example.xcpro.tasks.aat.models.AATTurnPointType
-import com.example.xcpro.tasks.core.PersistedOzParams
-import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.TaskType
-import com.example.xcpro.tasks.domain.model.TaskTargetSnapshot
 import com.example.xcpro.tasks.racing.models.RacingFinishPointType
 import com.example.xcpro.tasks.racing.models.RacingStartPointType
 import com.example.xcpro.tasks.racing.models.RacingTurnPointType
@@ -37,8 +34,9 @@ data class RacingStartDistanceUi(
 
 @HiltViewModel
 class TaskSheetViewModel @Inject constructor(
-    private val taskCoordinator: TaskSheetCoordinatorUseCase,
-    private val useCase: TaskSheetUseCase
+    private val useCase: TaskSheetUseCase,
+    private val taskManager: TaskManagerCoordinator,
+    private val persistedTaskImporter: TaskSheetPersistedTaskImporter
 ) : ViewModel() {
 
     val uiState: StateFlow<TaskUiState> = useCase.state
@@ -47,11 +45,11 @@ class TaskSheetViewModel @Inject constructor(
     private var lastObservedActiveLeg: Int? = null
 
     init {
-        taskCoordinator.setProximityHandler { entered, close ->
+        taskManager.setProximityHandler { entered, close ->
             onProximityEvent(entered, close)
         }
         viewModelScope.launch {
-            taskCoordinator.snapshotFlow.collect { snapshot ->
+            useCase.snapshotFlow.collect { snapshot ->
                 if (snapshot.taskType == TaskType.AAT &&
                     lastObservedActiveLeg != null &&
                     lastObservedActiveLeg != snapshot.activeLeg) {
@@ -64,45 +62,45 @@ class TaskSheetViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        taskCoordinator.clearProximityHandler()
+        taskManager.clearProximityHandler()
         super.onCleared()
     }
 
     fun onAddWaypoint(wp: SearchWaypoint) = mutate {
-        taskCoordinator.addWaypoint(wp)
+        taskManager.addWaypoint(wp)
         emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
     }
 
     fun onRemoveWaypoint(index: Int) = mutate {
-        taskCoordinator.removeWaypoint(index)
+        taskManager.removeWaypoint(index)
     }
 
     fun onReorderWaypoint(from: Int, to: Int) = mutate {
-        taskCoordinator.reorderWaypoints(from, to)
+        taskManager.reorderWaypoints(from, to)
     }
 
     fun onReplaceWaypoint(index: Int, wp: SearchWaypoint) = mutate {
-        taskCoordinator.replaceWaypoint(index, wp)
+        taskManager.replaceWaypoint(index, wp)
     }
 
     fun onSetTargetParam(index: Int, param: Double) {
-        taskCoordinator.setAATTargetParam(index, param)
+        taskManager.setAATTargetParam(index, param)
     }
 
     fun onToggleTargetLock(index: Int) {
-        taskCoordinator.toggleAATTargetLock(index)
+        taskManager.toggleAATTargetLock(index)
     }
 
     fun onAdvanceMode(mode: TaskAdvanceUiSnapshot.Mode) {
         when (uiState.value.taskType) {
-            TaskType.RACING -> taskCoordinator.setRacingAdvanceMode(mode.toRacingAdvanceMode())
+            TaskType.RACING -> taskManager.setRacingAdvanceMode(mode.toRacingAdvanceMode())
             TaskType.AAT -> useCase.setAdvanceMode(mode.toTaskAdvanceMode())
         }
     }
 
     fun onAdvanceArmToggle() {
         when (uiState.value.taskType) {
-            TaskType.RACING -> taskCoordinator.toggleRacingAdvanceArm()
+            TaskType.RACING -> taskManager.toggleRacingAdvanceArmed()
             TaskType.AAT -> useCase.toggleAdvanceArm()
         }
     }
@@ -110,7 +108,7 @@ class TaskSheetViewModel @Inject constructor(
     fun onProximityEvent(hasEnteredOZ: Boolean, closeToTarget: Boolean) = mutate {
         if (uiState.value.taskType == TaskType.RACING) return@mutate
         if (useCase.shouldAutoAdvance(hasEnteredOZ, closeToTarget)) {
-            taskCoordinator.advanceToNextLeg()
+            taskManager.advanceToNextLeg()
         }
     }
 
@@ -159,7 +157,7 @@ class TaskSheetViewModel @Inject constructor(
         nextWaypoint: TaskWaypoint
     ): RacingStartDistanceUi {
         val useOptimalCrossing = selectedStartType == RacingStartPointType.START_LINE
-        val distanceMeters = taskCoordinator.calculateDistanceToNextWaypointMeters(
+        val distanceMeters = useCase.calculateDistanceToNextWaypointMeters(
             fromWaypoint = startWaypoint,
             nextWaypoint = nextWaypoint,
             useOptimalStartLine = useOptimalCrossing
@@ -174,7 +172,7 @@ class TaskSheetViewModel @Inject constructor(
         fromWaypoint: TaskWaypoint,
         nextWaypoint: TaskWaypoint
     ): Double {
-        return taskCoordinator.calculateDistanceToNextWaypointMeters(
+        return useCase.calculateDistanceToNextWaypointMeters(
             fromWaypoint = fromWaypoint,
             nextWaypoint = nextWaypoint,
             useOptimalStartLine = false
@@ -184,19 +182,18 @@ class TaskSheetViewModel @Inject constructor(
     fun onSetActiveLeg(index: Int) = mutate {
         val waypoints = uiState.value.task.waypoints
         if (waypoints.isEmpty()) return@mutate
-        taskCoordinator.setActiveLeg(index.coerceIn(0, waypoints.lastIndex))
+        taskManager.setActiveLeg(index.coerceIn(0, waypoints.lastIndex))
     }
 
     fun onUpdateAATParameters(minimumTime: Duration, maximumTime: Duration) = mutate {
-        taskCoordinator.updateAATParameters(minimumTime, maximumTime)
+        taskManager.updateAATParameters(minimumTime, maximumTime)
     }
 
     fun importPersistedTask(json: String) = tryImportPersistedTask(json)
 
     fun tryImportPersistedTask(json: String): Boolean {
-        val persisted = runCatching { TaskPersistSerializer.deserialize(json) }.getOrNull() ?: return false
         val imported = runCatching {
-            mutate { applyPersistedTask(persisted) }
+            mutate { persistedTaskImporter.import(json, taskManager) }
         }.isSuccess
         if (imported) {
             emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
@@ -205,23 +202,9 @@ class TaskSheetViewModel @Inject constructor(
     }
 
     fun loadTask(taskName: String) = viewModelScope.launch {
-        if (taskCoordinator.loadTask(taskName)) {
+        if (taskManager.loadTask(taskName)) {
             emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
         }
-    }
-
-    private fun applyPersistedTask(persisted: TaskPersistSerializer.PersistedTask) {
-        val (importedTask, targets) = TaskPersistSerializer.toTask(persisted)
-        taskCoordinator.setTaskType(persisted.taskType)
-        taskCoordinator.clearTask()
-        importWaypoints(importedTask)
-        applyImportedTargets(taskType = persisted.taskType, targets = targets)
-        applyImportedObservationZones(
-            persisted = persisted,
-            taskType = persisted.taskType,
-            importedTask = importedTask
-        )
-        taskCoordinator.setActiveLeg(0)
     }
 
     fun onUpdateWaypointPointType(
@@ -234,20 +217,22 @@ class TaskSheetViewModel @Inject constructor(
         keyholeAngle: Double?,
         faiQuadrantOuterRadiusMeters: Double?
     ) = mutate {
-        taskCoordinator.updateWaypointPointType(
-            index = index,
-            startType = startType,
-            finishType = finishType,
-            turnType = turnType,
-            gateWidthMeters = gateWidthMeters,
-            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-            keyholeAngle = keyholeAngle,
-            faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
+        taskManager.updateWaypointPointType(
+            RacingWaypointTypeUpdate(
+                index = index,
+                startType = startType,
+                finishType = finishType,
+                turnType = turnType,
+                gateWidthMeters = gateWidthMeters,
+                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
+                keyholeAngle = keyholeAngle,
+                faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
+            )
         )
     }
 
     fun onUpdateAATArea(index: Int, radiusMeters: Double) = mutate {
-        taskCoordinator.updateAATArea(index, radiusMeters)
+        taskManager.updateAATArea(index, radiusMeters)
     }
 
     fun onUpdateAATWaypointPointTypeMeters(
@@ -260,110 +245,27 @@ class TaskSheetViewModel @Inject constructor(
         keyholeAngle: Double?,
         sectorOuterRadiusMeters: Double?
     ) = mutate {
-        taskCoordinator.updateAATWaypointPointTypeMeters(
-            index = index,
-            startType = startType,
-            finishType = finishType,
-            turnType = turnType,
-            gateWidthMeters = gateWidthMeters,
-            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-            keyholeAngle = keyholeAngle,
-            sectorOuterRadiusMeters = sectorOuterRadiusMeters
+        taskManager.updateAATWaypointPointType(
+            AATWaypointTypeUpdate(
+                index = index,
+                startType = startType,
+                finishType = finishType,
+                turnType = turnType,
+                gateWidthMeters = gateWidthMeters,
+                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
+                keyholeAngle = keyholeAngle,
+                sectorOuterRadiusMeters = sectorOuterRadiusMeters
+            )
         )
     }
 
-    fun onSetTaskType(taskType: TaskType) = mutate { taskCoordinator.setTaskType(taskType) }
-    fun onUpdateRacingStartRules(command: UpdateRacingStartRulesCommand) = mutate { taskCoordinator.updateRacingStartRules(command) }
-    fun onUpdateRacingFinishRules(command: UpdateRacingFinishRulesCommand) = mutate { taskCoordinator.updateRacingFinishRules(command) }
-    fun onUpdateRacingValidationRules(command: UpdateRacingValidationRulesCommand) = mutate { taskCoordinator.updateRacingValidationRules(command) }
-    fun onClearTask() = mutate { taskCoordinator.clearTask() }
+    fun onSetTaskType(taskType: TaskType) = mutate { taskManager.setTaskType(taskType) }
+    fun onUpdateRacingStartRules(command: UpdateRacingStartRulesCommand) = mutate { taskManager.updateRacingStartRules(command) }
+    fun onUpdateRacingFinishRules(command: UpdateRacingFinishRulesCommand) = mutate { taskManager.updateRacingFinishRules(command) }
+    fun onUpdateRacingValidationRules(command: UpdateRacingValidationRulesCommand) = mutate { taskManager.updateRacingValidationRules(command) }
+    fun onClearTask() = mutate { taskManager.clearTask() }
 
     private fun mutate(block: () -> Unit) = block()
 
     private fun emitViewportEffect(effect: TaskSheetViewportEffect) { _viewportEffects.tryEmit(effect) }
-
-    private fun importWaypoints(importedTask: Task) {
-        importedTask.waypoints.forEach { waypoint ->
-            taskCoordinator.addWaypoint(
-                SearchWaypoint(
-                    id = waypoint.id,
-                    title = waypoint.title,
-                    subtitle = waypoint.subtitle,
-                    lat = waypoint.lat,
-                    lon = waypoint.lon
-                )
-            )
-        }
-    }
-
-    private fun applyImportedTargets(taskType: TaskType, targets: List<TaskTargetSnapshot>) {
-        if (taskType != TaskType.AAT) return
-        targets.forEach { targetSnapshot ->
-            taskCoordinator.applyAATTargetState(
-                index = targetSnapshot.index,
-                targetParam = targetSnapshot.targetParam,
-                targetLocked = targetSnapshot.isLocked,
-                targetLat = targetSnapshot.target?.lat,
-                targetLon = targetSnapshot.target?.lon
-            )
-        }
-    }
-
-    private fun applyImportedObservationZones(
-        persisted: TaskPersistSerializer.PersistedTask,
-        taskType: TaskType,
-        importedTask: Task
-    ) {
-        persisted.waypoints.forEachIndexed { index, waypoint ->
-            val ozParams = PersistedOzParams.from(waypoint.ozParams)
-            val radiusMeters = ozParams.effectiveRadiusMeters()
-            if (taskType == TaskType.AAT) {
-                applyAatObservationZone(index, ozParams, radiusMeters)
-            }
-            if (taskType == TaskType.RACING) {
-                applyRacingObservationZone(index, radiusMeters, importedTask)
-            }
-        }
-    }
-
-    private fun applyAatObservationZone(
-        index: Int,
-        ozParams: PersistedOzParams,
-        radiusMeters: Double?
-    ) {
-        if (radiusMeters != null) {
-            taskCoordinator.updateAATArea(index, radiusMeters)
-        }
-        taskCoordinator.updateAATWaypointPointTypeMeters(
-            index = index,
-            startType = null,
-            finishType = null,
-            turnType = null,
-            gateWidthMeters = radiusMeters,
-            keyholeInnerRadiusMeters = ozParams.innerRadiusMeters,
-            keyholeAngle = ozParams.angleDeg,
-            sectorOuterRadiusMeters = ozParams.outerRadiusMeters
-        )
-    }
-
-    private fun applyRacingObservationZone(
-        index: Int,
-        radiusMeters: Double?,
-        importedTask: Task
-    ) {
-        if (radiusMeters == null) return
-        if (index <= 0 || index >= importedTask.waypoints.lastIndex) return
-        // Best-effort import for racing turnpoint cylinder radius.
-        taskCoordinator.updateWaypointPointType(
-            index = index,
-            startType = null,
-            finishType = null,
-            turnType = null,
-            gateWidthMeters = radiusMeters,
-            keyholeInnerRadiusMeters = null,
-            keyholeAngle = null,
-            faiQuadrantOuterRadiusMeters = null
-        )
-    }
-
 }

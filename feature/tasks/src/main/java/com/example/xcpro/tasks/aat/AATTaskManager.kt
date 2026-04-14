@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.aat
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.AATWaypointTypeUpdate
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.aat.models.AATWaypoint
 import com.example.xcpro.tasks.aat.models.AATAssignedArea
@@ -153,34 +154,19 @@ class AATTaskManager {
         )
     }
 
-    fun updateAATWaypointPointTypeMeters(
-        index: Int,
-        startType: com.example.xcpro.tasks.aat.models.AATStartPointType?,
-        finishType: com.example.xcpro.tasks.aat.models.AATFinishPointType?,
-        turnType: com.example.xcpro.tasks.aat.models.AATTurnPointType?,
-        gateWidthMeters: Double?,
-        keyholeInnerRadiusMeters: Double?,
-        keyholeAngle: Double?,
-        sectorOuterRadiusMeters: Double?
-    ) {
+    fun updateAATWaypointPointTypeMeters(update: AATWaypointTypeUpdate) {
         val currentWaypoints = _currentAATTask.waypoints.toMutableList()
-        if (index in currentWaypoints.indices) {
-            val currentWaypoint = currentWaypoints[index]
+        if (update.index in currentWaypoints.indices) {
+            val currentWaypoint = currentWaypoints[update.index]
 
             val updatedWaypoint = pointTypeConfigurator.updateWaypointPointType(
                 waypoint = currentWaypoint,
                 allWaypoints = currentWaypoints,
-                waypointIndex = index,
-                startType = startType,
-                finishType = finishType,
-                turnType = turnType,
-                gateWidthMeters = gateWidthMeters,
-                keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
-                keyholeAngle = keyholeAngle,
-                sectorOuterRadiusMeters = sectorOuterRadiusMeters
+                waypointIndex = update.index,
+                update = update
             )
 
-            currentWaypoints[index] = updatedWaypoint
+            currentWaypoints[update.index] = updatedWaypoint
             _currentAATTask = _currentAATTask.copy(waypoints = currentWaypoints)
         }
     }

@@ -15,7 +15,7 @@ internal class MapScreenProfileSessionCoordinator(
 
     fun persistMapStyle(styleName: String) {
         scope.launch {
-            dependencies.mapStyleUseCase.saveStyle(styleName)
+            dependencies.mapStyleRepository.saveStyle(styleName)
         }
     }
 
@@ -23,21 +23,21 @@ internal class MapScreenProfileSessionCoordinator(
         val resolved = profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
         if (activeProfileId == resolved) return
         activeProfileId = resolved
-        dependencies.mapStyleUseCase.setActiveProfileId(resolved)
-        val profileStyle = dependencies.mapStyleUseCase.readProfileStyle(resolved)
+        dependencies.mapStyleRepository.setActiveProfileId(resolved)
+        val profileStyle = dependencies.mapStyleRepository.readProfileStyle(resolved)
         val styleMutation = mapStateStore.setBaseMapStyle(profileStyle)
         if (styleMutation.effectiveStyleChanged) {
             emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value))
         }
-        dependencies.unitsUseCase.setActiveProfileId(resolved)
-        dependencies.orientationSettingsUseCase.setActiveProfileId(resolved)
-        dependencies.gliderConfigUseCase.setActiveProfileId(resolved)
+        dependencies.unitsRepository.setActiveProfileId(resolved)
+        dependencies.orientationSettingsRepository.setActiveProfileId(resolved)
+        dependencies.gliderConfigRepository.setActiveProfileId(resolved)
         dependencies.variometerLayoutUseCase.setActiveProfileId(resolved)
         dependencies.trailSettingsUseCase.setActiveProfileId(resolved)
         mapStateStore.setTrailSettings(dependencies.trailSettingsUseCase.getSettings())
         qnhProfileSwitchJob?.cancel()
         qnhProfileSwitchJob = scope.launch {
-            dependencies.qnhUseCase.setActiveProfileId(resolved)
+            dependencies.qnhRepository.setActiveProfileId(resolved)
         }
     }
 

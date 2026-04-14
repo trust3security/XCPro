@@ -132,10 +132,9 @@ class MapScreenViewModelStateBuildersTest {
     @Test
     fun createOverlayOwnshipAltitudeState_quantizesAndDedupesWithinBucket() = runTest {
         val repository = FlightDataRepository()
-        val useCase = FlightDataUseCase(repository)
         val overlayAltitudeState = createOverlayOwnshipAltitudeState(
             scope = backgroundScope,
-            flightDataUseCase = useCase
+            flightData = repository.flightData
         )
         runCurrent()
 
@@ -155,10 +154,9 @@ class MapScreenViewModelStateBuildersTest {
     @Test
     fun createOverlayOwnshipAltitudeState_fallsBackToBaroAndHandlesNull() = runTest {
         val repository = FlightDataRepository()
-        val useCase = FlightDataUseCase(repository)
         val overlayAltitudeState = createOverlayOwnshipAltitudeState(
             scope = backgroundScope,
-            flightDataUseCase = useCase
+            flightData = repository.flightData
         )
         runCurrent()
 

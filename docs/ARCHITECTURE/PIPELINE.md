@@ -80,7 +80,7 @@ Sensors
        -> `livefollow/watch/{sessionId}` route validation + join
        -> handoff to `map`
        -> MapLiveFollowRuntimeLayer (render-only watched glider + watched task overlay)
-  -> FlightDataUseCase
+  -> FlightDataRepository.flightData
   -> MapScreenViewModel
      -> FlightDataUiAdapter (MapScreenObservers)
         + GlideComputationRepository.glide
@@ -425,14 +425,20 @@ Rules:
 
 ## 4) Use Case -> ViewModel
 
-Use case:
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `FlightDataUseCase` exposes `FlightDataRepository.flightData`.
-  - `MapReplayUseCase` now injects `GlideComputationRepository`.
-  - It passes `glideComputationRepository.glide` into `FlightDataUiAdapter`.
+Use case / owner seam:
+- `feature/map/src/main/java/com/example/xcpro/map/MapReplayUseCase.kt`
+  - injects `GlideComputationRepository`.
+  - passes `glideComputationRepository.glide` into `FlightDataUiAdapter`.
+- `feature/map/src/main/java/com/example/xcpro/map/ThermallingModeRuntimeUseCase.kt`
+  - owns the thermalling runtime controller + settings seam consumed by `MapScreenViewModel`.
+- `feature/map/src/main/java/com/example/xcpro/map/MapUiControllersUseCase.kt`
+  - creates the scoped UI controllers (`FlightDataManager`, `MapOrientationManager`, `BallastController`).
+- `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionDependencies.kt`
+  - groups the profile/session-scoped owners consumed together by `MapScreenViewModel`.
 
 ViewModel:
 - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - reads `FlightDataRepository.flightData` directly for map location and ownship state derivations.
   - `mapLocation` = `flightData.gps` (SSOT for map location).
   - Instantiates `FlightDataUiAdapter` (wraps `MapScreenObservers`) for data fan-out.
   - Binds live thermalling runtime automation through
