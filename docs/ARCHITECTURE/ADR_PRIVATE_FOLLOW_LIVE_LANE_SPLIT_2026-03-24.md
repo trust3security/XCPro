@@ -17,6 +17,9 @@
 
 ## Context
 
+Current note:
+- Current repo-wide ViewModel seam policy is defined in `docs/ARCHITECTURE/ARCHITECTURE.md` and `docs/ARCHITECTURE/CODING_RULES.md`.
+
 - Problem:
   - XCPro Phase 1 and Phase 2 introduced signed-in identity, privacy defaults, and follow relationships, but the live-session lane still behaves as an anonymous public session model.
   - Making the existing v1 public lane auth-only would break the preserved public watch/share-code workflow.
@@ -43,7 +46,7 @@ Required:
   - app `LiveFollowSessionRepository` remains the session SSOT and consumes a transport seam that can start/read via either v1 or v2 as appropriate
   - public browse remains a separate owner from signed-in following-live browse
 - dependency direction impact:
-  - UI still talks to ViewModels/use-cases only
+  - UI still talks to ViewModels; this ADR does not move endpoint/lane selection into UI code
   - endpoint/lane selection stays in data-layer transport owners, not in UI code
 - API/module surface impact:
   - new authenticated APIs:

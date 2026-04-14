@@ -36,6 +36,15 @@ The following checks must fail the build when violated:
 - DI: core pipeline components must be injected, not constructed inside managers.
 - ViewModel purity: no SharedPreferences and no androidx.compose.ui.* types in ViewModels.
 - ViewModel boundaries: no business geospatial math/policy (distance/radius/zone-entry logic) in ViewModels.
+- ViewModel constructor guardrail: in production sources under `src/main`, any class declaration whose name ends with `ViewModel` must not directly receive constructor-injected dependencies typed as:
+  - `*Dependencies`
+  - `*CoordinatorDependencies`
+  - `*Services`
+  - `*ManagerBag`
+  - `*Deps`
+  - `TaskManagerCoordinator`
+  - This is class-based, not file-name-based; it still covers `TaskManagerCoordinatorHostViewModel` even though it lives in `TaskManagerCompat.kt`.
+  - This guardrail does not encode a use-cases-only rule and does not ban types by `Repository` or `UseCase` naming alone.
 - Compose lifecycle: use collectAsStateWithLifecycle for UI state collection.
 - Task UDF boundaries: no direct TaskManagerCoordinator mutation/query calls from Composables.
 - Task sync-read seam: cross-feature production task reads must use `TaskManagerCoordinator.taskSnapshotFlow` or `TaskManagerCoordinator.currentSnapshot()`; direct `currentTask`/`currentLeg`/`currentRacingTask`/`currentAATTask` reads outside `feature:tasks` are forbidden.

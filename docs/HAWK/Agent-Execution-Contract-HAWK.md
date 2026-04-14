@@ -7,9 +7,9 @@ pipeline in XCPro.
 Diagram: docs/HAWK/HAWKAGENT_PLAN.svg
 
 References (read before coding):
-- docs/RULES/ARCHITECTURE.md
-- docs/RULES/CODING_RULES.md
-- docs/RULES/PIPELINE.md
+- docs/ARCHITECTURE/ARCHITECTURE.md
+- docs/ARCHITECTURE/CODING_RULES.md
+- docs/ARCHITECTURE/PIPELINE.md
 
 
 Single Plan Rule:
@@ -65,7 +65,7 @@ Work is complete only when:
   SystemClock in domain or fusion.
 - Live fusion uses monotonic time.
 - Repositories are SSOT owners; services are lifecycle hosts only.
-- ViewModels depend on use-cases only; no Android or persistence in ViewModels.
+- ViewModels follow the stable domain-facing seam policy in `docs/ARCHITECTURE/ARCHITECTURE.md`; no Android or persistence in ViewModels.
 - UI renders state only and collects flows with lifecycle-aware APIs.
 - Production Kotlin must be ASCII only. No vendor names in production strings.
 - No literal "xcsoar" in production Kotlin source.

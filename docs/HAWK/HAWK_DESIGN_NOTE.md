@@ -79,7 +79,7 @@ Output smoothing:
 ## 7) Integration constraints
 
 - HAWK runs under VarioServiceManager (foreground service lifecycle).
-- HAWK has its own repository as SSOT. UI and ViewModel depend on use-cases only.
+- HAWK has its own repository as SSOT. HAWK ViewModels follow the stable domain-facing seam policy in `docs/ARCHITECTURE/ARCHITECTURE.md`.
 - No direct UI access to repositories or sensors.
 - No changes to TE by default.
 
