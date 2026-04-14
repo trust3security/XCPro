@@ -5,12 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.MapOrientationManager
+import com.example.xcpro.MapOrientationSettingsRepository
 import com.example.xcpro.common.flight.FlightMode
 import com.example.xcpro.common.flow.inVm
+import com.example.xcpro.common.glider.GliderConfigRepository
 import com.example.xcpro.common.waypoint.WaypointLoader
 import com.example.xcpro.core.common.geometry.OffsetPx
 import com.example.xcpro.common.units.AltitudeUnit
 import com.example.xcpro.common.units.UnitsPreferences
+import com.example.xcpro.common.units.UnitsRepository
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.FlightDataRepository
 import com.example.xcpro.flightdata.WaypointFilesUseCase
@@ -24,16 +27,19 @@ import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.map.model.GpsStatusUiModel
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.replay.SyntheticThermalReplayMode
+import com.example.xcpro.map.trail.MapTrailSettingsUseCase
 import com.example.xcpro.map.trail.TrailSettings
 import com.example.xcpro.map.trail.domain.TrailUpdateResult
 import com.example.xcpro.profiles.ProfileIdResolver
 import com.example.xcpro.qnh.CalibrateQnhUseCase
+import com.example.xcpro.qnh.QnhRepository
 import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.tasks.TaskFlightSurfaceUiState
 import com.example.xcpro.tasks.TaskFlightSurfaceUseCase
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
+import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
 import com.example.xcpro.variometer.layout.VariometerUiState
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.weather.wind.model.WindState
@@ -45,7 +51,10 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
-    private val profileSessionDependencies: MapScreenProfileSessionDependencies,
+    private val mapStyleRepository: MapStyleRepository, private val unitsRepository: UnitsRepository,
+    private val orientationSettingsRepository: MapOrientationSettingsRepository, private val gliderConfigRepository: GliderConfigRepository,
+    private val variometerLayoutUseCase: VariometerLayoutUseCase, private val trailSettingsUseCase: MapTrailSettingsUseCase,
+    private val qnhRepository: QnhRepository,
     private val waypointLoader: WaypointLoader,
     private val mapAirspaceUseCase: AirspaceUseCase,
     private val mapWaypointFilesUseCase: WaypointFilesUseCase,
@@ -67,7 +76,7 @@ class MapScreenViewModel @Inject constructor(
     private val thermallingModeUseCase: ThermallingModeRuntimeUseCase,
     private val weGlidePromptBridge: MapScreenWeGlidePromptBridge
 ) : ViewModel() {
-    private val initialStyleName = profileSessionDependencies.mapStyleRepository.initialStyle()
+    private val initialStyleName = mapStyleRepository.initialStyle()
     private val mapStateStore: MapStateStore = MapStateStore(initialStyleName)
     val mapState: MapStateReader = mapStateStore; val mapStateActions: MapStateActions = MapStateActionsDelegate(mapStateStore)
     val baseMapStyleName: StateFlow<String> = mapStateStore.baseMapStyleName
@@ -135,7 +144,7 @@ class MapScreenViewModel @Inject constructor(
     val adsbIconSizePx: StateFlow<Int> = adsbTrafficFacade.iconSizePx.eagerState(scope = viewModelScope, initial = ADSB_ICON_SIZE_DEFAULT_PX)
     val adsbEmergencyFlashEnabled: StateFlow<Boolean> = adsbTrafficFacade.emergencyFlashEnabled.eagerState(scope = viewModelScope, initial = ADSB_EMERGENCY_FLASH_ENABLED_DEFAULT)
     val adsbDefaultMediumUnknownIconEnabled: StateFlow<Boolean> = adsbTrafficFacade.defaultMediumUnknownIconEnabled.eagerState(scope = viewModelScope, initial = ADSB_DEFAULT_MEDIUM_UNKNOWN_ICON_ENABLED_DEFAULT)
-    val variometerUiState: StateFlow<VariometerUiState> = profileSessionDependencies.variometerLayoutUseCase.state
+    val variometerUiState: StateFlow<VariometerUiState> = variometerLayoutUseCase.state
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     private val _weGlideUploadPrompt = MutableStateFlow<WeGlideUploadPromptUiState?>(null)
@@ -180,15 +189,12 @@ class MapScreenViewModel @Inject constructor(
         uiEffects = _uiEffects,
         onRefreshWaypoints = ::loadWaypoints
     )
-    private val waypointQnhCoordinator = MapScreenWaypointQnhCoordinator(
-        scope = viewModelScope, uiState = _uiState, uiEffects = _uiEffects, waypointLoader = waypointLoader,
-        qnhRepository = profileSessionDependencies.qnhRepository, calibrateQnhUseCase = calibrateQnhUseCase
-    )
+    private val waypointQnhCoordinator = MapScreenWaypointQnhCoordinator(scope = viewModelScope, uiState = _uiState, uiEffects = _uiEffects, waypointLoader = waypointLoader, qnhRepository = qnhRepository, calibrateQnhUseCase = calibrateQnhUseCase)
     private val profileSessionCoordinator = MapScreenProfileSessionCoordinator(
-        scope = viewModelScope,
-        dependencies = profileSessionDependencies,
-        mapStateStore = mapStateStore,
-        emitMapCommand = ::emitMapCommand
+        scope = viewModelScope, mapStyleRepository = mapStyleRepository, unitsRepository = unitsRepository,
+        orientationSettingsRepository = orientationSettingsRepository, gliderConfigRepository = gliderConfigRepository,
+        variometerLayoutUseCase = variometerLayoutUseCase, trailSettingsUseCase = trailSettingsUseCase, qnhRepository = qnhRepository,
+        mapStateStore = mapStateStore, emitMapCommand = ::emitMapCommand
     )
     private val trafficCoordinator = createTrafficCoordinatorForViewModel(
         scope = viewModelScope,
@@ -219,20 +225,19 @@ class MapScreenViewModel @Inject constructor(
     private val taskShellCoordinator = MapScreenTaskShellCoordinator(scope = viewModelScope, mapTasksUseCase = mapTasksUseCase)
     val isAATEditMode: StateFlow<Boolean> = taskShellCoordinator.isAATEditMode
     val taskType: StateFlow<TaskType> = taskShellCoordinator.taskType
-    private val unitsState = profileSessionDependencies.unitsRepository.unitsFlow
-        .inVm(scope = viewModelScope, initial = UnitsPreferences())
+    private val unitsState = unitsRepository.unitsFlow.inVm(scope = viewModelScope, initial = UnitsPreferences())
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
     val trailSettings: StateFlow<TrailSettings> = mapStateStore.trailSettings
     val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
     val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, cardPreferences = cardPreferences, onProfileModeVisibilitiesChanged = ::onProfileModeVisibilitiesChanged) }
     val flightDataMgmtPort: FlightDataMgmtPort by lazy { createFlightDataMgmtPort(flightDataManager) { cardIngestionCoordinator.bindCards(it) } }
     init {
-        mapStateStore.setTrailSettings(profileSessionDependencies.trailSettingsUseCase.getSettings())
+        mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
         startMapScreenViewModelLifecycle(
             scope = viewModelScope, unitsState = unitsState, uiState = _uiState, flightDataManager = flightDataManager,
-            gliderConfigFlow = profileSessionDependencies.gliderConfigRepository.config, qnhCalibrationState = profileSessionDependencies.qnhRepository.calibrationState,
-            trailSettingsFlow = profileSessionDependencies.trailSettingsUseCase.settingsFlow, mapStateStore = mapStateStore, trafficCoordinator = trafficCoordinator,
+            gliderConfigFlow = gliderConfigRepository.config, qnhCalibrationState = qnhRepository.calibrationState,
+            trailSettingsFlow = trailSettingsUseCase.settingsFlow, mapStateStore = mapStateStore, trafficCoordinator = trafficCoordinator,
             thermallingController = thermallingModeUseCase, thermallingSettingsFlow = thermallingSettingsFlow, flightData = flightData, replaySessionState = replaySessionState,
             mapStateActions = mapStateActions, visibleModes = visibleFlightModes, applyRuntimeFlightMode = ::applyRuntimeFlightMode,
             clearRuntimeFlightModeOverride = ::clearRuntimeFlightModeOverride, applyContrastMap = ::setThermallingContrastOverrideEnabled,
@@ -265,10 +270,7 @@ class MapScreenViewModel @Inject constructor(
         applyHydratedProfileModeVisibilities(resolvedProfileId)
     }
     fun onEvent(event: MapUiEvent) = uiEventHandler.onEvent(event)
-    fun setMapVisible(isVisible: Boolean) {
-        trafficCoordinator.setMapVisible(isVisible)
-        weGlidePromptBridge.onMapVisibilityChanged(isVisible)
-    }
+    fun setMapVisible(isVisible: Boolean) { trafficCoordinator.setMapVisible(isVisible); weGlidePromptBridge.onMapVisibilityChanged(isVisible) }
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
     fun onToggleOgnScia() = trafficCoordinator.onToggleOgnScia()
     fun onToggleOgnThermals() = trafficCoordinator.onToggleOgnThermals()
@@ -291,9 +293,7 @@ class MapScreenViewModel @Inject constructor(
             profileModeVisibilitiesHydrated = false
             activeProfileModeVisibilities = emptyMap()
             recomputeMapFlightModeState()
-            if (latestHydratedProfileId == resolvedProfileId) {
-                applyHydratedProfileModeVisibilities(resolvedProfileId)
-            }
+            if (latestHydratedProfileId == resolvedProfileId) { applyHydratedProfileModeVisibilities(resolvedProfileId) }
         }
         profileSessionCoordinator.setActiveProfileId(profileId)
     }
@@ -302,9 +302,9 @@ class MapScreenViewModel @Inject constructor(
     fun ensureVariometerLayout(screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) =
         profileSessionCoordinator.ensureVariometerLayout(screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
     fun onVariometerOffsetCommitted(offset: OffsetPx, screenWidthPx: Float, screenHeightPx: Float) =
-        profileSessionDependencies.variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
+        variometerLayoutUseCase.onOffsetCommitted(offset, screenWidthPx, screenHeightPx)
     fun onVariometerSizeCommitted(sizePx: Float, screenWidthPx: Float, screenHeightPx: Float, minSizePx: Float, maxSizePx: Float) =
-        profileSessionDependencies.variometerLayoutUseCase.onSizeCommitted(sizePx, screenWidthPx, screenHeightPx, minSizePx, maxSizePx)
+        variometerLayoutUseCase.onSizeCommitted(sizePx, screenWidthPx, screenHeightPx, minSizePx, maxSizePx)
     fun createTaskGestureHandler(callbacks: TaskGestureCallbacks): TaskGestureHandler =
         taskShellCoordinator.createTaskGestureHandler(callbacks)
     fun getInterpolatedReplayHeadingDeg(nowMs: Long): Double? =
@@ -334,19 +334,12 @@ class MapScreenViewModel @Inject constructor(
             modeVisibilities = currentPolicyInputVisibilities()
         )
         mapStateStore.applyFlightModeUiState(state)
-        if (previousEffectiveMode != state.effectiveMode) {
-            flightDataManager.updateEffectiveFlightModeFromEnum(state.effectiveMode)
-            sensorsUseCase.setFlightMode(state.effectiveMode)
-        }
+        if (previousEffectiveMode != state.effectiveMode) { flightDataManager.updateEffectiveFlightModeFromEnum(state.effectiveMode); sensorsUseCase.setFlightMode(state.effectiveMode) }
     }
     private fun currentPolicyInputVisibilities(): Map<FlightModeSelection, Boolean> = activeProfileModeVisibilities.takeIf { profileModeVisibilitiesHydrated } ?: PRE_HYDRATION_BOOTSTRAP_VISIBILITIES
-    private fun applyHydratedProfileModeVisibilities(profileId: String) {
-        profileModeVisibilitiesHydrated = true; activeProfileModeVisibilities = latestAllProfileModeVisibilities[profileId].orEmpty()
-        recomputeMapFlightModeState()
-    }
+    private fun applyHydratedProfileModeVisibilities(profileId: String) { profileModeVisibilitiesHydrated = true; activeProfileModeVisibilities = latestAllProfileModeVisibilities[profileId].orEmpty(); recomputeMapFlightModeState() }
     private fun emitEffectiveStyleCommandIfChanged(styleChanged: Boolean) { if (styleChanged) emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value)) }
     private companion object {
-        val PRE_HYDRATION_BOOTSTRAP_VISIBILITIES: Map<FlightModeSelection, Boolean> =
-            mapOf(FlightModeSelection.THERMAL to false, FlightModeSelection.FINAL_GLIDE to false)
+        val PRE_HYDRATION_BOOTSTRAP_VISIBILITIES: Map<FlightModeSelection, Boolean> = mapOf(FlightModeSelection.THERMAL to false, FlightModeSelection.FINAL_GLIDE to false)
     }
 }

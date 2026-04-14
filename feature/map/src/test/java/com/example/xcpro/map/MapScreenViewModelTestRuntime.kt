@@ -449,7 +449,7 @@ abstract class MapScreenViewModelTestBase {
             metadataSyncRepository = metadataSyncRepository,
             ioDispatcher = mainDispatcherRule.dispatcher
         )
-        val profileSessionDependencies = MapScreenProfileSessionDependencies(
+        return MapScreenViewModel(
             mapStyleRepository = mapStyleRepository,
             unitsRepository = unitsRepository,
             orientationSettingsRepository = orientationSettingsRepository,
@@ -457,9 +457,6 @@ abstract class MapScreenViewModelTestBase {
             variometerLayoutUseCase = variometerLayoutUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
             qnhRepository = qnhRepository,
-        )
-        return MapScreenViewModel(
-            profileSessionDependencies = profileSessionDependencies,
             waypointLoader = waypointLoader,
             mapAirspaceUseCase = mapAirspaceUseCase,
             mapWaypointFilesUseCase = mapWaypointFilesUseCase,

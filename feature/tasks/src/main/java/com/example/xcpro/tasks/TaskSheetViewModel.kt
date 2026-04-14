@@ -34,9 +34,7 @@ data class RacingStartDistanceUi(
 
 @HiltViewModel
 class TaskSheetViewModel @Inject constructor(
-    private val useCase: TaskSheetUseCase,
-    private val taskManager: TaskManagerCoordinator,
-    private val persistedTaskImporter: TaskSheetPersistedTaskImporter
+    private val useCase: TaskSheetUseCase
 ) : ViewModel() {
 
     val uiState: StateFlow<TaskUiState> = useCase.state
@@ -45,7 +43,7 @@ class TaskSheetViewModel @Inject constructor(
     private var lastObservedActiveLeg: Int? = null
 
     init {
-        taskManager.setProximityHandler { entered, close ->
+        useCase.bindProximityHandler { entered, close ->
             onProximityEvent(entered, close)
         }
         viewModelScope.launch {
@@ -62,45 +60,45 @@ class TaskSheetViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        taskManager.clearProximityHandler()
+        useCase.clearProximityHandler()
         super.onCleared()
     }
 
     fun onAddWaypoint(wp: SearchWaypoint) = mutate {
-        taskManager.addWaypoint(wp)
+        useCase.addWaypoint(wp)
         emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
     }
 
     fun onRemoveWaypoint(index: Int) = mutate {
-        taskManager.removeWaypoint(index)
+        useCase.removeWaypoint(index)
     }
 
     fun onReorderWaypoint(from: Int, to: Int) = mutate {
-        taskManager.reorderWaypoints(from, to)
+        useCase.reorderWaypoints(from, to)
     }
 
     fun onReplaceWaypoint(index: Int, wp: SearchWaypoint) = mutate {
-        taskManager.replaceWaypoint(index, wp)
+        useCase.replaceWaypoint(index, wp)
     }
 
     fun onSetTargetParam(index: Int, param: Double) {
-        taskManager.setAATTargetParam(index, param)
+        useCase.setAATTargetParam(index, param)
     }
 
     fun onToggleTargetLock(index: Int) {
-        taskManager.toggleAATTargetLock(index)
+        useCase.toggleAATTargetLock(index)
     }
 
     fun onAdvanceMode(mode: TaskAdvanceUiSnapshot.Mode) {
         when (uiState.value.taskType) {
-            TaskType.RACING -> taskManager.setRacingAdvanceMode(mode.toRacingAdvanceMode())
+            TaskType.RACING -> useCase.setRacingAdvanceMode(mode.toRacingAdvanceMode())
             TaskType.AAT -> useCase.setAdvanceMode(mode.toTaskAdvanceMode())
         }
     }
 
     fun onAdvanceArmToggle() {
         when (uiState.value.taskType) {
-            TaskType.RACING -> taskManager.toggleRacingAdvanceArmed()
+            TaskType.RACING -> useCase.toggleRacingAdvanceArmed()
             TaskType.AAT -> useCase.toggleAdvanceArm()
         }
     }
@@ -108,7 +106,7 @@ class TaskSheetViewModel @Inject constructor(
     fun onProximityEvent(hasEnteredOZ: Boolean, closeToTarget: Boolean) = mutate {
         if (uiState.value.taskType == TaskType.RACING) return@mutate
         if (useCase.shouldAutoAdvance(hasEnteredOZ, closeToTarget)) {
-            taskManager.advanceToNextLeg()
+            useCase.advanceToNextLeg()
         }
     }
 
@@ -182,19 +180,17 @@ class TaskSheetViewModel @Inject constructor(
     fun onSetActiveLeg(index: Int) = mutate {
         val waypoints = uiState.value.task.waypoints
         if (waypoints.isEmpty()) return@mutate
-        taskManager.setActiveLeg(index.coerceIn(0, waypoints.lastIndex))
+        useCase.setActiveLeg(index.coerceIn(0, waypoints.lastIndex))
     }
 
     fun onUpdateAATParameters(minimumTime: Duration, maximumTime: Duration) = mutate {
-        taskManager.updateAATParameters(minimumTime, maximumTime)
+        useCase.updateAATParameters(minimumTime, maximumTime)
     }
 
     fun importPersistedTask(json: String) = tryImportPersistedTask(json)
 
     fun tryImportPersistedTask(json: String): Boolean {
-        val imported = runCatching {
-            mutate { persistedTaskImporter.import(json, taskManager) }
-        }.isSuccess
+        val imported = useCase.importPersistedTask(json)
         if (imported) {
             emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
         }
@@ -202,7 +198,7 @@ class TaskSheetViewModel @Inject constructor(
     }
 
     fun loadTask(taskName: String) = viewModelScope.launch {
-        if (taskManager.loadTask(taskName)) {
+        if (useCase.loadTask(taskName)) {
             emitViewportEffect(TaskSheetViewportEffect.RequestFitCurrentTask)
         }
     }
@@ -217,7 +213,7 @@ class TaskSheetViewModel @Inject constructor(
         keyholeAngle: Double?,
         faiQuadrantOuterRadiusMeters: Double?
     ) = mutate {
-        taskManager.updateWaypointPointType(
+        useCase.updateWaypointPointType(
             RacingWaypointTypeUpdate(
                 index = index,
                 startType = startType,
@@ -232,7 +228,7 @@ class TaskSheetViewModel @Inject constructor(
     }
 
     fun onUpdateAATArea(index: Int, radiusMeters: Double) = mutate {
-        taskManager.updateAATArea(index, radiusMeters)
+        useCase.updateAATArea(index, radiusMeters)
     }
 
     fun onUpdateAATWaypointPointTypeMeters(
@@ -245,7 +241,7 @@ class TaskSheetViewModel @Inject constructor(
         keyholeAngle: Double?,
         sectorOuterRadiusMeters: Double?
     ) = mutate {
-        taskManager.updateAATWaypointPointType(
+        useCase.updateAATWaypointPointType(
             AATWaypointTypeUpdate(
                 index = index,
                 startType = startType,
@@ -259,11 +255,11 @@ class TaskSheetViewModel @Inject constructor(
         )
     }
 
-    fun onSetTaskType(taskType: TaskType) = mutate { taskManager.setTaskType(taskType) }
-    fun onUpdateRacingStartRules(command: UpdateRacingStartRulesCommand) = mutate { taskManager.updateRacingStartRules(command) }
-    fun onUpdateRacingFinishRules(command: UpdateRacingFinishRulesCommand) = mutate { taskManager.updateRacingFinishRules(command) }
-    fun onUpdateRacingValidationRules(command: UpdateRacingValidationRulesCommand) = mutate { taskManager.updateRacingValidationRules(command) }
-    fun onClearTask() = mutate { taskManager.clearTask() }
+    fun onSetTaskType(taskType: TaskType) = mutate { useCase.setTaskType(taskType) }
+    fun onUpdateRacingStartRules(command: UpdateRacingStartRulesCommand) = mutate { useCase.updateRacingStartRules(command) }
+    fun onUpdateRacingFinishRules(command: UpdateRacingFinishRulesCommand) = mutate { useCase.updateRacingFinishRules(command) }
+    fun onUpdateRacingValidationRules(command: UpdateRacingValidationRulesCommand) = mutate { useCase.updateRacingValidationRules(command) }
+    fun onClearTask() = mutate { useCase.clearTask() }
 
     private fun mutate(block: () -> Unit) = block()
 

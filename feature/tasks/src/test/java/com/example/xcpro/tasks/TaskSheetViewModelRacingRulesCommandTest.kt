@@ -123,13 +123,10 @@ class TaskSheetViewModelRacingRulesCommandTest {
         val useCase = TaskSheetUseCase(
             taskManager = taskManager,
             repository = TaskRepository(validator = TaskValidator()),
-            proximityEvaluator = TaskProximityEvaluator()
-        )
-        return TaskSheetViewModel(
-            useCase = useCase,
-            taskManager = taskManager,
+            proximityEvaluator = TaskProximityEvaluator(),
             persistedTaskImporter = TaskSheetPersistedTaskImporter()
         )
+        return TaskSheetViewModel(useCase = useCase)
     }
 
     private fun mockTaskManager(): TaskManagerCoordinator {

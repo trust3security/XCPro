@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -89,6 +90,36 @@ class TaskSheetViewModelViewportEffectTest {
     }
 
     @Test
+    fun loadTask_success_emitsFitCurrentTask() = runBlocking {
+        val fixture = mockTaskManager()
+        Mockito.`when`(fixture.taskManager.loadTask("demo-task")).thenReturn(true)
+        val viewModel = createViewModel(fixture.taskManager)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+        val collected = collectEffects(viewModel)
+
+        viewModel.loadTask("demo-task")
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+
+        assertEquals(listOf(TaskSheetViewportEffect.RequestFitCurrentTask), collected.effects)
+        collected.job.cancel()
+    }
+
+    @Test
+    fun loadTask_failure_doesNotEmitViewportEffect() = runBlocking {
+        val fixture = mockTaskManager()
+        Mockito.`when`(fixture.taskManager.loadTask("missing-task")).thenReturn(false)
+        val viewModel = createViewModel(fixture.taskManager)
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+        val collected = collectEffects(viewModel)
+
+        viewModel.loadTask("missing-task")
+        mainDispatcherRule.dispatcher.scheduler.runCurrent()
+
+        assertTrue(collected.effects.isEmpty())
+        collected.job.cancel()
+    }
+
+    @Test
     fun onSetActiveLeg_doesNotEmitViewportEffect() {
         val fixture = mockTaskManager(
             task = Task(
@@ -114,13 +145,10 @@ class TaskSheetViewModelViewportEffectTest {
         val useCase = TaskSheetUseCase(
             taskManager = taskManager,
             repository = TaskRepository(validator = TaskValidator()),
-            proximityEvaluator = TaskProximityEvaluator()
-        )
-        return TaskSheetViewModel(
-            useCase = useCase,
-            taskManager = taskManager,
+            proximityEvaluator = TaskProximityEvaluator(),
             persistedTaskImporter = TaskSheetPersistedTaskImporter()
         )
+        return TaskSheetViewModel(useCase = useCase)
     }
 
     private fun mockTaskManager(

@@ -1,12 +1,24 @@
 package com.example.xcpro.map
 
+import com.example.xcpro.MapOrientationSettingsRepository
+import com.example.xcpro.common.glider.GliderConfigRepository
+import com.example.xcpro.common.units.UnitsRepository
+import com.example.xcpro.map.trail.MapTrailSettingsUseCase
+import com.example.xcpro.qnh.QnhRepository
+import com.example.xcpro.variometer.layout.VariometerLayoutUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 internal class MapScreenProfileSessionCoordinator(
     private val scope: CoroutineScope,
-    private val dependencies: MapScreenProfileSessionDependencies,
+    private val mapStyleRepository: MapStyleRepository,
+    private val unitsRepository: UnitsRepository,
+    private val orientationSettingsRepository: MapOrientationSettingsRepository,
+    private val gliderConfigRepository: GliderConfigRepository,
+    private val variometerLayoutUseCase: VariometerLayoutUseCase,
+    private val trailSettingsUseCase: MapTrailSettingsUseCase,
+    private val qnhRepository: QnhRepository,
     private val mapStateStore: MapStateStore,
     private val emitMapCommand: (MapCommand) -> Unit
 ) {
@@ -15,7 +27,7 @@ internal class MapScreenProfileSessionCoordinator(
 
     fun persistMapStyle(styleName: String) {
         scope.launch {
-            dependencies.mapStyleRepository.saveStyle(styleName)
+            mapStyleRepository.saveStyle(styleName)
         }
     }
 
@@ -23,21 +35,21 @@ internal class MapScreenProfileSessionCoordinator(
         val resolved = profileId.trim().ifBlank { DEFAULT_PROFILE_ID }
         if (activeProfileId == resolved) return
         activeProfileId = resolved
-        dependencies.mapStyleRepository.setActiveProfileId(resolved)
-        val profileStyle = dependencies.mapStyleRepository.readProfileStyle(resolved)
+        mapStyleRepository.setActiveProfileId(resolved)
+        val profileStyle = mapStyleRepository.readProfileStyle(resolved)
         val styleMutation = mapStateStore.setBaseMapStyle(profileStyle)
         if (styleMutation.effectiveStyleChanged) {
             emitMapCommand(MapCommand.SetStyle(mapStateStore.mapStyleName.value))
         }
-        dependencies.unitsRepository.setActiveProfileId(resolved)
-        dependencies.orientationSettingsRepository.setActiveProfileId(resolved)
-        dependencies.gliderConfigRepository.setActiveProfileId(resolved)
-        dependencies.variometerLayoutUseCase.setActiveProfileId(resolved)
-        dependencies.trailSettingsUseCase.setActiveProfileId(resolved)
-        mapStateStore.setTrailSettings(dependencies.trailSettingsUseCase.getSettings())
+        unitsRepository.setActiveProfileId(resolved)
+        orientationSettingsRepository.setActiveProfileId(resolved)
+        gliderConfigRepository.setActiveProfileId(resolved)
+        variometerLayoutUseCase.setActiveProfileId(resolved)
+        trailSettingsUseCase.setActiveProfileId(resolved)
+        mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         qnhProfileSwitchJob?.cancel()
         qnhProfileSwitchJob = scope.launch {
-            dependencies.qnhRepository.setActiveProfileId(resolved)
+            qnhRepository.setActiveProfileId(resolved)
         }
     }
 
@@ -69,7 +81,7 @@ internal class MapScreenProfileSessionCoordinator(
         minSizePx: Float,
         maxSizePx: Float
     ) {
-        dependencies.variometerLayoutUseCase.ensureLayout(
+        variometerLayoutUseCase.ensureLayout(
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx,
             defaultSizePx = defaultSizePx,

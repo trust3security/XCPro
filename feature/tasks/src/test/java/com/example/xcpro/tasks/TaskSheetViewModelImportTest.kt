@@ -191,11 +191,7 @@ class TaskSheetViewModelImportTest {
     }
 
     private fun createViewModel(taskManager: TaskManagerCoordinator): TaskSheetViewModel {
-        return TaskSheetViewModel(
-            useCase = createUseCase(taskManager),
-            taskManager = taskManager,
-            persistedTaskImporter = TaskSheetPersistedTaskImporter()
-        )
+        return TaskSheetViewModel(useCase = createUseCase(taskManager))
     }
 
     private fun createUseCase(taskManager: TaskManagerCoordinator): TaskSheetUseCase {
@@ -205,7 +201,8 @@ class TaskSheetViewModelImportTest {
         return TaskSheetUseCase(
             taskManager = taskManager,
             repository = repository,
-            proximityEvaluator = TaskProximityEvaluator()
+            proximityEvaluator = TaskProximityEvaluator(),
+            persistedTaskImporter = TaskSheetPersistedTaskImporter()
         )
     }
 

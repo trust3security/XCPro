@@ -47,15 +47,13 @@ class MapScreenProfileSessionCoordinatorTest {
         val mapStateStore = MapStateStore(MapStyleCatalog.TOPO)
         val coordinator = MapScreenProfileSessionCoordinator(
             scope = backgroundScope,
-            dependencies = MapScreenProfileSessionDependencies(
-                mapStyleRepository = mapStyleRepository,
-                unitsRepository = unitsRepository,
-                orientationSettingsRepository = orientationSettingsRepository,
-                gliderConfigRepository = gliderConfigRepository,
-                variometerLayoutUseCase = variometerLayoutUseCase,
-                trailSettingsUseCase = trailSettingsUseCase,
-                qnhRepository = qnhRepository
-            ),
+            mapStyleRepository = mapStyleRepository,
+            unitsRepository = unitsRepository,
+            orientationSettingsRepository = orientationSettingsRepository,
+            gliderConfigRepository = gliderConfigRepository,
+            variometerLayoutUseCase = variometerLayoutUseCase,
+            trailSettingsUseCase = trailSettingsUseCase,
+            qnhRepository = qnhRepository,
             mapStateStore = mapStateStore,
             emitMapCommand = commands::add
         )
@@ -89,15 +87,13 @@ class MapScreenProfileSessionCoordinatorTest {
         val qnhRepository = RecordingQnhRepository()
         val coordinator = MapScreenProfileSessionCoordinator(
             scope = backgroundScope,
-            dependencies = MapScreenProfileSessionDependencies(
-                mapStyleRepository = mapStyleRepository,
-                unitsRepository = unitsRepository,
-                orientationSettingsRepository = orientationSettingsRepository,
-                gliderConfigRepository = gliderConfigRepository,
-                variometerLayoutUseCase = variometerLayoutUseCase,
-                trailSettingsUseCase = trailSettingsUseCase,
-                qnhRepository = qnhRepository
-            ),
+            mapStyleRepository = mapStyleRepository,
+            unitsRepository = unitsRepository,
+            orientationSettingsRepository = orientationSettingsRepository,
+            gliderConfigRepository = gliderConfigRepository,
+            variometerLayoutUseCase = variometerLayoutUseCase,
+            trailSettingsUseCase = trailSettingsUseCase,
+            qnhRepository = qnhRepository,
             mapStateStore = MapStateStore(MapStyleCatalog.TOPO),
             emitMapCommand = {}
         )
@@ -124,15 +120,13 @@ class MapScreenProfileSessionCoordinatorTest {
         val commands = mutableListOf<MapCommand>()
         val coordinator = MapScreenProfileSessionCoordinator(
             scope = backgroundScope,
-            dependencies = MapScreenProfileSessionDependencies(
-                mapStyleRepository = mapStyleRepository,
-                unitsRepository = Mockito.mock(UnitsRepository::class.java),
-                orientationSettingsRepository = Mockito.mock(MapOrientationSettingsRepository::class.java),
-                gliderConfigRepository = Mockito.mock(GliderConfigRepository::class.java),
-                variometerLayoutUseCase = Mockito.mock(VariometerLayoutUseCase::class.java),
-                trailSettingsUseCase = trailSettingsUseCase,
-                qnhRepository = RecordingQnhRepository()
-            ),
+            mapStyleRepository = mapStyleRepository,
+            unitsRepository = Mockito.mock(UnitsRepository::class.java),
+            orientationSettingsRepository = Mockito.mock(MapOrientationSettingsRepository::class.java),
+            gliderConfigRepository = Mockito.mock(GliderConfigRepository::class.java),
+            variometerLayoutUseCase = Mockito.mock(VariometerLayoutUseCase::class.java),
+            trailSettingsUseCase = trailSettingsUseCase,
+            qnhRepository = RecordingQnhRepository(),
             mapStateStore = MapStateStore(MapStyleCatalog.TOPO),
             emitMapCommand = commands::add
         )
