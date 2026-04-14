@@ -1,5 +1,6 @@
 param(
     [switch]$Verbose,
+    [switch]$AuditViewModelBoundariesOnly,
     [ValidateSet("Full", "RepositoryFull", "ArchitectureFast")]
     [string]$RuleSet = "Full"
 )
@@ -182,6 +183,183 @@ function Assert-MaxLines {
     }
 }
 
+function Assert-NoAuditHits {
+    param(
+        [string]$Name,
+        [object[]]$Hits
+    )
+    if ($null -eq $Hits -or $Hits.Count -eq 0) {
+        return
+    }
+    Write-Host ""
+    Write-Host "FAIL: $Name"
+    foreach ($hit in $Hits) {
+        Write-Host "$($hit.FilePath):$($hit.LineNumber): $($hit.LineText)"
+    }
+    $script:HadFailures = $true
+}
+
+function Get-ProductionKotlinSourceFiles {
+    $rgArgs = @(
+        "--files",
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "**/src/main/kotlin/**/*.kt",
+        "--glob", "!**/build/**",
+        "--glob", "!**/.gradle/**"
+    )
+    $result = Invoke-Rg -RgArgs $rgArgs
+    if ($result.Code -gt 1) {
+        $details = ($result.ErrorOutput -join "; ")
+        throw "rg failed while collecting production Kotlin files (exit $($result.Code)). $details"
+    }
+    if ($result.Code -eq 1) {
+        return @()
+    }
+    return @($result.Output | Where-Object { $_ -and $_.Trim().Length -gt 0 } | Sort-Object -Unique)
+}
+
+function Get-BannedViewModelDependencyTypeName {
+    param(
+        [string]$TypeName
+    )
+    if (-not $TypeName) {
+        return $null
+    }
+    $simpleTypeName = $TypeName.Split('.')[-1]
+    if ($simpleTypeName -eq "TaskManagerCoordinator") {
+        return $simpleTypeName
+    }
+    if ($simpleTypeName -match '(CoordinatorDependencies|Dependencies|Services|ManagerBag|Deps)$') {
+        return $simpleTypeName
+    }
+    return $null
+}
+
+function Get-ViewModelConstructorBoundaryHits {
+    param(
+        [string[]]$FilePaths
+    )
+    $hits = New-Object System.Collections.Generic.List[object]
+    foreach ($filePath in $FilePaths) {
+        if (-not (Test-Path $filePath)) {
+            continue
+        }
+        $lines = @(Get-Content -Path $filePath)
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $line = $lines[$i]
+            if ($line -notmatch '^\s*(?:(?:public|internal|private|protected)\s+)?class\s+(?<ClassName>\w*ViewModel)\b') {
+                continue
+            }
+            $className = $Matches["ClassName"]
+            $headerEntries = New-Object System.Collections.Generic.List[object]
+            $foundConstructor = $false
+            $parenDepth = 0
+            for ($j = $i; $j -lt $lines.Count -and $j -lt ($i + 80); $j++) {
+                $headerLine = $lines[$j]
+                $headerEntries.Add([pscustomobject]@{
+                        LineNumber = $j + 1
+                        Text       = $headerLine
+                    })
+                if (-not $foundConstructor -and $headerLine -match '\bconstructor\s*\(') {
+                    $foundConstructor = $true
+                }
+                if (-not $foundConstructor) {
+                    if ($j -gt $i -and ($headerLine -match '\{' -or $headerLine -match '^\s*$')) {
+                        break
+                    }
+                    continue
+                }
+                $parenDepth += ([regex]::Matches($headerLine, '\(')).Count
+                $parenDepth -= ([regex]::Matches($headerLine, '\)')).Count
+                if ($parenDepth -le 0) {
+                    break
+                }
+            }
+            if (-not $foundConstructor) {
+                continue
+            }
+            foreach ($entry in $headerEntries) {
+                if ($entry.Text -notmatch ':\s*(?<TypeName>[A-Za-z_][A-Za-z0-9_\.]*)') {
+                    continue
+                }
+                $matchedTypeName = Get-BannedViewModelDependencyTypeName -TypeName $Matches["TypeName"]
+                if ($null -eq $matchedTypeName) {
+                    continue
+                }
+                $hits.Add([pscustomobject]@{
+                        FilePath    = $filePath.Replace('\', '/')
+                        LineNumber  = $entry.LineNumber
+                        LineText    = $entry.Text.Trim()
+                        ClassName   = $className
+                        MatchedType = $matchedTypeName
+                    })
+            }
+        }
+    }
+    return $hits
+}
+
+function Get-RememberTaskManagerCoordinatorAuditHits {
+    param(
+        [string[]]$ApprovedPaths
+    )
+    $approvedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($approvedPath in $ApprovedPaths) {
+        if (-not $approvedPath) {
+            continue
+        }
+        [void]$approvedSet.Add($approvedPath.Replace('\', '/'))
+    }
+
+    $rgArgs = @(
+        "-n",
+        "rememberTaskManagerCoordinator\(",
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "**/src/main/kotlin/**/*.kt"
+    )
+    $result = Invoke-Rg -RgArgs $rgArgs
+    if ($result.Code -gt 1) {
+        $details = ($result.ErrorOutput -join "; ")
+        throw "rg failed while auditing rememberTaskManagerCoordinator usage (exit $($result.Code)). $details"
+    }
+    if ($result.Code -eq 1) {
+        return @()
+    }
+
+    $hits = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $result.Output) {
+        if ($line -notmatch '^(?<FilePath>[^:]+):(?<LineNumber>\d+):(?<LineText>.*)$') {
+            continue
+        }
+        $normalizedPath = $Matches["FilePath"].Replace('\', '/')
+        if ($approvedSet.Contains($normalizedPath)) {
+            continue
+        }
+        $hits.Add([pscustomobject]@{
+                FilePath   = $normalizedPath
+                LineNumber = [int]$Matches["LineNumber"]
+                LineText   = $Matches["LineText"].Trim()
+            })
+    }
+    return $hits
+}
+
+function Write-AuditHits {
+    param(
+        [string]$Title,
+        [object[]]$Hits
+    )
+    Write-Host ""
+    $count = if ($null -eq $Hits) { 0 } else { $Hits.Count }
+    Write-Host "AUDIT: $Title ($count hit(s))"
+    if ($count -eq 0) {
+        return
+    }
+    foreach ($hit in $Hits) {
+        Write-Host "$($hit.FilePath):$($hit.LineNumber): $($hit.LineText)"
+    }
+}
+
 Require-Rg
 
 $script:HadFailures = $false
@@ -189,6 +367,26 @@ $script:LineBudgetExceptionSet = $null
 $script:LineCountByPath = $null
 $repoRoot = Resolve-Path (Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath "..") -ChildPath "..")
 Set-Location $repoRoot
+$approvedRememberTaskManagerCoordinatorPaths = @(
+    "feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt"
+)
+$productionKotlinFiles = @()
+$viewModelConstructorBoundaryHits = @()
+$rememberTaskManagerCoordinatorAuditHits = @()
+
+if ($AuditViewModelBoundariesOnly -or $RuleSet -in @("Full", "RepositoryFull", "ArchitectureFast")) {
+    $productionKotlinFiles = Get-ProductionKotlinSourceFiles
+    $viewModelConstructorBoundaryHits = Get-ViewModelConstructorBoundaryHits -FilePaths $productionKotlinFiles
+    $rememberTaskManagerCoordinatorAuditHits = Get-RememberTaskManagerCoordinatorAuditHits -ApprovedPaths $approvedRememberTaskManagerCoordinatorPaths
+    Write-AuditHits -Title "ViewModel constructor boundary candidates" -Hits $viewModelConstructorBoundaryHits
+    Write-AuditHits -Title "rememberTaskManagerCoordinator usage outside approved compat path" -Hits $rememberTaskManagerCoordinatorAuditHits
+}
+
+if ($AuditViewModelBoundariesOnly) {
+    Write-Host ""
+    Write-Host "ViewModel boundary audit completed."
+    exit 0
+}
 
 $runArchitectureRules = $true
 $runHygieneRules = $RuleSet -ne "ArchitectureFast"
@@ -220,6 +418,9 @@ if ($runArchitectureRules) {
         "--glob", "**/src/main/java/**/*ViewModel.kt"
     )
     Assert-NoMatches -Name "ViewModel purity violations" -RgArgs $vmArgs
+
+    # 2A) ViewModel constructor boundary: no broad dependency bags or TaskManagerCoordinator in ViewModel constructors.
+    Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
 
     # 3) Compose lifecycle: ban collectAsState without lifecycle awareness.
     $collectArgs = @(
@@ -474,9 +675,11 @@ if ($runArchitectureRules) {
         "rememberTaskManagerCoordinator\(",
         "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
         "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt",
-        "--glob", "!feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt"
+        "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt"
     )
+    foreach ($approvedPath in $approvedRememberTaskManagerCoordinatorPaths) {
+        $taskManagerCompatBypassArgs += @("--glob", "!$approvedPath")
+    }
     Assert-NoMatches -Name "rememberTaskManagerCoordinator bypass in task/map-task composable surfaces" -RgArgs $taskManagerCompatBypassArgs
 
     # 17) Non-UI manager/state model: no Compose runtime state in runtime manager/state classes.
