@@ -1,6 +1,7 @@
 package com.example.xcpro.tasks.racing
 
 import com.example.xcpro.common.waypoint.SearchWaypoint
+import com.example.xcpro.tasks.RacingWaypointTypeUpdate
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.racing.models.RacingWaypoint
@@ -153,6 +154,22 @@ class RacingTaskManager {
         }
     }
 
+    fun updateRacingWaypointType(update: RacingWaypointTypeUpdate) {
+        updateTaskFromSimple(
+            waypointManager.updateWaypointType(
+                currentSimpleTask(),
+                update.index,
+                update.startType,
+                update.finishType,
+                update.turnType,
+                update.gateWidthMeters,
+                update.keyholeInnerRadiusMeters,
+                update.keyholeAngle,
+                update.faiQuadrantOuterRadiusMeters
+            )
+        )
+    }
+
     fun updateRacingWaypointType(
         index: Int,
         startType: RacingStartPointType? = null,
@@ -162,21 +179,18 @@ class RacingTaskManager {
         keyholeInnerRadiusMeters: Double? = null,
         keyholeAngle: Double? = null,
         faiQuadrantOuterRadiusMeters: Double? = null
-    ) {
-        updateTaskFromSimple(
-            waypointManager.updateWaypointType(
-                currentSimpleTask(),
-                index,
-                startType,
-                finishType,
-                turnType,
-                gateWidthMeters,
-                keyholeInnerRadiusMeters,
-                keyholeAngle,
-                faiQuadrantOuterRadiusMeters
-            )
+    ) = updateRacingWaypointType(
+        RacingWaypointTypeUpdate(
+            index = index,
+            startType = startType,
+            finishType = finishType,
+            turnType = turnType,
+            gateWidthMeters = gateWidthMeters,
+            keyholeInnerRadiusMeters = keyholeInnerRadiusMeters,
+            keyholeAngle = keyholeAngle,
+            faiQuadrantOuterRadiusMeters = faiQuadrantOuterRadiusMeters
         )
-    }
+    )
 
     internal fun updateRacingStartRules(command: UpdateRacingStartRulesCommand) {
         updateRoleRules(role = WaypointRole.START, keys = RACING_START_RULE_KEYS) { destination ->

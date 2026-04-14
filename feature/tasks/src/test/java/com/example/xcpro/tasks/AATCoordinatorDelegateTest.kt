@@ -36,8 +36,7 @@ class AATCoordinatorDelegateTest {
     fun `updateWaypointPointType delegates update bridge`() {
         val taskManager = mock<AATTaskManager>()
         val delegate = delegate(taskManager)
-
-        delegate.updateWaypointPointTypeMeters(
+        val update = AATWaypointTypeUpdate(
             index = 1,
             startType = AATStartPointType.AAT_START_LINE,
             finishType = AATFinishPointType.AAT_FINISH_LINE,
@@ -48,44 +47,20 @@ class AATCoordinatorDelegateTest {
             sectorOuterRadiusMeters = 5600.0
         )
 
-        verify(taskManager).updateAATWaypointPointTypeMeters(
-            index = 1,
-            startType = AATStartPointType.AAT_START_LINE,
-            finishType = AATFinishPointType.AAT_FINISH_LINE,
-            turnType = AATTurnPointType.AAT_CYLINDER,
-            gateWidthMeters = 1200.0,
-            keyholeInnerRadiusMeters = 3400.0,
-            keyholeAngle = 45.0,
-            sectorOuterRadiusMeters = 5600.0
-        )
+        delegate.updateWaypointPointTypeMeters(update)
+
+        verify(taskManager).updateAATWaypointPointTypeMeters(eq(update))
     }
 
     @Test
     fun `updateWaypointPointType supports null attrs`() {
         val taskManager = mock<AATTaskManager>()
         val delegate = delegate(taskManager)
+        val update = AATWaypointTypeUpdate(index = 0)
 
-        delegate.updateWaypointPointTypeMeters(
-            index = 0,
-            startType = null,
-            finishType = null,
-            turnType = null,
-            gateWidthMeters = null,
-            keyholeInnerRadiusMeters = null,
-            keyholeAngle = null,
-            sectorOuterRadiusMeters = null
-        )
+        delegate.updateWaypointPointTypeMeters(update)
 
-        verify(taskManager).updateAATWaypointPointTypeMeters(
-            index = 0,
-            startType = null,
-            finishType = null,
-            turnType = null,
-            gateWidthMeters = null,
-            keyholeInnerRadiusMeters = null,
-            keyholeAngle = null,
-            sectorOuterRadiusMeters = null
-        )
+        verify(taskManager).updateAATWaypointPointTypeMeters(eq(update))
     }
 
     @Test

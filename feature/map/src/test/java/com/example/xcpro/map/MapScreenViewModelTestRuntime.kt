@@ -45,9 +45,9 @@ import com.example.xcpro.sensors.FlightStateSource
 import com.example.xcpro.sensors.GPSData
 import com.example.xcpro.sensors.GpsStatus
 import com.example.xcpro.sensors.SensorStatus
+import com.example.xcpro.sensors.SensorFusionRepository
 import com.example.xcpro.sensors.UnifiedSensorManager
 import com.example.xcpro.sensors.domain.FlyingState
-import com.example.xcpro.vario.VarioServiceManager
 import com.example.xcpro.vario.LevoVarioPreferencesRepository
 import com.example.xcpro.weather.wind.data.WindSensorFusionRepository
 import com.example.xcpro.flightdata.FlightDataRepository
@@ -160,8 +160,8 @@ abstract class MapScreenViewModelTestBase {
     protected val trailSettingsUseCase = MapTrailSettingsUseCase(MapTrailPreferences(context))
     protected val variometerLayoutUseCase =
         VariometerLayoutUseCase(VariometerWidgetRepository(context))
-    protected val varioServiceManager = Mockito.mock(VarioServiceManager::class.java)
     protected val unifiedSensorManager = Mockito.mock(UnifiedSensorManager::class.java)
+    protected val sensorFusionRepository = Mockito.mock(SensorFusionRepository::class.java)
     protected val flightStateFlow = MutableStateFlow(FlyingState())
     protected val flightStateSource = object : FlightStateSource {
         override val flightState = flightStateFlow
@@ -214,8 +214,6 @@ abstract class MapScreenViewModelTestBase {
     init {
         Mockito.`when`(replayController.session).thenReturn(replaySessionFlow)
         Mockito.`when`(replayController.events).thenReturn(replayEventsFlow)
-        Mockito.`when`(varioServiceManager.unifiedSensorManager).thenReturn(unifiedSensorManager)
-        Mockito.`when`(varioServiceManager.flightStateSource).thenReturn(flightStateSource)
         Mockito.`when`(unifiedSensorManager.gpsStatusFlow).thenReturn(gpsStatusFlow)
         Mockito.`when`(unifiedSensorManager.compassFlow).thenReturn(compassFlow)
         Mockito.`when`(unifiedSensorManager.attitudeFlow).thenReturn(attitudeFlow)
@@ -307,7 +305,9 @@ abstract class MapScreenViewModelTestBase {
         val mapWaypointFilesUseCase = Mockito.mock(WaypointFilesUseCase::class.java)
         val mapSensorsUseCase = MapSensorsUseCase(
             varioRuntimeControlPort = object : VarioRuntimeControlPort { override fun ensureRunningIfPermitted(): Boolean = true; override fun requestStop() = Unit },
-            varioServiceManager = varioServiceManager
+            unifiedSensorManager = unifiedSensorManager,
+            flightStateSource = flightStateSource,
+            sensorFusionRepository = sensorFusionRepository
         )
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
@@ -456,7 +456,7 @@ abstract class MapScreenViewModelTestBase {
             gliderConfigRepository = gliderRepository,
             variometerLayoutUseCase = variometerLayoutUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
-            qnhRepository = qnhRepository
+            qnhRepository = qnhRepository,
         )
         return MapScreenViewModel(
             profileSessionDependencies = profileSessionDependencies,

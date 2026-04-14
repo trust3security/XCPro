@@ -11,15 +11,7 @@ class ObserveForecastOverlayStateUseCase @Inject constructor(
     operator fun invoke(): Flow<ForecastOverlayUiState> = repository.overlayState
 }
 
-class SetForecastEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setOverlayEnabled(enabled)
-    }
-}
-
-class ToggleForecastPrimaryOverlaySelectionUseCase @Inject constructor(
+class SelectForecastPrimaryParameterUseCase @Inject constructor(
     private val preferencesRepository: ForecastPreferencesRepository,
     private val catalogPort: ForecastCatalogPort
 ) {
@@ -32,30 +24,6 @@ class ToggleForecastPrimaryOverlaySelectionUseCase @Inject constructor(
             matchesParameterId(meta.id, parameterId)
         }?.id ?: return
         preferencesRepository.setSelectedPrimaryParameterId(requestedId)
-    }
-}
-
-class ToggleSkySightPrimaryOverlaySelectionUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository,
-    private val catalogPort: ForecastCatalogPort
-) {
-    suspend operator fun invoke(parameterId: ForecastParameterId) {
-        val availableParameters = catalogPort.getParameters()
-            .filter(::isPrimaryParameterMeta)
-        if (availableParameters.isEmpty()) return
-
-        val requestedId = availableParameters.firstOrNull { meta ->
-            matchesParameterId(meta.id, parameterId)
-        }?.id ?: return
-        preferencesRepository.setSelectedPrimaryParameterId(requestedId)
-    }
-}
-
-class SetForecastWindOverlayEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setWindOverlayEnabled(enabled)
     }
 }
 
@@ -72,22 +40,6 @@ class SelectForecastWindParameterUseCase @Inject constructor(
             ?: windParameters.firstOrNull()?.id
             ?: DEFAULT_FORECAST_WIND_PARAMETER_ID
         preferencesRepository.setSelectedWindParameterId(selectedId)
-    }
-}
-
-class SetForecastAutoTimeEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setAutoTimeEnabled(enabled)
-    }
-}
-
-class SetForecastFollowTimeOffsetUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(offsetMinutes: Int) {
-        preferencesRepository.setFollowTimeOffsetMinutes(offsetMinutes)
     }
 }
 
@@ -112,78 +64,6 @@ class SetForecastTimeUseCase @Inject constructor(
         }?.validTimeUtcMs ?: slots.first().validTimeUtcMs
         preferencesRepository.setAutoTimeEnabled(false)
         preferencesRepository.setSelectedTimeUtcMs(clampedTime)
-    }
-}
-
-class SetForecastOpacityUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(opacity: Float) {
-        preferencesRepository.setOpacity(opacity)
-    }
-}
-
-class SetForecastWindOverlayScaleUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(scale: Float) {
-        preferencesRepository.setWindOverlayScale(scale)
-    }
-}
-
-class SetForecastWindDisplayModeUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(mode: ForecastWindDisplayMode) {
-        preferencesRepository.setWindDisplayMode(mode)
-    }
-}
-
-class SetSkySightSatelliteOverlayEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setSkySightSatelliteOverlayEnabled(enabled)
-    }
-}
-
-class SetSkySightSatelliteImageryEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setSkySightSatelliteImageryEnabled(enabled)
-    }
-}
-
-class SetSkySightSatelliteRadarEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setSkySightSatelliteRadarEnabled(enabled)
-    }
-}
-
-class SetSkySightSatelliteLightningEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setSkySightSatelliteLightningEnabled(enabled)
-    }
-}
-
-class SetSkySightSatelliteAnimateEnabledUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(enabled: Boolean) {
-        preferencesRepository.setSkySightSatelliteAnimateEnabled(enabled)
-    }
-}
-
-class SetSkySightSatelliteHistoryFramesUseCase @Inject constructor(
-    private val preferencesRepository: ForecastPreferencesRepository
-) {
-    suspend operator fun invoke(frameCount: Int) {
-        preferencesRepository.setSkySightSatelliteHistoryFrames(frameCount)
     }
 }
 

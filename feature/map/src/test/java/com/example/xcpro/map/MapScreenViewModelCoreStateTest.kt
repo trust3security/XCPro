@@ -158,7 +158,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     fun effectiveMode_propagatesOnlyWhenItChanges() {
         val viewModel = createViewModel()
         hydrateVisibilities(viewModel, activeProfileId = "pilot-a")
-        Mockito.clearInvocations(varioServiceManager)
+        Mockito.clearInvocations(sensorFusionRepository)
 
         viewModel.setFlightMode(FlightMode.THERMAL)
         viewModel.setFlightMode(FlightMode.THERMAL)
@@ -171,9 +171,9 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
             allVisibilities = mapOf("pilot-a" to mapOf(FlightModeSelection.THERMAL to false))
         )
 
-        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.THERMAL)
-        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.CRUISE)
-        Mockito.verifyNoMoreInteractions(varioServiceManager)
+        Mockito.verify(sensorFusionRepository).setFlightMode(FlightMode.THERMAL)
+        Mockito.verify(sensorFusionRepository).setFlightMode(FlightMode.CRUISE)
+        Mockito.verifyNoMoreInteractions(sensorFusionRepository)
         assertEquals(
             FlightModeSelection.CRUISE,
             viewModel.runtimeDependencies.flightDataManager.effectiveFlightModeSelection
@@ -184,7 +184,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
     fun explicitCruiseSelection_clearsRuntimeOverrideImmediately() {
         val viewModel = createViewModel()
         hydrateVisibilities(viewModel)
-        Mockito.clearInvocations(varioServiceManager)
+        Mockito.clearInvocations(sensorFusionRepository)
 
         viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
         viewModel.setFlightMode(FlightMode.CRUISE)
@@ -192,15 +192,15 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
         assertNull(viewModel.runtimeFlightModeOverride.value)
         assertEquals(FlightMode.CRUISE, viewModel.requestedFlightMode.value)
         assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
-        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.THERMAL)
-        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.CRUISE)
+        Mockito.verify(sensorFusionRepository).setFlightMode(FlightMode.THERMAL)
+        Mockito.verify(sensorFusionRepository).setFlightMode(FlightMode.CRUISE)
     }
 
     @Test
     fun explicitFinalGlideSelection_clearsRuntimeOverrideImmediately() {
         val viewModel = createViewModel()
         hydrateVisibilities(viewModel)
-        Mockito.clearInvocations(varioServiceManager)
+        Mockito.clearInvocations(sensorFusionRepository)
 
         viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
         viewModel.setFlightMode(FlightMode.FINAL_GLIDE)
@@ -208,21 +208,21 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
         assertNull(viewModel.runtimeFlightModeOverride.value)
         assertEquals(FlightMode.FINAL_GLIDE, viewModel.requestedFlightMode.value)
         assertEquals(FlightMode.FINAL_GLIDE, viewModel.effectiveFlightMode.value)
-        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.THERMAL)
-        Mockito.verify(varioServiceManager).setFlightMode(FlightMode.FINAL_GLIDE)
+        Mockito.verify(sensorFusionRepository).setFlightMode(FlightMode.THERMAL)
+        Mockito.verify(sensorFusionRepository).setFlightMode(FlightMode.FINAL_GLIDE)
     }
 
     @Test
     fun preHydrationStartup_isConservative() {
         val viewModel = createViewModel()
-        Mockito.clearInvocations(varioServiceManager)
+        Mockito.clearInvocations(sensorFusionRepository)
 
         viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
 
         assertEquals(listOf(FlightMode.CRUISE), viewModel.visibleFlightModes.value)
         assertEquals(FlightMode.THERMAL, viewModel.runtimeFlightModeOverride.value)
         assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
-        Mockito.verifyNoInteractions(varioServiceManager)
+        Mockito.verifyNoInteractions(sensorFusionRepository)
     }
 
     @Test
@@ -233,14 +233,14 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
             activeProfileId = "pilot-a",
             visibilities = mapOf(FlightModeSelection.THERMAL to false)
         )
-        Mockito.clearInvocations(varioServiceManager)
+        Mockito.clearInvocations(sensorFusionRepository)
 
         viewModel.applyRuntimeFlightMode(FlightMode.THERMAL)
 
         assertEquals(listOf(FlightMode.CRUISE, FlightMode.FINAL_GLIDE), viewModel.visibleFlightModes.value)
         assertEquals(FlightMode.THERMAL, viewModel.runtimeFlightModeOverride.value)
         assertEquals(FlightMode.CRUISE, viewModel.effectiveFlightMode.value)
-        Mockito.verifyNoInteractions(varioServiceManager)
+        Mockito.verifyNoInteractions(sensorFusionRepository)
     }
 
     @Test

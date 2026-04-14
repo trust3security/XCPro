@@ -7,6 +7,8 @@ import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import com.example.xcpro.tasks.domain.logic.TaskProximityEvaluator
 import com.example.xcpro.tasks.domain.logic.TaskValidator
+import com.example.xcpro.tasks.racing.RacingTaskStructureRules
+import com.example.xcpro.tasks.racing.navigation.RacingAdvanceState
 import com.example.xcpro.testing.MainDispatcherRule
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
@@ -26,8 +28,8 @@ class TaskSheetViewModelViewportEffectTest {
 
     @Test
     fun onAddWaypoint_emitsFitCurrentTask() {
-        val fixture = mockCoordinator()
-        val viewModel = createViewModel(fixture.coordinator)
+        val fixture = mockTaskManager()
+        val viewModel = createViewModel(fixture.taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val collected = collectEffects(viewModel)
 
@@ -48,8 +50,8 @@ class TaskSheetViewModelViewportEffectTest {
 
     @Test
     fun tryImportPersistedTask_emitsSingleFitCurrentTask() {
-        val fixture = mockCoordinator()
-        val viewModel = createViewModel(fixture.coordinator)
+        val fixture = mockTaskManager()
+        val viewModel = createViewModel(fixture.taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val collected = collectEffects(viewModel)
         val persisted = TaskPersistSerializer.PersistedTask(
@@ -88,7 +90,7 @@ class TaskSheetViewModelViewportEffectTest {
 
     @Test
     fun onSetActiveLeg_doesNotEmitViewportEffect() {
-        val fixture = mockCoordinator(
+        val fixture = mockTaskManager(
             task = Task(
                 id = "snapshot-task",
                 waypoints = listOf(
@@ -97,7 +99,7 @@ class TaskSheetViewModelViewportEffectTest {
                 )
             )
         )
-        val viewModel = createViewModel(fixture.coordinator)
+        val viewModel = createViewModel(fixture.taskManager)
         mainDispatcherRule.dispatcher.scheduler.runCurrent()
         val collected = collectEffects(viewModel)
 
@@ -108,34 +110,38 @@ class TaskSheetViewModelViewportEffectTest {
         collected.job.cancel()
     }
 
-    private fun createViewModel(coordinator: TaskSheetCoordinatorUseCase): TaskSheetViewModel {
-        val repository = TaskRepository(
-            validator = TaskValidator()
-        )
+    private fun createViewModel(taskManager: TaskManagerCoordinator): TaskSheetViewModel {
         val useCase = TaskSheetUseCase(
-            repository = repository,
+            taskManager = taskManager,
+            repository = TaskRepository(validator = TaskValidator()),
             proximityEvaluator = TaskProximityEvaluator()
         )
         return TaskSheetViewModel(
-            taskCoordinator = coordinator,
-            useCase = useCase
+            useCase = useCase,
+            taskManager = taskManager,
+            persistedTaskImporter = TaskSheetPersistedTaskImporter()
         )
     }
 
-    private fun mockCoordinator(
+    private fun mockTaskManager(
         taskType: TaskType = TaskType.RACING,
         task: Task = Task(id = "snapshot-task")
-    ): CoordinatorFixture {
-        val coordinator = Mockito.mock(TaskSheetCoordinatorUseCase::class.java)
+    ): TaskManagerFixture {
+        val taskManager = Mockito.mock(TaskManagerCoordinator::class.java)
         val snapshots = MutableStateFlow(
-            TaskCoordinatorSnapshot(
-                task = task,
+            TaskRuntimeSnapshot(
                 taskType = taskType,
+                task = task,
                 activeLeg = 0
             )
         )
-        Mockito.`when`(coordinator.snapshotFlow).thenReturn(snapshots)
-        return CoordinatorFixture(coordinator, snapshots)
+        val racingAdvanceSnapshots = MutableStateFlow(
+            RacingAdvanceState().snapshot()
+        )
+        Mockito.`when`(taskManager.taskSnapshotFlow).thenReturn(snapshots)
+        Mockito.`when`(taskManager.racingAdvanceSnapshotFlow).thenReturn(racingAdvanceSnapshots)
+        Mockito.`when`(taskManager.getRacingValidationProfile()).thenReturn(RacingTaskStructureRules.Profile.FAI_STRICT)
+        return TaskManagerFixture(taskManager, snapshots)
     }
 
     private fun sampleWaypoint(id: String, role: WaypointRole): TaskWaypoint {
@@ -158,9 +164,9 @@ class TaskSheetViewModelViewportEffectTest {
         return CollectedEffects(effects = effects, job = job)
     }
 
-    private data class CoordinatorFixture(
-        val coordinator: TaskSheetCoordinatorUseCase,
-        val snapshots: MutableStateFlow<TaskCoordinatorSnapshot>
+    private data class TaskManagerFixture(
+        val taskManager: TaskManagerCoordinator,
+        val snapshots: MutableStateFlow<TaskRuntimeSnapshot>
     )
 
     private data class CollectedEffects(
