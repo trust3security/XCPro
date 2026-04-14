@@ -1,14 +1,14 @@
-# Kotlin Line-Budget Compliance Phased IP (Remaining RULES-20260306-14 Scope)
+# Kotlin Line-Budget Compliance Phased IP (`RULES-20260306-14` Closeout Record)
 
 ## Purpose
 
-Release-grade phased plan to close the remaining default line-budget deviation
-scope for `RULES-20260306-14` without ad hoc churn, behavior drift, or hidden
+Release-grade phased plan that closed the default line-budget deviation scope
+for `RULES-20260306-14` without ad hoc churn, behavior drift, or hidden
 test-fixture ownership.
 
-This document supersedes the earlier draft scope. The previously planned map
-runtime and ADS-B runtime lanes have already landed; the active scope is now
-only the files still listed in `KNOWN_DEVIATIONS.md`.
+This document supersedes the earlier draft scope and is retained as the
+completed remediation record. The previously planned map runtime and ADS-B
+runtime lanes have already landed, and no files remain in active scope.
 
 Read first:
 
@@ -16,14 +16,14 @@ Read first:
 2. `docs/ARCHITECTURE/CODING_RULES.md`
 3. `docs/ARCHITECTURE/PIPELINE.md`
 4. `docs/ARCHITECTURE/CODEBASE_CONTEXT_AND_INTENT.md`
-5. `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` (entry `RULES-20260306-14`)
+5. `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` for current active exceptions, if any
 
 ## 0) Metadata
 
 - Title: Kotlin line-budget compliance for remaining default-budget exceptions
 - Owner: XCPro Team
 - Date: 2026-03-06
-- Refreshed: 2026-03-15
+- Refreshed: 2026-04-14
 - Issue/PR: `RULES-20260306-14` remediation lane
 - Status: Complete
 
@@ -46,8 +46,7 @@ Out of scope:
 - Functional feature work
 - Behavior changes in profile restore, ADS-B repository policy, wind policy, or
   card definitions
-- Expanding `RULES-20260306-14` to unrelated files not already listed in
-  `KNOWN_DEVIATIONS.md`
+- Expanding `RULES-20260306-14` to unrelated files after closeout
 
 ## 2) Seam-Pass Findings
 
@@ -147,9 +146,9 @@ Targeted lanes should also run for the touched scope before the full suite.
 ### Phase 0 - Freeze Remaining Scope
 
 - Goal:
-  - Keep `RULES-20260306-14` limited to the four remaining files above.
+  - Keep `RULES-20260306-14` limited to the scoped files in this lane.
 - Exit criteria:
-  - `KNOWN_DEVIATIONS.md` scope matches this plan.
+  - The scoped default-budget files match this plan.
   - No new oversized files are added to the issue during this lane.
 
 ### Phase 1 - Split `AppProfileSettingsRestoreApplierTest.kt`
@@ -253,10 +252,10 @@ Status:
 ### Phase 5 - Close `RULES-20260306-14`
 
 - Goal:
-  - Remove the deviation honestly once the four-file scope is gone.
+  - Remove the deviation honestly once the scoped files are gone.
 - Exit criteria:
   - No remaining files from this scope exceed the default budget.
-  - `KNOWN_DEVIATIONS.md` entry is narrowed or closed accordingly.
+  - Active deviation state is narrowed or closed accordingly.
 
 Status:
 
@@ -274,9 +273,5 @@ Status:
 ## 6) Closeout
 
 `RULES-20260306-14` closeout is complete for the default-budget exception
-scope tracked by this plan. The remaining global default line-budget exception
-in `scripts/ci/enforce_rules.ps1` is now only:
-
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-
-That file is outside this plan's completed scope.
+scope tracked by this plan. There are no remaining global default line-budget
+exception paths in `scripts/ci/enforce_rules.ps1`.

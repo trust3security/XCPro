@@ -1069,12 +1069,9 @@ if ($runLineBudgetRules) {
     # Line-budget rules.
 
     # 33) Global default Kotlin line budget.
-    $lineBudgetExceptionPaths = @(
-        # Keep synchronized with active time-boxed exceptions in
-        # docs/ARCHITECTURE/KNOWN_DEVIATIONS.md.
-        "feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt",
-        "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt"
-    )
+    # Keep synchronized with active time-boxed exceptions in
+    # docs/ARCHITECTURE/KNOWN_DEVIATIONS.md. Currently none.
+    $lineBudgetExceptionPaths = @()
     $script:LineBudgetExceptionSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($exceptionPath in $lineBudgetExceptionPaths) {
         [void]$script:LineBudgetExceptionSet.Add($exceptionPath.Replace('\', '/'))
