@@ -1,0 +1,224 @@
+# XCPro Brief — Lock Down Clean ViewModel Seams
+
+Goal: tighten ViewModel dependency boundaries across XCPro without ad-hoc wrappers, rename churn, or broad refactors. Deliver a narrow, industry-standard cleanup that makes the rule explicit in code and docs, then brings the current offenders into compliance with minimal surface area.
+
+## Outcome required
+
+Establish and enforce this rule across XCPro:
+
+- ViewModels may depend only on stable domain-facing seams.
+- Allowed seam types:
+  - use cases for orchestration, policy, lifecycle, and runtime coordination
+  - focused owner/port seams for authoritative reads, narrow authoritative flows, and simple authoritative commands
+- Forbidden:
+  - low-level infra/data-source dependencies
+  - broad dependency bags / service locators
+  - thin rename-only forwarding wrappers added only to satisfy wording
+- Naming is not policy:
+  - `UseCase`, `Repository`, `Owner`, `Port`, `Controller` naming alone does not decide validity
+  - the seam’s shape and responsibility decides validity
+
+This is a cleanup and lock-down pass, not a feature pass.
+
+## Non-goals
+
+Do not:
+- redesign unrelated modules
+- move ownership between feature modules unless required to remove a direct rule violation
+- introduce fake “use case” wrappers that only forward 1:1 with no policy/orchestration value
+- convert everything to use cases just for consistency
+- change UI behavior
+- rewrite working runtime pipelines
+- touch map rendering, sensor math, traffic behavior, glide behavior, Bluetooth behavior, or LiveFollow logic unless a direct ViewModel seam violation forces a tiny constructor/interface adjustment
+
+## Desired architecture standard
+
+A ViewModel in XCPro should sit at the UI/domain seam and do only:
+- collect stable authoritative flows
+- invoke narrow commands
+- coordinate screen lifecycle and user intents
+- map domain outputs into immutable UI state
+
+A ViewModel should not directly know about:
+- Retrofit/Room/DAO/network clients
+- concrete data repositories from infra/data layers
+- large “manager” objects that expose mixed concerns
+- dependency bags with many unrelated responsibilities
+
+## Scope
+
+### 1. Audit current ViewModels
+Inspect all ViewModels, with special attention to:
+- `feature/map/.../MapScreenViewModel.kt`
+- any other screen/card ViewModels with wide constructors
+- any ViewModel that currently depends on owners/repos/controllers/managers directly
+
+For each ViewModel dependency, classify it as:
+- valid stable domain-facing seam
+- invalid low-level/data/infra dependency
+- too-broad seam that should be split into narrower read/command ports
+- fake wrapper candidate that should be avoided
+
+### 2. Fix only real violations
+Where a dependency is invalid, replace it with one of:
+- an existing valid use case
+- a new narrow owner/port interface at the correct owning module boundary
+- a small extracted command/read seam from an overly broad existing type
+
+Important:
+- prefer extracting a narrow existing interface from the current owner over inventing a new forwarding wrapper class
+- if a type is already a valid domain seam but named `Repository` or `Owner`, it may stay as-is
+- only rename when the current name is materially misleading and the rename reduces future confusion
+
+### 3. Lock the rule in docs
+Update architecture docs so they no longer say the oversimplified rule “ViewModels depend on use-cases only”.
+
+Replace it with the actual policy above:
+- stable domain-facing seams allowed
+- use cases and narrow owner/port seams allowed
+- low-level infra and broad bags forbidden
+- naming alone is not policy
+
+Keep docs short, sharp, and enforceable.
+
+### 4. Add lightweight guardrails
+Add the smallest practical guardrail that fits the repo’s existing enforcement style:
+- update architecture docs / AGENTS / contributing guidance if needed
+- add or extend a rule/check only if it can be done without brittleness
+- avoid heavyweight static-analysis churn unless already natural in this repo
+
+Guardrails should help reviewers reject:
+- broad constructor bags
+- direct infra/data dependencies in ViewModels
+- wrapper-only “use case theater”
+
+## Implementation guidance
+
+### Preferred decision order
+For each suspect ViewModel dependency:
+
+1. Is it already a stable domain-facing seam with narrow responsibility?
+   - Keep it. No churn.
+
+2. Is it low-level infra/data facing?
+   - Replace it with a domain-facing seam.
+
+3. Is it too broad but owned in the right place?
+   - Extract a smaller read/command interface and inject that.
+
+4. Are you about to add a wrapper that only forwards calls?
+   - Stop. Do not do this unless the wrapper adds real orchestration/policy/lifecycle value.
+
+### Good seam examples
+Allowed:
+- `ObserveMapUiStateUseCase`
+- `SetFlightModeUseCase`
+- `TaskRouteReadPort`
+- `TrafficOverlayVisibilityOwner`
+- `FinalGlideReadPort`
+- `LiveFollowSessionCommandPort`
+
+Not allowed:
+- `RetrofitTrafficApi`
+- `RoomTaskDao`
+- `BigMapCoordinatorDependencies`
+- `EverythingRepository` used directly by VM
+- `FooUseCase` that just forwards one method to `FooRepository` with no added value
+
+### Constructor quality rule
+ViewModel constructors should stay readable and intention-revealing.
+
+If a constructor is wide because the screen genuinely coordinates several independent domain seams, that is acceptable.
+But if many arguments are just fragments of one broad owner, prefer one or two narrow seams with coherent responsibility rather than many unrelated dependencies or one giant bag.
+
+### Compose/UI state rule
+Do not change the current architectural direction away from:
+- immutable UI state
+- `StateFlow`
+- hoisted screen state in ViewModel
+- UI collecting state lifecycle-safely
+
+This pass is about dependency seams, not reworking state handling.
+
+## Deliverables
+
+### Code
+- narrowed/fixed ViewModel constructors where needed
+- extracted interfaces only where they solve a real seam problem
+- no thin wrapper churn
+- no behavior drift
+
+### Docs
+Update the minimum relevant docs, likely:
+- `docs/ARCHITECTURE/ARCHITECTURE.md`
+- `docs/ARCHITECTURE/CONTRIBUTING.md`
+- `AGENTS.md` only if needed for future Codex guardrails
+- any rule/enforcement doc currently stating “use-cases only”
+
+### Review summary
+Provide:
+1. list of ViewModels inspected
+2. for each changed dependency, why it was invalid before
+3. why the replacement seam is valid
+4. any intentionally unchanged dependencies and why they are acceptable
+5. exact files changed
+6. proof that no feature behavior was intentionally changed
+
+## Acceptance criteria
+
+### A. Policy clarity
+- No architecture doc still states the old simplistic rule “ViewModels depend on use-cases only”
+- Docs clearly state the new stable-domain-seam rule
+- Docs clearly forbid low-level infra/data dependencies and broad dependency bags
+- Docs clearly state naming is not policy
+
+### B. Real violations fixed
+- Every changed ViewModel dependency is either:
+  - a use case, or
+  - a narrow authoritative owner/port seam
+- No changed ViewModel depends directly on low-level infra/data types
+- No thin rename-only wrappers were introduced
+
+### C. Low churn
+- No unrelated module moves
+- No broad refactor outside the minimum seam cleanup
+- No UI behavior changes intended
+- No runtime ownership churn outside what is strictly needed for seam correctness
+
+### D. Reviewer readability
+- The final diff is understandable by a human reviewer
+- Each new interface has a clear single reason to exist
+- Constructor dependencies read as domain concepts, not implementation details
+
+## Suggested process
+
+1. Audit all ViewModels and produce a short classification table.
+2. Change only the true violations.
+3. Update docs to match the real policy.
+4. Run project checks.
+5. Provide a PASS/FAIL self-review against the acceptance criteria.
+
+## Evidence to include in final response
+
+Include:
+- `git diff --name-status`
+- concise dependency before/after summaries for changed ViewModels
+- any `rg` results used to prove old wording is gone
+- build/test results from the relevant checks you ran
+
+## Commands to run
+Use the repo’s normal local validation, at minimum whatever is currently standard such as:
+- `./gradlew enforceRules`
+- `./gradlew testDebugUnitTest`
+- `./gradlew assembleDebug`
+
+If one of these is too expensive or unavailable locally, say so explicitly and run the closest valid subset.
+
+## Output format required from Codex
+Return:
+1. what you changed
+2. why each change was necessary
+3. why no extra churn was introduced
+4. acceptance checklist with PASS/FAIL
+5. commands run and results
+6. any remaining risks or follow-up items, if truly necessary
