@@ -43,6 +43,24 @@ class ProfileRepositoryBundleTest {
     }
 
     @Test
+    fun exportBundle_doesNotEmitLegacyGliderType() = runTest {
+        val harness = ProfileRepositoryBundleHarness(backgroundScope)
+        advanceUntilIdle()
+        val created = harness.repository.createProfile(
+            ProfileCreationRequest(
+                name = "Legacy Glider Input",
+                aircraftType = AircraftType.GLIDER
+            )
+        ).getOrThrow()
+        advanceUntilIdle()
+
+        val exportArtifact = harness.repository.exportBundle(setOf(created.id)).getOrThrow()
+
+        assertTrue(!exportArtifact.bundleJson.contains("\"GLIDER\""))
+        assertTrue(exportArtifact.bundleJson.contains("\"SAILPLANE\""))
+    }
+
+    @Test
     fun previewBundle_reportsMetadataCollisionHintsAndIgnoredGlobalSections() = runTest {
         val harness = ProfileRepositoryBundleHarness(backgroundScope)
         advanceUntilIdle()
@@ -84,6 +102,7 @@ class ProfileRepositoryBundleTest {
         assertEquals(123_456L, preview.exportedAtWallMs)
         assertEquals("Preview Match (LS8)", preview.preferredActiveProfileName)
         assertEquals(1, preview.profiles.size)
+        assertEquals(AircraftType.SAILPLANE, preview.profiles.single().aircraftType)
         assertTrue(preview.profiles.single().matchesExistingProfileName)
         assertTrue(preview.aircraftProfileSectionIds.contains(ProfileSettingsSectionIds.UNITS_PREFERENCES))
         assertTrue(preview.ignoredGlobalSectionIds.contains(ProfileSettingsSectionIds.WEATHER_OVERLAY_PREFERENCES))
@@ -253,7 +272,7 @@ class ProfileRepositoryBundleTest {
         assertEquals(1, afterProfiles.count { it.name == "Pilot Replace" })
         val replaced = afterProfiles.first { it.name == "Pilot Replace" }
         assertEquals(existing.id, replaced.id)
-        assertEquals(AircraftType.GLIDER, replaced.aircraftType)
+        assertEquals(AircraftType.SAILPLANE, replaced.aircraftType)
         assertEquals(existing.id, result.profileImportResult.importedProfileIdMap["incoming-replace"])
     }
 

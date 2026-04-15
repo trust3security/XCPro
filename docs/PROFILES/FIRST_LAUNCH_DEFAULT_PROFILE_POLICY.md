@@ -19,6 +19,7 @@ Define the startup policy for profile creation when no valid profile state exist
   - `SAILPLANE`
   - `PARAGLIDER`
   - `HANG_GLIDER`
+- Legacy `GLIDER` is not a valid new selection. Stored or imported legacy `GLIDER` profiles are normalized to `SAILPLANE`.
 - First-launch setup must also expose `Load Profile File`.
 - There is no skip path on clean install.
 
@@ -35,7 +36,7 @@ Define the startup policy for profile creation when no valid profile state exist
 - Canonical defaults created by first-launch setup use:
   - `id = default-profile`
   - `name = Default`
-  - selected aircraft type from the picker
+  - selected canonical aircraft type from the picker
   - `aircraftModel = null`
   - `description = null`
 - The created profile becomes the active profile in the same repository mutation.

@@ -8,12 +8,22 @@ class EntitlementPolicyTest {
     private val policy = FeatureAccessPolicy()
 
     @Test
-    fun `pro unlocks advanced vario`() {
-        assertTrue(policy.featuresForTier(PlanTier.PRO).contains(AppFeature.VARIO_ADVANCED))
+    fun `basic unlocks distance circles`() {
+        assertTrue(policy.featuresForTier(PlanTier.BASIC).contains(AppFeature.DISTANCE_CIRCLES))
     }
 
     @Test
-    fun `free does not unlock livefollow broadcast`() {
-        assertFalse(policy.featuresForTier(PlanTier.FREE).contains(AppFeature.LIVEFOLLOW_BROADCAST))
+    fun `free does not unlock task creation`() {
+        assertFalse(policy.featuresForTier(PlanTier.FREE).contains(AppFeature.TASKS_CREATE))
+    }
+
+    @Test
+    fun `soaring unlocks task creation`() {
+        assertTrue(policy.featuresForTier(PlanTier.SOARING).contains(AppFeature.TASKS_CREATE))
+    }
+
+    @Test
+    fun `pro unlocks hotspots`() {
+        assertTrue(policy.featuresForTier(PlanTier.PRO).contains(AppFeature.HOTSPOTS))
     }
 }

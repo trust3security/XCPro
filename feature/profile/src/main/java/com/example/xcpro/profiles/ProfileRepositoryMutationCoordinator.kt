@@ -13,7 +13,8 @@ internal class ProfileRepositoryMutationCoordinator(
         persistState: suspend (List<UserProfile>, String?) -> Unit,
         commitState: (List<UserProfile>, UserProfile?) -> Unit
     ): UserProfile {
-        require(currentProfiles.isEmpty()) {
+        val canonicalCurrentProfiles = normalizeProfilesForPersistence(currentProfiles).profiles
+        require(canonicalCurrentProfiles.isEmpty()) {
             "First-launch setup is only available before any profiles exist"
         }
 
@@ -30,17 +31,19 @@ internal class ProfileRepositoryMutationCoordinator(
         persistState: suspend (List<UserProfile>, String?) -> Unit,
         commitState: (List<UserProfile>, UserProfile?) -> Unit
     ): UserProfile {
+        val canonicalCurrentProfiles = normalizeProfilesForPersistence(currentProfiles).profiles
         val normalizedName = request.name.trim()
         require(normalizedName.isNotBlank()) { "Profile name cannot be blank" }
         val sourceProfile = request.copyFromProfile?.let { source ->
-            currentProfiles.find { it.id == source.id } ?: error("Source profile for copy not found")
+            canonicalCurrentProfiles.find { it.id == source.id }
+                ?: error("Source profile for copy not found")
         }
 
         val createdAt = clock.nowWallMs()
         val newProfile = UserProfile(
             id = profileIdGenerator.newId(),
             name = normalizedName,
-            aircraftType = request.aircraftType,
+            aircraftType = request.aircraftType.canonicalForPersistence(),
             aircraftModel = request.aircraftModel ?: sourceProfile?.aircraftModel,
             description = request.description ?: sourceProfile?.description,
             preferences = sourceProfile?.preferences ?: ProfilePreferences(),
@@ -49,11 +52,11 @@ internal class ProfileRepositoryMutationCoordinator(
             polar = sourceProfile?.polar ?: ProfilePolarSettings()
         )
 
-        val updatedProfiles = currentProfiles + newProfile
-        val onlyDefaultBeforeCreate = currentProfiles.size == 1 &&
-            ProfileIdResolver.isCanonicalDefault(currentProfiles.first().id)
+        val updatedProfiles = canonicalCurrentProfiles + newProfile
+        val onlyDefaultBeforeCreate = canonicalCurrentProfiles.size == 1 &&
+            ProfileIdResolver.isCanonicalDefault(canonicalCurrentProfiles.first().id)
         val resolvedActive = when {
-            currentProfiles.isEmpty() -> newProfile
+            canonicalCurrentProfiles.isEmpty() -> newProfile
             onlyDefaultBeforeCreate -> newProfile
             else -> updatedProfiles.find { it.id == currentActiveProfileId } ?: fallbackActiveProfile(updatedProfiles)
         }
@@ -69,13 +72,15 @@ internal class ProfileRepositoryMutationCoordinator(
         persistState: suspend (List<UserProfile>, String?) -> Unit,
         commitState: (List<UserProfile>, UserProfile?) -> Unit
     ) {
-        val existing = currentProfiles.find { it.id == profile.id }
+        val canonicalCurrentProfiles = normalizeProfilesForPersistence(currentProfiles).profiles
+        val canonicalProfile = profile.normalizedForPersistence()
+        val existing = canonicalCurrentProfiles.find { it.id == canonicalProfile.id }
         val updatedProfiles = if (existing == null) {
-            (currentProfiles + profile).distinctBy { it.id }
+            (canonicalCurrentProfiles + canonicalProfile).distinctBy { it.id }
         } else {
-            currentProfiles
+            canonicalCurrentProfiles
         }
-        val resolvedActive = updatedProfiles.find { it.id == profile.id } ?: profile
+        val resolvedActive = updatedProfiles.find { it.id == canonicalProfile.id } ?: canonicalProfile
 
         persistState(updatedProfiles, resolvedActive.id)
         commitState(updatedProfiles, resolvedActive)
@@ -88,21 +93,25 @@ internal class ProfileRepositoryMutationCoordinator(
         persistState: suspend (List<UserProfile>, String?) -> Unit,
         commitState: (List<UserProfile>, UserProfile?) -> Unit
     ) {
-        val normalizedName = updatedProfile.name.trim()
+        val canonicalCurrentProfiles = normalizeProfilesForPersistence(currentProfiles).profiles
+        val canonicalUpdatedProfile = updatedProfile.normalizedForPersistence()
+        val normalizedName = canonicalUpdatedProfile.name.trim()
         require(normalizedName.isNotBlank()) { "Profile name cannot be blank" }
-        val index = currentProfiles.indexOfFirst { it.id == updatedProfile.id }
+        val index = canonicalCurrentProfiles.indexOfFirst { it.id == canonicalUpdatedProfile.id }
         if (index < 0) {
             error("Profile not found")
         }
-        val existing = currentProfiles[index]
+        val existing = canonicalCurrentProfiles[index]
         val metadataOnlyUpdate = existing.copy(
             name = normalizedName,
-            aircraftType = updatedProfile.aircraftType,
-            aircraftModel = updatedProfile.aircraftModel,
-            description = updatedProfile.description
+            aircraftType = canonicalUpdatedProfile.aircraftType,
+            aircraftModel = canonicalUpdatedProfile.aircraftModel,
+            description = canonicalUpdatedProfile.description
         )
-        val updatedProfiles = currentProfiles.toMutableList().apply { this[index] = metadataOnlyUpdate }
-        val updatedActive = if (currentActiveProfileId == updatedProfile.id) {
+        val updatedProfiles = canonicalCurrentProfiles.toMutableList().apply {
+            this[index] = metadataOnlyUpdate
+        }
+        val updatedActive = if (currentActiveProfileId == canonicalUpdatedProfile.id) {
             metadataOnlyUpdate
         } else {
             updatedProfiles.find { it.id == currentActiveProfileId }
@@ -119,14 +128,15 @@ internal class ProfileRepositoryMutationCoordinator(
         persistState: suspend (List<UserProfile>, String?) -> Unit,
         commitState: (List<UserProfile>, UserProfile?) -> Unit
     ) {
+        val canonicalCurrentProfiles = normalizeProfilesForPersistence(currentProfiles).profiles
         if (ProfileIdResolver.isCanonicalDefault(profileId)) {
             error("Cannot delete the default profile")
         }
-        if (currentProfiles.size <= 1) {
+        if (canonicalCurrentProfiles.size <= 1) {
             error("Cannot delete the last profile")
         }
-        val remaining = currentProfiles.filter { it.id != profileId }
-        if (remaining.size == currentProfiles.size) {
+        val remaining = canonicalCurrentProfiles.filter { it.id != profileId }
+        if (remaining.size == canonicalCurrentProfiles.size) {
             error("Profile not found")
         }
 

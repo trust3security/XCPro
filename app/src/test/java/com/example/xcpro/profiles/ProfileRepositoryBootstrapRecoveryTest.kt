@@ -71,11 +71,16 @@ class ProfileRepositoryBootstrapRecoveryTest {
 
         assertEquals(2, hydrated.size)
         assertEquals("p1", harness.repository.activeProfile.value?.id)
+        assertEquals(
+            AircraftType.SAILPLANE,
+            hydrated.first { it.id == "p1" }.aircraftType
+        )
         assertTrue(harness.writeStateCalls > 0)
         assertTrue(
             (harness.snapshotState.value.profilesJson ?: "")
                 .contains(ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID)
         )
+        assertTrue(!(harness.snapshotState.value.profilesJson ?: "").contains("\"GLIDER\""))
     }
 
     @Test
@@ -170,6 +175,7 @@ class ProfileRepositoryBootstrapRecoveryTest {
         assertEquals(created.id, repairedSnapshot.activeProfileId)
         val active = harness.repository.activeProfile.first()
         assertEquals(created.id, active?.id)
+        assertEquals(AircraftType.SAILPLANE, active?.aircraftType)
         assertEquals(created.id, harness.snapshotState.value.activeProfileId)
     }
 
@@ -245,6 +251,10 @@ class ProfileRepositoryBootstrapRecoveryTest {
         val hydrated = harness.repository.profiles.first { it.isNotEmpty() }
         assertEquals(2, hydrated.size)
         assertTrue(hydrated.any { it.id == "p2" })
+        assertEquals(
+            AircraftType.SAILPLANE,
+            hydrated.first { it.id == "p2" }.aircraftType
+        )
         assertTrue(hydrated.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID })
     }
 
@@ -267,6 +277,10 @@ class ProfileRepositoryBootstrapRecoveryTest {
         val hydrated = harness.repository.profiles.first { profiles -> profiles.any { it.id == "p3" } }
         assertEquals(2, hydrated.size)
         assertTrue(hydrated.any { it.id == "p3" })
+        assertEquals(
+            AircraftType.SAILPLANE,
+            hydrated.first { it.id == "p3" }.aircraftType
+        )
         assertTrue(hydrated.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID })
     }
 

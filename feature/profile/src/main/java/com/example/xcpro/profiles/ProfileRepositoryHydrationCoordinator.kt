@@ -36,7 +36,8 @@ internal class ProfileRepositoryHydrationCoordinator(
             DefaultProfileProvisioningResult(
                 profiles = parseResult.profiles,
                 insertedDefaultProfile = false,
-                migratedLegacyDefaultAlias = false
+                migratedLegacyDefaultAlias = false,
+                normalizedLegacyAircraftTypes = false
             )
         } else {
             ensureBootstrapProfile(parseResult.profiles, clock)
@@ -60,10 +61,14 @@ internal class ProfileRepositoryHydrationCoordinator(
         }
 
         val shouldRepairSnapshot = if (parseResult.parseFailed) {
-            defaultProvisioning.insertedDefaultProfile || defaultProvisioning.migratedLegacyDefaultAlias
+            defaultProvisioning.insertedDefaultProfile ||
+                defaultProvisioning.migratedLegacyDefaultAlias ||
+                defaultProvisioning.normalizedLegacyAircraftTypes
         } else {
             defaultProvisioning.insertedDefaultProfile ||
                 defaultProvisioning.migratedLegacyDefaultAlias ||
+                defaultProvisioning.normalizedLegacyAircraftTypes ||
+                parseResult.normalizedLegacyAircraftTypes ||
                 snapshot.activeProfileId != resolvedActiveId
         }
 
@@ -76,7 +81,12 @@ internal class ProfileRepositoryHydrationCoordinator(
                 if (parseResult.parseFailed) {
                     suppressBackupSync = true
                 }
-                if (defaultProvisioning.insertedDefaultProfile || defaultProvisioning.migratedLegacyDefaultAlias) {
+                if (
+                    defaultProvisioning.insertedDefaultProfile ||
+                    defaultProvisioning.migratedLegacyDefaultAlias ||
+                    defaultProvisioning.normalizedLegacyAircraftTypes ||
+                    parseResult.normalizedLegacyAircraftTypes
+                ) {
                     persistState(loadedProfiles, resolvedActiveId)
                 } else {
                     persistActiveProfileId(resolvedActiveId)

@@ -18,9 +18,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.profiles.AircraftType
 import com.example.xcpro.profiles.ProfileCreationRequest
+import com.example.xcpro.profiles.USER_SELECTABLE_AIRCRAFT_TYPES
 
 @Composable
 fun CreateProfileDialog(
@@ -49,9 +51,10 @@ fun CreateProfileDialog(
                 Text("Aircraft Type")
                 Spacer(modifier = Modifier.height(8.dp))
 
-                AircraftType.values().forEach { aircraft ->
+                USER_SELECTABLE_AIRCRAFT_TYPES.forEach { aircraft ->
                     RowWithRadio(
                         label = aircraft.displayName,
+                        testTag = "create_profile_aircraft_type_${aircraft.name}",
                         icon = {
                             Icon(
                                 imageVector = aircraft.icon(),
@@ -113,13 +116,22 @@ fun CreateProfileDialog(
 @Composable
 private fun RowWithRadio(
     label: String,
+    testTag: String? = null,
     icon: @Composable (() -> Unit)?,
     selected: Boolean,
     onSelected: () -> Unit
 ) {
     androidx.compose.foundation.layout.Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (testTag != null) {
+                    Modifier.testTag(testTag)
+                } else {
+                    Modifier
+                }
+            )
     ) {
         RadioButton(
             selected = selected,

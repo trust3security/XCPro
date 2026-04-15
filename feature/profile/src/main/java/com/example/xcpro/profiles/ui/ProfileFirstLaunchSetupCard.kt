@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.xcpro.profiles.AircraftType
+import com.example.xcpro.profiles.USER_SELECTABLE_AIRCRAFT_TYPES
 
 @Composable
 internal fun ProfileFirstLaunchSetupCard(
@@ -83,7 +84,7 @@ internal fun ProfileFirstLaunchSetupCard(
                     .fillMaxWidth()
                     .selectableGroup()
             ) {
-                firstLaunchAircraftChoices().forEach { aircraftType ->
+                USER_SELECTABLE_AIRCRAFT_TYPES.forEach { aircraftType ->
                     AircraftTypeOptionRow(
                         aircraftType = aircraftType,
                         selected = selectedAircraft == aircraftType,
@@ -169,9 +170,3 @@ private fun AircraftTypeOptionRow(
         }
     }
 }
-
-private fun firstLaunchAircraftChoices(): List<AircraftType> = listOf(
-    AircraftType.SAILPLANE,
-    AircraftType.PARAGLIDER,
-    AircraftType.HANG_GLIDER
-)

@@ -2,7 +2,8 @@ package com.example.xcpro.billing
 
 enum class PlanTier {
     FREE,
-    SOAR,
+    BASIC,
+    SOARING,
     XC,
     PRO,
 }

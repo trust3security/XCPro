@@ -12,14 +12,16 @@ This is the anti-chaos checklist.
 - backend verification skipped “for now”
 - paywall copy treated as business logic
 - product IDs or tier labels hardcoded in too many places
+- SkySight provider state collapsed into `PlanTier`
 - unrelated refactors bundled into the same feature branch
 
 ## Ad hoc logic red flags
 
 - a quick `when(tier)` check inserted in 10 unrelated screens
+- provider-gated access checks duplicated across random screens instead of using the central access policy
 - feature access inferred from screen names rather than capability IDs
 - placeholder products or fake server responses left in production paths
-- TODOs for expiry/revoke/restore flows
+- TODOs for expiry / revoke / restore / provider-link failure flows
 - debug-only shortcuts accidentally available in release
 - one-off compatibility shims with no removal plan
 
@@ -27,14 +29,16 @@ This is the anti-chaos checklist.
 
 - renaming unrelated packages or classes without functional need
 - moving modules before the first subscription slice works
-- changing paywall, backend, analytics, and every premium screen in one first patch
+- changing paywall, backend, analytics, every premium screen, and every integration in one first patch
 - changing copy, architecture, and business rules in a single commit
 - touching files only for style while implementing billing
+- pushing SkySight networking into the billing module without a real ownership reason
 
 ## Required self-audit before merge
 
-- Is there exactly one authoritative entitlement owner?
+- Is there exactly one authoritative XCPro entitlement owner?
 - Is every premium capability enforced through a reusable policy seam?
+- Are provider-linked premium checks also enforced through the same reusable policy seam?
 - Are UI classes only rendering and sending intents?
 - Did we avoid hardcoded price strings?
 - Did we avoid widening scope?

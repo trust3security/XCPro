@@ -15,12 +15,18 @@ Optional later:
 
 ### `:core:billing`
 Owns:
-- Play Billing adapter/wrapper
+- Play Billing adapter / wrapper
 - product catalog mapping
 - purchase sync coordination
-- entitlement state models
-- repository interfaces and implementations
+- XCPro entitlement state models
 - feature access policy
+- repositories and use cases for subscription-state observation and refresh
+
+### existing SkySight integration slice
+Owns:
+- SkySight API / auth client
+- linked-account verification flow
+- narrow read model that exposes `SkySightAccountState` to the access policy seam
 
 ### app/root layer
 Owns:
@@ -35,23 +41,27 @@ Owns:
 - feature comparison display
 - purchase button intents
 - restore CTA
+- provider-link CTA surfaces when allowed by plan
 
 ### backend
 Owns:
 - purchase verification
 - lifecycle updates
-- canonical entitlement grant/revoke decisions
+- canonical entitlement grant / revoke decisions
+- canonical provider-linked state needed for dual-gated features
 
 ## Recommended file responsibilities
 
 - `PlanTier.kt` -> display-neutral tier model
 - `AppFeature.kt` -> stable capability list
-- `EntitlementState.kt` -> canonical read model for the app
-- `FeatureAccessPolicy.kt` -> pure mapping tier -> features
-- `BillingCatalog.kt` -> product IDs/base plans/offers
+- `EntitlementState.kt` -> canonical XCPro plan read model for the app
+- `SkySightAccountState.kt` -> narrow provider account-state model
+- `FeatureAccessPolicy.kt` -> pure mapping from `PlanTier` + provider account state to capabilities
+- `BillingCatalog.kt` -> product IDs / base plans / offers
 - `PlayBillingClientAdapter.kt` -> Play Billing wrapper only
-- `SubscriptionRepository.kt` -> client orchestration, purchase sync, cache
-- `ObserveEntitlementsUseCase.kt` -> UI read path
+- `SubscriptionRepository.kt` -> client orchestration, purchase sync, XCPro entitlement cache
+- `ObserveEntitlementsUseCase.kt` -> UI read path for XCPro plan state
+- `ObserveAccessContextUseCase.kt` -> combined read path when screens need both plan state and provider-linked state
 - `RefreshEntitlementsUseCase.kt` -> explicit refresh trigger
 - `PurchaseSubscriptionUseCase.kt` -> purchase flow orchestration
 - `BillingViewModel.kt` -> screen and top-level billing state
@@ -65,6 +75,14 @@ Google Play BillingClient
     -> Purchase sync API client
     -> SubscriptionRepository
     -> ObserveEntitlementsUseCase
+        \
+         -> ObserveAccessContextUseCase
+        /
+SkySight auth / account-state lane
+    -> SkySight integration repository
+    -> ObserveAccessContextUseCase
+
+ObserveAccessContextUseCase
     -> BillingViewModel
     -> MainActivityScreen / AppNavGraph / feature screens
 ```
@@ -76,3 +94,5 @@ Google Play BillingClient
 - no duplicated entitlement state in multiple ViewModels
 - no price formatting logic mixed with entitlement enforcement
 - local DataStore can cache, but cannot become the source of truth
+- do not let `:core:billing` absorb unrelated SkySight networking ownership just because both affect gating
+- provider-linked access checks must still go through the same central policy seam

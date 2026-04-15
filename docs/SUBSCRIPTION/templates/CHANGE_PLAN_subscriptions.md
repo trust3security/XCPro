@@ -1,7 +1,7 @@
-# Subscription Change Plan — XCPro
+# Subscription Change Plan - XCPro
 
 ## 0) Metadata
-- Title: XCPro subscriptions (Free / Soar / XC / Pro)
+- Title: XCPro subscriptions (Free / Basic / Soaring / XC / Pro)
 - Owner:
 - Date:
 - Issue/PR:
@@ -11,7 +11,7 @@
 - Problem statement: XCPro needs subscription monetization with clean runtime entitlements and no architecture drift.
 - Why now:
 - In scope:
-  - Play subscription catalog for Soar / XC / Pro
+  - Play subscription catalog for Basic / Soaring / XC / Pro
   - backend-authoritative entitlements
   - client billing integration
   - paywall / upgrade flow

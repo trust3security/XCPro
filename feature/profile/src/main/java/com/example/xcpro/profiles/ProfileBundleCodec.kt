@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.google.gson.reflect.TypeToken
 
 data class ProfileBundleImportRequest(
     val json: String,
@@ -57,26 +56,11 @@ data class ManagedProfileIndexPointer(
     val bundleFileName: String?
 )
 
-private data class LegacyProfileExportDocument(
-    val version: String = "1.0",
-    val exportDate: String? = null,
-    val profiles: List<UserProfile> = emptyList()
-)
-
-private data class LegacyProfileBackupDocument(
-    val version: String = "1.0",
-    val generatedAtWallMs: Long = 0L,
-    val sequenceNumber: Long = 0L,
-    val isActive: Boolean = false,
-    val profile: UserProfile
-)
-
 private const val BUNDLE_VERSION = "2.0"
 private val VERSION_REGEX = Regex("""^(\d+)(?:\.(\d+))?.*$""")
 
 object ProfileBundleCodec {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
-    private val profileListType = object : TypeToken<List<UserProfile>>() {}.type
 
     fun serialize(document: ProfileBundleDocument): String = gson.toJson(document)
 
@@ -118,24 +102,21 @@ object ProfileBundleCodec {
                 supported = "1.x"
             )
         }
-        val document = gson.fromJson(root, LegacyProfileBackupDocument::class.java)
+        val normalizedProfile = gson.parseUserProfileOrNull(root.get("profile"))
+            ?.normalizedForPersistence()
+            ?: error("No profiles found in selected import file.")
         return ParsedProfileBundle(
-            profiles = listOf(document.profile),
-            activeProfileId = if (document.isActive) document.profile.id else null,
+            profiles = listOf(normalizedProfile),
+            activeProfileId = if (root.getBooleanOrFalse("isActive")) normalizedProfile.id else null,
             settingsSnapshot = ProfileSettingsSnapshot.empty(),
             sourceFormat = ProfileBundleSourceFormat.BACKUP_PROFILE_DOCUMENT_V1,
             schemaVersion = root.getStringOrNull("version") ?: "1.0",
-            exportedAtWallMs = document.generatedAtWallMs.takeIf { it > 0L }
+            exportedAtWallMs = root.getLongOrNull("generatedAtWallMs")?.takeIf { it > 0L }
         )
     }
 
     private fun parseAsBundleOrLegacy(root: JsonObject): ParsedProfileBundle? {
         if (!root.has("profiles")) return null
-        val profiles = parseProfilesArray(root.get("profiles"))
-        if (profiles.isEmpty()) {
-            error("No profiles found in selected import file.")
-        }
-
         val hasBundleMarkers = root.has("settings") ||
             root.has("settingsSnapshot") ||
             root.has("activeProfileId")
@@ -160,6 +141,12 @@ object ProfileBundleCodec {
                 else -> null
             }
             val settings = parseSettingsSnapshot(settingsElement)
+            val profiles = normalizeProfilesForPersistence(
+                parseProfilesArray(root.get("profiles")).filterNotNull()
+            ).profiles
+            if (profiles.isEmpty()) {
+                error("No profiles found in selected import file.")
+            }
             ParsedProfileBundle(
                 profiles = profiles,
                 activeProfileId = activeProfileId,
@@ -181,22 +168,25 @@ object ProfileBundleCodec {
                     supported = "1.x"
                 )
             }
-            val legacy = gson.fromJson(root, LegacyProfileExportDocument::class.java)
+            val profiles = normalizeProfilesForPersistence(
+                parseProfilesArray(root.get("profiles")).filterNotNull()
+            ).profiles
+            if (profiles.isEmpty()) {
+                error("No profiles found in selected import file.")
+            }
             ParsedProfileBundle(
-                profiles = legacy.profiles,
+                profiles = profiles,
                 activeProfileId = null,
                 settingsSnapshot = ProfileSettingsSnapshot.empty(),
                 sourceFormat = ProfileBundleSourceFormat.LEGACY_PROFILE_EXPORT_V1,
                 schemaVersion = root.getStringOrNull("version") ?: "1.0",
-                exportedAtLabel = legacy.exportDate?.trim()?.takeIf { it.isNotEmpty() }
+                exportedAtLabel = root.getStringOrNull("exportDate")
             )
         }
     }
 
-    private fun parseProfilesArray(element: JsonElement?): List<UserProfile> {
-        if (element == null || element.isJsonNull || !element.isJsonArray) return emptyList()
-        return gson.fromJson(element, profileListType) ?: emptyList()
-    }
+    private fun parseProfilesArray(element: JsonElement?): List<UserProfile?> =
+        gson.parseUserProfilesArray(element)
 
     private fun parseSettingsSnapshot(element: JsonElement?): ProfileSettingsSnapshot {
         if (element == null || element.isJsonNull || !element.isJsonObject) {
@@ -242,6 +232,13 @@ object ProfileBundleCodec {
         val value = get(key)
         if (value == null || value.isJsonNull) return null
         return runCatching { value.asLong }.getOrNull()
+    }
+
+    private fun JsonObject.getBooleanOrFalse(key: String): Boolean {
+        if (!has(key)) return false
+        val value = get(key)
+        if (value == null || value.isJsonNull) return false
+        return runCatching { value.asBoolean }.getOrDefault(false)
     }
 
     private fun parseVersionOrDefault(

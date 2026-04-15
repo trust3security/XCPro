@@ -24,6 +24,17 @@ enum class AircraftType(
     )
 }
 
+internal val USER_SELECTABLE_AIRCRAFT_TYPES: List<AircraftType> = listOf(
+    AircraftType.SAILPLANE,
+    AircraftType.PARAGLIDER,
+    AircraftType.HANG_GLIDER
+)
+
+internal fun AircraftType.canonicalForPersistence(): AircraftType = when (this) {
+    AircraftType.GLIDER -> AircraftType.SAILPLANE
+    else -> this
+}
+
 data class UIPosition(
     val x: Float,
     val y: Float
@@ -76,6 +87,28 @@ data class UserProfile(
             "$name - ${aircraftType.displayName}"
         }
     }
+}
+
+internal fun UserProfile.normalizedForPersistence(): UserProfile {
+    val normalizedAircraftType = aircraftType.canonicalForPersistence()
+    return if (normalizedAircraftType == aircraftType) {
+        this
+    } else {
+        copy(aircraftType = normalizedAircraftType)
+    }
+}
+
+internal data class NormalizedProfilesResult(
+    val profiles: List<UserProfile>,
+    val normalizedLegacyAircraftTypes: Boolean
+)
+
+internal fun normalizeProfilesForPersistence(profiles: List<UserProfile>): NormalizedProfilesResult {
+    val normalizedProfiles = profiles.map(UserProfile::normalizedForPersistence)
+    return NormalizedProfilesResult(
+        profiles = normalizedProfiles,
+        normalizedLegacyAircraftTypes = normalizedProfiles != profiles
+    )
 }
 
 data class ProfileCreationRequest(

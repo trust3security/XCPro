@@ -25,18 +25,20 @@ internal class ProfileRepositoryImportCoordinator(
             )
         }
 
+        val canonicalCurrentProfiles = normalizeProfilesForPersistence(currentProfiles).profiles
         val failures = mutableListOf<ProfileImportFailure>()
-        val knownIds = currentProfiles.map { it.id }.toMutableSet()
-        val knownNames = currentProfiles
+        val knownIds = canonicalCurrentProfiles.map { it.id }.toMutableSet()
+        val knownNames = canonicalCurrentProfiles
             .map { it.name.trim().lowercase(Locale.ROOT) }
             .filter { it.isNotBlank() }
             .toMutableSet()
-        val workingProfiles = currentProfiles.toMutableList()
+        val workingProfiles = canonicalCurrentProfiles.toMutableList()
         val importedProfiles = mutableListOf<UserProfile>()
         val importedIdMap = LinkedHashMap<String, String>()
 
         request.profiles.forEach { incoming ->
-            val normalizedName = incoming.name.trim()
+            val normalizedIncoming = incoming.normalizedForPersistence()
+            val normalizedName = normalizedIncoming.name.trim()
             if (normalizedName.isBlank()) {
                 failures += ProfileImportFailure(
                     sourceName = incoming.name,
@@ -55,7 +57,7 @@ internal class ProfileRepositoryImportCoordinator(
             } else {
                 -1
             }
-            val preferredIdRaw = incoming.id.trim()
+            val preferredIdRaw = normalizedIncoming.id.trim()
             val preferredId = ProfileIdResolver.normalizeOrNull(preferredIdRaw)
                 ?: preferredIdRaw
             val generatedId = if (replaceTargetIndex >= 0) {
@@ -73,22 +75,22 @@ internal class ProfileRepositoryImportCoordinator(
                 )
             }
 
-            val imported = incoming.copy(
+            val imported = normalizedIncoming.copy(
                 id = generatedId,
                 name = resolvedName,
                 preferences = if (request.preserveImportedPreferences) {
-                    incoming.preferences
+                    normalizedIncoming.preferences
                 } else {
                     ProfilePreferences()
                 },
                 isActive = false,
                 createdAt = if (request.preserveImportedPreferences) {
-                    incoming.createdAt
+                    normalizedIncoming.createdAt
                 } else {
                     clock.nowWallMs()
                 },
                 lastUsed = if (request.preserveImportedPreferences) {
-                    incoming.lastUsed
+                    normalizedIncoming.lastUsed
                 } else {
                     0L
                 }

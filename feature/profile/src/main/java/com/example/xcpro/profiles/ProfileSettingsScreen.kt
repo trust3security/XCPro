@@ -1,5 +1,7 @@
 package com.example.xcpro.profiles
 
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -10,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -214,24 +218,61 @@ fun ProfileBasicSettings(
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3
             )
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+
+            ProfileAircraftTypeSelector(
+                selectedAircraftType = profile.aircraftType.canonicalForPersistence(),
+                onAircraftTypeSelected = { aircraftType ->
+                    onProfileChanged(profile.copy(aircraftType = aircraftType))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileAircraftTypeSelector(
+    selectedAircraftType: AircraftType,
+    onAircraftTypeSelected: (AircraftType) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Aircraft Type",
+            style = MaterialTheme.typography.labelMedium
+        )
+        USER_SELECTABLE_AIRCRAFT_TYPES.forEach { aircraftType ->
+            Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = profile.aircraftType.icon(),
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Aircraft Type",
-                        style = MaterialTheme.typography.labelMedium
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = selectedAircraftType == aircraftType,
+                            onClick = { onAircraftTypeSelected(aircraftType) },
+                            role = Role.RadioButton
+                        )
+                        .testTag("profile_settings_aircraft_type_${aircraftType.name}")
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selectedAircraftType == aircraftType,
+                        onClick = null
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = aircraftType.icon(),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = profile.aircraftType.displayName,
+                        text = aircraftType.displayName,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium
                     )

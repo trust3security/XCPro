@@ -37,14 +37,16 @@ THEN READ THESE LOCAL TASK ARTIFACTS:
 TASK:
 Design the smallest safe implementation plan for adding subscription monetization to XCPro with these tiers:
 - Free
-- Soar
+- Basic
+- Soaring
 - XC
 - Pro
 
 MANDATORY PRODUCT MODEL:
 - Free is the default state and is not a Play subscription product
 - Paid tiers are separate subscription products:
-  - xcpro_soar
+  - xcpro_basic
+  - xcpro_soaring
   - xcpro_xc
   - xcpro_pro
 - Base plan IDs:
@@ -52,6 +54,31 @@ MANDATORY PRODUCT MODEL:
   - annual
 - Backend is authoritative for entitlements
 - Client-side cache is allowed, client-side authority is not
+
+LOCKED CAPABILITY DECISIONS SO FAR:
+- Free:
+  - airspace
+  - home waypoint / direct-to-home only
+  - flight mode screen selection
+  - Essentials cards only
+- Basic:
+  - Distance Circles
+  - ADS-B
+  - RainViewer
+  - WeGlide
+  - SkySight basic/free surfaces
+- Soaring:
+  - Add / create / edit Task
+  - OGN
+  - SkySight credential entry / account linking
+  - SkySight premium surfaces only when a linked paid SkySight account is validated
+- Pro:
+  - Scia
+  - Hotspots
+- If Hotspots is ultimately SkySight-backed, require both:
+  - plan >= PRO
+  - linked paid SkySight account
+- XC-specific bundle still needs to be made explicit in the change plan if XC remains a launch tier
 
 NON-NEGOTIABLES:
 - Preserve MVVM + UDF + SSOT
@@ -61,6 +88,7 @@ NON-NEGOTIABLES:
 - No widening scope into unrelated refactors
 - No TODOs in production paths
 - No “temporary” client-only entitlement unlocks
+- Do not collapse SkySight provider state into PlanTier
 - Use the smallest safe slice
 - Respect existing repo rules and verification gates
 
@@ -81,4 +109,5 @@ IMPORTANT:
 - Do not ask clarifying questions unless truly blocked by missing information that cannot be inferred from the repo and the SUBSCRIPTION docs
 - If ambiguity exists, choose the most architecture-consistent option and document the assumption
 - Call out that the current Android applicationId looks temporary and should be finalized before Play setup if that is still true in the repo
+- If XC has no clear differentiator in the repo or docs, call that out as a launch risk rather than hand-waving it away
 ```

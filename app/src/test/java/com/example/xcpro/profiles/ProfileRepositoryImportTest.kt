@@ -69,6 +69,26 @@ class ProfileRepositoryImportTest {
         assertEquals(false, stored.preferences.cardAnimations)
         assertEquals(1234L, stored.createdAt)
         assertEquals(5678L, stored.lastUsed)
+        assertEquals(AircraftType.SAILPLANE, stored.aircraftType)
+    }
+
+    @Test
+    fun importProfiles_normalizesLegacyGliderToSailplane() = runTest {
+        val harness = createHarness(backgroundScope)
+        val repository = harness.repository
+        val imported = UserProfile(
+            id = "legacy-glider-import",
+            name = "Legacy Glider Import",
+            aircraftType = AircraftType.GLIDER,
+            createdAt = 1_000L,
+            lastUsed = 2_000L
+        )
+
+        repository.importProfiles(ProfileImportRequest(profiles = listOf(imported))).getOrThrow()
+
+        val stored = repository.profiles.value.first { it.id == "legacy-glider-import" }
+        assertEquals(AircraftType.SAILPLANE, stored.aircraftType)
+        assertTrue(!(harness.snapshotState.value.profilesJson ?: "").contains("\"GLIDER\""))
     }
 
     @Test
@@ -245,7 +265,7 @@ class ProfileRepositoryImportTest {
         assertEquals(1, afterProfiles.count { it.name == "Replace Me" })
         val replaced = afterProfiles.first { it.name == "Replace Me" }
         assertEquals(existing.id, replaced.id)
-        assertEquals(AircraftType.GLIDER, replaced.aircraftType)
+        assertEquals(AircraftType.SAILPLANE, replaced.aircraftType)
         assertEquals(existing.id, result.importedProfileIdMap["incoming-replace-id"])
     }
 

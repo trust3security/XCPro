@@ -14,6 +14,7 @@ Define release-grade behavior for profile restore, reinstall, and clean-start te
 - Android backup and device transfer remain enabled for profile state.
 - Uninstall and reinstall may restore profiles if Android restores app-private data.
 - Restore is silent when the restored state is valid and an active profile resolves successfully.
+- Restored legacy `GLIDER` aircraft types are normalized to canonical `SAILPLANE` during hydration.
 - The first-launch aircraft picker is shown only when hydration completes with no valid profiles and no bootstrap error.
 
 ## Authoritative Storage

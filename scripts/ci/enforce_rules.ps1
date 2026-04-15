@@ -383,7 +383,13 @@ if ($AuditViewModelBoundariesOnly -or $RuleSet -in @("Full", "RepositoryFull", "
 }
 
 if ($AuditViewModelBoundariesOnly) {
+    Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
+    Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
     Write-Host ""
+    if ($script:HadFailures) {
+        Write-Host "ViewModel boundary audit failed."
+        exit 1
+    }
     Write-Host "ViewModel boundary audit completed."
     exit 0
 }
@@ -421,6 +427,7 @@ if ($runArchitectureRules) {
 
     # 2A) ViewModel constructor boundary: no broad dependency bags or TaskManagerCoordinator in ViewModel constructors.
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
+    Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
 
     # 3) Compose lifecycle: ban collectAsState without lifecycle awareness.
     $collectArgs = @(

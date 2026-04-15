@@ -25,25 +25,51 @@ TASK:
 Implement the smallest safe end-to-end subscription slice for XCPro using the approved plan.
 
 IMPLEMENTATION BOUNDARY:
-- runtime entitlements for Free / Soar / XC / Pro
-- billing/catalog infrastructure
+- runtime entitlements for Free / Basic / Soaring / XC / Pro
+- billing / catalog infrastructure
 - backend-authoritative entitlement sync
 - paywall / upgrade entry point
 - reusable feature access policy
 - root state wiring
 - a small representative set of gated features
+- SkySight provider-linked access state needed for dual-gated features
 - tests and docs needed for this slice
+
+LOCKED ACCESS RULES:
+- Free:
+  - airspace
+  - home waypoint / direct-to-home only
+  - flight mode screen selection
+  - Essentials cards only
+- Basic:
+  - Distance Circles
+  - ADS-B
+  - RainViewer
+  - WeGlide
+  - SkySight basic/free surfaces
+- Soaring:
+  - Add / create / edit Task
+  - OGN
+  - SkySight credential entry / account linking
+  - SkySight premium surfaces only when linked paid SkySight state is validated
+- Pro:
+  - Scia
+  - Hotspots
+- If Hotspots is SkySight-backed, require both Pro tier and linked paid SkySight state
+- XC-specific bundle must follow the approved plan only
 
 NON-NEGOTIABLES:
 - Backend remains authoritative
 - No UI-only premium unlocks
 - No BillingClient calls in composables
 - No scattered ad hoc tier checks
+- No scattered ad hoc provider-state checks
 - No scope widening into unrelated refactors
 - No dead shims, no TODOs, no placeholder production logic
 - Keep file ownership narrow and explicit
 - Split files if they become mixed-responsibility
 - Preserve dependency direction and repo architecture
+- Do not let the billing module absorb unrelated SkySight integration ownership
 
 REQUIRED WORKFLOW:
 1. Restate file ownership before editing
@@ -72,4 +98,5 @@ DO NOT:
 - rename products or tiers
 - hardcode price strings
 - leave edge cases unhandled in production paths
+- treat linked paid SkySight as if it were an XCPro purchase
 ```

@@ -146,7 +146,7 @@ class ProfileRepositoryMutationTest {
         ).getOrThrow()
 
         assertEquals("Copied", created.name)
-        assertEquals(AircraftType.GLIDER, created.aircraftType)
+        assertEquals(AircraftType.SAILPLANE, created.aircraftType)
         assertEquals("JS3", created.aircraftModel)
         assertEquals("Source profile", created.description)
         assertEquals(UnitSystem.IMPERIAL, created.preferences.units)
@@ -188,8 +188,31 @@ class ProfileRepositoryMutationTest {
 
         val profiles = repository.profiles.first()
         assertTrue(profiles.any { it.id == orphan.id })
+        assertEquals(
+            AircraftType.SAILPLANE,
+            profiles.first { it.id == orphan.id }.aircraftType
+        )
         val active = repository.activeProfile.first()
         assertEquals(orphan.id, active?.id)
+        assertEquals(AircraftType.SAILPLANE, active?.aircraftType)
+    }
+
+    @Test
+    fun updateProfile_allowsChangingCanonicalDefaultAircraftType() = runTest {
+        val harness = createScopedProfileRepositoryTestHarness(backgroundScope)
+        harness.repository.bootstrapComplete.first { it }
+        val defaultProfile = harness.completeFirstLaunch(AircraftType.PARAGLIDER)
+
+        val result = harness.repository.updateProfile(
+            defaultProfile.copy(aircraftType = AircraftType.HANG_GLIDER)
+        )
+
+        assertTrue(result.isSuccess)
+        val storedDefault = harness.repository.profiles.value.first {
+            it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID
+        }
+        assertEquals(AircraftType.HANG_GLIDER, storedDefault.aircraftType)
+        assertEquals(AircraftType.HANG_GLIDER, harness.repository.activeProfile.value?.aircraftType)
     }
 
     @Test

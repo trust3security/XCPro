@@ -13,6 +13,7 @@ For XCPro, the backend should be authoritative. The device is not trusted to dec
 5. Maintain entitlements after renewals, cancellations, expiries, refunds, and plan changes
 6. Process RTDN messages
 7. Expose a clean entitlement API to the app
+8. Expose provider-linked state needed for dual-gated features, such as SkySight account status
 
 ## Minimal API contract
 
@@ -39,11 +40,27 @@ Response:
 - expiry
 - source
 - last verified time
+- integration states needed for access policy, for example:
+  - `skysight.accountState = UNLINKED | LINKED_FREE | LINKED_PAID | LINK_ERROR | UNKNOWN`
 
 ### `POST /billing/google/rtdn`
 - Pub/Sub push or pull receiver
 - updates server-side subscription state
 - should be idempotent
+
+### `POST /integrations/skysight/link`
+Request:
+- authenticated XCPro user ID
+- SkySight credentials or delegated auth payload, depending on the final integration design
+
+Response:
+- canonical SkySight account state
+- whether the linked account is currently premium-capable
+- refresh / expiry metadata if available
+
+### `DELETE /integrations/skysight/link`
+- removes the stored XCPro-side SkySight link state
+- should revoke local premium SkySight access immediately
 
 ## Suggested storage model
 
@@ -54,6 +71,8 @@ Response:
 - `subscription_entitlements`
 - `subscription_events`
 - `subscription_catalog`
+- `integration_accounts`
+- `integration_account_events`
 - `audit_log`
 
 ## Required lifecycle handling
@@ -68,6 +87,10 @@ Response:
 - account hold
 - upgrade / downgrade / replace
 - linked purchase token chains where applicable
+- SkySight link
+- SkySight unlink
+- SkySight free -> paid transition
+- SkySight paid -> free / expired transition
 
 ## Security rules
 
@@ -75,11 +98,14 @@ Response:
 - always validate package name
 - always validate product ID
 - always validate purchase token ownership and current status
-- treat the backend as the only durable entitlement authority
+- treat the backend as the only durable XCPro subscription authority
+- never treat SkySight linked state as a substitute for XCPro subscription entitlement
+- do not store raw third-party credentials in plaintext
 - keep an audit trail for support and charge disputes
 
 ## Offline rule recommendation
 
 - cached entitlements may be used for temporary display continuity
-- new premium access must not be granted solely from local client assumptions
+- new premium XCPro access must not be granted solely from local client assumptions
+- new premium SkySight-backed access must not be granted solely from stale local linked-account assumptions
 - stale cache behavior must be explicit and tested

@@ -14,7 +14,8 @@ internal fun parseProfiles(
         return ParseProfilesResult(
             profiles = emptyList(),
             bootstrapMessage = null,
-            parseFailed = false
+            parseFailed = false,
+            normalizedLegacyAircraftTypes = false
         )
     }
 
@@ -29,10 +30,7 @@ internal fun parseProfiles(
                 parsedProfiles += null
                 return@forEach
             }
-            val parsedProfile = runCatching {
-                gson.fromJson(element, UserProfile::class.java)
-            }.getOrNull()
-            parsedProfiles += parsedProfile
+            parsedProfiles += gson.parseUserProfileOrNull(element)
         }
         parsedProfiles
     }.getOrElse { error ->
@@ -40,7 +38,8 @@ internal fun parseProfiles(
         return ParseProfilesResult(
             profiles = fallback,
             bootstrapMessage = "Failed to parse stored profiles.",
-            parseFailed = true
+            parseFailed = true,
+            normalizedLegacyAircraftTypes = false
         )
     }
 
@@ -53,23 +52,29 @@ internal fun parseProfiles(
     return ParseProfilesResult(
         profiles = sanitized.profiles,
         bootstrapMessage = message,
-        parseFailed = false
+        parseFailed = false,
+        normalizedLegacyAircraftTypes = sanitized.normalizedLegacyAircraftTypes
     )
 }
 
 internal fun sanitizeProfiles(rawProfiles: List<UserProfile?>): SanitizedProfilesResult {
     val unique = LinkedHashMap<String, UserProfile>()
     var dropped = false
+    var normalizedLegacyAircraftTypes = false
 
     rawProfiles.forEach { profile ->
         if (profile == null) {
             dropped = true
             return@forEach
         }
+        val normalizedProfile = profile.normalizedForPersistence()
+        if (normalizedProfile != profile) {
+            normalizedLegacyAircraftTypes = true
+        }
         val validation = runCatching {
-            val id = profile.id.trim()
-            val name = profile.name.trim()
-            val typeValid = profile.aircraftType.name.isNotBlank()
+            val id = normalizedProfile.id.trim()
+            val name = normalizedProfile.name.trim()
+            val typeValid = normalizedProfile.aircraftType.name.isNotBlank()
             Triple(id, name, typeValid)
         }.getOrNull()
 
@@ -82,14 +87,15 @@ internal fun sanitizeProfiles(rawProfiles: List<UserProfile?>): SanitizedProfile
             dropped = true
             return@forEach
         }
-        if (unique.put(id, profile) != null) {
+        if (unique.put(id, normalizedProfile) != null) {
             dropped = true
         }
     }
 
     return SanitizedProfilesResult(
         profiles = unique.values.toList(),
-        droppedInvalidEntries = dropped
+        droppedInvalidEntries = dropped,
+        normalizedLegacyAircraftTypes = normalizedLegacyAircraftTypes
     )
 }
 
@@ -97,24 +103,30 @@ internal fun ensureBootstrapProfile(
     profiles: List<UserProfile>,
     clock: Clock
 ): DefaultProfileProvisioningResult {
-    if (profiles.isEmpty()) {
+    val canonicalProfiles = normalizeProfilesForPersistence(profiles)
+    val normalizedProfiles = canonicalProfiles.profiles
+    if (normalizedProfiles.isEmpty()) {
         return DefaultProfileProvisioningResult(
             profiles = emptyList(),
             insertedDefaultProfile = false,
-            migratedLegacyDefaultAlias = false
+            migratedLegacyDefaultAlias = false,
+            normalizedLegacyAircraftTypes = canonicalProfiles.normalizedLegacyAircraftTypes
         )
     }
-    if (profiles.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID }) {
+    if (normalizedProfiles.any { it.id == ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID }) {
         return DefaultProfileProvisioningResult(
-            profiles = profiles,
+            profiles = normalizedProfiles,
             insertedDefaultProfile = false,
-            migratedLegacyDefaultAlias = false
+            migratedLegacyDefaultAlias = false,
+            normalizedLegacyAircraftTypes = canonicalProfiles.normalizedLegacyAircraftTypes
         )
     }
 
-    val legacyDefaultIndex = profiles.indexOfFirst { ProfileIdResolver.isLegacyDefaultAlias(it.id) }
+    val legacyDefaultIndex = normalizedProfiles.indexOfFirst {
+        ProfileIdResolver.isLegacyDefaultAlias(it.id)
+    }
     if (legacyDefaultIndex >= 0) {
-        val migrated = profiles.toMutableList()
+        val migrated = normalizedProfiles.toMutableList()
         val legacyDefault = migrated[legacyDefaultIndex]
         migrated[legacyDefaultIndex] = legacyDefault.copy(
             id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID
@@ -122,14 +134,16 @@ internal fun ensureBootstrapProfile(
         return DefaultProfileProvisioningResult(
             profiles = dedupeProfilesById(migrated),
             insertedDefaultProfile = false,
-            migratedLegacyDefaultAlias = true
+            migratedLegacyDefaultAlias = true,
+            normalizedLegacyAircraftTypes = canonicalProfiles.normalizedLegacyAircraftTypes
         )
     }
 
     return DefaultProfileProvisioningResult(
-        profiles = listOf(buildDefaultProfile(clock)) + profiles,
+        profiles = listOf(buildDefaultProfile(clock)) + normalizedProfiles,
         insertedDefaultProfile = true,
-        migratedLegacyDefaultAlias = false
+        migratedLegacyDefaultAlias = false,
+        normalizedLegacyAircraftTypes = canonicalProfiles.normalizedLegacyAircraftTypes
     )
 }
 
@@ -140,7 +154,7 @@ internal fun buildDefaultProfile(
     UserProfile(
         id = ProfileIdResolver.CANONICAL_DEFAULT_PROFILE_ID,
         name = "Default",
-        aircraftType = aircraftType,
+        aircraftType = aircraftType.canonicalForPersistence(),
         createdAt = clock.nowWallMs(),
         lastUsed = clock.nowWallMs()
     )
@@ -175,5 +189,6 @@ internal fun mergeMessages(primary: String?, secondary: String): String =
 internal data class DefaultProfileProvisioningResult(
     val profiles: List<UserProfile>,
     val insertedDefaultProfile: Boolean,
-    val migratedLegacyDefaultAlias: Boolean
+    val migratedLegacyDefaultAlias: Boolean,
+    val normalizedLegacyAircraftTypes: Boolean
 )

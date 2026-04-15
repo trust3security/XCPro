@@ -1,48 +1,78 @@
 {
-  "package_name": "TO_BE_FINALIZED",
+  "catalogVersion": 2,
   "plans": [
     {
-      "tier": "FREE",
-      "play_subscription_id": null,
-      "base_plans": [],
-      "offers": [],
-      "notes": "Default non-paid state"
-    },
-    {
-      "tier": "SOAR",
-      "play_subscription_id": "xcpro_soar",
-      "base_plans": [
+      "tier": "BASIC",
+      "displayName": "Basic",
+      "productId": "xcpro_basic",
+      "basePlans": [
         "monthly",
         "annual"
       ],
-      "offers": [
-        "trial7d"
+      "notes": [
+        "Low-friction entry tier",
+        "Target store price is about USD 5.99, configured in Play Console only"
+      ]
+    },
+    {
+      "tier": "SOARING",
+      "displayName": "Soaring",
+      "productId": "xcpro_soaring",
+      "basePlans": [
+        "monthly",
+        "annual"
       ],
-      "notes": "First paid tier"
+      "notes": [
+        "First serious workflow tier",
+        "Enables SkySight account linking surfaces"
+      ]
     },
     {
       "tier": "XC",
-      "play_subscription_id": "xcpro_xc",
-      "base_plans": [
+      "displayName": "XC",
+      "productId": "xcpro_xc",
+      "basePlans": [
         "monthly",
         "annual"
       ],
-      "offers": [
-        "trial7d"
-      ],
-      "notes": "Cross-country tier"
+      "notes": [
+        "XC-specific bundle still needs explicit launch approval"
+      ]
     },
     {
       "tier": "PRO",
-      "play_subscription_id": "xcpro_pro",
-      "base_plans": [
+      "displayName": "Pro",
+      "productId": "xcpro_pro",
+      "basePlans": [
         "monthly",
         "annual"
       ],
-      "offers": [
-        "trial7d"
-      ],
-      "notes": "Full unlock"
+      "notes": [
+        "Top-end premium tier"
+      ]
     }
-  ]
+  ],
+  "freePlan": {
+    "tier": "FREE",
+    "displayName": "Free",
+    "productId": null
+  },
+  "offers": [
+    "trial7d",
+    "intro_50pct_3m",
+    "winback_20pct_3m"
+  ],
+  "providerRules": {
+    "skysight": {
+      "linkAllowedFromTier": "SOARING",
+      "premiumRequires": {
+        "minimumTier": "SOARING",
+        "accountState": "LINKED_PAID"
+      },
+      "hotspotsRule": {
+        "minimumTier": "PRO",
+        "alsoRequireLinkedPaidIfSkySightBacked": true
+      }
+    }
+  }
 }

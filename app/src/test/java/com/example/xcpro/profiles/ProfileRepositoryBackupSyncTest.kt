@@ -233,6 +233,10 @@ class ProfileRepositoryBackupSyncTest {
         val profiles = latest.profiles
         val activeProfileId = latest.activeProfileId
         assertTrue(profiles.any { it.id == created.id })
+        assertEquals(
+            AircraftType.SAILPLANE,
+            profiles.first { it.id == created.id }.aircraftType
+        )
         assertEquals(created.id, activeProfileId)
         assertTrue(
             latest.settingsSnapshot.sections.containsKey(ProfileSettingsSectionIds.CARD_PREFERENCES)

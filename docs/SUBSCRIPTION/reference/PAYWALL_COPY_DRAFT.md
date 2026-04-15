@@ -8,18 +8,22 @@ Unlock more XCPro.
 ### Free
 Core XCPro experience.
 
-### Soar
-Weather and forecast tools for everyday flying.
+### Basic
+Starter visibility and integration tools.
+
+### Soaring
+Tasking, OGN, and SkySight account linking for serious flying.
 
 ### XC
-Cross-country tools, replay, sync, and follow features.
+Serious cross-country tools and the approved XC bundle.
 
 ### Pro
 Everything unlocked, including advanced premium tools.
 
 ## CTA copy
 
-- Start Soar
+- Start Basic
+- Upgrade to Soaring
 - Upgrade to XC
 - Go Pro
 - Restore purchase
@@ -29,4 +33,5 @@ Everything unlocked, including advanced premium tools.
 
 - Prices and billing period are loaded from Google Play.
 - Cancel any time in Google Play.
+- Premium SkySight-backed features require a linked paid SkySight account.
 - Restore purchases if you already subscribed on this account.

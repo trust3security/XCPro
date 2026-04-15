@@ -89,10 +89,12 @@ internal fun resolveImportActiveProfile(
 internal data class ParseProfilesResult(
     val profiles: List<UserProfile>,
     val bootstrapMessage: String?,
-    val parseFailed: Boolean
+    val parseFailed: Boolean,
+    val normalizedLegacyAircraftTypes: Boolean
 )
 
 internal data class SanitizedProfilesResult(
     val profiles: List<UserProfile>,
-    val droppedInvalidEntries: Boolean
+    val droppedInvalidEntries: Boolean,
+    val normalizedLegacyAircraftTypes: Boolean
 )

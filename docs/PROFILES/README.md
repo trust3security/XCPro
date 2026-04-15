@@ -4,6 +4,7 @@ This folder contains current profile-policy docs and the first-launch default
 profile change plan.
 
 Files:
+- `CHANGE_PLAN_GLIDER_TO_SAILPLANE_NORMALIZATION_2026-04-15.md`
 - `CHANGE_PLAN_FIRST_LAUNCH_DEFAULT_PROFILE_PICKER_2026-04-03.md`
 - `FIRST_LAUNCH_DEFAULT_PROFILE_POLICY.md`
 - `PROFILE_RESTORE_POLICY.md`

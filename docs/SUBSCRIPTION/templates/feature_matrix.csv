@@ -1,13 +1,16 @@
-feature_key,display_name,free,soar,xc,pro,notes
-MAP_CORE,Core map and flight display,1,1,1,1,Baseline value
-PROFILES,Profiles and local settings,1,1,1,1,Required for all users
-TASKS_BASIC,Basic task creation/view,1,1,1,1,Baseline usability
-WEATHER_BASIC,Weather snapshot/basic weather,0,1,1,1,Good Soar value
-FORECAST_BASIC,Forecast/basic forecast tools,0,1,1,1,Good Soar value
-IGC_REPLAY,IGC replay tools,0,0,1,1,Good XC value
-WEGLIDE_SYNC,WeGlide sync,0,0,1,1,Good XC value
-LIVEFOLLOW_VIEW,LiveFollow view/watch,0,0,1,1,Good XC value
-LIVEFOLLOW_BROADCAST,LiveFollow broadcast/share,0,0,0,1,Strong Pro value
-TRAFFIC_ADSB,Traffic / ADS-B overlays,0,0,0,1,Strong Pro value
-VARIO_ADVANCED,Advanced vario tuning/audio,0,0,0,1,Strong Pro value
-EXPORT_PREMIUM,Premium exports / advanced sharing,0,0,1,1,Mid/high tier value
+tier,capability,enabled,extra_gate,note
+Free,AIRSPACE,TRUE,,Core baseline
+Free,WAYPOINT_HOME_ONLY,TRUE,,Home waypoint/direct-to-home only
+Free,FLIGHT_MODE_SCREEN_SELECTION,TRUE,,Free can select screens
+Free,CARD_PACK_ESSENTIALS,TRUE,,Essentials cards only
+Basic,DISTANCE_CIRCLES,TRUE,,Basic and above
+Basic,TRAFFIC_ADSB,TRUE,,Basic and above
+Free,SKYSIGHT_BASIC,TRUE,,Free/public SkySight level only
+Soaring,SKYSIGHT_LINK_ACCOUNT,TRUE,,Soaring and above
+Soaring,SKYSIGHT_PREMIUM,TRUE,LINKED_PAID,Requires valid linked paid SkySight account
+Basic,RAINVIEWER,TRUE,,Basic and above
+Basic,WEGLIDE_SYNC,TRUE,,Basic and above
+Soaring,TASKS_CREATE,TRUE,,Soaring and above
+Soaring,TRAFFIC_OGN,TRUE,,Soaring and above
+Pro,SCIA,TRUE,,Pro only
+Pro,HOTSPOTS,TRUE,OPTIONAL_LINKED_PAID_IF_SKYSIGHT_BACKED,Pro only

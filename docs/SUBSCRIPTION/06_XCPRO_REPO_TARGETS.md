@@ -9,7 +9,7 @@ This is the repo-focused targeting guide for the first subscription slice.
 - root screen orchestration in `MainActivityScreen`
 - root navigation in `AppNavGraph`
 - `AppModule` and `TimeModule` under app DI
-- strict agent/architecture workflow docs
+- strict agent / architecture workflow docs
 - strict required verification commands
 
 ## Recommended first touched files
@@ -30,9 +30,17 @@ This is the repo-focused targeting guide for the first subscription slice.
 - `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
 - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
 
+### Likely feature / settings entry points
+
+- existing settings / profile area for SkySight credential entry
+- task-creation entry points
+- map overlays / controls for Distance Circles, ADS-B, OGN, RainViewer, Scia, and Hotspots
+- WeGlide entry points
+
 ### New code areas
 
 - `core/billing/...`
+- existing SkySight integration slice for narrow linked-account state exposure
 - `app/.../billing/...` only if a new module is deferred
 - `app/.../paywall/...` or `feature/paywall/...`
 
@@ -40,17 +48,28 @@ This is the repo-focused targeting guide for the first subscription slice.
 
 ### `MainActivityScreen`
 - collect root entitlement state
+- collect or receive the narrow provider-linked state needed for access decisions
 - trigger initial refresh
-- pass entitlement state and upgrade callbacks downward
+- pass entitlement / access state and upgrade callbacks downward
 
 ### `AppNavGraph`
-- route to upgrade/paywall
+- route to upgrade / paywall
+- route to provider-link entry points when the plan allows linking but account setup is missing
 - apply generic access checks for gated destinations
 - do not become the owner of entitlement business rules
 
 ### `AppModule`
 - wire repositories, adapters, and use cases
 - avoid putting business policy into DI modules
+
+## Recommended first representative gates
+
+- `Basic`: Distance Circles
+- `Basic`: ADS-B
+- `Soaring`: Add / create / edit Task
+- `Soaring+`: SkySight credential entry
+- dual gate: one premium SkySight-backed surface
+- `Pro`: Hotspots or Scia
 
 ## Strong recommendation
 

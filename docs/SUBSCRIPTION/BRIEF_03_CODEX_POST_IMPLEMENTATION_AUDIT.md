@@ -25,20 +25,22 @@ AUDIT RULES:
 - If you apply any fix, keep it minimal and explain why it was necessary
 
 MANDATORY CHECKS:
-1. Exactly one authoritative entitlement owner exists
-2. Backend is still authoritative for entitlements
+1. Exactly one authoritative XCPro entitlement owner exists
+2. Backend is still authoritative for XCPro entitlements
 3. No client-only unlock path exists in production logic
 4. No direct BillingClient calls exist in composables
 5. No business logic lives in UI classes
 6. No duplicated entitlement state exists across random ViewModels or managers
-7. No hardcoded price strings are used where ProductDetails should be used
+7. No hardcoded price strings are used where `ProductDetails` should be used
 8. Product IDs and base plan IDs remain stable and centralized
 9. Feature access is capability-based, not scattered tier-name branching
-10. No TODOs, temporary shims, or silent fallbacks remain in production paths
-11. No unrelated files were changed without reason
-12. Tests and verification evidence match the claimed behavior
-13. Docs were updated where required
-14. File ownership remains narrow and architecture-consistent
+10. Third-party provider state is not collapsed into `PlanTier`
+11. SkySight premium features require both the allowed XCPro tier and linked paid SkySight state
+12. No TODOs, temporary shims, or silent fallbacks remain in production paths
+13. No unrelated files were changed without reason
+14. Tests and verification evidence match the claimed behavior
+15. Docs were updated where required
+16. File ownership remains narrow and architecture-consistent
 
 REQUIRED OUTPUT:
 1. Scope summary
