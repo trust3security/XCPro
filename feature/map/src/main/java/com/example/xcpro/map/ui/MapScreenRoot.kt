@@ -155,11 +155,11 @@ internal fun MapScreenRoot(
         locationPermissionRequester = locationPermissionRequester,
         currentLocationFlow = hotPathBindings.currentLocation,
         orientationFlow = hotPathBindings.orientationFlow,
+        liveFlightDataFlow = mapViewModel.flightDataMgmtPort.liveFlightDataFlow,
         orientationFlightDataRuntimeBinder = remember(flightDataManager, orientationManager) {
             MapOrientationFlightDataRuntimeBinder(flightDataManager = flightDataManager, orientationController = orientationManager)
         },
         profileUiState = profileLookAndFeelBinding.profileUiState,
-        flightDataManager = flightDataManager,
         currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
         safeContainerSize = safeContainerSize,
         flightCardsBinding = flightCardsBinding,

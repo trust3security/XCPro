@@ -13,10 +13,8 @@ import com.example.dfcards.dfcards.toIntSizePx
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS
 import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS
-import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLocationPermissionRequester
 import com.example.xcpro.map.MapLocationRuntimePort
-import com.example.xcpro.map.toReplayLocationFrame
 import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
@@ -132,32 +130,6 @@ object MapComposeEffects {
     }
 
     @Composable
-    fun FlightDataAndCardEffects(
-        flightDataManager: FlightDataManager,
-        locationManager: MapLocationRuntimePort,
-        orientationFlow: StateFlow<OrientationData>,
-        suppressLiveGps: Boolean,
-        renderLocalOwnship: Boolean
-    ) {
-        val suppressLiveGpsState = rememberUpdatedState(suppressLiveGps)
-        val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
-
-        LaunchedEffect(Unit) {
-            flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
-                if (liveData != null && renderLocalOwnshipState.value && suppressLiveGpsState.value) {
-                    // AI-NOTE: Avoid stale captures in a long-lived collector; replay map updates
-                    // must see the latest orientation and replay/live toggle values.
-                    // Replay/IGC: use flight data for map updates when GPS is suppressed.
-                    locationManager.updateLocationFromReplayFrame(
-                        liveData.toReplayLocationFrame(),
-                        orientationFlow.value
-                    )
-                }
-            }
-        }
-    }
-
-    @Composable
     fun DisplayPoseEffects(
         locationManager: MapLocationRuntimePort,
         orientationFlow: StateFlow<OrientationData>,
@@ -212,7 +184,6 @@ object MapComposeEffects {
         currentLocationFlow: StateFlow<MapLocationUiModel?>,
         orientationFlow: StateFlow<OrientationData>,
         uiState: ProfileUiState,
-        flightDataManager: FlightDataManager,
         currentFlightModeSelection: FlightModeSelection,
         safeContainerSize: IntSize,
         flightViewModel: FlightDataViewModel,
@@ -246,14 +217,6 @@ object MapComposeEffects {
             profileModeCards = profileModeCards,
             profileModeTemplates = profileModeTemplates,
             activeTemplateId = activeTemplateId
-        )
-
-        FlightDataAndCardEffects(
-            flightDataManager = flightDataManager,
-            locationManager = locationManager,
-            orientationFlow = orientationFlow,
-            suppressLiveGps = suppressLiveGps,
-            renderLocalOwnship = renderLocalOwnship
         )
 
         DisplayPoseEffects(

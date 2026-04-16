@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -12,8 +14,8 @@ import androidx.navigation.NavHostController
 import com.example.dfcards.FlightModeSelection
 import com.example.xcpro.airspace.AirspaceUiState
 import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLifecycleEffects
+import com.example.xcpro.map.MapLocationFlightDataRuntimeBinder
 import com.example.xcpro.map.MapOrientationFlightDataRuntimeBinder
 import com.example.xcpro.map.MapLifecycleRuntimePort
 import com.example.xcpro.map.MapLocationPermissionRequester
@@ -23,6 +25,7 @@ import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapTaskScreenManager
+import com.example.xcpro.core.flight.RealTimeFlightData
 import com.example.xcpro.map.model.MapLocationUiModel
 import com.example.xcpro.map.ui.effects.MapComposeEffects
 import com.example.xcpro.profiles.ProfileUiState
@@ -94,9 +97,9 @@ internal fun MapScreenComposeAndLifecycleEffects(
     locationPermissionRequester: MapLocationPermissionRequester,
     currentLocationFlow: StateFlow<MapLocationUiModel?>,
     orientationFlow: StateFlow<OrientationData>,
+    liveFlightDataFlow: StateFlow<RealTimeFlightData?>,
     orientationFlightDataRuntimeBinder: MapOrientationFlightDataRuntimeBinder,
     profileUiState: ProfileUiState,
-    flightDataManager: FlightDataManager,
     currentFlightModeSelection: FlightModeSelection,
     safeContainerSize: IntSize,
     flightCardsBinding: MapScreenFlightCardsBinding,
@@ -106,8 +109,25 @@ internal fun MapScreenComposeAndLifecycleEffects(
     allowSensorStart: Boolean,
     renderLocalOwnship: Boolean
 ) {
+    val shouldForwardReplayLocationUpdateState =
+        rememberUpdatedState(suppressLiveGps && renderLocalOwnship)
+    val locationFlightDataRuntimeBinder = remember(
+        liveFlightDataFlow,
+        locationManager,
+        orientationFlow
+    ) {
+        MapLocationFlightDataRuntimeBinder(
+            liveFlightDataFlow = liveFlightDataFlow,
+            locationManager = locationManager,
+            orientationProvider = { orientationFlow.value },
+            shouldForwardReplayLocationUpdate = { shouldForwardReplayLocationUpdateState.value }
+        )
+    }
     LaunchedEffect(orientationFlightDataRuntimeBinder) {
         orientationFlightDataRuntimeBinder.collectLatestFlightData()
+    }
+    LaunchedEffect(locationFlightDataRuntimeBinder) {
+        locationFlightDataRuntimeBinder.collectLatestFlightData()
     }
     MapComposeEffects.AllMapEffects(
         locationManager = locationManager,
@@ -115,7 +135,6 @@ internal fun MapScreenComposeAndLifecycleEffects(
         currentLocationFlow = currentLocationFlow,
         orientationFlow = orientationFlow,
         uiState = profileUiState,
-        flightDataManager = flightDataManager,
         currentFlightModeSelection = currentFlightModeSelection,
         safeContainerSize = safeContainerSize,
         flightViewModel = flightCardsBinding.flightViewModel,
