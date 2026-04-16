@@ -15,6 +15,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.xcpro.core.common.geometry.DensityScale
 import com.example.xcpro.core.common.geometry.OffsetPx
+import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.MapOverlayManager
 import com.example.xcpro.map.TaskRenderSnapshot
 import com.example.xcpro.map.MapScreenViewModel
@@ -129,6 +130,16 @@ internal fun rememberMapScreenWidgetLayoutBinding(
         onHamburgerSizeChange = onHamburgerSizeChange,
         onSettingsSizeChange = onSettingsSizeChange
     )
+}
+
+@Composable
+internal fun MapScreenLocationProfileBinding(
+    activeProfileId: String,
+    locationManager: MapLocationRuntimePort
+) {
+    LaunchedEffect(activeProfileId, locationManager) {
+        locationManager.setActiveProfileId(activeProfileId)
+    }
 }
 
 @Composable

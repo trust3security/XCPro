@@ -103,7 +103,10 @@ internal fun MapScreenRoot(
         waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase,
         localOwnshipRenderEnabled = { renderLocalOwnshipState.value }
     )
-    LaunchedEffect(profileLookAndFeelBinding.activeProfileId, managers.locationManager) { managers.locationManager.setActiveProfileId(profileLookAndFeelBinding.activeProfileId) }
+    MapScreenLocationProfileBinding(
+        activeProfileId = profileLookAndFeelBinding.activeProfileId,
+        locationManager = managers.locationManager
+    )
     val panelState by managers.taskScreenManager.taskPanelState.collectAsStateWithLifecycle(); val isTaskPanelVisible =
         panelState != MapTaskScreenManager.TaskPanelState.HIDDEN
     MapScreenBackHandler(
