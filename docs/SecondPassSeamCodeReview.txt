@@ -1,0 +1,36 @@
+Do a second-pass seam/code review.
+
+This is NOT a bug pass.
+
+Re-evaluate the change specifically for:
+
+1. Boundary violations
+   - crossing feature/module ownership incorrectly
+   - UI depending on runtime/data layers
+   - wrong module responsibilities
+
+2. Dependency direction
+   - dependencies must point inward toward stable seams
+   - no leaks to infra or data sources from UI/domain
+
+3. Ownership correctness
+   - is each responsibility owned by the correct module?
+   - any duplicated or split ownership?
+
+4. Architecture fit
+   - does this change align with PIPELINE.md and ADRs?
+   - or is it introducing a parallel/competing path?
+
+5. Coupling and cohesion
+   - overly wide ViewModels / coordinators
+   - dependency bags or god objects
+   - weak or unclear seams
+
+6. Hidden drift from first pass
+   - anything that "works" but weakens structure
+   - shortcuts, temporary logic, or silent fallbacks
+
+Output:
+- only real issues (no noise)
+- classify each as: boundary / ownership / dependency / cohesion
+- PASS/FAIL overall architecture integrity
