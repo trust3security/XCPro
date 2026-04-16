@@ -83,6 +83,7 @@ internal fun rememberMapScreenManagers(
     replayHeadingProvider: (Long) -> Double?,
     replayFixProvider: (Long) -> ReplayDisplayPose?,
     featureFlags: MapFeatureFlags,
+    useRenderFrameSyncProvider: () -> Boolean,
     coroutineScope: CoroutineScope,
     taskInputs: MapScreenManagersTaskInputs,
     airspaceUseCase: AirspaceUseCase,
@@ -230,9 +231,9 @@ internal fun rememberMapScreenManagers(
         )
     }
 
-    val locationRenderFrameBinder = remember(featureFlags, locationManager, renderSurfaceDiagnostics) {
+    val locationRenderFrameBinder = remember(useRenderFrameSyncProvider, locationManager, renderSurfaceDiagnostics) {
         MapLocationRenderFrameBinderAdapter(
-            useRenderFrameSync = { featureFlags.useRenderFrameSync },
+            useRenderFrameSync = useRenderFrameSyncProvider,
             onRenderFrame = { locationManager.onRenderFrame() },
             renderSurfaceDiagnostics = renderSurfaceDiagnostics
         )

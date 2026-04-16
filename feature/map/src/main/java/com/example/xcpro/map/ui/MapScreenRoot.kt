@@ -52,6 +52,7 @@ internal fun MapScreenRoot(
     val runtimeDependencies = mapViewModel.runtimeDependencies
     val flightDataManager = runtimeDependencies.flightDataManager
     val orientationManager = runtimeDependencies.orientationManager
+    val useRenderFrameSyncProvider = remember(runtimeDependencies.featureFlags) { { runtimeDependencies.featureFlags.useRenderFrameSync } }
     val orientationFlow = orientationManager.orientationFlow
     val rootUiBinding = rememberMapScreenRootUiBinding(mapViewModel = mapViewModel)
     MapScreenSideEffects(
@@ -97,6 +98,7 @@ internal fun MapScreenRoot(
         replayHeadingProvider = mapViewModel::getInterpolatedReplayHeadingDeg,
         replayFixProvider = mapViewModel::getInterpolatedReplayPose,
         featureFlags = runtimeDependencies.featureFlags,
+        useRenderFrameSyncProvider = useRenderFrameSyncProvider,
         coroutineScope = coroutineScope,
         taskInputs = taskManagerInputs,
         airspaceUseCase = runtimeDependencies.airspaceUseCase,
@@ -164,7 +166,7 @@ internal fun MapScreenRoot(
         safeContainerSize = safeContainerSize,
         flightCardsBinding = flightCardsBinding,
         replaySessionState = sessionBindings.replaySession,
-        useRenderFrameSync = runtimeDependencies.featureFlags.useRenderFrameSync,
+        useRenderFrameSync = useRenderFrameSyncProvider(),
         suppressLiveGps = sessionBindings.suppressLiveGps,
         allowSensorStart = sessionBindings.allowSensorStart && allowFlightSensorStart,
         renderLocalOwnship = renderLocalOwnship
