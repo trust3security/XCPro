@@ -6,13 +6,13 @@ import com.example.xcpro.weglide.ui.WeGlideUploadPromptUiState
 
 @Composable
 internal fun BoxScope.MapScreenScaffoldContentHost(
-    inputs: MapScreenScaffoldInputs,
+    inputs: MapScreenContentInputs,
     weGlideUploadPrompt: WeGlideUploadPromptUiState?,
     onConfirmWeGlideUploadPrompt: () -> Unit,
     onDismissWeGlideUploadPrompt: () -> Unit
 ) {
     MapScreenContent(
-        inputs = inputs.content,
+        inputs = inputs,
         weGlideUploadPrompt = weGlideUploadPrompt,
         onConfirmWeGlideUploadPrompt = onConfirmWeGlideUploadPrompt,
         onDismissWeGlideUploadPrompt = onDismissWeGlideUploadPrompt,

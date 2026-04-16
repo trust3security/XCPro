@@ -24,10 +24,10 @@ import com.example.xcpro.navdrawer.NavigationDrawer
  */
 @Composable
 internal fun MapScreenScaffold(
-    inputs: MapScreenScaffoldInputs,
+    inputs: MapScreenScaffoldChromeInputs,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val scaffold = inputs.scaffold
+    val scaffold = inputs
     NavigationDrawer(
         drawerState = scaffold.drawerState,
         navController = scaffold.navController,

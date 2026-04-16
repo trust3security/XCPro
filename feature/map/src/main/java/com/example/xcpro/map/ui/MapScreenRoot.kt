@@ -112,9 +112,7 @@ internal fun MapScreenRoot(
         waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase,
         localOwnshipRenderEnabled = { renderLocalOwnshipState.value }
     )
-    LaunchedEffect(profileLookAndFeelBinding.activeProfileId, managers.locationManager) {
-        managers.locationManager.setActiveProfileId(profileLookAndFeelBinding.activeProfileId)
-    }
+    LaunchedEffect(profileLookAndFeelBinding.activeProfileId, managers.locationManager) { managers.locationManager.setActiveProfileId(profileLookAndFeelBinding.activeProfileId) }
     val panelState by managers.taskScreenManager.taskPanelState.collectAsStateWithLifecycle(); val isTaskPanelVisible =
         panelState != MapTaskScreenManager.TaskPanelState.HIDDEN
     MapScreenBackHandler(
@@ -127,20 +125,12 @@ internal fun MapScreenRoot(
     )
 
     val bindings = rememberMapScreenBindings(mapViewModel = mapViewModel, mapStateReader = mapStateReader)
-    val taskRenderSnapshotProvider = mapViewModel::taskRenderSnapshot; val mapBindings = bindings.map
+    val taskRenderSnapshotProvider = mapViewModel::taskRenderSnapshot
     val sessionBindings = bindings.session; val taskBindings = bindings.task
     val trafficOverlayRuntimeInputs =
         rememberMapTrafficOverlayRuntimeInputs(mapViewModel = mapViewModel, currentLocation = hotPathBindings.currentLocation)
-    MapAirspaceOverlayEffect(
-        mapState = mapState,
-        airspaceState = airspaceState,
-        overlayManager = managers.overlayManager
-    )
-    MapTrafficOverlayRuntimeEffects(
-        overlayManager = managers.overlayManager,
-        inputs = trafficOverlayRuntimeInputs,
-        renderLocalOwnship = renderLocalOwnship
-    )
+    MapAirspaceOverlayEffect(mapState = mapState, airspaceState = airspaceState, overlayManager = managers.overlayManager)
+    MapTrafficOverlayRuntimeEffects(overlayManager = managers.overlayManager, inputs = trafficOverlayRuntimeInputs, renderLocalOwnship = renderLocalOwnship)
     MapWeatherOverlayEffects(overlayManager = managers.overlayManager)
 
     MapScreenRuntimeEffects(
@@ -164,11 +154,7 @@ internal fun MapScreenRoot(
         taskRenderSnapshotProvider = taskRenderSnapshotProvider
     )
     TaskViewportCommandEffects(mapViewModel = mapViewModel)
-    MapScreenCameraRuntimeEffects(
-        cameraManager = managers.cameraManager,
-        hotPathBindings = hotPathBindings,
-        replaySession = sessionBindings.replaySession
-    )
+    MapScreenCameraRuntimeEffects(cameraManager = managers.cameraManager, hotPathBindings = hotPathBindings, replaySession = sessionBindings.replaySession)
     val locationPermissionRequester = rememberLocationPermissionRequester(managers.locationManager)
     MapScreenComposeAndLifecycleEffects(
         lifecycleManager = managers.lifecycleManager,
@@ -194,15 +180,8 @@ internal fun MapScreenRoot(
         allowSensorStart = sessionBindings.allowSensorStart && allowFlightSensorStart,
         renderLocalOwnship = renderLocalOwnship
     )
-    val widgetLayout = rememberMapScreenWidgetLayoutBinding(
-        activeProfileId = profileLookAndFeelBinding.activeProfileId,
-        density = density
-    )
-    ensureSafeContainerFallback(
-        safeContainerSizeState = safeContainerSizeState,
-        screenWidthPx = widgetLayout.screenWidthPx,
-        screenHeightPx = widgetLayout.screenHeightPx
-    )
+    val widgetLayout = rememberMapScreenWidgetLayoutBinding(activeProfileId = profileLookAndFeelBinding.activeProfileId, density = density)
+    ensureSafeContainerFallback(safeContainerSizeState = safeContainerSizeState, screenWidthPx = widgetLayout.screenWidthPx, screenHeightPx = widgetLayout.screenHeightPx)
     val variometerLayout = rememberVariometerLayout(
         mapViewModel = mapViewModel,
         activeProfileId = profileLookAndFeelBinding.activeProfileId,
@@ -211,7 +190,7 @@ internal fun MapScreenRoot(
         density = density
     )
     MapVisibilityLifecycleEffect(mapViewModel)
-    val scaffoldInputs = rememberMapScreenScaffoldInputs(
+    val scaffoldChromeBindings = rememberMapScreenScaffoldChromeBindings(
         coroutineScope = coroutineScope,
         navController = navController,
         drawerState = drawerState,
@@ -220,6 +199,13 @@ internal fun MapScreenRoot(
         settingsExpanded = settingsExpanded,
         onMapStyleSelected = onMapStyleSelected,
         onOpenGeneralSettings = onOpenGeneralSettings,
+        mapViewModel = mapViewModel,
+        rootUiBinding = rootUiBinding,
+        bindings = bindings,
+        taskScreenManager = managers.taskScreenManager
+    )
+    val contentInputs = rememberMapScreenContentInputs(
+        showMapBottomNavigation = scaffoldChromeBindings.shared.showMapBottomNavigation,
         allowFlightSensorStart = allowFlightSensorStart,
         isGeneralSettingsVisible = isGeneralSettingsVisible,
         renderLocalOwnship = renderLocalOwnship,
@@ -233,16 +219,27 @@ internal fun MapScreenRoot(
         widgetLayout = widgetLayout,
         variometerLayout = variometerLayout,
         flightDataManager = flightDataManager,
-        managers = managers,
+        mapInitializer = managers.mapInitializer,
+        locationManager = managers.locationManager,
+        locationRenderFrameBinder = managers.locationRenderFrameBinder,
+        renderSurfaceDiagnostics = managers.renderSurfaceDiagnostics,
+        cameraManager = managers.cameraManager,
+        overlayManager = managers.overlayManager,
+        modalManager = managers.modalManager,
+        taskScreenManager = managers.taskScreenManager,
+        widgetManager = managers.widgetManager,
+        lifecycleManager = managers.lifecycleManager,
         mapState = mapState,
         mapRuntimeController = mapRuntimeController,
         taskRenderSnapshotProvider = taskRenderSnapshotProvider,
         density = density,
-        safeContainerSizeState = safeContainerSizeState
+        safeContainerSizeState = safeContainerSizeState,
+        shouldBlockDrawerOpen = scaffoldChromeBindings.shared.shouldBlockDrawerOpen,
+        onOpenGeneralSettingsFromMap = scaffoldChromeBindings.shared.onOpenGeneralSettingsFromMap
     )
-    MapScreenScaffold(inputs = scaffoldInputs) {
+    MapScreenScaffold(inputs = scaffoldChromeBindings.scaffold) {
         MapScreenScaffoldContentHost(
-            inputs = scaffoldInputs,
+            inputs = contentInputs,
             weGlideUploadPrompt = rootUiBinding.weGlideUploadPrompt,
             onConfirmWeGlideUploadPrompt = mapViewModel::onConfirmWeGlideUploadPrompt,
             onDismissWeGlideUploadPrompt = mapViewModel::onDismissWeGlideUploadPrompt
