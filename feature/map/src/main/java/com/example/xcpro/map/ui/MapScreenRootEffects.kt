@@ -17,6 +17,7 @@ import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.MapLifecycleEffects
 import com.example.xcpro.map.MapLocationFlightDataRuntimeBinder
 import com.example.xcpro.map.MapOrientationFlightDataRuntimeBinder
+import com.example.xcpro.map.MapOrientationFlightDataRuntimePort
 import com.example.xcpro.map.MapLifecycleRuntimePort
 import com.example.xcpro.map.MapLocationPermissionRequester
 import com.example.xcpro.map.MapLocationRuntimePort
@@ -98,7 +99,7 @@ internal fun MapScreenComposeAndLifecycleEffects(
     currentLocationFlow: StateFlow<MapLocationUiModel?>,
     orientationFlow: StateFlow<OrientationData>,
     liveFlightDataFlow: StateFlow<RealTimeFlightData?>,
-    orientationFlightDataRuntimeBinder: MapOrientationFlightDataRuntimeBinder,
+    orientationFlightDataRuntimePort: MapOrientationFlightDataRuntimePort,
     profileUiState: ProfileUiState,
     currentFlightModeSelection: FlightModeSelection,
     safeContainerSize: IntSize,
@@ -111,6 +112,15 @@ internal fun MapScreenComposeAndLifecycleEffects(
 ) {
     val shouldForwardReplayLocationUpdateState =
         rememberUpdatedState(suppressLiveGps && renderLocalOwnship)
+    val orientationFlightDataRuntimeBinder = remember(
+        liveFlightDataFlow,
+        orientationFlightDataRuntimePort
+    ) {
+        MapOrientationFlightDataRuntimeBinder(
+            liveFlightDataFlow = liveFlightDataFlow,
+            orientationRuntimePort = orientationFlightDataRuntimePort
+        )
+    }
     val locationFlightDataRuntimeBinder = remember(
         liveFlightDataFlow,
         locationManager,

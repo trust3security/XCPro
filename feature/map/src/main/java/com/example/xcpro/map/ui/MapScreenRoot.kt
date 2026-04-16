@@ -20,7 +20,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.xcpro.livefollow.watch.LiveFollowWatchViewModel
 import com.example.xcpro.map.MapSize
-import com.example.xcpro.map.MapOrientationFlightDataRuntimeBinder
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapTaskScreenManager
@@ -52,6 +51,7 @@ internal fun MapScreenRoot(
     val runtimeDependencies = mapViewModel.runtimeDependencies
     val flightDataManager = runtimeDependencies.flightDataManager
     val orientationManager = runtimeDependencies.orientationManager
+    val orientationFlightDataRuntimePort = mapViewModel.orientationFlightDataRuntimePort
     val useRenderFrameSyncProvider = remember(runtimeDependencies.featureFlags) { { runtimeDependencies.featureFlags.useRenderFrameSync } }
     val orientationFlow = orientationManager.orientationFlow
     val rootUiBinding = rememberMapScreenRootUiBinding(mapViewModel = mapViewModel)
@@ -158,9 +158,7 @@ internal fun MapScreenRoot(
         currentLocationFlow = hotPathBindings.currentLocation,
         orientationFlow = hotPathBindings.orientationFlow,
         liveFlightDataFlow = mapViewModel.flightDataMgmtPort.liveFlightDataFlow,
-        orientationFlightDataRuntimeBinder = remember(flightDataManager, orientationManager) {
-            MapOrientationFlightDataRuntimeBinder(flightDataManager = flightDataManager, orientationController = orientationManager)
-        },
+        orientationFlightDataRuntimePort = orientationFlightDataRuntimePort,
         profileUiState = profileLookAndFeelBinding.profileUiState,
         currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
         safeContainerSize = safeContainerSize,

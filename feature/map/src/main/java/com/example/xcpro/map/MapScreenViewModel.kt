@@ -231,6 +231,7 @@ class MapScreenViewModel @Inject constructor(
     val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
     val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, cardPreferences = cardPreferences, onProfileModeVisibilitiesChanged = ::onProfileModeVisibilitiesChanged) }
     val flightDataMgmtPort: FlightDataMgmtPort by lazy { createFlightDataMgmtPort(flightDataManager) { cardIngestionCoordinator.bindCards(it) } }
+    internal val orientationFlightDataRuntimePort: MapOrientationFlightDataRuntimePort by lazy { createMapOrientationFlightDataRuntimePort(orientationManager) }
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
         mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
