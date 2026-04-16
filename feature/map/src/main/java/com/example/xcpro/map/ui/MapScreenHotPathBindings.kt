@@ -2,7 +2,6 @@ package com.example.xcpro.map.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.model.MapLocationUiModel
@@ -17,11 +16,11 @@ internal data class MapScreenHotPathBindings(
 @Composable
 internal fun rememberMapScreenHotPathBindings(
     mapViewModel: MapScreenViewModel,
-    orientationManager: MapOrientationManager
-): MapScreenHotPathBindings = remember(mapViewModel, orientationManager) {
+    orientationFlow: StateFlow<OrientationData>
+): MapScreenHotPathBindings = remember(mapViewModel, orientationFlow) {
     MapScreenHotPathBindings(
         currentZoom = mapViewModel.mapState.currentZoom,
         currentLocation = mapViewModel.mapLocation,
-        orientationFlow = orientationManager.orientationFlow
+        orientationFlow = orientationFlow
     )
 }

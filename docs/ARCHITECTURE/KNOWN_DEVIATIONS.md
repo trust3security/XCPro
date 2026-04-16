@@ -112,4 +112,3 @@ Compliance note (2026-02-20):
   - No scoped privacy-sensitive production logs bypass the canonical redaction/removal policy.
   - `AppLogger` has explicit contract coverage for redaction/gating behavior.
   - New raw production `Log.*` drift is blocked by automation except for narrow documented platform-edge exceptions.
-

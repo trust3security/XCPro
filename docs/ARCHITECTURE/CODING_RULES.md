@@ -409,6 +409,7 @@ Forbidden:
 - Platform APIs
 - Business math
 - Exposing raw managers/controllers as public ViewModel handles
+- Exposing broad dependency bundles that let UI/routes recover raw managers/controllers or bypass narrow screen seams
 - Constructing domain/service collaborators directly when DI/factory is available
 
 ---
@@ -423,12 +424,16 @@ Allowed:
 - User input
 - Visual effects
 
+Boundary classification:
+- For architecture enforcement, Compose helper files such as `*Effects.kt`, `remember*`, `*Bindings.kt`, and screen-root helpers are UI-layer code.
+
 Forbidden:
 - Unbounded loops outside the frame-ticker display exception
 - Business logic
 - State derivation
 - Domain calculations
-- Direct calls from Composables to manager/repository methods for domain mutations or business queries
+- Direct calls from Composables or other UI-layer helpers/effects to manager/repository methods for domain mutations or business queries
+- Accepting concrete runtime managers/controllers in UI-layer helpers/effects for domain/runtime mutations when a callback or narrow feature-owned seam is sufficient for the required action
 - Reading manager internals as UI state (for example currentTask/currentLeg/currentAATTask)
 - Collecting flows directly in Composables without lifecycle awareness
 - Manual coroutine scopes

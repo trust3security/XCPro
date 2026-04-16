@@ -2,15 +2,15 @@ package com.example.xcpro.map.ui.effects
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.dfcards.FlightDataViewModel
 import com.example.dfcards.dfcards.toDensityScale
 import com.example.dfcards.dfcards.toIntSizePx
-import com.example.xcpro.toOrientationFlightDataSnapshot
 import com.example.xcpro.common.orientation.OrientationData
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_LIVE_NS
 import com.example.xcpro.map.DISPLAY_POSE_MIN_FRAME_INTERVAL_REPLAY_NS
 import com.example.xcpro.map.FlightDataManager
@@ -21,12 +21,10 @@ import com.example.xcpro.core.time.TimeBridge
 import com.example.xcpro.profiles.ProfileUiState
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.map.model.MapLocationUiModel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.StateFlow
 internal const val PROFILE_CARD_PREPARE_MIN_INTERVAL_MS = 500L
 
 internal fun shouldDispatchDisplayPoseFrame(
@@ -138,7 +136,6 @@ object MapComposeEffects {
         flightDataManager: FlightDataManager,
         locationManager: MapLocationRuntimePort,
         orientationFlow: StateFlow<OrientationData>,
-        orientationManager: MapOrientationManager,
         suppressLiveGps: Boolean,
         renderLocalOwnship: Boolean
     ) {
@@ -147,19 +144,14 @@ object MapComposeEffects {
 
         LaunchedEffect(Unit) {
             flightDataManager.liveFlightDataFlow.collectLatest { liveData ->
-                if (liveData != null) {
-                    orientationManager.updateFromFlightData(
-                        liveData.toOrientationFlightDataSnapshot()
-                    )
+                if (liveData != null && renderLocalOwnshipState.value && suppressLiveGpsState.value) {
                     // AI-NOTE: Avoid stale captures in a long-lived collector; replay map updates
                     // must see the latest orientation and replay/live toggle values.
-                    if (renderLocalOwnshipState.value && suppressLiveGpsState.value) {
-                        // Replay/IGC: use flight data for map updates when GPS is suppressed.
-                        locationManager.updateLocationFromReplayFrame(
-                            liveData.toReplayLocationFrame(),
-                            orientationFlow.value
-                        )
-                    }
+                    // Replay/IGC: use flight data for map updates when GPS is suppressed.
+                    locationManager.updateLocationFromReplayFrame(
+                        liveData.toReplayLocationFrame(),
+                        orientationFlow.value
+                    )
                 }
             }
         }
@@ -219,7 +211,6 @@ object MapComposeEffects {
         locationPermissionRequester: MapLocationPermissionRequester,
         currentLocationFlow: StateFlow<MapLocationUiModel?>,
         orientationFlow: StateFlow<OrientationData>,
-        orientationManager: MapOrientationManager,
         uiState: ProfileUiState,
         flightDataManager: FlightDataManager,
         currentFlightModeSelection: FlightModeSelection,
@@ -261,7 +252,6 @@ object MapComposeEffects {
             flightDataManager = flightDataManager,
             locationManager = locationManager,
             orientationFlow = orientationFlow,
-            orientationManager = orientationManager,
             suppressLiveGps = suppressLiveGps,
             renderLocalOwnship = renderLocalOwnship
         )

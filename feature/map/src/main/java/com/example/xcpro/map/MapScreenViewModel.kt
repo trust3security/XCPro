@@ -260,6 +260,12 @@ class MapScreenViewModel @Inject constructor(
     fun setForecastSatelliteOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setForecastSatelliteOverrideEnabled(enabled))
     fun setThermallingContrastOverrideEnabled(enabled: Boolean) = emitEffectiveStyleCommandIfChanged(mapStateStore.setThermallingContrastOverrideEnabled(enabled))
     fun setFlightMode(newMode: FlightMode) = recomputeMapFlightModeState(requestedMode = newMode, runtimeOverrideMode = null)
+    internal fun taskRenderSnapshot(): TaskRenderSnapshot = mapTasksUseCase.taskRenderSnapshot()
+    internal fun currentTask() = mapTasksUseCase.currentRuntimeSnapshot().task
+    internal fun currentTaskWaypointCount(): Int = currentTask().waypoints.size
+    internal fun clearTask() = mapTasksUseCase.clearTask()
+    internal suspend fun saveTask(taskName: String): Boolean = mapTasksUseCase.saveTask(taskName)
+    internal fun applyOrientationFlightModeSelection(selection: FlightModeSelection) = orientationManager.setFlightMode(selection)
     internal fun applyRuntimeFlightMode(mode: FlightMode) = recomputeMapFlightModeState(runtimeOverrideMode = mode)
     internal fun clearRuntimeFlightModeOverride() = recomputeMapFlightModeState(runtimeOverrideMode = null)
     internal fun onProfileModeVisibilitiesChanged(activeProfileId: String?, allVisibilities: Map<String, Map<FlightModeSelection, Boolean>>) {

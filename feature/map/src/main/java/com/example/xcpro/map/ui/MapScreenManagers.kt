@@ -29,11 +29,12 @@ import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenSizeProvider
 import com.example.xcpro.map.MapStateActions
 import com.example.xcpro.map.MapStateReader
+import com.example.xcpro.map.MapOrientationRuntimePort
 import com.example.xcpro.map.MapSensorsUseCase
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.map.MapTasksUseCase
 import com.example.xcpro.map.TaskRenderSyncCoordinator
 import com.example.xcpro.map.LocationSensorsController
+import com.example.xcpro.map.TaskRenderSnapshot
 import com.example.xcpro.map.helpers.GliderPaddingHelper
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.ui.widgets.MapUIWidgetManager
@@ -41,11 +42,19 @@ import com.example.xcpro.replay.ReplayDisplayPose
 import com.example.xcpro.replay.SessionState
 import com.example.xcpro.airspace.AirspaceUseCase
 import com.example.xcpro.flightdata.WaypointFilesUseCase
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.config.MapFeatureFlags
 import com.example.xcpro.tasks.TaskMapRenderRouter
+import com.example.xcpro.tasks.core.Task
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
+
+internal data class MapScreenManagersTaskInputs(
+    val taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
+    val taskWaypointCountProvider: () -> Int,
+    val currentTaskProvider: () -> Task,
+    val clearTask: () -> Unit,
+    val saveTask: suspend (String) -> Boolean
+)
 
 internal data class MapScreenManagers(
     val snailTrailManager: SnailTrailManager,
@@ -67,14 +76,15 @@ internal fun rememberMapScreenManagers(
     mapState: MapScreenState,
     mapStateReader: MapStateReader,
     mapStateActions: MapStateActions,
-    orientationManager: MapOrientationManager,
+    orientationRuntimePort: MapOrientationRuntimePort,
+    onOrientationUserInteraction: () -> Unit,
     sensorsUseCase: MapSensorsUseCase,
     replaySessionState: StateFlow<SessionState>,
     replayHeadingProvider: (Long) -> Double?,
     replayFixProvider: (Long) -> ReplayDisplayPose?,
     featureFlags: MapFeatureFlags,
     coroutineScope: CoroutineScope,
-    tasksUseCase: MapTasksUseCase,
+    taskInputs: MapScreenManagersTaskInputs,
     airspaceUseCase: AirspaceUseCase,
     waypointFilesUseCase: WaypointFilesUseCase,
     localOwnshipRenderEnabled: () -> Boolean
@@ -83,9 +93,9 @@ internal fun rememberMapScreenManagers(
         SnailTrailManager(context, mapState, featureFlags)
     }
 
-    val taskRenderSyncCoordinator = remember(tasksUseCase, mapState) {
+    val taskRenderSyncCoordinator = remember(taskInputs, mapState) {
         TaskRenderSyncCoordinator(
-            snapshotProvider = tasksUseCase::taskRenderSnapshot,
+            snapshotProvider = taskInputs.taskRenderSnapshotProvider,
             mapProvider = { mapState.mapLibreMap },
             renderSync = TaskMapRenderRouter::syncTaskVisuals,
             renderClear = TaskMapRenderRouter::clearAllTaskVisuals,
@@ -97,7 +107,7 @@ internal fun rememberMapScreenManagers(
 
     val overlayManager = remember(
         mapState,
-        tasksUseCase,
+        taskInputs,
         context,
         mapStateReader,
         mapStateActions,
@@ -113,7 +123,7 @@ internal fun rememberMapScreenManagers(
             mapState,
             mapStateReader,
             taskRenderSyncCoordinator,
-            { tasksUseCase.currentRuntimeSnapshot().task.waypoints.size },
+            taskInputs.taskWaypointCountProvider,
             mapStateActions,
             snailTrailManager,
             coroutineScope,
@@ -127,8 +137,14 @@ internal fun rememberMapScreenManagers(
         MapUIWidgetManager(mapState)
     }
 
-    val taskScreenManager = remember(mapState, tasksUseCase, coroutineScope) {
-        MapTaskScreenManager(mapState, tasksUseCase, coroutineScope)
+    val taskScreenManager = remember(mapState, taskInputs, coroutineScope) {
+        MapTaskScreenManager(
+            mapState = mapState,
+            currentTaskProvider = taskInputs.currentTaskProvider,
+            clearTaskAction = taskInputs.clearTask,
+            saveTaskAction = taskInputs.saveTask,
+            coroutineScope = coroutineScope
+        )
     }
 
     val cameraSurface = remember(mapState) {
@@ -225,7 +241,7 @@ internal fun rememberMapScreenManagers(
     val lifecycleManager = remember(
         mapState,
         mapStateActions,
-        orientationManager,
+        orientationRuntimePort,
         locationManager,
         locationRenderFrameBinder,
         replaySessionState
@@ -235,7 +251,7 @@ internal fun rememberMapScreenManagers(
                 mapState = mapState,
                 stateActions = mapStateActions
             ),
-            orientationManager = orientationManager,
+            orientationManager = orientationRuntimePort,
             locationManager = locationManager,
             locationRenderFrameCleanup = locationRenderFrameBinder,
             renderSurfaceDiagnostics = renderSurfaceDiagnostics,
@@ -252,7 +268,7 @@ internal fun rememberMapScreenManagers(
         mapStateReader,
         mapStateActions,
         overlayManager,
-        orientationManager,
+        onOrientationUserInteraction,
         taskRenderSyncCoordinator,
         context,
         coroutineScope,
@@ -266,7 +282,7 @@ internal fun rememberMapScreenManagers(
             mapStateReader = mapStateReader,
             stateActions = mapStateActions,
             overlayManager = overlayManager,
-            orientationManager = orientationManager,
+            onOrientationUserInteraction = onOrientationUserInteraction,
             taskRenderSyncCoordinator = taskRenderSyncCoordinator,
             snailTrailManager = snailTrailManager,
             coroutineScope = coroutineScope,

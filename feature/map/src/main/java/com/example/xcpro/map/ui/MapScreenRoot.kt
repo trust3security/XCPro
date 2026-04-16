@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.xcpro.livefollow.watch.LiveFollowWatchViewModel
 import com.example.xcpro.map.MapSize
+import com.example.xcpro.map.MapOrientationFlightDataRuntimeBinder
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
 import com.example.xcpro.map.MapTaskScreenManager
@@ -53,6 +54,7 @@ internal fun MapScreenRoot(
     val runtimeDependencies = mapViewModel.runtimeDependencies
     val flightDataManager = runtimeDependencies.flightDataManager
     val orientationManager = runtimeDependencies.orientationManager
+    val orientationFlow = orientationManager.orientationFlow
     val rootUiBinding = rememberMapScreenRootUiBinding(mapViewModel = mapViewModel)
     MapScreenSideEffects(
         uiEffects = mapViewModel.uiEffects,
@@ -65,11 +67,7 @@ internal fun MapScreenRoot(
     // Runtime map state owned by the UI layer.
     val mapState = remember { MapScreenState() }
     val mapStateReader = mapViewModel.mapState
-    val hotPathBindings = rememberMapScreenHotPathBindings(
-        mapViewModel = mapViewModel,
-        orientationManager = orientationManager
-    )
-
+    val hotPathBindings = rememberMapScreenHotPathBindings(mapViewModel = mapViewModel, orientationFlow = orientationFlow)
     // Simplified permission state: always enabled, but keep size hydration for card readiness.
     val safeContainerSizeState = remember { mutableStateOf(IntSize.Zero) }
     var safeContainerSize by safeContainerSizeState
@@ -81,30 +79,35 @@ internal fun MapScreenRoot(
             )
         )
     }
-
-    val flightCardsBinding = rememberMapScreenFlightCardsBinding(
-        navController = navController,
-        mapViewModel = mapViewModel
-    )
+    val flightCardsBinding = rememberMapScreenFlightCardsBinding(navController = navController, mapViewModel = mapViewModel)
     val profileLookAndFeelBinding = rememberMapScreenProfileLookAndFeelBinding()
     LaunchedEffect(profileLookAndFeelBinding.activeProfileId) {
         mapViewModel.setActiveProfileId(profileLookAndFeelBinding.activeProfileId)
     }
     val airspaceState = rememberMapScreenAirspaceState()
-
+    val taskManagerInputs = remember(mapViewModel) {
+        MapScreenManagersTaskInputs(
+            taskRenderSnapshotProvider = mapViewModel::taskRenderSnapshot,
+            taskWaypointCountProvider = mapViewModel::currentTaskWaypointCount,
+            currentTaskProvider = mapViewModel::currentTask,
+            clearTask = mapViewModel::clearTask,
+            saveTask = mapViewModel::saveTask
+        )
+    }
     val managers = rememberMapScreenManagers(
         context = context,
         mapState = mapState,
         mapStateReader = mapStateReader,
         mapStateActions = mapViewModel.mapStateActions,
-        orientationManager = orientationManager,
+        orientationRuntimePort = orientationManager,
+        onOrientationUserInteraction = orientationManager::onUserInteraction,
         sensorsUseCase = runtimeDependencies.sensorsUseCase,
         replaySessionState = mapViewModel.replaySessionState,
         replayHeadingProvider = mapViewModel::getInterpolatedReplayHeadingDeg,
         replayFixProvider = mapViewModel::getInterpolatedReplayPose,
         featureFlags = runtimeDependencies.featureFlags,
         coroutineScope = coroutineScope,
-        tasksUseCase = runtimeDependencies.tasksUseCase,
+        taskInputs = taskManagerInputs,
         airspaceUseCase = runtimeDependencies.airspaceUseCase,
         waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase,
         localOwnshipRenderEnabled = { renderLocalOwnshipState.value }
@@ -112,8 +115,8 @@ internal fun MapScreenRoot(
     LaunchedEffect(profileLookAndFeelBinding.activeProfileId, managers.locationManager) {
         managers.locationManager.setActiveProfileId(profileLookAndFeelBinding.activeProfileId)
     }
-    val panelState by managers.taskScreenManager.taskPanelState.collectAsStateWithLifecycle()
-    val isTaskPanelVisible = panelState != MapTaskScreenManager.TaskPanelState.HIDDEN
+    val panelState by managers.taskScreenManager.taskPanelState.collectAsStateWithLifecycle(); val isTaskPanelVisible =
+        panelState != MapTaskScreenManager.TaskPanelState.HIDDEN
     MapScreenBackHandler(
         drawerState = drawerState,
         modalManager = managers.modalManager,
@@ -123,18 +126,11 @@ internal fun MapScreenRoot(
         coroutineScope = coroutineScope
     )
 
-    val bindings = rememberMapScreenBindings(
-        mapViewModel = mapViewModel,
-        mapStateReader = mapStateReader
-    )
-    val mapBindings = bindings.map
-    val sessionBindings = bindings.session
-    val taskBindings = bindings.task
-    val trafficOverlayRuntimeInputs = rememberMapTrafficOverlayRuntimeInputs(
-        mapViewModel = mapViewModel,
-        currentLocation = hotPathBindings.currentLocation
-    )
-
+    val bindings = rememberMapScreenBindings(mapViewModel = mapViewModel, mapStateReader = mapStateReader)
+    val taskRenderSnapshotProvider = mapViewModel::taskRenderSnapshot; val mapBindings = bindings.map
+    val sessionBindings = bindings.session; val taskBindings = bindings.task
+    val trafficOverlayRuntimeInputs =
+        rememberMapTrafficOverlayRuntimeInputs(mapViewModel = mapViewModel, currentLocation = hotPathBindings.currentLocation)
     MapAirspaceOverlayEffect(
         mapState = mapState,
         airspaceState = airspaceState,
@@ -159,13 +155,13 @@ internal fun MapScreenRoot(
         currentZoomFlow = hotPathBindings.currentZoom,
         renderLocalOwnship = renderLocalOwnship,
         currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
-        orientationManager = orientationManager
+        onApplyOrientationFlightModeSelection = mapViewModel::applyOrientationFlightModeSelection
     )
-
     val mapRuntimeController = rememberMapRuntimeController(
         overlayManager = managers.overlayManager,
         mapViewModel = mapViewModel,
-        cameraManager = managers.cameraManager
+        cameraManager = managers.cameraManager,
+        taskRenderSnapshotProvider = taskRenderSnapshotProvider
     )
     TaskViewportCommandEffects(mapViewModel = mapViewModel)
     MapScreenCameraRuntimeEffects(
@@ -173,7 +169,6 @@ internal fun MapScreenRoot(
         hotPathBindings = hotPathBindings,
         replaySession = sessionBindings.replaySession
     )
-
     val locationPermissionRequester = rememberLocationPermissionRequester(managers.locationManager)
     MapScreenComposeAndLifecycleEffects(
         lifecycleManager = managers.lifecycleManager,
@@ -182,7 +177,12 @@ internal fun MapScreenRoot(
         locationPermissionRequester = locationPermissionRequester,
         currentLocationFlow = hotPathBindings.currentLocation,
         orientationFlow = hotPathBindings.orientationFlow,
-        orientationManager = orientationManager,
+        orientationFlightDataRuntimeBinder = remember(flightDataManager, orientationManager) {
+            MapOrientationFlightDataRuntimeBinder(
+                flightDataManager = flightDataManager,
+                orientationController = orientationManager
+            )
+        },
         profileUiState = profileLookAndFeelBinding.profileUiState,
         flightDataManager = flightDataManager,
         currentFlightModeSelection = rootUiBinding.currentFlightModeSelection,
@@ -194,7 +194,6 @@ internal fun MapScreenRoot(
         allowSensorStart = sessionBindings.allowSensorStart && allowFlightSensorStart,
         renderLocalOwnship = renderLocalOwnship
     )
-
     val widgetLayout = rememberMapScreenWidgetLayoutBinding(
         activeProfileId = profileLookAndFeelBinding.activeProfileId,
         density = density
@@ -204,7 +203,6 @@ internal fun MapScreenRoot(
         screenWidthPx = widgetLayout.screenWidthPx,
         screenHeightPx = widgetLayout.screenHeightPx
     )
-
     val variometerLayout = rememberVariometerLayout(
         mapViewModel = mapViewModel,
         activeProfileId = profileLookAndFeelBinding.activeProfileId,
@@ -212,7 +210,6 @@ internal fun MapScreenRoot(
         screenHeightPx = widgetLayout.screenHeightPx,
         density = density
     )
-
     MapVisibilityLifecycleEffect(mapViewModel)
     val scaffoldInputs = rememberMapScreenScaffoldInputs(
         coroutineScope = coroutineScope,
@@ -239,6 +236,7 @@ internal fun MapScreenRoot(
         managers = managers,
         mapState = mapState,
         mapRuntimeController = mapRuntimeController,
+        taskRenderSnapshotProvider = taskRenderSnapshotProvider,
         density = density,
         safeContainerSizeState = safeContainerSizeState
     )

@@ -8,8 +8,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.maplibre.android.camera.CameraPosition
-import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.gestures.MoveGestureDetector
+import org.maplibre.android.gestures.RotateGestureDetector
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.UiSettings
 import org.mockito.kotlin.any
@@ -22,38 +22,16 @@ import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-class MapInitializerOgnViewportZoomTest {
+class MapInitializerOrientationInteractionTest {
 
     @Test
-    fun setupInitialPosition_forwardsViewportZoomToOgnRuntime() = runTest {
+    fun moveBegin_triggersOrientationInteractionCallbackOnce() = runTest {
         val fixture = createFixture(scope = this)
-
-        invokePrivateMethod(
-            target = fixture.initializer,
-            name = "setupInitialPosition",
-            parameterTypes = arrayOf(MapLibreMap::class.java),
-            args = arrayOf(fixture.map)
-        )
-
-        verify(fixture.overlayManager, times(1)).setOgnViewportZoom(8.0f)
-        verify(fixture.overlayManager, times(1)).invalidateTrafficProjection(true)
-    }
-
-    @Test
-    fun cameraIdleListener_forwardsViewportZoomToOgnRuntime() = runTest {
-        val fixture = createFixture(scope = this)
-        val cameraIdleListeners = mutableListOf<MapLibreMap.OnCameraIdleListener>()
+        val moveListeners = mutableListOf<MapLibreMap.OnMoveListener>()
         doAnswer { invocation ->
-            cameraIdleListeners += invocation.getArgument<MapLibreMap.OnCameraIdleListener>(0)
+            moveListeners += invocation.getArgument<MapLibreMap.OnMoveListener>(0)
             null
-        }.whenever(fixture.map).addOnCameraIdleListener(any<MapLibreMap.OnCameraIdleListener>())
-        whenever(fixture.map.cameraPosition).thenReturn(
-            CameraPosition.Builder()
-                .target(LatLng(-35.2, 149.2))
-                .zoom(9.4)
-                .bearing(12.0)
-                .build()
-        )
+        }.whenever(fixture.map).addOnMoveListener(any<MapLibreMap.OnMoveListener>())
 
         invokePrivateMethod(
             target = fixture.initializer,
@@ -61,20 +39,20 @@ class MapInitializerOgnViewportZoomTest {
             parameterTypes = arrayOf(MapLibreMap::class.java),
             args = arrayOf(fixture.map)
         )
-        cameraIdleListeners.single().onCameraIdle()
 
-        verify(fixture.overlayManager, times(1)).setOgnViewportZoom(9.4f)
-        verify(fixture.overlayManager, times(1)).invalidateTrafficProjection(true)
+        moveListeners.single().onMoveBegin(mock<MoveGestureDetector>())
+
+        verify(fixture.onOrientationUserInteraction, times(1)).invoke()
     }
 
     @Test
-    fun cameraMoveListener_invalidatesTrafficProjection() = runTest {
+    fun rotateBegin_triggersOrientationInteractionCallbackOnce() = runTest {
         val fixture = createFixture(scope = this)
-        val cameraMoveListeners = mutableListOf<MapLibreMap.OnCameraMoveListener>()
+        val rotateListeners = mutableListOf<MapLibreMap.OnRotateListener>()
         doAnswer { invocation ->
-            cameraMoveListeners += invocation.getArgument<MapLibreMap.OnCameraMoveListener>(0)
+            rotateListeners += invocation.getArgument<MapLibreMap.OnRotateListener>(0)
             null
-        }.whenever(fixture.map).addOnCameraMoveListener(any<MapLibreMap.OnCameraMoveListener>())
+        }.whenever(fixture.map).addOnRotateListener(any<MapLibreMap.OnRotateListener>())
 
         invokePrivateMethod(
             target = fixture.initializer,
@@ -82,9 +60,10 @@ class MapInitializerOgnViewportZoomTest {
             parameterTypes = arrayOf(MapLibreMap::class.java),
             args = arrayOf(fixture.map)
         )
-        cameraMoveListeners.single().onCameraMove()
 
-        verify(fixture.overlayManager, times(1)).invalidateTrafficProjection(false)
+        rotateListeners.single().onRotateBegin(mock<RotateGestureDetector>())
+
+        verify(fixture.onOrientationUserInteraction, times(1)).invoke()
     }
 
     private fun createFixture(scope: kotlinx.coroutines.test.TestScope): Fixture {
@@ -93,6 +72,7 @@ class MapInitializerOgnViewportZoomTest {
         val stateActions = MapStateActionsDelegate(mapStateStore)
         val overlayManager: MapOverlayManager = mock()
         val map: MapLibreMap = mock()
+        val onOrientationUserInteraction: () -> Unit = mock()
         whenever(map.uiSettings).thenReturn(mock<UiSettings>())
         return Fixture(
             initializer = MapInitializer(
@@ -101,7 +81,7 @@ class MapInitializerOgnViewportZoomTest {
                 mapStateReader = mapStateStore,
                 stateActions = stateActions,
                 overlayManager = overlayManager,
-                onOrientationUserInteraction = {},
+                onOrientationUserInteraction = onOrientationUserInteraction,
                 taskRenderSyncCoordinator = mock<TaskRenderSyncCoordinator>(),
                 snailTrailManager = mock<SnailTrailManager>(),
                 coroutineScope = scope,
@@ -109,8 +89,8 @@ class MapInitializerOgnViewportZoomTest {
                 waypointFilesUseCase = mock<WaypointFilesUseCase>(),
                 localOwnshipRenderEnabledProvider = { false }
             ),
-            overlayManager = overlayManager,
-            map = map
+            initializerMap = map,
+            onOrientationUserInteraction = onOrientationUserInteraction
         )
     }
 
@@ -127,7 +107,10 @@ class MapInitializerOgnViewportZoomTest {
 
     private data class Fixture(
         val initializer: MapInitializer,
-        val overlayManager: MapOverlayManager,
+        val initializerMap: MapLibreMap,
+        val onOrientationUserInteraction: () -> Unit
+    ) {
         val map: MapLibreMap
-    )
+            get() = initializerMap
+    }
 }

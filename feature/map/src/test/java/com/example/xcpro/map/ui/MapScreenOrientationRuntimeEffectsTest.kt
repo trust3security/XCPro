@@ -1,22 +1,61 @@
 package com.example.xcpro.map.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.junit4.createComposeRule
 import com.example.dfcards.FlightModeSelection
-import com.example.xcpro.MapOrientationManager
+import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class MapScreenOrientationRuntimeEffectsTest {
 
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
     @Test
-    fun applyOrientationFlightModeSelection_forwardsSelectionToOrientationManager() {
-        val orientationManager = mock<MapOrientationManager>()
+    fun initialComposition_forwardsCurrentSelectionToCallback() {
+        val forwardedSelections = mutableListOf<FlightModeSelection>()
 
-        applyOrientationFlightModeSelection(
-            orientationManager = orientationManager,
-            currentFlightModeSelection = FlightModeSelection.CRUISE
-        )
+        composeTestRule.setContent {
+            MapScreenOrientationRuntimeEffects(
+                currentFlightModeSelection = FlightModeSelection.CRUISE,
+                onApplyOrientationFlightModeSelection = forwardedSelections::add
+            )
+        }
 
-        verify(orientationManager).setFlightMode(FlightModeSelection.CRUISE)
+        composeTestRule.waitForIdle()
+        composeTestRule.runOnIdle {
+            assertEquals(listOf(FlightModeSelection.CRUISE), forwardedSelections)
+        }
+    }
+
+    @Test
+    fun selectionChange_forwardsUpdatedSelectionToCallback() {
+        val forwardedSelections = mutableListOf<FlightModeSelection>()
+        var currentSelection by mutableStateOf(FlightModeSelection.CRUISE)
+
+        composeTestRule.setContent {
+            MapScreenOrientationRuntimeEffects(
+                currentFlightModeSelection = currentSelection,
+                onApplyOrientationFlightModeSelection = forwardedSelections::add
+            )
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.runOnIdle {
+            currentSelection = FlightModeSelection.THERMAL
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.runOnIdle {
+            assertEquals(
+                listOf(FlightModeSelection.CRUISE, FlightModeSelection.THERMAL),
+                forwardedSelections
+            )
+        }
     }
 }

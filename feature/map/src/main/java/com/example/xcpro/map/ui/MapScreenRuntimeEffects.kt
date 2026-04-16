@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dfcards.FlightModeSelection
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.MapLocationRuntimePort
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.map.trail.TrailSettings
@@ -25,7 +24,7 @@ internal fun MapScreenRuntimeEffects(
     currentZoomFlow: StateFlow<Float>,
     renderLocalOwnship: Boolean,
     currentFlightModeSelection: FlightModeSelection,
-    orientationManager: MapOrientationManager
+    onApplyOrientationFlightModeSelection: (FlightModeSelection) -> Unit
 ) {
     val currentZoom by currentZoomFlow.collectAsStateWithLifecycle()
     MapScreenTaskRuntimeEffects(
@@ -44,7 +43,7 @@ internal fun MapScreenRuntimeEffects(
     )
     MapScreenOrientationRuntimeEffects(
         currentFlightModeSelection = currentFlightModeSelection,
-        orientationManager = orientationManager
+        onApplyOrientationFlightModeSelection = onApplyOrientationFlightModeSelection
     )
 }
 

@@ -2,6 +2,7 @@ package com.example.xcpro.map
 
 import com.example.xcpro.core.common.logging.AppLogger
 import com.example.xcpro.tasks.BottomSheetState
+import com.example.xcpro.tasks.core.Task
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +18,9 @@ import kotlinx.coroutines.flow.map
  */
 class MapTaskScreenManager(
     internal val mapState: MapScreenState,
-    private val tasksUseCase: MapTasksUseCase,
+    private val currentTaskProvider: () -> Task,
+    private val clearTaskAction: () -> Unit,
+    private val saveTaskAction: suspend (String) -> Boolean,
     private val coroutineScope: CoroutineScope
 ) {
     companion object {
@@ -66,7 +69,7 @@ class MapTaskScreenManager(
      * Handle task clear operation
      */
     fun handleTaskClear() {
-        tasksUseCase.clearTask()
+        clearTaskAction()
         hideTaskPanel()
     }
 
@@ -74,7 +77,7 @@ class MapTaskScreenManager(
      * Handle task save operation
      */
     fun handleTaskSave() {
-        val task = tasksUseCase.currentRuntimeSnapshot().task
+        val task = currentTaskProvider()
         if (task.waypoints.isEmpty()) {
             return
         }
@@ -85,7 +88,7 @@ class MapTaskScreenManager(
             ?: "task_autosave"
 
         coroutineScope.launch {
-            val saved = tasksUseCase.saveTask(saveName)
+            val saved = saveTaskAction(saveName)
             if (!saved) {
                 AppLogger.e(LOG_TAG, "Failed to save task as $saveName")
             }
@@ -114,7 +117,7 @@ class MapTaskScreenManager(
     }
 
     fun collapseTaskPanel() {
-        _taskPanelState.value = if (tasksUseCase.currentRuntimeSnapshot().task.waypoints.isNotEmpty()) {
+        _taskPanelState.value = if (currentTaskProvider().waypoints.isNotEmpty()) {
             TaskPanelState.COLLAPSED
         } else {
             TaskPanelState.HIDDEN
@@ -157,7 +160,7 @@ class MapTaskScreenManager(
     private fun normalizeState(state: TaskPanelState): TaskPanelState {
         return if (
             state == TaskPanelState.COLLAPSED &&
-            tasksUseCase.currentRuntimeSnapshot().task.waypoints.isEmpty()
+            currentTaskProvider().waypoints.isEmpty()
         ) {
             TaskPanelState.HIDDEN
         } else {

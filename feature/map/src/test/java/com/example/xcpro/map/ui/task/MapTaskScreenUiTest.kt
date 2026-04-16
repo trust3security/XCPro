@@ -9,10 +9,8 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import com.example.xcpro.map.MapScreenState
-import com.example.xcpro.map.MapTasksUseCase
 import com.example.xcpro.map.MapTaskScreenManager
 import com.example.xcpro.tasks.TaskFlightSurfaceUiState
-import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.Task
 import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
@@ -22,8 +20,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -139,20 +135,11 @@ class MapTaskScreenUiTest {
     }
 
     private fun createManager(task: Task): MapTaskScreenManager {
-        val tasksUseCase: MapTasksUseCase = mock()
-        whenever(tasksUseCase.currentRuntimeSnapshot()).thenReturn(
-            TaskRuntimeSnapshot(
-                taskType = TaskType.RACING,
-                task = task,
-                activeLeg = 0
-            )
-        )
-
-        val mapState = MapScreenState()
-
         return MapTaskScreenManager(
-            mapState = mapState,
-            tasksUseCase = tasksUseCase,
+            mapState = MapScreenState(),
+            currentTaskProvider = { task },
+            clearTaskAction = {},
+            saveTaskAction = { true },
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
     }

@@ -1,7 +1,6 @@
 package com.example.xcpro.map
 
 import android.content.Context
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.map.BlueLocationOverlay
 import com.example.xcpro.map.trail.SnailTrailManager
 import com.example.xcpro.core.common.logging.AppLogger
@@ -23,7 +22,7 @@ class MapInitializer(
     private val mapStateReader: MapStateReader,
     private val stateActions: MapStateActions,
     private val overlayManager: MapOverlayManager,
-    private val orientationManager: MapOrientationManager,
+    private val onOrientationUserInteraction: () -> Unit,
     private val taskRenderSyncCoordinator: TaskRenderSyncCoordinator,
     private val snailTrailManager: SnailTrailManager,
     private val coroutineScope: CoroutineScope,
@@ -207,7 +206,7 @@ class MapInitializer(
         map.addOnRotateListener(object : MapLibreMap.OnRotateListener {
             override fun onRotateBegin(detector: org.maplibre.android.gestures.RotateGestureDetector) {
                 onUserMapInteractionBegan()
-                orientationManager.onUserInteraction()
+                onOrientationUserInteraction()
             }
 
             override fun onRotate(detector: org.maplibre.android.gestures.RotateGestureDetector) {
@@ -253,7 +252,7 @@ class MapInitializer(
 
     private fun handleMapMovement(map: MapLibreMap) {
         // Trigger orientation override on user pan gesture
-        orientationManager.onUserInteraction()
+        onOrientationUserInteraction()
 
         // Save current position before movement for return functionality
         if (!mapStateReader.showReturnButton.value) {

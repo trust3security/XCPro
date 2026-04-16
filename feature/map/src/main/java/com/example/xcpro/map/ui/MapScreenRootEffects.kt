@@ -4,18 +4,17 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import com.example.dfcards.FlightModeSelection
-import com.example.xcpro.MapOrientationManager
 import com.example.xcpro.airspace.AirspaceUiState
 import com.example.xcpro.common.orientation.OrientationData
 import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapLifecycleEffects
+import com.example.xcpro.map.MapOrientationFlightDataRuntimeBinder
 import com.example.xcpro.map.MapLifecycleRuntimePort
 import com.example.xcpro.map.MapLocationPermissionRequester
 import com.example.xcpro.map.MapLocationRuntimePort
@@ -95,7 +94,7 @@ internal fun MapScreenComposeAndLifecycleEffects(
     locationPermissionRequester: MapLocationPermissionRequester,
     currentLocationFlow: StateFlow<MapLocationUiModel?>,
     orientationFlow: StateFlow<OrientationData>,
-    orientationManager: MapOrientationManager,
+    orientationFlightDataRuntimeBinder: MapOrientationFlightDataRuntimeBinder,
     profileUiState: ProfileUiState,
     flightDataManager: FlightDataManager,
     currentFlightModeSelection: FlightModeSelection,
@@ -107,12 +106,14 @@ internal fun MapScreenComposeAndLifecycleEffects(
     allowSensorStart: Boolean,
     renderLocalOwnship: Boolean
 ) {
+    LaunchedEffect(orientationFlightDataRuntimeBinder) {
+        orientationFlightDataRuntimeBinder.collectLatestFlightData()
+    }
     MapComposeEffects.AllMapEffects(
         locationManager = locationManager,
         locationPermissionRequester = locationPermissionRequester,
         currentLocationFlow = currentLocationFlow,
         orientationFlow = orientationFlow,
-        orientationManager = orientationManager,
         uiState = profileUiState,
         flightDataManager = flightDataManager,
         currentFlightModeSelection = currentFlightModeSelection,

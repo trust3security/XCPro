@@ -1,8 +1,6 @@
 package com.example.xcpro.map
 
-import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.Task
-import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import org.junit.Assert.assertEquals
@@ -11,8 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 
 class MapTaskScreenManagerTest {
 
@@ -102,19 +98,31 @@ class MapTaskScreenManagerTest {
         assertEquals(MapTaskScreenManager.TaskPanelState.HIDDEN, manager.taskPanelState.value)
     }
 
-    private fun createManager(task: Task): MapTaskScreenManager {
-        val tasksUseCase: MapTasksUseCase = mock()
-        whenever(tasksUseCase.currentRuntimeSnapshot()).thenReturn(
-            TaskRuntimeSnapshot(
-                taskType = TaskType.RACING,
-                task = task,
-                activeLeg = 0
-            )
+    @Test
+    fun handleTaskClear_invokesActionAndHidesPanel() {
+        var cleared = false
+        val manager = createManager(
+            task = sampleTask(withWaypoints = true),
+            clearTask = { cleared = true }
         )
-        val mapState = MapScreenState()
+
+        manager.showTaskPanel(MapTaskScreenManager.TaskPanelState.EXPANDED_FULL)
+        manager.handleTaskClear()
+
+        assertTrue(cleared)
+        assertEquals(MapTaskScreenManager.TaskPanelState.HIDDEN, manager.taskPanelState.value)
+    }
+
+    private fun createManager(
+        task: Task,
+        clearTask: () -> Unit = {},
+        saveTask: suspend (String) -> Boolean = { true }
+    ): MapTaskScreenManager {
         return MapTaskScreenManager(
-            mapState = mapState,
-            tasksUseCase = tasksUseCase,
+            mapState = MapScreenState(),
+            currentTaskProvider = { task },
+            clearTaskAction = clearTask,
+            saveTaskAction = saveTask,
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
     }

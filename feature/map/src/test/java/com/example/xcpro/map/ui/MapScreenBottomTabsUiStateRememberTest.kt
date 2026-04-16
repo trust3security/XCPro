@@ -6,10 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapTaskScreenManager
-import com.example.xcpro.map.MapTasksUseCase
-import com.example.xcpro.tasks.TaskRuntimeSnapshot
 import com.example.xcpro.tasks.core.Task
-import com.example.xcpro.tasks.core.TaskType
 import com.example.xcpro.tasks.core.TaskWaypoint
 import com.example.xcpro.tasks.core.WaypointRole
 import kotlinx.coroutines.CoroutineScope
@@ -19,8 +16,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -111,11 +106,10 @@ class MapScreenBottomTabsUiStateRememberTest {
     }
 
     private fun createManager(): MapTaskScreenManager {
-        val tasksUseCase: MapTasksUseCase = mock()
-        whenever(tasksUseCase.currentRuntimeSnapshot()).thenReturn(
-            TaskRuntimeSnapshot(
-                taskType = TaskType.RACING,
-                task = Task(
+        return MapTaskScreenManager(
+            mapState = MapScreenState(),
+            currentTaskProvider = {
+                Task(
                     id = "task_with_points",
                     waypoints = listOf(
                         TaskWaypoint(
@@ -127,14 +121,10 @@ class MapScreenBottomTabsUiStateRememberTest {
                             role = WaypointRole.START
                         )
                     )
-                ),
-                activeLeg = 0
-            )
-        )
-
-        return MapTaskScreenManager(
-            mapState = MapScreenState(),
-            tasksUseCase = tasksUseCase,
+                )
+            },
+            clearTaskAction = {},
+            saveTaskAction = { true },
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
     }

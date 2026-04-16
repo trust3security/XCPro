@@ -18,6 +18,7 @@ import com.example.xcpro.map.FlightDataManager
 import com.example.xcpro.map.MapPoint
 import com.example.xcpro.map.MapScreenState
 import com.example.xcpro.map.MapScreenViewModel
+import com.example.xcpro.map.TaskRenderSnapshot
 import com.example.xcpro.map.MapTaskIntegration
 import com.example.xcpro.map.MapUiEvent
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +55,7 @@ internal fun rememberMapScreenScaffoldInputs(
     managers: MapScreenManagers,
     mapState: MapScreenState,
     mapRuntimeController: MapRuntimeController,
+    taskRenderSnapshotProvider: () -> TaskRenderSnapshot,
     density: Density,
     safeContainerSizeState: MutableState<IntSize>,
     screenWidthPx: Float = widgetLayout.screenWidthPx,
@@ -172,7 +174,7 @@ internal fun rememberMapScreenScaffoldInputs(
                 modalManager = managers.modalManager,
                 taskScreenManager = managers.taskScreenManager,
                 taskFlightSurfaceUiState = taskBindings.taskFlightSurfaceUiState,
-                taskRenderSnapshotProvider = mapViewModel.runtimeDependencies.tasksUseCase::taskRenderSnapshot,
+                taskRenderSnapshotProvider = taskRenderSnapshotProvider,
                 watchedPilotFocusEpoch = watchedPilotFocusEpoch,
                 mapLibreMapProvider = { mapState.mapLibreMap },
                 onFocusWatchedPilot = focusWatchedPilot@ { latitudeDeg, longitudeDeg ->
