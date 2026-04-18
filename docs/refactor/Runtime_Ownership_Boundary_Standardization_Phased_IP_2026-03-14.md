@@ -26,11 +26,11 @@
 - Problem statement:
   - Several representative runtime helpers still blur ownership boundaries by exposing writable runtime state publicly, creating long-lived scopes internally, or mirroring live rollout state through mutable process-wide holders.
   - The most concrete current examples are:
-    - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficSelectionRuntime.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideRepository.kt`
-    - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
-    - `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`
-    - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioFeatureFlags.kt`
+    - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficSelectionRuntime.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/data/WindOverrideRepository.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/replay/ReplayPipeline.kt`
+    - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioFeatureFlags.kt`
   - The result is not necessarily broken behavior today, but it weakens reviewability, makes scope lifetime harder to reason about, and increases the chance of ad hoc fixes or duplicated ownership over time.
 - Why now:
   - This is the highest-leverage architecture hardening move available without broad churn.
@@ -72,7 +72,7 @@ Required rules for the scoped phases:
 
 Use the existing traffic port seam as the baseline pattern:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapTrafficCoordinatorAdapters.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapTrafficCoordinatorAdapters.kt`
   - exposes `StateFlow` to consumers
   - keeps writable state behind intent methods
   - makes mutation rights explicit without leaking writable flow types
@@ -180,9 +180,9 @@ Rules:
 - Goal:
   - Convert traffic selection from a public writable-flow contract into a read-only runtime port with explicit mutation methods.
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficSelectionRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapTrafficCoordinatorAdapters.kt` if contract reuse helps
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficSelectionRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapTrafficCoordinatorAdapters.kt` if contract reuse helps
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
   - targeted traffic/map tests
 - Tests to add/update:
   - selection-state tests that lock mutation through named methods only
@@ -197,8 +197,8 @@ Rules:
 - Goal:
   - Remove hidden long-lived scope ownership from wind sensor input adaptation.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputs.kt`
   - any narrow owner/wiring files required by the chosen boundary
 - Tests to add/update:
   - targeted wind runtime tests covering collection start/stop ownership
@@ -213,8 +213,8 @@ Rules:
 - Goal:
   - Remove hidden long-lived scope ownership from the wind override source while keeping the repository as the explicit persistence owner.
 - Files to change:
-  - `feature/profile/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideSource.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideRepository.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/data/WindOverrideSource.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/data/WindOverrideRepository.kt`
   - any narrow consumers/tests affected by the contract change
 - Tests to add/update:
   - targeted wind runtime tests covering override propagation
@@ -229,7 +229,7 @@ Rules:
 - Goal:
   - Make replay lifecycle ownership explicit and remove hidden scope reset behavior from helper internals.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/ReplayPipeline.kt`
   - replay runtime wiring/tests touched by the boundary move
 - Tests to add/update:
   - replay determinism regression tests
@@ -247,8 +247,8 @@ Rules:
 - Goal:
   - Clean up the remaining scoped runtime-holder patterns that still weaken ownership clarity after Phases 1-3.
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioFeatureFlags.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoop.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioFeatureFlags.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoop.kt`
   - any small supporting runtime-owner files needed to narrow that seam
 - Tests to add/update:
   - ADS-B emergency rollout/runtime tests locking the new ownership path

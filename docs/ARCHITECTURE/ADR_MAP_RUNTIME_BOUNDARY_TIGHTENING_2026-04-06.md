@@ -45,7 +45,7 @@ A fourth boundary check landed in the seam-hardening pass:
 
 1. `MapTasksUseCase` moves to `feature:map`.
    - It is the map-shell adapter over `TaskManagerCoordinator`.
-   - It remains in package `com.example.xcpro.map` for low-churn consumers.
+   - It remains in package `com.trust3.xcpro.map` for low-churn consumers.
 
 2. `TaskRenderSnapshot` stays in `feature:map-runtime`.
    - It is still consumed by runtime owners such as

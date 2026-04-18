@@ -1,4 +1,4 @@
-﻿# Task Architecture Compliance Refactor Plan
+# Task Architecture Compliance Refactor Plan
 
 Date: 2026-02-11
 Status: Completed (closed 2026-02-11)
@@ -244,14 +244,14 @@ Allowed dependency direction: UI -> domain -> data.
     - `./gradlew assembleDebug`
 
 ## Files Likely to Change (Initial List)
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt`
 
 ## Implementation Rule
 Code changes must follow this phased plan unless a newer approved plan explicitly replaces it.

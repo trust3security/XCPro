@@ -1,4 +1,4 @@
-﻿# Terrain Elevation Ownership Release-Grade Phased IP
+# Terrain Elevation Ownership Release-Grade Phased IP
 
 ## 0) Metadata
 
@@ -67,10 +67,10 @@
 
 ### 2.2 Existing Seams To Reuse
 
-- `feature/map/src/main/java/com/example/xcpro/qnh/TerrainElevationProvider.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/qnh/TerrainElevationProvider.kt`
   - current minimal read-only terrain port
   - good starting shape, but the owner is too high in the graph for flight-runtime consumers
-- `feature/flight-runtime/src/main/java/com/example/xcpro/audio/VarioAudioControllerPort.kt`
+- `feature/flight-runtime/src/main/java/com/trust3/xcpro/audio/VarioAudioControllerPort.kt`
   - proven cross-module runtime port pattern where flight runtime depends on a small shared interface and Android side effects live outside the runtime module
 
 ### 2.3 Related Existing Plans
@@ -264,8 +264,8 @@ Boundary risks:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/qnh/TerrainElevationProvider.kt` | existing narrow terrain read port | keep the read-only single-purpose contract shape | relocate to a lower shared owner and broaden to both consumers |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/audio/VarioAudioControllerPort.kt` | cross-module runtime port consumed by flight runtime and implemented outside it | runtime module depends on small interface; side effects live in a higher module | terrain port is read-only and source-policy oriented rather than controller-like |
+| `feature/map/src/main/java/com/trust3/xcpro/qnh/TerrainElevationProvider.kt` | existing narrow terrain read port | keep the read-only single-purpose contract shape | relocate to a lower shared owner and broaden to both consumers |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/audio/VarioAudioControllerPort.kt` | cross-module runtime port consumed by flight runtime and implemented outside it | runtime module depends on small interface; side effects live in a higher module | terrain port is read-only and source-policy oriented rather than controller-like |
 
 ### 4.2B Boundary Moves
 
@@ -443,15 +443,15 @@ Explicitly forbidden:
   - replace the temporary Phase 1 `OpenMeteoTerrainElevationReadPort` binding with the canonical repository binding
 - Files to change:
   - new terrain repository and source adapters in `feature:map`
-  - `feature/map/src/main/java/com/example/xcpro/terrain/TerrainElevationDataSource.kt`
-  - `feature/map/src/main/java/com/example/xcpro/terrain/TerrainElevationRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/terrain/TerrainElevationResultCache.kt`
-  - `feature/map/src/main/java/com/example/xcpro/terrain/SrtmTerrainDataSource.kt`
-  - `feature/map/src/main/java/com/example/xcpro/terrain/OpenMeteoTerrainDataSource.kt`
-  - `feature/map/src/main/java/com/example/xcpro/di/TerrainModule.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/terrain/TerrainElevationDataSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/terrain/TerrainElevationRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/terrain/TerrainElevationResultCache.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/terrain/SrtmTerrainDataSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/terrain/OpenMeteoTerrainDataSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/TerrainModule.kt`
   - migrated or replaced `SrtmTerrainDatabase.kt`
   - migrated or replaced `OpenMeteoElevationApi.kt`
-  - deleted `feature/map/src/main/java/com/example/xcpro/terrain/OpenMeteoTerrainElevationReadPort.kt`
+  - deleted `feature/map/src/main/java/com/trust3/xcpro/terrain/OpenMeteoTerrainElevationReadPort.kt`
   - deleted `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/ElevationCache.kt`
   - `config/quality/raw_log_allowlist.txt`
 - Ownership/file split changes in this phase:
@@ -555,9 +555,9 @@ Explicitly forbidden:
   - Docs/ADR/deviation sync landed on 2026-03-16 after QNH moved to `TerrainElevationReadPort`.
   - `enforceRules` and `assembleDebug` passed.
   - Targeted terrain/QNH proof passed:
-    - `:feature:flight-runtime:testDebugUnitTest --tests "com.example.xcpro.sensors.FlightDataCalculatorEngineReplayTerrainGateTest"`
-    - `:feature:map:testDebugUnitTest --tests "com.example.xcpro.terrain.TerrainElevationRepositoryTest"`
-    - `:feature:map:testDebugUnitTest --tests "com.example.xcpro.qnh.CalibrateQnhUseCaseTest"`
+    - `:feature:flight-runtime:testDebugUnitTest --tests "com.trust3.xcpro.sensors.FlightDataCalculatorEngineReplayTerrainGateTest"`
+    - `:feature:map:testDebugUnitTest --tests "com.trust3.xcpro.terrain.TerrainElevationRepositoryTest"`
+    - `:feature:map:testDebugUnitTest --tests "com.trust3.xcpro.qnh.CalibrateQnhUseCaseTest"`
     - `:dfcards-library:testDebugUnitTest --tests "com.example.dfcards.dfcards.calculations.SimpleAglCalculatorTest"`
   - The repo-wide `testDebugUnitTest` gate was rerun but remains intermittently blocked by a Gradle file-lock on `feature/map/build/test-results/testDebugUnitTest/binary/output.bin`, so that final suite should be rerun in a clean shell before treating this plan as fully closed.
 

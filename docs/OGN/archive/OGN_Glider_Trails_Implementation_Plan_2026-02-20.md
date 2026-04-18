@@ -59,9 +59,9 @@ Required direction remains:
 
 Planned touched areas:
 
-- `feature/map/src/main/java/com/example/xcpro/ogn/*`
-- `feature/map/src/main/java/com/example/xcpro/map/*`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/*`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/*`
+- `feature/map/src/main/java/com/trust3/xcpro/map/*`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/*`
 - `docs/OGN/*` and `docs/ARCHITECTURE/PIPELINE.md`
 
 ### 2.2A Boundary Moves (Mandatory)
@@ -140,8 +140,8 @@ Use existing 19-step vario palette already present in XCPro snail/thermal logic:
 
 References:
 
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailPalette.kt`
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalColorScale.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailPalette.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalColorScale.kt`
 
 ## 4.2 Width Contract (New for OGN trails)
 
@@ -194,12 +194,12 @@ Only emit segment if:
 - Goal:
   Implement OGN trail domain math and state machine outside UI.
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailModels.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailMath.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailModels.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailMath.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt` (new)
 - Tests:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailMathTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnGliderTrailMathTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
 - Exit:
   - Deterministic unit tests for color index and width mapping.
   - Fresh-sample dedup and pruning validated.
@@ -209,8 +209,8 @@ Only emit segment if:
 - Goal:
   Expose trails and preferences through existing OGN use-case path.
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
   - OGN DI module files.
 - Tests:
   - Extend `OgnTrafficPreferencesRepositoryTest.kt` for new keys.
@@ -223,13 +223,13 @@ Only emit segment if:
 - Goal:
   Render OGN glider trails and provide user toggle.
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/components/OgnGliderTrailsButton.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/components/OgnGliderTrailsButton.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
 - Tests:
   - UI/VM wiring assertions for toggle and gating.
 - Exit:
@@ -315,28 +315,28 @@ Optional when environment is available:
    Fix:
    Sample retention now prunes by sample age (`nowMonoMs - sourceSeenMonoMs`) regardless of active-id membership.
    Code:
-   `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`.
+   `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt`.
 
 2. Miss:
    Preference test default assumption was brittle when DataStore state leaked between tests.
    Fix:
    Test setup now explicitly resets `showGliderTrailsEnabled` to `false`.
    Code:
-   `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`.
+   `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`.
 
 3. Miss:
    Initial plan did not explicitly call out runtime layer ownership for OGN trail overlay in lifecycle cleanup.
    Fix:
    Runtime cleanup now includes `ognGliderTrailOverlay` in map lifecycle teardown.
    Code:
-   `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`.
+   `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`.
 
 4. Miss:
    Repository tests validated retention pruning when fresh input arrived, but did not validate timer-driven housekeeping when upstream target lists stayed quiet.
    Fix:
    Added explicit housekeeping test that advances virtual time and injected monotonic clock to prove deterministic segment expiry without new upstream emissions.
    Code:
-   `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailRepositoryTest.kt` (`historyPrunesViaHousekeepingWhenUpstreamIsQuiet`).
+   `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnGliderTrailRepositoryTest.kt` (`historyPrunesViaHousekeepingWhenUpstreamIsQuiet`).
 
 
 ## 11) Compliance Check Against Forbidden Patterns

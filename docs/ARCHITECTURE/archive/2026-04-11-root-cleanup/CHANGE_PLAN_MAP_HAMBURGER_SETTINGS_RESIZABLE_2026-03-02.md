@@ -131,13 +131,13 @@ After:
 - Goal:
   - Extend widget layout SSOT to include hamburger/settings size.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/widgets/MapWidgetLayoutViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/widgets/MapWidgetLayoutModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/widgets/MapWidgetLayoutRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/widgets/MapWidgetLayoutUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/widgets/MapWidgetLayoutViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt`
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/map/widgets/MapWidgetLayoutUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/widgets/MapWidgetLayoutUseCaseTest.kt`
 - Exit criteria:
   - Both widget sizes load default, clamp to range, and persist in one authoritative path.
 
@@ -146,17 +146,17 @@ After:
 - Goal:
   - Thread size state from root to widgets and add resize affordance in edit mode.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayActions.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/MapUIWidgets.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/SideHamburgerMenuImpl.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/SettingsShortcutWidgetImpl.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayActions.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/MapUIWidgets.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/SideHamburgerMenuImpl.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/SettingsShortcutWidgetImpl.kt`
 - Tests to add/update:
-  - `app/src/test/java/com/example/xcpro/MapOverlayWidgetGesturesTest.kt` (add resize commit assertions).
+  - `app/src/test/java/com/trust3/xcpro/MapOverlayWidgetGesturesTest.kt` (add resize commit assertions).
 - Exit criteria:
   - Resize works only in UI edit mode, updates bounds safely, and commits to SSOT.
 

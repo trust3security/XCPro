@@ -19,11 +19,11 @@ Purpose:
 
 ## Unit/Test Gate
 
-- `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*" --tests "com.example.xcpro.replay.Igc*"`  
+- `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*" --tests "com.trust3.xcpro.replay.Igc*"`  
   - Status: PASS (captured prior to this fast pass; see P7-4/P7-6 evidence context)
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`  
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.*"`  
   - Status: PASS (captured prior to this fast pass; see P7-4/P7-6 evidence context)
-- `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*"`  
+- `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*"`  
   - Status: pass evidence captured during earlier Phase 7 runs
 
 ## Build Gate

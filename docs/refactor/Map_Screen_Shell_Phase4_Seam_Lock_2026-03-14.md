@@ -50,7 +50,7 @@ The first implementation batch should:
 
 Source file:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
 
 Observed shape:
 
@@ -181,28 +181,28 @@ Do not start with this seam.
 
 | File | Why It Changes | Ownership Change |
 |---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` | remove proven profile/prompt orchestration from the main body | becomes thinner while staying the single screen owner |
-| `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTestRuntime.kt` | adapt constructor wiring to narrowed dependency groups | test helper stays aligned to the production seam |
-| `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelCoreStateTest.kt` | keep profile/style/QNH assertions covering the extracted seam | preserves behavior contract through the split |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` | remove proven profile/prompt orchestration from the main body | becomes thinner while staying the single screen owner |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTestRuntime.kt` | adapt constructor wiring to narrowed dependency groups | test helper stays aligned to the production seam |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelCoreStateTest.kt` | keep profile/style/QNH assertions covering the extracted seam | preserves behavior contract through the split |
 
 ### 5.2 Files To Add
 
 | File | Responsibility |
 |---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionDependencies.kt` | concern-specific injected dependency group for profile/style/layout routing |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionCoordinator.kt` | profile-scoped style, units, trail, QNH, and variometer routing |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenWeGlidePromptBridge.kt` | pending-prompt collection and confirm/dismiss resolution |
-| `feature/map/src/test/java/com/example/xcpro/map/MapScreenWeGlidePromptBridgeTest.kt` or `MapScreenViewModelWeGlidePromptTest.kt` | prompt-resolution coverage, currently missing |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionDependencies.kt` | concern-specific injected dependency group for profile/style/layout routing |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionCoordinator.kt` | profile-scoped style, units, trail, QNH, and variometer routing |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenWeGlidePromptBridge.kt` | pending-prompt collection and confirm/dismiss resolution |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenWeGlidePromptBridgeTest.kt` or `MapScreenViewModelWeGlidePromptTest.kt` | prompt-resolution coverage, currently missing |
 
 ### 5.3 Files Explicitly Not Touched In Phase 4A
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenRuntimeDependencies.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelObservers.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelRuntimeWiring.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenRuntimeDependencies.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelObservers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelRuntimeWiring.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
 
 If implementation pressure reaches those files, stop and re-scope.
 

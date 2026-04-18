@@ -28,7 +28,7 @@ Relevant XCSoar files:
 
 ### New package (Racing-only)
 ```
-feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/
+feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/
   RacingNavigationEngine.kt
   RacingZoneDetector.kt
   RacingNavigationState.kt

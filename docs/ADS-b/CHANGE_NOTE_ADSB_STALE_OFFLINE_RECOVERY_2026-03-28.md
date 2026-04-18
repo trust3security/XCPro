@@ -36,11 +36,11 @@ happened:
 
 ## Files Changed
 
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/domain/AdsbNetworkAvailabilityPort.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryConnectivityTest.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/domain/AdsbNetworkAvailabilityPort.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryConnectivityTest.kt`
 
 ## Regression Coverage
 
@@ -55,13 +55,13 @@ false but the fresh network snapshot is already true.
 
 Pass:
 
-- `./gradlew.bat :feature:traffic:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbTrafficRepositoryConnectivityTest"`
+- `./gradlew.bat :feature:traffic:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryConnectivityTest"`
 
 Workspace blockers seen during broader verification on 2026-03-28:
 
 - `./gradlew.bat enforceRules`
   - failed for an unrelated existing line-budget violation in
-    `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+    `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
     (`509` lines, max `500`).
 - `./gradlew.bat testDebugUnitTest`
   - blocked by a Windows file-lock cleanup failure under

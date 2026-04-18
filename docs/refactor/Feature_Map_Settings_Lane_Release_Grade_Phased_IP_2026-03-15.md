@@ -108,7 +108,7 @@ Read first:
     `screens/navdrawer/**` that no longer fits one owner.
   - The remaining lane is architecturally split:
     - thermalling settings already persist through
-      `feature/profile/src/main/java/com/example/xcpro/thermalling/ThermallingModePreferencesRepository.kt`
+      `feature/profile/src/main/java/com/trust3/xcpro/thermalling/ThermallingModePreferencesRepository.kt`
     - polar/glider configuration persists through profile-owned glider
       repositories while UI/ViewModel stay in `feature:map`
     - colors now persist and render through `feature:profile`, while
@@ -207,32 +207,32 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` thermalling/polar/layout/colors/HAWK routes | app routes still resolve to map-owned settings screens | direct dependencies on the true owner modules | Phases 1-4 |
-| `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt` | app sub-sheets wrap map-owned settings screens | app sub-sheets wrap owner-module settings screens | Phases 1-4 |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt` -> `"colors"` | profile-owned Look & Feel flow still navigates to a map-owned colors route | keep the route stable, but resolve it to the profile-owned colors screen | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/**` | owner settings use-cases/viewmodels/screens compiled in map shell | move to owner module or delete after migration | Phases 1-4 |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt` color-theme methods | look-and-feel persistence duplicates theme authority | remove or delegate color-theme ownership to `ThemePreferencesRepository` | Phase 3B |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/LookAndFeelProfileSettingsContributor.kt` theme payload | look-and-feel export/import duplicates theme section payload | keep theme export/import in `ThemeProfileSettingsContributor` only | Phase 3B |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` thermalling/polar/layout/colors/HAWK routes | app routes still resolve to map-owned settings screens | direct dependencies on the true owner modules | Phases 1-4 |
+| `app/src/main/java/com/trust3/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt` | app sub-sheets wrap map-owned settings screens | app sub-sheets wrap owner-module settings screens | Phases 1-4 |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt` -> `"colors"` | profile-owned Look & Feel flow still navigates to a map-owned colors route | keep the route stable, but resolve it to the profile-owned colors screen | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/**` | owner settings use-cases/viewmodels/screens compiled in map shell | move to owner module or delete after migration | Phases 1-4 |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt` color-theme methods | look-and-feel persistence duplicates theme authority | remove or delegate color-theme ownership to `ThemePreferencesRepository` | Phase 3B |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/LookAndFeelProfileSettingsContributor.kt` theme payload | look-and-feel export/import duplicates theme section payload | keep theme export/import in `ThemeProfileSettingsContributor` only | Phase 3B |
 
 ### 2.2D File Ownership Plan
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Feature_Map_Settings_Lane_Release_Grade_Phased_IP_2026-03-15.md` | New | active execution contract for the remaining settings lane | the lane now needs its own seam-accurate plan | too detailed for the parent IP | No |
-| `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettings*.kt` | Existing | current thermalling settings lane to remove from map | it is the cleanest remaining move because persistence is already profile-owned | not a map-runtime concern | Yes |
-| `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Polar*.kt` | Existing | current polar/glider settings lane to remove from map | it is isolated around glider settings | not a generic map-shell concern | Yes |
-| `feature/map/src/main/java/com/example/xcpro/glider/GliderUseCase.kt` | Existing | current glider owner facade to relocate | only used by polar cards/settings | belongs with profile-owned glider persistence | Yes |
-| `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Layout*.kt` | Existing | current card-layout settings lane to remove from map | layout settings are profile/card-preference concerns | keep map widget runtime separate | Yes |
-| `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Colors*.kt` | Existing | current theme/color settings lane to remove from map | theme persistence already lives in profile | not a map-shell concern | Yes |
-| `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemePreferencesUseCase.kt` | Existing | current theme settings facade to relocate | only wraps profile-owned persistence | belongs near its repository owner | Yes |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt` | Existing | current look-and-feel persistence helper that still duplicates theme ID ownership | Phase 3B must narrow it back to look-and-feel-only state | theme persistence has a canonical repository already | Yes |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/LookAndFeelProfileSettingsContributor.kt` and `ThemeProfileSettingsContributor.kt` | Existing | current profile export/import seam for look-and-feel and theme payloads | Phase 3B must remove duplicate theme capture/apply ownership | one section should not duplicate another section's authority | Yes |
-| `feature/map/src/main/java/com/example/xcpro/ui/components/ColorPicker*.kt` | Existing | generic UI dependency currently compiled in `feature:map` | colors cannot move cleanly while it depends on map-owned generic UI | not a map-shell concern | Yes |
-| `feature/map/src/main/java/com/example/xcpro/ui/theme/Theme.kt` and `ThemeViewModel.kt` | Existing | app theme runtime read path that must stay explicit during the colors move | Phase 3B must preserve runtime observation without leaving hidden settings writes here | do not let the colors UI move silently break the app theme runtime | Yes |
-| `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettings*.kt` | Existing | current mixed-owner HAWK settings lane | needs dedicated seam extraction before moving | cannot stay in map long term | Yes |
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | Existing | route registrar for direct settings entry routes | app owns route registration | not owner of settings business/UI logic | No |
-| `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt` | Existing | app-owned sub-sheet wrappers | app host already owns General Settings composition | remains the composition root | No |
-| `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettingsSubSheetContent.kt` | Existing | app-owned sub-sheet selection switchboard | same as above | do not reintroduce host logic in `feature:map` | No |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettings*.kt` | Existing | current thermalling settings lane to remove from map | it is the cleanest remaining move because persistence is already profile-owned | not a map-runtime concern | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Polar*.kt` | Existing | current polar/glider settings lane to remove from map | it is isolated around glider settings | not a generic map-shell concern | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/glider/GliderUseCase.kt` | Existing | current glider owner facade to relocate | only used by polar cards/settings | belongs with profile-owned glider persistence | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Layout*.kt` | Existing | current card-layout settings lane to remove from map | layout settings are profile/card-preference concerns | keep map widget runtime separate | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Colors*.kt` | Existing | current theme/color settings lane to remove from map | theme persistence already lives in profile | not a map-shell concern | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/ui/theme/ThemePreferencesUseCase.kt` | Existing | current theme settings facade to relocate | only wraps profile-owned persistence | belongs near its repository owner | Yes |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt` | Existing | current look-and-feel persistence helper that still duplicates theme ID ownership | Phase 3B must narrow it back to look-and-feel-only state | theme persistence has a canonical repository already | Yes |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/LookAndFeelProfileSettingsContributor.kt` and `ThemeProfileSettingsContributor.kt` | Existing | current profile export/import seam for look-and-feel and theme payloads | Phase 3B must remove duplicate theme capture/apply ownership | one section should not duplicate another section's authority | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/ui/components/ColorPicker*.kt` | Existing | generic UI dependency currently compiled in `feature:map` | colors cannot move cleanly while it depends on map-owned generic UI | not a map-shell concern | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/ui/theme/Theme.kt` and `ThemeViewModel.kt` | Existing | app theme runtime read path that must stay explicit during the colors move | Phase 3B must preserve runtime observation without leaving hidden settings writes here | do not let the colors UI move silently break the app theme runtime | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettings*.kt` | Existing | current mixed-owner HAWK settings lane | needs dedicated seam extraction before moving | cannot stay in map long term | Yes |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | Existing | route registrar for direct settings entry routes | app owns route registration | not owner of settings business/UI logic | No |
+| `app/src/main/java/com/trust3/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt` | Existing | app-owned sub-sheet wrappers | app host already owns General Settings composition | remains the composition root | No |
+| `app/src/main/java/com/trust3/xcpro/appshell/settings/GeneralSettingsSubSheetContent.kt` | Existing | app-owned sub-sheet selection switchboard | same as above | do not reintroduce host logic in `feature:map` | No |
 | `scripts/ci/enforce_rules.ps1` | Existing | drift guards after each owner move | enforce regression protection | required for release-grade closure | No |
 
 ### 2.2E Module and API Surface
@@ -263,12 +263,12 @@ Confirm dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| Thermalling clamps/defaults | `feature/profile/src/main/java/com/example/xcpro/thermalling/ThermallingModePreferencesRepository.kt` and its thermalling constants package | thermalling settings UI + runtime | persistence and defaults already live there | No |
+| Thermalling clamps/defaults | `feature/profile/src/main/java/com/trust3/xcpro/thermalling/ThermallingModePreferencesRepository.kt` and its thermalling constants package | thermalling settings UI + runtime | persistence and defaults already live there | No |
 | Glider/polar config policy | profile-owned glider repository/common glider model files | polar cards/settings | persistence owner already canonical | No |
-| Theme/color preference policy | `feature/profile/src/main/java/com/example/xcpro/ui/theme/ThemePreferencesRepository.kt` | colors screen + theme consumers | persistence owner already canonical | No |
-| Look and Feel theme quick-selection policy | `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt` plus the canonical theme repository | look-and-feel sheet + colors route | profile-owned settings lane already canonical for quick theme selection | No second persistence owner |
+| Theme/color preference policy | `feature/profile/src/main/java/com/trust3/xcpro/ui/theme/ThemePreferencesRepository.kt` | colors screen + theme consumers | persistence owner already canonical | No |
+| Look and Feel theme quick-selection policy | `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt` plus the canonical theme repository | look-and-feel sheet + colors route | profile-owned settings lane already canonical for quick theme selection | No second persistence owner |
 | Card layout preference policy | `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardPreferences.kt` | layout settings screen + card runtime | canonical card preference owner already exists | No |
-| HAWK confidence/runtime mapping | `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt` | HAWK settings preview + map/runtime consumers | live HAWK runtime is centralized in the variometer owner | No second runtime owner |
+| HAWK confidence/runtime mapping | `feature/variometer/src/main/java/com/trust3/xcpro/hawk/HawkVarioUseCase.kt` | HAWK settings preview + map/runtime consumers | live HAWK runtime is centralized in the variometer owner | No second runtime owner |
 
 ### 2.3 Time Base
 
@@ -362,11 +362,11 @@ app route / app General Settings sheet
   - move thermalling settings UI ownership from `feature:map` to
     `feature:profile`
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettings*.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
-  - owner destination under `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/**`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-  - `app/src/main/java/com/example/xcpro/appshell/settings/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettings*.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
+  - owner destination under `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/**`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/appshell/settings/**`
 - Ownership/file split changes in this phase:
   - `feature:profile` owns thermalling settings screen, use-case, viewmodel,
     and sub-sheet wrapper
@@ -391,10 +391,10 @@ app route / app General Settings sheet
 - Goal:
   - move glider/polar settings ownership to `feature:profile`
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/glider/GliderUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/glider/GliderViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Polar*.kt`
-  - owner destination under `feature/profile/src/main/java/com/example/xcpro/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/glider/GliderUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/glider/GliderViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Polar*.kt`
+  - owner destination under `feature/profile/src/main/java/com/trust3/xcpro/**`
   - `app` route/sub-sheet registrars
 - Ownership/file split changes in this phase:
   - `feature:profile` owns glider settings use-case/viewmodel and polar cards
@@ -432,8 +432,8 @@ app route / app General Settings sheet
     - keep the `LookAndFeelScreen -> ColorThemeSheet -> "colors"` navigation
       contract stable while changing the route owner
     - do not assume `ThemePreferencesUseCase` is colors-only:
-      `feature:map/src/main/java/com/example/xcpro/ui/theme/ThemeViewModel.kt`
-      and `feature:map/src/main/java/com/example/xcpro/ui/theme/Theme.kt` still
+      `feature:map/src/main/java/com/trust3/xcpro/ui/theme/ThemeViewModel.kt`
+      and `feature:map/src/main/java/com/trust3/xcpro/ui/theme/Theme.kt` still
       use the same contract for app/theme runtime reads
     - treat duplicate Look & Feel/theme ownership as the first blocker, not an
       incidental cleanup item:
@@ -454,27 +454,27 @@ app route / app General Settings sheet
       ownership is finished
 - Files to change:
   - Phase 3A layout:
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Layout*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Layout*.kt`
     - owner destination under
-      `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/**`
-    - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-    - `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt`
+      `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/**`
+    - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+    - `app/src/main/java/com/trust3/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt`
   - Phase 3B colors:
     - first remove duplicate Look & Feel/theme authority and duplicate profile
       export/import payload
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Colors*.kt`
-    - `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemePreferencesUseCase.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/LookAndFeelProfileSettingsContributor.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ThemeProfileSettingsContributor.kt`
-    - `feature/map/src/main/java/com/example/xcpro/ui/components/ColorPicker*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Colors*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/ui/theme/ThemePreferencesUseCase.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/LookAndFeelProfileSettingsContributor.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ThemeProfileSettingsContributor.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/ui/components/ColorPicker*.kt`
     - if needed, a new or renamed read-only theme contract used by
       `ThemeViewModel`
     - owner destination under
-      `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/**`
-      and/or `feature/profile/src/main/java/com/example/xcpro/ui/theme/**`
-    - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt`
-    - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+      `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/**`
+      and/or `feature/profile/src/main/java/com/trust3/xcpro/ui/theme/**`
+    - `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt`
+    - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 - Ownership/file split changes in this phase:
   - Phase 3A:
     - `feature:profile` owns layout settings UI/use-case/viewmodel
@@ -559,8 +559,8 @@ app route / app General Settings sheet
   - extract one runtime read port for live HAWK data
   - forbid a second live HAWK runtime owner
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettings*.kt`
-  - `feature/map/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt` or a new port file
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettings*.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/hawk/HawkVarioUseCase.kt` or a new port file
   - owner destination under `feature/variometer/**` or approved module
   - `app` route/sub-sheet registrars
 - Ownership/file split changes in this phase:

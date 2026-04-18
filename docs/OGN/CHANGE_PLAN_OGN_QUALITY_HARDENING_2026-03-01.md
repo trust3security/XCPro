@@ -57,7 +57,7 @@ Implemented in code:
       - `OgnTrafficRepositoryConnectionTest`
       - `OgnTrafficRepositoryPolicyTest`
       - rerun with explicit task execution:
-        `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.*" --rerun-tasks`
+        `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.*" --rerun-tasks`
 
 Performance follow-on plan status:
 - `docs/OGN/CHANGE_PLAN_OGN_OVERLAY_RENDER_INIT_FASTPATH_2026-03-01.md`
@@ -104,12 +104,12 @@ Dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt` (only if diagnostics expand)
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (if style-generation hook needed)
-  - OGN tests in `feature/map/src/test/java/com/example/xcpro/ogn/*`
-  - OGN/map overlay tests in `feature/map/src/test/java/com/example/xcpro/map/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt` (only if diagnostics expand)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` (if style-generation hook needed)
+  - OGN tests in `feature/map/src/test/java/com/trust3/xcpro/ogn/*`
+  - OGN/map overlay tests in `feature/map/src/test/java/com/trust3/xcpro/map/*`
   - `docs/OGN/*.md`
 - Boundary risk:
   - Low if all policy remains repository/runtime UI and no domain/UI crossing is introduced.
@@ -200,9 +200,9 @@ After:
 - Goal:
   - Lock current behavior and add failing/expectation tests for all four gaps.
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/*Ogn*Overlay*Test.kt` (if needed)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/*Ogn*Overlay*Test.kt` (if needed)
 - Tests to add/update:
   - timed->untimed->older-timed edge sequence.
   - DDB failure then retry timing behavior.
@@ -215,9 +215,9 @@ After:
 - Goal:
   - Enforce monotonic timed-source authority even after untimed fallback commits.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
 - Tests to add/update:
   - reject older timed frame when latest accepted timed source is newer.
   - keep untimed fallback behavior when timed is absent beyond fallback window.
@@ -229,9 +229,9 @@ After:
 - Goal:
   - keep normal cadence on success; retry quickly after failure.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDdbRepository.kt` (if contract expansion needed)
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDdbRepository.kt` (if contract expansion needed)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
 - Tests to add/update:
   - failure triggers retry within short window (2-5 min policy window).
   - success returns to standard due-check cadence.
@@ -244,9 +244,9 @@ After:
 - Goal:
   - avoid full style image/layer checks on every OGN render.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (if style generation tokening required)
-  - map overlay tests under `feature/map/src/test/java/com/example/xcpro/map/`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` (if style generation tokening required)
+  - map overlay tests under `feature/map/src/test/java/com/trust3/xcpro/map/`
 - Tests to add/update:
   - repeated render calls do not trigger duplicate style initialization work.
   - map style change still reinitializes correctly.

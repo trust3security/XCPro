@@ -466,7 +466,7 @@ fun MainNavigation() {
 #### Step 5.1: Delete Files
 
 **Delete these entire files:**
-- oe `app/src/main/java/com/example/xcpro/map/TemplateChangeNotifier.kt`
+- oe `app/src/main/java/com/trust3/xcpro/map/TemplateChangeNotifier.kt`
 
 #### Step 5.2: Delete from FlightDataManager.kt
 
@@ -733,7 +733,7 @@ git branch -D feature/ssot-refactor
 ### Partial Rollback
 Keep SSOT ViewModel but restore old MapComposeEffects:
 ```bash
-git checkout fix/flight-data-cards-empty-template -- app/src/main/java/com/example/xcpro/map/MapComposeEffects.kt
+git checkout fix/flight-data-cards-empty-template -- app/src/main/java/com/trust3/xcpro/map/MapComposeEffects.kt
 ```
 
 ---

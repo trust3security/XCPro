@@ -202,10 +202,10 @@ Dependency flow remains:
 `UI -> domain/use-cases -> data adapter`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/*`
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (only if needed)
-  - `feature/map/src/test/java/com/example/xcpro/forecast/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` (only if needed)
+  - `feature/map/src/test/java/com/trust3/xcpro/forecast/*`
   - `docs/ARCHITECTURE/PIPELINE.md`
 - Boundary risk:
   - Rendering behavior must stay in map runtime classes, not ViewModel/use-case.
@@ -375,10 +375,10 @@ After:
   - update evidence artifacts and capture script defaults to avoid reintroducing
     stale layer/zoom assumptions during future contract refreshes.
 - Candidate files:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPorts.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastPorts.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
   - `scripts/integrations/capture_skysight_evidence.ps1`
 - Tests:
   - adapter tests for wind URL templates and point-field mapping
@@ -420,8 +420,8 @@ After:
   - ensure cleanup/reapply on style reload does not leak duplicate sources/layers,
     including both wind and fill branch IDs.
 - Candidate files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (only if reapply behavior requires updates)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` (only if reapply behavior requires updates)
 - Tests:
   - runtime unit tests around source/layer branch selection
   - runtime tests for branch switch cleanup (no leftover wind/fill layers)
@@ -461,11 +461,11 @@ After:
   - settings UX note: make clear that auth check is connectivity/credential test and
     does not by itself guarantee forecast tile availability at selected region/time.
 - Candidate files:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt` (only if labels/order/category tweaks needed)
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt` (only if no-data UX handling needed)
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayUseCases.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt` (only if labels/order/category tweaks needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt` (only if no-data UX handling needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayUseCases.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
 - Tests:
   - repository/ViewModel state tests for parameter selection + no-data handling
   - repository tests for fatal vs non-fatal fetch outcomes and last-good overlay retention

@@ -97,9 +97,9 @@ Required:
   - `feature:flight-runtime` has no dependency on `feature:map`,
     `feature:profile`, or `feature:variometer`.
 - API/module surface impact:
-  - The moved packages remain stable (`com.example.xcpro.sensors`,
-    `com.example.xcpro.flightdata`, `com.example.xcpro.weather.wind.*`,
-    `com.example.xcpro.replay`) so consumer imports do not churn.
+  - The moved packages remain stable (`com.trust3.xcpro.sensors`,
+    `com.trust3.xcpro.flightdata`, `com.trust3.xcpro.weather.wind.*`,
+    `com.trust3.xcpro.replay`) so consumer imports do not churn.
   - Cross-module public surface is limited to the moved runtime foundations and
     shared contracts; replay shell and live sensor APIs remain outside.
 - time-base/determinism impact:

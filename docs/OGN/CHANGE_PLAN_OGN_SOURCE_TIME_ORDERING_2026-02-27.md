@@ -104,11 +104,11 @@ Dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnAprsLineParser.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt` (freshness compatibility checks)
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt` (freshness compatibility checks)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnAprsLineParser.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt` (freshness compatibility checks)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt` (freshness compatibility checks)
 - Boundary risk:
   - Low if all ordering rules stay repository-side.
 
@@ -183,8 +183,8 @@ After:
 - Goal:
   - Capture and lock current behavior with tests that reproduce rewind risk.
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
 - Tests to add/update:
   - Out-of-order arrival sequence test (newer packet arrives before older).
   - Assert current behavior (for baseline), then update expected in Phase 2.
@@ -197,9 +197,9 @@ After:
 - Goal:
   - Parse APRS timestamp tokens and expose source event-time candidate in model.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnAprsLineParser.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnAprsLineParserTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnAprsLineParser.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnAprsLineParserTest.kt`
 - Tests to add/update:
   - Parse `/hhmmssh` timestamp form.
   - Parse `@ddhhmmz` timestamp form (if supported).
@@ -213,8 +213,8 @@ After:
 - Goal:
   - Replace arrival-order overwrite with event-time ordered apply policy.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
 - Tests to add/update:
   - Out-of-order packet delivery no longer rewinds committed position.
   - Small reorder-window late packet can still be accepted in-order.
@@ -228,8 +228,8 @@ After:
 - Goal:
   - Reject impossible teleport-like updates and avoid oscillation from bad packets.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
 - Tests to add/update:
   - Impossible speed jump rejection by time delta.
   - Valid high-speed tug scenarios remain accepted.
@@ -243,11 +243,11 @@ After:
   - Ensure thermal/trail repositories consume ordered samples without regression.
   - Expose drop/reorder counters in snapshot for debug panel.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt` (if needed)
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt` (if needed)
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt` (if needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt` (if needed)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
 - Tests to add/update:
   - Freshness monotonic assumptions still hold with new timestamp fields.
   - Diagnostics counters update as expected.
@@ -334,8 +334,8 @@ Optional when relevant:
 Executed successfully:
 
 ```bash
-./gradlew.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnAprsLineParserTest" --tests "com.example.xcpro.ogn.OgnTrafficRepositoryPolicyTest"
-./gradlew.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.example.xcpro.ogn.OgnGliderTrailRepositoryTest" --tests "com.example.xcpro.ogn.OgnThermalRepositoryTest"
+./gradlew.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.OgnAprsLineParserTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryPolicyTest"
+./gradlew.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.ogn.OgnGliderTrailRepositoryTest" --tests "com.trust3.xcpro.ogn.OgnThermalRepositoryTest"
 ./gradlew.bat :feature:map:assembleDebug
 ./gradlew.bat :app:assembleDebug
 ```

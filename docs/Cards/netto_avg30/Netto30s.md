@@ -17,28 +17,28 @@ Last updated: 2026-01-30
 
 ## Sensor -> domain pipeline
 1) Sensors and fusion loops
-   - Baro/IMU loop: feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt
+   - Baro/IMU loop: feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt
    - GPS loop: same file
 
 2) Emit and calculate metrics
-   - FlightDataEmitter.emit(): feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt
-   - CalculateFlightMetricsUseCase.execute(): feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
+   - FlightDataEmitter.emit(): feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt
+   - CalculateFlightMetricsUseCase.execute(): feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
 
 3) Brutto vario selection (input to netto)
    - SensorFrontEnd.buildSnapshot() picks TE -> Pressure -> Baro -> GPS
-   - File: feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SensorFrontEnd.kt
 
 4) Netto computation (single-sample)
    - FlightCalculationHelpers.calculateNetto() returns (value, valid)
-   - File: feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt
    - Uses StillAirSinkProvider.sinkAtSpeed() (polar/glider config)
-     - File: feature/map/src/main/java/com/example/xcpro/glider/StillAirSinkProvider.kt
+     - File: feature/map/src/main/java/com/trust3/xcpro/glider/StillAirSinkProvider.kt
    - Speed selection uses TAS when available, otherwise recent TAS/GND or a fallback.
    - If no motion evidence or no polar, returns brutto and sets valid=false.
 
 5) Netto sample for the 30s window
    - FusionBlackboard.resolveNettoSampleValue() uses last valid netto as fallback.
-   - File: feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FusionBlackboard.kt
 
 6) 30-second window for NETTO 30S
    - FusionBlackboard.updateAveragesAndDisplay() uses FixedSampleAverageWindow(30).
@@ -46,9 +46,9 @@ Last updated: 2026-01-30
    - Resets on time going backwards or circling-state toggle.
    - Non-finite samples are treated as 0.0 to keep the window moving.
    - Files:
-     - feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt
-     - feature/map/src/main/java/com/example/xcpro/sensors/FixedSampleAverageWindow.kt
-     - feature/map/src/main/java/com/example/xcpro/sensors/WindowFill.kt
+     - feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FusionBlackboard.kt
+     - feature/map/src/main/java/com/trust3/xcpro/sensors/FixedSampleAverageWindow.kt
+     - feature/map/src/main/java/com/trust3/xcpro/sensors/WindowFill.kt
 
 7) Display netto smoothing
    - FusionBlackboard also keeps a 5s TimedAverageWindow for displayNettoRaw.
@@ -59,29 +59,29 @@ Last updated: 2026-01-30
    - FlightMetricsResult.displayNetto
    - FlightMetricsResult.netto
    - FlightMetricsResult.nettoValid
-   - File: feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
 
 ## Domain -> UI models
 - FlightDisplayMapper copies nettoAverage30s, displayNetto, netto, nettoValid into CompleteFlightData.
-  - File: feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt
+  - File: feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDisplayMapper.kt
 - convertToRealTimeFlightData() maps those fields into RealTimeFlightData.
-  - File: feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt
+  - File: feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt
 
 ## UI / cards path
 1) SensorFusionRepository.flightDataFlow -> VarioServiceManager -> FlightDataRepository
    - Files:
-     - feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepository.kt
-     - feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt
-     - feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt
+     - feature/map/src/main/java/com/trust3/xcpro/sensors/SensorFusionRepository.kt
+     - feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt
+     - feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt
 
 2) FlightDataUiAdapter / MapScreenObservers converts CompleteFlightData to RealTimeFlightData
-   - File: feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
+   - File: feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
 
 3) FlightDataManager buffers and buckets data for cards
-   - File: feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt
 
 4) CardIngestionCoordinator pushes card data into FlightDataViewModel
-   - File: feature/map/src/main/java/com/example/xcpro/map/CardIngestionCoordinator.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/map/CardIngestionCoordinator.kt
 
 5) Card formatting
    - CardDataFormatter and CardFormatSpec
@@ -94,7 +94,7 @@ Last updated: 2026-01-30
 - Decimals: 0 for ft/min, 1 for other units.
 - Files:
   - dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt
-  - dfcards-library/src/main/java/com/example/xcpro/common/units/UnitsFormatter.kt
+  - dfcards-library/src/main/java/com/trust3/xcpro/common/units/UnitsFormatter.kt
 
 ## Common "blank" or stale cases
 - liveData is null (CardDataFormatter returns placeholder).

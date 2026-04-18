@@ -209,7 +209,7 @@ Commands:
 
 ```bash
 ./gradlew enforceRules
-test-safe.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.FlightCalculationHelpersTest"
+test-safe.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.FlightCalculationHelpersTest"
 ./gradlew :feature:map:compileDebugKotlin
 ```
 
@@ -231,8 +231,8 @@ Required checks:
 Targeted checks (planned):
 
 ```bash
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.FlightCalculationHelpersTest"
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest.adsbCenter_updatesFromOwnshipGpsLocation" --tests "com.example.xcpro.map.MapScreenViewModelTest.adsbOwnshipReference_clearsWhenGpsBecomesUnavailable"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.FlightCalculationHelpersTest"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelTest.adsbCenter_updatesFromOwnshipGpsLocation" --tests "com.trust3.xcpro.map.MapScreenViewModelTest.adsbOwnshipReference_clearsWhenGpsBecomesUnavailable"
 ```
 
 ## 6) Risks and Mitigations
@@ -262,7 +262,7 @@ Targeted checks (planned):
   - `git revert <merge_or_commit_sha>`
 - Recovery verification after rollback:
   1. `./gradlew enforceRules`
-  2. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.FlightCalculationHelpersTest"`
+  2. `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.FlightCalculationHelpersTest"`
   3. `./gradlew assembleDebug`
 - PR note requirement:
   - Include the exact rollback SHA placeholder and the three validation commands above.
@@ -271,7 +271,7 @@ Targeted checks (planned):
 
 - `#7 Perf evidence`:
   - Added opt-in perf evidence test:
-    - `feature/map/src/test/java/com/example/xcpro/sensors/FlightCalculationHelpersPerfEvidenceTest.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/sensors/FlightCalculationHelpersPerfEvidenceTest.kt`
   - Added committed evidence doc scaffold with reproducible command:
     - `docs/ARCHITECTURE/evidence/AGL_BURST_PERF_EVIDENCE_2026-02-27.md`
 - `#9 CI hang protection`:
@@ -279,7 +279,7 @@ Targeted checks (planned):
     - `build.gradle.kts`
     - `config/test/flaky-robolectric-allowlist.txt`
   - Added explicit per-test timeout rule utility for non-Robolectric JVM tests:
-    - `feature/map/src/test/java/com/example/xcpro/testing/TestTimeoutPolicy.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/testing/TestTimeoutPolicy.kt`
   - Kept `MapScreenViewModelTest` on CI retry allowlist instead of class-level JUnit timeout,
     because Robolectric main-looper idling requires main-thread execution.
 - `#10 Rollback note`:

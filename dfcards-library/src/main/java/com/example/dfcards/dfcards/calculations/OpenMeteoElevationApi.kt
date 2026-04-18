@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import com.example.xcpro.core.common.logging.AppLogger
+import com.trust3.xcpro.core.common.logging.AppLogger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -182,3 +182,4 @@ class OpenMeteoElevationApi(
         return results
     }
 }
+

@@ -63,7 +63,7 @@ API/module surface impact:
 - `MapScaleBarRuntimeState` is the explicit shell/runtime bridge for scale-bar
   handles.
 - `BlueLocationOverlay` and `SailplaneIconBitmapFactory` remain runtime-owned
-  types in the shared `com.example.xcpro.map` package surface.
+  types in the shared `com.trust3.xcpro.map` package surface.
 
 Time-base/determinism impact:
 - None. This move changes owner/module placement only.

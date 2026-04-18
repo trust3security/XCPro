@@ -52,10 +52,10 @@ Execution update (2026-03-08):
     - `docs/ADS-b/ADSB.md` updated to v8 with maintainability/observability hardening contract
 - Verification status:
   - `./gradlew :feature:map:compileDebugKotlin` pass
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbTrafficRepositoryRuntimePolicyTest" --tests "com.example.xcpro.adsb.*" --tests "com.example.xcpro.map.Adsb*"` pass
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbTrafficStore*" --tests "com.example.xcpro.adsb.AdsbProximityTierResolverTest" --tests "com.example.xcpro.adsb.AdsbTrafficSelectionOrderingTest"` pass
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbTrafficRepositoryRuntimeTransitionsTest"` pass
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateTest" --tests "com.example.xcpro.map.AdsbStickyIconProjectionCacheTest" --tests "com.example.xcpro.map.AdsbIconTelemetryTrackerTest"` pass
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryRuntimePolicyTest" --tests "com.trust3.xcpro.adsb.*" --tests "com.trust3.xcpro.map.Adsb*"` pass
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbTrafficStore*" --tests "com.trust3.xcpro.adsb.AdsbProximityTierResolverTest" --tests "com.trust3.xcpro.adsb.AdsbTrafficSelectionOrderingTest"` pass
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryRuntimeTransitionsTest"` pass
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateTest" --tests "com.trust3.xcpro.map.AdsbStickyIconProjectionCacheTest" --tests "com.trust3.xcpro.map.AdsbIconTelemetryTrackerTest"` pass
   - `./gradlew enforceRules` pass (Phase 5 re-run)
   - `./gradlew testDebugUnitTest` pass (Phase 5 re-run)
   - `./gradlew assembleDebug` pass (Phase 5 re-run)
@@ -135,7 +135,7 @@ In scope:
 Planned files:
 - `docs/ADS-b/ADSB.md` (append implementation invariants if needed)
 - `docs/ADS-b/archive/ADSB_Improvement_Plan.md` (historical baseline for this plan)
-- ADS-B test files under `feature/map/src/test/java/com/example/xcpro/adsb/` and `.../map/`
+- ADS-B test files under `feature/map/src/test/java/com/trust3/xcpro/adsb/` and `.../map/`
 
 Exit criteria:
 - Baseline invariants are documented and test-locked.
@@ -156,10 +156,10 @@ In scope:
 - Add narrow unit tests for policy-level delay floors/bounds and retry-floor classification mapping.
 
 Planned files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoop.kt`
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
-- `feature/map/src/main/java/com/example/xcpro/adsb/` (new `AdsbRuntimePolicy` file)
-- related tests in `feature/map/src/test/java/com/example/xcpro/adsb/`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoop.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/` (new `AdsbRuntimePolicy` file)
+- related tests in `feature/map/src/test/java/com/trust3/xcpro/adsb/`
 
 Exit criteria:
 - Single policy source for loop/polling constants and wait-state semantics.
@@ -184,9 +184,9 @@ In scope:
 - Add pure unit tests per policy component, including boundary and stale/fresh transitions.
 
 Planned files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-- new policy helper files under `feature/map/src/main/java/com/example/xcpro/adsb/`
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStore*Test.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+- new policy helper files under `feature/map/src/main/java/com/trust3/xcpro/adsb/`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStore*Test.kt`
 
 Exit criteria:
 - Store orchestrator reduced and easier to audit.
@@ -214,13 +214,13 @@ In scope:
   - degraded-state snapshot fields
 
 Planned files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
 - `.../AdsbTrafficRepositoryRuntimeLoop.kt`
 - `.../AdsbTrafficRepositoryRuntimeLoopTransitions.kt`
 - `.../AdsbTrafficRepositoryRuntimeNetworkWait.kt`
 - `.../AdsbTrafficRepositoryRuntimePolling.kt`
 - `.../AdsbTrafficRepositoryRuntimeSnapshot.kt`
-- runtime-focused tests under `feature/map/src/test/java/com/example/xcpro/adsb/` (including `AdsbTrafficRepositoryRuntimeTransitionsTest`)
+- runtime-focused tests under `feature/map/src/test/java/com/trust3/xcpro/adsb/` (including `AdsbTrafficRepositoryRuntimeTransitionsTest`)
 
 Exit criteria:
 - Runtime responsibilities separated with no state-authority ambiguity.
@@ -245,13 +245,13 @@ In scope:
   - runtime counter updates
 
 Planned files:
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbOverlayFrameLoopController.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbStickyIconProjectionCache.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbIconTelemetryTracker.kt`
-- new tests under `feature/map/src/test/java/com/example/xcpro/map/` (including `MapOverlayManagerRuntimeTrafficDelegateTest`)
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbOverlayFrameLoopController.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbStickyIconProjectionCache.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbIconTelemetryTracker.kt`
+- new tests under `feature/map/src/test/java/com/trust3/xcpro/map/` (including `MapOverlayManagerRuntimeTrafficDelegateTest`)
 
 Exit criteria:
 - Delegate critical behavior is directly test-covered.
@@ -297,7 +297,7 @@ Required each phase:
 Recommended targeted fast loop during execution:
 
 ```bash
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.*" --tests "com.example.xcpro.map.Adsb*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.*" --tests "com.trust3.xcpro.map.Adsb*"
 ```
 
 When relevant (device/emulator):

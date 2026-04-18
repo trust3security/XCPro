@@ -63,7 +63,7 @@ Dependency direction remains:
 - Any boundary risk:
   - Direct repository writes from composables.
   - Runtime overlay state becoming hidden SSOT.
-  - Importing the wrong `MapOverlayManager` symbol (`com.example.xcpro.screens.overlays.MapOverlayManager` vs `com.example.xcpro.map.MapOverlayManager`).
+  - Importing the wrong `MapOverlayManager` symbol (`com.trust3.xcpro.screens.overlays.MapOverlayManager` vs `com.trust3.xcpro.map.MapOverlayManager`).
 
 ### 2.2A Boundary Moves (Mandatory)
 
@@ -142,9 +142,9 @@ After:
 - Goal:
   Add `General -> OGN` settings entry and dedicated screen shell.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt` (new)
 - Tests to add/update:
   - Navigation/manual QA checklist only in this phase.
 - Exit criteria:
@@ -154,13 +154,13 @@ After:
 - Goal:
   Add OGN icon-size preference SSOT and layer-correct settings write path.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnIconSizing.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUseCase.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModel.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnIconSizing.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUseCase.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModel.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt` (new)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt` (new)
 - Exit criteria:
   - OGN icon-size preference clamps, persists, and is observable as flow.
 
@@ -168,15 +168,15 @@ After:
 - Goal:
   Apply OGN icon size live in runtime overlay and preserve after overlay recreation/style changes.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` (only if init-order patch is required)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt` (only if init-order patch is required)
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt` (OGN icon-size exposure assertions)
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt` (OGN icon-size exposure assertions)
 - Exit criteria:
   - Changing slider updates OGN icon size on live map without restart.
   - Size remains after style switch and map re-init path.
@@ -239,7 +239,7 @@ Optional when relevant:
 | Style reload can reset icon size | High | Cache configured size in `MapOverlayManager` and reapply on style/map ready | XCPro Team |
 | Slider spam causes jank | Medium | Snap-to-int, no-op on unchanged value, clamp in repository and runtime | XCPro Team |
 | UI-domain boundary regression | High | Keep strict `UI -> VM -> UseCase -> Repository` path and review callsites | XCPro Team |
-| Wrong `MapOverlayManager` import during implementation | Medium | Enforce `com.example.xcpro.map.MapOverlayManager` in runtime wiring files | XCPro Team |
+| Wrong `MapOverlayManager` import during implementation | Medium | Enforce `com.trust3.xcpro.map.MapOverlayManager` in runtime wiring files | XCPro Team |
 | OGN/ADS-B style image cleanup interference | High | Use distinct style image IDs and cleanup only overlay-owned IDs | XCPro Team |
 | Incorrect icon-size scaling semantics | Medium | Define fixed bitmap base size and convert px to scale consistently | XCPro Team |
 | Label overlap at large icon sizes | Medium | Tie text offset to icon scale and verify min/max states manually | XCPro Team |
@@ -305,7 +305,7 @@ Pass order:
 ## 11) Current Verification Snapshot (2026-02-11)
 
 - Completed:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest" --tests "com.example.xcpro.map.MapScreenViewModelTest.ognIconSize_defaultsToConfiguredDefaultPx" --tests "com.example.xcpro.map.MapScreenViewModelTest.ognIconSize_readsPersistedPreferenceOnInit"` (PASS)
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.OgnTrafficPreferencesRepositoryTest" --tests "com.trust3.xcpro.map.MapScreenViewModelTest.ognIconSize_defaultsToConfiguredDefaultPx" --tests "com.trust3.xcpro.map.MapScreenViewModelTest.ognIconSize_readsPersistedPreferenceOnInit"` (PASS)
   - `./gradlew :app:compileDebugKotlin` (PASS)
   - `./gradlew enforceRules` (PASS)
   - `./gradlew testDebugUnitTest` (PASS)

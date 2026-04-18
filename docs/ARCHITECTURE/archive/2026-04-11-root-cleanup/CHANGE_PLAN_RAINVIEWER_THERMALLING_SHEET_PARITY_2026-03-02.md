@@ -35,30 +35,30 @@
 ## 2) Investigation Findings (Comprehensive Code Pass)
 
 1) General RainViewer tile currently uses route navigation, not General-local sheet state.
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt:305-309`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt:305-309`
 
 2) RainViewer route host is currently full-screen `Scaffold`, not `ModalBottomSheet`.
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt:117`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt:117`
 
 3) Thermalling route host uses production sheet pattern already.
 - `rememberModalBottomSheetState(skipPartiallyExpanded = true)`
 - full-height container + weighted content body
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettingsScreen.kt:70-123`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettingsScreen.kt:70-123`
 
 4) Thermalling is already General-local sub-sheet capable.
 - `GeneralSubSheet.THERMALLING` local state owner
 - `ThermallingSettingsSubSheet` full-height `ModalBottomSheet`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt:397-401`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt:630-677`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt:397-401`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt:630-677`
 
 5) Map Weather tab "More settings" currently navigates directly to `SettingsRoutes.WEATHER_SETTINGS`.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt:134-143`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt:160-166`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt:134-143`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt:160-166`
 
 6) Existing weather tests focus on policy/state wiring, not sheet host parity semantics.
-- `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModelTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettingsUseCaseTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModelTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsUseCaseTest.kt`
 
 ## 3) Architecture Contract
 
@@ -78,11 +78,11 @@ Remains:
 `UI -> domain -> data`
 
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt` (compatibility checks only if needed)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt` (entrypoint hardening if needed)
-  - tests under `feature/map/src/test/java/com/example/xcpro/screens/navdrawer`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` (compatibility checks only if needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt` (entrypoint hardening if needed)
+  - tests under `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer`
 - Boundary risk:
   - Host migration must not move weather business logic into UI host code.
 
@@ -170,7 +170,7 @@ After:
 - Goal:
   - Separate weather content from host container to allow sheet-host reuse.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
 - Required implementation quality:
   - Introduce `WeatherSettingsContent(...)` that contains existing cards/controls only.
   - Preserve all existing viewmodel bindings and weather control semantics.
@@ -185,7 +185,7 @@ After:
 - Goal:
   - Make `SettingsRoutes.WEATHER_SETTINGS` host match Thermalling sheet contract.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
 - Required implementation quality:
   - Replace root `Scaffold` host with `ModalBottomSheet`.
   - Use `rememberModalBottomSheetState(skipPartiallyExpanded = true)`.
@@ -202,7 +202,7 @@ After:
 - Goal:
   - Align General tile interaction with Thermalling local sheet model.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
 - Required implementation quality:
   - Add `GeneralSubSheet.WEATHER`.
   - Change RainViewer tile click from route navigation to local sub-sheet state transition.
@@ -219,8 +219,8 @@ After:
 - Goal:
   - Preserve map Weather tab behavior while converging to sheet parity.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt` (if compatibility wrappers needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` (if compatibility wrappers needed)
 - Required implementation quality:
   - Keep `SettingsRoutes.WEATHER_SETTINGS` route functional for map-tab entry.
   - Add `launchSingleTop` if repeated navigation duplication is observed.
@@ -326,12 +326,12 @@ Implemented production behavior:
 
 Files changed:
 
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenScaffoldPolicyTest.kt`
-- `feature/map/src/androidTest/java/com/example/xcpro/screens/navdrawer/WeatherSettingsSheetBehaviorInstrumentedTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenScaffoldPolicyTest.kt`
+- `feature/map/src/androidTest/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsSheetBehaviorInstrumentedTest.kt`
 
 Verification evidence:
 
@@ -341,14 +341,14 @@ Verification evidence:
 - Focused safety checks:
   - `./gradlew :feature:map:compileDebugKotlin --no-daemon --no-configuration-cache` -> PASS
   - `./gradlew :feature:map:compileDebugAndroidTestKotlin --no-daemon --no-configuration-cache` -> PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapScreenScaffoldPolicyTest" --tests "com.example.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest" --tests "com.example.xcpro.screens.navdrawer.WeatherSettingsScreenPolicyTest" --no-daemon --no-configuration-cache` -> PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapScreenScaffoldPolicyTest" --tests "com.trust3.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest" --tests "com.trust3.xcpro.screens.navdrawer.WeatherSettingsScreenPolicyTest" --no-daemon --no-configuration-cache` -> PASS
   - `./gradlew :feature:map:clean --no-daemon --no-configuration-cache` -> PASS (performed once to recover transient KSP file-lock/cache issue)
 - Known transient in verification:
   - `./gradlew testDebugUnitTest --no-daemon --no-configuration-cache` showed one intermittent unrelated failure in `app` module (`ProfileRepositoryTest.ioReadError_preservesLastKnownGoodState`) on first run, then passed on immediate rerun.
 - Instrumentation execution:
   - Attempted:
-    - `./gradlew :feature:map:connectedDebugAndroidTest --no-daemon --no-configuration-cache "-Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.screens.navdrawer.WeatherSettingsSheetBehaviorInstrumentedTest"` -> FAIL (device-side compose-host issue).
-    - `./gradlew :feature:map:connectedDebugAndroidTest --no-daemon --no-configuration-cache "-Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.map.ui.AdsbStatusBadgesInstrumentedTest"` -> FAIL with same error.
+    - `./gradlew :feature:map:connectedDebugAndroidTest --no-daemon --no-configuration-cache "-Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.screens.navdrawer.WeatherSettingsSheetBehaviorInstrumentedTest"` -> FAIL (device-side compose-host issue).
+    - `./gradlew :feature:map:connectedDebugAndroidTest --no-daemon --no-configuration-cache "-Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.map.ui.AdsbStatusBadgesInstrumentedTest"` -> FAIL with same error.
   - Failure signature on connected device:
     - `IllegalStateException: No compose hierarchies found in the app` (affects pre-existing instrumentation class too, so this is treated as environment/baseline and not a regression from this change set).
 

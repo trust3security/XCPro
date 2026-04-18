@@ -14,7 +14,7 @@
 
 | Phase | Status | Notes / Evidence |
 |---|---|---|
-| Phase 1: Runtime Overlay Icon Migration | DONE | `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt` now uses SymbolLayer + `R.drawable.ic_adsb_glider` |
+| Phase 1: Runtime Overlay Icon Migration | DONE | `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt` now uses SymbolLayer + `R.drawable.ic_adsb_glider` |
 | Phase 2: Runtime Wiring and Reapply Paths | DONE | OGN icon-size + targets are reapplied via `MapOverlayManager`, `MapScreenRoot`, `MapScreenScaffoldInputs`, `MapInitializer` |
 | Phase 3: Settings + Contracts | DONE | OGN icon-size settings path is implemented end-to-end (repo/use-case/viewmodel/screen/nav) |
 | Phase 4: Documentation Sync | DONE | OGN icon-size path is documented in `docs/ARCHITECTURE/PIPELINE.md` |
@@ -136,7 +136,7 @@ This plan changes only runtime visual representation for OGN targets and keeps p
 
 ## Phase 1: Runtime Overlay Icon Migration
 
-- `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
   - migrate from circle marker rendering to icon-based `SymbolLayer`
   - add style image registration for `ic_adsb_glider`
   - keep stale alpha, viewport culling, and target cap logic
@@ -147,14 +147,14 @@ Exit criteria:
 
 ## Phase 2: Runtime Wiring and Reapply Paths
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
   - ensure OGN overlay creation path uses icon-capable overlay
   - preserve and reapply latest OGN targets across style changes
   - preserve and reapply OGN icon size on map-ready and style recreation
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
   - push OGN targets and icon-size settings into overlay manager
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
   - initialize OGN overlay with correct runtime map/context on first style load
 
 Exit criteria:
@@ -162,15 +162,15 @@ Exit criteria:
 
 ## Phase 3: Settings + Contracts (if not already present)
 
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnIconSizing.kt`
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-- `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnIconSizing.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+- `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 
 Exit criteria:
 - OGN icon size is user-configurable and persisted.
@@ -199,9 +199,9 @@ Run:
 
 Targeted tests:
 
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
   - default, clamp, persist for OGN icon size
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
   - OGN icon-size flow exposure and persisted value on startup
 
 ## Manual

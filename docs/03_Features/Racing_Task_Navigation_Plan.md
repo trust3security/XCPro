@@ -590,22 +590,22 @@ Decision: keep this plan, but extend it with mandatory compliance workstreams.
 ### Newly Identified Critical Gaps (Code Evidence)
 
 1. RT structural validation is still too weak.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/domain/logic/TaskValidator.kt` uses `minPoints = 2` for Racing.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/logic/TaskValidator.kt` uses `minPoints = 2` for Racing.
    - RT needs explicit Start + >=2 TP + Finish semantics.
 2. JSON persistence/import is lossy for racing task semantics.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt` does not preserve racing point-type/rule fields and uses constant `id = "imported"`.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` imports by replaying `addWaypoint(...)`, which drops role/type/rule fidelity.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt` does not preserve racing point-type/rule fields and uses constant `id = "imported"`.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt` imports by replaying `addWaypoint(...)`, which drops role/type/rule fidelity.
 3. Deterministic ID policy is weak and collision-prone.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt` uses 32-bit `hashCode` suffix.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt` uses 32-bit `hashCode` suffix.
    - Fingerprint excludes racing rule metadata.
 4. Start-line geometry helper has unit-contract drift risk.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` passes `gateWidth` (km) into geometry methods that operate in meters.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` passes `gateWidth` (km) into geometry methods that operate in meters.
 5. Sparse-fix line crossings can be dropped.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt` requires both fixes within line-radius prefilter before intersection.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt` requires both fixes within line-radius prefilter before intersection.
 6. Crossing timestamp semantics are not nearest-second normalized.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingMath.kt` interpolates with truncation.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/boundary/RacingBoundaryCrossingMath.kt` interpolates with truncation.
 7. Racing nav events/states are too minimal for competition semantics.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEvent.kt` and `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationState.kt` only model START/TURNPOINT/FINISH with no tolerance/near-miss/penalty outcomes.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEvent.kt` and `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationState.kt` only model START/TURNPOINT/FINISH with no tolerance/near-miss/penalty outcomes.
 8. Missing rule-level procedures from start/finish docs.
    - No explicit PEV cadence constraints (max count, dedupe, interval windows).
    - No straight-in exception path for finish min-altitude checks.

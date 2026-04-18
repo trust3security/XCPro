@@ -95,27 +95,27 @@ function Set-ToggledValue {
 $scenarios = @(
     @{
         Name = 'app-impl'
-        Path = 'app/src/main/java/com/example/xcpro/benchmark/AppBuildBenchmarkApi.kt'
+        Path = 'app/src/main/java/com/trust3/xcpro/benchmark/AppBuildBenchmarkApi.kt'
         Marker = 'IMPL_VERSION'
     },
     @{
         Name = 'map-impl'
-        Path = 'feature/map/src/main/java/com/example/xcpro/map/benchmark/MapBuildBenchmarkApi.kt'
+        Path = 'feature/map/src/main/java/com/trust3/xcpro/map/benchmark/MapBuildBenchmarkApi.kt'
         Marker = 'IMPL_VERSION'
     },
     @{
         Name = 'map-abi'
-        Path = 'feature/map/src/main/java/com/example/xcpro/map/benchmark/MapBuildBenchmarkApi.kt'
+        Path = 'feature/map/src/main/java/com/trust3/xcpro/map/benchmark/MapBuildBenchmarkApi.kt'
         Marker = 'MAP_ABI_VERSION'
     },
     @{
         Name = 'core-impl'
-        Path = 'core/common/src/main/java/com/example/xcpro/benchmark/CoreBuildBenchmarkApi.kt'
+        Path = 'core/common/src/main/java/com/trust3/xcpro/benchmark/CoreBuildBenchmarkApi.kt'
         Marker = 'IMPL_VERSION'
     },
     @{
         Name = 'core-abi'
-        Path = 'core/common/src/main/java/com/example/xcpro/benchmark/CoreBuildBenchmarkApi.kt'
+        Path = 'core/common/src/main/java/com/trust3/xcpro/benchmark/CoreBuildBenchmarkApi.kt'
         Marker = 'ABI_VERSION'
     }
 )

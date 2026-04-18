@@ -155,10 +155,10 @@ Lifecycle/cadence proof:
 - rerun `scripts/qa/verify_mapscreen_package_evidence.ps1 -PackageId pkg-f1 -RunId <runId> -UpdateGateResult`
 
 Module-focused loop:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.trail.*"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.trail.*"`
 
 Windows lock-safe loop:
-- `test-safe.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.trail.*"`
+- `test-safe.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.trail.*"`
 
 ## 6. Exit Criteria
 

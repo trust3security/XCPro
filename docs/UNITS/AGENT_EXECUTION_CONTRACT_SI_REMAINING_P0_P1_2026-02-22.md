@@ -223,19 +223,19 @@ Optional quality checks:
 ## 4.1 Verification Evidence Table
 | Command | Purpose | Result (PASS/FAIL) | Duration | Failures fixed | Notes |
 |---|---|---|---|---|---|
-| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.*" --tests "com.example.xcpro.tasks.aat.*" --tests "com.example.xcpro.tasks.racing.*"` | Focused SI regression in task/AAT/racing scope | PASS | ~1m31s | 1 compile fix | Caught stale import in `TaskPersistenceAdapters`; rerun green. |
+| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.*" --tests "com.trust3.xcpro.tasks.aat.*" --tests "com.trust3.xcpro.tasks.racing.*"` | Focused SI regression in task/AAT/racing scope | PASS | ~1m31s | 1 compile fix | Caught stale import in `TaskPersistenceAdapters`; rerun green. |
 | `./gradlew --no-daemon --no-configuration-cache enforceRules` | Architecture/coding rule enforcement | PASS | ~13s | N/A | SI static guards still pass after Run 10 wrapper/radius cleanup. |
 | `./gradlew --no-daemon --no-configuration-cache testDebugUnitTest` | Unit/regression test coverage | PASS | ~51s | N/A | Full JVM suite green. |
 | `./gradlew --no-daemon --no-configuration-cache assembleDebug` | Build integrity | PASS | ~44s | N/A | Debug app + modules assembled successfully. |
 | `./gradlew --no-daemon --no-configuration-cache :app:uninstallDebug :app:uninstallDebugAndroidTest` | Instrumentation remediation | PASS | ~11s | N/A | Cleared stale app/test APKs on device before retry. |
 | `./gradlew --no-daemon --no-configuration-cache :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"` | App-module instrumentation (when relevant) | PASS | ~31s | 1 environment fix | Rerun passed (9 tests) after uninstall/reinstall remediation. |
 | `./gradlew --no-daemon --no-configuration-cache connectedDebugAndroidTest --no-parallel` | Full multi-module instrumentation (release/CI parity) | FAIL | ~2m09s | N/A | Run was user-aborted to reduce cycle time before completion. |
-| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.core.TaskWaypointRadiusContractTest" --tests "com.example.xcpro.tasks.domain.engine.DefaultAATTaskEngineTest" --tests "com.example.xcpro.tasks.aat.gestures.AatGestureHandlerHitTest" --tests "com.example.xcpro.tasks.TaskPersistSerializerFidelityTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"` | Focused validation of Run 19 `#30` code changes | PASS | ~54s | N/A | Validated touched task/AAT/racing paths after dual-write cleanup and meter-only call-path updates. |
+| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.core.TaskWaypointRadiusContractTest" --tests "com.trust3.xcpro.tasks.domain.engine.DefaultAATTaskEngineTest" --tests "com.trust3.xcpro.tasks.aat.gestures.AatGestureHandlerHitTest" --tests "com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest"` | Focused validation of Run 19 `#30` code changes | PASS | ~54s | N/A | Validated touched task/AAT/racing paths after dual-write cleanup and meter-only call-path updates. |
 | `./gradlew --no-daemon --no-configuration-cache enforceRules` | Architecture/coding rule enforcement (Run 19 rerun) | PASS | ~13s | N/A | No new SI rule regressions after Run 19 patch set. |
 | `./gradlew --no-daemon --no-configuration-cache testDebugUnitTest` | Full JVM regression suite (Run 19 rerun) | PASS | ~45s | N/A | Full unit suite remains green after Run 19 changes. |
 | `./gradlew --no-daemon --no-configuration-cache assembleDebug` | Build integrity (Run 19 rerun) | PASS | ~41s | N/A | Debug assemble remains green after Run 19 changes. |
-| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.core.TaskWaypointRadiusContractTest" --tests "com.example.xcpro.tasks.core.TaskWaypointCustomParamsTest" --tests "com.example.xcpro.tasks.TaskPersistSerializerFidelityTest"` | Focused validation of Run 21 SI-first radius contract test updates | PASS | ~16s | N/A | Confirms SI-canonical internal expectations + explicit legacy boundary fallback coverage. |
-| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.domain.engine.DefaultAATTaskEngineTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"` | Regression sanity for core task engine/coordinator contracts after Run 21 serializer hardening | PASS | ~47s | N/A | No regressions from clearing legacy `customRadius` on `toTask` import. |
+| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.core.TaskWaypointRadiusContractTest" --tests "com.trust3.xcpro.tasks.core.TaskWaypointCustomParamsTest" --tests "com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest"` | Focused validation of Run 21 SI-first radius contract test updates | PASS | ~16s | N/A | Confirms SI-canonical internal expectations + explicit legacy boundary fallback coverage. |
+| `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.domain.engine.DefaultAATTaskEngineTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest"` | Regression sanity for core task engine/coordinator contracts after Run 21 serializer hardening | PASS | ~47s | N/A | No regressions from clearing legacy `customRadius` on `toTask` import. |
 | `./gradlew --no-daemon --no-configuration-cache :feature:map:compileDebugKotlin` | Compile integrity for Run 21 task/persistence changes | PASS | ~11s | N/A | Module compile clean post-hardening. |
 | `./gradlew --no-daemon --no-configuration-cache enforceRules` | Architecture/coding rule enforcement (Run 21 rerun) | PASS | ~10s | N/A | SI guardrails remain green after Run 21 updates. |
 
@@ -384,45 +384,45 @@ Run B acceptance gate:
 
 ## 9.5 Run C Procedure: Core/Racing Radius Dual-Contract Cleanup (`#30`)
 1. Remove internal `resolvedCustomRadiusKm()` dependencies from active racing call paths:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskCoreMappers.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointListItems.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskCoreMappers.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskInitializer.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointListItems.kt`
 2. Normalize racing custom parameter contracts to meter-named internals:
-   - migrate `RacingWaypointCustomParams` fields/keys in `feature/map/src/main/java/com/example/xcpro/tasks/core/TaskWaypointCustomParams.kt`.
-   - migrate resolver usage in `feature/map/src/main/java/com/example/xcpro/tasks/TaskObservationZoneResolver.kt` to consume meter-canonical params.
+   - migrate `RacingWaypointCustomParams` fields/keys in `feature/map/src/main/java/com/trust3/xcpro/tasks/core/TaskWaypointCustomParams.kt`.
+   - migrate resolver usage in `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskObservationZoneResolver.kt` to consume meter-canonical params.
 3. Migrate racing model canonical radius storage to meters:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingWaypoint.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt` (`racingWaypoints` bridge).
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingWaypoint.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTask.kt` (`racingWaypoints` bridge).
    - ensure internal manager/model call paths use meter-only factory inputs; retain km compatibility inputs only for explicit boundary-adapter reads if still required.
 4. Migrate unsuffixed radius update APIs in non-boundary task layers to explicit meter contracts:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`
    - naming target: `gateWidthMeters`, `keyholeInnerRadiusMeters`, `faiQuadrantOuterRadiusMeters`.
 5. Migrate `RacingWaypointManager` to meter-canonical defaults/mutations and update dependent callers/signature paths:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointManager.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngineSupport.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingZoneDetector.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointManager.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngineSupport.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingZoneDetector.kt`
    - include residual raw field access cleanup in racing diagnostics/display paths (for example `RacingFinishLineDisplay`).
 6. Migrate `RacingTaskManager` bridge/update radius contracts to explicit meter-named APIs and propagate through call chain:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`
 7. Remove internal racing import-path km conversion in task sheet import flow:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` (`applyRacingObservationZone`).
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt` (`applyRacingObservationZone`).
 8. Tighten boundary ownership for `TaskWaypoint.customRadius` km:
    - internal task/racing flows should use meter contracts.
    - km compatibility remains only in explicit serializer/protocol persistence boundaries (`TaskPersistSerializer` + legacy persistence bridges).
    - include core helper cleanup so `TaskWaypoint.withCustomRadiusMeters(...)` no longer forces km mirror propagation through internal engine normalization paths.
 9. Remove dead km compatibility helpers from core task model once callers are migrated:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/core/Models.kt` (`withCustomRadiusKm`, `getEffectiveRadius`).
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/core/Models.kt` (`withCustomRadiusKm`, `getEffectiveRadius`).
 10. Remove dead racing km helper and migrate test fixtures:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingWaypoint.kt` (`effectiveRadius`).
-   - `feature/map/src/test/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngineSupportTest.kt`
-   - `feature/map/src/test/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngineTest.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingWaypoint.kt` (`effectiveRadius`).
+   - `feature/map/src/test/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngineSupportTest.kt`
+   - `feature/map/src/test/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngineTest.kt`
 11. Update/add tests to lock SI-first behavior and compatibility boundaries:
    - `TaskWaypointRadiusContractTest`
    - `TaskWaypointCustomParamsTest`
@@ -430,7 +430,7 @@ Run B acceptance gate:
    - targeted racing mapper/engine tests for meter-first paths.
 12. Update docs/backlog state (`EXECUTION_BACKLOG`, `CHANGE_PLAN`, `SI_REPASS_FINDINGS`) with final `#30` closure or residuals.
 13. Remove internal racing UI dependence on legacy km radius fields:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointListItems.kt` should not read `TaskWaypoint.customRadius` for internal state/keys after meter-only migration.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointListItems.kt` should not read `TaskWaypoint.customRadius` for internal state/keys after meter-only migration.
 
 Run C acceptance gate:
 1. No internal task/racing mapper/engine/manager/UI path depends on `resolvedCustomRadiusKm()` or km-only radius fields.
@@ -448,21 +448,21 @@ Run C acceptance gate:
 ## 9.6 Run D Procedure: Compliance Closeout
 1. Execute deep SI re-pass and close remaining cleanup items `#28/#34/#40/#41/#42/#43`.
 2. Close `#28`:
-   - remove unused km helper `haversineDistance(...)` in `feature/map/src/main/java/com/example/xcpro/gestures/AirspaceGestureMath.kt`, or convert to explicit meter helper if retained by newly added callers.
+   - remove unused km helper `haversineDistance(...)` in `feature/map/src/main/java/com/trust3/xcpro/gestures/AirspaceGestureMath.kt`, or convert to explicit meter helper if retained by newly added callers.
 3. Close `#34` target 1:
-   - remove or migrate `AreaBoundaryCalculator.calculateDistanceInArea(...)` to explicit meter contract in `feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt`.
+   - remove or migrate `AreaBoundaryCalculator.calculateDistanceInArea(...)` to explicit meter contract in `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt`.
    - if retained, rename to `calculateDistanceInAreaMeters(...)` and use meter helper accumulation only.
 4. Close `#34` target 2:
-   - remove legacy commented source in `feature/map/src/main/java/com/example/xcpro/tasks/KeyholeVerification.kt` (or move to non-production docs/test fixtures if historical reference is needed).
+   - remove legacy commented source in `feature/map/src/main/java/com/trust3/xcpro/tasks/KeyholeVerification.kt` (or move to non-production docs/test fixtures if historical reference is needed).
 5. Close adjacent Run 25 residuals required for clean SI sign-off:
-   - remove or migrate local km helper in `feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATLongPressOverlay.kt` (file currently appears unused).
-   - remove unused km wrapper set in `feature/map/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditGeometry.kt` if no active callers require compatibility:
+   - remove or migrate local km helper in `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ui/AATLongPressOverlay.kt` (file currently appears unused).
+   - remove unused km wrapper set in `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/interaction/AATEditGeometry.kt` if no active callers require compatibility:
      - `generateCircleCoordinates(...)`
      - `generateSectorCoordinates(...)`
      - `calculateDestinationPoint(...)`
      - `haversineDistance(...)`
 6. Close adjacent Run 34 residual (`#43`) for AAT geometry compatibility wrappers:
-   - remove or boundary-scope unused km wrappers in `feature/map/src/main/java/com/example/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt`:
+   - remove or boundary-scope unused km wrappers in `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt`:
      - `generateCircleCoordinates(...)`
      - `generateStartLine(...)`
      - `generateFinishLine(...)`
@@ -503,8 +503,8 @@ Use these commands (Windows/PowerShell) for each run:
 5. `./gradlew --no-daemon --no-configuration-cache connectedDebugAndroidTest --no-parallel` (release/CI parity run)
 
 Inventory/re-pass helper commands (recommended):
-1. `rg -n "Km\\b|km/h|Kmh|haversineKm|calculateDistance\\(" feature/map/src/main/java/com/example/xcpro/tasks feature/map/src/main/java/com/example/xcpro/ogn`
-2. `rg -n "km/h|Kmh|speed.*Kmh|sink.*Kmh|Ms\\b" core/common/src/main/java/com/example/xcpro/common/glider feature/map/src/main/java/com/example/xcpro/glider`
+1. `rg -n "Km\\b|km/h|Kmh|haversineKm|calculateDistance\\(" feature/map/src/main/java/com/trust3/xcpro/tasks feature/map/src/main/java/com/trust3/xcpro/ogn`
+2. `rg -n "km/h|Kmh|speed.*Kmh|sink.*Kmh|Ms\\b" core/common/src/main/java/com/trust3/xcpro/common/glider feature/map/src/main/java/com/trust3/xcpro/glider`
 
 ## 9.9 Mandatory Reporting After Each Run
 1. Phase summary (what changed, files touched, tests updated, risks).

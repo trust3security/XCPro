@@ -152,7 +152,7 @@ Before truncation, sort by priority score such as:
 
 ## File-by-file implementation plan
 
-### 1) `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
+### 1) `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
 
 Use this file as the template for a shared policy.
 
@@ -163,7 +163,7 @@ Options:
 
 **Recommendation:** start by copying the ADS-B policy shape, then unify after the first working OGN version.
 
-### 2) `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+### 2) `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
 
 Add:
 
@@ -173,7 +173,7 @@ Add:
 
 Also keep the existing manual icon-size path, but treat it as the base size.
 
-### 3) `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+### 3) `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
 
 Add viewport-aware state similar to ADS-B.
 
@@ -184,7 +184,7 @@ Responsibilities:
 - apply label visibility rules
 - optionally separate priority and normal traffic rendering
 
-### 4) `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+### 4) `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
 
 This is the main declutter hotspot.
 
@@ -195,13 +195,13 @@ Changes:
 - make icon size, label size, offset, and visibility policy-driven
 - if needed, introduce separate symbol layers for priority vs normal targets
 
-### 5) `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+### 5) `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
 
 Add a public `setOgnViewportZoom(zoomLevel: Float)` method.
 
 Optionally add a single traffic-facing entry point later, but do not block the first pass on that cleanup.
 
-### 6) `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+### 6) `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
 
 Where ADS-B zoom is updated today, also update OGN zoom.
 
@@ -212,7 +212,7 @@ Do it in both places:
 
 That keeps OGN behavior aligned with what ADS-B already does.
 
-### 7) `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+### 7) `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
 
 Replace the fixed watch-aircraft scale with zoom-aware scaling.
 
@@ -223,7 +223,7 @@ Recommended behavior:
 - only keep overlap forced on if that is truly required for product behavior
 - if overlap stays forced on, the icon still needs a much smaller far-zoom scale
 
-### 8) Optional helper: `feature/map-runtime/src/main/java/com/example/xcpro/map/SailplaneIconBitmapFactory.kt`
+### 8) Optional helper: `feature/map-runtime/src/main/java/com/trust3/xcpro/map/SailplaneIconBitmapFactory.kt`
 
 Use this only if dynamic bitmap generation gives better visual fidelity than pure symbol scaling.
 

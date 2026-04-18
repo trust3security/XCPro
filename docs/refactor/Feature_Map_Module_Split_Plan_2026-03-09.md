@@ -13,7 +13,7 @@
 
 - Problem statement:
   - `feature/map` currently carries the majority of the repo's Android build surface.
-  - Current production package volume inside `feature/map/src/main/java/com/example/xcpro`:
+  - Current production package volume inside `feature/map/src/main/java/com/trust3/xcpro`:
     - `tasks`: `220` files / `30853` lines
     - `map`: `249` files / `29106` lines
     - `screens`: `116` files / `15869` lines
@@ -24,7 +24,7 @@
     - `igc`: `26` files / `2823` lines
     - `replay`: `21` files / `2312` lines
     - `forecast`: `21` files / `2939` lines
-  - Total current production Kotlin footprint under `feature/map/src/main/java/com/example/xcpro`: `949` files / `113148` lines.
+  - Total current production Kotlin footprint under `feature/map/src/main/java/com/trust3/xcpro`: `949` files / `113148` lines.
   - Current direct cross-slice coupling inside `feature:map`:
     - `map` + `screens` importing `replay` / `igc`: `58` imports
     - `map` importing `adsb` / `ogn`: `207` imports
@@ -73,7 +73,7 @@
 ./gradlew :feature:map:compileDebugKotlin --build-cache --configuration-cache --console=plain
 ./gradlew :feature:map:assembleDebug --build-cache --configuration-cache --console=plain
 ./gradlew :app:assembleDebug --build-cache --configuration-cache --console=plain
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.replay.ReplaySampleEmitterTest" --build-cache --configuration-cache --console=plain
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest" --build-cache --configuration-cache --console=plain
 ```
 
 ### 2.2 Current Baseline
@@ -85,8 +85,8 @@ Pre-split baseline captured before Phase 1 implementation:
 | `:feature:map:compileDebugKotlin` | `3.83s` | warm local timing |
 | `:feature:map:assembleDebug` | `32.82s` | warm local timing |
 | `:app:assembleDebug` | `32.91s` | warm local timing |
-| `ReplaySampleEmitterTest` targeted loop | `9.66s` | `:feature:map:testDebugUnitTest --tests "com.example.xcpro.replay.ReplaySampleEmitterTest"` |
-| `feature:map` production file count | `949` | `.kt` files under `feature/map/src/main/java/com/example/xcpro` |
+| `ReplaySampleEmitterTest` targeted loop | `9.66s` | `:feature:map:testDebugUnitTest --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest"` |
+| `feature:map` production file count | `949` | `.kt` files under `feature/map/src/main/java/com/trust3/xcpro` |
 
 ### 2.3 Phase 1 Measured Checkpoint
 
@@ -103,8 +103,8 @@ Method:
 ```
 
 Files used for the temporary edit:
-- `feature/igc/src/main/java/com/example/xcpro/replay/IgcReplayUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/replay/IgcReplayUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayController.kt`
 
 | Metric | Measured Result | Notes |
 |---|---|---|
@@ -144,7 +144,7 @@ These are pass/fail targets, not aspirational notes. If a phase misses its prima
 - Stop and re-plan if:
   - a new feature-to-feature dependency would be required,
   - `feature:igc` would need a direct dependency on `feature:weather`,
-  - `feature:tasks` still needs `com.example.xcpro.map.*` after contract extraction,
+  - `feature:tasks` still needs `com.trust3.xcpro.map.*` after contract extraction,
   - the phase misses its build target by `> 10%`,
   - runtime behavior changes are needed just to make the split compile.
 
@@ -224,28 +224,28 @@ Notes:
 
 | Current Package / File Group | Count | Destination | Phase | Notes |
 |---|---|---|---|---|
-| `com.example.xcpro.igc.**` | `26` files | `feature:igc` except app-owned metadata adapters and recording runtime bridge inputs | Phase 1 | moved domain, data, file UI/use-cases, and contracts; kept `IgcMetadataSources.kt` and `IgcRecordingUseCase.kt` in `feature:map` for now |
-| replay parser / models / UI / contracts | subset of `com.example.xcpro.replay.**` | `feature:igc` | Phase 1 | moved `IgcParser`, replay models/state/use-case/VM, interpolator/math/noise helpers, and matching tests |
-| replay runtime backend | remaining `com.example.xcpro.replay.**` | keep in `feature:map` in Phase 1 | Phase 1 | keep `IgcReplayController*`, `ReplayPipeline*`, `ReplaySensorSource`, `ReplaySampleEmitter`, `ReplaySessionPrep`, and runtime emission wiring map-owned |
-| `com.example.xcpro.screens.replay.*` | `3` files | `feature:igc` | Phase 1 | includes `IgcFilesScreen.kt` and `IgcReplayScreen.kt` |
-| `com.example.xcpro.adsb.**` | `68` files | `feature:traffic` | Phase 2 | includes metadata DB/sync, emergency-audio logic, and ADS-B icon assets |
-| `com.example.xcpro.ogn.**` | `34` files | `feature:traffic` | Phase 2 | includes trails, thermals, preferences, and OGN icon assets |
+| `com.trust3.xcpro.igc.**` | `26` files | `feature:igc` except app-owned metadata adapters and recording runtime bridge inputs | Phase 1 | moved domain, data, file UI/use-cases, and contracts; kept `IgcMetadataSources.kt` and `IgcRecordingUseCase.kt` in `feature:map` for now |
+| replay parser / models / UI / contracts | subset of `com.trust3.xcpro.replay.**` | `feature:igc` | Phase 1 | moved `IgcParser`, replay models/state/use-case/VM, interpolator/math/noise helpers, and matching tests |
+| replay runtime backend | remaining `com.trust3.xcpro.replay.**` | keep in `feature:map` in Phase 1 | Phase 1 | keep `IgcReplayController*`, `ReplayPipeline*`, `ReplaySensorSource`, `ReplaySampleEmitter`, `ReplaySessionPrep`, and runtime emission wiring map-owned |
+| `com.trust3.xcpro.screens.replay.*` | `3` files | `feature:igc` | Phase 1 | includes `IgcFilesScreen.kt` and `IgcReplayScreen.kt` |
+| `com.trust3.xcpro.adsb.**` | `68` files | `feature:traffic` | Phase 2 | includes metadata DB/sync, emergency-audio logic, and ADS-B icon assets |
+| `com.trust3.xcpro.ogn.**` | `34` files | `feature:traffic` | Phase 2 | includes trails, thermals, preferences, and OGN icon assets |
 | `screens/navdrawer/AdsbSettings*` | `4` files | `feature:traffic` | Phase 2 | traffic settings UI |
 | `screens/navdrawer/OgnSettings*` | `4` files | `feature:traffic` | Phase 2 | traffic settings UI |
 | `screens/navdrawer/HotspotsSettings*` | `4` files | `feature:traffic` | Phase 2 | OGN hotspot settings UI |
 | traffic route/sub-sheet entry points (`SettingsRoutes`, `AppNavGraph`, `SettingsDfRuntime*` traffic wrappers) | `route constants + wrapper surfaces` | `feature:traffic` entry surface; `app` keeps route registration only | Phase 2 | full-screen routes and drawer sub-sheets must move together |
 | traffic DI modules (`AdsbMetadataModule.kt`, `AdsbNetworkModule.kt`, `OgnThermalModule.kt`, traffic bindings from `MapBindingsModule.kt`) | `5` module units | `feature:traffic` | Phase 2 | `feature:map` keeps only facade injection and map runtime adapters |
 | traffic map runtime adapters (`MapScreenTrafficCoordinator`, `MapOverlayManager`, `AdsbTrafficOverlay`, `OgnTrafficOverlay`, traffic selection/binding files`) | `map-owned runtime set` | keep in `feature:map` | Phase 2 | MapLibre rendering, tap routing, and map gesture ownership stay with the map shell |
-| `com.example.xcpro.forecast.**` | `21` files | `feature:weather` | Phase 3 | forecast repositories and overlay logic |
-| `com.example.xcpro.weather.**` | `32` files | `feature:weather` | Phase 3 | weather repositories, rain UI, wind-related UI; exclude any contract code moved to shared/core |
+| `com.trust3.xcpro.forecast.**` | `21` files | `feature:weather` | Phase 3 | forecast repositories and overlay logic |
+| `com.trust3.xcpro.weather.**` | `32` files | `feature:weather` | Phase 3 | weather repositories, rain UI, wind-related UI; exclude any contract code moved to shared/core |
 | `screens/navdrawer/ForecastSettings*` | `3` files | `feature:weather` | Phase 3 | forecast settings UI |
 | `screens/navdrawer/WeatherSettings*` | `4` files | `feature:weather` | Phase 3 | weather settings UI |
-| `com.example.xcpro.tasks.**` | `220` files | `feature:tasks` | Phase 4 | move only after map contracts exist |
+| `com.trust3.xcpro.tasks.**` | `220` files | `feature:tasks` | Phase 4 | move only after map contracts exist |
 | `screens/navdrawer/Task.kt` | `1` file | `feature:tasks` | Phase 4 | task screen shell |
 | `screens/navdrawer/TaskScreenUseCasesViewModel.kt` | `1` file | `feature:tasks` | Phase 4 | task screen VM |
 | `screens/navdrawer/tasks/*` | `6` files | `feature:tasks` | Phase 4 | task file bottom sheet UI |
-| `com.example.xcpro.map.replay.**` | keep in `feature:map` initially | `feature:map` until Phase 4 / 5 | Phase 4 / 5 | `RacingReplayLogBuilder` is map/task support, not core replay runtime |
-| `com.example.xcpro.sensors.**` | keep in `feature:map` | no move in this plan | N/A | avoid expanding this refactor beyond build-speed target |
+| `com.trust3.xcpro.map.replay.**` | keep in `feature:map` initially | `feature:map` until Phase 4 / 5 | Phase 4 / 5 | `RacingReplayLogBuilder` is map/task support, not core replay runtime |
+| `com.trust3.xcpro.sensors.**` | keep in `feature:map` | no move in this plan | N/A | avoid expanding this refactor beyond build-speed target |
 
 Hold-back files that must not be blindly moved with `tasks`:
 
@@ -428,9 +428,9 @@ Rule:
   - move `igc` + `replay` packages and replay/file screens into `feature:igc`
   - keep map shell depending on public APIs only
 - Concrete move set:
-  - `com.example.xcpro.igc.**`
-  - `com.example.xcpro.replay.**`
-  - `com.example.xcpro.screens.replay.*`
+  - `com.trust3.xcpro.igc.**`
+  - `com.trust3.xcpro.replay.**`
+  - `com.trust3.xcpro.screens.replay.*`
 - DI / Hilt work:
   - move `IgcBindingsModule.kt` into `feature:igc`
   - split replay-specific providers out of `WindSensorModule.kt` if needed
@@ -439,12 +439,12 @@ Rule:
 - Android surface checklist:
   - move replay/file screen routes away from `feature:map`
   - keep `map.replay.RacingReplayLogBuilder` in `feature:map` for now
-  - verify no `feature:igc` source imports `com.example.xcpro.weather.wind.*`
+  - verify no `feature:igc` source imports `com.trust3.xcpro.weather.wind.*`
 - Primary verification:
   - `:feature:igc:assembleDebug`
-  - `:feature:igc:testDebugUnitTest --tests "com.example.xcpro.replay.ReplaySampleEmitterTest"`
-  - `:feature:igc:testDebugUnitTest --tests "com.example.xcpro.replay.IgcReplayLevoNettoValidationTest"`
-  - `:feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.domain.IgcSessionStateMachineTest"`
+  - `:feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest"`
+  - `:feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.replay.IgcReplayLevoNettoValidationTest"`
+  - `:feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.domain.IgcSessionStateMachineTest"`
 - Exit criteria:
   - `feature:igc` compiles and owns `igc` / `replay`
   - `map` / `screens` direct imports to `igc` / `replay` are `0`
@@ -460,8 +460,8 @@ Rule:
   - expose exact map-facing traffic APIs instead of repository/package reach-through
   - keep MapLibre overlays, tap routing, and map-specific selection runtime in `feature:map`
 - Concrete move set:
-  - `com.example.xcpro.adsb.**`
-  - `com.example.xcpro.ogn.**`
+  - `com.trust3.xcpro.adsb.**`
+  - `com.trust3.xcpro.ogn.**`
   - `AdsbSettings*`, `OgnSettings*`, `HotspotsSettings*`
   - traffic DI modules: `AdsbMetadataModule.kt`, `AdsbNetworkModule.kt`, `OgnThermalModule.kt`, and traffic bindings currently inside `MapBindingsModule.kt`
   - traffic route entry surfaces currently spread across `SettingsRoutes.kt`, `AppNavGraph.kt`, and `SettingsDfRuntime*`
@@ -477,8 +477,8 @@ Rule:
   - bind `OpenSkyCredentialsPort` from `app` into `feature:traffic` so credentials/config stop reading `feature:map` `BuildConfig`
   - keep only facade injection and map-owned runtime adapters in `feature:map`
 - Android surface checklist:
-  - move traffic icon drawables/resources with `AdsbAircraftIcon.kt` and `OgnAircraftIcon.kt`; no `com.example.xcpro.map.R` imports remain
-  - replace `com.example.xcpro.map.BuildConfig` usage in `OpenSkyCredentialsRepository.kt` with `OpenSkyCredentialsPort`
+  - move traffic icon drawables/resources with `AdsbAircraftIcon.kt` and `OgnAircraftIcon.kt`; no `com.trust3.xcpro.map.R` imports remain
+  - replace `com.trust3.xcpro.map.BuildConfig` usage in `OpenSkyCredentialsRepository.kt` with `OpenSkyCredentialsPort`
   - remove traffic route constants from `feature:map` `SettingsRoutes.kt`; `ADSB`, `OGN`, and `HOTSPOTS` routes become traffic-owned entry points or app-local registrations
   - move both full-screen and drawer traffic settings entry points together:
     - `AppNavGraph` full-screen destinations
@@ -512,8 +512,8 @@ Rule:
 - Goal:
   - move `forecast`, `weather`, and weather-specific settings/runtime UI out of `feature:map`
 - Concrete move set:
-  - `com.example.xcpro.forecast.**`
-  - `com.example.xcpro.weather.**`
+  - `com.trust3.xcpro.forecast.**`
+  - `com.trust3.xcpro.weather.**`
   - `ForecastSettings*`
   - `WeatherSettings*`
 - DI / Hilt work:
@@ -547,7 +547,7 @@ Rule:
   - map-owned task rendering ports are defined
   - task screen host port is defined
 - Concrete move set:
-  - `com.example.xcpro.tasks.**`
+  - `com.trust3.xcpro.tasks.**`
   - task navdrawer screens and bottom-sheet files
   - task DI modules after contract extraction
 - DI / Hilt work:
@@ -556,7 +556,7 @@ Rule:
   - move `TaskRepositoryIgcTaskDeclarationSource` implementation ownership here if it still exists
   - bind task contracts in `app`, not in `feature:map`
 - Android surface checklist:
-  - remove `com.example.xcpro.map.BuildConfig` imports from:
+  - remove `com.trust3.xcpro.map.BuildConfig` imports from:
     - `RacingMapRenderer.kt`
     - `AATEditOverlayRenderer.kt`
     - `AATTaskRenderer.kt`
@@ -572,7 +572,7 @@ Rule:
     - `RacingReplayValidationTest`
 - Exit criteria:
   - `feature:tasks` compiles and owns task domain/UI
-  - task imports of `com.example.xcpro.map.*` go from `7` to `0`
+  - task imports of `com.trust3.xcpro.map.*` go from `7` to `0`
   - map imports of task internals go from `56` to contract-only
 - Rollback point:
   - revert only task module introduction and contract wiring from the current phase

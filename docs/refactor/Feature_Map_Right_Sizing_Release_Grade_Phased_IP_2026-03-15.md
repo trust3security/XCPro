@@ -97,7 +97,7 @@ Read first:
   - 2026-03-15: Current workspace footprint after Parent Phase 2A is
     `405` main Kotlin files / `40,669` main lines in `feature:map`, with
     `42` screen files / `4,797` screen lines remaining under
-    `feature/map/src/main/java/com/example/xcpro/screens/**`.
+    `feature/map/src/main/java/com/trust3/xcpro/screens/**`.
   - 2026-03-15: Parent Phase 2 seam lock completed. The flight-runtime cut is
     now explicitly split because:
     - `FlightDataCalculatorEngine` still depends on the map-owned
@@ -357,7 +357,7 @@ Read first:
 - General Settings now has one app-owned host with two supported entry modes:
   - map-launched host open requests from `feature:map`
   - `SettingsRoutes.GENERAL` compatibility requests in
-    `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+    `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 
 ## 3) Ownership Model
 
@@ -391,7 +391,7 @@ Implementation shape requirement:
 - Any new module must be justified by runtime ownership, not by file count
   aesthetics.
 - Each move must keep dependency direction explicit and testable.
-- `feature/map/src/main/java/com/example/xcpro/screens/**` is not one phase
+- `feature/map/src/main/java/com/trust3/xcpro/screens/**` is not one phase
   lane. Treat it as four separate ownership buckets:
   - cross-feature general-settings host and registry
   - true owner-module settings wrappers
@@ -467,9 +467,9 @@ And inside each feature:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/screens/**` | non-map owner screens still compiled as part of the map shell | move screens to owner modules and leave only route registration seams | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/sensors/**` and related runtime packages | non-map runtime/fusion code is map-owned | move behind `feature:flight-runtime` ports | Phase 2 |
-| residual heavy runtime owners in `feature/map/src/main/java/com/example/xcpro/map/**` | runtime code still compiled with the shell | move remaining runtime owners to `feature:map-runtime` | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/**` | non-map owner screens still compiled as part of the map shell | move screens to owner modules and leave only route registration seams | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/sensors/**` and related runtime packages | non-map runtime/fusion code is map-owned | move behind `feature:flight-runtime` ports | Phase 2 |
+| residual heavy runtime owners in `feature/map/src/main/java/com/trust3/xcpro/map/**` | runtime code still compiled with the shell | move remaining runtime owners to `feature:map-runtime` | Phase 3 |
 | `feature:map` growth after owner moves | shell becomes a new residual bucket again | enforceRules drift guards + docs/ADR sync | Phase 4 |
 
 ### 4.2D File Ownership Plan
@@ -478,10 +478,10 @@ And inside each feature:
 |---|---|---|---|---|---|
 | `docs/refactor/Feature_Map_Right_Sizing_Release_Grade_Phased_IP_2026-03-15.md` | New | release-grade execution contract for the right-sizing track | active phased plan belongs in `docs/refactor` | not a durable ADR by itself | No |
 | `docs/refactor/Feature_Map_Right_Sizing_Master_Plan_2026-03-15.md` | Existing | baseline summary and strategy pointer | already holds the measured baseline | keep as overview, not the active execution contract | No |
-| `feature/map/src/main/java/com/example/xcpro/screens/**` | Existing | Phase 1 screen inventory to reduce | largest non-shell UI/settings block left in `feature:map` | not runtime and not shell-only | Yes |
-| `feature/map/src/main/java/com/example/xcpro/sensors/**` | Existing | Phase 2 runtime extraction set | largest non-map business/runtime block left | not shell UI and not MapLibre runtime | Yes |
-| `feature/map/src/main/java/com/example/xcpro/orientation/**` and `weather/wind/data/**` | Existing | Phase 2 runtime extraction set | tightly coupled to flight/sensor fusion | should move with fusion owner, not alone | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/**` | Existing | must end as shell-only plus map-specific adapters | core map package is still too mixed | some stays shell-owned, heavy runtime does not | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/**` | Existing | Phase 1 screen inventory to reduce | largest non-shell UI/settings block left in `feature:map` | not runtime and not shell-only | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/sensors/**` | Existing | Phase 2 runtime extraction set | largest non-map business/runtime block left | not shell UI and not MapLibre runtime | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/orientation/**` and `weather/wind/data/**` | Existing | Phase 2 runtime extraction set | tightly coupled to flight/sensor fusion | should move with fusion owner, not alone | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/**` | Existing | must end as shell-only plus map-specific adapters | core map package is still too mixed | some stays shell-owned, heavy runtime does not | Yes |
 | `feature/map-runtime/src/main/java/**` | Existing | Phase 3 runtime landing zone | existing map runtime owner | better than leaving runtime in shell | Possible |
 | `feature/flight-runtime/**` | New target module | sensor/orientation/fusion runtime owner | Phase 2 needs a runtime home with explicit ownership | not `core:*` because this is feature/runtime logic | Yes |
 | `scripts/ci/enforce_rules.ps1` | Existing | drift guards after boundary moves | current repo enforcement lives here | required to prevent regression | No |
@@ -623,9 +623,9 @@ app
   - confirm that `FlightMgmt`, `TaskRouteScreen`, diagnostics, and overlays are
     explicitly out of scope for this phase
 - Files to change:
-  - `app/src/main/java/com/example/xcpro/appshell/settings/**`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/appshell/settings/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   - owner-module sheet wrappers or entry surfaces where still required
   - only the specific remaining map-owned settings wrappers that survive the
     seam lock
@@ -706,8 +706,8 @@ app
   - keep settings preview/read APIs stable while moving the runtime owner
   - preserve one live HAWK runtime owner
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/hawk/**`
-  - `feature/variometer/src/main/java/com/example/xcpro/hawk/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/hawk/**`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/hawk/**`
   - map-side DI adapters/bindings for any temporary runtime ports
   - HAWK tests in `feature:map` and `feature:variometer`
 - Ownership/file split changes in this phase:
@@ -748,33 +748,33 @@ app
   - replay/time-base proof for moved runtime-only owners
   - DI plan that keeps replay shell and map shell out of the new module
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorDataSource.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateSource.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/CirclingDetector.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlyingState.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlyingStateDetector.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlightMetricsModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/AirspeedDataSource.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/ExternalAirspeedRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/ReplayAirspeedRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/domain/CirclingWind.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindMeasurementList.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindStore.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindSelectionUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt`
-  - `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
-  - `feature/map/src/main/java/com/example/xcpro/replay/ReplaySensorSource.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideSource.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/weather/wind/model/WindOverride.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/weather/wind/model/WindSource.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/weather/wind/model/WindVector.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorData.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorDataSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/CirclingDetector.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlyingState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlyingStateDetector.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlightMetricsModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/AirspeedDataSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/ExternalAirspeedRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/ReplayAirspeedRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/CirclingWind.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindMeasurementList.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindSelectionUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDisplayMapper.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySensorSource.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/data/WindOverrideSource.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/model/WindOverride.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/model/WindSource.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/model/WindVector.kt`
   - target new `feature:flight-runtime`
 - Ownership/file split changes in this phase:
   - `feature:flight-runtime` owns the raw-sensor contracts, sensor/flight-data
@@ -823,17 +823,17 @@ app
   - define a narrow HAWK runtime read port for audio vario samples instead of
     depending on the full repository/UI state
 - Files to change:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/glider/**`
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/audio/**`
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/hawk/**`
-  - `feature/profile/src/main/java/com/example/xcpro/glider/**`
-  - `feature/variometer/src/main/java/com/example/xcpro/audio/**`
-  - `feature/variometer/src/main/java/com/example/xcpro/hawk/**`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepository.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/glider/**`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/audio/**`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/hawk/**`
+  - `feature/profile/src/main/java/com/trust3/xcpro/glider/**`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/audio/**`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/hawk/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorFusionRepositoryFactory.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorFusionRepository.kt`
 - Ownership/file split changes in this phase:
   - `feature:flight-runtime` owns the shared runtime contracts/models only:
     `StillAirSinkProvider`, `SpeedBoundsMs`, `VarioAudioSettings`, the
@@ -875,35 +875,35 @@ app
     `VarioDiagnosticsSample` and the remaining runtime-only helper/model set
     instead of leaving map-owned back-edges
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/VarioDiagnosticsSample.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmissionState` via
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorFusionRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioDiagnosticsSample.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmissionState` via
     `FlightDataEmitter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataConstants.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataFilters.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataReplayLogging.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/VarioSuite.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/ThermalTracker.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/TimedAverageWindow.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FixedSampleAverageWindow.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/WindowFill.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/DisplayVarioSmoother.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/NeedleVarioDynamics.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/PressureKalmanFilter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/IVarioCalculator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/OptimizedKalmanVario.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/LegacyKalmanVario.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/RawBaroVario.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/GPSVario.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/ComplementaryVario.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataConstants.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataFilters.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataReplayLogging.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioSuite.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/ThermalTracker.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/TimedAverageWindow.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FixedSampleAverageWindow.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/WindowFill.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/DisplayVarioSmoother.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/NeedleVarioDynamics.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/PressureKalmanFilter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/IVarioCalculator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/OptimizedKalmanVario.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/LegacyKalmanVario.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/RawBaroVario.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/GPSVario.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/ComplementaryVario.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorFusionRepositoryFactory.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/**`
   - target `feature:flight-runtime`
 - Ownership/file split changes in this phase:
   - `feature:flight-runtime` owns the fusion engine, metric calculators,
@@ -954,7 +954,7 @@ app
     sensor owners, map-runtime flags, or profile settings
 - Files to change:
   - pure reusable owners under
-    `feature/map/src/main/java/com/example/xcpro/orientation/**` that are safe
+    `feature/map/src/main/java/com/trust3/xcpro/orientation/**` that are safe
     to expose cross-module:
     `HeadingResolver.kt`, `OrientationClock.kt`, and orientation math helpers
   - the Hilt binding module for the moved orientation clock
@@ -994,9 +994,9 @@ app
   - keep `OrientationEngine` out of scope until its settings dependency on
     `MapOrientationSettings` is decoupled from `feature:profile`
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
-  - `feature/map/src/main/java/com/example/xcpro/OrientationDataSourceFactory.kt`
-  - `feature/map/src/main/java/com/example/xcpro/OrientationSensorSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSourceFactory.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/OrientationSensorSource.kt`
   - new raw-orientation sensor/runtime policy contracts in
     `feature:flight-runtime`
   - temporary map-owned adapters over `UnifiedSensorManager` and the
@@ -1045,9 +1045,9 @@ app
   - proof that runtime moves do not create `feature:map-runtime -> feature:map`
     back-edges
 - Files to change:
-  - residual runtime owners under `feature/map/src/main/java/com/example/xcpro/map/**`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - residual runtime owners under `feature/map/src/main/java/com/trust3/xcpro/map/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
   - `feature:map-runtime`
 - Ownership/file split changes in this phase:
   - `feature:map` becomes shell/composition/adapters only
@@ -1087,12 +1087,12 @@ app
   - `scripts/ci/enforce_rules.ps1`
   - active architecture docs and ADRs if boundaries changed
   - remaining shell files only after a focused seam lock, starting with:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
 - Ownership/file split changes in this phase:
   - add module drift guards for the extracted boundaries
   - finalize shell-only steady-state rules

@@ -48,12 +48,12 @@
 ## 1) Scope
 
 - Problem statement:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` is still the broad screen composition root with a large constructor surface and cross-feature orchestration.
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`,
-    `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`,
-    and `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` is still the broad screen composition root with a large constructor surface and cross-feature orchestration.
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`,
+    `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`,
+    and `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
     still fan a wide shell contract through the screen.
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` still mixes main map rendering with shell-local state for QNH, bottom tabs, wind callout sizing, forecast/weather collection, traffic adaptation, and prompt plumbing.
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` still mixes main map rendering with shell-local state for QNH, bottom tabs, wind callout sizing, forecast/weather collection, traffic adaptation, and prompt plumbing.
   - The result is unclear ownership, broad review blast radius, file-size pressure, and avoidable recomposition/fanout risk on the main screen path.
 - Why now:
   - This is the highest-ROI ownership seam left in the active code path.
@@ -107,9 +107,9 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenRuntimeDependencies.kt` | already groups a runtime seam into a narrow contract | grouped dependency model instead of raw constructor fanout | reuse the grouping style for shell inputs, not runtime owners |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenAuxiliaryPanelsInputs.kt` | already uses focused UI input groups for QNH and prompt rendering | narrow UI input models per section | extend the pattern to shell-owned hosts, not just data models |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficUiBindings.kt` | already separates traffic data and traffic actions into focused models | owner-specific binding/action models | reuse as-is; do not invent a new traffic binding style |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenRuntimeDependencies.kt` | already groups a runtime seam into a narrow contract | grouped dependency model instead of raw constructor fanout | reuse the grouping style for shell inputs, not runtime owners |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenAuxiliaryPanelsInputs.kt` | already uses focused UI input groups for QNH and prompt rendering | narrow UI input models per section | extend the pattern to shell-owned hosts, not just data models |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficUiBindings.kt` | already separates traffic data and traffic actions into focused models | owner-specific binding/action models | reuse as-is; do not invent a new traffic binding style |
 
 ### 2.2B Boundary Moves (Mandatory)
 
@@ -128,36 +128,36 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | direct collection of forecast/weather and traffic feature state in the monolithic host | focused section hosts with grouped inputs | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | direct ownership of QNH, bottom-tab, and wind-callout shell state | dedicated shell hosts for those UI states | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | pure pass-through of the giant scaffold model | grouped content-section inputs | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | assembles one broad contract for unrelated concerns | grouped builder functions per section | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt` | acts as a giant data carrier | section-specific models aligned to ownership | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt` | combines unrelated feature outputs in one binding object | focused binding groups | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | assembles and forwards the entire broad shell surface | assembler over grouped bindings and grouped section inputs | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` | broad constructor/orchestration surface that still reflects shell fanout | grouped collaborators or coordinators only where Phases 1-3 prove the seam | Phase 4 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | direct collection of forecast/weather and traffic feature state in the monolithic host | focused section hosts with grouped inputs | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | direct ownership of QNH, bottom-tab, and wind-callout shell state | dedicated shell hosts for those UI states | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | pure pass-through of the giant scaffold model | grouped content-section inputs | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` | assembles one broad contract for unrelated concerns | grouped builder functions per section | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt` | acts as a giant data carrier | section-specific models aligned to ownership | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt` | combines unrelated feature outputs in one binding object | focused binding groups | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | assembles and forwards the entire broad shell surface | assembler over grouped bindings and grouped section inputs | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` | broad constructor/orchestration surface that still reflects shell fanout | grouped collaborators or coordinators only where Phases 1-3 prove the seam | Phase 4 |
 
 ### 2.2D File Ownership Plan (Mandatory)
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing | high-level composition of focused content hosts only | this file is already the live content entry | keep as thin shell composition, not a state owner | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | Existing | shell bridge from scaffold inputs into grouped content inputs | already the handoff point | should remain a thin bridge, not a second composition root | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt` | Existing | grouped section input model declarations | already holds scaffold models | keep models close to scaffold assembly | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Existing | grouped input builders and shell-only assembly logic | already builds scaffold inputs | do not push assembly into the ViewModel | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt` | Existing | temporary host for binding-group extraction during Phase 3 | existing binding hub | split before extending | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | Existing | top-level assembler over grouped bindings and managers | this is the screen root | should orchestrate, not adapt leaf-feature state | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` | Existing | single screen state owner and intent handler | must remain the screen VM | do not move UI state into composables or repositories | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBottomTabsHost.kt` | New | shell-only bottom-tab state and behavior | focused UI ownership slice | too UI-specific for VM or domain | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenQnhDialogHost.kt` | New | shell-only QNH dialog state and input adaptation | focused UI ownership slice | keep QNH business rules in existing owners; this host only manages UI state | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenWindCalloutHost.kt` | New | shell-only wind callout geometry and viewport state | focused UI ownership slice | display-only geometry belongs in UI | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenForecastWeatherHost.kt` | New | forecast/weather state collection and shell adaptation for rendering | focused section owner | keeps leaf-feature state collection out of the root content host | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenTrafficHost.kt` | New | traffic-specific shell adaptation using existing traffic models | focused section owner | reuses traffic binding patterns instead of broad shell wiring | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt` | New | grouped section input models for the content path | makes section contracts explicit | more precise than extending the giant scaffold model | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt` | New | focused binding groups split out of `MapScreenBindings.kt` | needed to keep binding concerns narrow | avoids another oversized binding file | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionDependencies.kt` | New | concern-specific injected dependency group for profile/style/layout routing | reduces ViewModel constructor width without creating a mega bundle | scoped to one proven concern only | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionCoordinator.kt` | New | profile-scoped style, units, trail, QNH, and variometer routing | proven by the Phase 3 root/profile seam | belongs in map feature VM layer, not UI | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenWeGlidePromptBridge.kt` | New | prompt collection and confirm/dismiss resolution for WeGlide post-flight prompts | prompt seam is already explicit in shell/UI | keeps prompt orchestration out of the main ViewModel body | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing | high-level composition of focused content hosts only | this file is already the live content entry | keep as thin shell composition, not a state owner | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | Existing | shell bridge from scaffold inputs into grouped content inputs | already the handoff point | should remain a thin bridge, not a second composition root | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt` | Existing | grouped section input model declarations | already holds scaffold models | keep models close to scaffold assembly | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Existing | grouped input builders and shell-only assembly logic | already builds scaffold inputs | do not push assembly into the ViewModel | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt` | Existing | temporary host for binding-group extraction during Phase 3 | existing binding hub | split before extending | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | Existing | top-level assembler over grouped bindings and managers | this is the screen root | should orchestrate, not adapt leaf-feature state | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` | Existing | single screen state owner and intent handler | must remain the screen VM | do not move UI state into composables or repositories | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBottomTabsHost.kt` | New | shell-only bottom-tab state and behavior | focused UI ownership slice | too UI-specific for VM or domain | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenQnhDialogHost.kt` | New | shell-only QNH dialog state and input adaptation | focused UI ownership slice | keep QNH business rules in existing owners; this host only manages UI state | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenWindCalloutHost.kt` | New | shell-only wind callout geometry and viewport state | focused UI ownership slice | display-only geometry belongs in UI | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenForecastWeatherHost.kt` | New | forecast/weather state collection and shell adaptation for rendering | focused section owner | keeps leaf-feature state collection out of the root content host | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenTrafficHost.kt` | New | traffic-specific shell adaptation using existing traffic models | focused section owner | reuses traffic binding patterns instead of broad shell wiring | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSectionInputs.kt` | New | grouped section input models for the content path | makes section contracts explicit | more precise than extending the giant scaffold model | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt` | New | focused binding groups split out of `MapScreenBindings.kt` | needed to keep binding concerns narrow | avoids another oversized binding file | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionDependencies.kt` | New | concern-specific injected dependency group for profile/style/layout routing | reduces ViewModel constructor width without creating a mega bundle | scoped to one proven concern only | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionCoordinator.kt` | New | profile-scoped style, units, trail, QNH, and variometer routing | proven by the Phase 3 root/profile seam | belongs in map feature VM layer, not UI | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenWeGlidePromptBridge.kt` | New | prompt collection and confirm/dismiss resolution for WeGlide post-flight prompts | prompt seam is already explicit in shell/UI | keeps prompt orchestration out of the main ViewModel body | New file |
 
 Rules for the new files:
 
@@ -201,7 +201,7 @@ Explicitly forbidden comparisons:
 
 | Risk | Rule Reference | Guard Type (lint/enforceRules/test/review) | File/Test |
 |---|---|---|---|
-| Business logic drifts into new composable hosts | `ARCHITECTURE.md`, `CODING_RULES.md` | review + targeted host tests | new shell host files in `feature/map/src/main/java/com/example/xcpro/map/ui/` |
+| Business logic drifts into new composable hosts | `ARCHITECTURE.md`, `CODING_RULES.md` | review + targeted host tests | new shell host files in `feature/map/src/main/java/com/trust3/xcpro/map/ui/` |
 | Duplicate screen or feature state is introduced during file splits | SSOT rules in `ARCHITECTURE.md` | review + unit tests | host state tests and builder tests |
 | Giant shell contract is replaced by a renamed giant contract | file ownership and narrow-file rules in `AGENTS.md` | review + line-budget gate | `MapScreenScaffoldInputModel.kt`, `MapScreenSectionInputs.kt`, `MapScreenBindingGroups.kt` |
 | Root recomposition pressure stays broad after the split | MapScreen SLO contract | perf evidence + review | `MS-ENG-09` evidence package for Phases 2-3 |
@@ -291,13 +291,13 @@ second source of truth.
 - Goal:
   - remove shell-local state and direct leaf-feature state collection from `MapScreenContentRuntime.kt` without changing behavior
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenAuxiliaryPanelsInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBottomTabsHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenQnhDialogHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenWindCalloutHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenForecastWeatherHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenTrafficHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenAuxiliaryPanelsInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBottomTabsHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenQnhDialogHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenWindCalloutHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenForecastWeatherHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenTrafficHost.kt`
 - Ownership/file split changes in this phase:
   - QNH dialog UI state moves into `MapScreenQnhDialogHost.kt`
   - bottom-tab UI state moves into `MapScreenBottomTabsHost.kt`
@@ -319,10 +319,10 @@ second source of truth.
 - Goal:
   - replace the giant scaffold/content contract with grouped section models aligned to ownership
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSectionInputs.kt`
 - Ownership/file split changes in this phase:
   - section-specific input models replace the broad carrier model
   - scaffold builders assemble grouped models per concern instead of one broad shell object
@@ -341,11 +341,11 @@ second source of truth.
 - Goal:
   - split broad binding assembly by concern so the root becomes an assembler only
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
 - Ownership/file split changes in this phase:
   - split the current broad `MapScreenBindings.kt` collection into focused groups for map/session/task/traffic state
   - move root-only UI collection out of `MapScreenRoot.kt` into focused root binding helpers
@@ -367,10 +367,10 @@ second source of truth.
 - Goal:
   - reduce `MapScreenViewModel.kt` constructor/orchestration width only where Phases 1-3 prove a real ownership seam
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionDependencies.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenWeGlidePromptBridge.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionDependencies.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenWeGlidePromptBridge.kt`
   - affected `MapScreenViewModel` tests
 - Ownership/file split changes in this phase:
   - keep `MapScreenViewModel` as the single screen-state owner

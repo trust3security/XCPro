@@ -50,12 +50,12 @@ Status: Implemented (v1, no cap)
 
 ## Implemented File Touchpoints
 
-1. `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-2. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-3. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
-4. `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
-5. `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionUseCase.kt`
-6. `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionViewModel.kt`
+1. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
+4. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
+5. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionUseCase.kt`
+6. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionViewModel.kt`
 
 ## Verified Gates
 

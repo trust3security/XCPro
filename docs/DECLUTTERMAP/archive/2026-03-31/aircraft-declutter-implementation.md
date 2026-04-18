@@ -32,8 +32,8 @@ This fits the current XCPro stack better than layer-expression offsets because:
 
 The shared declutter engine lives in:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterEngine.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterEngine.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
 
 Current behavior:
 
@@ -61,38 +61,38 @@ For OGN specifically, the selected target is pinned at origin so the existing se
 
 Shared declutter runtime:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterEngine.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterEngine.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
 
 Overlay integration and zoom-strength policy:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlaySupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt`
 
 Runtime delegate/camera invalidation wiring:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayInteractionCadencePolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnHelpers.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficHelpers.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayInteractionCadencePolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnHelpers.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficHelpers.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
 
 Tests:
 
-- `feature/traffic/src/test/java/com/example/xcpro/map/TrafficScreenDeclutterEngineTest.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapInitializerOgnViewportZoomTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/TrafficScreenDeclutterEngineTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapInitializerOgnViewportZoomTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
 
 Docs:
 
@@ -124,8 +124,8 @@ Delegate notes:
 
 Focused tests run first:
 
-- `.\gradlew :feature:traffic:testDebugUnitTest :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.TrafficScreenDeclutterEngineTest" --tests "com.example.xcpro.map.MapOverlayManagerRuntimeOgnDelegateViewportZoomTest" --tests "com.example.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateTest" --tests "com.example.xcpro.map.MapInitializerOgnViewportZoomTest"`
-- `.\gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapOverlayManagerOgnLifecycleTest"`
+- `.\gradlew :feature:traffic:testDebugUnitTest :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.TrafficScreenDeclutterEngineTest" --tests "com.trust3.xcpro.map.MapOverlayManagerRuntimeOgnDelegateViewportZoomTest" --tests "com.trust3.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateTest" --tests "com.trust3.xcpro.map.MapInitializerOgnViewportZoomTest"`
+- `.\gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapOverlayManagerOgnLifecycleTest"`
 
 Merge-ready repo gate:
 

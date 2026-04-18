@@ -10,7 +10,7 @@ Goal
 - Make time base explicit and testable.
 
 Scope
-- Files under `feature/map/src/main/java/com/example/xcpro/map/trail/`
+- Files under `feature/map/src/main/java/com/trust3/xcpro/map/trail/`
 - MapScreen observers/ViewModel wiring for trail updates.
 - MapScreenRuntimeEffects/manager rendering wiring.
 

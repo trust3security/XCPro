@@ -1,8 +1,8 @@
 package com.example.ui1
 
-import com.example.xcpro.common.units.UnitsFormatter
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.VerticalSpeedUnit
+import com.trust3.xcpro.common.units.UnitsFormatter
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.common.units.VerticalSpeedUnit
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -30,21 +30,21 @@ Observed in current code:
 
 - Wind data path is already provider-backed and explicit:
   - `SkySightForecastProviderAdapter` emits wind tile specs with `format=VECTOR_WIND_POINTS`, `speedProperty=spd`, `directionProperty=dir`.
-  - File: `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+  - File: `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
 - Forecast UI/runtime path is fully wired:
   - `ForecastPreferencesRepository` -> `ForecastOverlayRepository` -> `ForecastOverlayViewModel` -> `ForecastOverlayBottomSheet` -> `MapScreenContent` -> `MapOverlayManager` -> `ForecastRasterOverlay`.
 - Wind rendering is currently hardcoded:
   - One custom arrow bitmap (`WIND_ARROW_ICON_ID`) in `ForecastRasterOverlay`.
   - One symbol layer + one circle layer.
   - No style mode selection in preferences or UI.
-  - File: `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
+  - File: `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
 - Existing wind UI control is size-only:
   - `windOverlayScale` persisted in preferences and exposed in bottom sheet.
-  - File: `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+  - File: `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
 - Forecast settings page (General) currently has:
   - enable, opacity, region, credentials, auth confirmation.
   - no wind display mode control.
-  - File: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+  - File: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
 - No renderer tests exist for `ForecastRasterOverlay` branch behavior.
 
 Conclusion:
@@ -60,44 +60,44 @@ These gaps were not fully captured in the first pass and should be handled durin
    - `ForecastAuthRepository` verifies `/api/auth` with `X-API-KEY`, but overlay data calls in
      `SkySightForecastProviderAdapter` do not use saved credentials or auth-derived session material.
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastAuthRepository.kt`
-     - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
-     - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastAuthRepository.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
 
 2. MapLibre HTTP client is globally replaced at runtime.
    - `SkySightMapLibreNetworkConfigurator` calls `HttpRequestUtil.setOkHttpClient(client)` and injects
      `Origin` only for selected SkySight hosts.
    - This is process-global for MapLibre and should be treated as a shared-runtime risk.
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
-     - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
 
 3. Forecast and ADS-b share one unqualified OkHttp DI binding.
    - `AdsbNetworkModule` provides a singleton `OkHttpClient` used by ADS-b and forecast repositories.
    - Wind mode work should avoid increasing coupling; consider qualifier split if behavior diverges.
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`
-     - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
-     - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastAuthRepository.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/di/AdsbNetworkModule.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastAuthRepository.kt`
 
 4. Auto-time ticker runs continuously even in manual time mode.
    - `autoTimeTickerFlow()` loops forever and drives selection flow every minute.
    - This is acceptable for MVP but is a battery/cadence optimization gap.
    - File:
-     - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
 
 5. Forecast time labels are device-timezone based, not region-timezone based.
    - `formatForecastTime()` uses `ZoneId.systemDefault()`.
    - For region-driven forecast interpretation, this is a UX correctness gap.
    - File:
-     - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
 
 6. Wind point query exposes speed only, not direction.
    - Evidence payload includes both `sfcwindspd/sfcwinddir` and `bltopwindspd/bltopwinddir`, but
      adapter maps only speed fields via `resolvePointField`.
    - Wind mode implementation should decide and document callout semantics.
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
      - `docs/integrations/skysight/evidence/value_success.json`
 
 7. No dedicated renderer tests for `ForecastRasterOverlay`.
@@ -175,13 +175,13 @@ Dependency flow remains:
 
 Modules/files touched (planned):
 
-- `feature/map/src/main/java/com/example/xcpro/forecast/*`
-- `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettings*`
-- `feature/map/src/test/java/com/example/xcpro/forecast/*`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/*`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettings*`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/*`
 
 Boundary risk:
 
@@ -257,8 +257,8 @@ After:
 - Goal:
   - Add provider-neutral enum and settings contract.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastSettings.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastSettings.kt`
 - Changes:
   - Add `ForecastWindDisplayMode` enum.
   - Add default constant and parse/normalize helper.
@@ -273,10 +273,10 @@ After:
 - Goal:
   - Persist and expose wind display mode via existing forecast state pipeline.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayUseCases.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayUseCases.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayViewModel.kt`
 - Changes:
   - Add datastore key `forecast_wind_display_mode`.
   - Add `setWindDisplayMode(...)` and `windDisplayModeFlow`.
@@ -293,11 +293,11 @@ After:
 - Goal:
   - User can change wind mode from map forecast sheet and Forecast settings.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
 - Changes:
   - Add mode chips/toggle in bottom sheet.
   - Add mode selector in Forecast General card.
@@ -312,9 +312,9 @@ After:
 - Goal:
   - Render ARROW and BARB branches with safe cleanup and style reload.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
 - Changes:
   - Pass mode through `setForecastOverlay(...)` and reapply paths.
   - `ForecastRasterOverlay.render(...)` accepts `windDisplayMode`.

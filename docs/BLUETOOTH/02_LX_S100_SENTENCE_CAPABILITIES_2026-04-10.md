@@ -237,6 +237,6 @@ Official/manual references:
 
 Field-level/code references:
 
-- [LxSentenceParser.kt](C:/Users/Asus/AndroidStudioProjects/XCPro/feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/LxSentenceParser.kt)
+- [LxSentenceParser.kt](C:/Users/Asus/AndroidStudioProjects/XCPro/feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/lxnav/LxSentenceParser.kt)
 - [Parser.cpp](C:/Users/Asus/AndroidStudioProjects/XCSoar/src/Device/Driver/LX/Parser.cpp)
 - [DeviceInfo.hpp](C:/Users/Asus/AndroidStudioProjects/XCSoar/src/NMEA/DeviceInfo.hpp)

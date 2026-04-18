@@ -45,9 +45,9 @@
 `UI -> domain/use-cases -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/weather/rain/*`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettings*`
-  - weather/navdrawer tests under `feature/map/src/test/java/com/example/xcpro/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/rain/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettings*`
+  - weather/navdrawer tests under `feature/map/src/test/java/com/trust3/xcpro/**`
   - `docs/ARCHITECTURE/PIPELINE.md`
 - Boundary risk:
   - Prevent policy drift into Compose labels/controls.

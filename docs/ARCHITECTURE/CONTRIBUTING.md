@@ -173,13 +173,13 @@ Use `preflight.bat` before PR/release validation.
 For fast daily local verification, use `check-quick.bat`:
 ```bat
 check-quick.bat
-check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
+check-quick.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelTest"
 ```
 For Windows test file-lock resilience (`output.bin`/`.lck`), use
 `gradlew` directly:
 ```bat
 gradlew testDebugUnitTest
-gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCase*"
+gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.domain.CalculateFlightMetricsUseCase*"
 ```
 
 Preferred root-gate retry path:

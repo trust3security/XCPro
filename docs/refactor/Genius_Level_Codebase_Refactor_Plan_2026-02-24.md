@@ -55,7 +55,7 @@ Current measured risks:
 - Lint warnings: `655`
 - Lint hints: `38`
 - First blocking file:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
 - Manifest mismatch:
   - `app/src/main/AndroidManifest.xml` currently has `INTERNET` only; missing
     `ACCESS_NETWORK_STATE` for connectivity APIs used in ADS-B network adapter.
@@ -210,7 +210,7 @@ Source adapters -> Repository (SSOT) -> UseCase -> ViewModel -> UI
   - Remove hard failures from lint/build verification.
 - Files to change:
   - `app/src/main/AndroidManifest.xml`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/data/AndroidAdsbNetworkAvailabilityAdapter.kt`
   - `build.gradle.kts`
 - Tests to add/update:
   - ADS-B network availability adapter tests for failure-safe behavior.
@@ -235,12 +235,12 @@ Source adapters -> Repository (SSOT) -> UseCase -> ViewModel -> UI
 - Goal:
   - Split highest risk files (`> 650 LOC`) into focused collaborators.
 - Initial targets:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayController.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
 - Tests to add/update:
   - parity tests per extracted collaborator boundary.
 - Exit criteria:

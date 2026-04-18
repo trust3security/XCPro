@@ -19,10 +19,10 @@
 ### BUG-01 (Critical): Sensor-start failure can crash app/service
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt:162`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt:168`
-- `app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt:71`
-- `feature/map/src/main/java/com/example/xcpro/map/LocationSensorsController.kt:133`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt:162`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt:168`
+- `app/src/main/java/com/trust3/xcpro/service/VarioForegroundService.kt:71`
+- `feature/map/src/main/java/com/trust3/xcpro/map/LocationSensorsController.kt:133`
 
 Problem:
 - `startSensorsOnMainThread()` catches `Throwable` and rethrows `RuntimeException`.
@@ -35,11 +35,11 @@ Impact:
 ### BUG-02 (Critical): Profile bootstrap race causes false "no profile" state
 
 Evidence:
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt:79`
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt:83`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt:25`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:31`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:40`
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt:79`
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt:83`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileViewModel.kt:25`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:31`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:40`
 
 Problem:
 - UI gate toggles to profile-creation flow as soon as state is empty/null.
@@ -52,10 +52,10 @@ Impact:
 ### BUG-03 (High): Profile storage/parsing failure path degrades to empty list
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:48`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:55`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:32`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:36`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:48`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:55`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:32`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:36`
 
 Problem:
 - Parse failures default to `emptyList()` with no resilient recovery strategy.
@@ -67,11 +67,11 @@ Impact:
 ### BUG-04 (High): Startup gating stacks to near-10s non-responsive window
 
 Evidence:
-- `app/src/main/java/com/example/xcpro/MainActivity.kt:37`
-- `app/src/main/java/com/example/xcpro/MainActivity.kt:76`
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt:36`
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt:73`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt:211`
+- `app/src/main/java/com/trust3/xcpro/MainActivity.kt:37`
+- `app/src/main/java/com/trust3/xcpro/MainActivity.kt:76`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt:36`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt:73`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt:211`
 
 Problem:
 - Fixed splash hold (`2_000ms`) plus style-load timeout (`8_000ms`) can serialize startup readiness.
@@ -83,10 +83,10 @@ Impact:
 ### BUG-05 (Medium-High): Map lifecycle catch-up does not fully sync MapView lifecycle
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt:71`
-- `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt:73`
-- `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt:75`
-- `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt:194`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt:71`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt:73`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt:75`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt:194`
 
 Problem:
 - `syncCurrentOwnerState()` only starts orientation/sensor checks.
@@ -98,7 +98,7 @@ Impact:
 ### BUG-06 (Critical): Profile persistence write-order race can wipe existing profile data
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Problem:
 - Profile mutations persisted `active_profile_id` and `profiles_json` in separate writes.
@@ -111,8 +111,8 @@ Impact:
 ### BUG-07 (High): Map init coroutine swallowed cancellation and could run stale callbacks
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
 
 Problem:
 - Map init launch path used `runCatching` without cancellation rethrow.
@@ -125,8 +125,8 @@ Impact:
 ### BUG-08 (Medium): Startup map-style default mismatch causes style churn
 
 Evidence:
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapStyleRepository.kt`
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapStyleRepository.kt`
 
 Problem:
 - Different default style values across startup paths can emit extra early style commands.
@@ -144,8 +144,8 @@ Changes:
 - Handle `CancellationException` explicitly and rethrow only cancellation.
 - Return typed outcome (`Result`/sealed status) to callers.
 - Add local failure handling in:
-  - `app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/LocationSensorsController.kt`
+  - `app/src/main/java/com/trust3/xcpro/service/VarioForegroundService.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/LocationSensorsController.kt`
 - Ensure retries stay bounded and log actionable failure reason.
 
 Acceptance:
@@ -234,7 +234,7 @@ Pending verification:
 ### BUG-09 (Critical): App forces screen-on for entire activity lifetime
 
 Evidence:
-- `app/src/main/java/com/example/xcpro/MainActivity.kt:74`
+- `app/src/main/java/com/trust3/xcpro/MainActivity.kt:74`
 
 Problem:
 - `FLAG_KEEP_SCREEN_ON` is set unconditionally during app startup.
@@ -254,10 +254,10 @@ Acceptance:
 ### BUG-10 (Critical): Foreground vario service auto-starts on app launch and is sticky
 
 Evidence:
-- `app/src/main/java/com/example/xcpro/MainActivity.kt:91`
-- `app/src/main/java/com/example/xcpro/MainActivity.kt:221`
-- `app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt:72`
-- `app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt:92`
+- `app/src/main/java/com/trust3/xcpro/MainActivity.kt:91`
+- `app/src/main/java/com/trust3/xcpro/MainActivity.kt:221`
+- `app/src/main/java/com/trust3/xcpro/service/VarioForegroundService.kt:72`
+- `app/src/main/java/com/trust3/xcpro/service/VarioForegroundService.kt:92`
 
 Problem:
 - Service starts immediately after permission grant on app launch.
@@ -280,12 +280,12 @@ Acceptance:
 ### BUG-11 (High): High-rate sensor stack stays active once service is running
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt:66`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt:71`
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt:47`
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt:49`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt:45`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt:139`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt:66`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt:71`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt:47`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt:49`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt:45`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt:139`
 
 Problem:
 - Barometer/rotation/accel sensors use game-rate delays.
@@ -307,10 +307,10 @@ Acceptance:
 ### BUG-12 (High): Frame-driven display loop runs continuously while map is visible
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt:146`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt:147`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt:149`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt:150`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt:146`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt:147`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt:149`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt:150`
 
 Problem:
 - A `withFrameNanos` loop runs continuously for display updates.
@@ -330,9 +330,9 @@ Acceptance:
 ### BUG-13 (Medium-High): ADS-B center wait loop polls at 100ms when center unavailable
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt:522`
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt:525`
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt:604`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt:522`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt:525`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt:604`
 
 Problem:
 - ADS-B loop waits for center via fixed 100ms polling.
@@ -352,12 +352,12 @@ Acceptance:
 ### BUG-14 (Medium): HAWK UI ticker wakes CPU even when HAWK card is hidden/disabled
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt:23`
-- `feature/map/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt:30`
-- `feature/map/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt:32`
-- `feature/map/src/main/java/com/example/xcpro/hawk/HawkConfig.kt:34`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt:94`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt:95`
+- `feature/map/src/main/java/com/trust3/xcpro/hawk/HawkVarioUseCase.kt:23`
+- `feature/map/src/main/java/com/trust3/xcpro/hawk/HawkVarioUseCase.kt:30`
+- `feature/map/src/main/java/com/trust3/xcpro/hawk/HawkVarioUseCase.kt:32`
+- `feature/map/src/main/java/com/trust3/xcpro/hawk/HawkConfig.kt:34`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt:94`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt:95`
 
 Problem:
 - `HawkVarioUseCase` ticker emits every 250ms regardless of `config.enabled`.
@@ -377,10 +377,10 @@ Acceptance:
 ### BUG-15 (Medium): Replay trail updater keeps per-frame loop active while replay is selected
 
 Evidence:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt:91`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt:93`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt:91`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt:92`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt:91`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt:93`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt:91`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt:92`
 
 Problem:
 - Replay suppress flag is true whenever replay selection is non-null.

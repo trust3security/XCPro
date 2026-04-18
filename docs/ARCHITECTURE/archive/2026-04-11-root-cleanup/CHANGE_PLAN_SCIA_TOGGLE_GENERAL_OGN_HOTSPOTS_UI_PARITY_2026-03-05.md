@@ -1,4 +1,4 @@
-﻿# CHANGE_PLAN_SCIA_TOGGLE_GENERAL_OGN_HOTSPOTS_UI_PARITY_2026-03-05.md
+# CHANGE_PLAN_SCIA_TOGGLE_GENERAL_OGN_HOTSPOTS_UI_PARITY_2026-03-05.md
 
 ## 0) Metadata
 
@@ -36,23 +36,23 @@
 ## 2) Baseline Findings
 
 1) SCIA global toggle currently lives in map tab UI.
-- File: `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabContents.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabContents.kt`
 - Function: `OgnTabContent(...)` currently renders `Switch` for `Show Scia`.
 
 2) SCIA state is already SSOT-backed.
-- File: `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
 - Owner flow: `showSciaEnabledFlow`
 - Mutation API: `setShowSciaEnabled(...)` and atomic `setOverlayAndSciaEnabled(...)`.
 
 3) OGN settings sheet currently does not expose SCIA control.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
 
 4) Hotspots sheet host style is the target pattern for parity.
-- File: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
 - `HotspotsSettingsSubSheet(...)` uses:
   - `rememberModalBottomSheetState(skipPartiallyExpanded = true)`
   - `dragHandle = null`
@@ -150,9 +150,9 @@ Unchanged supporting path:
 - Goal:
   - Make `OgnSettings*` stack fully capable of owning SCIA global toggle.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
 - Tasks:
   - Add SCIA flow exposure to use-case.
   - Add SCIA flag to OGN UI state.
@@ -168,8 +168,8 @@ Unchanged supporting path:
 - Goal:
   - Move SCIA toggle to `General -> OGN` top and align OGN sheet behavior/style with Hotspots conventions.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
 - Tasks:
   - Add top SCIA card/control in `OgnSettingsContent` (first section in scroll content).
   - Keep existing OGN controls (icon size/radius/display mode/IDs) below SCIA section.
@@ -189,10 +189,10 @@ Unchanged supporting path:
 - Goal:
   - Remove global SCIA toggle from map OGN tab and keep it focused on trail visibility context.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabContents.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` (if signature propagation needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabContents.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` (if signature propagation needed)
 - Tasks:
   - Remove SCIA switch row and its callback plumbing from OGN tab surface.
   - Keep user guidance text pointing to `General -> OGN` for SCIA global enable.

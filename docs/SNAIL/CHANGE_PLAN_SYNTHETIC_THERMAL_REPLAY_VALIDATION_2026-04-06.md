@@ -45,18 +45,18 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt` | deterministic in-memory replay generation | build a standard `IgcLog`, not a custom file | thermal geometry instead of straight racing legs |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt` | existing replay launch owner | use `loadLog(...)` through the replay coordinator seam | add a dedicated thermal validation path |
+| `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt` | deterministic in-memory replay generation | build a standard `IgcLog`, not a custom file | thermal geometry instead of straight racing legs |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt` | existing replay launch owner | use `loadLog(...)` through the replay coordinator seam | add a dedicated thermal validation path |
 
 ### 2.2B File Ownership Plan
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/replay/SyntheticThermalReplayLogBuilder.kt` | New | deterministic thermal `IgcLog` generation | replay-domain helper beside existing replay builders | not UI; not parser/file IO | No |
-| `feature/map/src/main/java/com/example/xcpro/map/replay/SyntheticThermalReplayLauncher.kt` | New | synthetic replay launch orchestration | focused replay launch helper for debug/dev scenarios | keeps `MapScreenReplayCoordinator` below hotspot cap | No |
-| `feature/map/src/main/java/com/example/xcpro/map/replay/DemoReplayLauncher.kt` | New | existing demo replay start variants | focused debug replay launcher | avoids coordinator hotspot growth | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt` | Existing | replay session/racing orchestration | canonical replay owner already lives here | should not move replay authority to UI | No |
-| `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt` plus existing map UI input files | Existing | debug replay button wiring only | existing debug replay lane already lives here | avoids a second debug UI surface | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/replay/SyntheticThermalReplayLogBuilder.kt` | New | deterministic thermal `IgcLog` generation | replay-domain helper beside existing replay builders | not UI; not parser/file IO | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/replay/SyntheticThermalReplayLauncher.kt` | New | synthetic replay launch orchestration | focused replay launch helper for debug/dev scenarios | keeps `MapScreenReplayCoordinator` below hotspot cap | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/replay/DemoReplayLauncher.kt` | New | existing demo replay start variants | focused debug replay launcher | avoids coordinator hotspot growth | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt` | Existing | replay session/racing orchestration | canonical replay owner already lives here | should not move replay authority to UI | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt` plus existing map UI input files | Existing | debug replay button wiring only | existing debug replay lane already lives here | avoids a second debug UI surface | No |
 
 ### 2.3 Time Base
 
@@ -103,7 +103,7 @@ Explicitly forbidden:
   - synthetic replay uses a replay-only retention override so the full thermal is preserved for inspection
 - Required verification:
   - `scripts/qa/run_change_verification.bat -Profile slice-replay`
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenReplayCoordinatorTest" --tests "com.example.xcpro.map.replay.SyntheticThermalReplayLogBuilderTest"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenReplayCoordinatorTest" --tests "com.trust3.xcpro.map.replay.SyntheticThermalReplayLogBuilderTest"`
   - `scripts/qa/run_change_verification.bat -Profile pr-ready`
 
 ## 6) ADR / Deviation Check

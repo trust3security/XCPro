@@ -10,7 +10,7 @@ plugins {
 val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPropertiesExtension>()
 
 android {
-    namespace = "com.example.xcpro.livefollow"
+    namespace = "com.trust3.xcpro.livefollow"
     compileSdk = 35
 
     defaultConfig {

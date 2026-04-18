@@ -103,12 +103,12 @@ Dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/*`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/*`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/*`
-  - `feature/map/src/main/java/com/example/xcpro/audio/*`
-  - `feature/map/src/main/java/com/example/xcpro/map/*`
-  - `feature/map/src/test/java/com/example/xcpro/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/audio/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/*`
+  - `feature/map/src/test/java/com/trust3/xcpro/*`
 - Any boundary risk:
   - Risk of moving business math into UI for visual alignment.
   - Risk of bypassing domain use-case by reading repositories directly in UI path.
@@ -239,9 +239,9 @@ UI consumes corrected display/audio/netto channels consistently
 - Goal:
   - Freeze current behavior and add failing tests that represent known defects.
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/LevoVarioPipelineTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/weather/wind/WindSensorFusionRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/LevoVarioPipelineTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/weather/wind/WindSensorFusionRepositoryTest.kt`
 - Tests to add/update:
   - Positive TE activation test from cold start (currently expected to fail).
   - TE dt-source test with GPS cadence mismatch (currently expected to fail).
@@ -257,12 +257,12 @@ UI consumes corrected display/audio/netto channels consistently
   - Make TE mathematically and temporally correct for pull-up/slowdown compensation.
   - Align TE/netto eligibility behavior with explicit wind availability semantics and aircraft-speed envelopes.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt` (if speed timestamp/source propagation is added to estimate model)
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FusionBlackboard.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SensorFrontEnd.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/WindEstimator.kt` (if speed timestamp/source propagation is added to estimate model)
 - Tests to add/update:
   - TE engages after seeded eligible airspeed samples.
   - TE uses speed-sample time delta, not emit-frame delta.
@@ -281,13 +281,13 @@ UI consumes corrected display/audio/netto channels consistently
 - Goal:
   - Ensure valid IAS/TAS samples are consumable by TE path in production.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/ExternalAirspeedRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorFusionRepositoryFactory.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/ExternalAirspeedRepository.kt`
   - Live external-air data ingress adapter file(s) (new; no current callsite found)
 - Tests to add/update:
   - Use-case prioritizes valid external/replay airspeed over wind-derived fallback.
@@ -303,9 +303,9 @@ UI consumes corrected display/audio/netto channels consistently
 - Goal:
   - Use already-wired TAS/heading/g-load signals for straight-flight wind estimation.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindEkfUseCase.kt` (only if API adjustments required)
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt` (if confidence/source semantics need extension)
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindEkfUseCase.kt` (only if API adjustments required)
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindState.kt` (if confidence/source semantics need extension)
 - Tests to add/update:
   - EKF candidate published during straight flight with valid TAS.
   - EKF blackout during circling/high-turn/high-g events.
@@ -320,9 +320,9 @@ UI consumes corrected display/audio/netto channels consistently
 - Goal:
   - Remove one-frame TE lag in audio path and align displayed netto channel and settings-control mapping.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt`
 - Tests to add/update:
   - Audio input selection reflects current-frame TE sample when available.
   - `nettoDisplayFlow` consumes intended display netto signal.

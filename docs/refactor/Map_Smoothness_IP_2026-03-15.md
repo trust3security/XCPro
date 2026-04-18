@@ -93,8 +93,8 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/DisplayPoseRenderCoordinator.kt` | already acts as a narrow runtime owner over a hot render loop | keep hot-path decisions in focused runtime owners rather than broad UI hosts | add a focused camera motion policy instead of embedding more hot-path branching in the coordinator |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt` | already narrows root ownership into focused binding helpers | move high-frequency collection into focused binding/effect hosts instead of `MapScreenRoot.kt` | add hot-path-specific effect/binding helpers because current root still collects too much |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseRenderCoordinator.kt` | already acts as a narrow runtime owner over a hot render loop | keep hot-path decisions in focused runtime owners rather than broad UI hosts | add a focused camera motion policy instead of embedding more hot-path branching in the coordinator |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt` | already narrows root ownership into focused binding helpers | move high-frequency collection into focused binding/effect hosts instead of `MapScreenRoot.kt` | add hot-path-specific effect/binding helpers because current root still collects too much |
 
 ### 2.2B Boundary Moves (Mandatory)
 
@@ -110,30 +110,30 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTrackingCameraController.kt` | direct inline selection of long animation for continuous follow | dedicated follow camera motion policy with explicit continuous/discrete rules | Phase 1 |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapPositionController.kt` | unconditional `setBlueLocationVisible(true)` on every overlay update | overlay visibility updates only on state transitions | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | direct root-level collection of hot orientation state | focused effect/binding host near runtime surface | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt` | wide binding object carries hot location/zoom data through the root path | focused hot-path binding group used only where needed | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt` | root helper path still consumes hot orientation inputs through `rememberMapRuntimeController(...)` | focused hot-path effect host owns runtime camera effect wiring | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt` | perpetual frame loop calls `onDisplayFrame()` even when render sync is enabled | render-frame-driven dispatch path | Phase 4 |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/LocationManager.kt` | `triggerRepaint()` forced from display loop when render sync is enabled | runtime frame consumer that only renders on real frame callbacks | Phase 4 |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapTrackingCameraController.kt` | direct inline selection of long animation for continuous follow | dedicated follow camera motion policy with explicit continuous/discrete rules | Phase 1 |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapPositionController.kt` | unconditional `setBlueLocationVisible(true)` on every overlay update | overlay visibility updates only on state transitions | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | direct root-level collection of hot orientation state | focused effect/binding host near runtime surface | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt` | wide binding object carries hot location/zoom data through the root path | focused hot-path binding group used only where needed | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt` | root helper path still consumes hot orientation inputs through `rememberMapRuntimeController(...)` | focused hot-path effect host owns runtime camera effect wiring | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt` | perpetual frame loop calls `onDisplayFrame()` even when render sync is enabled | render-frame-driven dispatch path | Phase 4 |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/LocationManager.kt` | `triggerRepaint()` forced from display loop when render sync is enabled | runtime frame consumer that only renders on real frame callbacks | Phase 4 |
 
 ### 2.2D File Ownership Plan (Mandatory)
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/LocationManager.kt` | Existing | runtime orchestration only; no long follow-loop animation policy and no timer-driven repaint forcing | already owns location/render runtime wiring | keep as coordinator, not policy bucket | Yes |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTrackingCameraController.kt` | Existing | tracking-camera application using a narrow motion policy | already owns follow-camera application | should consume policy, not embed broader behavior matrix | Yes |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapPositionController.kt` | Existing | camera application and overlay handoff only | already owns accepted camera/overlay application | should stop owning overlay visibility churn policy | Yes |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapFollowCameraMotionPolicy.kt` | New | canonical owner for continuous-follow vs discrete-transition camera motion rules | runtime-only hot-path policy | too hot-path-specific for UI or generic feature flags | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | Existing | low-frequency screen assembler only | already the route root | should stop collecting hot runtime state | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt` | Existing | low-frequency helper wiring only after the split; no hot orientation-driven runtime effect ownership | already owns route helper composition | the hot camera-effect path should move out rather than keep piggybacking on a root helper | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt` | Existing | low-frequency grouped bindings only after split | existing binding grouping file | hot-path bindings need a narrower owner | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt` | Existing | stable shared map effects only; no forced frame loop when render sync is enabled | existing effect hub | split hot-path effect ownership before extending | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapScreenHotPathEffects.kt` | New | high-frequency orientation/GPS/render-frame effect ownership near runtime boundary | keeps hot collectors out of `MapScreenRoot.kt` | too runtime-adjacent for broad root binding files | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenHotPathBindings.kt` | New | focused binding readers for hot location/zoom/runtime-only state | prevents wide root binding fanout | avoids bloating `MapScreenBindingGroups.kt` again | New file |
-| `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt` | Existing | single owner of aircraft overlay runtime state and idempotent visible/update behavior | already owns the overlay runtime objects | should stay the authoritative overlay owner | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/RenderFrameSync.kt` | Existing | render-frame callback owner and enablement gate | already owns MapView render binding | should remain the single render-sync callback surface | Yes |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/LocationManager.kt` | Existing | runtime orchestration only; no long follow-loop animation policy and no timer-driven repaint forcing | already owns location/render runtime wiring | keep as coordinator, not policy bucket | Yes |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapTrackingCameraController.kt` | Existing | tracking-camera application using a narrow motion policy | already owns follow-camera application | should consume policy, not embed broader behavior matrix | Yes |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapPositionController.kt` | Existing | camera application and overlay handoff only | already owns accepted camera/overlay application | should stop owning overlay visibility churn policy | Yes |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapFollowCameraMotionPolicy.kt` | New | canonical owner for continuous-follow vs discrete-transition camera motion rules | runtime-only hot-path policy | too hot-path-specific for UI or generic feature flags | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | Existing | low-frequency screen assembler only | already the route root | should stop collecting hot runtime state | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt` | Existing | low-frequency helper wiring only after the split; no hot orientation-driven runtime effect ownership | already owns route helper composition | the hot camera-effect path should move out rather than keep piggybacking on a root helper | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt` | Existing | low-frequency grouped bindings only after split | existing binding grouping file | hot-path bindings need a narrower owner | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt` | Existing | stable shared map effects only; no forced frame loop when render sync is enabled | existing effect hub | split hot-path effect ownership before extending | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapScreenHotPathEffects.kt` | New | high-frequency orientation/GPS/render-frame effect ownership near runtime boundary | keeps hot collectors out of `MapScreenRoot.kt` | too runtime-adjacent for broad root binding files | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenHotPathBindings.kt` | New | focused binding readers for hot location/zoom/runtime-only state | prevents wide root binding fanout | avoids bloating `MapScreenBindingGroups.kt` again | New file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt` | Existing | single owner of aircraft overlay runtime state and idempotent visible/update behavior | already owns the overlay runtime objects | should stay the authoritative overlay owner | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/RenderFrameSync.kt` | Existing | render-frame callback owner and enablement gate | already owns MapView render binding | should remain the single render-sync callback surface | Yes |
 
 ### 2.2E Module and API Surface (Mandatory when boundaries change)
 
@@ -280,10 +280,10 @@ The full 4-part plan is required to reach the after-state. Phase 1 improves one 
 - Goal:
   - stop using long SDK camera animations for continuous follow updates while preserving animated discrete transitions
 - Files to change:
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/LocationManager.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTrackingCameraController.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapPositionController.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapFollowCameraMotionPolicy.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapTrackingCameraController.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapPositionController.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapFollowCameraMotionPolicy.kt`
   - affected camera/runtime tests
 - Ownership/file split changes in this phase:
   - move continuous-follow motion rules into `MapFollowCameraMotionPolicy.kt`
@@ -304,12 +304,12 @@ The full 4-part plan is required to reach the after-state. Phase 1 improves one 
 - Goal:
   - stop pushing hot orientation/GPS/zoom/location state through `MapScreenRoot.kt` and the wide binding path
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapScreenHotPathEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenHotPathBindings.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapScreenHotPathEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenHotPathBindings.kt`
   - affected UI/runtime binding tests
 - Ownership/file split changes in this phase:
   - `MapScreenRoot.kt` becomes low-frequency screen assembly only
@@ -331,8 +331,8 @@ The full 4-part plan is required to reach the after-state. Phase 1 improves one 
 - Goal:
   - stop mutating overlay visibility/readiness/style state on every accepted update when nothing actually changed
 - Files to change:
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapPositionController.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapPositionController.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
   - affected overlay/port tests
 - Ownership/file split changes in this phase:
   - `BlueLocationOverlay.kt` becomes the sole decider for whether visibility/update calls are no-ops
@@ -352,13 +352,13 @@ The full 4-part plan is required to reach the after-state. Phase 1 improves one 
 - Goal:
   - if render-frame sync stays, make it render-driven rather than a perpetual frame loop that forces repaint
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/LocationManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/RenderFrameSync.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapReplaySnapshotControllers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/RenderFrameSync.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapReplaySnapshotControllers.kt`
   - any minimal runtime binding files needed to connect the render callback
   - affected render-sync tests
 - Ownership/file split changes in this phase:

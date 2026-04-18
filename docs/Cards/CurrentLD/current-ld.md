@@ -64,12 +64,12 @@ This is the one pilot-facing Current L/D number.
 
 New visible owner path:
 
-1. `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdCalculator.kt`
-2. `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdRepository.kt`
-3. `feature/map/src/main/java/com/example/xcpro/map/FlightDataUiAdapter.kt`
-4. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
-5. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
-6. `core/flight/src/main/java/com/example/xcpro/core/flight/RealTimeFlightData.kt`
+1. `feature/map-runtime/src/main/java/com/trust3/xcpro/currentld/PilotCurrentLdCalculator.kt`
+2. `feature/map-runtime/src/main/java/com/trust3/xcpro/currentld/PilotCurrentLdRepository.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataUiAdapter.kt`
+4. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
+5. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt`
+6. `core/flight/src/main/java/com/trust3/xcpro/core/flight/RealTimeFlightData.kt`
 7. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
 
 High-level behavior:
@@ -112,10 +112,10 @@ The visible card does not average instantaneous L/D values.
 
 That raw metric is still owned by:
 
-1. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
-2. `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
-3. `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
-4. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
+1. `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt`
+2. `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
+3. `feature/flight-runtime/src/main/java/com/trust3/xcpro/flightdata/FlightDisplayMapper.kt`
+4. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt`
 
 It remains available for diagnostics, replay verification, and degraded
 fallback inside the fused pilot metric path.
@@ -140,9 +140,9 @@ Wind is still a separate authoritative seam.
 
 Owners:
 
-- `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
-- `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt`
-- `feature/profile/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideRepository.kt`
+- `feature/flight-runtime/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
+- `feature/flight-runtime/src/main/java/com/trust3/xcpro/weather/wind/model/WindState.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/weather/wind/data/WindOverrideRepository.kt`
 
 Wind now affects the visible `ld_curr` card through the fused pilot metric:
 
@@ -156,10 +156,10 @@ Wind is still not patched into the old raw `currentLD` helper.
 
 Active-polar owner path remains:
 
-1. `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt`
-3. `core/common/src/main/java/com/example/xcpro/glider/PolarCalculator.kt`
-4. `core/common/src/main/java/com/example/xcpro/glider/GliderSpeedBounds.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/glider/PolarStillAirSinkProvider.kt`
+3. `core/common/src/main/java/com/trust3/xcpro/glider/PolarCalculator.kt`
+4. `core/common/src/main/java/com/trust3/xcpro/glider/GliderSpeedBounds.kt`
 
 Operative setup concepts:
 

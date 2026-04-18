@@ -24,11 +24,11 @@ This note answers two questions:
 Authoritative owners:
 
 - Glider model catalog:
-  - `core/common/src/main/java/com/example/xcpro/common/glider/GliderModels.kt`
+  - `core/common/src/main/java/com/trust3/xcpro/common/glider/GliderModels.kt`
 - Active selected model, effective model, fallback state, and per-profile glider config:
-  - `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt`
 - MacCready and Auto MC preferences:
-  - `feature/profile/src/main/java/com/example/xcpro/vario/LevoVarioPreferencesRepository.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/vario/LevoVarioPreferencesRepository.kt`
 
 Important split:
 
@@ -41,7 +41,7 @@ Important split:
 
 File:
 
-- `core/common/src/main/java/com/example/xcpro/common/glider/GliderModels.kt`
+- `core/common/src/main/java/com/trust3/xcpro/common/glider/GliderModels.kt`
 
 Current built-in sources:
 
@@ -60,7 +60,7 @@ Current catalog quality:
 
 File:
 
-- `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt`
 
 Stored per profile:
 
@@ -89,12 +89,12 @@ Important behavior:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/PolarSettingsScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/PolarAircraftSelectCard.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/PolarConfigCard.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/PolarThreePointPolarCard.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/PolarPreviewCard.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/PolarDetailsCard.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarAircraftSelectCard.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarConfigCard.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarThreePointPolarCard.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarPreviewCard.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarDetailsCard.kt`
 
 UI capabilities today:
 
@@ -113,7 +113,7 @@ UI capabilities today:
 
 File:
 
-- `feature/profile/src/main/java/com/example/xcpro/glider/GliderSpeedBounds.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderSpeedBounds.kt`
 
 Current priority:
 
@@ -131,7 +131,7 @@ Outputs:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/glider/PolarCalculator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/glider/PolarCalculator.kt`
 
 Current sink priority:
 
@@ -156,7 +156,7 @@ Important limitation:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/glider/StillAirSinkProvider.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/glider/StillAirSinkProvider.kt`
 
 This is the runtime entrypoint used by the flight pipeline:
 
@@ -167,7 +167,7 @@ This is the runtime entrypoint used by the flight pipeline:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt`
 
 Current behavior:
 
@@ -178,7 +178,7 @@ Current behavior:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculator.kt`
 
 Current behavior:
 
@@ -190,7 +190,7 @@ Current behavior:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/SpeedToFlyCalculator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SpeedToFlyCalculator.kt`
 
 Current behavior:
 
@@ -203,7 +203,7 @@ Current behavior:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
 
 Current outputs already carried in flight data:
 
@@ -219,7 +219,7 @@ Current outputs already carried in flight data:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/FlightDataSources.kt`
 
 Already mapped into `RealTimeFlightData`:
@@ -366,7 +366,7 @@ In practice this also means:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt`
 
 Current `currentLD` is:
 

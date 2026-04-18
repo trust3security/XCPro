@@ -108,9 +108,9 @@ Rules for this IP:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt` | authoritative runtime SSOT with live/replay gating | single runtime owner, read-only exposure, deterministic source gating | none |
-| `feature/map/src/main/java/com/example/xcpro/map/MapTrafficCoordinatorAdapters.kt` | narrow runtime adapter surface without leaking writable state | internal adapter / port shape with explicit mutation entrypoints | none |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` | already contains the intended task read seam | preserve `taskSnapshotFlow` as authority while narrowing bypasses | public direct reads will be removed |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt` | authoritative runtime SSOT with live/replay gating | single runtime owner, read-only exposure, deterministic source gating | none |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapTrafficCoordinatorAdapters.kt` | narrow runtime adapter surface without leaking writable state | internal adapter / port shape with explicit mutation entrypoints | none |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` | already contains the intended task read seam | preserve `taskSnapshotFlow` as authority while narrowing bypasses | public direct reads will be removed |
 
 ### 2.2D Boundary Moves
 
@@ -128,9 +128,9 @@ Rules for this IP:
 
 | Bypass Callsite / Pattern | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` route composition | reaches through `mapViewModel.runtimeDependencies.flightDataManager` | consume a narrow flight-management port or map-owned route contract | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataMgmt.kt` | direct `FlightDataManager` dependency in route surface | narrow read/action port owned by map shell | Phase 1 |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` public direct reads | cross-feature callers can read `currentTask` / `currentLeg` | `taskSnapshotFlow` or a snapshot wrapper | Phase 4 |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` route composition | reaches through `mapViewModel.runtimeDependencies.flightDataManager` | consume a narrow flight-management port or map-owned route contract | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataMgmt.kt` | direct `FlightDataManager` dependency in route surface | narrow read/action port owned by map shell | Phase 1 |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` public direct reads | cross-feature callers can read `currentTask` / `currentLeg` | `taskSnapshotFlow` or a snapshot wrapper | Phase 4 |
 | DI providers creating anonymous `CoroutineScope(...)` | lifetime hidden inside provider code | explicit named owner scope or caller-owned scope | Phase 2 |
 | Public convenience constructors with `NoOp` defaults | silently degraded production wiring | injected constructor only, plus internal/test builders | Phase 3 |
 
@@ -268,10 +268,10 @@ Stop `app` and non-map-shell callers from reaching through `MapScreenViewModel` 
 
 ### Primary Hotspots
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenRuntimeDependencies.kt`
-- `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataMgmt.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenRuntimeDependencies.kt`
+- `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataMgmt.kt`
 
 ### Changes
 
@@ -316,17 +316,17 @@ Eliminate hidden long-lived scopes and make lifetime ownership explicit, named, 
 
 ### Primary Hotspots
 
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/di/SensorFusionModule.kt`
-- `feature/livefollow/src/main/java/com/example/xcpro/livefollow/di/LiveFollowModule.kt`
-- `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/di/SensorFusionModule.kt`
+- `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/di/LiveFollowModule.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
 
 ### Secondary Audit Hotspots
 
-- `feature/map/src/main/java/com/example/xcpro/sensors/UnifiedSensorManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`
-- `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/UnifiedSensorManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/ReplayPipeline.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
 
 ### Changes
 
@@ -381,9 +381,9 @@ Close the production-reachable degraded wiring paths that allow mandatory behavi
 
 ### Primary Hotspots
 
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
 
 ### Changes
 
@@ -431,8 +431,8 @@ Turn the current "mostly disciplined" task contract into an enforced one.
 
 ### Primary Hotspots
 
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapTasksUseCase.kt`
 - any cross-feature consumer still reading task state directly
 
 ### Changes
@@ -483,7 +483,7 @@ Make the module boundary real instead of nominal.
 
 ### Current Cut (2026-04-06)
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapTasksUseCase.kt`
   is the first confirmed move candidate and is treated as map-shell code.
 - `TaskRenderSnapshot` remains in `feature:map-runtime` because runtime owners
   (`TaskRenderSyncCoordinator`, `MapCameraRuntimePort`) still consume it there.
@@ -546,7 +546,7 @@ already-correct replay/task/profile/traffic owners.
 
 ### Primary Hotspot
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
 
 ### Changes
 

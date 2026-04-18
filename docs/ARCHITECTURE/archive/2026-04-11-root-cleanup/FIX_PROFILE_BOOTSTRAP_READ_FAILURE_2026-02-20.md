@@ -12,9 +12,9 @@
 ### MISS-01 (Critical): read-error fallback is treated as real empty profile state
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:43`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:55`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:67`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:43`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:55`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:67`
 
 Problem:
 - `IOException` is converted to `emptyPreferences()` at storage boundary.
@@ -27,10 +27,10 @@ Impact:
 ### MISS-02 (Critical): hydration path can wipe active profile id during degraded read
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:51`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:82`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:92`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:104`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:51`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:82`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:92`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:104`
 
 Problem:
 - On degraded read, `profiles` can become empty and `resolvedId` becomes null.
@@ -43,9 +43,9 @@ Impact:
 ### MISS-03 (High): bootstrap error is collected but not used in startup gating or visible recovery UX
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt:50`
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt:103`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt:82`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileViewModel.kt:50`
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt:103`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionContent.kt:82`
 
 Problem:
 - `bootstrapError` exists in UI state but is not used in startup route decisions.
@@ -57,8 +57,8 @@ Impact:
 ### MISS-04 (High): profile settings route can auto-close during normal hydration window
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt:29`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt:35`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt:29`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt:35`
 
 Problem:
 - Route pops immediately when `profile == null`, without checking hydration completion.
@@ -69,7 +69,7 @@ Impact:
 ### MISS-05 (Medium): no regression tests for degraded-read + no-destructive-write contract
 
 Evidence:
-- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt`
 
 Problem:
 - Tests cover parse failure fallback, but not storage read errors after valid state.
@@ -81,10 +81,10 @@ Impact:
 ### MISS-06 (Critical): non-IOException read failures can permanently stall profile hydration
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:47`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:60`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:44`
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt:93`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:47`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:60`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:44`
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt:93`
 
 Problem:
 - Storage rethrows non-`IOException` failures from DataStore read flow.
@@ -97,11 +97,11 @@ Impact:
 ### MISS-07 (Critical): dual independent DataStore flows allow mixed snapshots and active-profile corruption
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:41`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt:53`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:45`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:51`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:85`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:41`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt:53`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:45`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:51`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:85`
 
 Problem:
 - `profilesJsonFlow` and `activeProfileIdFlow` are separate collectors over the same DataStore source.
@@ -114,9 +114,9 @@ Impact:
 ### MISS-08 (High): all-or-nothing parse has no post-parse validation for required profile fields
 
 Evidence:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt:72`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionList.kt:96`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionList.kt:107`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt:72`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionList.kt:96`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionList.kt:107`
 
 Problem:
 - Parsed `UserProfile` entries are accepted without validating required fields.
@@ -137,8 +137,8 @@ Changes:
 - Do not map read errors to semantic "empty data."
 
 Target files:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 ### Phase B: harden repository hydration to preserve last-known-good state
 
@@ -153,7 +153,7 @@ Changes:
 - Add top-level stream failure containment so non-IO flow failures do not stall hydration forever.
 
 Target files:
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 ### Phase C: fix startup and screen gating behavior
 
@@ -166,9 +166,9 @@ Changes:
   - only pop when hydrated and requested profile is confirmed missing.
 
 Target files:
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionContent.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt`
 
 ### Phase D: regression tests for missed cases
 
@@ -182,7 +182,7 @@ Add tests:
 - Profile settings route does not auto-close before hydration completes.
 
 Target files:
-- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt`
 - New UI/viewmodel tests under profile feature/app module as appropriate.
 
 ## 3) Acceptance Criteria
@@ -231,5 +231,5 @@ Additional pass hardening:
 ## 6) Verification Results (2026-02-20)
 
 Passed:
-- `./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileRepositoryTest"`
+- `./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.profiles.ProfileRepositoryTest"`
 - `./gradlew enforceRules testDebugUnitTest assembleDebug`

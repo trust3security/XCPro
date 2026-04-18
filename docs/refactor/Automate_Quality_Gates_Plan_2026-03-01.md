@@ -30,8 +30,8 @@ This plan is based on:
   - `scripts/arch_gate.py`
   - Update architecture governance docs listed in task brief
   - Confirm and document real time abstraction anchors:
-    - `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-    - `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+    - `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+    - `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 - Out of scope:
   - Broad feature behavior changes unrelated to quality gates/docs
   - Unrelated module refactors
@@ -296,8 +296,8 @@ Implemented artifacts:
 
 Clock/time abstraction anchors verified:
 
-- `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-- `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+- `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+- `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 Verification results:
 

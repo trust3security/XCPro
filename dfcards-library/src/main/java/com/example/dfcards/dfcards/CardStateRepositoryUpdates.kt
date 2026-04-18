@@ -5,8 +5,8 @@ import com.example.dfcards.CardStrings
 import com.example.dfcards.CardTimeFormatter
 import com.example.dfcards.dfcards.CardState
 import com.example.dfcards.dfcards.FlightData
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.core.flight.RealTimeFlightData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -215,3 +215,4 @@ private fun highlightColorFor(cardId: String, realData: RealTimeFlightData): Lon
         }
     }
 }
+

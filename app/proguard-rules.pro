@@ -20,5 +20,5 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 # Keep Hilt component names and members used reflectively by Hilt_XCProApplication.
--keep class com.example.xcpro.DaggerXCProApplication_HiltComponents_SingletonC { *; }
--keep class com.example.xcpro.DaggerXCProApplication_HiltComponents_SingletonC$* { *; }
+-keep class com.trust3.xcpro.DaggerXCProApplication_HiltComponents_SingletonC { *; }
+-keep class com.trust3.xcpro.DaggerXCProApplication_HiltComponents_SingletonC$* { *; }

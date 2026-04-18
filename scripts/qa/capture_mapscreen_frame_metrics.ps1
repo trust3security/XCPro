@@ -1,6 +1,6 @@
 param(
-    [string]$ApplicationId = "com.example.openxcpro.debug",
-    [string]$Activity = "com.example.xcpro.MainActivity",
+    [string]$ApplicationId = "com.trust3.xcpro.debug",
+    [string]$Activity = "com.trust3.xcpro.MainActivity",
     [int]$DurationSeconds = 60,
     [int]$SwipePauseMs = 350,
     [string]$OutputJsonPath,

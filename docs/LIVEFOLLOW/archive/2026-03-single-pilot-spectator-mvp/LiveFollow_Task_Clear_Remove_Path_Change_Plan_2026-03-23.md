@@ -64,19 +64,19 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt` | owns LiveFollow current-API request shape and dedupe state | keep wire-shape ownership transport-local | extend same endpoint with explicit clear payload |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSource.kt` | already clears watched task when read payload is null | reuse null-task watch behavior as the overlay-clear trigger | none |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt` | owns LiveFollow current-API request shape and dedupe state | keep wire-shape ownership transport-local | extend same endpoint with explicit clear payload |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSource.kt` | already clears watched task when read payload is null | reuse null-task watch behavior as the overlay-clear trigger | none |
 | `C:\\Users\\Asus\\AndroidStudioProjects\\XCPro_Server\\app\\main.py` current `task_upsert` + `build_live_response` | same deployed endpoint/read path | preserve revision-based current-state ownership | represent clear as a dedicated current revision instead of adding a new route |
 
 ### 2.2D File Ownership Plan
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/LiveFollowSessionRepository.kt` | Existing | session-owned pilot task upload/clear orchestration | task transport timing already lives here | avoid ViewModel or task-source side effects | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt` | Existing | current API upsert/clear wire mapping and dedupe | transport-local state already here | avoid repo/UI transport knowledge | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/transport/LiveFollowCurrentApiTaskMapper.kt` | Existing | request JSON mapping for task upsert/clear | closest owner for payload shape | keep JSON literals out of repo orchestration | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/data/session/*.kt` | Existing | client regressions for clear orchestration | closest owner | n/a | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSourceTest.kt` | Existing | watcher clear regression | closest owner | n/a | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/session/LiveFollowSessionRepository.kt` | Existing | session-owned pilot task upload/clear orchestration | task transport timing already lives here | avoid ViewModel or task-source side effects | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt` | Existing | current API upsert/clear wire mapping and dedupe | transport-local state already here | avoid repo/UI transport knowledge | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/transport/LiveFollowCurrentApiTaskMapper.kt` | Existing | request JSON mapping for task upsert/clear | closest owner for payload shape | keep JSON literals out of repo orchestration | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/data/session/*.kt` | Existing | client regressions for clear orchestration | closest owner | n/a | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSourceTest.kt` | Existing | watcher clear regression | closest owner | n/a | No |
 | `C:\\Users\\Asus\\AndroidStudioProjects\\XCPro_Server\\app\\main.py` | Existing | backend current API task clear persistence/read behavior | current deployed server is implemented here | no separate server route/module exists yet | No |
 | `C:\\Users\\Asus\\AndroidStudioProjects\\XCPro_Server\\app\\tests\\test_livefollow_api.py` | Existing | backend regression coverage | closest owner | n/a | No |
 | `docs/ARCHITECTURE/PIPELINE.md` | Existing | pipeline ownership update | required by repo rules | authoritative pipeline doc | No |

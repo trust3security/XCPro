@@ -1,0 +1,96 @@
+package com.trust3.xcpro.sensors.domain
+
+import com.trust3.xcpro.core.flight.calculations.BarometricAltitudeData
+import com.trust3.xcpro.core.flight.calculations.ConfidenceLevel
+import com.trust3.xcpro.core.flight.filters.ModernVarioResult
+import com.trust3.xcpro.common.flight.FlightMode
+import com.trust3.xcpro.external.ExternalInstrumentFlightSnapshot
+import com.trust3.xcpro.sensors.GPSData
+import com.trust3.xcpro.weather.wind.model.AirspeedSample
+import com.trust3.xcpro.weather.wind.model.WindState
+
+data class FlightMetricsRequest(
+    val gps: GPSData,
+    val currentTimeMillis: Long,
+    val wallTimeMillis: Long,
+    val gpsTimestampMillis: Long,
+    val deltaTimeSeconds: Double,
+    val varioResult: ModernVarioResult,
+    val varioGpsValue: Double,
+    val baroResult: BarometricAltitudeData?,
+    val windState: WindState?,
+    val externalAirspeedSample: AirspeedSample? = null,
+    val externalInstrumentSnapshot: ExternalInstrumentFlightSnapshot = ExternalInstrumentFlightSnapshot(),
+    val allowOnlineTerrainLookup: Boolean = true,
+    val varioValidUntil: Long,
+    val isFlying: Boolean,
+    val macCreadySetting: Double,
+    val autoMcEnabled: Boolean,
+    val teCompensationEnabled: Boolean = true,
+    val flightMode: FlightMode,
+    val isReplayMode: Boolean = false
+)
+
+data class FlightMetricsResult(
+    val baroAltitude: Double,
+    val qnh: Double,
+    val isQnhCalibrated: Boolean,
+    val pressureAltitude: Double,
+    val baroGpsDelta: Double?,
+    val baroConfidence: ConfidenceLevel,
+    val qnhCalibrationAgeSeconds: Long,
+    val bruttoVario: Double,
+    val verticalSpeed: Double,
+    val varioSource: String,
+    val varioValid: Boolean,
+    val teVario: Double?,
+    val navAltitude: Double,
+    val bruttoAverage30s: Double,
+    val bruttoAverage30sValid: Boolean,
+    val nettoAverage30s: Double,
+    val nettoAverage30sValid: Boolean = false,
+    val displayVario: Double,
+    val displayNeedleVario: Double,
+    val displayNeedleVarioFast: Double,
+    val displayBaselineVario: Double,
+    val displayNetto: Double,
+    val netto: Float,
+    val nettoValid: Boolean,
+    val indicatedAirspeedMs: Double,
+    val trueAirspeedMs: Double,
+    val airspeedSourceLabel: String,
+    val tasValid: Boolean,
+    val baselineVario: Double,
+    val baselineVarioValid: Boolean,
+    val thermalAverageCircle: Float,
+    val thermalAverage30s: Float,
+    val thermalAverageTotal: Float,
+    val thermalGain: Double,
+    val thermalGainValid: Boolean,
+    val currentThermalLiftRate: Double,
+    val currentThermalValid: Boolean,
+    val calculatedLD: Float,
+    val currentLDValid: Boolean = false,
+    val currentLDAir: Float = 0f,
+    val currentLDAirValid: Boolean = false,
+    val polarLdCurrentSpeed: Float,
+    val polarLdCurrentSpeedValid: Boolean = false,
+    val polarBestLd: Float,
+    val polarBestLdValid: Boolean = false,
+    val teAltitude: Double,
+    val isCircling: Boolean,
+    val isTurning: Boolean = false,
+    val thermalAverage30sValid: Boolean,
+    val levoNettoMs: Double,
+    val levoNettoValid: Boolean,
+    val levoNettoHasWind: Boolean,
+    val levoNettoHasPolar: Boolean,
+    val levoNettoConfidence: Double,
+    val autoMcMs: Double,
+    val autoMcValid: Boolean,
+    val speedToFlyIasMs: Double,
+    val speedToFlyDeltaMs: Double,
+    val speedToFlyValid: Boolean,
+    val speedToFlyMcSourceAuto: Boolean,
+    val speedToFlyHasPolar: Boolean
+)

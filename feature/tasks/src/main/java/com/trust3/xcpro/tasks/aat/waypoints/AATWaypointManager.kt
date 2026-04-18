@@ -1,0 +1,49 @@
+package com.trust3.xcpro.tasks.aat.waypoints
+
+import com.trust3.xcpro.common.waypoint.SearchWaypoint
+import com.trust3.xcpro.tasks.aat.SimpleAATTask
+import com.trust3.xcpro.tasks.aat.models.AATAssignedArea
+import com.trust3.xcpro.tasks.core.Task
+import java.time.Duration
+
+/**
+ * AAT waypoint operation facade.
+ */
+class AATWaypointManager {
+
+    fun initializeTask(waypoints: List<SearchWaypoint>): SimpleAATTask {
+        return AATWaypointInitializationSupport.initializeTask(waypoints)
+    }
+
+    fun initializeFromGenericWaypoints(genericWaypoints: List<com.trust3.xcpro.tasks.core.TaskWaypoint>): SimpleAATTask {
+        return AATWaypointInitializationSupport.initializeFromGenericWaypoints(genericWaypoints)
+    }
+
+    fun initializeFromCoreTask(task: Task): SimpleAATTask {
+        return AATWaypointInitializationSupport.initializeFromCoreTask(task)
+    }
+
+    fun addWaypoint(currentTask: SimpleAATTask, searchWaypoint: SearchWaypoint): SimpleAATTask {
+        return AATWaypointMutationSupport.addWaypoint(currentTask, searchWaypoint)
+    }
+
+    fun removeWaypoint(currentTask: SimpleAATTask, currentLeg: Int, index: Int): Pair<SimpleAATTask, Int> {
+        return AATWaypointMutationSupport.removeWaypoint(currentTask, currentLeg, index)
+    }
+
+    fun updateArea(currentTask: SimpleAATTask, index: Int, newArea: AATAssignedArea): SimpleAATTask {
+        return AATWaypointMutationSupport.updateArea(currentTask, index, newArea)
+    }
+
+    fun updateTimes(currentTask: SimpleAATTask, minTime: Duration, maxTime: Duration?): SimpleAATTask {
+        return AATWaypointMutationSupport.updateTimes(currentTask, minTime, maxTime)
+    }
+
+    fun reorderWaypoints(currentTask: SimpleAATTask, fromIndex: Int, toIndex: Int): SimpleAATTask {
+        return AATWaypointMutationSupport.reorderWaypoints(currentTask, fromIndex, toIndex)
+    }
+
+    fun replaceWaypoint(currentTask: SimpleAATTask, index: Int, newWaypoint: SearchWaypoint): SimpleAATTask {
+        return AATWaypointMutationSupport.replaceWaypoint(currentTask, index, newWaypoint)
+    }
+}

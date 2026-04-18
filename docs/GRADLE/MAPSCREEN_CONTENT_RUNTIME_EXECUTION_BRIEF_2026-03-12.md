@@ -95,9 +95,9 @@ current injected/viewmodel-backed UI layer.
 
 Modules/files touched in the first slice:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
 - new or updated traffic UI host files under
-  `feature/traffic/src/main/java/com/example/xcpro/map/ui/`
+  `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/`
 
 Boundary risk:
 
@@ -253,9 +253,9 @@ SSOT does not change. Ownership of the traffic UI runtime seam does.
   - add the traffic-owned runtime helper/host and switch
     `MapScreenContentRuntime.kt` to it
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
   - new or updated files under
-    `feature/traffic/src/main/java/com/example/xcpro/map/ui/`
+    `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/`
 - Tests:
   - update or add focused traffic UI tests only if compile fallout demands it
 - Exit criteria:

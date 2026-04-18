@@ -1,0 +1,11 @@
+package com.trust3.xcpro.adsb.metadata.domain
+
+import kotlinx.coroutines.flow.StateFlow
+
+interface AircraftMetadataRepository {
+    val metadataRevision: StateFlow<Long>
+    val lookupProgressRevision: StateFlow<Long>
+
+    suspend fun getMetadataFor(icao24s: List<String>): Map<String, AircraftMetadata>
+}
+

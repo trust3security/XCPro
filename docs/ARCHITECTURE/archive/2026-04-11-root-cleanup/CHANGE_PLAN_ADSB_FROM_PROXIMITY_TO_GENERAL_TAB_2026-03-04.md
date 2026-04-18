@@ -35,9 +35,9 @@
 ## 1A) Comprehensive Code Pass Findings (Current State)
 
 1) General root and Proximity ownership
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
   owns General grid tiles and local `GeneralSubSheet` transitions.
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
   defines `ProximitySettingsSheet` actions.
 
 2) ADS-b is currently nested under Proximity
@@ -45,9 +45,9 @@
 - `SettingsDfRuntime.kt` wires that action to `navController.navigate("adsb_settings")`.
 
 3) ADS-b route constant is not centralized
-- `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/navigation/SettingsRoutes.kt`
   does not currently define an ADS-b route constant.
-- `app/src/main/java/com/example/xcpro/AppNavGraph.kt` registers `"adsb_settings"` directly.
+- `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` registers `"adsb_settings"` directly.
 
 4) ADS-b settings architecture is already correct and must remain unchanged
 - UI: `AdsbSettingsScreen` + `AdsbSettingsViewModel`.
@@ -155,8 +155,8 @@ No change to:
 - Goal:
   - Remove raw ADS-b route strings from navigation wiring.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navigation/SettingsRoutes.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 - Tests to add/update:
   - route constant coverage in existing settings/navigation policy tests.
 - Exit criteria:
@@ -167,8 +167,8 @@ No change to:
 - Goal:
   - Move ADS-b entry from Proximity into General root tile grid.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
 - Required implementation quality:
   - Add dedicated General `ADS-b` tile/tab that navigates directly to ADS-b settings.
   - Remove `onOpenAdsb` plumbing from `ProximitySettingsSheet` and callsites.

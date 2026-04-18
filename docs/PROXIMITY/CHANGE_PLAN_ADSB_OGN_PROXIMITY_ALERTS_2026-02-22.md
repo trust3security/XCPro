@@ -157,8 +157,8 @@ After:
 - Goal:
   - Harden tests around current ownship-distance policy and fallback semantics.
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbProximityColorPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbGeoJsonMapperTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbProximityColorPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbGeoJsonMapperTest.kt`
 - Tests to add/update:
   - Boundary assertions around `2,000 m` and `5,000 m`.
   - Neutral fallback when ownship reference is unavailable.
@@ -171,12 +171,12 @@ After:
 - Goal:
   - Ensure ViewModel/details/docs clearly communicate ownship-relative semantics.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` (if selected-target source semantics need clarification)
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt` (optional label clarification)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` (if selected-target source semantics need clarification)
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt` (optional label clarification)
   - `docs/ADS-b/ADSB.md`
   - `docs/ARCHITECTURE/PIPELINE.md`
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt` ownship-source semantic checks.
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt` ownship-source semantic checks.
 - Exit criteria:
   - No OGN dependency in ADS-B proximity policy path.
   - Docs consistently describe ownship-only behavior.

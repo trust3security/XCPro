@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.tasks"
+    namespace = "com.trust3.xcpro.tasks"
     compileSdk = 35
 
     defaultConfig {

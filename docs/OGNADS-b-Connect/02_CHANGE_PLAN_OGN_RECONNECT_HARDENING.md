@@ -59,8 +59,8 @@ Confirm dependency flow remains: `UI -> domain -> data`
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt` | explicit offline waiting and resume | injected network port + pause-until-online seam | OGN uses socket stream, so waiting must wrap socket attempts and retry delays without forcing ADS-B's whole loop shape |
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt` | serialized runtime ownership | explicit writer ownership | do not put blocking socket `readLine()` on the same single writer lane |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt` | explicit offline waiting and resume | injected network port + pause-until-online seam | OGN uses socket stream, so waiting must wrap socket attempts and retry delays without forcing ADS-B's whole loop shape |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt` | serialized runtime ownership | explicit writer ownership | do not put blocking socket `readLine()` on the same single writer lane |
 
 ### 2.2B Boundary moves
 
@@ -80,14 +80,14 @@ Confirm dependency flow remains: `UI -> domain -> data`
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt` | existing | runtime SSOT + entrypoints | already owns OGN runtime | keep constructor/state ownership centralized | maybe |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt` | existing | connection loop and reconnect policy | current canonical owner | do not move policy into UI | maybe |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt` | existing | snapshot/state contract | canonical OGN model owner | map package only typealiases these models | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | existing | UI mapping only | current OGN/ADS-B indicator mapping | do not embed transport policy elsewhere | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt` | new | OGN domain port for network availability | mirrors ADS-B boundary pattern | runtime should not call Android APIs directly | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt` | new | OGN wait-until-online helper | keeps connection file focused | separate seam from socket loop | no |
-| `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt` | existing | OGN connection behavior tests | current seam tests live here | keep behavioral tests with runtime | maybe |
-| `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt` | new or existing | UI mapping lock tests | indicator semantics deserve direct tests | avoid indirect UI assertions via runtime tests | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt` | existing | runtime SSOT + entrypoints | already owns OGN runtime | keep constructor/state ownership centralized | maybe |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt` | existing | connection loop and reconnect policy | current canonical owner | do not move policy into UI | maybe |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt` | existing | snapshot/state contract | canonical OGN model owner | map package only typealiases these models | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | existing | UI mapping only | current OGN/ADS-B indicator mapping | do not embed transport policy elsewhere | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt` | new | OGN domain port for network availability | mirrors ADS-B boundary pattern | runtime should not call Android APIs directly | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt` | new | OGN wait-until-online helper | keeps connection file focused | separate seam from socket loop | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt` | existing | OGN connection behavior tests | current seam tests live here | keep behavioral tests with runtime | maybe |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt` | new or existing | UI mapping lock tests | indicator semantics deserve direct tests | avoid indirect UI assertions via runtime tests | no |
 
 ### 2.2E Module and API surface
 

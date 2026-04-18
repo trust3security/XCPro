@@ -20,18 +20,18 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.items
-import com.example.xcpro.profiles.ProfileViewModel
-import com.example.xcpro.profiles.ProfileExportDialog
-import com.example.xcpro.profiles.ProfileImportDialog
-import com.example.xcpro.profiles.ProfileImportResultDialog
-import com.example.xcpro.profiles.ProfileIdResolver
-import com.example.xcpro.profiles.UserProfile
-import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
+import com.trust3.xcpro.profiles.ProfileViewModel
+import com.trust3.xcpro.profiles.ProfileExportDialog
+import com.trust3.xcpro.profiles.ProfileImportDialog
+import com.trust3.xcpro.profiles.ProfileImportResultDialog
+import com.trust3.xcpro.profiles.ProfileIdResolver
+import com.trust3.xcpro.profiles.UserProfile
+import com.trust3.xcpro.screens.navdrawer.SettingsTopAppBar
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.profiles.ProfilesConfigViewModel
-import com.example.xcpro.profiles.ui.CreateProfileDialog
-import com.example.xcpro.profiles.ui.icon
+import com.trust3.xcpro.profiles.ProfilesConfigViewModel
+import com.trust3.xcpro.profiles.ui.CreateProfileDialog
+import com.trust3.xcpro.profiles.ui.icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

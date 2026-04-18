@@ -57,8 +57,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionCoordinator.kt` | focused ViewModel collaborator | narrow concern-specific coordinator | task shell seam depends on task runtime use case instead of profile/session dependencies |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenWeGlidePromptBridge.kt` | extracted screen-level adapter seam | keep ViewModel API stable while moving direct responsibility out | none |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionCoordinator.kt` | focused ViewModel collaborator | narrow concern-specific coordinator | task shell seam depends on task runtime use case instead of profile/session dependencies |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenWeGlidePromptBridge.kt` | extracted screen-level adapter seam | keep ViewModel API stable while moving direct responsibility out | none |
 
 ### 2.2B Boundary Moves
 
@@ -71,10 +71,10 @@
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` | Existing | canonical task + AAT edit-mode runtime read seam | task authority already lives here | not map-owned state | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt` | Existing | map-runtime read adapter over coordinator task/edit state | existing runtime task seam | not UI-specific | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenTaskShellCoordinator.kt` | New | focused map-shell adapter for task gesture creation and AAT edit forwarding | map screen VM seam | not task-core and not UI composable state | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` | Existing | screen state owner and orchestration only | screen ViewModel remains public shell contract | do not make the new coordinator a second ViewModel | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` | Existing | canonical task + AAT edit-mode runtime read seam | task authority already lives here | not map-owned state | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapTasksUseCase.kt` | Existing | map-runtime read adapter over coordinator task/edit state | existing runtime task seam | not UI-specific | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTaskShellCoordinator.kt` | New | focused map-shell adapter for task gesture creation and AAT edit forwarding | map screen VM seam | not task-core and not UI composable state | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` | Existing | screen state owner and orchestration only | screen ViewModel remains public shell contract | do not make the new coordinator a second ViewModel | No |
 
 ### 2.2E Module and API Surface
 

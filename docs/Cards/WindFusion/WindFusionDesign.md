@@ -129,7 +129,7 @@ SensorDataSource (raw flows)
 
 ## Migration plan
 Completed migration steps:
-1) Add data models (`GpsSample`, `PressureSample`, `AirspeedSample`, `HeadingSample`, `GLoadSample`, `WindState`) in `feature/map/src/main/java/com/example/xcpro/weather/wind/model`.
+1) Add data models (`GpsSample`, `PressureSample`, `AirspeedSample`, `HeadingSample`, `GLoadSample`, `WindState`) in `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model`.
 2) Extract wind math into use-cases: circling, EKF, store, selector (pure Kotlin, no Android).
 3) Create `WindSensorFusionRepository`:
    - Subscribe directly to sensor flows (`SensorDataSource`), not `CompleteFlightData`.

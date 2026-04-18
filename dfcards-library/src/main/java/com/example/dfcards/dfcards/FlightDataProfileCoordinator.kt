@@ -3,8 +3,8 @@ package com.example.dfcards.dfcards
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
-import com.example.xcpro.core.common.geometry.DensityScale
-import com.example.xcpro.core.common.geometry.IntSizePx
+import com.trust3.xcpro.core.common.geometry.DensityScale
+import com.trust3.xcpro.core.common.geometry.IntSizePx
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -66,3 +66,4 @@ internal class FlightDataProfileCoordinator(
         }
     }
 }
+

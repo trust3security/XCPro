@@ -59,18 +59,18 @@ P0 (must close first):
 
 P1 (confidence blocker):
 - Replace brittle source-text tests:
-  - `feature/map/src/test/java/com/example/xcpro/map/HotspotsOverlayPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/HotspotsOverlayPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
 
 P1 (determinism hardening):
 - Zone behavior contract and tests:
-  - `feature/map/src/main/java/com/example/xcpro/di/OgnThermalModule.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/OgnThermalModule.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
 
 P2 (flake and hygiene):
 - Remove sleep/wall-clock polling in:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
 - Cleanup temp/log artifact policy in:
   - `.gitignore`
   - local untracked temp output

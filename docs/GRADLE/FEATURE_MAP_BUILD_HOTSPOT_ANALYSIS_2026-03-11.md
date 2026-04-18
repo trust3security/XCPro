@@ -71,7 +71,7 @@ Measured from local source tree on 2026-03-11:
 - files containing `@HiltViewModel`: `29`
 - files containing `@Module`: `13`
 
-Top directory buckets under `feature/map/src/main/java/com/example/xcpro`:
+Top directory buckets under `feature/map/src/main/java/com/trust3/xcpro`:
 
 | Bucket | File count |
 |---|---:|
@@ -85,10 +85,10 @@ Top directory buckets under `feature/map/src/main/java/com/example/xcpro`:
 
 Large-file examples:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`: `494` lines
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`: `487` lines
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`: `483` lines
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntime.kt`: `475` lines
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`: `494` lines
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`: `487` lines
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`: `483` lines
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntime.kt`: `475` lines
 
 The module mixes:
 
@@ -110,7 +110,7 @@ compiles.
 
 `app` also imports map-owned types outside the screen entrypoint:
 
-- direct imports from `app/src/main/java` into `com.example.xcpro.map.*`: `22`
+- direct imports from `app/src/main/java` into `com.trust3.xcpro.map.*`: `22`
 - notable imports include:
   - `MapStyleRepository`
   - `QnhPreferencesRepository`

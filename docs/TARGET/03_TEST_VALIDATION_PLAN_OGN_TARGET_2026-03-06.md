@@ -56,11 +56,11 @@ Connected tests when available
 ## 4) Concrete tests to add/extend
 
 Preferences and startup
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
 - app startup reset tests for target keys (if reset policy selected).
 
 ViewModel/coordinator
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTrafficSelectionTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTrafficSelectionTest.kt`
 - add cases:
   - target selection persists independent of details-sheet selection
   - suppression-driven clear
@@ -72,11 +72,11 @@ ViewModel/coordinator
   - target-on auto-enables OGN overlay when required
 
 Details sheet
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnMarkerDetailsSheetTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnMarkerDetailsSheetTest.kt`
 - extend with target toggle output/visibility rules.
 
 Overlay runtime
-- extend `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
+- extend `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
 - add:
   - target line overlay lifecycle
   - ring layer lifecycle
@@ -85,8 +85,8 @@ Overlay runtime
   - style reload and detach coverage
 
 - add new tests:
-  - `feature/map/src/test/java/com/example/xcpro/map/OgnTargetLineOverlayTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/OgnTargetRingOverlayTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/OgnTargetLineOverlayTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/OgnTargetRingOverlayTest.kt`
 
 ## 5) Manual scenarios
 

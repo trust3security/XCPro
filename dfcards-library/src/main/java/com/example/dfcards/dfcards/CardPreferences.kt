@@ -12,9 +12,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import com.example.dfcards.dfcards.CardState
-import com.example.xcpro.core.common.logging.AppLogger
-import com.example.xcpro.core.time.Clock
-import com.example.xcpro.core.time.DefaultClockProvider
+import com.trust3.xcpro.core.common.logging.AppLogger
+import com.trust3.xcpro.core.time.Clock
+import com.trust3.xcpro.core.time.DefaultClockProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -440,3 +440,4 @@ class CardPreferences(
 
     enum class CardAnchor { TOP, BOTTOM }
 }
+

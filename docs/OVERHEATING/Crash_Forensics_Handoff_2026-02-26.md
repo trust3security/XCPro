@@ -3,7 +3,7 @@
 Date: 2026-02-26  
 Repository: `C:\Users\Asus\AndroidStudioProjects\XCPro`  
 Device: `SM-S908E` (`adb serial: R5CT2084XHN`)  
-App process analyzed: `com.example.openxcpro.debug` (and historical `com.example.xcpro.debug`)
+App process analyzed: `com.example.openxcpro.debug` (and historical `com.trust3.xcpro.debug`)
 
 ## 1) Executive Summary
 
@@ -98,27 +98,27 @@ Primary:
 
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/OpenMeteoElevationApi.kt` (line 121 in crash stacks)
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/SimpleAglCalculator.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt`
 
 Secondary pressure paths observed in stacks:
 
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/data/*`
-- Compose runtime/UI rendering (`feature/map/src/main/java/com/example/xcpro/map/ui/*`)
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/*`
+- Compose runtime/UI rendering (`feature/map/src/main/java/com/trust3/xcpro/map/ui/*`)
 
 Historical native risk areas:
 
-- `feature/map/src/main/java/com/example/xcpro/audio/VarioToneGenerator.kt`
-- `feature/map/src/main/java/com/example/xcpro/audio/VarioBeepController.kt`
-- map lifecycle/runtime (`feature/map/src/main/java/com/example/xcpro/map/*` + MapLibre integration)
+- `feature/map/src/main/java/com/trust3/xcpro/audio/VarioToneGenerator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/audio/VarioBeepController.kt`
+- map lifecycle/runtime (`feature/map/src/main/java/com/trust3/xcpro/map/*` + MapLibre integration)
 
 ## 8) Hardening Already Present in Current Working Tree
 
 The following mitigations already exist in this workspace branch:
 
 - AGL update coalescing worker (prevents pile-up):
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt`
 - Removal of duplicate AGL fetch path; flight-state now consumes SSOT AGL from `FlightDataRepository`:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt`
 - Bounded LRU elevation cache:
   - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/ElevationCache.kt`
 - Failed-fetch retry backoff in AGL calculator:
@@ -201,18 +201,18 @@ Additional code-pass findings after re-auditing the hot path and replay/wind/met
 3. Replay path still triggers AGL network updates (determinism and load risk)
 - Evidence:
   - AGL update is called unconditionally inside metrics use case:
-    - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:181`
+    - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:181`
   - `FlightMetricsRequest` currently has no replay/live flag:
-    - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:461`
+    - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:461`
   - Request creation in emitter has no replay discriminator:
-    - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt:74`
+    - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt:74`
 - Risk:
   - Replay sessions can continue to invoke live terrain fetch behavior, increasing request volume and violating deterministic replay expectations.
 
 4. ADS-B metadata on-demand retry map has no eviction policy
 - Evidence:
   - Long-lived retry state is stored in:
-    - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt:125`
+    - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt:125`
   - Entries are removed on success, but no periodic TTL prune/cap is present.
 - Risk:
   - In high-traffic sessions with many one-off ICAO misses, map growth can become unbounded and add background memory pressure.
@@ -220,24 +220,24 @@ Additional code-pass findings after re-auditing the hot path and replay/wind/met
 5. Audio stop/release race risk remains (historical native crash family alignment)
 - Evidence:
   - Beep loop writes audio continuously:
-    - `feature/map/src/main/java/com/example/xcpro/audio/VarioBeepController.kt:97`
+    - `feature/map/src/main/java/com/trust3/xcpro/audio/VarioBeepController.kt:97`
   - Stop cancels job but does not join completion before audio stop:
-    - `feature/map/src/main/java/com/example/xcpro/audio/VarioBeepController.kt:69`
+    - `feature/map/src/main/java/com/trust3/xcpro/audio/VarioBeepController.kt:69`
   - Tone generator operations (play/write/stop/release) are not synchronized:
-    - `feature/map/src/main/java/com/example/xcpro/audio/VarioToneGenerator.kt:196`
-    - `feature/map/src/main/java/com/example/xcpro/audio/VarioToneGenerator.kt:343`
+    - `feature/map/src/main/java/com/trust3/xcpro/audio/VarioToneGenerator.kt:196`
+    - `feature/map/src/main/java/com/trust3/xcpro/audio/VarioToneGenerator.kt:343`
   - Engine release triggers stop/release sequence while loops may still be unwinding:
-    - `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt:354`
+    - `feature/map/src/main/java/com/trust3/xcpro/audio/VarioAudioEngine.kt:354`
 - Risk:
   - Concurrent `AudioTrack` write vs stop/release can trigger native instability (matches historical `AUDIO_NATIVE` tombstone family).
 
 6. Map scale-bar listener lifecycle is not detached
 - Evidence:
   - Attach gate is one-way and not reset:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapScaleBarController.kt:25`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapScaleBarController.kt:33`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapScaleBarController.kt:25`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapScaleBarController.kt:33`
   - Listener is added once via anonymous callback:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapScaleBarController.kt:35`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapScaleBarController.kt:35`
   - No corresponding `removeOnLayoutChangeListener(...)` path exists in map lifecycle cleanup.
 - Risk:
   - Stale callbacks across map/runtime churn can target outdated map/mapView state, and new map instances may miss listener re-attach after lifecycle churn.
@@ -245,13 +245,13 @@ Additional code-pass findings after re-auditing the hot path and replay/wind/met
 7. Airspace GeoJSON cache can grow without bound
 - Evidence:
   - Repository-level static caches are mutable maps with no cap/TTL:
-    - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt:41`
-    - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt:42`
+    - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt:41`
+    - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt:42`
   - GeoJSON cache key includes class-selection hash, and each miss stores full GeoJSON payload:
-    - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt:174`
-    - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt:184`
+    - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt:174`
+    - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt:184`
   - Existing prune only removes old `lastModified` entries for the same file; old selection variants remain:
-    - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt:181`
+    - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt:181`
 - Risk:
   - Repeated airspace class/filter changes can accumulate large GeoJSON strings in-process and increase long-session heap pressure.
 

@@ -80,7 +80,7 @@ Required behavior:
 
 Primary file:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficSelectedGroupFanoutLayout.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficSelectedGroupFanoutLayout.kt`
 
 ### 2) Build ADS-B packed-group seeds from the actual renderable target set
 
@@ -104,8 +104,8 @@ Required behavior:
 
 Primary files:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
 
 ### 3) Exclude non-visible OGN traffic from packed-group election
 
@@ -128,8 +128,8 @@ Required behavior:
 
 Primary files:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
 
 ---
 
@@ -180,12 +180,12 @@ No new bypasses.
 
 Reuse existing owners and tests where possible:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficPackedGroupLabelControl.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficSelectedGroupFanoutLayout.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/TrafficPackedGroupLabelControlTest.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/TrafficSelectedGroupFanoutLayoutTest.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficOverlayFeatureTargetsTest.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/AdsbTrafficOverlayFeatureProjectionTest.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficPackedGroupLabelControl.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficSelectedGroupFanoutLayout.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/TrafficPackedGroupLabelControlTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/TrafficSelectedGroupFanoutLayoutTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureTargetsTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/AdsbTrafficOverlayFeatureProjectionTest.kt`
 
 Prefer the smallest safe patch over a shared-architecture rewrite.
 
@@ -193,12 +193,12 @@ Prefer the smallest safe patch over a shared-architecture rewrite.
 
 ## Likely Files To Touch
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficSelectedGroupFanoutLayout.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
-- targeted tests under `feature/traffic/src/test/java/com/example/xcpro/map/`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficSelectedGroupFanoutLayout.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- targeted tests under `feature/traffic/src/test/java/com/trust3/xcpro/map/`
 
 If a helper is needed, keep it small and purpose-specific.
 

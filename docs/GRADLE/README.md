@@ -52,7 +52,7 @@ The local speed scripts now default to compile-only loops:
 To add tests, pass Gradle args explicitly:
 
 ```bat
-check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
+check-quick.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelTest"
 ```
 
 ## What the measurements say
@@ -117,10 +117,10 @@ ownership intact.
 
 Best first target:
 
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsAdsb.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsAdsb.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt`
 - related support/config classes already being split around the traffic runtime
 
 Why this first:

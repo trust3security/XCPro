@@ -33,8 +33,8 @@ Implementation update (2026-02-18, pass #1):
   - AAT target-point autosave in `AATTaskManager.updateTargetPoint`.
   - Duplicate catch cleanup in `RacingMapRenderer`.
 - Added tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskFilesUseCaseCupImportTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/tasks/domain/TaskRepositoryTargetStateTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskFilesUseCaseCupImportTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/domain/TaskRepositoryTargetStateTest.kt`
 - Remaining high-risk gaps (still open):
   - rollout cleanup plan for residual legacy `cup_tasks` files after migration
   - share-flow instrumentation coverage for multi-document chooser path
@@ -47,8 +47,8 @@ Implementation update (2026-02-18, pass #2):
   - Sparse target snapshot handling fixed: serializer now resolves snapshots by `index` and `id` (with positional fallback for compatibility).
   - Legacy duplicate QR/file path retired by deleting `TaskQRGenerator.kt` and routing preview/share through canonical QR dialog flow.
 - Added tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskPersistSerializerFidelityTest.kt`
-  - extended `feature/map/src/test/java/com/example/xcpro/tasks/TaskFilesUseCaseCupImportTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskPersistSerializerFidelityTest.kt`
+  - extended `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskFilesUseCaseCupImportTest.kt`
 
 Implementation update (2026-02-18, pass #3):
 - Implemented now:
@@ -64,9 +64,9 @@ Implementation update (2026-02-18, pass #3):
     - removed random fallback IDs in `TaskPersistenceAdapters`.
     - fallback ID now derives deterministically from waypoint fingerprint.
 - Added tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskFilesUseCaseShareRequestTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskStoragePartitioningTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdaptersDeterministicIdTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskFilesUseCaseShareRequestTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskStoragePartitioningTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdaptersDeterministicIdTest.kt`
 
 Implementation update (2026-02-18, pass #4):
 - Implemented now:
@@ -75,9 +75,9 @@ Implementation update (2026-02-18, pass #4):
   - Added explicit coverage for racing/AAT CUP storage write/read failure handling.
   - Added explicit coverage for `TaskFilesViewModel` share failure mapping (null request + thrown exception).
 - Added tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskFilesRepositoryFailureTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskStorageFailureModesTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskFilesViewModelFailureResilienceTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskFilesRepositoryFailureTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskStorageFailureModesTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskFilesViewModelFailureResilienceTest.kt`
 
 Implementation update (2026-02-18, pass #5):
 - Implemented now:
@@ -87,31 +87,31 @@ Implementation update (2026-02-18, pass #5):
     - migration is bounded via per-storage migration flags in existing task prefs
   - Migration remains non-destructive on ambiguous collisions and keeps legacy fallback readable.
 - Updated tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskStoragePartitioningTest.kt` now validates legacy->scoped migration side effects
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskStorageFailureModesTest.kt` now clears migration prefs for deterministic isolation
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskStoragePartitioningTest.kt` now validates legacy->scoped migration side effects
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskStorageFailureModesTest.kt` now clears migration prefs for deterministic isolation
 
 Implementation update (2026-02-18, pass #6):
 - Implemented now:
   - Added instrumentation coverage for canonical multi-document share dispatch:
-    - `app/src/androidTest/java/com/example/xcpro/TaskFilesShareInstrumentedTest.kt`
+    - `app/src/androidTest/java/com/trust3/xcpro/TaskFilesShareInstrumentedTest.kt`
   - Device-level validation confirms one chooser event wrapping a single `ACTION_SEND_MULTIPLE` payload with URI grant flags.
 - Verification:
-  - `./gradlew --% :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.TaskFilesShareInstrumentedTest`: PASS
+  - `./gradlew --% :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.TaskFilesShareInstrumentedTest`: PASS
 
 Implementation update (2026-02-18, pass #7):
 - Implemented now:
   - Added strict residual legacy cleanup policy after dual migration completion:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/LegacyCupStorageCleanupPolicy.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/LegacyCupStorageCleanupPolicy.kt`
   - Racing/AAT storage migrations now invoke cleanup policy after migration and on subsequent runs.
   - Policy behavior:
     - delete legacy duplicates that match scoped files,
     - archive unresolved legacy leftovers to `filesDir/cup_tasks/legacy_archive`,
     - mark cleanup complete only when no legacy root `.cup` files remain.
 - Updated tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskStoragePartitioningTest.kt` now validates residual conflict archival sequencing.
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskStorageFailureModesTest.kt` now clears cleanup policy prefs for deterministic isolation.
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskStoragePartitioningTest.kt` now validates residual conflict archival sequencing.
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskStorageFailureModesTest.kt` now clears cleanup policy prefs for deterministic isolation.
 - Verification:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskStoragePartitioningTest" --tests "com.example.xcpro.tasks.TaskStorageFailureModesTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskStoragePartitioningTest" --tests "com.trust3.xcpro.tasks.TaskStorageFailureModesTest"`: PASS
 
 Implementation update (2026-02-18, pass #12):
 - Implemented now:
@@ -121,9 +121,9 @@ Implementation update (2026-02-18, pass #12):
     - removed `printStackTrace()` usage from task map render/edit paths,
     - replaced with bounded debug-only `Log.w` diagnostics (`BuildConfig.DEBUG` gated, no stack dumps).
 - Updated tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/TaskManagerCoordinatorTest.kt` now verifies task-argument distance computation path.
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskManagerCoordinatorTest.kt` now verifies task-argument distance computation path.
 - Verification:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest"`: PASS
   - `./gradlew enforceRules testDebugUnitTest assembleDebug`: PASS
 
 Implementation update (2026-02-18, pass #13):
@@ -136,10 +136,10 @@ Implementation update (2026-02-18, pass #13):
     - `TaskSheetViewModel` import waypoint application no longer calls nested `mutate`/`sync` cycles per waypoint,
     - import now batches coordinator waypoint adds and commits a single final sync refresh.
 - Added tests:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/domain/TaskRepositoryProjectionComplianceTest.kt`
-  - extended `feature/map/src/test/java/com/example/xcpro/tasks/TaskSheetViewModelImportTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/domain/TaskRepositoryProjectionComplianceTest.kt`
+  - extended `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskSheetViewModelImportTest.kt`
 - Verification:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.tasks.domain.TaskRepositoryProjectionComplianceTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.tasks.domain.TaskRepositoryProjectionComplianceTest"`: PASS
   - `./gradlew enforceRules testDebugUnitTest assembleDebug`: PASS
 
 Deep-pass refresh (2026-02-18, pass #11):
@@ -150,14 +150,14 @@ Deep-pass refresh (2026-02-18, pass #11):
 - Newly confirmed residuals (non-blocking for task-files release gate):
   1. `P2` API contract ambiguity remains:
      - `TaskManagerCoordinator.calculateTaskDistanceForTask(task)` ignores the `task` argument and uses current delegate state only
-       (`feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt:207`).
+       (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt:207`).
      - No production callsites found; current usage is test-only.
   2. `P2` Runtime exception logging debt remains in task renderers:
      - `printStackTrace()` still appears in map/task rendering/overlay code paths:
-       - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingMapRenderer.kt`
-       - `feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATMapRenderer.kt`
-       - `feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATTaskRenderer.kt`
-       - `feature/map/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditOverlayRenderer.kt`
+       - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingMapRenderer.kt`
+       - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATMapRenderer.kt`
+       - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATTaskRenderer.kt`
+       - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/interaction/AATEditOverlayRenderer.kt`
 - Release impact assessment:
   - task-files hardening gate remains release-ready (`HIGH`) for import/export/share/migration/cleanup behavior.
   - residuals were targeted in follow-up implementation pass #12.
@@ -167,10 +167,10 @@ Deep-pass refresh (2026-02-18, pass #11):
 - Problem statement:
   - Task file import/export and task-state projection are inconsistent across layers; several risky paths are weakly tested.
   - Key findings:
-    - `.cup` import in files tab resolves by display name into named-task persistence instead of the selected document URI (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:29`).
-    - Serializer claims full-fidelity but drops waypoint custom fields and uses default OZ params (`feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt:14`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt:25`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt:50`).
-    - Repository domain projection ignores waypoint role/custom geometry and rewrites role by index (`feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:86`).
-    - JSON import success is emitted before apply/parse confirmation (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:51`).
+    - `.cup` import in files tab resolves by display name into named-task persistence instead of the selected document URI (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:29`).
+    - Serializer claims full-fidelity but drops waypoint custom fields and uses default OZ params (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt:14`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt:25`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt:50`).
+    - Repository domain projection ignores waypoint role/custom geometry and rewrites role by index (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:86`).
+    - JSON import success is emitted before apply/parse confirmation (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:51`).
 - Why now:
   - Current behavior can silently import wrong tasks, lose custom geometry/targets, and overstate release confidence.
 - In scope:
@@ -188,121 +188,121 @@ Deep-pass refresh (2026-02-18, pass #11):
 Severity uses `P0` (release blocker), `P1` (high), `P2` (medium).
 
 1. `P0` CUP import contract mismatch in Files tab.
-   - `TaskFilesUseCase.importTaskFile` routes `.cup` import by display name into named-task persistence, not selected URI content (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:29`).
-   - Racing/AAT CUP parsers only parse quoted waypoint rows (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:183`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:240`), while `taskToCup` writes unquoted rows (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:130`).
+   - `TaskFilesUseCase.importTaskFile` routes `.cup` import by display name into named-task persistence, not selected URI content (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:29`).
+   - Racing/AAT CUP parsers only parse quoted waypoint rows (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:183`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:240`), while `taskToCup` writes unquoted rows (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:130`).
 
 2. `P0` CSV/CUP robustness is unsafe for commas and quoting.
-   - Parsers split by raw comma (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:185`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:241`) and are not CSV-quote aware.
-   - Writers do not consistently quote/escape user text fields (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:130`).
+   - Parsers split by raw comma (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:185`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:241`) and are not CSV-quote aware.
+   - Writers do not consistently quote/escape user text fields (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:130`).
 
 3. `P1` Locale-sensitive numeric formatting in task file writers.
-   - Default-locale `String.format` is used for lat/lon serialization in CUP writers (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:140`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:147`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:150`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:155`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:203`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:208`).
+   - Default-locale `String.format` is used for lat/lon serialization in CUP writers (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:140`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:147`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:150`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:155`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:203`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:208`).
 
 4. `P0` Main-thread I/O risk on export/share/import-adjacent paths.
-   - ViewModel calls sync export/share use-case methods from `viewModelScope.launch` (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:92`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:103`).
-   - Repository methods performing resolver/file writes are non-suspending (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:82`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:160`).
+   - ViewModel calls sync export/share use-case methods from `viewModelScope.launch` (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:92`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:103`).
+   - Repository methods performing resolver/file writes are non-suspending (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:82`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:160`).
 
 5. `P0` JSON import success and failure semantics are incorrect.
-   - Success toast is emitted before JSON apply/parse outcome (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:51`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:52`).
-   - UI event handler directly calls `taskViewModel.importPersistedTask(event.json)` with no local failure guard (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt:88`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt:89`).
+   - Success toast is emitted before JSON apply/parse outcome (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:51`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:52`).
+   - UI event handler directly calls `taskViewModel.importPersistedTask(event.json)` with no local failure guard (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt:88`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt:89`).
 
 6. `P0` Import/serializer fidelity gaps remain.
-   - Serializer writes default OZ values instead of preserving waypoint custom OZ payload (`feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt:50`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt:51`).
-   - `toTask` forces task id `"imported"` and `allowsTarget = true` on all snapshots (`feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt:69`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt:97`).
-   - Import path adds waypoints through `SearchWaypoint` projection, dropping persisted role/custom fields before partial re-application (`feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:245`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:248`).
+   - Serializer writes default OZ values instead of preserving waypoint custom OZ payload (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt:50`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt:51`).
+   - `toTask` forces task id `"imported"` and `allowsTarget = true` on all snapshots (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt:69`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt:97`).
+   - Import path adds waypoints through `SearchWaypoint` projection, dropping persisted role/custom fields before partial re-application (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:245`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:248`).
 
 7. `P1` Target lock semantics are effectively non-functional.
-   - Lock control exists in UI (`feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTargetControls.kt:59`) but lock state is not used to gate target recomputation in repository update flow (`feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:131`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:136`).
+   - Lock control exists in UI (`feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTargetControls.kt:59`) but lock state is not used to gate target recomputation in repository update flow (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:131`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:136`).
 
 8. `P1` Task-type persistence contamination remains.
-   - Racing lists all `.cup` files from shared `cup_tasks` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:56`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:62`).
-   - AAT list uses filename contains `AAT` heuristic in same directory (`feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:82`).
+   - Racing lists all `.cup` files from shared `cup_tasks` (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:56`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:62`).
+   - AAT list uses filename contains `AAT` heuristic in same directory (`feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:82`).
 
 9. `P1` Determinism drift from random fallback IDs across adapters.
-   - Persistence adapters and file parsers still generate random fallback IDs (`feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:178`, `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:279`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:199`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:259`).
+   - Persistence adapters and file parsers still generate random fallback IDs (`feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:178`, `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:279`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:199`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:259`).
 
 10. `P2` Legacy duplicate QR path still diverges from main import/share path.
-   - Legacy QR serializer path omits targets (`feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt:198`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt:201`).
-   - Legacy QR share path starts chooser from IO dispatcher (`feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt:220`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt:242`).
+   - Legacy QR serializer path omits targets (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskQRGenerator.kt:198`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskQRGenerator.kt:201`).
+   - Legacy QR share path starts chooser from IO dispatcher (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskQRGenerator.kt:220`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskQRGenerator.kt:242`).
 
 11. `P2` Share flow emits one chooser event per generated file.
-   - `TaskFilesViewModel.shareTask` emits `TaskFilesEvent.Share` for each request (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:108`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:109`), causing repeated chooser UX instead of a single combined intent.
+   - `TaskFilesViewModel.shareTask` emits `TaskFilesEvent.Share` for each request (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:108`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:109`), causing repeated chooser UX instead of a single combined intent.
 
 12. `P2` Import sequencing does redundant nested sync cycles.
-   - `TaskSheetViewModel.importPersistedTask` wraps import in `mutate` while `importWaypoints` calls `onAddWaypoint`, which itself calls `mutate` (`feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:163`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:245`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:52`).
+   - `TaskSheetViewModel.importPersistedTask` wraps import in `mutate` while `importWaypoints` calls `onAddWaypoint`, which itself calls `mutate` (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:163`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:245`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:52`).
 
 13. `P0` Racing/AAT CUP save->load compatibility is likely broken by own parser contract.
-   - Writers emit a quoted task metadata row with empty lat/lon (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:142`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:195`).
-   - Parsers accept any quoted non-header row and immediately parse coords (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:183`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:189`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:240`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:245`), so metadata row can trigger parse failure.
-   - Both parse methods swallow at function scope and return null/empty on exception (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:218`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:273`).
+   - Writers emit a quoted task metadata row with empty lat/lon (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:142`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:195`).
+   - Parsers accept any quoted non-header row and immediately parse coords (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:183`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:189`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:240`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:245`), so metadata row can trigger parse failure.
+   - Both parse methods swallow at function scope and return null/empty on exception (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:218`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:273`).
 
 14. `P0` Canonical Files export/share paths still drop target snapshots.
-   - `TaskFilesUseCase` serializes with `targets = emptyList()` for export and share (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:55`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:82`), despite serializer supporting targets.
+   - `TaskFilesUseCase` serializes with `targets = emptyList()` for export and share (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:55`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:82`), despite serializer supporting targets.
 
 15. `P1` Risky file persistence paths are effectively untested.
    - No direct unit/instrumentation coverage found for `RacingTaskStorage.save/load CUP`, `AATTaskFileIO.save/load CUP`, or `TaskFilesUseCase` import/export/share paths.
 
 16. `P2` Additional production logging debt in task/map runtime paths.
-   - Widespread `printStackTrace()` and verbose logs in task map runtime/render code (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingMapRenderer.kt:123`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATMapRenderer.kt:68`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditOverlayRenderer.kt:34`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt:21`).
+   - Widespread `printStackTrace()` and verbose logs in task map runtime/render code (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingMapRenderer.kt:123`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATMapRenderer.kt:68`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/interaction/AATEditOverlayRenderer.kt:34`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt:21`).
 
 17. `P2` API contract bug in coordinator distance helper.
-   - `TaskManagerCoordinator.calculateTaskDistanceForTask(task)` ignores the passed `task` parameter and calculates from current delegate state only (`feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt:207`).
+   - `TaskManagerCoordinator.calculateTaskDistanceForTask(task)` ignores the passed `task` parameter and calculates from current delegate state only (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt:207`).
 
 18. `P0` Active-leg regression on target edits.
-   - `TaskRepository.updateFrom` defaults `activeIndex` to `0` (`feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:41`).
-   - `setTargetParam` / `toggleTargetLock` / `setTargetLock` call `updateFrom` without passing current active leg (`feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:213`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:222`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:230`).
-   - `TaskSheetViewModel` target edit actions do not call full `sync()` after use-case mutation (`feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:68`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:73`), so UI can observe index reset to `0`.
+   - `TaskRepository.updateFrom` defaults `activeIndex` to `0` (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:41`).
+   - `setTargetParam` / `toggleTargetLock` / `setTargetLock` call `updateFrom` without passing current active leg (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:213`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:222`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:230`).
+   - `TaskSheetViewModel` target edit actions do not call full `sync()` after use-case mutation (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:68`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:73`), so UI can observe index reset to `0`.
 
 19. `P1` CUP latitude formatting mismatch for low-latitude waypoints.
-   - Racing/AAT storage writers do not zero-pad latitude degrees (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:150`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:203`).
-   - Parsers assume fixed two-digit latitude degrees (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:228`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:289`).
+   - Racing/AAT storage writers do not zero-pad latitude degrees (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:150`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:203`).
+   - Parsers assume fixed two-digit latitude degrees (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:228`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:289`).
 
 20. `P1` Main-thread blocking risk extends through named-task load chain.
-   - Files import invokes `taskManager.loadTask` from UI coroutine (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:29`).
-   - Load chain traverses sync file I/O adapters without enforced dispatcher switch (`feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt:236`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt:59`, `feature/map/src/main/java/com/example/xcpro/tasks/domain/persistence/TaskEnginePersistenceService.kt:53`, `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:83`, `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:118`).
+   - Files import invokes `taskManager.loadTask` from UI coroutine (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:29`).
+   - Load chain traverses sync file I/O adapters without enforced dispatcher switch (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt:236`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt:59`, `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/persistence/TaskEnginePersistenceService.kt:53`, `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:83`, `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt:118`).
 
 21. `P1` Import exception handling can cancel event pipelines.
-   - Files tab event collector calls `taskViewModel.importPersistedTask` directly (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt:88`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt:89`).
-   - `importPersistedTask` does not guard deserialize/toTask exceptions (`feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:163`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:165`).
-   - QR scan flow also invokes `onImportJson(decoded)` without local protection (`feature/map/src/main/java/com/example/xcpro/tasks/QrTaskDialogs.kt:55`).
+   - Files tab event collector calls `taskViewModel.importPersistedTask` directly (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt:88`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt:89`).
+   - `importPersistedTask` does not guard deserialize/toTask exceptions (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:163`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:165`).
+   - QR scan flow also invokes `onImportJson(decoded)` without local protection (`feature/map/src/main/java/com/trust3/xcpro/tasks/QrTaskDialogs.kt:55`).
 
 22. `P2` Potential MediaStore pending-row leak on write failure.
-   - `saveToDownloads` sets `IS_PENDING = 1` then returns `null` on `openOutputStream` failure without clearing/deleting the pending row (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:98`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:105`).
+   - `saveToDownloads` sets `IS_PENDING = 1` then returns `null` on `openOutputStream` failure without clearing/deleting the pending row (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:98`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:105`).
 
 23. `P2` Encoding determinism not explicit in task file writes.
-   - Multiple write paths rely on platform default charset (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:104`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:121`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:163`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:85`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:113`).
+   - Multiple write paths rely on platform default charset (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:104`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:121`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:163`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:85`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:113`).
 
 24. `P2` Dead/duplicate preview+QR path still present.
-   - `TaskPreviewContent` appears unreferenced (definition-only hit) while wiring legacy QR dialog + task files event handling (`feature/map/src/main/java/com/example/xcpro/tasks/TaskBottomSheetComponents.kt:51`).
+   - `TaskPreviewContent` appears unreferenced (definition-only hit) while wiring legacy QR dialog + task files event handling (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskBottomSheetComponents.kt:51`).
 
 25. `P2` Duplicate exception catch in racing map renderer.
-   - Duplicate `catch (e: Exception)` blocks in course-line render path (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingMapRenderer.kt:278`, `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingMapRenderer.kt:280`).
+   - Duplicate `catch (e: Exception)` blocks in course-line render path (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingMapRenderer.kt:278`, `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingMapRenderer.kt:280`).
 
 26. `P2` Target memory map lifecycle is unbounded.
-   - `targetStateById` accumulates by waypoint id (`feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:33`) with no pruning when tasks are cleared/replaced/waypoints removed.
+   - `targetStateById` accumulates by waypoint id (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:33`) with no pruning when tasks are cleared/replaced/waypoints removed.
 
 27. `P1` Export/share flows have unguarded exception paths.
-   - `TaskFilesViewModel` calls use-case import/export/share operations without `runCatching` protection (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:49`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:93`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt:104`).
-   - Use-case export/share path performs direct file writes that can throw (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:59`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:60`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:86`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:89`).
-   - Repository write methods do raw stream/file writes without local failure mapping (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:104`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:121`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:163`).
+   - `TaskFilesViewModel` calls use-case import/export/share operations without `runCatching` protection (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:49`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:93`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt:104`).
+   - Use-case export/share path performs direct file writes that can throw (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:59`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:60`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:86`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:89`).
+   - Repository write methods do raw stream/file writes without local failure mapping (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:104`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:121`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:163`).
 
 28. `P1` AAT target-point mutations are not autosaved.
-   - `AATTaskManager.updateTargetPoint` mutates `_currentAATTask` but does not call `saveAATTask()` (`feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt:338`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt:342`).
-   - Target updates are triggered from normal UI flows (`feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:241`), so restart/recovery can lose edited target points.
+   - `AATTaskManager.updateTargetPoint` mutates `_currentAATTask` but does not call `saveAATTask()` (`feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt:338`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt:342`).
+   - Target updates are triggered from normal UI flows (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:241`), so restart/recovery can lose edited target points.
 
 29. `P1` Target memory aliases repeated waypoint IDs across distinct legs.
-   - Target state is keyed only by waypoint id (`feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:33`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:105`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt:212`).
-   - Add-waypoint flows preserve source waypoint ids (duplicates allowed) (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointManager.kt:28`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/waypoints/AATWaypointMutationSupport.kt:140`).
+   - Target state is keyed only by waypoint id (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:33`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:105`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt:212`).
+   - Add-waypoint flows preserve source waypoint ids (duplicates allowed) (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointManager.kt:28`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/waypoints/AATWaypointMutationSupport.kt:140`).
    - Editing one repeated waypoint can overwrite target/lock state for another repeated occurrence.
 
 30. `P1` Canonical CUP exporter role encoding mismatches current parsers.
-   - `TaskFilesUseCase.taskToCup` encodes `code` as numeric index and role via `style` (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:115`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:120`, `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:130`).
-   - Racing/AAT parsers derive role from `code` string (`START`/`FINISH`) and ignore `style` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:193`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:249`).
+   - `TaskFilesUseCase.taskToCup` encodes `code` as numeric index and role via `style` (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:115`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:120`, `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:130`).
+   - Racing/AAT parsers derive role from `code` string (`START`/`FINISH`) and ignore `style` (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:193`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:249`).
    - Exported CUP role fidelity will degrade on parser-driven re-import.
 
 31. `P2` Charset determinism is not explicit on task file reads.
-   - URI text read path relies on platform-default charset (`feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt:76`).
-   - Racing/AAT CUP file reads rely on default charset (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt:102`, `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:135`).
+   - URI text read path relies on platform-default charset (`feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt:76`).
+   - Racing/AAT CUP file reads rely on default charset (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt:102`, `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt:135`).
 
 ## 2) Architecture Contract
 
@@ -341,10 +341,10 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:29` | File import bypasses document URI and loads named persisted task | Parse/import from selected `DocumentRef` content | Phase 1-2 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt:89` | UI directly applies JSON without local failure path | ViewModel/use-case returns explicit apply result | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt:201` | Legacy QR export serializes with empty targets | Route all QR flows through `QrTaskDialogs` stateful path | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:180` | `Any?` point-type APIs hide type safety at boundaries | Typed sealed/enum command models per task type | Phase 2-3 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:29` | File import bypasses document URI and loads named persisted task | Parse/import from selected `DocumentRef` content | Phase 1-2 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt:89` | UI directly applies JSON without local failure path | ViewModel/use-case returns explicit apply result | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskQRGenerator.kt:201` | Legacy QR export serializes with empty targets | Route all QR flows through `QrTaskDialogs` stateful path | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:180` | `Any?` point-type APIs hide type safety at boundaries | Typed sealed/enum command models per task type | Phase 2-3 |
 
 ### 2.3 Time Base
 
@@ -467,8 +467,8 @@ Task + targets + custom params -> fidelity serializer -> QR/JSON -> deterministi
 - Phase 1 - Pure logic fixes
   - Goal: implement deterministic URI-driven import and full-fidelity serialization mapping.
   - Files to change:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt`
     - mapper helpers under `tasks/core` as needed.
   - Tests to add/update: serializer round-trip, invalid JSON handling, `.cup` parsing/import mapping.
   - Exit criteria: no lossy round-trip for custom role/radius/point-type/targets.
@@ -476,10 +476,10 @@ Task + targets + custom params -> fidelity serializer -> QR/JSON -> deterministi
 - Phase 1A - Import correctness and thread safety (new)
   - Goal: make Files-tab import URI-correct and main-thread safe.
   - Files to change:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt`
   - Exit criteria:
     - `.cup` import uses selected document content.
     - no blocking file I/O on Main.
@@ -488,7 +488,7 @@ Task + targets + custom params -> fidelity serializer -> QR/JSON -> deterministi
 - Phase 2 - Repository / SSOT wiring
   - Goal: make `TaskRepository` projection consume explicit role/custom params, not index/default synthesis.
   - Files to change:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt`
     - duplicate mapper sites (`tasks/racing/RacingTaskCoreMappers.kt`, `tasks/data/persistence/TaskPersistenceAdapters.kt`, `tasks/aat/AATTaskCoreMappers.kt`).
   - Tests to add/update: envelope/proximity/validation with non-default roles and OZ settings.
   - Exit criteria: one authoritative mapping behavior shared across runtime + persistence.
@@ -496,10 +496,10 @@ Task + targets + custom params -> fidelity serializer -> QR/JSON -> deterministi
 - Phase 3 - ViewModel + UI wiring
   - Goal: remove optimistic success paths and unify active QR/task file UI paths.
   - Files to change:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesViewModel.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt` (remove/retire)
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskBottomSheetComponents.kt` (retire or wire)
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesViewModel.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskQRGenerator.kt` (remove/retire)
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskBottomSheetComponents.kt` (retire or wire)
   - Tests to add/update: event ordering and failure messaging tests.
   - Exit criteria: success messaging only after apply success; no stale parallel QR path.
 
@@ -514,7 +514,7 @@ Task + targets + custom params -> fidelity serializer -> QR/JSON -> deterministi
 - Phase 5 - Legacy path retirement (new)
   - Goal: remove duplicate QR/file flows that diverge from canonical behavior.
   - Files to change:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/TaskQRGenerator.kt` (retire or route to canonical path)
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskQRGenerator.kt` (retire or route to canonical path)
     - related callsites that still reference legacy signatures.
   - Exit criteria:
     - single canonical serializer/import path.
@@ -587,9 +587,9 @@ Optional when relevant:
 ## 7A) Current Gate Status (2026-02-18, after implementation pass #13)
 
 - Required command checks rerun:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"`: PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskStoragePartitioningTest" --tests "com.example.xcpro.tasks.TaskStorageFailureModesTest"`: PASS
-  - `./gradlew --% :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.TaskFilesShareInstrumentedTest`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskStoragePartitioningTest" --tests "com.trust3.xcpro.tasks.TaskStorageFailureModesTest"`: PASS
+  - `./gradlew --% :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.TaskFilesShareInstrumentedTest`: PASS
   - `./gradlew connectedDebugAndroidTest --no-parallel`: PASS
   - `./gradlew enforceRules`: PASS
   - `./gradlew testDebugUnitTest`: PASS

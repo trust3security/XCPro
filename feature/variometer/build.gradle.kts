@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.variometer"
+    namespace = "com.trust3.xcpro.variometer"
     compileSdk = 35
 
     defaultConfig {

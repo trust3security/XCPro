@@ -1,6 +1,6 @@
 package com.example.dfcards.dfcards
 
-import com.example.xcpro.core.time.Clock
+import com.trust3.xcpro.core.time.Clock
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 
@@ -10,3 +10,4 @@ class FlightCardsUseCaseFactory @Inject constructor(
     fun create(scope: CoroutineScope): FlightCardsUseCase =
         FlightCardsUseCase(scope, clock)
 }
+

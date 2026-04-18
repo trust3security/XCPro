@@ -3,7 +3,7 @@ package com.example.dfcards
 import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
 import com.example.dfcards.dfcards.FlightDataTemplateManagerFactory
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.xcpro.core.time.FakeClock
+import com.trust3.xcpro.core.time.FakeClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -141,3 +141,4 @@ class DfCardsMainDispatcherRule(
         Dispatchers.resetMain()
     }
 }
+

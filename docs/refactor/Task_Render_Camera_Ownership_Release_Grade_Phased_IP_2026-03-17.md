@@ -18,9 +18,9 @@
 ## 1) Scope
 
 - Problem statement:
-  - Manual leg selection currently changes `activeLeg`, and `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt` includes that value in the task render signature even though the render snapshot does not use it.
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt` treats that signature as a full task sync trigger.
-  - Generic Racing redraw still owns camera fit in `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskDisplay.kt`, so a non-render state change can redraw overlays and move the map.
+  - Manual leg selection currently changes `activeLeg`, and `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapOverlay.kt` includes that value in the task render signature even though the render snapshot does not use it.
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt` treats that signature as a full task sync trigger.
+  - Generic Racing redraw still owns camera fit in `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskDisplay.kt`, so a non-render state change can redraw overlays and move the map.
   - Style refresh and overlay refresh can also replay that path, so the bug is broader than just next/prev turnpoint taps.
 - Why now:
   - The current seam violates the existing camera ownership contract in `docs/ARCHITECTURE/ARCHITECTURE.md` and the runtime intent in `docs/ARCHITECTURE/PIPELINE.md`.
@@ -84,9 +84,9 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapCommand.kt` | existing UI-only imperative map command seam | one-shot imperative map command instead of persistent Compose state | may need a task-fit command in addition to `SetStyle` |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt` | existing runtime owner for imperative map commands | queue/apply command only when map is ready | may need task-fit application instead of style-only command handling |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt` | single render sync owner already exists | one downstream owner for task redraw decisions | coordinator must stop implying camera fit |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapCommand.kt` | existing UI-only imperative map command seam | one-shot imperative map command instead of persistent Compose state | may need a task-fit command in addition to `SetStyle` |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt` | existing runtime owner for imperative map commands | queue/apply command only when map is ready | may need task-fit application instead of style-only command handling |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt` | single render sync owner already exists | one downstream owner for task redraw decisions | coordinator must stop implying camera fit |
 | `docs/refactor/Task_AAT_Ownership_Release_Grade_Phased_IP_2026-03-15.md` | similar task/map ownership correction | keep `feature:tasks` task-core-owned and map behavior in map modules | this track also touches camera ownership explicitly |
 
 ### 2.2B Boundary Moves
@@ -102,9 +102,9 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt` | `activeLeg` included in full render signature | signature includes only true render inputs | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskDisplay.kt` | generic Racing redraw directly calls `animateCamera(...)` | redraw only; approved fit goes through explicit map-runtime path | Phase 2-3 |
-| `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt` | style/overlay refresh can replay implicit fit via redraw | redraw-only lifecycle sync | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapOverlay.kt` | `activeLeg` included in full render signature | signature includes only true render inputs | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskDisplay.kt` | generic Racing redraw directly calls `animateCamera(...)` | redraw only; approved fit goes through explicit map-runtime path | Phase 2-3 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt` | style/overlay refresh can replay implicit fit via redraw | redraw-only lifecycle sync | Phase 3 |
 | manual leg selection path (`BottomSheetState` -> VM -> coordinator) | leg change indirectly causes full redraw and fit | leg change updates task/nav/glide only | Phase 1 |
 
 ### 2.2D File Ownership Plan
@@ -112,17 +112,17 @@ Confirm dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Task_Render_Camera_Ownership_Release_Grade_Phased_IP_2026-03-17.md` | New | execution contract for this track | active phased plan belongs in `docs/refactor` | not a durable ADR by itself | No |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt` | Existing | UI-derived task render signature inputs only | this is where task UI state currently feeds render sync | not a renderer, not a task authority | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt` | Existing | render invalidation and sync dispatch only | single render sync owner already exists here | not a camera owner | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt` | Existing | render snapshot owner for map runtime | this is the canonical map-runtime task snapshot seam | not UI or renderer-specific | No |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt` | Existing | task overlay routing only | router should decide renderer, not camera side effects | not a camera owner | No |
-| `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskDisplay.kt` | Existing | Racing overlay drawing only after this track | current renderer already owns Racing drawing | camera side effects do not belong here | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapCommand.kt` | Existing | UI-only imperative map commands | existing explicit map command seam | better than ad hoc callback state | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt` | Existing | applies one-shot imperative map commands when map is ready | current runtime command owner | preferable to renderer-owned camera calls | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskViewportPlanner.kt` | New, if needed | pure task-to-bounds/task-fit planning helper | keeps fit math out of renderer and out of UI state | not in `feature:tasks`; bounds planning is map-runtime concern | Maybe |
-| `feature/map/src/test/java/com/example/xcpro/map/TaskRenderSyncCoordinatorTest.kt` | Existing | render invalidation contract tests | current render sync contract is tested here | not an integration-only concern | No |
-| `feature/map/src/test/java/com/example/xcpro/map/ui/MapRuntimeControllerTest.kt` | Existing or New | imperative fit command behavior | command application belongs with runtime command owner | not a renderer test | Maybe |
-| `feature/map/src/test/java/com/example/xcpro/tasks/racing/RacingTaskDisplayTest.kt` | New, if needed | renderer draw-only contract tests | lock "no direct camera fit on redraw" | not a coordinator test | Maybe |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapOverlay.kt` | Existing | UI-derived task render signature inputs only | this is where task UI state currently feeds render sync | not a renderer, not a task authority | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt` | Existing | render invalidation and sync dispatch only | single render sync owner already exists here | not a camera owner | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapTasksUseCase.kt` | Existing | render snapshot owner for map runtime | this is the canonical map-runtime task snapshot seam | not UI or renderer-specific | No |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapRenderRouter.kt` | Existing | task overlay routing only | router should decide renderer, not camera side effects | not a camera owner | No |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskDisplay.kt` | Existing | Racing overlay drawing only after this track | current renderer already owns Racing drawing | camera side effects do not belong here | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapCommand.kt` | Existing | UI-only imperative map commands | existing explicit map command seam | better than ad hoc callback state | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt` | Existing | applies one-shot imperative map commands when map is ready | current runtime command owner | preferable to renderer-owned camera calls | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskViewportPlanner.kt` | New, if needed | pure task-to-bounds/task-fit planning helper | keeps fit math out of renderer and out of UI state | not in `feature:tasks`; bounds planning is map-runtime concern | Maybe |
+| `feature/map/src/test/java/com/trust3/xcpro/map/TaskRenderSyncCoordinatorTest.kt` | Existing | render invalidation contract tests | current render sync contract is tested here | not an integration-only concern | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapRuntimeControllerTest.kt` | Existing or New | imperative fit command behavior | command application belongs with runtime command owner | not a renderer test | Maybe |
+| `feature/map/src/test/java/com/trust3/xcpro/tasks/racing/RacingTaskDisplayTest.kt` | New, if needed | renderer draw-only contract tests | lock "no direct camera fit on redraw" | not a coordinator test | Maybe |
 
 ### 2.2E Module and API Surface
 
@@ -286,10 +286,10 @@ Approved task-fit action
 - Goal:
   - Remove `activeLeg` from full redraw invalidation unless selected-leg state becomes a real render input in the same phase.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/TaskRenderSyncCoordinatorTest.kt`
-  - optionally `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt` if snapshot/signature alignment needs cleanup
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapOverlay.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/TaskRenderSyncCoordinatorTest.kt`
+  - optionally `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapTasksUseCase.kt` if snapshot/signature alignment needs cleanup
 - Tests to add/update:
   - active-leg-only change does not trigger full sync
   - repeated identical task state still dedupes
@@ -304,10 +304,10 @@ Approved task-fit action
   - Introduce one explicit, one-shot task-fit request seam owned by map runtime, using the Phase 0 trigger matrix.
 - Files to change:
   - preferred path:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapCommand.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapCommand.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt`
   - optional focused helper:
-    - `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskViewportPlanner.kt`
+    - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskViewportPlanner.kt`
   - whichever task-action owner must emit the explicit fit request for approved triggers
 - Tests to add/update:
   - approved trigger actions emit fit exactly once
@@ -322,10 +322,10 @@ Approved task-fit action
 - Goal:
   - Remove renderer-owned camera fit and ensure redraw lifecycle paths do not move the camera unless an explicit fit request is active.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskDisplay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskDisplay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapRenderRouter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
   - targeted runtime/controller tests
 - Tests to add/update:
   - generic Racing redraw does not animate or move camera

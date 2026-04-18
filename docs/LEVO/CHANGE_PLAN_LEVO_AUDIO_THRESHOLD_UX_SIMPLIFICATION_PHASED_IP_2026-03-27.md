@@ -127,8 +127,8 @@ Confirmed target dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/LevoVarioSettingsViewModel.kt` | Existing Levo settings VM already forwards state mutations through one use-case/repository path | Keep UI as a thin intent-forwarding layer | Replace raw redundant setters with canonical per-side setters |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/LevoVarioProfileSettingsContributor.kt` | Existing profile contributor owns Levo settings capture/apply | Keep repository-owned capture/apply path | Add compatibility alias handling before raw-field removal |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/LevoVarioSettingsViewModel.kt` | Existing Levo settings VM already forwards state mutations through one use-case/repository path | Keep UI as a thin intent-forwarding layer | Replace raw redundant setters with canonical per-side setters |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/LevoVarioProfileSettingsContributor.kt` | Existing profile contributor owns Levo settings capture/apply | Keep repository-owned capture/apply path | Add compatibility alias handling before raw-field removal |
 
 ### 2.2B Boundary Moves
 
@@ -150,17 +150,17 @@ Confirmed target dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/LEVO/CHANGE_PLAN_LEVO_AUDIO_THRESHOLD_UX_SIMPLIFICATION_PHASED_IP_2026-03-27.md` | New | Rollout contract for this change | Levo-specific behavior and settings plan | Not a global architecture rule | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/audio/VarioAudioThresholdSemantics.kt` | New | Canonical pure helper for effective threshold semantics and compatibility writes | Shared model layer already owns `VarioAudioSettings` | UI must not own policy; repository should not become the only consumer of semantics | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/audio/VarioAudioSettings.kt` | Existing | Shared runtime settings contract | Canonical settings model already lives here | Avoid duplicate model in profile or variometer modules | No |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/LevoVarioSettingsViewModel.kt` | Existing | Intent forwarding for settings screen | Current owner of settings UI actions | Do not push mutation logic into Composable | No |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/VarioAudioComponents.kt` | Existing | Threshold controls and explanatory copy | Existing owner of threshold sliders | UI change belongs in settings component, not repository | Watch line budget only |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/LevoVarioSettingsScreen.kt` | Existing | Wiring screen state to threshold card | Existing screen owner | Keep state wiring centralized | No |
-| `feature/profile/src/main/java/com/example/xcpro/vario/LevoVarioPreferencesRepository.kt` | Existing | Persist and read Levo settings | Authoritative store already here | Do not create second persistence seam | No |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/LevoVarioProfileSettingsContributor.kt` | Existing | Profile capture/apply compatibility | Existing profile snapshot owner for Levo settings | Avoid bundle logic in UI or runtime | No |
-| `feature/variometer/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt` | Existing | Runtime audio gate semantics | Existing owner of actual tone mapping | Keep mapper authoritative for playback logic | No |
-| `feature/flight-runtime/src/test/java/com/example/xcpro/audio/VarioAudioThresholdSemanticsTest.kt` | New | Locks pure effective-threshold semantics | The helper owner lives in `feature:flight-runtime` | Avoid testing shared helper through downstream modules only | No |
-| `feature/variometer/src/test/java/com/example/xcpro/audio/VarioFrequencyMapperTest.kt` | New | Locks mapper no-regression behavior | Mapper runtime behavior belongs in `feature:variometer` | Keep shared-helper tests separate from mapper tests | No |
-| `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt` | Existing | Profile capture proof | Existing bundle coverage path | Avoid duplicate profile snapshot test harness | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/audio/VarioAudioThresholdSemantics.kt` | New | Canonical pure helper for effective threshold semantics and compatibility writes | Shared model layer already owns `VarioAudioSettings` | UI must not own policy; repository should not become the only consumer of semantics | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/audio/VarioAudioSettings.kt` | Existing | Shared runtime settings contract | Canonical settings model already lives here | Avoid duplicate model in profile or variometer modules | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/LevoVarioSettingsViewModel.kt` | Existing | Intent forwarding for settings screen | Current owner of settings UI actions | Do not push mutation logic into Composable | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/VarioAudioComponents.kt` | Existing | Threshold controls and explanatory copy | Existing owner of threshold sliders | UI change belongs in settings component, not repository | Watch line budget only |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/LevoVarioSettingsScreen.kt` | Existing | Wiring screen state to threshold card | Existing screen owner | Keep state wiring centralized | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/vario/LevoVarioPreferencesRepository.kt` | Existing | Persist and read Levo settings | Authoritative store already here | Do not create second persistence seam | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/LevoVarioProfileSettingsContributor.kt` | Existing | Profile capture/apply compatibility | Existing profile snapshot owner for Levo settings | Avoid bundle logic in UI or runtime | No |
+| `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioFrequencyMapper.kt` | Existing | Runtime audio gate semantics | Existing owner of actual tone mapping | Keep mapper authoritative for playback logic | No |
+| `feature/flight-runtime/src/test/java/com/trust3/xcpro/audio/VarioAudioThresholdSemanticsTest.kt` | New | Locks pure effective-threshold semantics | The helper owner lives in `feature:flight-runtime` | Avoid testing shared helper through downstream modules only | No |
+| `feature/variometer/src/test/java/com/trust3/xcpro/audio/VarioFrequencyMapperTest.kt` | New | Locks mapper no-regression behavior | Mapper runtime behavior belongs in `feature:variometer` | Keep shared-helper tests separate from mapper tests | No |
+| `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt` | Existing | Profile capture proof | Existing bundle coverage path | Avoid duplicate profile snapshot test harness | No |
 
 ### 2.2E Module and API Surface
 

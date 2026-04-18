@@ -1,0 +1,322 @@
+package com.trust3.xcpro.navdrawer
+
+import android.content.Context
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
+import com.example.ui1.icons.ActivityLog
+import com.example.ui1.icons.Hangglider
+import com.example.ui1.icons.Task
+import com.trust3.xcpro.common.orientation.MapOrientationMode
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.trust3.xcpro.livefollow.LiveFollowRoutes
+import com.trust3.xcpro.map.MapStyleCatalog
+import com.trust3.xcpro.navigation.SettingsRoutes
+import com.trust3.xcpro.screens.flightdata.HomeWaypointViewModel
+import com.trust3.xcpro.profiles.ProfileViewModel
+import com.trust3.xcpro.profiles.ui.icon
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+
+/**
+ * Profile section with aircraft selection and logbook
+ */
+@Composable
+fun ProfileSection(
+    profileViewModel: ProfileViewModel,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    navController: NavHostController,
+    drawerState: DrawerState,
+    scope: CoroutineScope
+) {
+    val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+    val activeProfile = uiState.activeProfile
+    val profileTitle = activeProfile?.let { "${it.name} (${it.aircraftType.displayName})" } ?: "No Profile Selected"
+
+    var selectedAircraftModel by remember { mutableStateOf<String?>(null) }
+    var aircraftExpanded by remember { mutableStateOf(false) }
+
+    ModernExpandableSection(
+        title = profileTitle,
+        icon = activeProfile?.aircraftType?.icon() ?: Icons.Outlined.Person,
+        isExpanded = isExpanded,
+        onToggle = onToggle
+    ) {
+        // Quick Profile Actions
+        ModernNavItem(
+            title = "Switch Profile",
+            icon = Icons.Outlined.SwitchAccount,
+            indentLevel = 1,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    navController.navigate("profile_selection")
+                }
+            }
+        )
+
+        ModernNavItem(
+            title = "Manage Profiles",
+            icon = Icons.Outlined.Person,
+            indentLevel = 1,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    navController.navigate("profiles")
+                }
+            }
+        )
+
+        // Aircraft Subsection
+        ModernExpandableSubItem(
+            title = selectedAircraftModel ?: "Aircraft",
+            icon = Icons.Outlined.Flight,
+            isExpanded = aircraftExpanded,
+            onToggle = { aircraftExpanded = !aircraftExpanded },
+            isSubItem = true
+        ) {
+            listOf(
+                "Sailplanes" to Icons.Outlined.Flight,
+                "Paraglider" to Icons.Outlined.Paragliding,
+                "Hangglider" to Hangglider
+            ).forEach { (aircraftType, icon) ->
+                ModernNavItem(
+                    title = aircraftType,
+                    icon = icon,
+                    isSelected = selectedAircraftModel?.contains(aircraftType) == true,
+                    indentLevel = 2,
+                    onClick = {
+                        scope.launch {
+                            selectedAircraftModel = aircraftType
+                            aircraftExpanded = false
+                            drawerState.close()
+                            when (aircraftType) {
+                                "Sailplanes" -> navController.navigate("sailplanes")
+                                "Paraglider" -> navController.navigate("paragliders")
+                                "Hangglider" -> navController.navigate("hanggliders")
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        // Logbook Item
+        ModernNavItem(
+            title = "Logbook",
+            icon = ActivityLog,
+            indentLevel = 1,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    navController.navigate("logbook")
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Task section with home waypoint and add task
+ */
+@Composable
+fun TaskSection(
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    navController: NavHostController,
+    drawerState: DrawerState,
+    scope: CoroutineScope,
+    onItemSelected: (String) -> Unit = {}
+) {
+    val homeWaypointViewModel: HomeWaypointViewModel = hiltViewModel()
+    val homeWaypointName by homeWaypointViewModel.homeWaypointName
+        .collectAsStateWithLifecycle()
+
+    val infiniteTransition = rememberInfiniteTransition(label = "home_pulse")
+
+    val homeIconColor = if (homeWaypointName == null) {
+        // Strong pulsing red when no home waypoint
+        infiniteTransition.animateColor(
+            initialValue = MaterialTheme.colorScheme.error.copy(alpha = 0.3f),
+            targetValue = MaterialTheme.colorScheme.error,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "home_pulse_color"
+        ).value
+    } else {
+        // Static gray when home waypoint is set
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    ModernExpandableSection(
+        title = "Task",
+        icon = Task,
+        isExpanded = isExpanded,
+        onToggle = onToggle
+    ) {
+        ModernNavItem(
+            title = homeWaypointName?.let { name ->
+                if (name.length > 15) "${name.take(15)}..." else name
+            } ?: "Select Home",
+            icon = Icons.Outlined.Home,
+            indentLevel = 1,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    if (homeWaypointName == null) {
+                        navController.navigate("flight_data/waypoints?autoFocusHome=true")
+                    } else {
+                        navController.navigate("flight_data/waypoints?autoFocusHome=false")
+                    }
+                }
+            },
+            iconTint = homeIconColor
+        )
+
+        ModernNavItem(
+            title = "Add Task",
+            icon = Icons.Outlined.Add,
+            indentLevel = 1,
+            onClick = {
+                android.util.Log.d("TaskSection", " Add Task clicked!")
+                scope.launch {
+                    drawerState.close()
+                    android.util.Log.d("TaskSection", " Calling onItemSelected with 'add_task'")
+                    onItemSelected("add_task")
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Map style section with radio selection
+ */
+@Composable
+fun MapStyleSection(
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    selectedMapStyle: String,
+    onMapStyleSelected: (String) -> Unit
+) {
+    ModernExpandableSection(
+        title = "Map Style",
+        icon = Icons.Outlined.Map,
+        isExpanded = isExpanded,
+        onToggle = onToggle
+    ) {
+        MapStyleCatalog.selectableDefinitions.forEach { definition ->
+            ModernRadioItem(
+                title = definition.label,
+                icon = mapStyleIcon(definition.key),
+                isSelected = selectedMapStyle == definition.key,
+                onClick = { onMapStyleSelected(definition.key) }
+            )
+        }
+    }
+}
+
+private fun mapStyleIcon(styleKey: String): ImageVector {
+    return when (styleKey) {
+        MapStyleCatalog.TOPO -> Icons.Outlined.Terrain
+        MapStyleCatalog.SATELLITE -> Icons.Outlined.Satellite
+        MapStyleCatalog.TERRAIN -> Icons.Outlined.Landscape
+        else -> Icons.Outlined.Map
+    }
+}
+
+/**
+ * Settings section with flight data, general, and look & feel
+ */
+@Composable
+fun SettingsSection(
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    navController: NavHostController,
+    drawerState: DrawerState,
+    scope: CoroutineScope,
+    onOpenGeneralSettings: (() -> Unit)? = null
+) {
+    ModernExpandableSection(
+        title = "Settings",
+        icon = Icons.Outlined.Settings,
+        isExpanded = isExpanded,
+        onToggle = onToggle
+    ) {
+        ModernNavItem(
+            title = "Flight Data",
+            icon = Icons.Outlined.CloudUpload,
+            indentLevel = 1,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    navController.navigate("flight_data")
+                }
+            }
+        )
+        ModernNavItem(
+            title = "General",
+            icon = Icons.Outlined.Tune,
+            indentLevel = 1,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    if (onOpenGeneralSettings != null) {
+                        onOpenGeneralSettings()
+                    } else {
+                        navController.navigate(SettingsRoutes.GENERAL) {
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Bottom items (Account, Support, About)
+ */
+@Composable
+fun BottomMenuItems(
+    navController: NavHostController,
+    drawerState: DrawerState,
+    scope: CoroutineScope
+) {
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 8.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+
+    listOf(
+        "Friends Flying" to Icons.Outlined.Groups to LiveFollowRoutes.FRIENDS_FLYING,
+        "Manage Account" to Icons.Outlined.AccountCircle to "manage_account",
+        "Support" to Icons.AutoMirrored.Outlined.HelpOutline to "support",
+        "About" to Icons.Outlined.Info to "about"
+    ).forEach { (titleIcon, route) ->
+        ModernNavItem(
+            title = titleIcon.first,
+            icon = titleIcon.second,
+            onClick = {
+                scope.launch {
+                    drawerState.close()
+                    navController.navigate(route)
+                }
+            }
+        )
+    }
+}

@@ -222,8 +222,8 @@ Exit gate
 ### Phase 1: SSOT target state in preferences/use-case
 
 Files
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
 - startup reset file(s) if session-local
 
 Tests
@@ -235,10 +235,10 @@ Exit gate
 ### Phase 2: ViewModel and coordinator policy
 
 Files
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelRuntimeWiring.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelRuntimeWiring.kt`
 
 Tests
 - `MapScreenViewModelTrafficSelectionTest` target state + cross-selection behavior
@@ -251,8 +251,8 @@ Exit gate
 ### Phase 3: Details sheet + intent wiring
 
 Files
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnMarkerDetailsSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
 - binding/scaffold files only if strictly required
 
 Tests
@@ -265,14 +265,14 @@ Exit gate
 ### Phase 4: OGN ring and target line overlays
 
 Files
-- `feature/map/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt` (new)
-- `feature/map/src/main/java/com/example/xcpro/map/OgnTargetLineOverlay.kt` (new)
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` (front-order signature + lifecycle wiring)
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeStatus.kt` (target overlay status)
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt` (new)
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnTargetLineOverlay.kt` (new)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` (front-order signature + lifecycle wiring)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeStatus.kt` (target overlay status)
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
 
 Tests
 - extend `MapOverlayManagerOgnLifecycleTest`

@@ -35,7 +35,7 @@
 ## 2) Comprehensive Code Pass Findings
 
 1) General route is already a route-hosted `ModalBottomSheet`.
-- File: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`.
+- File: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`.
 
 2) Proximity is local state inside General.
 - `showProximitySettingsSheet` is General-local state and renders a local `ModalBottomSheet`.
@@ -76,7 +76,7 @@ Remains:
   - `feature/map/.../screens/navdrawer/OgnSettingsScreen.kt`
   - `feature/map/.../screens/navdrawer/HotspotsSettingsScreen.kt`
   - `feature/map/.../screens/navdrawer/ThermallingSettingsScreen.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   - `feature/map/.../navigation/SettingsRoutes.kt`
   - tests under `feature/map/src/test/.../screens/navdrawer`
 - Boundary risk:
@@ -208,7 +208,7 @@ After:
 - Goal:
   - Prevent route breakage while converging ownership to General.
 - Files:
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   - `feature/map/.../navigation/SettingsRoutes.kt`
   - `feature/map/.../screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
 - Required implementation quality:

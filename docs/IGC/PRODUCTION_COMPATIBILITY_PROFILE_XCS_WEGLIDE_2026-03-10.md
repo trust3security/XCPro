@@ -23,7 +23,7 @@ writer path now carries the compatibility changes too.
 
 Production recorder metadata now comes from:
 
-- `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt`
 
 Current behavior:
 
@@ -35,8 +35,8 @@ Current behavior:
 
 That metadata flows into the actual writer path through:
 
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcHeaderMapper.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcHeaderMapper.kt`
 
 Resulting production export shape:
 
@@ -49,8 +49,8 @@ Resulting production export shape:
 
 Production signing is now applied in:
 
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcGRecordSigner.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcGRecordSigner.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
 
 Current behavior:
 
@@ -95,7 +95,7 @@ Future agents must not treat generator-only fixes as application fixes.
 Focused verification run completed after the production patch:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.domain.IgcGRecordSignerTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryRecoveryTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryRecoveryKillPointTest" --tests "com.example.xcpro.igc.data.IgcRecoveryMetadataStoreTest" :feature:igc:assembleDebug :feature:map:assembleDebug
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.domain.IgcGRecordSignerTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryRecoveryTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryRecoveryKillPointTest" --tests "com.trust3.xcpro.igc.data.IgcRecoveryMetadataStoreTest" :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
 Result:

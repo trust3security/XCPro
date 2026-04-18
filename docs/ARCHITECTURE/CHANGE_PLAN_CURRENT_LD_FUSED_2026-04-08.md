@@ -69,8 +69,8 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideComputationRepository.kt` | map-runtime repository combining flight, wind, and route state | map-side authoritative runtime join | fused Current L/D uses rolling estimator instead of glide solver |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` | map-side join into `RealTimeFlightData` | map-side combine and DTO exposure | adds fused Current L/D snapshot |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/glide/GlideComputationRepository.kt` | map-runtime repository combining flight, wind, and route state | map-side authoritative runtime join | fused Current L/D uses rolling estimator instead of glide solver |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt` | map-side join into `RealTimeFlightData` | map-side combine and DTO exposure | adds fused Current L/D snapshot |
 
 ### 2.2B Boundary Moves
 

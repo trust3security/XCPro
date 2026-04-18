@@ -52,8 +52,8 @@ Confirm dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/...`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/...`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/...`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/...`
 - Any boundary risk:
   - Low, as long as fixes remain inside the ADS-B store/repository package and do not leak policy into UI/map layers.
 
@@ -155,9 +155,9 @@ Provider timing fields -> AdsbTarget -> AdsbTrafficStore computes explicit effec
 - Goal:
   - Make `AdsbTrafficStore` use the correct effective age for emergency gating and `ageSec` exposure where intended
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficThreatPolicies.kt` if a small helper is needed
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt` only if naming must be clarified without semantic change
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficThreatPolicies.kt` if a small helper is needed
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt` only if naming must be clarified without semantic change
 - Tests to add/update:
   - `AdsbTrafficStoreEmergencyGeometryTest`
   - Optional focused helper test if an explicit effective-age helper is introduced
@@ -171,9 +171,9 @@ Provider timing fields -> AdsbTarget -> AdsbTrafficStore computes explicit effec
 - Goal:
   - Preserve continuous-emergency `ACTIVE` state without duplicate trigger count when the store still considers the situation continuous
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioAlertFsm.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt` only if candidate continuity semantics need a narrow fix there
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioAlertFsm.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt` only if candidate continuity semantics need a narrow fix there
 - Tests to add/update:
   - `AdsbTrafficRepositoryLifecycleAndEmergencyTest`
   - Additional targeted FSM/repository test only if needed to lock the continuity rule

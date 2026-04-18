@@ -107,9 +107,9 @@ Read first:
 
 Current switchboard hotspots:
 
-- `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
   - 660 lines
-- `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
   - 517 lines
 
 Current cross-feature dependencies in `feature/profile` driven by settings
@@ -343,9 +343,9 @@ Contract note:
 - Files to change:
   - targeted tests only
 - Tests to add/update:
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt`
   - add explicit deterministic section-order expectations for:
     - export bundle settings section order
     - backup sync settings section order
@@ -370,8 +370,8 @@ Contract note:
     - contributor interfaces
     - canonical section ordering / supported-section registry
     - section ID constants and ordered section lists
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsBindingsModule.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsSnapshot.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsBindingsModule.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsSnapshot.kt`
   - new orchestrator helper/registry files under `feature/profile`
 - Tests to add/update:
   - contributor registry duplicate-owner test
@@ -405,7 +405,7 @@ Phase 1 implementation rules:
 - Files to change:
   - `AppProfileSettingsSnapshotProvider.kt`
   - `AppProfileSettingsRestoreApplier.kt`
-  - new local contributor files under `feature/profile/src/main/java/com/example/xcpro/profiles/`
+  - new local contributor files under `feature/profile/src/main/java/com/trust3/xcpro/profiles/`
 - Tests to add/update:
   - per-contributor capture/apply tests for local sections as needed
   - orchestration tests still passing unchanged
@@ -457,13 +457,13 @@ Phase 1 implementation rules:
 #### Step 1: `OGN_TRAIL_SELECTION_PREFERENCES`
 
 - Current implementation still lives in:
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
 - Runtime owner already exists in:
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
 - Planned changes:
   - add `OgnTrailSelectionProfileSettingsContributor` under
-    `feature/traffic/src/main/java/com/example/xcpro/ogn/`
+    `feature/traffic/src/main/java/com/trust3/xcpro/ogn/`
   - bind it through `TrafficProfileSettingsBindingsModule.kt`
   - keep a feature-local payload DTO inside the new contributor
   - preserve deterministic export by serializing a sorted set of selected
@@ -489,13 +489,13 @@ Phase 1 implementation rules:
 #### Step 2: `ADSB_TRAFFIC_PREFERENCES`
 
 - Current implementation still lives in:
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
 - Runtime owner already exists in:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
 - Planned changes:
   - add `AdsbTrafficProfileSettingsContributor` under
-    `feature/traffic/src/main/java/com/example/xcpro/adsb/`
+    `feature/traffic/src/main/java/com/trust3/xcpro/adsb/`
   - bind it through the traffic multibinding module
   - keep a feature-local payload DTO inside the new contributor
   - preserve the current payload exactly for this slice:
@@ -547,13 +547,13 @@ Run after each step:
 
 ```bash
 ./gradlew :feature:traffic:testDebugUnitTest
-./gradlew :feature:profile:testDebugUnitTest --tests "com.example.xcpro.profiles.AppProfileSettingsSnapshotProviderTest" --tests "com.example.xcpro.profiles.AppProfileSettingsRestoreApplierTest" --tests "com.example.xcpro.profiles.ProfileSettingsContributorRegistryTest"
+./gradlew :feature:profile:testDebugUnitTest --tests "com.trust3.xcpro.profiles.AppProfileSettingsSnapshotProviderTest" --tests "com.trust3.xcpro.profiles.AppProfileSettingsRestoreApplierTest" --tests "com.trust3.xcpro.profiles.ProfileSettingsContributorRegistryTest"
 ```
 
 When the unrelated `feature:map` Hilt compile blocker is fixed, rerun:
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileRepositoryBundleTest" --tests "com.example.xcpro.profiles.ProfileRepositoryBackupSyncTest"
+./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.profiles.ProfileRepositoryBundleTest" --tests "com.trust3.xcpro.profiles.ProfileRepositoryBackupSyncTest"
 ```
 
 #### Traffic Batch Risks

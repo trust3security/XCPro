@@ -18,19 +18,19 @@ Implementation can start once it follows the rules captured here: keep OGN and A
 
 Current map behavior is asymmetric:
 
-- ADS-B already surfaces user-visible status through `AdsbPersistentStatusBadge(...)` and `AdsbIssueFlashBadge(...)` in `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficPanelsAndSheets.kt`.
-- OGN failure surfacing currently lives in `OgnDebugPanel(...)` in `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt`.
-- ADS-B debug detail also lives in a panel path through `AdsbDebugPanel(...)` in `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsAdsb.kt`.
-- Visibility is owned by `rememberTrafficDebugPanelVisibility(...)` in `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficContentUiState.kt`.
-- OGN and ADS-B debug panels are gated by `debugPanelsEnabled = BuildConfig.DEBUG` from `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`.
+- ADS-B already surfaces user-visible status through `AdsbPersistentStatusBadge(...)` and `AdsbIssueFlashBadge(...)` in `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficPanelsAndSheets.kt`.
+- OGN failure surfacing currently lives in `OgnDebugPanel(...)` in `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt`.
+- ADS-B debug detail also lives in a panel path through `AdsbDebugPanel(...)` in `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsAdsb.kt`.
+- Visibility is owned by `rememberTrafficDebugPanelVisibility(...)` in `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficContentUiState.kt`.
+- OGN and ADS-B debug panels are gated by `debugPanelsEnabled = BuildConfig.DEBUG` from `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`.
 - ADS-B persistent status is not purely debug-gated and already appears as a real bottom-left card when ADS-B is unhealthy.
-- The requested visual reference already exists in `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt`: a compact top-right circular indicator using `CircleShape` and `Icons.Filled.Lens`.
+- The requested visual reference already exists in `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt`: a compact top-right circular indicator using `CircleShape` and `Icons.Filled.Lens`.
 
 Failure-state ownership already exists:
 
-- OGN uses `OgnTrafficSnapshot.connectionState` and `lastError` from `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`.
-- ADS-B uses `AdsbTrafficSnapshot.connectionState`, `authMode`, `lastError`, and `lastNetworkFailureKind` from `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`.
-- ADS-B explicitly reports offline and socket/network failures in runtime paths such as `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt` and `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoopTransitions.kt`.
+- OGN uses `OgnTrafficSnapshot.connectionState` and `lastError` from `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`.
+- ADS-B uses `AdsbTrafficSnapshot.connectionState`, `authMode`, `lastError`, and `lastNetworkFailureKind` from `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`.
+- ADS-B explicitly reports offline and socket/network failures in runtime paths such as `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt` and `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoopTransitions.kt`.
 - OGN socket and stream failures flow through `OgnTrafficRepositoryRuntimeConnectionPolicies.kt`, which promotes the snapshot to `OgnConnectionState.ERROR`.
 
 ## 1) Scope
@@ -81,8 +81,8 @@ Dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt` | compact top-right circle indicator already used on MapScreen | top-right host, circular surface, simple color-coded state | traffic needs two indicators and must avoid overlap with pilot status host |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficPanelsAndSheets.kt` | current traffic status surfacing path | keep sheets and traffic UI ownership in the traffic runtime layer | remove active status-card surfacing while keeping card code in repo |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt` | compact top-right circle indicator already used on MapScreen | top-right host, circular surface, simple color-coded state | traffic needs two indicators and must avoid overlap with pilot status host |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficPanelsAndSheets.kt` | current traffic status surfacing path | keep sheets and traffic UI ownership in the traffic runtime layer | remove active status-card surfacing while keeping card code in repo |
 
 ### 2.2B Boundary Moves
 
@@ -102,12 +102,12 @@ Dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Traffic_Connection_Status_Indicators_Phased_IP_2026-03-27.md` | New | change plan and investigation record | required non-trivial planning artifact | not production code | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficContentUiState.kt` | Existing | derive traffic indicator UI state from existing snapshots | this file already owns traffic presentation derivation | not repository or ViewModel because the state is display-only | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficPanelsAndSheets.kt` | Existing | keep sheets; stop actively surfacing legacy traffic status cards | current active callsite already lives here | not repository or map runtime because this is purely Compose render wiring | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficRuntimeLayer.kt` | Existing | host the new traffic indicator composable | this is the traffic runtime Compose entrypoint | not `feature:map` because traffic UI ownership should stay in traffic slice | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | New | pure mapping policy from snapshot states to hidden/green/red indicator model | keeps status policy testable and out of composables | not in repository because it is presentation policy only | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicators.kt` | New | render OGN and ADS-B indicator dots and optional tap detail UI | focused UI file for the new visuals | not in existing panel file because rendering responsibilities differ and should stay small | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing | pass pilot-status visibility or top-right reservation into traffic runtime layer | this file already composes traffic and live-follow map runtime hosts together | not repository or ViewModel because this is map overlay composition only | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficContentUiState.kt` | Existing | derive traffic indicator UI state from existing snapshots | this file already owns traffic presentation derivation | not repository or ViewModel because the state is display-only | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficPanelsAndSheets.kt` | Existing | keep sheets; stop actively surfacing legacy traffic status cards | current active callsite already lives here | not repository or map runtime because this is purely Compose render wiring | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficRuntimeLayer.kt` | Existing | host the new traffic indicator composable | this is the traffic runtime Compose entrypoint | not `feature:map` because traffic UI ownership should stay in traffic slice | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | New | pure mapping policy from snapshot states to hidden/green/red indicator model | keeps status policy testable and out of composables | not in repository because it is presentation policy only | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicators.kt` | New | render OGN and ADS-B indicator dots and optional tap detail UI | focused UI file for the new visuals | not in existing panel file because rendering responsibilities differ and should stay small | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing | pass pilot-status visibility or top-right reservation into traffic runtime layer | this file already composes traffic and live-follow map runtime hosts together | not repository or ViewModel because this is map overlay composition only | No |
 
 ### 2.2E Module and API Surface
 

@@ -12,13 +12,13 @@ See `docs/Orientation/Orientation.md` for shared architecture, data flow, and cr
 ## User-facing entry points
 
 1) Settings > General > Orientation
-   - Screen: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OrientationSettingsScreen.kt`
-   - Entry in General settings grid: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-   - Navigation route: `app/src/main/java/com/example/xcpro/AppNavGraph.kt` (`orientation_settings`)
+   - Screen: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OrientationSettingsScreen.kt`
+   - Entry in General settings grid: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+   - Navigation route: `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` (`orientation_settings`)
    - Lets the user set separate modes for Cruise/Final Glide and Thermal/Circling, plus glider vertical offset.
 
 2) Map screen compass widget
-   - Toggle control: `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt` and `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
+   - Toggle control: `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt` and `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
    - Cycles: NORTH_UP -> TRACK_UP -> HEADING_UP -> NORTH_UP
    - This updates the *active profile* (cruise or circling) in preferences via `MapOrientationManager.setOrientationMode`.
 
@@ -43,16 +43,16 @@ OrientationDataSource  <---- updateFromFlightData() ---- MapOrientationManager
 ```
 
 Key files:
-- Orientation contracts: `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
-- Orientation manager: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
-- Orientation data source: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
-- Heading resolver (HEADING_UP): `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt`
-- Location / camera updates: `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-- Camera effects and clamping: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-- Location jitter gate: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
-- Icon rotation policy: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
-- Icon rendering: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
-- Orientation UI: `feature/map/src/main/java/com/example/xcpro/CompassWidget.kt`
+- Orientation contracts: `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt`
+- Orientation manager: `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
+- Orientation data source: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
+- Heading resolver (HEADING_UP): `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt`
+- Location / camera updates: `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+- Camera effects and clamping: `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+- Location jitter gate: `feature/map/src/main/java/com/trust3/xcpro/map/MapLocationFilter.kt`
+- Icon rotation policy: `feature/map/src/main/java/com/trust3/xcpro/map/IconHeadingSmoother.kt`
+- Icon rendering: `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
+- Orientation UI: `feature/map/src/main/java/com/trust3/xcpro/CompassWidget.kt`
 
 ## Orientation modes overview
 
@@ -65,7 +65,7 @@ Key files:
 ## Heading Up behavior (core logic)
 
 ### 1) Orientation calculation (MapOrientationManager)
-File: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
+File: `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
 
 When `currentMode == HEADING_UP`:
 - `calculateBearing()` uses `OrientationSensorData.headingSolution`.
@@ -81,7 +81,7 @@ Heading Up stale timeout (XCSoar parity):
 - While within the 5s window, the last valid bearing is held and `isValid` remains false.
 
 ### 2) Heading inputs and smoothing (OrientationDataSource)
-File: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
+File: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
 
 `OrientationDataSource` builds `OrientationSensorData` from:
 - Flight data (`RealTimeFlightData`) for track, ground speed, wind, etc.
@@ -101,7 +101,7 @@ Heading pipeline details:
   `HEADING_STALE_THRESHOLD_MS = 1500`, that source is considered stale.
 
 ### 3) Heading resolver (HEADING_UP fallbacks)
-File: `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt`
+File: `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt`
 
 The resolver chooses a heading in priority order:
 1) **Compass / attitude heading** when reliable (`BearingSource.COMPASS`).
@@ -131,7 +131,7 @@ B) **Not tracking (user has panned; return button is shown)**
 - Small changes are ignored (`bearingChanged` threshold ~2 degrees).
 
 ### 5) Icon orientation for Heading Up
-File: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+File: `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
 
 For Heading Up:
 - The map rotates to heading.
@@ -207,7 +207,7 @@ Implementation:
 - Track Up stale timeout remains 10s.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
 
 ### 2) Align movement gate to 2 m/s (XCSoar threshold)
 
@@ -219,7 +219,7 @@ Implementation:
   - Heading Up track/wind fallback (`HeadingResolver`).
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/MapOrientationPreferences.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/MapOrientationPreferences.kt`
 
 ### 3) Gate wind-derived heading by "isFlying"
 
@@ -238,11 +238,11 @@ Wiring:
 - `MapOrientationManager` passes it to `OrientationDataSource`.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt`
-- `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
-- `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
 
 ### Acceptance criteria (all 3 items)
 - Heading Up resets to north after ~5s of no valid heading.
@@ -340,8 +340,8 @@ If you are looking to improve Heading Up stability or parity, these are the main
 - Prefer rotation vector heading over raw magnetometer, or compute azimuth from
   accelerometer + magnetometer (SensorManager.getRotationMatrix / getOrientation).
 - This is the biggest correctness win for non-level mounts.
-- Files: `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt`,
-  `feature/map/src/main/java/com/example/xcpro/sensors/OrientationProcessor.kt`.
+- Files: `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt`,
+  `feature/map/src/main/java/com/trust3/xcpro/sensors/OrientationProcessor.kt`.
 
 2) **Pick a primary heading source (avoid source fighting)**
 - If rotation vector is available and fresh, ignore magnetometer updates.
@@ -349,7 +349,7 @@ If you are looking to improve Heading Up stability or parity, these are the main
 
 3) **Gate wind-based heading by quality/age**
 - Use `windQuality` and `windAgeSeconds` from `RealTimeFlightData` to avoid stale wind.
-- File: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`.
+- File: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`.
 
 4) **Heading stale timeout (aligned)**
 - Heading Up now uses a 5s stale timeout (XCSoar parity).

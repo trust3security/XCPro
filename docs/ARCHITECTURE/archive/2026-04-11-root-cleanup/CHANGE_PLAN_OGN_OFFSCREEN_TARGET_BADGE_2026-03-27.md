@@ -76,9 +76,9 @@ Dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt` | Additive OGN target visual overlay handle | map-native overlay with source/layer lifecycle, cleanup, bring-to-front | text badge instead of circle geometry |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetLineOverlay.kt` | Existing target-specific visual rendered from delegate | runtime delegate owns latest target inputs and redraw cadence | badge also needs ownship altitude + units for label text |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnRelativeAltitudeLabelFormatter.kt` | Existing relative altitude label policy | signed relative-height formatting | badge color uses navy/red sign rule instead of existing icon color bands |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt` | Additive OGN target visual overlay handle | map-native overlay with source/layer lifecycle, cleanup, bring-to-front | text badge instead of circle geometry |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetLineOverlay.kt` | Existing target-specific visual rendered from delegate | runtime delegate owns latest target inputs and redraw cadence | badge also needs ownship altitude + units for label text |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnRelativeAltitudeLabelFormatter.kt` | Existing relative altitude label policy | signed relative-height formatting | badge color uses navy/red sign rule instead of existing icon color bands |
 
 ### 2.2B Boundary Moves
 
@@ -98,17 +98,17 @@ Dependency flow remains:
 |---|---|---|---|---|---|
 | `docs/ARCHITECTURE/CHANGE_PLAN_OGN_OFFSCREEN_TARGET_BADGE_2026-03-27.md` | New | feature/change contract | required for non-trivial map runtime work | not production code | No |
 | `docs/ARCHITECTURE/PIPELINE.md` | Existing | pipeline contract | runtime overlay wiring changed | must stay in canonical pipeline doc | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt` | Existing | cross-module opaque overlay handle contract | new overlay handle belongs in the same runtime state seam | not in `feature:map`; keep map-free contract in `feature:traffic` | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | New | pure badge text/color/visibility model | isolates render policy from MapLibre plumbing | not ViewModel/domain because this is render-only map policy | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | New | concrete MapLibre badge overlay | same ownership as existing target ring/line overlays | not Compose overlay; keep target visuals map-native | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | OGN overlay orchestration | authoritative runtime coordinator for OGN target visuals | not `MapScreenViewModel`; keep runtime-only render state local | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | map-runtime forwarding API | owns shell/runtime bridge | not business logic | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` | Existing | shell constructor wiring | owns factory injection defaults | not `feature:traffic`; constructor lives in map shell | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayEffects.kt` | Existing | Compose side-effect forwarding only | render inputs already originate here | no rendering logic should live here | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayUiAdapters.kt` | Existing | UI/runtime adapter | keep forwarding logic together | not in ViewModel | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt` | Existing | runtime handle storage | authoritative runtime cache for map-owned handles | not in ViewModel state | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeStateAdapter.kt` | Existing | bridge from map shell state to traffic runtime seam | extends existing opaque handle mapping | not in `feature:traffic`; depends on map shell state | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleSurfaceAdapter.kt` | Existing | runtime cleanup | must release new overlay on destroy/cleanup | not elsewhere; shell owns lifecycle teardown | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt` | Existing | cross-module opaque overlay handle contract | new overlay handle belongs in the same runtime state seam | not in `feature:map`; keep map-free contract in `feature:traffic` | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | New | pure badge text/color/visibility model | isolates render policy from MapLibre plumbing | not ViewModel/domain because this is render-only map policy | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | New | concrete MapLibre badge overlay | same ownership as existing target ring/line overlays | not Compose overlay; keep target visuals map-native | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | OGN overlay orchestration | authoritative runtime coordinator for OGN target visuals | not `MapScreenViewModel`; keep runtime-only render state local | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | map-runtime forwarding API | owns shell/runtime bridge | not business logic | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` | Existing | shell constructor wiring | owns factory injection defaults | not `feature:traffic`; constructor lives in map shell | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficOverlayEffects.kt` | Existing | Compose side-effect forwarding only | render inputs already originate here | no rendering logic should live here | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficOverlayUiAdapters.kt` | Existing | UI/runtime adapter | keep forwarding logic together | not in ViewModel | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenState.kt` | Existing | runtime handle storage | authoritative runtime cache for map-owned handles | not in ViewModel state | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeStateAdapter.kt` | Existing | bridge from map shell state to traffic runtime seam | extends existing opaque handle mapping | not in `feature:traffic`; depends on map shell state | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleSurfaceAdapter.kt` | Existing | runtime cleanup | must release new overlay on destroy/cleanup | not elsewhere; shell owns lifecycle teardown | No |
 | focused tests under `feature/map` and `feature/traffic` | Existing/New | runtime/formatter coverage | lock behavior and cleanup | not manual-only validation | No |
 
 ### 2.2E Module and API Surface
@@ -122,8 +122,8 @@ Dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| signed relative-height text | `feature/traffic/src/main/java/com/example/xcpro/map/OgnRelativeAltitudeLabelFormatter.kt` | OGN target badge render model | existing signed delta formatter already drives OGN relative labels | No |
-| distance text formatting | `core/common/src/main/java/com/example/xcpro/common/units/UnitsFormatter.kt` | OGN target badge render model | canonical units formatter | No |
+| signed relative-height text | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnRelativeAltitudeLabelFormatter.kt` | OGN target badge render model | existing signed delta formatter already drives OGN relative labels | No |
+| distance text formatting | `core/common/src/main/java/com/trust3/xcpro/common/units/UnitsFormatter.kt` | OGN target badge render model | canonical units formatter | No |
 | badge text color sign rule | new badge render-model file | ownship target badge only | requirement is badge-specific and differs from icon-band policy | No |
 
 ### 2.3 Time Base

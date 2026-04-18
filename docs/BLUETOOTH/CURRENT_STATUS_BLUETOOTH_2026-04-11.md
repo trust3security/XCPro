@@ -78,28 +78,28 @@ Not implemented yet:
 ## Current code anchors
 
 - Bluetooth transport:
-  - `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/AndroidBluetoothTransport.kt`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/AndroidBluetoothTransport.kt`
 - LX parser:
-  - `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/LxSentenceParser.kt`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/lxnav/LxSentenceParser.kt`
 - LX runtime repository:
-  - `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/runtime/LxExternalRuntimeRepository.kt`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/lxnav/runtime/LxExternalRuntimeRepository.kt`
 - LX control/use-case state:
-  - `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/control/`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/lxnav/control/`
 - Bluetooth settings UI:
-  - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/BluetoothVarioSettingsUseCase.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/BluetoothVarioSettingsScreen.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/BluetoothVarioSettingsUseCase.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/BluetoothVarioSettingsScreen.kt`
 - External instrument fused-runtime seam:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/external/ExternalInstrumentReadPort.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/external/ExternalInstrumentReadPort.kt`
 - External live airspeed SSOT:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/ExternalAirspeedRepository.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/weather/wind/data/ExternalAirspeedRepository.kt`
 - External live airspeed write seam:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/ExternalAirspeedWritePort.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/weather/wind/data/ExternalAirspeedWritePort.kt`
 - External live airspeed Hilt binding:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/di/ExternalAirspeedModule.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/di/ExternalAirspeedModule.kt`
 - TAS-only external airspeed interpretation:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
 - TAS-only IGC emission guard:
-  - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt`
 
 ## Open implementation gaps
 

@@ -83,8 +83,8 @@ Severity-ranked findings from strict re-audit:
    - Risk: clean clones lose canonical execution contract.
 
 2. High: Compose state leakage in non-UI manager/state classes.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATEditModeState.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/AATEditModeState.kt`
    - Risk: violates non-UI manager state model rule; increases hidden coupling.
 
 3. Medium: `enforceRules` coverage gap for the above leakage.
@@ -93,7 +93,7 @@ Severity-ranked findings from strict re-audit:
    - Risk: future Compose-state regressions in AAT runtime classes are not blocked.
 
 4. Medium: Remaining hotspot target miss.
-   - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` at ~447 LOC.
+   - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` at ~447 LOC.
    - Risk: maintainability/change-safety remains below 5/5 threshold.
 
 5. Low: Contract-doc pointer drift.
@@ -127,7 +127,7 @@ Additional misses found after another repository-wide sweep:
    - Risk: architecture doc no longer matches implementation intent.
 
 3. High: Non-UI Compose-state leakage includes one more runtime class.
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATTargetPointDragHandler.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/AATTargetPointDragHandler.kt`
      still uses `mutableStateOf` in a non-composable runtime handler class.
    - This was not called out in the prior finding set.
 
@@ -165,8 +165,8 @@ Additional misses found in a full pass-through audit:
 
 2. Medium (Resolved 2026-02-14): `enforceRules` ignored-test guard only covered unit-test scope.
    - `scripts/ci/enforce_rules.ps1` rule 16 scans:
-     - `feature/map/src/test/java/com/example/xcpro/map/**`
-     - `feature/map/src/test/java/com/example/xcpro/tasks/**`
+     - `feature/map/src/test/java/com/trust3/xcpro/map/**`
+     - `feature/map/src/test/java/com/trust3/xcpro/tasks/**`
    - Resolution:
      - rule now scans `app/src/androidTest/**` and `app/src/test/**`
        for `@Ignore` and `@Disabled`.
@@ -183,8 +183,8 @@ Additional misses found in a full pass-through audit:
      a fixed file list.
    - Resolution:
      - added structural composable discovery + scan using package globs:
-       - `feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt`
-       - `feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt`
+       - `feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt`
+       - `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/**/*.kt`
    - Residual risk: low (new files are auto-included if they contain `@Composable`).
 
 5. Low: Additional contract doc drift in RULES execution contract.
@@ -271,7 +271,7 @@ Implementation tasks:
 3. Add PR checklist update in docs for trigger-owner and dependency rules.
 4. Extend non-UI Compose-state enforcement beyond map managers:
    - include AAT runtime manager/state classes under
-     `feature/map/src/main/java/com/example/xcpro/tasks/aat/**`.
+     `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/**`.
 5. Add doc-contract consistency gate:
    - active plan pointer in architecture docs must resolve to a tracked file.
    - execution-contract docs must not reference superseded plan as primary.

@@ -33,7 +33,7 @@ Read first:
 - Recheck update: 2026-02-22 (sixth-pass delta applied after code + plan re-audit)
 - Related decision: Item 7 from codebase review is **CHANGE**, not leave-as-is.
 - Why item 7 is change-required:
-  - Runtime is centered on `SimpleRacingTask` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`) while richer `RacingTask` (`feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt`) is not runtime-authoritative.
+  - Runtime is centered on `SimpleRacingTask` (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`) while richer `RacingTask` (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTask.kt`) is not runtime-authoritative.
   - This split blocks reliable implementation of gate timing, altitude procedures, penalties/tolerances, and schema-level rule persistence.
 
 ## 0A) Coordination Notes
@@ -72,7 +72,7 @@ Read first:
 
 | Area | Requirement (`docs/RACING_TASK`) | Current state | Gap |
 |---|---|---|---|
-| RT minimum structure | Start + >=2 TP + Finish | Validation allows 2 points total (`feature/map/src/main/java/com/example/xcpro/tasks/domain/logic/TaskValidator.kt`) | Missing hard RT structure gate |
+| RT minimum structure | Start + >=2 TP + Finish | Validation allows 2 points total (`feature/map/src/main/java/com/trust3/xcpro/tasks/domain/logic/TaskValidator.kt`) | Missing hard RT structure gate |
 | Canonical model | One runtime-authoritative model | Runtime uses `SimpleRacingTask`; richer `RacingTask` is separate | Split SSOT and drift risk |
 | Start gate open/close | Required rule fields and enforcement | No gate fields in core task model; no gate-time checks in nav engine | Missing |
 | Pre-start altitude | Optional constraint + pre-start evidence | Not represented in active rules model; not evaluated | Missing |
@@ -82,14 +82,14 @@ Read first:
 | Finish closing | Closing time and outlanding behavior | No closing-time rule evaluation in finish logic | Missing |
 | Finish min altitude | Optional penalty-relevant constraint | Not evaluated in navigation validation events | Missing |
 | Multiple starts | Detect and preserve candidates | Current runtime advances from first detected start only | Missing candidate set |
-| Rules UI | Task-sheet-grade field editing | Mostly geometry/radius controls + static rules text (`feature/map/src/main/java/com/example/xcpro/tasks/RulesBTTabParameters.kt`) | Missing editor |
+| Rules UI | Task-sheet-grade field editing | Mostly geometry/radius controls + static rules text (`feature/map/src/main/java/com/trust3/xcpro/tasks/RulesBTTabParameters.kt`) | Missing editor |
 | Schema fidelity | JSON stores RT rules/metadata | `TaskPersistSerializer` is waypoint-centric and not RT-rule complete | Missing |
-| Rule profile support | FAI strict vs XCPro extended compatibility mode | Validation allows non-FAI zones without explicit profile (`feature/map/src/main/java/com/example/xcpro/tasks/domain/logic/TaskValidator.kt`) | Missing profile gate |
+| Rule profile support | FAI strict vs XCPro extended compatibility mode | Validation allows non-FAI zones without explicit profile (`feature/map/src/main/java/com/trust3/xcpro/tasks/domain/logic/TaskValidator.kt`) | Missing profile gate |
 | Steering point semantics | Optional steering point before finish | Multiple paths rewrite roles by index and collapse `OPTIONAL` -> `TURNPOINT` | Missing role preservation |
-| Deterministic task identity | Stable IDs across import/init/replay | `UUID.randomUUID()` in racing initializer (`feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt`) | Missing deterministic ID policy |
+| Deterministic task identity | Stable IDs across import/init/replay | `UUID.randomUUID()` in racing initializer (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskInitializer.kt`) | Missing deterministic ID policy |
 | Start/finish direction override | Manual direction from task sheet | Start/finish line crossing bearings derived only from adjacent legs | Missing explicit override path |
-| Altitude/speed rule inputs | Pre-start altitude and speed checks | `RacingNavigationFix` has no altitude/speed fields (`feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationState.kt`) | Missing nav input fields |
-| Replay parity with canonical model | Replay should use same canonical task contract | Replay helpers/log builder still consume `SimpleRacingTask` (`feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt`) | Missing migration |
+| Altitude/speed rule inputs | Pre-start altitude and speed checks | `RacingNavigationFix` has no altitude/speed fields (`feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationState.kt`) | Missing nav input fields |
+| Replay parity with canonical model | Replay should use same canonical task contract | Replay helpers/log builder still consume `SimpleRacingTask` (`feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt`) | Missing migration |
 
 ## 1B) Missed Items from Recheck (Delta)
 
@@ -243,23 +243,23 @@ Required:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | Runtime directly maps to `SimpleRacingTask` | Map canonical task + rules -> `RacingNavTask` | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt` | Persists RT through simplified model | Persist canonical task/rules via versioned serializer | Phase 8 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` | `Any?` point-type bridge APIs | Typed RT rule/geometry update commands | Phase 7 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` (`importPersistedTask`) | Clear + `addWaypoint` reconstruction + best-effort OZ patching | Canonical import hydration command (preserve roles/types/rules/ids) | Phase 8 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` (`switchToTaskType`) | Migrates only waypoint list between task types | Canonical task snapshot transfer preserving ID/rules/metadata | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt` (`applyEngineTaskToManager`) | Hydrates managers from `state.base.task.waypoints` only | Canonical `setTask`/snapshot handoff path | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt` | Separate rich model not runtime-owner | Deprecate then remove after migration | Phase 2/9 |
-| `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt` | Replay converts canonical task to `SimpleRacingTask` | Replay consumes canonical->nav projection only | Phase 2 |
-| `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayAnchorBuilder.kt` | Replay-specific boundary heuristics (`lineCrossOffsetMeters`, local calculators) | Planner/event-derived crossing evidence for anchors | Phase 5/9 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt` | Random UUID task IDs | Deterministic ID policy utility | Phase 2B |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` + `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt` | `isTaskValid` via `waypoints.size >= 2` | validator-backed validity projection | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt` | `isTaskValid` via `waypoints.size >= 2` | validator-backed engine validity mapping | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | listener add without lifecycle remove | explicit unbind/dispose path | Phase 2/9 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt` (`FAI_QUADRANT` path) | No planner crossing (inside-change trigger only) | Planner-backed sector/quadrant crossing with interpolation | Phase 5 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt` (`validateRacingCourse`) | course validation returns valid for any `>=2` task | validator-backed structural + geometry validation | Phase 3 |
-| `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt` + `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt` | Replay entry checks rely on `>=2` only | Replay entry uses RT validator contract | Phase 9 |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` (`bind`) | Unbounded repeat collectors on repeated bind | single-active-bind contract with tracked/cancelled job | Phase 9 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt` | Runtime directly maps to `SimpleRacingTask` | Map canonical task + rules -> `RacingNavTask` | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt` | Persists RT through simplified model | Persist canonical task/rules via versioned serializer | Phase 8 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt` | `Any?` point-type bridge APIs | Typed RT rule/geometry update commands | Phase 7 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt` (`importPersistedTask`) | Clear + `addWaypoint` reconstruction + best-effort OZ patching | Canonical import hydration command (preserve roles/types/rules/ids) | Phase 8 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` (`switchToTaskType`) | Migrates only waypoint list between task types | Canonical task snapshot transfer preserving ID/rules/metadata | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt` (`applyEngineTaskToManager`) | Hydrates managers from `state.base.task.waypoints` only | Canonical `setTask`/snapshot handoff path | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTask.kt` | Separate rich model not runtime-owner | Deprecate then remove after migration | Phase 2/9 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt` | Replay converts canonical task to `SimpleRacingTask` | Replay consumes canonical->nav projection only | Phase 2 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt` | Replay-specific boundary heuristics (`lineCrossOffsetMeters`, local calculators) | Planner/event-derived crossing evidence for anchors | Phase 5/9 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskInitializer.kt` | Random UUID task IDs | Deterministic ID policy utility | Phase 2B |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` + `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt` | `isTaskValid` via `waypoints.size >= 2` | validator-backed validity projection | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt` | `isTaskValid` via `waypoints.size >= 2` | validator-backed engine validity mapping | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt` | listener add without lifecycle remove | explicit unbind/dispose path | Phase 2/9 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt` (`FAI_QUADRANT` path) | No planner crossing (inside-change trigger only) | Planner-backed sector/quadrant crossing with interpolation | Phase 5 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt` (`validateRacingCourse`) | course validation returns valid for any `>=2` task | validator-backed structural + geometry validation | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt` + `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt` | Replay entry checks rely on `>=2` only | Replay entry uses RT validator contract | Phase 9 |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt` (`bind`) | Unbounded repeat collectors on repeated bind | single-active-bind contract with tracked/cancelled job | Phase 9 |
 
 ### 2.3 Time Base Declaration
 
@@ -354,7 +354,7 @@ Key architecture result:
 
 ## 3A) Canonical RT Model Spec
 
-Planned additions under `feature/map/src/main/java/com/example/xcpro/tasks/core/`:
+Planned additions under `feature/map/src/main/java/com/trust3/xcpro/tasks/core/`:
 
 - `Task` extension:
   - `metadata: TaskMetadata = TaskMetadata()`
@@ -406,7 +406,7 @@ Planned rule details:
 
 ## 3B) Navigation Outcome Model Spec
 
-Extend `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/`:
+Extend `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/`:
 
 - State additions:
   - `startCandidates: List<StartCandidate>`
@@ -466,7 +466,7 @@ Engine behavior targets:
 - existing `lat/lon/timestamp/accuracy`
 
 Adapters to update:
-- `feature/map/src/main/java/com/example/xcpro/map/RacingNavigationFixAdapter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/RacingNavigationFixAdapter.kt`
 - replay adapters that synthesize fixes
 
 Reason:
@@ -496,7 +496,7 @@ CUP strategy:
 - Goal:
   - Freeze current behavior with baseline tests before large refactor.
 - Files to add/update:
-  - Add baseline tests under `feature/map/src/test/java/com/example/xcpro/tasks/racing/navigation/`
+  - Add baseline tests under `feature/map/src/test/java/com/trust3/xcpro/tasks/racing/navigation/`
   - Add compatibility tests for existing JSON and CUP import/export.
 - Tests:
   - Replay determinism baseline for current path.
@@ -509,11 +509,11 @@ CUP strategy:
 - Goal:
   - Introduce typed RT metadata/rules model without behavior change.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/core/Models.kt` (extend `Task`)
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/core/Models.kt` (extend `Task`)
   - New core model files for `TaskMetadata` and `TaskRules`.
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt` (read/write scaffolding)
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskState.kt` (surface rule snapshot if needed)
-  - `feature/map/src/main/java/com/example/xcpro/tasks/domain/logic/TaskValidator.kt` (add profile-aware validation scaffolding only)
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt` (read/write scaffolding)
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskState.kt` (surface rule snapshot if needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/logic/TaskValidator.kt` (add profile-aware validation scaffolding only)
 - Tests:
   - Model default invariants.
   - Serializer round-trip for new fields.
@@ -526,17 +526,17 @@ CUP strategy:
 - Goal:
   - Replace runtime reliance on `SimpleRacingTask` as authoritative model.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/` (new `RacingNavTask`, mapper)
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskCoreMappers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointManager.kt`
-  - Deprecate `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/` (new `RacingNavTask`, mapper)
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapRenderRouter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskCoreMappers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointManager.kt`
+  - Deprecate `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTask.kt`
 - Tests:
   - Mapper invariants and no-loss geometry checks.
   - Navigation engine parity tests against baseline for unchanged scenarios.
@@ -553,11 +553,11 @@ CUP strategy:
 - Goal:
   - Remove runtime randomness, harden fallback identity quality, and align RT defaults across UI/engine/mappers.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointListItems.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskCoreMappers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskInitializer.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointListItems.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskCoreMappers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt`
 - Tests:
   - Deterministic ID generation tests (no `UUID.randomUUID` in RT init path).
   - Collision-resistance tests for fallback IDs.
@@ -573,12 +573,12 @@ CUP strategy:
 - Goal:
   - Enforce exactly one Start, >=2 interior TPs, one Finish, start-first/finish-last ordering, and key geometry constraints; make validator-backed validity the only runtime truth.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/domain/logic/TaskValidator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
-  - UI validation rendering files in `feature/map/src/main/java/com/example/xcpro/tasks/`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/logic/TaskValidator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
+  - UI validation rendering files in `feature/map/src/main/java/com/trust3/xcpro/tasks/`
 - Tests:
   - New RT validator tests for structure and role sequencing.
   - Start/finish cardinality and ordering tests (exactly one each, fixed boundary positions).
@@ -595,11 +595,11 @@ CUP strategy:
 - Goal:
   - Implement gate-time, start type, tolerance, pre-start altitude, and PEV-complete cadence semantics.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationState.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEvent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingZoneDetector.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/RacingNavigationFixAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEvent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingZoneDetector.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/RacingNavigationFixAdapter.kt`
   - Add start-rule evaluator helper files in same package.
 - Tests:
   - Gate open/close accept/reject cases.
@@ -620,8 +620,8 @@ CUP strategy:
 - Goal:
   - Full strict TP achievement plus near-miss reporting, boundary math hardening for sparse-fix crossings (including FAI quadrant interpolation), and explicit transition-source handling.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/boundary/`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/boundary/`
 - Tests:
   - Segment intersection and boundary interpolation tests (including nearest-second timestamp normalization).
   - FAI quadrant crossing tests with planner-derived intersection time under sparse-fix sampling.
@@ -641,7 +641,7 @@ CUP strategy:
 - Goal:
   - Add finish line/ring direction rules, min-altitude checks (with straight-in exception), closure policy, and post-finish landing semantics.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
   - finish evaluator helpers
   - state/event model files
   - optional contest-boundary geometry helper in tasks domain
@@ -661,13 +661,13 @@ CUP strategy:
 - Goal:
   - Replace static RT rules panel with editable RT rules and typed ViewModel commands.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/RulesBTTabParameters.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingManageBTTab.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingStartPointSelector.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/RacingFinishPointSelector.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/RulesBTTabParameters.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingManageBTTab.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/ui/RacingStartPointSelector.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/ui/RacingFinishPointSelector.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
 - Required refactor:
   - Remove `Any?` update paths; use typed command models.
 - Tests:
@@ -682,14 +682,14 @@ CUP strategy:
 - Goal:
   - Schema-v2 full fidelity for RT rules and robust compatibility, including canonical import hydration.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/CupFormatUtils.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/CupFormatUtils.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
 - Tests:
   - v1 -> v2 migration tests.
   - v2 round-trip fidelity tests for all RT rules.
@@ -708,11 +708,11 @@ CUP strategy:
   - `docs/RACING_TASK/task_json_schema_example.md` (schema v2)
   - `docs/RACING_TASK/task_creation_ui_spec.md` (actual UI behavior)
   - `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` (only if exception approved)
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingMapRenderer.kt` (role-color expression consistency fix if not already addressed earlier)
-  - `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayAnchorBuilder.kt` (remove planner-bypass anchor heuristics once parity path lands)
-  - `feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt` (replace `>=2` gate with validator-backed RT validity precondition)
-  - `feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt` (align replay preconditions with RT structure contract)
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` (lifecycle-safe listener cleanup)
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingMapRenderer.kt` (role-color expression consistency fix if not already addressed earlier)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt` (remove planner-bypass anchor heuristics once parity path lands)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt` (replace `>=2` gate with validator-backed RT validity precondition)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt` (align replay preconditions with RT structure contract)
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt` (lifecycle-safe listener cleanup)
   - `scripts/ci/enforce_rules.ps1` (add deterministic-ID and role-rewrite guardrails when feasible)
   - Remove/deprecate old model files once fully unused.
 - Tests:

@@ -2,11 +2,11 @@
 
 ## Current seam evidence
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:90-127`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:90-127`  
   `runConnectionLoop()` resets `backoffMs` after any non-throwing `connectAndRead()` return.
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:150-270`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:150-270`  
   `connectAndRead()` returns `ConnectionExitReason.StreamEnded` on `reader.readLine() == null`.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt:60-76`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt:60-76`  
   OGN loss is shown only for `OgnConnectionState.ERROR`.
 
 ## Implementation prompt
@@ -36,14 +36,14 @@ Recommended approach:
 
 ## Files likely touched
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
 - optional:
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
 - tests:
-  - `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-  - optional `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - optional `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt`
 
 ## Tests to add or update
 

@@ -176,7 +176,7 @@ Completed:
 
 Verification:
 1. PASS:
-   - `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.*" --tests "com.example.xcpro.tasks.aat.*" --tests "com.example.xcpro.tasks.racing.*"`
+   - `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.*" --tests "com.trust3.xcpro.tasks.aat.*" --tests "com.trust3.xcpro.tasks.racing.*"`
    - `./gradlew --no-daemon --no-configuration-cache enforceRules`
    - `./gradlew --no-daemon --no-configuration-cache testDebugUnitTest`
    - `./gradlew --no-daemon --no-configuration-cache assembleDebug`
@@ -207,7 +207,7 @@ Completed:
 
 Verification:
 1. PASS:
-   - `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.example.xcpro.glider.*"`
+   - `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.glider.*"`
    - `./gradlew --no-daemon --no-configuration-cache enforceRules testDebugUnitTest assembleDebug`
 2. NOT RUN:
    - instrumentation commands (`:app:connectedDebugAndroidTest`, `connectedDebugAndroidTest`) for this storage-domain pass.
@@ -285,10 +285,10 @@ Execution implication:
 ### Run 16 (2026-02-23)
 Findings added to plan:
 1. Racing model factory contract still exposes km compatibility inputs in active internal manager paths (`customGateWidth`, `keyholeInnerRadius`, `faiQuadrantOuterRadius`), so model-canonical migration is incomplete:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingWaypoint.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointManager.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingWaypoint.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointManager.kt`
 2. Raw km field access remains in racing display diagnostics and should be removed as part of final radius-contract cleanup:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
 3. Run 15 residuals remain otherwise unchanged (model canonical storage, manager defaults, dual-write racing projection paths, raw km guard in `RacingZoneDetector`, compatibility-first test intent).
 
 Execution implication:
@@ -300,13 +300,13 @@ Execution implication:
 ### Run 17 (2026-02-23)
 Findings added to plan:
 1. Core radius helper still propagates legacy km mirror in internal flows:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/core/Models.kt` (`withCustomRadiusMeters` synchronizes `customRadius` from meters).
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/core/Models.kt` (`withCustomRadiusMeters` synchronizes `customRadius` from meters).
 2. Internal AAT/racing engine normalization paths still call this helper, so dual-field propagation is not boundary-only:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/AATTaskWaypointCodec.kt`
-   - `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultAATTaskEngine.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/AATTaskWaypointCodec.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultAATTaskEngine.kt`
 3. Internal-domain test intent still asserts km mirror population:
-   - `feature/map/src/test/java/com/example/xcpro/tasks/domain/engine/DefaultAATTaskEngineTest.kt`
+   - `feature/map/src/test/java/com/trust3/xcpro/tasks/domain/engine/DefaultAATTaskEngineTest.kt`
 
 Execution implication:
 1. Run C closure must include a core-level dual-write strategy update so internal engine paths no longer require km mirror propagation.
@@ -315,7 +315,7 @@ Execution implication:
 ### Run 18 (2026-02-23)
 Findings added to plan:
 1. Racing UI still reads legacy km radius field `customRadius` in active internal state wiring:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointListItems.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointListItems.kt`
 2. This conflicts with `#30` target of boundary-only km compatibility ownership.
 
 Execution implication:
@@ -326,15 +326,15 @@ Execution implication:
 Completed:
 1. Implemented `#30` follow-up cleanup in active projection and UI-state paths:
    - Removed internal `customRadius` dual-write from:
-     - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`
-     - `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
-     - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt`
    - Removed legacy `customRadius` dependency from AAT list compose state keys:
-     - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageListItems.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATManageListItems.kt`
    - Removed residual `resolvedCustomRadiusKm()` dependency in AAT gesture edit callback:
-     - `feature/map/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/gestures/AatGestureHandler.kt`
    - Removed raw km diagnostic/display usage in finish-line rendering:
-     - `feature/map/src/main/java/com/example/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
 2. Verification pass completed:
    - PASS: focused `:feature:map:testDebugUnitTest` suite for changed task/AAT/racing paths.
    - PASS: `enforceRules`.
@@ -405,15 +405,15 @@ Execution implication:
 ### Run 25 (2026-02-23)
 Findings added to plan (`#34/#28` focused re-check):
 1. `#28` remains open with no change in production code:
-   - `feature/map/src/main/java/com/example/xcpro/gestures/AirspaceGestureMath.kt` still contains unused km helper `haversineDistance(...)` (no call sites found in repo).
+   - `feature/map/src/main/java/com/trust3/xcpro/gestures/AirspaceGestureMath.kt` still contains unused km helper `haversineDistance(...)` (no call sites found in repo).
 2. `#34` target 1 remains open:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt` still has `calculateDistanceInArea(...)` with unsuffixed return contract and km accumulation (`AATMathUtils.calculateDistance(...)`).
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt` still has `calculateDistanceInArea(...)` with unsuffixed return contract and km accumulation (`AATMathUtils.calculateDistance(...)`).
    - method appears dead (no callers found).
 3. `#34` target 2 remains open:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/KeyholeVerification.kt` remains a legacy commented source block with km conversions and local km haversine helper.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/KeyholeVerification.kt` remains a legacy commented source block with km conversions and local km haversine helper.
 4. Adjacent residuals found during `#34/#28` audit and added to closeout scope:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATLongPressOverlay.kt` local km haversine + meter-to-km conversion in hit-test path (file appears unused).
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditGeometry.kt` unused km wrapper `haversineDistance(...)`.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ui/AATLongPressOverlay.kt` local km haversine + meter-to-km conversion in hit-test path (file appears unused).
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/interaction/AATEditGeometry.kt` unused km wrapper `haversineDistance(...)`.
 
 Execution implication:
 1. Keep `#28` and `#34` open.
@@ -423,12 +423,12 @@ Execution implication:
 ### Run 26 (2026-02-23)
 Findings added to plan (`#34/#28` focused re-check, active call-path validation):
 1. `#28` remains open:
-   - `feature/map/src/main/java/com/example/xcpro/gestures/AirspaceGestureMath.kt` still contains unused km helper `haversineDistance(...)`.
+   - `feature/map/src/main/java/com/trust3/xcpro/gestures/AirspaceGestureMath.kt` still contains unused km helper `haversineDistance(...)`.
 2. `#34` remains open:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt` still has unsuffixed km-returning `calculateDistanceInArea(...)` (appears unused).
-   - `feature/map/src/main/java/com/example/xcpro/tasks/KeyholeVerification.kt` remains commented legacy km-based source.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt` still has unsuffixed km-returning `calculateDistanceInArea(...)` (appears unused).
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/KeyholeVerification.kt` remains commented legacy km-based source.
 3. New adjacent miss confirmed (active path):
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt` `calculateAreaSizeKm2(...)` is actively consumed by `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt`.
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt` `calculateAreaSizeKm2(...)` is actively consumed by `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt`.
    - This keeps internal quick-validation policy thresholds on km2 contracts (`< 10.0`, `> 5000.0`) instead of SI m2.
 4. Area-size warning output in the same path currently labels area values as `km` rather than squared units.
 
@@ -440,7 +440,7 @@ Execution implication:
 ### Run 27 (2026-02-23)
 Findings added to plan (`#34/#28` deep re-check, wrapper call-site sweep):
 1. `#28` status unchanged:
-   - `feature/map/src/main/java/com/example/xcpro/gestures/AirspaceGestureMath.kt` unused km helper remains.
+   - `feature/map/src/main/java/com/trust3/xcpro/gestures/AirspaceGestureMath.kt` unused km helper remains.
 2. `#34` status unchanged:
    - dead unsuffixed km-returning `calculateDistanceInArea(...)` remains in `AreaBoundaryCalculator`.
    - commented km-based `KeyholeVerification` remains in production source.
@@ -502,7 +502,7 @@ Execution implication:
 ### Run 32 (2026-02-23)
 Findings added to plan (`#34/#28` triple-pass sequence, this-cycle pass 2):
 1. New adjacent miss identified in test coverage for `#40`:
-   - `feature/map/src/test/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngineUnitsTest.kt` currently validates start/finish meter-threshold behavior only.
+   - `feature/map/src/test/java/com/trust3/xcpro/tasks/aat/AATTaskQuickValidationEngineUnitsTest.kt` currently validates start/finish meter-threshold behavior only.
    - no tests lock area-size SI policy behavior or squared-unit warning output labeling in quick-validation path.
 
 Execution implication:
@@ -523,7 +523,7 @@ Execution implication:
 Findings added to plan (`#34/#28` triple-pass sequence, this-cycle pass 1):
 1. `#28` and `#34` remain unchanged (`AirspaceGestureMath`, `AreaBoundaryCalculator.calculateDistanceInArea`, commented `KeyholeVerification`).
 2. New adjacent miss identified in AAT geometry compatibility surface:
-   - `feature/map/src/main/java/com/example/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt` still exposes unused km wrappers:
+   - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt` still exposes unused km wrappers:
      - `generateCircleCoordinates(...)`,
      - `generateStartLine(...)`,
      - `generateFinishLine(...)`,
@@ -589,7 +589,7 @@ Implementation completed:
 6. Closed `#43` by removing unused km wrappers from `AATGeometryGenerator` (`generateCircleCoordinates`, `generateStartLine`, `generateFinishLine`, `calculateDestinationPoint`).
 
 Verification evidence:
-1. PASS: `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.aat.AATTaskQuickValidationEngineUnitsTest" --no-daemon --no-configuration-cache`
+1. PASS: `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.aat.AATTaskQuickValidationEngineUnitsTest" --no-daemon --no-configuration-cache`
 2. PASS: `./gradlew enforceRules --no-daemon --no-configuration-cache`
 3. PASS: `./gradlew testDebugUnitTest --no-daemon --no-configuration-cache`
 4. PASS: `./gradlew assembleDebug --no-daemon --no-configuration-cache`
@@ -693,7 +693,7 @@ Implementation completed (`#12` fixture-matrix coverage closeout):
    - `TaskManagerCoordinatorTest.segment distance meter contract holds across racing and aat fixture matrix`.
 
 Verification evidence:
-1. PASS: `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.aat.calculations.AATDistanceCalculatorUnitsTest" --tests "com.example.xcpro.tasks.racing.RacingGeometryUtilsTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"`
+1. PASS: `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.aat.calculations.AATDistanceCalculatorUnitsTest" --tests "com.trust3.xcpro.tasks.racing.RacingGeometryUtilsTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest"`
 
 ### Run 46 (2026-02-23)
 Implementation completed (remaining non-`#12` `enforce_rules` caveat closure):

@@ -18,7 +18,7 @@ Purpose:
 
 ## Rule Set Ownership
 
-- Rule set declaration: `IgcLintRuleSet.Phase7Strict` in `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintRuleSet.kt`
-- Validator entrypoint: `StrictIgcLintValidator` in `feature/igc/src/main/java/com/example/xcpro/igc/domain/StrictIgcLintValidator.kt`
-- Finalize integration: `IgcExportValidationAdapter` in `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportValidationAdapter.kt`
-- UI message contract: `IgcLintMessageMapper` in `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcLintMessageMapper.kt`
+- Rule set declaration: `IgcLintRuleSet.Phase7Strict` in `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintRuleSet.kt`
+- Validator entrypoint: `StrictIgcLintValidator` in `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/StrictIgcLintValidator.kt`
+- Finalize integration: `IgcExportValidationAdapter` in `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportValidationAdapter.kt`
+- UI message contract: `IgcLintMessageMapper` in `feature/igc/src/main/java/com/trust3/xcpro/igc/usecase/IgcLintMessageMapper.kt`

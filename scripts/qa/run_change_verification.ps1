@@ -75,22 +75,22 @@ $profiles = @{
     )
     "slice-terrain" = @(
         @{ kind = "gradle"; label = "rules"; args = @("enforceRules") + $sharedFlags },
-        @{ kind = "gradle"; label = "qnh"; args = @(":feature:map:testDebugUnitTest", "--tests", "com.example.xcpro.qnh.CalibrateQnhUseCaseTest") + $sharedFlags },
-        @{ kind = "gradle"; label = "terrain-repo"; args = @(":feature:map:testDebugUnitTest", "--tests", "com.example.xcpro.terrain.TerrainElevationRepositoryTest") + $sharedFlags },
-        @{ kind = "gradle"; label = "replay-gate"; args = @(":feature:flight-runtime:testDebugUnitTest", "--tests", "com.example.xcpro.sensors.FlightDataCalculatorEngineReplayTerrainGateTest") + $sharedFlags },
+        @{ kind = "gradle"; label = "qnh"; args = @(":feature:map:testDebugUnitTest", "--tests", "com.trust3.xcpro.qnh.CalibrateQnhUseCaseTest") + $sharedFlags },
+        @{ kind = "gradle"; label = "terrain-repo"; args = @(":feature:map:testDebugUnitTest", "--tests", "com.trust3.xcpro.terrain.TerrainElevationRepositoryTest") + $sharedFlags },
+        @{ kind = "gradle"; label = "replay-gate"; args = @(":feature:flight-runtime:testDebugUnitTest", "--tests", "com.trust3.xcpro.sensors.FlightDataCalculatorEngineReplayTerrainGateTest") + $sharedFlags },
         @{ kind = "gradle"; label = "agl-calculator"; args = @(":dfcards-library:testDebugUnitTest", "--tests", "com.example.dfcards.dfcards.calculations.SimpleAglCalculatorTest") + $sharedFlags },
         @{ kind = "gradle"; label = "assemble"; args = @("assembleDebug") + $sharedFlags }
     )
     "slice-profile" = @(
         @{ kind = "gradle"; label = "rules"; args = @("enforceRules") + $sharedFlags },
-        @{ kind = "gradle"; label = "profile-app"; args = @(":app:testDebugUnitTest", "--tests", "com.example.xcpro.profiles.*") + $sharedFlags },
+        @{ kind = "gradle"; label = "profile-app"; args = @(":app:testDebugUnitTest", "--tests", "com.trust3.xcpro.profiles.*") + $sharedFlags },
         @{ kind = "gradle"; label = "profile-feature"; args = @(":feature:profile:testDebugUnitTest") + $sharedFlags },
         @{ kind = "gradle"; label = "assemble"; args = @("assembleDebug") + $sharedFlags }
     )
     "slice-replay" = @(
         @{ kind = "gradle"; label = "rules"; args = @("enforceRules") + $sharedFlags },
-        @{ kind = "gradle"; label = "replay-map"; args = @(":feature:map:testDebugUnitTest", "--tests", "com.example.xcpro.replay.*") + $sharedFlags },
-        @{ kind = "gradle"; label = "replay-igc"; args = @(":feature:igc:testDebugUnitTest", "--tests", "com.example.xcpro.replay.*") + $sharedFlags },
+        @{ kind = "gradle"; label = "replay-map"; args = @(":feature:map:testDebugUnitTest", "--tests", "com.trust3.xcpro.replay.*") + $sharedFlags },
+        @{ kind = "gradle"; label = "replay-igc"; args = @(":feature:igc:testDebugUnitTest", "--tests", "com.trust3.xcpro.replay.*") + $sharedFlags },
         @{ kind = "gradle"; label = "assemble"; args = @("assembleDebug") + $sharedFlags }
     )
     "pr-ready" = @(

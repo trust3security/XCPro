@@ -38,8 +38,8 @@ Note: When working on this plan, always read and comply with `ARCHITECTURE.md`, 
 
 ### 1) ThermalTracker: last thermal gate
 Files:
-- `feature/map/src/main/java/com/example/xcpro/sensors/ThermalTracker.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/ThermalTracker.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataModels.kt`
 
 Changes:
 - Add constants:
@@ -55,9 +55,9 @@ Rationale:
 
 ### 1b) Thermal timing parity (turning hysteresis)
 Files:
-- `feature/map/src/main/java/com/example/xcpro/sensors/CirclingDetector.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/ThermalTracker.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/CirclingDetector.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/ThermalTracker.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
 
 Changes:
 - Extend `CirclingDecision` to include `turning` (and optionally `turningStartTimeMs`).
@@ -77,7 +77,7 @@ Rationale:
 
 ### 2) Thermal validity semantics
 File:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataModels.kt`
 
 Changes:
 - Align `ThermalClimbInfo.isDefined()` with XCSoar:
@@ -89,8 +89,8 @@ Changes:
 
 ### 3) Metric wiring
 Files:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
 
 Changes:
 - Map `currentThermalValid` to the **combined** validity:
@@ -109,7 +109,7 @@ Changes:
 
 ### 5) Tests (lock parity)
 Suggested new tests:
-- `feature/map/src/test/java/com/example/xcpro/sensors/ThermalTrackerTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/sensors/ThermalTrackerTest.kt`
 
 Cases:
 1) Circling < 45s, gain > 0 -> last thermal NOT updated.
@@ -119,7 +119,7 @@ Cases:
 
 ### 6) Replay validation logs (optional)
 File:
-- `feature/map/src/main/java/com/example/xcpro/replay/ReplayPipeline.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/ReplayPipeline.kt`
 
 Change:
 - Add log fields:

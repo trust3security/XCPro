@@ -2,13 +2,13 @@
 
 ## Current seam evidence
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt:44-149`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt:44-149`  
   OGN uses `CoroutineScope(SupervisorJob() + dispatcher)` on the raw injected dispatcher and keeps many mutable fields in the runtime.
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt:154-245`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt:154-245`  
   multiple collectors and public entry points can mutate runtime state.
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt:235-360`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt:235-360`  
   additional runtime state mutation and async DDB refresh work.
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt:20-55`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt:20-55`  
   ADS-B uses a serialized writer dispatcher, but its transport path is structurally different.
 
 ## Implementation prompt
@@ -45,14 +45,14 @@ Acceptable time-boxed fallback if the preferred architecture is too large:
 
 ## Files likely touched
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt`
 - possible new focused files:
   - `OgnTrafficRepositoryRuntimeMutations.kt`
   - `OgnTrafficRepositoryRuntimeReducer.kt`
 - tests:
-  - `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
   - optional new ordering/contention tests
 
 ## Tests to add or update

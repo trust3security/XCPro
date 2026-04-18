@@ -1,7 +1,7 @@
 package com.example.dfcards.profiles
 
-import com.example.xcpro.core.common.profiles.ProfileSettingsApplyContributor
-import com.example.xcpro.core.common.profiles.ProfileSettingsCaptureContributor
+import com.trust3.xcpro.core.common.profiles.ProfileSettingsApplyContributor
+import com.trust3.xcpro.core.common.profiles.ProfileSettingsCaptureContributor
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -24,3 +24,4 @@ abstract class CardProfileSettingsBindingsModule {
         contributor: CardProfileSettingsContributor
     ): ProfileSettingsApplyContributor
 }
+

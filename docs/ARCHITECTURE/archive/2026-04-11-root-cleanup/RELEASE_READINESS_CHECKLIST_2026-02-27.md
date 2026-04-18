@@ -52,7 +52,7 @@ Execution checklist and evidence log for
 | `./gradlew.bat enforceRules` | 2026-02-27 | Pass | "Rule enforcement passed." |
 | `./gradlew.bat :feature:map:testDebugUnitTest` | 2026-02-27 | Interrupted | Prior run interrupted by daemon/lock contention and user abort |
 | `C:\Users\Asus\.gradle\wrapper\dists\gradle-8.13-bin\5xuhj0ry160q40clulazy9h7d\gradle-8.13\bin\gradle.bat --no-daemon assembleDebug` | 2026-02-27 | Pass | Basic build-only gate completed successfully |
-| `:feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"` | 2026-02-27 | Interrupted | User-aborted rerun after applying ADS-B preference-reset test patch |
+| `:feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelTest"` | 2026-02-27 | Interrupted | User-aborted rerun after applying ADS-B preference-reset test patch |
 
 ## Open Risks (Current)
 

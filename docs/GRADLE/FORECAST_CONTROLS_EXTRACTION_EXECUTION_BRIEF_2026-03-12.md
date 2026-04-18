@@ -76,17 +76,17 @@ The next slice should therefore meet all of these constraints:
 
 ### Source to extract from `feature:map`
 
-- [ForecastOverlayBottomSheetControls.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt)
+- [ForecastOverlayBottomSheetControls.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt)
 
 ### Thin map-side wrappers to keep
 
-- [ForecastOverlayBottomSheetRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheetRuntime.kt)
-- [MapBottomSheetTabs.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt)
+- [ForecastOverlayBottomSheetRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheetRuntime.kt)
+- [MapBottomSheetTabs.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt)
 
 ### Forecast-owned models already outside `feature:map`
 
-- [ForecastOverlayModels.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/profile/src/main/java/com/example/xcpro/forecast/ForecastOverlayModels.kt)
-- [ForecastSettings.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/profile/src/main/java/com/example/xcpro/forecast/ForecastSettings.kt)
+- [ForecastOverlayModels.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/profile/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayModels.kt)
+- [ForecastSettings.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/profile/src/main/java/com/trust3/xcpro/forecast/ForecastSettings.kt)
 
 ## Target Shape
 
@@ -95,8 +95,8 @@ controls surface into it.
 
 Recommended target files:
 
-- `feature/profile/src/main/java/com/example/xcpro/forecast/ui/ForecastOverlayControlsContent.kt`
-- `feature/profile/src/main/java/com/example/xcpro/forecast/ui/ForecastOverlayFormatting.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/forecast/ui/ForecastOverlayControlsContent.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/forecast/ui/ForecastOverlayFormatting.kt`
 
 Keep the package name stable if that avoids a wider import churn wave.
 
@@ -129,8 +129,8 @@ Keep the package name stable if that avoids a wider import churn wave.
 2. Move `ForecastOverlayControlsContent(...)` into that file with no behavioral edits.
 3. Move `formatForecastTime(...)` and `formatFollowTimeOffsetLabel(...)` into a
    small forecast-owned helper file.
-4. Update [ForecastOverlayBottomSheetRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheetRuntime.kt) to import and call the moved composable/helpers.
-5. Update [MapBottomSheetTabs.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt) to import the moved composable.
+4. Update [ForecastOverlayBottomSheetRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheetRuntime.kt) to import and call the moved composable/helpers.
+5. Update [MapBottomSheetTabs.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt) to import the moved composable.
 6. Delete the moved declarations from the original map file.
 7. Stop. Do not extend the slice into forecast runtime or weather runtime work.
 

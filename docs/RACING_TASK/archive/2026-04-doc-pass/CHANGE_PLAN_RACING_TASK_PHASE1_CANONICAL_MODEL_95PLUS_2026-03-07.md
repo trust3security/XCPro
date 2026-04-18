@@ -58,7 +58,7 @@ Execution update (2026-03-07):
   - `python scripts/arch_gate.py`: PASS
   - `powershell -ExecutionPolicy Bypass -File scripts/ci/enforce_rules.ps1`: PASS
   - `./gradlew :feature:map:compileDebugKotlin`: PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskNavigationControllerTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest" --tests "com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.example.xcpro.map.RacingReplayTaskHelpersTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.trust3.xcpro.map.RacingReplayTaskHelpersTest"`: PASS
   - `./gradlew enforceRules`: PASS
   - `./gradlew testDebugUnitTest`: PASS
   - `./gradlew assembleDebug`: PASS
@@ -209,7 +209,7 @@ No runtime authority write-back from simple/legacy models.
 - Goal:
   - Freeze explicit canonical contract and migration inventory.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/core/Models.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/core/Models.kt`
   - `docs/RACING_TASK/CHANGE_PLAN_RACING_TASK_PRODUCTION_GRADE_PHASED_IP_2026-03-07.md`
   - this plan doc
 - Tests:
@@ -222,7 +222,7 @@ No runtime authority write-back from simple/legacy models.
 - Goal:
   - Introduce typed RT payload in core model without behavior change.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/core/Models.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/core/Models.kt`
   - new core files for RT payload (for example: `RacingTaskRules.kt`, `TaskMetadata.kt`)
   - serializer/adapters: `TaskPersistSerializer.kt`, `TaskPersistenceAdapters.kt`
 - Tests:

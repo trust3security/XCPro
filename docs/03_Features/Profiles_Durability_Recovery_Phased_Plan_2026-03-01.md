@@ -89,7 +89,7 @@ Phase 1 post-implementation repass findings (2026-03-01, latest pass):
    reason and keeping deterministic ID regeneration behavior.
 
 3. Closed: import feedback formatting is centralized in shared formatter:
-   - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileImportFeedbackFormatter.kt`
+   - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileImportFeedbackFormatter.kt`
    Consumers:
    - `ProfileSelectionScreen`
    - `ProfileSettingsScreen`

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.map.runtime"
+    namespace = "com.trust3.xcpro.map.runtime"
     compileSdk = 35
 
     defaultConfig {

@@ -93,26 +93,26 @@ Focus only on these areas:
 ## Files most likely in scope
 
 Review the current implementation in and around these files first:
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayConfig.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayConfig.kt`
 
 Also review the ADS-B / OGN connectivity code only to confirm the current behavior is intentional, not to change it:
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoopTransitions.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbPollingHealthPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeLoopTransitions.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbPollingHealthPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
 
 ## What to do
 
@@ -144,7 +144,7 @@ Use the most precise commands that match the actual repo/test layout.
 
 Expected minimum coverage:
 - relevant `:feature:traffic:testDebugUnitTest` coverage for the OGN slice,
-- `:feature:map:testDebugUnitTest --tests "com.example.xcpro.map.LiveFollowWatchAircraftOverlayTest"`,
+- `:feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.LiveFollowWatchAircraftOverlayTest"`,
 - `enforceRules`.
 
 If you changed additional code outside those areas, run the smallest extra targeted checks needed to justify the change.

@@ -111,9 +111,9 @@ function Resolve-EvidenceReportPath {
 }
 
 $testClassByPackage = @{
-    "pkg-d1" = "com.example.xcpro.map.MapscreenPkgD1PerfEvidenceTest"
-    "pkg-g1" = "com.example.xcpro.map.MapscreenPkgG1PerfEvidenceTest"
-    "pkg-w1" = "com.example.xcpro.map.MapscreenPkgW1PerfEvidenceTest"
+    "pkg-d1" = "com.trust3.xcpro.map.MapscreenPkgD1PerfEvidenceTest"
+    "pkg-g1" = "com.trust3.xcpro.map.MapscreenPkgG1PerfEvidenceTest"
+    "pkg-w1" = "com.trust3.xcpro.map.MapscreenPkgW1PerfEvidenceTest"
 }
 
 $repoRoot = Resolve-Path (Join-Path (Join-Path $PSScriptRoot "..") "..")

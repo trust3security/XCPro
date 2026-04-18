@@ -90,11 +90,11 @@ Dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDdbRepository.kt` (if needed)
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDdbRepository.kt` (if needed)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
   - `docs/OGN/OGN.md`
   - `docs/OGN/OGN_PROTOCOL_NOTES.md`
   - `docs/OGN/OGN_APRS_TEST_VECTORS.md`
@@ -186,8 +186,8 @@ After:
 - Goal:
   - Lock current behavior with failing/expectation tests before policy changes.
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
 - Tests to add/update:
   - timed frame then delayed untimed frame scenario.
   - inbound-stall scenario where keepalive writes continue.
@@ -200,10 +200,10 @@ After:
 - Goal:
   - Prevent untimed frames from rewinding committed timed-target position.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
 - Design policy:
   - Add per-target time-authority state:
     - `TIMED_LOCKED`: target has committed timed samples
@@ -224,8 +224,8 @@ After:
 - Goal:
   - Stall detection uses inbound read activity only.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
 - Tests to add/update:
   - keepalive-write-only stream still trips stall timeout.
   - periodic inbound server comment lines keep stream healthy.
@@ -237,9 +237,9 @@ After:
 - Goal:
   - DDB refresh check runs while stream is connected, not only on reconnect.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDdbRepository.kt` (only if contract expansion needed)
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt` (or new repository cadence test)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDdbRepository.kt` (only if contract expansion needed)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt` (or new repository cadence test)
 - Tests to add/update:
   - long-lived connection triggers due-check and refresh attempt.
   - refresh failure does not break active stream.
@@ -251,8 +251,8 @@ After:
 - Goal:
   - Surface new policy counters and sync all OGN docs.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels*.kt` (if new counters displayed)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels*.kt` (if new counters displayed)
   - `docs/OGN/OGN.md`
   - `docs/OGN/OGN_PROTOCOL_NOTES.md`
   - `docs/OGN/OGN_APRS_TEST_VECTORS.md`
@@ -362,7 +362,7 @@ Rescore update (2026-03-01, second code pass + fix):
 Rescore update (2026-03-01, verification rerun):
 - Forced suite and focused reruns succeeded:
   - `./gradlew testDebugUnitTest --rerun-tasks`
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.*" --rerun-tasks`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.*" --rerun-tasks`
 - Connectivity reliability score raised to `9.4 / 10` (`94 / 100`).
 
 Remaining risks:

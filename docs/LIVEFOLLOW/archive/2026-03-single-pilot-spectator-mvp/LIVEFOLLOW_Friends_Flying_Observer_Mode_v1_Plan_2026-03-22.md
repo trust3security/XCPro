@@ -56,8 +56,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt` | existing aircraft marker overlay | MapLibre source/layer self-heal pattern | watched pilot uses a distinct source/layer/icon and stays in `feature:map` to avoid module inversion |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | existing watched-pilot chrome host | keep watch display mapping in watch UI layer | extend with bottom telemetry strip only |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt` | existing aircraft marker overlay | MapLibre source/layer self-heal pattern | watched pilot uses a distinct source/layer/icon and stays in `feature:map` to avoid module inversion |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | existing watched-pilot chrome host | keep watch display mapping in watch UI layer | extend with bottom telemetry strip only |
 
 ### 2.2B Boundary Moves
 
@@ -75,15 +75,15 @@
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | Existing | route wiring for map vs Friends Flying shell composition | app navigation owner | navigation should stay in app layer | maybe helper split if file grows |
-| `app/src/main/java/com/example/xcpro/MapRouteHost.kt` | New | shared app-level map shell host with optional overlay | avoids duplicating map-route composition | not domain logic | no |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | map-side bridge from watch UI state into overlay/focus rendering | current watch/map seam already lives here | keeps map runtime out of watch ViewModel | no |
-| `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | New | watched pilot MapLibre source/layer runtime | map runtime object owner | should not live in ViewModel or livefollow module | no |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt` | Existing | overlay seam inputs | existing map shell contract owner | narrow API threading | no |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Existing | binds new map overlay/focus callbacks | map shell input assembly | current place for overlay callbacks | no |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowMapRenderState.kt` | Existing | watched map render payload | watch UI contract | already owns map-facing watch state | no |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | watch display mapping and telemetry labels | watch UI state owner | telemetry labels belong with other watch labels | no |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | top panel + bottom telemetry strip chrome | existing watched-pilot map chrome host | keep all watch chrome together | maybe later |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | Existing | route wiring for map vs Friends Flying shell composition | app navigation owner | navigation should stay in app layer | maybe helper split if file grows |
+| `app/src/main/java/com/trust3/xcpro/MapRouteHost.kt` | New | shared app-level map shell host with optional overlay | avoids duplicating map-route composition | not domain logic | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | map-side bridge from watch UI state into overlay/focus rendering | current watch/map seam already lives here | keeps map runtime out of watch ViewModel | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | New | watched pilot MapLibre source/layer runtime | map runtime object owner | should not live in ViewModel or livefollow module | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSectionInputs.kt` | Existing | overlay seam inputs | existing map shell contract owner | narrow API threading | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Existing | binds new map overlay/focus callbacks | map shell input assembly | current place for overlay callbacks | no |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowMapRenderState.kt` | Existing | watched map render payload | watch UI contract | already owns map-facing watch state | no |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | watch display mapping and telemetry labels | watch UI state owner | telemetry labels belong with other watch labels | no |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | top panel + bottom telemetry strip chrome | existing watched-pilot map chrome host | keep all watch chrome together | maybe later |
 | `docs/ARCHITECTURE/PIPELINE.md` | Existing | pipeline wiring update | required by repo contract | canonical architecture doc | no |
 
 ### 2.2E Module and API Surface

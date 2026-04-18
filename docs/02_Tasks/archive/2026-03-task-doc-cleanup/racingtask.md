@@ -105,12 +105,12 @@ The UI flow (start + turnpoints + finish) is necessary but not sufficient for fu
 
 ## 6) References in code
 
-- Task model: `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt`
-- Waypoint defaults: `feature/map/src/main/java/com/example/xcpro/tasks/racing/models/RacingWaypoint.kt`
-- Distance & path: `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskCalculator.kt`
-- Validation: `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskValidator.kt`
-- UI selectors: `feature/map/src/main/java/com/example/xcpro/tasks/racing/ui/`
-- Task creation flow: `feature/map/src/main/java/com/example/xcpro/screens/task/`
+- Task model: `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTask.kt`
+- Waypoint defaults: `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingWaypoint.kt`
+- Distance & path: `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskCalculator.kt`
+- Validation: `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskValidator.kt`
+- UI selectors: `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/ui/`
+- Task creation flow: `feature/map/src/main/java/com/trust3/xcpro/screens/task/`
 
 ---
 

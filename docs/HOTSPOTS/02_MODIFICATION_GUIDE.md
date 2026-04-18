@@ -5,19 +5,19 @@ Use this guide when changing thermal hotspot behavior.
 ## 1) File map
 
 - Runtime policy:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
 - Hotspot model:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalModels.kt`
 - Retention constants/helpers:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRetention.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRetention.kt`
 - Display share constants/helpers:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnHotspotsDisplayPercent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnHotspotsDisplayPercent.kt`
 - Settings persistence:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
 - Hotspots settings UI + VM:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HotspotsSettingsScreen.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HotspotsSettingsViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HotspotsSettingsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HotspotsSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HotspotsSettingsViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HotspotsSettingsUseCase.kt`
 
 ## 2) Safe change recipes
 
@@ -69,9 +69,9 @@ Selected thermal context is a read-only projection over hotspot SSOT + raw SCIA 
 
 Current owners:
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnSelectedThermalContextProjector.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnSelectedThermalOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnSelectedThermalContextProjector.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnSelectedThermalOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnThermalDetailsSheet.kt`
 
 Defaults:
 
@@ -145,9 +145,9 @@ Current thermal layer IDs:
 
 Related anchor lists:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt`
 
 ## 2.7 Keep hotspot toggle semantics coherent
 

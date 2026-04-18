@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity
-            android:name="com.example.xcpro.map.ui.MapComposeTestActivity"
+            android:name="com.trust3.xcpro.map.ui.MapComposeTestActivity"
             android:exported="false" />
     </application>
 </manifest>

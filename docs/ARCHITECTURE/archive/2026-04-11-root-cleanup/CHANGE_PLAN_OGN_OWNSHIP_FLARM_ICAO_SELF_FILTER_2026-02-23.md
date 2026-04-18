@@ -108,9 +108,9 @@ Dependency flow remains:
 `UI -> domain/use-case -> data`
 
 - Modules/files touched:
-  - Data: `feature/map/src/main/java/com/example/xcpro/ogn/*`
-  - Domain/use-case: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
-  - ViewModel/UI: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+  - Data: `feature/map/src/main/java/com/trust3/xcpro/ogn/*`
+  - Domain/use-case: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
+  - ViewModel/UI: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
 - Any boundary risk:
   - UI doing ad-hoc validation/matching policy.
   - Filtering in UI instead of repository SSOT.
@@ -188,7 +188,7 @@ Explicitly forbidden comparisons:
 | Risk | Rule Reference | Guard Type (lint/enforceRules/test/review) | File/Test |
 |---|---|---|---|
 | UI starts applying filtering policy | MVVM/UDF + SSOT | Review + tests | `OgnSettingsScreen.kt`, `OgnSettingsViewModel.kt` |
-| Parser drops id type and causes wrong matches | Deterministic correctness | Unit test | `feature/map/src/test/java/com/example/xcpro/ogn/OgnAprsLineParserTest.kt` |
+| Parser drops id type and causes wrong matches | Deterministic correctness | Unit test | `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnAprsLineParserTest.kt` |
 | Callsign-prefix inference introduces false positives | Deterministic correctness | Unit tests with strict prefix allowlist (`ICA`, `FLR`) | `OgnAprsLineParserTest.kt` |
 | Malformed `id` tokens accepted (`7 hex`) | Deterministic correctness | Parser edge-case unit tests | `OgnAprsLineParserTest.kt` |
 | Callsign suffix (`-SSID`) breaks inference/fallback | Deterministic correctness | Parser unit tests with `CALL-1` forms | `OgnAprsLineParserTest.kt` |
@@ -196,7 +196,7 @@ Explicitly forbidden comparisons:
 | Parser/DDB type mapping drift (unknown type handling mismatch) | Deterministic correctness | Unit tests for unsupported/unknown type tokens and `device_type` values | parser + DDB mapping tests |
 | Same 6-hex in different types aliases thermal/trail state | Deterministic correctness | collision tests for canonical typed key propagation | new OGN collision tests |
 | Same legacy id across types yields wrong marker/details selection | Deterministic correctness + UX correctness | map overlay + ViewModel selection key collision tests | new map OGN selection tests |
-| Preferences accept invalid hex values | SSOT contract clarity | Unit test | `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt` |
+| Preferences accept invalid hex values | SSOT contract clarity | Unit test | `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt` |
 | OGN settings draft state lost on recreation | MVVM/UDF + UX consistency | ViewModel/UI tests with recreation and deferred commit | new `OgnSettingsViewModelTest.kt` + UI tests |
 | Ownship filtering not applied to trails/thermals | SSOT ownership | Integration/unit test | `OgnTrafficRepository` + existing thermal/trail tests |
 | Trail-selection state not cleaned for suppressed ownship ids | UI/SSOT consistency | Unit test | new `OgnTrailSelectionPreferencesRepositoryTest.kt` |
@@ -247,11 +247,11 @@ Settings flow:
 - Goal:
   Preserve OGN address-type information in parsed target model.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnAprsLineParser.kt`
-  - Optional new helper: `feature/map/src/main/java/com/example/xcpro/ogn/OgnAddressIdentity.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnAprsLineParser.kt`
+  - Optional new helper: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnAddressIdentity.kt`
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnAprsLineParserTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnAprsLineParserTest.kt`
   - Optional new parser-specific decode test file.
 - Exit criteria:
   - Parsed target contains normalized 6-hex address plus typed source when available.
@@ -265,13 +265,13 @@ Settings flow:
 - Goal:
   Keep identity enrichment and tracked-policy decisions consistent with typed addresses.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDdbJsonParser.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDdbRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDdbJsonParser.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDdbRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbJsonParserTest.kt`
-  - New: `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbRepositoryLookupTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnDdbJsonParserTest.kt`
+  - New: `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnDdbRepositoryLookupTest.kt`
 - Exit criteria:
   - DDB lookups use type+hex when type is known.
   - Parser/DDB type mapping matrix is centralized and documented (including unknown handling).
@@ -283,22 +283,22 @@ Settings flow:
   Eliminate cross-type aliasing for repository state and marker selection while keeping
   UI-visible `target.id` display semantics stable.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelection*`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt` (selection filter key path)
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt` (trail row key path)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelection*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt` (selection filter key path)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt` (trail row key path)
 - Tests to add/update:
-  - New: `feature/map/src/test/java/com/example/xcpro/ogn/OgnTypedKeyCollisionPolicyTest.kt`
-  - New: `feature/map/src/test/java/com/example/xcpro/map/MapScreenOgnSelectionKeyPolicyTest.kt`
-  - New: `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrailSelectionKeyMigrationTest.kt`
+  - New: `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTypedKeyCollisionPolicyTest.kt`
+  - New: `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenOgnSelectionKeyPolicyTest.kt`
+  - New: `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrailSelectionKeyMigrationTest.kt`
 - Exit criteria:
   - Two simultaneous targets with same legacy `id` but different address types remain independent in:
     - traffic cache
@@ -314,14 +314,14 @@ Settings flow:
 - Goal:
   Add persistent own FLARM/ICAO inputs with strict validation.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
-  - Optional new UI state model: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+  - Optional new UI state model: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
-  - New: `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModelTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+  - New: `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModelTest.kt`
     (commit/save semantics, normalization path, recreation-safe draft state).
 - Exit criteria:
   - Both fields accept only uppercase 6-hex (stored null if blank).
@@ -338,23 +338,23 @@ Settings flow:
 - Goal:
   Filter ownship targets once in repository before publish.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionUseCase.kt` (if repository API expands)
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt` (if suppression flow surfaced)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt` (if suppression diagnostics surfaced)
-  - (if needed) `feature/map/src/main/java/com/example/xcpro/di/MapBindingsModule.kt` wiring remains valid
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionUseCase.kt` (if repository API expands)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt` (if suppression flow surfaced)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt` (if suppression diagnostics surfaced)
+  - (if needed) `feature/map/src/main/java/com/trust3/xcpro/di/MapBindingsModule.kt` wiring remains valid
 - Tests to add/update:
-  - New: `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficOwnshipFilterPolicyTest.kt`
-  - New: `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositorySettingsRaceTest.kt`
+  - New: `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficOwnshipFilterPolicyTest.kt`
+  - New: `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositorySettingsRaceTest.kt`
   - New: suppression diagnostics consistency tests (snapshot/target list/suppression set).
   - Update OGN repository policy tests if helper methods are exposed internally.
   - Update all `FakeOgnTrafficRepository` implementations under:
-    - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
-    - `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
-    - `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
   - Verify existing `OgnThermalRepositoryTest` and `OgnGliderTrailRepositoryTest` remain green.
 - Exit criteria:
   - Incoming ownship targets are excluded when typed id matches configured ownship IDs.

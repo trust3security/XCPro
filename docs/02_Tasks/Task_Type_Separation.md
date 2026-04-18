@@ -87,10 +87,10 @@ With **ZERO cross-contamination**:
 
 ```kotlin
 // oe FORBIDDEN - In AAT code
-package com.example.xcpro.tasks.aat
+package com.trust3.xcpro.tasks.aat
 
-import com.example.xcpro.tasks.racing.RacingCalculator  // NO!
-import com.example.xcpro.tasks.racing.models.*  // NO!
+import com.trust3.xcpro.tasks.racing.RacingCalculator  // NO!
+import com.trust3.xcpro.tasks.racing.models.*  // NO!
 
 fun calculateAAT() {
     val distance = RacingCalculator.calculateDistance(...)  // NO!
@@ -99,10 +99,10 @@ fun calculateAAT() {
 
 ```kotlin
 // oe FORBIDDEN - In Racing code
-package com.example.xcpro.tasks.racing
+package com.trust3.xcpro.tasks.racing
 
-import com.example.xcpro.tasks.aat.AATCalculator  // NO!
-import com.example.xcpro.tasks.aat.models.*  // NO!
+import com.trust3.xcpro.tasks.aat.AATCalculator  // NO!
+import com.trust3.xcpro.tasks.aat.models.*  // NO!
 
 fun calculateRacing() {
     val area = AATArea(...)  // NO!
@@ -113,7 +113,7 @@ fun calculateRacing() {
 
 ```kotlin
 // oe FORBIDDEN - Shared utilities
-package com.example.xcpro.tasks.shared  // NO "shared" directory!
+package com.trust3.xcpro.tasks.shared  // NO "shared" directory!
 
 object SharedMathUtils {  // NO!
     fun calculateDistance(...) { ... }
@@ -171,11 +171,11 @@ class CylinderGeometry {  // Used by both = VIOLATION
 
 ```kotlin
 // ... CORRECT - AAT code uses AAT utilities
-package com.example.xcpro.tasks.aat
+package com.trust3.xcpro.tasks.aat
 
-import com.example.xcpro.tasks.aat.calculations.AATMathUtils
-import com.example.xcpro.tasks.aat.models.AATWaypoint
-import com.example.xcpro.tasks.aat.areas.CircleAreaCalculator
+import com.trust3.xcpro.tasks.aat.calculations.AATMathUtils
+import com.trust3.xcpro.tasks.aat.models.AATWaypoint
+import com.trust3.xcpro.tasks.aat.areas.CircleAreaCalculator
 
 class AATTaskCalculator {
     fun calculateDistance() {
@@ -186,11 +186,11 @@ class AATTaskCalculator {
 
 ```kotlin
 // ... CORRECT - Racing code uses Racing utilities
-package com.example.xcpro.tasks.racing
+package com.trust3.xcpro.tasks.racing
 
-import com.example.xcpro.tasks.racing.calculations.RacingMathUtils
-import com.example.xcpro.tasks.racing.models.RacingWaypoint
-import com.example.xcpro.tasks.racing.turnpoints.CylinderCalculator
+import com.trust3.xcpro.tasks.racing.calculations.RacingMathUtils
+import com.trust3.xcpro.tasks.racing.models.RacingWaypoint
+import com.trust3.xcpro.tasks.racing.turnpoints.CylinderCalculator
 
 class RacingTaskCalculator {
     fun calculateDistance() {
@@ -201,7 +201,7 @@ class RacingTaskCalculator {
 
 ```kotlin
 // ... CORRECT - TaskManagerCoordinator routes ONLY
-package com.example.xcpro.tasks
+package com.trust3.xcpro.tasks
 
 class TaskManagerCoordinator {
     private val racingManager = RacingTaskManager()
@@ -283,16 +283,16 @@ feature/map-runtime/src/main/java/.../tasks/
 
 ```bash
 # 1. Check for Racing imports in AAT task-owned code (should return ZERO)
-rg -n "import.*racing" feature/tasks/src/main/java/com/example/xcpro/tasks/aat
+rg -n "import.*racing" feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat
 
 # 2. Check for AAT imports in Racing task-owned code (should return ZERO)
-rg -n "import.*aat" feature/tasks/src/main/java/com/example/xcpro/tasks/racing
+rg -n "import.*aat" feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing
 
 # 3. Check for shared directories (should return ZERO)
-rg --files feature/tasks/src/main/java/com/example/xcpro/tasks | rg "/shared/|\\\\shared\\\\"
+rg --files feature/tasks/src/main/java/com/trust3/xcpro/tasks | rg "/shared/|\\\\shared\\\\"
 
 # 4. Verify no task type switching in calculation files
-rg -n "when.*taskType" feature/tasks/src/main/java/com/example/xcpro/tasks/racing feature/tasks/src/main/java/com/example/xcpro/tasks/aat
+rg -n "when.*taskType" feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat
 ```
 
 ### Automated CI Check
@@ -310,13 +310,13 @@ jobs:
       - uses: actions/checkout@v2
       - name: Check Racing imports in AAT
         run: |
-          if rg -n "import.*racing" feature/tasks/src/main/java/com/example/xcpro/tasks/aat; then
+          if rg -n "import.*racing" feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat; then
             echo "ERROR: Found Racing imports in AAT code!"
             exit 1
           fi
       - name: Check AAT imports in Racing
         run: |
-          if rg -n "import.*aat" feature/tasks/src/main/java/com/example/xcpro/tasks/racing; then
+          if rg -n "import.*aat" feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing; then
             echo "ERROR: Found AAT imports in Racing code!"
             exit 1
           fi
@@ -485,8 +485,8 @@ fun calculateBearing(...) { ... }  // AAT's own copy
 - [Racing_Tasks.md](./Racing_Tasks.md) - Racing implementation
 - [AAT_Tasks.md](./AAT_Tasks.md) - AAT implementation
 - [PIPELINE.md](../ARCHITECTURE/PIPELINE.md) - Current task/runtime module split
-- [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) - AAT module structure
-- [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) - Racing module structure
+- [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ARCHITECTURE.md) - AAT module structure
+- [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/trust3/xcpro/tasks/racing/ARCHITECTURE.md) - Racing module structure
 
 ---
 

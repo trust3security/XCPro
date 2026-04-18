@@ -59,9 +59,9 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | current map-entry-scoped LiveFollow orchestration | keep shared map-entry watch ViewModel as the owner of watch intent | send a richer selection payload instead of only share code |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | current map overlay consumes a single watch UI state | keep top panel rendering driven by one watch UI state | none |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | current persistent sheet browse shell | keep sheet state local and list rendering in Friends Flying UI | split row rendering into a focused file because the screen file is near the line budget |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | current map-entry-scoped LiveFollow orchestration | keep shared map-entry watch ViewModel as the owner of watch intent | send a richer selection payload instead of only share code |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | current map overlay consumes a single watch UI state | keep top panel rendering driven by one watch UI state | none |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | current persistent sheet browse shell | keep sheet state local and list rendering in Friends Flying UI | split row rendering into a focused file because the screen file is near the line budget |
 
 ### 2.2B Boundary Moves
 
@@ -81,18 +81,18 @@
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/LIVEFOLLOW/LIVEFOLLOW_Single_Watched_Pilot_State_Polish_Plan_2026-03-22.md` | New | slice plan and ownership record | required non-trivial change plan | not runtime code | No |
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | Existing | route orchestration between Friends Flying and shared watch owner | nav graph already owns map-entry-scoped handoff | not a feature ViewModel responsibility | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingViewModel.kt` | Existing | emit row-tap watch selection event | list ViewModel already owns selection intents | not UI business | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | Existing | row display mapping | presentation mapping already lives here | keep UI free of ad hoc mapping logic | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | Existing | scaffold and expanded-content wiring only | route shell owner | avoid growing row rendering in an already large file | Yes |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingPilotRows.kt` | New | pilot row rendering and selected styling | focused UI split for row responsibilities | not viewmodel/domain logic | Yes, split target |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchViewModel.kt` | Existing | selected watch target hint and clear behavior | watch owner already lives here | avoid introducing route-local watch mirrors | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | compact panel labels, selected share code, stale/unavailable wording | watch presentation mapper already lives here | map host should render, not derive | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | compact panel action affordance and wording | current top panel renderer lives here | avoid duplicating panel chrome elsewhere | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/friends/FriendsFlyingViewModelTest.kt` | Existing | selection event regressions | closest owner | n/a | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/friends/FriendsFlyingUiStateTest.kt` | Existing | row model regressions | closest owner | n/a | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiStateTest.kt` | Existing | stale/unavailable/pending-switch panel regressions | closest owner | n/a | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/watch/LiveFollowWatchViewModelTest.kt` | Existing | selected-target and clear behavior regressions | closest owner | n/a | No |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | Existing | route orchestration between Friends Flying and shared watch owner | nav graph already owns map-entry-scoped handoff | not a feature ViewModel responsibility | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingViewModel.kt` | Existing | emit row-tap watch selection event | list ViewModel already owns selection intents | not UI business | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | Existing | row display mapping | presentation mapping already lives here | keep UI free of ad hoc mapping logic | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | Existing | scaffold and expanded-content wiring only | route shell owner | avoid growing row rendering in an already large file | Yes |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingPilotRows.kt` | New | pilot row rendering and selected styling | focused UI split for row responsibilities | not viewmodel/domain logic | Yes, split target |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchViewModel.kt` | Existing | selected watch target hint and clear behavior | watch owner already lives here | avoid introducing route-local watch mirrors | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | compact panel labels, selected share code, stale/unavailable wording | watch presentation mapper already lives here | map host should render, not derive | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | compact panel action affordance and wording | current top panel renderer lives here | avoid duplicating panel chrome elsewhere | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingViewModelTest.kt` | Existing | selection event regressions | closest owner | n/a | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingUiStateTest.kt` | Existing | row model regressions | closest owner | n/a | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiStateTest.kt` | Existing | stale/unavailable/pending-switch panel regressions | closest owner | n/a | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchViewModelTest.kt` | Existing | selected-target and clear behavior regressions | closest owner | n/a | No |
 
 ### 2.3 Time Base
 

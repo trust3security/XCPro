@@ -12,15 +12,15 @@ not the earlier pre-implementation plan.
 Current branch reality:
 
 - OGN zoom-band icon sizing is implemented through:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportSizing.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
 - OGN immediate label visibility is implemented through style restyling in:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
 - Live Follow watch-aircraft zoom scaling is implemented in:
-  - `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
 
 Current branch regressions that block release-grade readiness:
 
@@ -86,16 +86,16 @@ No repository, ViewModel, or persistence owner changes are required in Phase A.
 
 Reference files reviewed:
 
-- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
-- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `origin/main:feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
-- `origin/main:feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `origin/main:feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-- `origin/main:feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+- `origin/main:feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `origin/main:feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
+- `origin/main:feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `origin/main:feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt`
+- `origin/main:feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `origin/main:feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+- `origin/main:feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
 - current `HEAD` versions of those same files plus:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
 
 Pattern/structure to reuse:
 
@@ -117,14 +117,14 @@ Intentional deviation from current branch:
 
 The cluster path was introduced through these files:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterModels.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterModels.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt`
 
 `origin/main` did not have cluster feature generation, cluster hit results, or
 cluster expand-on-tap.
@@ -133,13 +133,13 @@ cluster expand-on-tap.
 
 Current cluster membership is computed from rendered icon size in:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
 
 But zoom changes only restyle OGN layers through:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
 
 That leaves cluster topology stale until the next traffic render.
 
@@ -168,11 +168,11 @@ Keep the current owner seam and fix the style-reapply behavior inside
 
 The branch now has one explicit OGN zoom-band owner:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
 
 And one rendered-size owner:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportSizing.kt`
 
 That ownership is acceptable for Phase A and should stay.
 
@@ -247,69 +247,69 @@ No new domain, repository, or Android boundary adapter is needed.
 | File | New / Existing | Owner / Responsibility | Why this file owns it | Why not another layer/file |
 |---|---|---|---|---|
 | `docs/ZOOM/xcpro-phase-1-implementation-brief.md` | Existing | Phase A corrective plan | This is the active implementation brief | Do not spread phase ownership across chat history |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt` | Existing | Canonical OGN zoom-band policy | It already owns the four zoom bands | Do not move policy into UI or runtime helpers |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt` | Existing | Base-size to rendered-size resolution | It already owns rendered icon-size resolution | Keep one rendered-size owner |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt` | Existing | OGN overlay runtime layer/source behavior | Overlay owns MapLibre source and style mutation | Delegate should not own feature generation |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt` | Existing | OGN layer construction and style property helpers | This is the existing OGN style helper seam | Keep style helpers out of the delegate |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt` | Existing | Branch-only cluster feature path | This file is only needed because the cluster path was added | Delete or retire in Phase A because cluster behavior is out of scope |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | Existing | Branch-only screen clustering policy | This file exists solely for cluster grouping | Delete or retire in Phase A |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterModels.kt` | Existing | Branch-only cluster hit/render models | This file exists solely for cluster behavior | Delete or retire in Phase A |
-| `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt` | Existing | OGN runtime handle contract | This is the runtime seam between map shell and traffic overlay handles | Do not hide contract changes in callers |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | Cached OGN viewport input and rendered-size forwarding | It is the runtime owner already wired from `MapInitializer` | Do not duplicate runtime state in overlay helpers |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | Public map-runtime API surface | This is the shell-facing runtime contract owner | Keep shell APIs centralized |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` | Existing | Map tap routing | The gesture layer owns user tap behavior | Do not hide tap semantics inside the delegate |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt` | Existing | Ring overlay rendering and hit resolution | It owns the target-ring runtime seam | Keep ring hit behavior local to the ring overlay |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | Watched-aircraft overlay lifecycle and zoom forwarding | This is the actual UI-runtime owner seam | Do not route through unrelated runtime managers |
-| `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | Existing | Watched-aircraft scale/style application | It owns the MapLibre layer/source for the watched aircraft | The composable should not own style mutation details |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt` | Existing | Canonical OGN zoom-band policy | It already owns the four zoom bands | Do not move policy into UI or runtime helpers |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportSizing.kt` | Existing | Base-size to rendered-size resolution | It already owns rendered icon-size resolution | Keep one rendered-size owner |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt` | Existing | OGN overlay runtime layer/source behavior | Overlay owns MapLibre source and style mutation | Delegate should not own feature generation |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt` | Existing | OGN layer construction and style property helpers | This is the existing OGN style helper seam | Keep style helpers out of the delegate |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt` | Existing | Branch-only cluster feature path | This file is only needed because the cluster path was added | Delete or retire in Phase A because cluster behavior is out of scope |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | Existing | Branch-only screen clustering policy | This file exists solely for cluster grouping | Delete or retire in Phase A |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterModels.kt` | Existing | Branch-only cluster hit/render models | This file exists solely for cluster behavior | Delete or retire in Phase A |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt` | Existing | OGN runtime handle contract | This is the runtime seam between map shell and traffic overlay handles | Do not hide contract changes in callers |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | Cached OGN viewport input and rendered-size forwarding | It is the runtime owner already wired from `MapInitializer` | Do not duplicate runtime state in overlay helpers |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | Public map-runtime API surface | This is the shell-facing runtime contract owner | Keep shell APIs centralized |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt` | Existing | Map tap routing | The gesture layer owns user tap behavior | Do not hide tap semantics inside the delegate |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt` | Existing | Ring overlay rendering and hit resolution | It owns the target-ring runtime seam | Keep ring hit behavior local to the ring overlay |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | Watched-aircraft overlay lifecycle and zoom forwarding | This is the actual UI-runtime owner seam | Do not route through unrelated runtime managers |
+| `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | Existing | Watched-aircraft scale/style application | It owns the MapLibre layer/source for the watched aircraft | The composable should not own style mutation details |
 
 ## Phase A file change plan
 
 ### Production files expected to change
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
   - remove `resolveRenderItems(...)`
   - remove cluster-aware hit path
   - keep viewport zoom state and style-only label gating
   - restore direct target feature rendering
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
   - keep icon-size and label-visibility restyling
   - remove branch-added cluster layer/style behavior
   - retain top/bottom label visibility toggles
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt`
   - keep `setViewportZoom(...)`
   - revert OGN hit APIs from `findHitAt(...)` to direct `findTargetAt(...)`
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
   - keep rendered-size ownership and viewport zoom caching
   - remove cluster hit / expand APIs
   - restore direct target lookup
 
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
   - keep `setOgnViewportZoom(...)`
   - remove public cluster hit / expand APIs
   - keep direct `findOgnTargetAt(...)`
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
   - restore direct OGN target tap path
   - remove cluster expand-on-tap behavior
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt`
   - keep rendered-size ring behavior if it is already part of the viewport-sized
     Phase 1 path
   - revert hit API to direct target key return
 
-- `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
   - keep zoom-band scaling
   - fix style recreation so runtime objects are reapplied even when the
     resolved scale is unchanged
 
 ### Files expected to be deleted or retired from the production path
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterModels.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterModels.kt`
 
 If any helper from those files remains useful after cluster removal, move only
 the non-cluster logic into the canonical OGN overlay/support files and delete
@@ -319,18 +319,18 @@ the cluster-only artifacts.
 
 ### Tests to delete or rewrite
 
-- `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateClusterTapTest.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficOverlayFeatureScreenDeclutterTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateClusterTapTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureScreenDeclutterTest.kt`
 
 Those tests lock Phase 2 behavior and should not stay attached to Phase 1.
 
 ### Tests to keep and adjust
 
-- `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
   - keep viewport sizing expectations
   - remove cluster-specific API expectations
 
-- `feature/map/src/test/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlayTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlayTest.kt`
   - keep zoom-band scale expectations
   - add style-recreation regression coverage
 

@@ -1,0 +1,365 @@
+package com.trust3.xcpro.profiles.ui
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.trust3.xcpro.profiles.AircraftType
+import com.trust3.xcpro.profiles.ProfileCreationRequest
+import com.trust3.xcpro.profiles.ProfileUiState
+import com.trust3.xcpro.profiles.UserProfile
+
+@Composable
+fun ProfileSelectionContent(
+    state: ProfileUiState,
+    onCompleteFirstLaunch: (AircraftType) -> Unit = {},
+    onSelectProfile: (UserProfile) -> Unit,
+    onDeleteProfile: (String) -> Unit,
+    onCreateProfile: (ProfileCreationRequest) -> Unit,
+    onShowImportDialog: () -> Unit,
+    onShowCreateDialog: () -> Unit,
+    onHideCreateDialog: () -> Unit,
+    onRecoverWithDefaultProfile: () -> Unit,
+    onClearError: () -> Unit,
+    onContinue: () -> Unit,
+    onEditProfile: (UserProfile) -> Unit = {},
+    storageNamespaceLabel: String? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (!state.isFirstLaunchSetupRequired) {
+            ProfileSelectionHeader()
+        }
+
+        when {
+            !state.isHydrated || state.isLoading -> ProfileSelectionLoading(
+                modifier = Modifier.weight(1f)
+            )
+
+            state.isFirstLaunchSetupRequired -> ProfileFirstLaunchSetupCard(
+                isLoading = state.isLoading,
+                onCompleteFirstLaunch = onCompleteFirstLaunch,
+                onImportProfiles = onShowImportDialog,
+                storageNamespaceLabel = storageNamespaceLabel,
+                modifier = Modifier.weight(1f)
+            )
+
+            state.profiles.isEmpty() -> ProfileEmptyState(
+                modifier = Modifier.weight(1f),
+                onCreateFirstProfile = onShowCreateDialog,
+                onImportProfiles = onShowImportDialog,
+                allowManualCreation = state.bootstrapError.isNullOrBlank(),
+                storageNamespaceLabel = storageNamespaceLabel
+            )
+
+            else -> ProfileListSection(
+                profiles = state.profiles,
+                activeProfileId = state.activeProfile?.id,
+                onSelectProfile = onSelectProfile,
+                onDeleteProfile = onDeleteProfile,
+                onShowCreateDialog = onShowCreateDialog,
+                onEditProfile = onEditProfile,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        state.activeProfile?.let { active ->
+            SelectedProfileCard(
+                profile = active,
+                onContinue = onContinue
+            )
+        }
+
+        state.error?.let { message ->
+            ProfileErrorCard(
+                message = message,
+                onDismiss = onClearError
+            )
+        }
+        if (state.error == null && !state.bootstrapError.isNullOrBlank()) {
+            BootstrapRecoveryCard(
+                message = state.bootstrapError,
+                isLoading = state.isLoading,
+                onRecoverWithDefaultProfile = onRecoverWithDefaultProfile,
+                onImportBackup = onShowImportDialog
+            )
+        }
+    }
+
+    if (state.showCreateDialog) {
+        CreateProfileDialog(
+            onDismiss = onHideCreateDialog,
+            onCreate = onCreateProfile
+        )
+    }
+}
+
+@Composable
+private fun ProfileSelectionHeader() {
+    Text(
+        text = "Select Aircraft Profile",
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 24.dp)
+    )
+
+    Text(
+        text = "Choose the aircraft profile for your current aircraft and flight configuration.",
+        style = MaterialTheme.typography.bodyMedium,
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 32.dp)
+    )
+}
+
+@Composable
+private fun ProfileSelectionLoading(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ProfileEmptyState(
+    modifier: Modifier = Modifier,
+    onCreateFirstProfile: () -> Unit,
+    onImportProfiles: () -> Unit,
+    allowManualCreation: Boolean,
+    storageNamespaceLabel: String?
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "XCPro",
+                style = MaterialTheme.typography.displayMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Text(
+                text = if (allowManualCreation) {
+                    "Welcome to your flight app!"
+                } else {
+                    "Profile startup needs attention"
+                },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = if (allowManualCreation) {
+                    "Create your first flight profile to get started."
+                } else {
+                    "Use the recovery actions below to restore or recreate the default profile."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+            if (allowManualCreation) {
+                Button(
+                    onClick = onCreateFirstProfile,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Create Your First Profile")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onImportProfiles,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Load Profile File")
+                }
+            }
+            if (!storageNamespaceLabel.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Profiles are scoped to app package: $storageNamespaceLabel",
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BootstrapRecoveryCard(
+    message: String,
+    isLoading: Boolean,
+    onRecoverWithDefaultProfile: () -> Unit,
+    onImportBackup: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Button(
+                    onClick = onRecoverWithDefaultProfile,
+                    enabled = !isLoading,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Recover Default")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(
+                    onClick = onImportBackup,
+                    enabled = !isLoading,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Load Profile File")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectedProfileCard(
+    profile: UserProfile,
+    onContinue: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = profile.aircraftType.icon(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Profile Selected!",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = profile.getDisplayName(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Button(
+                onClick = onContinue,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Continue to Flight Map", fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileErrorCard(
+    message: String,
+    onDismiss: (() -> Unit)?
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            if (onDismiss != null) {
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dismiss error",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+    }
+}

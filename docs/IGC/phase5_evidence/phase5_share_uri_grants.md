@@ -30,12 +30,12 @@ Device/API: compile + local tests (no connected-device execution)
 ## Log/Artifact References
 
 - command output snippets:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"` => PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.*"` => PASS
   - `./gradlew :feature:map:assembleDebugAndroidTest` => PASS
   - connected tests => blocked (`No connected devices`)
 - screenshots:
   - pending manual device pass
 - relevant test outputs:
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesShareInstrumentedTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesCopyToInstrumentedTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesReplayOpenInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesShareInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesCopyToInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesReplayOpenInstrumentedTest.kt`

@@ -11,7 +11,7 @@
 ## 1) Scope
 
 - Problem statement:
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
     still owns three separate runtime state machines:
     - weather rain
     - SkySight satellite
@@ -85,8 +85,8 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | leaf runtime owner under a thin shell coordinator | delegate owns one runtime slice, keeps local mutable state private, exposes narrow intent/status methods | forecast/weather leaf delegates remain in `feature:map-runtime` first, not owner-module moves |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | interaction-aware deferred runtime rendering with explicit flush path | private mutable runtime state, focused `setMapInteractionActive`, `onMapDetached`, and targeted render helpers | forecast/weather has warning/error flows and map-style reapply that need separate leaf APIs |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | leaf runtime owner under a thin shell coordinator | delegate owns one runtime slice, keeps local mutable state private, exposes narrow intent/status methods | forecast/weather leaf delegates remain in `feature:map-runtime` first, not owner-module moves |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | interaction-aware deferred runtime rendering with explicit flush path | private mutable runtime state, focused `setMapInteractionActive`, `onMapDetached`, and targeted render helpers | forecast/weather has warning/error flows and map-style reapply that need separate leaf APIs |
 
 ### 2.2B Boundary Moves
 
@@ -109,18 +109,18 @@ Confirm dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Forecast_Weather_Runtime_Seam_Extraction_Plan_2026-03-14.md` | New | seam plan and SSOT contract | required non-trivial refactor plan | production code must not carry execution plan | no |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeWeatherRainDelegate.kt` | New | weather-rain runtime owner | first high-risk leaf seam | `MapOverlayManagerRuntimeForecastWeatherDelegate.kt` is too mixed | yes, Phase 1 split |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapWeatherRainInteractionCadencePolicy.kt` | New | weather-rain interaction cadence policy | keeps rain throttling and transition overrides with the rain runtime owner | traffic-owned cadence helpers should not own weather behavior | no |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeSkySightSatelliteDelegate.kt` | New | SkySight satellite runtime owner | isolates satellite config, contrast-icon side effects, and error flow | coordinator should not own satellite state machine | yes, Phase 2 split |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastRasterDelegate.kt` | New | forecast primary/wind runtime owner | isolates forecast config, warning flow, and wind-arrow lookup | coordinator should not own forecast raster state machine | yes, Phase 3 split |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` | Existing | thin coordinator across leaf delegates | preserve shell-facing ABI while shrinking mixed owner | `MapOverlayManagerRuntime.kt` should stay a shell coordinator, not re-absorb leaf logic | yes |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | shell coordinator and leaf wiring | existing runtime composition root | UI/ViewModel must not own runtime delegate construction | no |
-| `feature/map-runtime/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeSkySightSatelliteDelegateTest.kt` | New | focused satellite style-reapply regression | keeps satellite extraction behavior locked where implementation lives | manager-only tests would hide the leaf seam | no |
-| `feature/map-runtime/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastRasterDelegateTest.kt` | New | focused forecast style-reapply regression | keeps forecast extraction behavior locked where implementation lives | manager-only tests would hide the leaf seam | no |
-| `feature/map-runtime/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeDetachOrderingTest.kt` | New | runtime detach-order regression | locks teardown risk in the runtime owner module | weather-only tests would miss the real manager detach path | no |
-| `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest.kt` | Existing | weather-rain runtime regression coverage | existing focused rain runtime test seam | unrelated broader suites would obscure the regression | no |
-| `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerWeatherRainTest.kt` | Existing | shell/manager parity coverage | existing wrapper regression seam | UI tests are too far from runtime ordering | no |
-| `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerDetachOrderingTest.kt` | New | real detach ordering regression | locks teardown risk found in review | existing rain tests only covered manual null-map flush | yes, new focused test |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeWeatherRainDelegate.kt` | New | weather-rain runtime owner | first high-risk leaf seam | `MapOverlayManagerRuntimeForecastWeatherDelegate.kt` is too mixed | yes, Phase 1 split |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapWeatherRainInteractionCadencePolicy.kt` | New | weather-rain interaction cadence policy | keeps rain throttling and transition overrides with the rain runtime owner | traffic-owned cadence helpers should not own weather behavior | no |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeSkySightSatelliteDelegate.kt` | New | SkySight satellite runtime owner | isolates satellite config, contrast-icon side effects, and error flow | coordinator should not own satellite state machine | yes, Phase 2 split |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastRasterDelegate.kt` | New | forecast primary/wind runtime owner | isolates forecast config, warning flow, and wind-arrow lookup | coordinator should not own forecast raster state machine | yes, Phase 3 split |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` | Existing | thin coordinator across leaf delegates | preserve shell-facing ABI while shrinking mixed owner | `MapOverlayManagerRuntime.kt` should stay a shell coordinator, not re-absorb leaf logic | yes |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | shell coordinator and leaf wiring | existing runtime composition root | UI/ViewModel must not own runtime delegate construction | no |
+| `feature/map-runtime/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeSkySightSatelliteDelegateTest.kt` | New | focused satellite style-reapply regression | keeps satellite extraction behavior locked where implementation lives | manager-only tests would hide the leaf seam | no |
+| `feature/map-runtime/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastRasterDelegateTest.kt` | New | focused forecast style-reapply regression | keeps forecast extraction behavior locked where implementation lives | manager-only tests would hide the leaf seam | no |
+| `feature/map-runtime/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeDetachOrderingTest.kt` | New | runtime detach-order regression | locks teardown risk in the runtime owner module | weather-only tests would miss the real manager detach path | no |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegateWeatherRainTest.kt` | Existing | weather-rain runtime regression coverage | existing focused rain runtime test seam | unrelated broader suites would obscure the regression | no |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerWeatherRainTest.kt` | Existing | shell/manager parity coverage | existing wrapper regression seam | UI tests are too far from runtime ordering | no |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerDetachOrderingTest.kt` | New | real detach ordering regression | locks teardown risk found in review | existing rain tests only covered manual null-map flush | yes, new focused test |
 
 ### 2.2E Module and API Surface
 
@@ -193,9 +193,9 @@ After full seam:
   - extract the weather-rain state machine from the mixed delegate
   - fix detach-order interaction release risk
 - Files to change:
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeWeatherRainDelegate.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeWeatherRainDelegate.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
   - focused tests
 - Tests to add/update:
   - existing weather-rain delegate regression suite

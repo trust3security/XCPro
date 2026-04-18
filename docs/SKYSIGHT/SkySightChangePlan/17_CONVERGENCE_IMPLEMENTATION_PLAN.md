@@ -86,8 +86,8 @@ Tasks:
 
 Files:
 
-- `feature/map/src/test/java/com/example/xcpro/forecast/SkySightForecastProviderAdapterTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapterTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
 
 Exit:
 
@@ -107,7 +107,7 @@ Tasks:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
 
 Exit:
 
@@ -125,8 +125,8 @@ Tasks:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
 
 Exit:
 
@@ -145,9 +145,9 @@ Tasks:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayViewModel.kt`
 
 Exit:
 
@@ -164,8 +164,8 @@ Tasks:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
 
 Exit:
 
@@ -188,8 +188,8 @@ Regression checks:
 
 Files:
 
-- `feature/map/src/test/java/com/example/xcpro/forecast/SkySightForecastProviderAdapterTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapterTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
 
 ## Phase 6 - Verification
 

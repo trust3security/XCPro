@@ -224,16 +224,16 @@ Scope:
 
 Primary files:
 
-- `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
-- new `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+- new `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
 - DI wiring files as needed
 - `docs/ARCHITECTURE/PIPELINE.md` if startup ownership wording changes
 
 Required focused checks:
 
 ```bash
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.*RecoveryBootstrap*"
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.IgcRecordingUseCaseTest"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.*RecoveryBootstrap*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.IgcRecordingUseCaseTest"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -257,15 +257,15 @@ Scope:
 Primary files:
 
 - new recovery metadata contract/store under `feature/igc/.../data/`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcSessionStateSnapshotStore.kt` if needed
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcSessionStateSnapshotStore.kt` if needed
 
 Required focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.*Recovery*"
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.*Metadata*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.*Recovery*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.*Metadata*"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -293,8 +293,8 @@ Primary files:
 Required focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.*Recovery*"
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.*Recovery*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.*Recovery*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.*Recovery*"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -313,7 +313,7 @@ Scope:
 
 Primary files:
 
-- `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
+- `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
 - supporting Android test utilities/fakes
 
 Required focused checks:
@@ -352,8 +352,8 @@ Primary files:
 Required focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*Diagnostic*"
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.*Recovery*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*Diagnostic*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.*Recovery*"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -442,8 +442,8 @@ Minimum required evidence references:
 
 - `scripts/arch_gate.py` status
 - time abstraction reference paths:
-  - `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-  - `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+  - `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+  - `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 Recommended evidence destinations:
 

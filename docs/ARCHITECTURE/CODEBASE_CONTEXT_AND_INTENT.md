@@ -121,8 +121,8 @@ These invariants are policy and are also expected to be machine-enforced:
 - `.github/workflows/quality-gates.yml` via `./gradlew enforceRules` (CI)
 
 2) Time abstraction references must use real in-repo anchors:
-- `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-- `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+- `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+- `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 3) Deviation status has one source of truth:
 - `KNOWN_DEVIATIONS.md` is authoritative.

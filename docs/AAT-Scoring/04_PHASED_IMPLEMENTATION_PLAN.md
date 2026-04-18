@@ -67,12 +67,12 @@ Create the new pure scoring domain module and its normalized contracts.
 
 - add `:feature:competition`
 - add package roots:
-  - `com.example.xcpro.competition.aat.config`
-  - `com.example.xcpro.competition.aat.model`
-  - `com.example.xcpro.competition.aat.roster`
-  - `com.example.xcpro.competition.aat.engine`
-  - `com.example.xcpro.competition.aat.policy`
-  - `com.example.xcpro.competition.aat.ports`
+  - `com.trust3.xcpro.competition.aat.config`
+  - `com.trust3.xcpro.competition.aat.model`
+  - `com.trust3.xcpro.competition.aat.roster`
+  - `com.trust3.xcpro.competition.aat.engine`
+  - `com.trust3.xcpro.competition.aat.policy`
+  - `com.trust3.xcpro.competition.aat.ports`
 - add normalized models:
   - `AatPublishedCompetitionDay`
   - `AatTaskDefinitionSnapshot`

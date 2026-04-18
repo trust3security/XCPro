@@ -120,9 +120,9 @@ Execution rules:
   - UI composables split by concern (content, sections, helpers).
 
 Current near-cap files in this slice:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt` (`424`)
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt` (`438`)
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/AdsbSettingsScreen.kt` (`460`)
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt` (`424`)
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt` (`438`)
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/AdsbSettingsScreen.kt` (`460`)
 
 Preemptive actions:
 - No new feature logic added to near-cap files without extraction in the same phase.
@@ -146,7 +146,7 @@ After:
 - Files:
   - `docs/PROXIMITY/CHANGE_PLAN_ADSB_PROXIMITY_PRODUCTION_GRADE_2026-03-03.md`
   - new replay-vector doc under `docs/PROXIMITY/`
-  - targeted tests in `feature/map/src/test/java/com/example/xcpro/adsb/`
+  - targeted tests in `feature/map/src/test/java/com/trust3/xcpro/adsb/`
 - Tests:
   - baseline sequence snapshots for approach/diverge/crossing/sparse/stale/duplicate-like patterns.
 - Exit criteria:
@@ -158,7 +158,7 @@ After:
 - Goal:
   - Add predictive escalation confidence so RED/EMERGENCY require stronger conflict evidence than distance alone.
 - Files:
-  - new domain policy files in `feature/map/src/main/java/com/example/xcpro/adsb/`
+  - new domain policy files in `feature/map/src/main/java/com/trust3/xcpro/adsb/`
   - `AdsbTrafficStore.kt` integration (kept under line budget)
 - Tests:
   - projected miss-distance and time-to-conflict test matrix.

@@ -50,8 +50,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt` | runtime-only map task collaborator | keep pure runtime owners in `feature:map-runtime` | none |
-| `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt` | UI wrapper over map runtime behavior | keep Compose/UI shell in `feature:map` | none |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt` | runtime-only map task collaborator | keep pure runtime owners in `feature:map-runtime` | none |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt` | UI wrapper over map runtime behavior | keep Compose/UI shell in `feature:map` | none |
 
 ### 2.2B Boundary Moves
 
@@ -67,11 +67,11 @@
 |---|---|---|---|---|---|
 | `docs/refactor/Map_Task_Runtime_Module_Right_Sizing_2026-03-15.md` | New | focused execution record for this slice | this is a separate follow-on refactor track | not part of the completed ownership plan | No |
 | `feature/map-runtime/build.gradle.kts` | Existing | runtime module dependency boundary | runtime-only Compose type deps belong here if required | not a UI module concern | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/gestures/*.kt` | New | reusable task gesture contract/factory | runtime seam is shared by map UI and handlers | not task-core and not UI-specific | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt` | New | AAT MapLibre gesture runtime | non-UI runtime owner | not screen/UI shell code | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt` | New | shared MapLibre coordinate conversion helper | runtime utility shared by AAT map components | not task-core and not UI-only | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` | Existing | screen orchestration only | may need import-only adjustment | still the screen owner | No |
-| `feature/map/src/main/java/com/example/xcpro/gestures/*.kt` | Existing | UI gesture shell only after extraction | remove runtime code from the UI module | not the reusable runtime owner | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/gestures/*.kt` | New | reusable task gesture contract/factory | runtime seam is shared by map UI and handlers | not task-core and not UI-specific | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/tasks/aat/gestures/AatGestureHandler.kt` | New | AAT MapLibre gesture runtime | non-UI runtime owner | not screen/UI shell code | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt` | New | shared MapLibre coordinate conversion helper | runtime utility shared by AAT map components | not task-core and not UI-only | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` | Existing | screen orchestration only | may need import-only adjustment | still the screen owner | No |
+| `feature/map/src/main/java/com/trust3/xcpro/gestures/*.kt` | Existing | UI gesture shell only after extraction | remove runtime code from the UI module | not the reusable runtime owner | No |
 | `feature/map/src/test/java/...` and `feature/map-runtime/src/test/java/...` | Existing/New | ownership-aligned runtime tests | tests should live with the production owner | not in task module once ownership moved | No |
 
 ### 2.2E Module and API Surface

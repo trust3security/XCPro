@@ -153,16 +153,16 @@ Goal:
 
 Current implementation inventory:
 
-- `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModeSettings.kt`
-- `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModePreferencesRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettingsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettingsUiState.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettingsViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModeSettings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModePreferencesRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettingsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettingsUiState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettingsViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettingsScreen.kt`
 - Route wiring:
-  - `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navigation/SettingsRoutes.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 
 Production-upgrade work packages:
 
@@ -178,9 +178,9 @@ Production-upgrade work packages:
 4. Final UI string/localization cleanup:
    - Move all user-visible thermalling strings to string resources (no hard-coded UI copy).
    - Primary targets:
-     - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ThermallingSettingsScreen.kt`
-     - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt` (Thermalling tile label)
-     - `app/src/main/java/com/example/xcpro/AppNavGraph.kt` / settings titles if thermalling labels are embedded there.
+     - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ThermallingSettingsScreen.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt` (Thermalling tile label)
+     - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` / settings titles if thermalling labels are embedded there.
    - Use placeholder-based resources for dynamic labels:
      - enter delay label
      - exit delay label
@@ -280,9 +280,9 @@ Implementation work packages:
 
 Planned files:
 
-- `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModeCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModeState.kt`
-- `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModePolicy.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModeCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModeState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModePolicy.kt`
 
 Required test matrix:
 
@@ -313,9 +313,9 @@ Phase 2 exit criteria (production-ready):
 Phase 2 implementation update (2026-03-02, live-only production pass):
 
 - Implemented runtime coordinator core:
-  - `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModeCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModeState.kt`
-  - `feature/map/src/main/java/com/example/xcpro/thermalling/ThermallingModePolicy.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModeCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModeState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/thermalling/ThermallingModePolicy.kt`
 - Delivered state machine + deterministic timing:
   - phases `IDLE`, `ENTER_PENDING`, `ACTIVE`, `EXIT_PENDING`
   - injected monotonic clock (`Clock.nowMonoMs()`) only
@@ -326,17 +326,17 @@ Phase 2 implementation update (2026-03-02, live-only production pass):
   - disable-mid-session restore/reset
   - manual thermal zoom memory inside active session
 - Added deterministic unit coverage:
-  - `feature/map/src/test/java/com/example/xcpro/thermalling/ThermallingModeCoordinatorTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/thermalling/ThermallingModePolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/thermalling/ThermallingModeCoordinatorTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/thermalling/ThermallingModePolicyTest.kt`
 
 Verification evidence (2026-03-02):
 
 - `python scripts/arch_gate.py` -> `ARCH GATE PASSED`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.thermalling.ThermallingModePolicyTest" --tests "com.example.xcpro.thermalling.ThermallingModeCoordinatorTest"` -> `BUILD SUCCESSFUL`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.thermalling.ThermallingModePolicyTest" --tests "com.trust3.xcpro.thermalling.ThermallingModeCoordinatorTest"` -> `BUILD SUCCESSFUL`
 - `./gradlew enforceRules` -> `Rule enforcement passed.`
 - `./gradlew assembleDebug` -> `BUILD SUCCESSFUL`
 - `./gradlew testDebugUnitTest` -> `FAILED` due to existing unrelated test:
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt`
   - failure: `ioReadError_preservesLastKnownGoodState`
 
 Phase 2 score (live-only scope): `9.2 / 10`
@@ -383,10 +383,10 @@ Implementation work packages:
 
 Planned files:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt` (if wrapper additions are required)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt` (if wrapper additions are required)
 - Optional helper:
-  - `feature/map/src/main/java/com/example/xcpro/map/ThermallingModeRuntimeWiring.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ThermallingModeRuntimeWiring.kt`
 
 Required test matrix:
 
@@ -441,9 +441,9 @@ Implementation work packages:
 
 Planned files:
 
-- `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt` (if IA tweaks needed)
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-- `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/navigation/SettingsRoutes.kt` (if IA tweaks needed)
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+- `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 - `docs/ARCHITECTURE/PIPELINE.md`
 - `docs/General/THERMALLING/THERMALLING_MODE_FEATURE_SPEC.md`
 

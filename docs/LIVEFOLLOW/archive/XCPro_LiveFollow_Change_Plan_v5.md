@@ -65,7 +65,7 @@ That belongs to Codex.
 
 ### 1. Package / namespace rule
 Codex must **not** invent a generic package such as:
-- `com.example.xcpro`
+- `com.trust3.xcpro`
 - `com.example.*`
 
 Codex must inspect existing nearby feature modules and use the repo’s actual namespace/package convention.

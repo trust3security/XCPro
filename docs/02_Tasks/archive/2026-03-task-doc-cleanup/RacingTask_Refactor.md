@@ -212,7 +212,7 @@ Deliverables:
 5) File and module impact map (initial target)
 
 New (Racing-only):
-- feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/
+- feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/
   - RacingNavigationEngine.kt
   - RacingZoneDetector.kt
   - RacingNavigationState.kt
@@ -220,16 +220,16 @@ New (Racing-only):
   - RacingTransitionDetector.kt (if needed)
 
 New (map/task integration):
-- feature/map/src/main/java/com/example/xcpro/map/TaskNavigationController.kt
+- feature/map/src/main/java/com/trust3/xcpro/map/TaskNavigationController.kt
   - Subscribes to FlightDataRepository
   - Uses RacingNavigationEngine only when TaskType.RACING
 
 Existing (update):
-- feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt
+- feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt
   - Add routing hooks for navigation events.
-- feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt
+- feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt
   - Wire TaskNavigationController lifecycle only.
-- feature/map/src/main/java/com/example/xcpro/tasks/TaskRepository.kt
+- feature/map/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt
   - Consume navigation state if needed for UI.
 
 ----------------------------------------------------------------------

@@ -55,8 +55,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBootstrapRecoveryTest.kt` | already covered bootstrap and degraded profile startup behavior | repository bootstrap harness and diagnostics assertions | add explicit clean-install empty-state expectations |
-| `app/src/test/java/com/example/xcpro/profiles/ProfileSelectionContentRecoveryTest.kt` | existing compose startup-state coverage | recovery-card UI test structure | add first-launch-specific picker and scroll behavior |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBootstrapRecoveryTest.kt` | already covered bootstrap and degraded profile startup behavior | repository bootstrap harness and diagnostics assertions | add explicit clean-install empty-state expectations |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileSelectionContentRecoveryTest.kt` | existing compose startup-state coverage | recovery-card UI test structure | add first-launch-specific picker and scroll behavior |
 
 ### 2.2B Boundary Moves
 
@@ -69,11 +69,11 @@
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt` | Existing | repository API and backup-sync gating | repository owns persistence-side profile mutations | UI must not own bootstrap/write policy | No |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryMutationCoordinator.kt` | Existing | atomic canonical default creation | mutation coordinator already owns profile write transactions | keeps repository facade narrow | No |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt` | Existing | derived first-launch UI state + intent forwarding | ViewModel already shapes profile startup UI state | repository should not expose UI-only flags | No |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileFirstLaunchSetupCard.kt` | New | first-launch aircraft picker rendering only | dedicated UI owner keeps setup card isolated | avoids adding mixed logic to generic content file | No |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt` | Existing | startup-state routing between loading, first-launch, recovery, and list screens | central startup rendering switch already lives here | avoids duplicate state branching | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt` | Existing | repository API and backup-sync gating | repository owns persistence-side profile mutations | UI must not own bootstrap/write policy | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryMutationCoordinator.kt` | Existing | atomic canonical default creation | mutation coordinator already owns profile write transactions | keeps repository facade narrow | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileViewModel.kt` | Existing | derived first-launch UI state + intent forwarding | ViewModel already shapes profile startup UI state | repository should not expose UI-only flags | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileFirstLaunchSetupCard.kt` | New | first-launch aircraft picker rendering only | dedicated UI owner keeps setup card isolated | avoids adding mixed logic to generic content file | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionContent.kt` | Existing | startup-state routing between loading, first-launch, recovery, and list screens | central startup rendering switch already lives here | avoids duplicate state branching | No |
 
 ### 2.2E Module and API Surface
 

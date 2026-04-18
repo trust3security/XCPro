@@ -83,9 +83,9 @@ Non-negotiables enforced in implementation:
 - Required flow:
   `UI -> domain/use-case -> data`
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/*` (thermal model/repository/detector/preference)
-  - `feature/map/src/main/java/com/example/xcpro/map/*` (use-case/viewmodel/runtime overlay wiring)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/*` (tap routing and thermal sheet host)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/*` (thermal model/repository/detector/preference)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/*` (use-case/viewmodel/runtime overlay wiring)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/*` (tap routing and thermal sheet host)
   - `docs/OGN/*` and `docs/ARCHITECTURE/PIPELINE.md` (docs sync)
 - Boundary risks:
   - ViewModel doing detector math.
@@ -196,7 +196,7 @@ Transitions:
 
 Add file:
 
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalModels.kt`
 
 Current implemented model fields:
 
@@ -281,7 +281,7 @@ Visibility rule:
 
 Add:
 
-- `feature/map/src/main/java/com/example/xcpro/map/OgnThermalOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnThermalOverlay.kt`
 
 Layers:
 
@@ -311,7 +311,7 @@ Selection policy:
 
 Add:
 
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalDetailsSheet.kt`
 
 Behavior:
 
@@ -352,11 +352,11 @@ All displayed values must use `UnitsPreferences`.
 - Goal:
   Implement thermal detection state machine and hotspot SSOT in repository layer.
 - Files to change:
-  1. `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalModels.kt`
-  2. `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-  3. `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetector.kt`
-  4. `feature/map/src/main/java/com/example/xcpro/ogn/OgnTurnDetector.kt`
-  5. `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+  1. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalModels.kt`
+  2. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+  3. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalDetector.kt`
+  4. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTurnDetector.kt`
+  5. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
 - Tests to add/update:
   - Detector and repository unit tests with fake monotonic clock.
 - Exit criteria:
@@ -367,11 +367,11 @@ All displayed values must use `UnitsPreferences`.
 - Goal:
   Wire persisted `Show Thermals` preference and thermal selection state through VM/UDF path.
 - Files to change:
-  1. `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  2. `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  3. `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  4. `feature/map/src/main/java/com/example/xcpro/map/MapScreenBindings.kt`
-  5. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  1. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  2. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
+  3. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  4. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenBindings.kt`
+  5. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
 - Tests to add/update:
   - ViewModel tests for toggle, selection, mutual exclusion, and state clearing semantics.
 - Exit criteria:
@@ -386,11 +386,11 @@ All displayed values must use `UnitsPreferences`.
 - Goal:
   Render thermal hotspots and support thermal hit-test selection without SSOT drift.
 - Files to change:
-  1. `feature/map/src/main/java/com/example/xcpro/map/OgnThermalOverlay.kt`
-  2. `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt`
-  3. `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  4. `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-  5. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+  1. `feature/map/src/main/java/com/trust3/xcpro/map/OgnThermalOverlay.kt`
+  2. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenState.kt`
+  3. `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  4. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+  5. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
 - Tests to add/update:
   - Integration-level map runtime wiring tests (where feasible) and ViewModel interaction tests.
 - Exit criteria:
@@ -402,10 +402,10 @@ All displayed values must use `UnitsPreferences`.
 - Goal:
   Provide user controls and thermal details presentation in ADS-B-style interaction.
 - Files to change:
-  1. `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtonItems.kt`
-  2. `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
-  3. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  4. `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
+  1. `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtonItems.kt`
+  2. `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt`
+  3. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  4. `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalDetailsSheet.kt`
 - Tests to add/update:
   - UI tests or snapshot tests for toggle visibility and sheet fields where harness allows.
 - Exit criteria:
@@ -445,9 +445,9 @@ Coverage categories:
 
 Add:
 
-1. `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalDetectorTest.kt`
-2. `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
-3. `feature/map/src/test/java/com/example/xcpro/ogn/OgnTurnDetectorTest.kt`
+1. `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalDetectorTest.kt`
+2. `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
+3. `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTurnDetectorTest.kt`
 
 Must cover:
 
@@ -463,7 +463,7 @@ Must cover:
 
 Extend:
 
-1. `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+1. `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
 
 Add UI tests where feasible:
 

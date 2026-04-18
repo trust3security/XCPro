@@ -89,11 +89,11 @@ Work:
   - single non-wind selector behavior.
 
 Files:
-- `feature/map/src/test/java/com/example/xcpro/map/ForecastRasterOverlaySourceLayerFallbackTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/WeatherRainOverlayPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/HotspotsOverlayPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerWeatherRainTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ForecastRasterOverlaySourceLayerFallbackTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/WeatherRainOverlayPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/HotspotsOverlayPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerWeatherRainTest.kt`
 
 Exit criteria:
 - Baseline tests pass and represent current intended behavior.
@@ -111,10 +111,10 @@ Work:
 - Keep verify flow exception-safe and cancellation-safe.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastCredentialsRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastCredentialsRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
 
 Tests:
 - new/updated `ForecastCredentialsRepositoryTest`
@@ -138,9 +138,9 @@ Work:
 - Ensure fatal/warning channels cannot duplicate the same message.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
 
 Tests:
 - `ForecastOverlayRepositoryTest`
@@ -164,10 +164,10 @@ Work:
 - Re-verify thermal/rain/satellite/forecast/wind interaction order.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
 
 Tests:
 - `HotspotsOverlayPolicyTest`
@@ -190,8 +190,8 @@ Work:
 - Harden/validate evidence capture script assumptions against runtime contract.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/*NetworkConfigurator*Test.kt` (new)
+- `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/*NetworkConfigurator*Test.kt` (new)
 - `scripts/integrations/capture_skysight_evidence.ps1`
 
 Exit criteria:
@@ -252,15 +252,15 @@ Phase score target: **95/100**
 
 Implemented:
 - Repository warning/error dedupe: warning text is now filtered against fatal error text.
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
 - Overlay-manager stale runtime issue fix:
   - forecast runtime warning clears deterministically when map is unavailable or forecast is disabled.
   - satellite runtime error clears deterministically when satellite overlay is disabled while map is unavailable.
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
 - UI message unification policy:
   - centralized warning/error merge + dedupe contract in `resolveSkySightUiMessages(...)`.
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/SkySightUiMessagePolicy.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/SkySightUiMessagePolicy.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
 - Satellite-only reference-time policy made explicit and test-locked:
   - `ForecastOverlayRepository` satellite-only state keeps `selectedTimeUtcMs = nowWallMs`
     with no catalog/time-slot fetch.
@@ -268,21 +268,21 @@ Implemented:
   - docs updated in `docs/ARCHITECTURE/PIPELINE.md`.
 
 Tests added/updated:
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
   - `primaryDisabled_withWindTileAndLegendFailure_dedupesWarningAgainstError`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerForecastWarningTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerForecastWarningTest.kt`
   - `setForecastOverlay_whenMapUnavailable_clearsStaleRuntimeWarning`
   - `setForecastOverlay_disabled_clearsWarningEvenWhenMapUnavailable`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt`
   - `setSkySightSatelliteOverlay_disabled_clearsErrorWhenMapUnavailable`
-- `feature/map/src/test/java/com/example/xcpro/map/ui/SkySightUiMessagePolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/SkySightUiMessagePolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
   - `satelliteOnly_doesNotResolveForecastSelection` now also asserts selected-time reference source.
-- `feature/map/src/test/java/com/example/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt`
   - `resolveBaseFrameEpochSec_withoutReference_usesNearLiveSteppedTime`
 
 Verification:
-- `./test-safe.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.forecast.ForecastOverlayRepositoryTest" --tests "com.example.xcpro.map.MapOverlayManagerForecastWarningTest" --tests "com.example.xcpro.map.MapOverlayManagerSkySightSatelliteErrorTest" --tests "com.example.xcpro.map.ui.SkySightUiMessagePolicyTest"` -> PASS
+- `./test-safe.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.forecast.ForecastOverlayRepositoryTest" --tests "com.trust3.xcpro.map.MapOverlayManagerForecastWarningTest" --tests "com.trust3.xcpro.map.MapOverlayManagerSkySightSatelliteErrorTest" --tests "com.trust3.xcpro.map.ui.SkySightUiMessagePolicyTest"` -> PASS
 - `./gradlew enforceRules --no-daemon --no-configuration-cache` -> PASS
 - `python scripts/arch_gate.py` -> PASS
 - `./gradlew testDebugUnitTest --no-daemon --no-configuration-cache` -> PASS
@@ -294,12 +294,12 @@ Phase 2 quality score after this update: **92/100**
 
 Implemented:
 - Removed stale legacy secondary forecast anchor namespace from weather overlay ordering policy.
-  - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
 - Added regression assertions to ensure removed secondary anchors are not queried in weather overlay policy path.
-  - `feature/map/src/test/java/com/example/xcpro/map/HotspotsOverlayPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/HotspotsOverlayPolicyTest.kt`
 
 Verification:
-- `./test-safe.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.HotspotsOverlayPolicyTest" --tests "com.example.xcpro.map.WeatherRainOverlayPolicyTest"` -> PASS
+- `./test-safe.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.HotspotsOverlayPolicyTest" --tests "com.trust3.xcpro.map.WeatherRainOverlayPolicyTest"` -> PASS
 - `python scripts/arch_gate.py` -> PASS
 - `./gradlew enforceRules --no-daemon --no-configuration-cache` -> PASS
 - `./gradlew testDebugUnitTest --no-daemon --no-configuration-cache` -> PASS

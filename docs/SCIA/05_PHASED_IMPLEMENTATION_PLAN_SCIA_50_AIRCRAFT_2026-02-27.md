@@ -179,7 +179,7 @@ Reference sizing
 - `downsampleFactor = ceil(estimatedSegments / renderBudget)` when above budget
 
 Files (expected)
-- new policy class under `feature/map/src/main/java/com/example/xcpro/ogn/` or `map/`
+- new policy class under `feature/map/src/main/java/com/trust3/xcpro/ogn/` or `map/`
 - `OgnGliderTrailOverlay.kt` and/or `MapOverlayManager.kt`
 - optional `OgnGliderTrailRepository.kt` integration if policy is repository-side
 

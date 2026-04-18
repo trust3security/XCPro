@@ -77,9 +77,9 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | current owner of badge layer style and placement | keep overlay as the only MapLibre style owner | larger/more legible text constants |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | current owner of badge visibility/content | keep pure render-model builder as the only content/visibility owner | remove `targetOnScreen` suppression from the decision |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt` | already formats OGN speed from `groundSpeedMps` | reuse `UnitsFormatter.speed(...)` for badge speed text | badge stays compact; not full detail-sheet layout |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | current owner of badge layer style and placement | keep overlay as the only MapLibre style owner | larger/more legible text constants |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | current owner of badge visibility/content | keep pure render-model builder as the only content/visibility owner | remove `targetOnScreen` suppression from the decision |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnMarkerDetailsSheet.kt` | already formats OGN speed from `groundSpeedMps` | reuse `UnitsFormatter.speed(...)` for badge speed text | badge stays compact; not full detail-sheet layout |
 
 ### 2.2B Boundary Moves
 
@@ -97,10 +97,10 @@ Confirm dependency flow remains:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | existing | badge visibility rule and content formatting | canonical content/policy owner | overlay should not decide business/display content | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | existing | badge text style, halo, offset, and render application | canonical MapLibre layer owner | delegate should not own font/contrast constants | no |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnOwnshipTargetBadgeRenderModelTest.kt` | existing | focused coverage for visibility, text composition, and color semantics | existing test owner for badge content | no need for a new test file unless scope expands | no |
-| `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` or a focused OGN delegate test | existing | lock that selected-target updates still drive the badge through the same delegate path | existing runtime boundary owner | avoid introducing a new runtime owner just for badge policy | maybe |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | existing | badge visibility rule and content formatting | canonical content/policy owner | overlay should not decide business/display content | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | existing | badge text style, halo, offset, and render application | canonical MapLibre layer owner | delegate should not own font/contrast constants | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeRenderModelTest.kt` | existing | focused coverage for visibility, text composition, and color semantics | existing test owner for badge content | no need for a new test file unless scope expands | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` or a focused OGN delegate test | existing | lock that selected-target updates still drive the badge through the same delegate path | existing runtime boundary owner | avoid introducing a new runtime owner just for badge policy | maybe |
 
 ### 2.2E Module and API Surface
 
@@ -112,8 +112,8 @@ Confirm dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| badge visibility/content policy | `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | badge overlay + tests | it already decides whether the badge exists and what text it shows | no |
-| badge typography/contrast constants | `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | overlay layer configuration | it already owns the MapLibre symbol layer | no |
+| badge visibility/content policy | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt` | badge overlay + tests | it already decides whether the badge exists and what text it shows | no |
+| badge typography/contrast constants | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt` | overlay layer configuration | it already owns the MapLibre symbol layer | no |
 
 ### 2.3 Time Base
 
@@ -196,7 +196,7 @@ After:
   - remove off-screen-only suppression so the ownship badge appears whenever a
     selected target exists
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt`
 - Ownership/file split changes in this phase:
   - none; same builder remains canonical
 - Tests to add/update:
@@ -219,8 +219,8 @@ Phase 1 implementation note:
 - Goal:
   - include target speed in the badge and improve cockpit readability
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeRenderModel.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnOwnshipTargetBadgeOverlay.kt`
 - Ownership/file split changes in this phase:
   - none; builder owns text, overlay owns typography
 - Tests to add/update:
@@ -285,7 +285,7 @@ Required checks for merge-ready completion:
 Planned narrow proof for the first implementation pass:
 
 ```bash
-./gradlew :feature:traffic:testDebugUnitTest --tests "com.example.xcpro.map.OgnOwnshipTargetBadgeRenderModelTest"
+./gradlew :feature:traffic:testDebugUnitTest --tests "com.trust3.xcpro.map.OgnOwnshipTargetBadgeRenderModelTest"
 ./gradlew enforceRules
 ```
 

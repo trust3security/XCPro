@@ -8,16 +8,16 @@
 
 ## Data Flow (Source of Truth)
 1) Sensor fusion computes vario + TE vario
-   `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+   `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
 2) Audio input selection chooses **TE vario if valid**, else **raw vario**
-   `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioController.kt`
+   `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioAudioController.kt`
 3) Selected value is stored as `latestAudioVario`
-   `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+   `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
 4) That value is emitted into flight data and mapped to `audioVario`
-   `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
-   `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
+   `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt`
+   `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDisplayMapper.kt`
 5) UI reads it as `audioNeedleVario` and draws the purple needle
-   `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+   `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt`
    `feature/variometer/src/main/java/com/example/ui1/UIVariometer.kt`
 
 ## Why It Rarely Diverges (Phone Sensors)
@@ -44,7 +44,7 @@
 
 ## Audio Output Behavior (Separate Path)
 - Audio mapping applies canonical lift/sink start-threshold semantics and clamps to +/-5 m/s.
-  `feature/variometer/src/main/java/com/example/xcpro/audio/VarioFrequencyMapper.kt`
+  `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioFrequencyMapper.kt`
 - Default effective lift start threshold: +0.1 m/s
 - Default effective sink start threshold: -0.3 m/s
 - Legacy raw threshold values are accepted only as import/read compatibility inputs and are converted to the canonical lift/sink start thresholds.

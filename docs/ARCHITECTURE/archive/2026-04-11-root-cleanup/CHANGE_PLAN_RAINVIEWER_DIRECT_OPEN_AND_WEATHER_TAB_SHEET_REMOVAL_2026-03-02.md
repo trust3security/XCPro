@@ -43,9 +43,9 @@
 `UI -> domain -> data` remains unchanged.
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/*`
   - this plan doc
 - Any boundary risk:
   - Avoid moving navigation policy into reusable UI leaf components.
@@ -198,7 +198,7 @@ Bottom-sheet flow remains for non-RainViewer tabs (`SkySight`, `Scia`, `Tab 4`) 
    - Completed.
    - Evidence:
      - `./gradlew :feature:map:compileDebugKotlin` passed.
-     - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapBottomSheetTabsTest"` passed via `.\test-safe.bat` (Windows file-lock-safe wrapper).
+     - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapBottomSheetTabsTest"` passed via `.\test-safe.bat` (Windows file-lock-safe wrapper).
      - `python scripts/arch_gate.py` passed.
      - `./gradlew enforceRules` passed.
      - `./gradlew testDebugUnitTest` passed via `.\test-safe.bat testDebugUnitTest` after transient file-lock cleanup failures in standard invocation.

@@ -149,9 +149,9 @@ After:
 - Goal:
   - Reproduce and lock current failure-prone behaviors with tests before changing logic.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/metadata/OpenSkyMetadataClientTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/metadata/AircraftMetadataSyncRepositoryImplTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/OpenSkyMetadataClientTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/AircraftMetadataSyncRepositoryImplTest.kt`
 - Tests:
   - Add baseline tests for long download/import path and transient token failure pacing.
 - Exit criteria:
@@ -165,7 +165,7 @@ After:
   - Introduce dedicated ADS-B metadata HTTP qualifier/client.
   - Keep polling client tuned for live cadence; tune metadata client for large downloads and variable mobile latency.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/AdsbNetworkModule.kt`
   - ADS-B metadata client constructors using the dedicated qualifier.
 - Tests:
   - DI wiring/unit coverage for qualifiers and client injection.
@@ -181,10 +181,10 @@ After:
   - Import from file stream after response closure.
   - Apply insert batching (`INSERT_BATCH_SIZE`) in importer path.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/OpenSkyMetadataClient.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataSyncRepositoryImpl.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataImporter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataDao.kt` (if batch API needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/OpenSkyMetadataClient.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/AircraftMetadataSyncRepositoryImpl.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/AircraftMetadataImporter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/AircraftMetadataDao.kt` (if batch API needed)
 - Tests:
   - Metadata sync repository tests for staged download/import behavior.
   - Importer tests for batching and promotion safety.
@@ -200,7 +200,7 @@ After:
   - Add monotonic cooldown for transient token fetch failures in token repository.
   - Preserve credential-rejected behavior and auth-mode semantics.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/OpenSkyTokenRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/OpenSkyTokenRepository.kt`
 - Tests:
   - Extend `OpenSkyTokenRepositoryTest` for transient failure cooldown and recovery behavior.
 - Exit criteria:

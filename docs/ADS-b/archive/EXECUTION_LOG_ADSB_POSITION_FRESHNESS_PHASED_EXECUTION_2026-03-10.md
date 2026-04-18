@@ -39,16 +39,16 @@ Recorded before ADS-B Phase 0 execution:
 - `docs/ADS-b/CHANGE_PLAN_ADSB_POSITION_FRESHNESS_REWIND_FIX_2026-03-10.md`
 - `docs/IGC/**`
 - `feature/igc/**`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
-- `feature/map/src/test/java/com/example/xcpro/igc/**`
-- `feature/map/src/test/java/com/example/xcpro/vario/VarioServiceManagerConstructionTest.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnAircraftIcon.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnAircraftIconTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/igc/**`
+- `feature/map/src/test/java/com/trust3/xcpro/vario/VarioServiceManagerConstructionTest.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnAircraftIcon.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnAircraftIconTest.kt`
 - `scripts/dev/**`
-- `app/src/main/java/com/example/xcpro/benchmark/**`
-- `core/common/src/main/java/com/example/xcpro/benchmark/**`
+- `app/src/main/java/com/trust3/xcpro/benchmark/**`
+- `core/common/src/main/java/com/trust3/xcpro/benchmark/**`
 - `docs/GRADLE/**`
-- `feature/map/src/main/java/com/example/xcpro/map/benchmark/**`
+- `feature/map/src/main/java/com/trust3/xcpro/map/benchmark/**`
 - `feature/map/src/main/res/drawable/ic_paraglider.png`
 - `feature/traffic/src/main/res/drawable/ic_paraglider.png`
 
@@ -106,8 +106,8 @@ Rule:
   - completed the requested basic build gate successfully
 - Files touched:
   - `docs/ADS-b/README.md`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficPositionFreshnessBaselineTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbDisplayMotionSmootherBaselineTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficPositionFreshnessBaselineTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbDisplayMotionSmootherBaselineTest.kt`
 - Commands:
   - `python scripts/arch_gate.py`
     - Result: PASS
@@ -139,12 +139,12 @@ Rule:
   - repository ingestion now normalizes provider position/contact timing instead of using local-only receipt semantics.
   - metadata and selection surfaces propagate position/contact age fields.
 - Files touched:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbSelectedTargetDetails.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbSelectedTargetDetails.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
 - Basic gate status:
   - basic checks were not rerun in this continuation pass.
 
@@ -157,11 +157,11 @@ Rule:
   - position-age/contact-age and derived staleness feed selection/UI model output.
   - contact-only contact updates do not extend geometry-expiry.
 - Files touched:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficPositionFreshnessBaselineTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryPositionTimingTest.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficPositionFreshnessBaselineTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryPositionTimingTest.kt`
 
 ### `P3`
 
@@ -178,13 +178,13 @@ Rule:
   - added explicit freshness fields to GeoJSON output while preserving `age_s`.
   - updated ADS-B details sheet and smoother baseline/regression tests.
 - Files touched:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbEmergencyFlashPolicy.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbDisplayMotionSmoother.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/AdsbGeoJsonMapperTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/AdsbDisplayMotionSmootherBaselineTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/AdsbDisplayMotionSmootherTest.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbEmergencyFlashPolicy.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlaySupport.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbDisplayMotionSmoother.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/AdsbGeoJsonMapperTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/AdsbDisplayMotionSmootherBaselineTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/AdsbDisplayMotionSmootherTest.kt`
 - Risk note:
   - full baseline/build verification for map module remains to be rerun in this continuation pass.

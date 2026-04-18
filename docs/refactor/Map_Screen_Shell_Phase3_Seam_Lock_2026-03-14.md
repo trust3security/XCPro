@@ -49,7 +49,7 @@ Do not churn these already-focused files unless compile fallout forces it:
 
 Source file:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
 
 Observed shape:
 
@@ -73,7 +73,7 @@ Observed shape:
 
 Source file:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
 
 Observed shape:
 
@@ -94,9 +94,9 @@ Observed shape:
 
 | File | Reason To Leave Alone In Phase 3 |
 |---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt` | already owns widget layout, variometer layout, safe-container tracking, and runtime-controller setup in focused helpers |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt` | already owns back handling and lifecycle/effect wiring in focused functions |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt` | already establishes the preferred helper pattern for flight cards, profile/look-and-feel, and airspace binding |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt` | already owns widget layout, variometer layout, safe-container tracking, and runtime-controller setup in focused helpers |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt` | already owns back handling and lifecycle/effect wiring in focused functions |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt` | already establishes the preferred helper pattern for flight cards, profile/look-and-feel, and airspace binding |
 
 Professional constraint:
 
@@ -179,28 +179,28 @@ Preferred input groups:
 
 | File | Why It Changes | Ownership Change |
 |---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt` | split broad binding collection by concern | stops being the mixed collector for unrelated state |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt` | add the remaining root UI binding helper | root stops collecting scattered UI state inline |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | accept grouped sources instead of broad raw parameter fanout | scaffold assembly becomes a grouped binding consumer |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | become assembler-only over grouped helpers and builders | root stops adapting scattered leaf-feature and shell UI state directly |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt` | split broad binding collection by concern | stops being the mixed collector for unrelated state |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt` | add the remaining root UI binding helper | root stops collecting scattered UI state inline |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` | accept grouped sources instead of broad raw parameter fanout | scaffold assembly becomes a grouped binding consumer |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | become assembler-only over grouped helpers and builders | root stops adapting scattered leaf-feature and shell UI state directly |
 
 ### 5.2 Files To Add
 
 | File | Responsibility |
 |---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt` | focused binding models and remember-functions for map/session/task/traffic groups |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt` | focused binding models and remember-functions for map/session/task/traffic groups |
 
 ### 5.3 Files Explicitly Not Touched In Phase 3
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenManagers.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSectionInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenManagers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
 
 If implementation pressure reaches those files, stop and re-scope. That means
 the work is spilling into another phase.

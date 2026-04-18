@@ -6,7 +6,7 @@ Superseded plan/status docs were archived on 2026-04-07 in
 
 ## Current XCPro reference
 
-- Active polar authority: `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
+- Active polar authority: `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt`
 - Runtime sink/L-D/final-glide seam: `GliderRepository -> PolarStillAirSinkProvider`
 - Source priority:
   - manual 3-point polar when valid

@@ -14,7 +14,7 @@ The first forecast-controls slice was structurally correct and low risk, but it
 only produced a small `map-impl` improvement. The remaining hotspot is still
 inside `feature:map`, and the next best forecast-owned candidate is:
 
-- [ForecastOverlayRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntime.kt)
+- [ForecastOverlayRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntime.kt)
 
 Why this file is a good next target:
 
@@ -49,18 +49,18 @@ This makes it a stronger build-surface candidate than more settings-screen work.
 
 ### Move from `feature:map` to `feature:profile`
 
-- [ForecastOverlayRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntime.kt)
-- [ForecastOverlayRuntimeSelectionSupport.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntimeSelectionSupport.kt)
-- [ForecastPorts.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastPorts.kt)
+- [ForecastOverlayRuntime.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntime.kt)
+- [ForecastOverlayRuntimeSelectionSupport.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntimeSelectionSupport.kt)
+- [ForecastPorts.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastPorts.kt)
 
 ### Keep in `feature:map`
 
-- [ForecastOverlayRepository.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt)
-- [ForecastOverlayUseCases.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayUseCases.kt)
-- [ForecastOverlayViewModel.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt)
-- [SkySightForecastProviderAdapter.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt)
-- [FakeForecastProviderAdapter.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/FakeForecastProviderAdapter.kt)
-- [ForecastModule.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt)
+- [ForecastOverlayRepository.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt)
+- [ForecastOverlayUseCases.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayUseCases.kt)
+- [ForecastOverlayViewModel.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayViewModel.kt)
+- [SkySightForecastProviderAdapter.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt)
+- [FakeForecastProviderAdapter.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/FakeForecastProviderAdapter.kt)
+- [ForecastModule.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/di/ForecastModule.kt)
 
 ## Boundary Rules
 
@@ -68,7 +68,7 @@ This makes it a stronger build-surface candidate than more settings-screen work.
 
 Use the existing package:
 
-- `com.example.xcpro.forecast`
+- `com.trust3.xcpro.forecast`
 
 This is important. It avoids a rename wave through repository, use cases, DI,
 tests, and adapters.
@@ -97,7 +97,7 @@ are and continue implementing the moved interfaces.
 
 ### SSOT ownership
 
-- SSOT remains in [ForecastPreferencesRepository.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/profile/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt)
+- SSOT remains in [ForecastPreferencesRepository.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/profile/src/main/java/com/trust3/xcpro/forecast/ForecastPreferencesRepository.kt)
 - the moved runtime remains a pure state-assembly/runtime engine
 - do not move repository state ownership in this slice
 
@@ -109,7 +109,7 @@ are and continue implementing the moved interfaces.
 
 ### Time base
 
-- keep the existing injected [Clock.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/core/time/src/main/java/com/example/xcpro/core/time/Clock.kt) behavior unchanged
+- keep the existing injected [Clock.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt) behavior unchanged
 - no direct wall-time calls may be introduced
 
 ### Replay determinism
@@ -132,8 +132,8 @@ the slice has drifted and should stop.
 
 ## Implementation Steps
 
-1. Physically move the three target files into `feature/profile/src/main/java/com/example/xcpro/forecast/`.
-2. Keep the package declaration unchanged as `com.example.xcpro.forecast`.
+1. Physically move the three target files into `feature/profile/src/main/java/com/trust3/xcpro/forecast/`.
+2. Keep the package declaration unchanged as `com.trust3.xcpro.forecast`.
 3. Delete the originals from `feature:map`.
 4. Compile `feature:profile`.
 5. Compile `feature:map`.
@@ -144,9 +144,9 @@ the slice has drifted and should stop.
 
 These should remain unchanged or nearly unchanged:
 
-- constructor shape in [ForecastOverlayRepository.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt)
-- public API of [ForecastOverlayViewModel.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt)
-- Hilt bindings in [ForecastModule.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt)
+- constructor shape in [ForecastOverlayRepository.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt)
+- public API of [ForecastOverlayViewModel.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayViewModel.kt)
+- Hilt bindings in [ForecastModule.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/di/ForecastModule.kt)
 - map UI integration code
 - weather/overlay manager code
 
@@ -233,6 +233,6 @@ What this slice probably will not do alone:
 Only after this slice is measured and reviewed:
 
 1. decide whether the next bounded target is
-   [MapOverlayManagerRuntimeForecastWeatherDelegate.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt)
+   [MapOverlayManagerRuntimeForecastWeatherDelegate.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt)
    or to stop forecast extraction if the payoff is too small
 2. do not combine that next step into the same change

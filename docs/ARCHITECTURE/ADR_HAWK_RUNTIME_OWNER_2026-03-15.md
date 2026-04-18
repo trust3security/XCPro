@@ -110,8 +110,8 @@ Required:
 ## Validation
 
 - Tests/evidence required:
-  - `feature/variometer/src/test/java/com/example/xcpro/hawk/HawkVarioEngineTest.kt`
-  - `feature/variometer/src/test/java/com/example/xcpro/hawk/HawkVarioRepositoryTest.kt`
+  - `feature/variometer/src/test/java/com/trust3/xcpro/hawk/HawkVarioEngineTest.kt`
+  - `feature/variometer/src/test/java/com/trust3/xcpro/hawk/HawkVarioRepositoryTest.kt`
   - `feature:map:compileDebugKotlin`
   - standard AGENTS verification gates
 - SLO or latency impact:

@@ -125,14 +125,14 @@ def run_adb(args: List[str], check: bool = True) -> subprocess.CompletedProcess:
 
 def detect_package() -> Optional[str]:
     try:
-        out = run_adb(["shell", "pm", "list", "packages", "com.example.xcpro"]).stdout
+        out = run_adb(["shell", "pm", "list", "packages", "com.trust3.xcpro"]).stdout
     except subprocess.CalledProcessError:
         return None
     packages = [line.split(":", 1)[1].strip() for line in out.splitlines() if line.startswith("package:")]
-    if "com.example.xcpro.debug" in packages:
-        return "com.example.xcpro.debug"
-    if "com.example.xcpro" in packages:
-        return "com.example.xcpro"
+    if "com.trust3.xcpro.debug" in packages:
+        return "com.trust3.xcpro.debug"
+    if "com.trust3.xcpro" in packages:
+        return "com.trust3.xcpro"
     return packages[0] if packages else None
 
 
@@ -169,7 +169,7 @@ def capture(args: argparse.Namespace) -> int:
         if not package:
             print("Could not detect package; use --package", file=sys.stderr)
         else:
-            activity = args.activity or resolve_activity(package) or "com.example.xcpro.MainActivity"
+            activity = args.activity or resolve_activity(package) or "com.trust3.xcpro.MainActivity"
             component = f"{package}/{activity}"
             run_adb(["shell", "am", "start", "-n", component], check=False)
 

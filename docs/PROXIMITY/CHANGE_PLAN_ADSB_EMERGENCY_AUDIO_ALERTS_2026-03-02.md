@@ -148,8 +148,8 @@ Feature is production-ready only when all are true:
   - Deterministic replay matrix test suite (`R1..R8`) with serialized trace parity checks.
   - Full gate verification pass after implementation (`enforceRules`, `testDebugUnitTest`, `assembleDebug`).
 - Evidence:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioAlertFsm.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbEmergencyAudioReplayDeterminismTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioAlertFsm.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioReplayDeterminismTest.kt`
 - Exit criteria:
   - Zero determinism mismatches.
   - Zero cooldown-violation re-triggers.

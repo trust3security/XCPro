@@ -68,7 +68,7 @@ only when explicitly requested:
 If you need tests, pass them directly:
 
 ```bat
-check-quick.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest"
+check-quick.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelTest"
 ```
 
 ## QA bundles

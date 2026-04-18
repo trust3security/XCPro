@@ -160,16 +160,16 @@ That gives you all three outcomes you want:
 
 Primary files:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapZoomConstraints.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/SailplaneIconBitmapFactory.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayConfig.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficMapApi.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapZoomConstraints.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/SailplaneIconBitmapFactory.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlaySupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayConfig.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficMapApi.kt`

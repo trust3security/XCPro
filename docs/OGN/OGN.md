@@ -31,30 +31,30 @@ Not implemented:
 ## End-to-End Path
 
 1. UI toggle and settings:
-   - Scia bottom-sheet toggle: `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-   - Preferences: `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-   - Trail selection preferences: `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
+   - Scia bottom-sheet toggle: `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+   - Preferences: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+   - Trail selection preferences: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
 2. ViewModel/use-case orchestration:
-   - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt` (`OgnTrafficUseCase`)
-   - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt` (`OgnTrafficUseCase`)
+   - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
 3. Repository and parsing:
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnAprsLineParser.kt`
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDdbRepository.kt`
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnAprsLineParser.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDdbRepository.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt`
 4. Map runtime rendering:
-   - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/OgnThermalOverlay.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/OgnThermalOverlay.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
 5. OGN details UI:
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalDetailsSheet.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnMarkerDetailsSheet.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalDetailsSheet.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
 
 ## Runtime Semantics
 
@@ -275,21 +275,21 @@ Close-zoom marker label semantics:
 ## Tests
 
 Parser and policy:
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnAprsLineParserTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnSubscriptionPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrackStabilizerTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbJsonParserTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnAprsLineParserTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnSubscriptionPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrackStabilizerTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnDdbJsonParserTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnGliderTrailRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
 
 Map runtime lifecycle:
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapRuntimeControllerWeatherStyleTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapRuntimeControllerWeatherStyleTest.kt`
 
 Preferences and VM wiring:
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepositoryTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`

@@ -2,7 +2,7 @@ package com.example.dfcards
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import com.example.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.core.flight.RealTimeFlightData
 
 /**
  * PHASE 3: FlightDataProvider - simplified interface (fallback removed)
@@ -29,3 +29,4 @@ fun FlightDataProvider(
         }
     }
 }
+

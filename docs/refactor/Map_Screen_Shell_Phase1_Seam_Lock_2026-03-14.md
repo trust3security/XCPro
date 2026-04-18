@@ -47,7 +47,7 @@ Professional constraint:
 
 Source file:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
 
 | Lines | State / Collection | Current Owner | Phase 1 Owner | Notes |
 |---|---|---|---|---|
@@ -183,29 +183,29 @@ Phase 1 rule:
 
 | File | Why It Changes | Ownership Change |
 |---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | reduce it to orchestration and render assembly | stops owning QNH, bottom-tab, wind-tap, and forecast/weather state directly |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenAuxiliaryPanelsInputs.kt` | may need grouped inputs refined for extracted helpers | remains a UI input-model file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt` | may accept grouped helper outputs instead of raw local vars | remains render-section ownership only |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | reduce it to orchestration and render assembly | stops owning QNH, bottom-tab, wind-tap, and forecast/weather state directly |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenAuxiliaryPanelsInputs.kt` | may need grouped inputs refined for extracted helpers | remains a UI input-model file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt` | may accept grouped helper outputs instead of raw local vars | remains render-section ownership only |
 
 ### 5.2 Files To Add
 
 | File | Responsibility |
 |---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenQnhUiState.kt` | QNH live-data collection, dialog state, QNH label, and `MapQnhDialogInputs` assembly |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenForecastWeatherState.kt` | forecast/weather collection, warning/error resolution, runtime-effect inputs, and forecast UI adapters |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBottomTabsUiState.kt` | bottom-tab UI state, satellite-style restore memory, and bottom-sheet suppression |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenWindTapUiState.kt` | wind tap callout state, viewport/label geometry, and clear/reset effects |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenQnhUiState.kt` | QNH live-data collection, dialog state, QNH label, and `MapQnhDialogInputs` assembly |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenForecastWeatherState.kt` | forecast/weather collection, warning/error resolution, runtime-effect inputs, and forecast UI adapters |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBottomTabsUiState.kt` | bottom-tab UI state, satellite-style restore memory, and bottom-sheet suppression |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenWindTapUiState.kt` | wind tap callout state, viewport/label geometry, and clear/reset effects |
 
 ### 5.3 Files Explicitly Not Touched In Phase 1
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
 
 If implementation pressure reaches any of those files, stop and re-scope. That
 means the work is crossing into Phase 2 or Phase 3.

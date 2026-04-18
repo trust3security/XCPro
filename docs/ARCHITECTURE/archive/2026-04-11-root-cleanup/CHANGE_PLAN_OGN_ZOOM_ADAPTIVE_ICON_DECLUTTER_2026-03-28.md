@@ -114,9 +114,9 @@ Read first:
 
 | Data | Owner | Exposed As | Forbidden Duplicates |
 |---|---|---|---|
-| OGN icon size preference | `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt` | `iconSizePxFlow` via `OgnTrafficFacade` | runtime or UI treating derived rendered size as the persisted source |
-| Current map zoom | `feature/map/src/main/java/com/example/xcpro/map/MapStateStore.kt` plus map camera callbacks | `currentZoom` state and camera idle/init callbacks | OGN preference repo or ViewModel owning map zoom |
-| Effective rendered OGN icon size | `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | imperative runtime apply only | persisted state, ViewModel state, or Compose-owned authoritative state |
+| OGN icon size preference | `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt` | `iconSizePxFlow` via `OgnTrafficFacade` | runtime or UI treating derived rendered size as the persisted source |
+| Current map zoom | `feature/map/src/main/java/com/trust3/xcpro/map/MapStateStore.kt` plus map camera callbacks | `currentZoom` state and camera idle/init callbacks | OGN preference repo or ViewModel owning map zoom |
+| Effective rendered OGN icon size | `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | imperative runtime apply only | persisted state, ViewModel state, or Compose-owned authoritative state |
 
 ### 2.1A State Contract
 
@@ -144,10 +144,10 @@ Dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | ADS-B already accepts viewport zoom as a separate runtime input | keep base size preference separate from viewport-derived display policy | OGN may only need derived icon-size scaling, not the full ADS-B declutter policy object |
-| `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt` | ADS-B overlay recalculates render policy from base size plus viewport context | keep zoom-aware visual policy local to the overlay/runtime slice | OGN can stay imperative and reuse existing `setIconSizePx(...)` path |
-| `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` | already pushes initial zoom and camera-idle zoom into ADS-B runtime | reuse the same startup/camera-idle event sources for OGN | add OGN runtime feed without widening ViewModel state |
-| `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt` | existing OGN lifecycle tests already cover overlay recreation and cached-runtime behavior | extend runtime-level lifecycle verification instead of starting with UI-shell callback tests | add zoom-specific assertions only where runtime ownership actually changes |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | ADS-B already accepts viewport zoom as a separate runtime input | keep base size preference separate from viewport-derived display policy | OGN may only need derived icon-size scaling, not the full ADS-B declutter policy object |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt` | ADS-B overlay recalculates render policy from base size plus viewport context | keep zoom-aware visual policy local to the overlay/runtime slice | OGN can stay imperative and reuse existing `setIconSizePx(...)` path |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt` | already pushes initial zoom and camera-idle zoom into ADS-B runtime | reuse the same startup/camera-idle event sources for OGN | add OGN runtime feed without widening ViewModel state |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt` | existing OGN lifecycle tests already cover overlay recreation and cached-runtime behavior | extend runtime-level lifecycle verification instead of starting with UI-shell callback tests | add zoom-specific assertions only where runtime ownership actually changes |
 
 ### 2.2B Boundary Moves
 
@@ -172,14 +172,14 @@ Dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/ARCHITECTURE/CHANGE_PLAN_OGN_ZOOM_ADAPTIVE_ICON_DECLUTTER_2026-03-28.md` | New | change contract and phased execution | required for non-trivial map runtime work | not production code | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt` | New | pure zoom-to-rendered-size policy | isolates visual sizing rules from runtime plumbing | not in prefs repo; this is not persisted policy | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | OGN runtime ownership for base size, zoom input, and derived rendered size apply | already owns OGN overlay lifecycle and imperative size apply | not ViewModel or Compose; keep render-only state local | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | runtime bridge API for OGN viewport zoom | same owner as existing ADS-B runtime zoom bridge | not in UI; keep shell/runtime seam together | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` | Existing | map startup and camera-idle zoom forwarding | already owns initial zoom and camera-idle callbacks | not in ViewModel; zoom source is map runtime | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficViewportSizingTest.kt` | New | pure policy coverage | lock scaling curve/clamps independent of map runtime | not runtime test only; helper is pure | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | New | runtime zoom wiring coverage | mirror existing ADS-B viewport zoom test pattern | not in `feature:map`; delegate lives in `feature:traffic` | No |
-| `feature/map/src/test/java/com/example/xcpro/map/MapInitializerTest.kt` or focused equivalent | New | startup and camera-idle OGN zoom forwarding coverage | lock the real runtime seam that owns initial and ongoing viewport zoom handoff | not in UI-shell tests; zoom does not belong to scaffold config state | Maybe |
-| `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt` | Existing | style recreation and runtime reapply coverage | already owns OGN overlay lifecycle assertions | not duplicated in UI-shell tests; overlay recreation is runtime behavior | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportSizing.kt` | New | pure zoom-to-rendered-size policy | isolates visual sizing rules from runtime plumbing | not in prefs repo; this is not persisted policy | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | OGN runtime ownership for base size, zoom input, and derived rendered size apply | already owns OGN overlay lifecycle and imperative size apply | not ViewModel or Compose; keep render-only state local | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | runtime bridge API for OGN viewport zoom | same owner as existing ADS-B runtime zoom bridge | not in UI; keep shell/runtime seam together | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt` | Existing | map startup and camera-idle zoom forwarding | already owns initial zoom and camera-idle callbacks | not in ViewModel; zoom source is map runtime | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficViewportSizingTest.kt` | New | pure policy coverage | lock scaling curve/clamps independent of map runtime | not runtime test only; helper is pure | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | New | runtime zoom wiring coverage | mirror existing ADS-B viewport zoom test pattern | not in `feature:map`; delegate lives in `feature:traffic` | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapInitializerTest.kt` or focused equivalent | New | startup and camera-idle OGN zoom forwarding coverage | lock the real runtime seam that owns initial and ongoing viewport zoom handoff | not in UI-shell tests; zoom does not belong to scaffold config state | Maybe |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt` | Existing | style recreation and runtime reapply coverage | already owns OGN overlay lifecycle assertions | not duplicated in UI-shell tests; overlay recreation is runtime behavior | No |
 
 ### 2.2E Module and API Surface
 

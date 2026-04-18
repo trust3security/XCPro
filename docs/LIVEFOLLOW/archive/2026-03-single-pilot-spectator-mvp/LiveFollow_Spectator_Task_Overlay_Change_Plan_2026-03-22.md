@@ -68,9 +68,9 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt` | exports task SSOT into another feature boundary | adapter reads `TaskManagerCoordinator.taskSnapshotFlow` and maps to feature-local model | LiveFollow export is flow-based instead of pull-only |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSource.kt` | parses current API live-read payload into transport-local watch state | keep parsing and transport ownership in the data source | extend payload parsing to keep task, not just aircraft |
-| `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | dedicated spectator-only map overlay runtime | keep rendering in map runtime-only helper | add a second dedicated task overlay helper with disjoint layer/source IDs |
+| `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt` | exports task SSOT into another feature boundary | adapter reads `TaskManagerCoordinator.taskSnapshotFlow` and maps to feature-local model | LiveFollow export is flow-based instead of pull-only |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/watch/CurrentApiDirectWatchTrafficSource.kt` | parses current API live-read payload into transport-local watch state | keep parsing and transport ownership in the data source | extend payload parsing to keep task, not just aircraft |
+| `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | dedicated spectator-only map overlay runtime | keep rendering in map runtime-only helper | add a second dedicated task overlay helper with disjoint layer/source IDs |
 
 ### 2.2B Boundary Moves
 
@@ -100,9 +100,9 @@
 | `feature/livefollow/.../data/watch/CurrentApiDirectWatchTrafficSource.kt` | Existing | watch poll parsing and transport-local task state | current API live-read task lives in same payload | avoid second polling client | No |
 | `feature/livefollow/.../data/watch/WatchTrafficModels.kt` | Existing | watched task read model in watch SSOT | watch repo exports one snapshot | avoids map-owned task authority | No |
 | `feature/livefollow/.../watch/LiveFollowWatchUiState.kt` | Existing | VM map render projection | render input belongs in UI state | keep transport parsing out of UI | No |
-| `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | Existing | watched glider overlay runtime | current marker scale belongs here | no server or VM ownership | No |
-| `feature/map/src/main/java/com/example/xcpro/map/LiveFollowWatchTaskOverlay.kt` | New | watched task map overlay runtime | read-only spectator task rendering belongs on map side | do not mix with editable task runtime/router | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | map-side handoff to spectator overlays | it already owns watched-aircraft runtime hookup | keep Composables render-only | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchAircraftOverlay.kt` | Existing | watched glider overlay runtime | current marker scale belongs here | no server or VM ownership | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/LiveFollowWatchTaskOverlay.kt` | New | watched task map overlay runtime | read-only spectator task rendering belongs on map side | do not mix with editable task runtime/router | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | map-side handoff to spectator overlays | it already owns watched-aircraft runtime hookup | keep Composables render-only | No |
 | `docs/ARCHITECTURE/PIPELINE.md` | Existing | authoritative pipeline wiring update | required when wiring changes | global pipeline doc owner | No |
 
 ### 2.2E Module and API Surface

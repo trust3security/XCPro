@@ -9,9 +9,9 @@ import com.example.dfcards.FlightTemplate
 import com.example.dfcards.FlightTemplates
 import com.example.dfcards.dfcards.CardState
 import com.example.dfcards.dfcards.FlightData
-import com.example.xcpro.core.common.geometry.DensityScale
-import com.example.xcpro.core.common.geometry.IntSizePx
-import com.example.xcpro.core.common.geometry.dpToPx
+import com.trust3.xcpro.core.common.geometry.DensityScale
+import com.trust3.xcpro.core.common.geometry.IntSizePx
+import com.trust3.xcpro.core.common.geometry.dpToPx
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -560,3 +560,4 @@ internal fun CardStateRepository.hasCard(cardId: String): Boolean =
     cardStateFlowsMap.containsKey(cardId)
 
 internal fun CardStateRepository.getCardCount(): Int = cardStateFlowsMap.size
+

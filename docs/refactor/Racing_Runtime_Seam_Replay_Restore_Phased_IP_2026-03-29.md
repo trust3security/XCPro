@@ -102,9 +102,9 @@ Confirm dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/**`
-  - `feature/map/src/main/java/com/example/xcpro/map/**`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/taskperformance/**`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/**`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/taskperformance/**`
   - tests under `feature/tasks` and `feature/map`
 - Any boundary risk:
   - accidentally making `feature:map` the owner of task runtime instead of replay orchestration only
@@ -116,9 +116,9 @@ Confirm dependency flow remains:
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
 | `docs/refactor/Task_AAT_Ownership_Release_Grade_Phased_IP_2026-03-15.md` | same family of task-runtime authority repair | owner-first state contract, explicit forbidden duplicates, phased tests before cleanup | this plan keeps the existing ADR split instead of moving all reads to one seam |
-| `feature/map/src/main/java/com/example/xcpro/map/MapReplaySnapshotControllers.kt` | already owns replay capture/restore helpers | keep replay snapshot logic behind a focused controller instead of scattering restore code | widen capture/restore payload to full racing task/nav state |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt` | already combines task snapshot and racing nav state without inventing new authority | derive consumer outputs from both seams when needed | task UI projector may need a similar combine step for racing-only in-flight displays |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt` | already owns replay lifecycle orchestration | fix replay sequencing here instead of scattering replay cleanup across consumers | racing replay may need stricter terminal cleanup than the current event-only restore path |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapReplaySnapshotControllers.kt` | already owns replay capture/restore helpers | keep replay snapshot logic behind a focused controller instead of scattering restore code | widen capture/restore payload to full racing task/nav state |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/navigation/NavigationRouteRepository.kt` | already combines task snapshot and racing nav state without inventing new authority | derive consumer outputs from both seams when needed | task UI projector may need a similar combine step for racing-only in-flight displays |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt` | already owns replay lifecycle orchestration | fix replay sequencing here instead of scattering replay cleanup across consumers | racing replay may need stricter terminal cleanup than the current event-only restore path |
 
 ### 2.2B Boundary Moves
 
@@ -135,8 +135,8 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapReplaySnapshotControllers.kt` | restores only `mode` and `isArmed` | full replay snapshot restore API (`activeLeg`, `RacingNavigationState`, full advance snapshot, replay mode/speed/cadence, `autoStopAfterFinish`, racing replay map shell state) | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt` | manual replay reset with no complete terminal restore contract | replay lifecycle calls focused capture/reset/cleanup/terminal-restore API only | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapReplaySnapshotControllers.kt` | restores only `mode` and `isArmed` | full replay snapshot restore API (`activeLeg`, `RacingNavigationState`, full advance snapshot, replay mode/speed/cadence, `autoStopAfterFinish`, racing replay map shell state) | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt` | manual replay reset with no complete terminal restore contract | replay lifecycle calls focused capture/reset/cleanup/terminal-restore API only | Phase 1 |
 | replay controller terminal event path | `Completed`/`Cancelled` emitted after live sensors may already resume | restore/cleanup ordering that fences replay/live handoff explicitly | Phase 1 |
 | replay restore through coordinator leg mutation | `setActiveLeg(...)` can trigger controller manual-leg listener | atomic/suppressed restore path for coordinator leg + nav state | Phase 1 |
 | racing task UI/minimized indicator path | renders current leg from `TaskUiState.stats.activeIndex` only | explicit racing UI projector that chooses task-selection leg or nav leg by contract | Phase 2 |
@@ -147,23 +147,23 @@ Confirm dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Racing_Runtime_Seam_Replay_Restore_Phased_IP_2026-03-29.md` | New | execution contract for this seam repair | active phased plan belongs in `docs/refactor` | not a durable ADR by itself | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapReplaySnapshotControllers.kt` | Existing | racing replay snapshot capture/restore, including replay overrides and map shell state | replay orchestration already lives in map feature | not task-runtime owner, not UI | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt` | Existing | replay start/cleanup/terminal lifecycle orchestration only | map feature owns replay orchestration | not the place to own task/nav state models | No |
-| `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntime.kt` | Existing | replay cleanup/terminal event ordering and stop semantics | replay runtime already owns session/source reset behavior | not a task-runtime owner, but Phase 1 may need narrow cleanup-order changes here | No |
-| `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntimePlayback.kt` | Existing | replay completion ordering and reset-after-finish sequencing | finish/reset ordering already lives here | not a task or UI file | No |
-| `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntimeLoadAndConfig.kt` | Existing | replay mode/`autoStopAfterFinish` config accessors | replay config lives here already | not task-owned | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | Existing | racing navigation snapshot/restore API and fix-driven orchestration | already owns `racingState` and advance state | not a map concern, not UI | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationStateStore.kt` | Existing | storage/reset/restore of racing navigation state | state store should own state replacement mechanics | not coordinator-owned task snapshot | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` | Existing | selected task leg restore target only; task-runtime authority remains unchanged | coordinator already owns `TaskRuntimeSnapshot` | should not absorb nav-only runtime | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt` | Existing | coordinator/task-sheet read seam; may expose racing runtime input to a separate flight-surface projector | task sheet should consume use-case outputs, not raw controller | not in Composable or ViewModel | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetUseCase.kt` | Existing | selected-leg editor/task-sheet projection only | task-sheet/editor semantics already live here | not the place to redefine all task UI state as in-flight nav status | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceUseCase.kt` | New | racing flight-surface projector for the minimized/top-map indicator | Phase 2 needs a dedicated projector that can combine coordinator snapshot and racing nav state without mutating sheet/editor semantics | not in `TaskRepository`, not in Composables, not in replay/map orchestration code | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceViewModel.kt` | New or existing split if needed | exposes the minimized-indicator UI model to map UI | keeps map UI from reading raw seams or overloading `TaskSheetViewModel.uiState` | not in `MapTaskScreenUi`, and not by broadening `TaskSheetViewModel` if that makes it mixed-responsibility | Maybe |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt` | Existing | rendering only | must consume a clarified UI model, not decide seam policy itself | not a domain/projector owner | No |
-| `feature/tasks/src/test/java/com/example/xcpro/tasks/TaskNavigationControllerTest.kt` | Existing | controller snapshot/restore and seam regression tests | controller behavior belongs here | not a map test | No |
-| `feature/map/src/test/java/com/example/xcpro/map/MapScreenReplayCoordinatorTest.kt` | New | replay start/terminal restore behavior | map replay orchestration needs direct tests | no existing file covers it | No |
-| `feature/map/src/test/java/com/example/xcpro/map/RacingReplaySnapshotControllerTest.kt` | New | snapshot capture/restore coverage | focused replay snapshot semantics deserve direct tests | too specific for broader coordinator test | No |
-| `feature/map/src/test/java/com/example/xcpro/map/ui/task/MapTaskScreenUiTest.kt` | Existing | rendering regression for current-leg display contract | UI surface already has tests | projector policy still needs visible rendering proof | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapReplaySnapshotControllers.kt` | Existing | racing replay snapshot capture/restore, including replay overrides and map shell state | replay orchestration already lives in map feature | not task-runtime owner, not UI | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt` | Existing | replay start/cleanup/terminal lifecycle orchestration only | map feature owns replay orchestration | not the place to own task/nav state models | No |
+| `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntime.kt` | Existing | replay cleanup/terminal event ordering and stop semantics | replay runtime already owns session/source reset behavior | not a task-runtime owner, but Phase 1 may need narrow cleanup-order changes here | No |
+| `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntimePlayback.kt` | Existing | replay completion ordering and reset-after-finish sequencing | finish/reset ordering already lives here | not a task or UI file | No |
+| `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntimeLoadAndConfig.kt` | Existing | replay mode/`autoStopAfterFinish` config accessors | replay config lives here already | not task-owned | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt` | Existing | racing navigation snapshot/restore API and fix-driven orchestration | already owns `racingState` and advance state | not a map concern, not UI | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationStateStore.kt` | Existing | storage/reset/restore of racing navigation state | state store should own state replacement mechanics | not coordinator-owned task snapshot | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` | Existing | selected task leg restore target only; task-runtime authority remains unchanged | coordinator already owns `TaskRuntimeSnapshot` | should not absorb nav-only runtime | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt` | Existing | coordinator/task-sheet read seam; may expose racing runtime input to a separate flight-surface projector | task sheet should consume use-case outputs, not raw controller | not in Composable or ViewModel | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetUseCase.kt` | Existing | selected-leg editor/task-sheet projection only | task-sheet/editor semantics already live here | not the place to redefine all task UI state as in-flight nav status | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskFlightSurfaceUseCase.kt` | New | racing flight-surface projector for the minimized/top-map indicator | Phase 2 needs a dedicated projector that can combine coordinator snapshot and racing nav state without mutating sheet/editor semantics | not in `TaskRepository`, not in Composables, not in replay/map orchestration code | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskFlightSurfaceViewModel.kt` | New or existing split if needed | exposes the minimized-indicator UI model to map UI | keeps map UI from reading raw seams or overloading `TaskSheetViewModel.uiState` | not in `MapTaskScreenUi`, and not by broadening `TaskSheetViewModel` if that makes it mixed-responsibility | Maybe |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt` | Existing | rendering only | must consume a clarified UI model, not decide seam policy itself | not a domain/projector owner | No |
+| `feature/tasks/src/test/java/com/trust3/xcpro/tasks/TaskNavigationControllerTest.kt` | Existing | controller snapshot/restore and seam regression tests | controller behavior belongs here | not a map test | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenReplayCoordinatorTest.kt` | New | replay start/terminal restore behavior | map replay orchestration needs direct tests | no existing file covers it | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/RacingReplaySnapshotControllerTest.kt` | New | snapshot capture/restore coverage | focused replay snapshot semantics deserve direct tests | too specific for broader coordinator test | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUiTest.kt` | Existing | rendering regression for current-leg display contract | UI surface already has tests | projector policy still needs visible rendering proof | No |
 
 ### 2.2E Module and API Surface
 
@@ -343,9 +343,9 @@ Route / glide / task performance
   - Lock current intended authority split before changing code.
   - Add or update tests that reproduce the replay restore gap, the replay failure/cleanup gap, the live-fix race windows, and the allowed disabled/manual divergence.
 - Files to change:
-  - `feature/tasks/src/test/java/com/example/xcpro/tasks/TaskNavigationControllerTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenReplayCoordinatorTest.kt` (new)
-  - `feature/map/src/test/java/com/example/xcpro/map/RacingReplaySnapshotControllerTest.kt` (new)
+  - `feature/tasks/src/test/java/com/trust3/xcpro/tasks/TaskNavigationControllerTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenReplayCoordinatorTest.kt` (new)
+  - `feature/map/src/test/java/com/trust3/xcpro/map/RacingReplaySnapshotControllerTest.kt` (new)
 - Ownership/file split changes in this phase:
   - none; tests only
 - Tests to add/update:
@@ -370,13 +370,13 @@ Route / glide / task performance
   - fence replay/live handoff so live fixes cannot mutate reset/restore state in an uncontrolled gap
   - ensure failure cleanup converges to the same live-ready state as complete/cancel
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapReplaySnapshotControllers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntimePlayback.kt`
-  - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntimeLoadAndConfig.kt`
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt`
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationStateStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapReplaySnapshotControllers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntimePlayback.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntimeLoadAndConfig.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationStateStore.kt`
 - Ownership/file split changes in this phase:
   - replay snapshot helper becomes the single owner of replay capture/restore completeness for racing replay
   - replay coordinator/runtime gain explicit replay/live handoff ordering responsibility
@@ -448,12 +448,12 @@ Route / glide / task performance
   - remove ambiguous UI assumptions about `activeLeg` vs racing nav leg
   - keep editor/selection semantics separate from in-flight nav-progress semantics
 - Files to change:
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceUseCase.kt` (new)
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFlightSurfaceViewModel.kt` (new or split from existing VM if the final shape stays clean)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/task/MapTaskScreenUiTest.kt`
-  - task-flight-surface / task-sheet tests under `feature/tasks/src/test/java/com/example/xcpro/tasks/*`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskFlightSurfaceUseCase.kt` (new)
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskFlightSurfaceViewModel.kt` (new or split from existing VM if the final shape stays clean)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUiTest.kt`
+  - task-flight-surface / task-sheet tests under `feature/tasks/src/test/java/com/trust3/xcpro/tasks/*`
 - Ownership/file split changes in this phase:
   - `TaskUiState.stats.activeIndex` stays the selected-leg/editor contract
   - a dedicated racing flight-surface projector becomes the owner of minimized-indicator "current TP in flight" semantics
@@ -511,10 +511,10 @@ Route / glide / task performance
 ## 6) Verification Plan
 
 - Smallest sufficient first:
-  - `./gradlew :feature:tasks:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskNavigationControllerTest"`
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenReplayCoordinatorTest" --tests "com.example.xcpro.map.RacingReplaySnapshotControllerTest" --tests "com.example.xcpro.map.ui.task.MapTaskScreenUiTest"`
+  - `./gradlew :feature:tasks:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenReplayCoordinatorTest" --tests "com.trust3.xcpro.map.RacingReplaySnapshotControllerTest" --tests "com.trust3.xcpro.map.ui.task.MapTaskScreenUiTest"`
 - Add focused replay validation when Phase 1 code lands:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest"`
 - Slice-complete proof:
   - `./gradlew enforceRules`
   - `./gradlew testDebugUnitTest`

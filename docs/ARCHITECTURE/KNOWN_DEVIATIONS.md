@@ -26,11 +26,11 @@ README consistency rule:
 - Next review: 2026-05-15
 - Expiry: 2026-06-30
 - Scope:
-  - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainAttribution.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`
-  - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-  - `feature/weather/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRainAttribution.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
+  - `feature/weather/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
 - Rationale:
   - Weather provider endpoints/host validation and legally required source attribution require provider literals.
   - UI/public API naming remains provider-neutral outside explicit attribution/compliance surfaces.
@@ -88,11 +88,11 @@ Compliance note (2026-02-20):
 - Execution plan:
   - `docs/refactor/Logging_Architecture_Standardization_Phased_IP_2026-03-14.md`
 - Scope:
-  - `core/common/src/main/java/com/example/xcpro/core/common/logging/AppLogger.kt`
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
+  - `core/common/src/main/java/com/trust3/xcpro/core/common/logging/AppLogger.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
   - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/OpenMeteoElevationApi.kt`
-  - `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+  - `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
   - hotspot clusters in `feature/variometer`, `feature/map`, `feature/map-runtime`, `feature/tasks`, and `dfcards-library`
 - Risk:
   - Privacy-sensitive production logs currently print exact coordinates, names, IDs, and session identifiers directly from feature code.

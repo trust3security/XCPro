@@ -34,28 +34,28 @@ The refactor stayed on the intended seam:
 
 ### 2.1 Ownership Outcome
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
   - reduced from the earlier `476` line hotspot to `380` lines
   - now assembles focused UI state helpers instead of directly owning all shell-local state
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenQnhUiState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenQnhUiState.kt`
   - owns QNH dialog UI state and input adaptation
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenForecastWeatherState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenForecastWeatherState.kt`
   - owns forecast/weather collection and shell adaptation
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBottomTabsUiState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBottomTabsUiState.kt`
   - owns bottom-tab and sheet-local UI state
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenWindTapUiState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenWindTapUiState.kt`
   - owns wind-tap geometry/display state
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSectionInputs.kt`
   - owns grouped content-section contracts
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt`
   - owns grouped map/session/task/traffic binding collection
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionDependencies.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionDependencies.kt`
   - owns the profile/session dependency group for the proven ViewModel seam
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenProfileSessionCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenProfileSessionCoordinator.kt`
   - owns profile/style/layout routing
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenWeGlidePromptBridge.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenWeGlidePromptBridge.kt`
   - owns prompt collection and confirm/dismiss resolution
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
   - reduced from the `392` line Phase 4 seam-lock baseline to `330` lines
   - remains the single screen-state owner instead of turning into a facade over hidden state owners
 
@@ -66,7 +66,7 @@ Passed during Phase 4A completion:
 - `./gradlew enforceRules --no-configuration-cache`
 - `./gradlew testDebugUnitTest --no-configuration-cache`
 - `./gradlew assembleDebug --no-configuration-cache`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenWeGlidePromptBridgeTest" --tests "com.example.xcpro.map.MapScreenViewModelCoreStateTest" --no-configuration-cache`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenWeGlidePromptBridgeTest" --tests "com.trust3.xcpro.map.MapScreenViewModelCoreStateTest" --no-configuration-cache`
 
 Manual validation completed after the implementation:
 

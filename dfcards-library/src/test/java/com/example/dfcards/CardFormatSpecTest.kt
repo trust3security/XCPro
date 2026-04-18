@@ -1,11 +1,11 @@
 package com.example.dfcards
 
-import com.example.xcpro.common.units.AltitudeM
-import com.example.xcpro.common.units.DistanceM
-import com.example.xcpro.common.units.SpeedMs
-import com.example.xcpro.common.units.UnitsFormatter
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.common.units.AltitudeM
+import com.trust3.xcpro.common.units.DistanceM
+import com.trust3.xcpro.common.units.SpeedMs
+import com.trust3.xcpro.common.units.UnitsFormatter
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.core.flight.RealTimeFlightData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -521,3 +521,4 @@ class CardFormatSpecTest {
         }
     }
 }
+

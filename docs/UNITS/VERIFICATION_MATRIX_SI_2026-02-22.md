@@ -15,7 +15,7 @@ Status: In progress (Run 46 closed `enforce_rules` caveat with 5 recursive passe
 - `./gradlew connectedDebugAndroidTest --no-parallel`
 
 ## Latest Execution Evidence (Run 24)
-- `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.OpenSkyProviderClientTest" --tests "com.example.xcpro.adsb.AdsbTrafficRepositoryTest" --tests "com.example.xcpro.ogn.OgnTrafficRepositoryPolicyTest" --tests "com.example.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.example.xcpro.replay.ReplaySampleEmitterTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest"` -> PASS
+- `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.OpenSkyProviderClientTest" --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryPolicyTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"` -> PASS
 - `./gradlew --no-daemon --no-configuration-cache enforceRules testDebugUnitTest assembleDebug` -> PASS
 - Instrumentation evidence (unchanged from Run 10):
   - `./gradlew --no-daemon --no-configuration-cache :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"` -> PASS (9 tests)
@@ -70,7 +70,7 @@ Status: In progress (Run 46 closed `enforce_rules` caveat with 5 recursive passe
 - Run 38 implemented and verified closeout residuals:
   - `#28`, `#34`, `#40`, `#41`, `#42`, `#43`.
 - Verification commands executed in this run:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.aat.AATTaskQuickValidationEngineUnitsTest" --no-daemon --no-configuration-cache` -> PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.aat.AATTaskQuickValidationEngineUnitsTest" --no-daemon --no-configuration-cache` -> PASS
   - `./gradlew enforceRules --no-daemon --no-configuration-cache` -> PASS
   - `./gradlew testDebugUnitTest --no-daemon --no-configuration-cache` -> PASS
   - `./gradlew assembleDebug --no-daemon --no-configuration-cache` -> PASS
@@ -84,7 +84,7 @@ Status: In progress (Run 46 closed `enforce_rules` caveat with 5 recursive passe
 ## Run 44 Note (`#18` Implementation Closeout Verification)
 - Run 44 implemented and verified backlog `#18` changes.
 - Focused verification command:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.tasks.AATCoordinatorDelegateTest" --tests "com.example.xcpro.tasks.core.TaskWaypointRadiusContractTest" --tests "com.example.xcpro.tasks.aat.AATInteractiveTurnpointManagerValidationTest" --tests "com.example.xcpro.tasks.aat.interaction.AATEditGeometryValidatorTest" --tests "com.example.xcpro.tasks.aat.areas.AreaCalculatorUnitsTest" --tests "com.example.xcpro.tasks.aat.AATTaskDisplayGeometryBuilderUnitsTest" --tests "com.example.xcpro.tasks.racing.RacingGeometryUtilsTest"` -> PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.tasks.AATCoordinatorDelegateTest" --tests "com.trust3.xcpro.tasks.core.TaskWaypointRadiusContractTest" --tests "com.trust3.xcpro.tasks.aat.AATInteractiveTurnpointManagerValidationTest" --tests "com.trust3.xcpro.tasks.aat.interaction.AATEditGeometryValidatorTest" --tests "com.trust3.xcpro.tasks.aat.areas.AreaCalculatorUnitsTest" --tests "com.trust3.xcpro.tasks.aat.AATTaskDisplayGeometryBuilderUnitsTest" --tests "com.trust3.xcpro.tasks.racing.RacingGeometryUtilsTest"` -> PASS
 - Repo-gate status:
   - `./scripts/ci/enforce_rules.ps1` -> FAIL (pre-existing unrelated rule hit in `TaskManagerCompat.kt` and existing script no-files handling), so full-script green status is still pending outside this tranche.
 - Targeted static checks for new `#18` guard patterns were executed with `rg` and returned no matches.
@@ -92,7 +92,7 @@ Status: In progress (Run 46 closed `enforce_rules` caveat with 5 recursive passe
 ## Run 45 Note (`#12` Fixture-Matrix Closure Verification)
 - Run 45 added and verified the remaining racing/AAT fixture-matrix distance invariants for backlog `#12`.
 - Focused verification command:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.aat.calculations.AATDistanceCalculatorUnitsTest" --tests "com.example.xcpro.tasks.racing.RacingGeometryUtilsTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"` -> PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.aat.calculations.AATDistanceCalculatorUnitsTest" --tests "com.trust3.xcpro.tasks.racing.RacingGeometryUtilsTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest"` -> PASS
 - Repo-gate status remains unchanged from Run 44 (`enforce_rules` still blocked by pre-existing unrelated issues).
 
 ## Run 46 Note (Remaining Non-`#12` Caveat Closure)

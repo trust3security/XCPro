@@ -90,10 +90,10 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/weglide/src/main/java/com/example/xcpro/weglide/auth/WeGlideAuthManager.kt` | existing external account/auth seam | keep provider exchange behind an auth manager/repository boundary | Phase 1 private-follow auth is simpler and will not implement full provider exchange in-repo without external setup |
-| `feature/weglide/src/main/java/com/example/xcpro/weglide/auth/WeGlideTokenStoreImpl.kt` | secure token persistence pattern | encrypted shared prefs with safe fallback | store one bearer session instead of OAuth refresh bundle |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/friends/CurrentApiActivePilotsDataSource.kt` | current LiveFollow network style | OkHttp + focused parser + result mapping | add bearer header and `/api/v2/me*` account transport |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ManageAccountScreen.kt` | existing account/settings route host | reuse `manage_account` route as the UI host | move XCPro cloud account ownership into `feature:livefollow`, not `feature:profile` |
+| `feature/weglide/src/main/java/com/trust3/xcpro/weglide/auth/WeGlideAuthManager.kt` | existing external account/auth seam | keep provider exchange behind an auth manager/repository boundary | Phase 1 private-follow auth is simpler and will not implement full provider exchange in-repo without external setup |
+| `feature/weglide/src/main/java/com/trust3/xcpro/weglide/auth/WeGlideTokenStoreImpl.kt` | secure token persistence pattern | encrypted shared prefs with safe fallback | store one bearer session instead of OAuth refresh bundle |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/friends/CurrentApiActivePilotsDataSource.kt` | current LiveFollow network style | OkHttp + focused parser + result mapping | add bearer header and `/api/v2/me*` account transport |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ManageAccountScreen.kt` | existing account/settings route host | reuse `manage_account` route as the UI host | move XCPro cloud account ownership into `feature:livefollow`, not `feature:profile` |
 
 ### 2.2B Boundary Moves
 
@@ -115,7 +115,7 @@ Confirm dependency flow remains:
 | `feature/livefollow/build.gradle.kts` | Existing | module config for account build settings | auth/account code lives in `feature:livefollow` | not app-owned feature logic | No |
 | `feature/livefollow/.../account/*.kt` | New | cloud-account data/use-case/viewmodel/ui | private-follow account lane belongs in LiveFollow feature | not `feature:profile`, which owns local aircraft profiles | Yes, split by auth/data/ui responsibility |
 | `feature/livefollow/.../di/LiveFollowModule.kt` or new account DI file | Existing/New | DI wiring for account repo/auth/data sources | module DI owner | not `app`, to preserve feature ownership | Maybe |
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | Existing | route wiring only | app owns nav graph composition | not feature-owned | No |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | Existing | route wiring only | app owns nav graph composition | not feature-owned | No |
 | `XCPro_Server/app/main.py` | Existing | current FastAPI endpoint owner for LiveFollow + new account lane | existing service currently owns API and SQLAlchemy models | splitting whole server is unnecessary for Phase 1 | Yes if new helpers become too broad; prefer focused local helper sections |
 | `XCPro_Server/app/alembic/versions/<phase1>.py` | New | schema migration for Phase 1 account tables | follows existing migration pattern | not in tests or docs | No |
 | `XCPro_Server/app/tests/test_livefollow_api.py` | Existing | API regression + Phase 1 endpoint tests | current server test owner | keep v1 regression coverage in existing suite | No |

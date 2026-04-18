@@ -61,12 +61,12 @@
 
 - Planned touch points:
   - `build.gradle.kts`
-  - `feature/map/src/test/java/com/example/xcpro/map/HotspotsOverlayPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
-  - `feature/map/src/main/java/com/example/xcpro/di/OgnThermalModule.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/HotspotsOverlayPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/OgnThermalModule.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
   - `.gitignore`
 
 Boundary risk:
@@ -118,21 +118,21 @@ P1 (closed in current workspace; keep as regression guards):
 
 P1 (test confidence debt, closed):
 - Source-file text assertions removed and replaced with behavior tests in:
-  - `feature/map/src/test/java/com/example/xcpro/map/HotspotsOverlayPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/HotspotsOverlayPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
 - Verification evidence:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.HotspotsOverlayPolicyTest" --tests "com.example.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"` -> PASS.
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.HotspotsOverlayPolicyTest" --tests "com.trust3.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"` -> PASS.
 
 P1 (determinism contract risk):
 - Timezone source uses `ZoneId.systemDefault()` in:
-  - `feature/map/src/main/java/com/example/xcpro/di/OgnThermalModule.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/OgnThermalModule.kt`
 
 P2 (flake debt, closed for targeted files):
 - Removed `Thread.sleep`/wall-clock wait patterns in:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt` (`awaitCondition` now scheduler-driven)
-  - `feature/map/src/test/java/com/example/xcpro/adsb/OpenSkyTokenRepositoryTest.kt` (deferred gate instead of sleep)
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt` (`awaitCondition` now scheduler-driven)
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/OpenSkyTokenRepositoryTest.kt` (deferred gate instead of sleep)
 - Verification evidence:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.OpenSkyTokenRepositoryTest"` -> PASS.
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.OpenSkyTokenRepositoryTest"` -> PASS.
 
 P2 (hygiene debt, partial closure):
 - Added ignore coverage for transient logs/temp artifacts in `.gitignore`:
@@ -181,8 +181,8 @@ Work is corrective: verification-gate reliability, test/determinism hardening, a
 - Goal:
   - Convert policy tests from source-string assertions to behavior assertions.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/map/HotspotsOverlayPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/HotspotsOverlayPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`
   - minimal production seams only if needed for testability.
 - Actions:
   - Remove `Paths.get`/`Files.readAllBytes` code-path checks.
@@ -195,9 +195,9 @@ Work is corrective: verification-gate reliability, test/determinism hardening, a
 - Goal:
   - Keep local-midnight product behavior but make zone behavior explicit and test-proven.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/di/OgnThermalModule.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/OgnThermalModule.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
   - `docs/ARCHITECTURE/PIPELINE.md` if flow contract changes.
 - Actions:
   - Preserve injected zone contract.
@@ -210,8 +210,8 @@ Work is corrective: verification-gate reliability, test/determinism hardening, a
 - Goal:
   - Remove wall-clock/sleep polling in targeted tests.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
 - Actions:
   - Replace with test scheduler driven waiting or deterministic synchronization.
 - Exit criteria:

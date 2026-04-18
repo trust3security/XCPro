@@ -188,10 +188,10 @@ Execution-note:
 16. Fresh phase-2 package runs generated against the tightened contract: `pkg-d1/20260305-170139`, `pkg-g1/20260305-170311`, and `pkg-w1/20260305-170441` (all include required-gate command evidence + connected app instrumentation pass in package artifacts).
 17. Updated threshold rollup (`run_mapscreen_evidence_threshold_checks.ps1 -UpdateGateResults -AllowPending`) now reports: `pkg-d1 pending=4`, `pkg-g1 pending=2`, `pkg-w1 pending=1`, and `pkg-e1 failed=1 (MS-UX-01)`.
 18. Phase-2 host perf evidence harness added for package SLO automation:
-    - `feature/map/src/test/java/com/example/xcpro/map/MapscreenPkgD1PerfEvidenceTest.kt`
-    - `feature/map/src/test/java/com/example/xcpro/map/MapscreenPkgG1PerfEvidenceTest.kt`
-    - `feature/map/src/test/java/com/example/xcpro/map/MapscreenPkgW1PerfEvidenceTest.kt`
-    - shared writer/support: `feature/map/src/test/java/com/example/xcpro/map/MapscreenPerfEvidenceSupport.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/map/MapscreenPkgD1PerfEvidenceTest.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/map/MapscreenPkgG1PerfEvidenceTest.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/map/MapscreenPkgW1PerfEvidenceTest.kt`
+    - shared writer/support: `feature/map/src/test/java/com/trust3/xcpro/map/MapscreenPerfEvidenceSupport.kt`
     - JSON output path: `feature/map/build/reports/perf/mapscreen/<package>-evidence.json`
 19. Phase-2 metric application automation added: `scripts/qa/apply_mapscreen_phase2_perf_metrics.ps1` now runs package evidence test(s), applies measured `slo_metrics` into `metrics.json` (tier_a + tier_b), marks SLO status as `captured`, and can call verifier gate update.
 20. Threshold verifier strict-mode hardening applied for non-pending SLO evaluation: `scripts/qa/verify_mapscreen_package_evidence.ps1` now preserves rule/tier check collections as arrays (`+= ,(...)`) before `.Count` checks to avoid scalar pipeline failures once metrics are populated.

@@ -7,7 +7,7 @@
 - Date: 2026-03-10
 - Issue/PR: RULES-20260306-14 continuation + map runtime maintainability lane
 - Status: Phase 4 in finalization (map-lane gates executed; full test-suite gate deferred by fast-path request)
-- Target: `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` < 350 lines
+- Target: `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` < 350 lines
 
 ## 1) Scope
 
@@ -41,7 +41,7 @@
 `UI -> domain -> data`
 
 - `MapOverlayManager.kt` remains a thin subclass wrapper over `MapOverlayManagerRuntime`.
-- New extraction files remain in `feature/map` or `feature/traffic/src/main/java/com/example/xcpro/map` and keep boundary ownership unchanged.
+- New extraction files remain in `feature/map` or `feature/traffic/src/main/java/com/trust3/xcpro/map` and keep boundary ownership unchanged.
 
 ### 2.3 Time Base
 
@@ -108,9 +108,9 @@ Work:
 - keep behavior identical in `runtimeCounters()` and status snapshots
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeCounters.kt` (new)
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeStateAdapter.kt` (new)
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` (trimmed)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeCounters.kt` (new)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeStateAdapter.kt` (new)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` (trimmed)
 
 Tests:
 - no new logic changes; verify existing runtime tests still pass
@@ -134,8 +134,8 @@ Work:
 - new delegate receives callbacks from runtime and owns scheduling only.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeInteractionDelegate.kt` (new)
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` (trimmed)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeInteractionDelegate.kt` (new)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` (trimmed)
 
 Tests:
 - `MapOverlayRuntimeInteractionDelegateTest.kt` (new)
@@ -159,8 +159,8 @@ Work:
 - keep `MapOverlayManagerRuntimeForecastWeatherDelegate.kt` and other existing delegates untouched
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeStatusCoordinator.kt` (new)
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` (final shrink)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeStatusCoordinator.kt` (new)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` (final shrink)
 
 Tests:
 - add/extend `MapOverlayManagerRuntimeStatusTest.kt`

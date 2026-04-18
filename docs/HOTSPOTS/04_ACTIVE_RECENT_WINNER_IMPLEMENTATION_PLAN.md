@@ -46,8 +46,8 @@ Confirm dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-`feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`,
-`feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`,
+`feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`,
+`feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`,
 `docs/HOTSPOTS/*.md`, optionally `docs/ARCHITECTURE/PIPELINE.md`.
 - Any boundary risk:
 low; change remains repository-owned policy with no new UI/domain dependency leak.
@@ -193,7 +193,7 @@ docs match implementation constants/ordering; required Gradle checks pass.
 ## 5) Test Plan
 
 - Unit tests:
-`feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`
+`feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`
 add/update:
   - active-recent beats stronger finalized within 700 m
   - recent finalized beats stale active (if policy adopts recency-first freshness tier)

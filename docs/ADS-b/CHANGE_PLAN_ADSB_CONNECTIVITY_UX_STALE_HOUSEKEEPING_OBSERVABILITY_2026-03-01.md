@@ -21,8 +21,8 @@ Deep-pass update (2026-03-01, pass #2):
 - Fixed during pass:
   1) `OpenSkyTokenRepository.invalidate()` now clears transient token-failure cooldown state,
      so credential save/clear actions can trigger immediate token retry instead of waiting up to 30s.
-     - Files: `feature/map/src/main/java/com/example/xcpro/adsb/OpenSkyTokenRepository.kt`
-     - Test: `feature/map/src/test/java/com/example/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
+     - Files: `feature/map/src/main/java/com/trust3/xcpro/adsb/OpenSkyTokenRepository.kt`
+     - Test: `feature/map/src/test/java/com/trust3/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
 - Remaining open findings confirmed by pass:
   1) Stale/expiry progression can stall while waiting in `awaitNetworkOnline()` (loop-driven housekeeping gap).
   2) `publishFromStore(...)` path does not purge expired targets before selection.
@@ -39,8 +39,8 @@ Deep-pass update (2026-03-01, pass #3):
      - `offlineWait_progressesStaleThenExpiry_withoutAdditionalFetches()`
      - `centerUpdateWhileOffline_purgesExpiredTargetsImmediately()`
   - Files:
-    - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-    - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
 - Remaining open findings after pass #3:
   1) Release UX still lacks a persistent (non-debug) degraded/offline ADS-B indicator beyond one-shot flash.
   2) Snapshot observability and e2e network-transition coverage are still lighter than release-grade target.
@@ -52,8 +52,8 @@ Deep-pass update (2026-03-01, pass #4):
      - Debug hide-while-connecting policy no longer hides `BackingOff`.
   2) Added UI policy regression coverage for BackingOff issue behavior.
   - Files:
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt`
-    - `feature/map/src/test/java/com/example/xcpro/map/ui/TrafficDebugPanelAutoDismissPolicyTest.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/map/ui/TrafficDebugPanelAutoDismissPolicyTest.kt`
 - Remaining open findings after pass #4:
   1) Release UX still lacks a persistent (non-debug) degraded/offline ADS-B indicator beyond one-shot flash.
   2) Snapshot observability and e2e network-transition coverage are still lighter than release-grade target.
@@ -66,8 +66,8 @@ Deep-pass update (2026-03-01, pass #5):
   2) Added regression coverage for the reconnect timestamp bug:
      - `offlineRecovery_successUsesFreshMonoTimestampAfterWait()`
   - Files:
-    - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-    - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
 - Remaining open findings after pass #5:
   1) Release/e2e network-transition coverage depth remains the primary deduction to close (`95 -> 96`).
      - Execution plan: `docs/ADS-b/CHANGE_PLAN_ADSB_NETWORK_TRANSITION_E2E_COVERAGE_2026-03-01.md`
@@ -206,9 +206,9 @@ After:
 - Goal:
   - Provide clear user-visible ADS-B connectivity state in release builds.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt`
-  - (if needed) `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt`
+  - (if needed) `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
 - Planned behavior:
   - Keep current one-shot flash indicator for attention.
   - Add a lightweight persistent status chip/banner in release-safe UI when ADS-B is degraded/offline/backing off.
@@ -223,8 +223,8 @@ After:
 - Goal:
   - Ensure stale dim and expiry purge continue correctly during prolonged offline waits.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt` (only if policy helpers needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt` (only if policy helpers needed)
 - Planned behavior:
   - Add repository-owned housekeeping cadence while ADS-B streaming is enabled.
   - Run purge + reselection + snapshot publish from monotonic clock even when network wait is active.
@@ -240,8 +240,8 @@ After:
 - Goal:
   - Improve runtime diagnosis and confidence for network churn.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
   - optional diagnostics UI surfaces where snapshot telemetry is shown
 - Planned behavior:
   - Extend snapshot telemetry with explicit connectivity transition fields (for example: online flag, last transition mono, offline dwell, reconnect attempt counters).

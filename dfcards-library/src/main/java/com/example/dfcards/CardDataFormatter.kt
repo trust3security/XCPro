@@ -1,7 +1,7 @@
 package com.example.dfcards
 
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.core.flight.RealTimeFlightData
 
 internal object CardDataFormatter {
     private val defaultTimeFormatter = SystemCardTimeFormatter()
@@ -37,3 +37,4 @@ internal object CardDataFormatter {
         return spec.format(liveData, units, strings, timeFormatter)
     }
 }
+

@@ -10,11 +10,11 @@ plugins {
 val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPropertiesExtension>()
 
 android {
-    namespace = "com.example.xcpro"
+    namespace = "com.trust3.xcpro"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.openxcpro"
+        applicationId = "com.trust3.xcpro"
         minSdk = 30
         targetSdk = 35
         versionCode = 1

@@ -57,9 +57,9 @@ Implementation:
 3. Keep counters debug/diagnostics-visible only.
 
 Likely files:
-1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
-2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
-3. `feature/map/src/main/java/com/example/xcpro/sensors/VarioDiagnosticsSample.kt` (if exposing through diagnostics)
+1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioDiagnosticsSample.kt` (if exposing through diagnostics)
 
 Tests:
 1. Counter increment tests for each transition event.
@@ -81,8 +81,8 @@ Implementation:
 
 Likely files:
 1. `dfcards-library/src/main/java/com/example/dfcards/FlightDataSources.kt`
-2. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
-3. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt`
 
 Tests:
 1. Extend conversion tests for confidence propagation.
@@ -105,15 +105,15 @@ Implementation:
 3. Replace ad-hoc checks in heading resolver, trail processor, and wind-arrow validity logic.
 
 Likely files:
-1. `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
-2. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt`
-3. `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt`
+1. `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt`
 4. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt`
 
 Tests:
 1. Add low-confidence and boundary-threshold tests in:
-   1. `feature/map/src/test/java/com/example/xcpro/ConvertToRealTimeFlightDataTest.kt`
-   2. `feature/map/src/test/java/com/example/xcpro/map/trail/TrailProcessorTest.kt`
+   1. `feature/map/src/test/java/com/trust3/xcpro/ConvertToRealTimeFlightDataTest.kt`
+   2. `feature/map/src/test/java/com/trust3/xcpro/map/trail/TrailProcessorTest.kt`
 2. Add threshold equality tests for non-domain consumers.
 
 Exit criteria:
@@ -130,9 +130,9 @@ Implementation:
 3. Expose to diagnostics/debug sink.
 
 Likely files:
-1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
-2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
-3. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/` (if surfaced in diagnostics UI)
+1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/` (if surfaced in diagnostics UI)
 
 Tests:
 1. Transition sequence tests validating exact event counts.
@@ -152,8 +152,8 @@ Implementation:
 3. Keep emission ordering deterministic and avoid introducing replay coupling.
 
 Likely files:
-1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
 
 Tests:
 1. Add regression tests for cache clear on stop.
@@ -172,8 +172,8 @@ Implementation:
 2. Preserve fail-safe behavior when no wind solution is reliable.
 
 Likely files:
-1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
-2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlyingStateDetector.kt`
+1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlyingStateDetector.kt`
 
 Tests:
 1. Add tests for source-transition scenarios affecting `isFlying`.
@@ -244,12 +244,12 @@ Verify which parts of this phased plan are implemented and identify misses with 
 ### 9.1 Implemented Baseline (Confirmed)
 
 1. Domain source stabilization exists (hysteresis + dwell + grace):
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
 2. Metrics path uses stabilized source for TAS/IAS/TE:
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:96`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:115`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:96`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:115`
 3. Use-case execution is synchronized:
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:69`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:69`
 
 ### 9.2 Missed Items by Phase
 
@@ -258,10 +258,10 @@ Verify which parts of this phased plan are implemented and identify misses with 
 1. Transition-event model (`GPS_TO_WIND`, `WIND_TO_GPS`, `WIND_GRACE_HOLD`, `WIND_DWELL_BLOCK`) is not implemented.
    1. No symbols found in codebase for these events.
 2. Current counters are still policy-evaluation buckets, not transition events.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:67`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:101`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:67`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:101`
 3. Counters are not exposed through diagnostics/debug runtime models.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/VarioDiagnosticsSample.kt:5`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioDiagnosticsSample.kt:5`
 
 ## Phase 1 Misses (Wind Confidence Propagation)
 
@@ -269,64 +269,64 @@ Verify which parts of this phased plan are implemented and identify misses with 
    1. `dfcards-library/src/main/java/com/example/dfcards/FlightDataSources.kt:63`
    2. `dfcards-library/src/main/java/com/example/dfcards/FlightDataSources.kt:78`
 2. Map observer wind copy path publishes speed/direction/quality but not confidence.
-   1. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt:193`
-   2. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt:195`
+   1. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt:193`
+   2. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt:195`
 
 ## Phase 2 Misses (Unified Live Wind Validity Policy Across Surfaces)
 
 1. Heading resolver still uses ad-hoc wind-valid rules with no confidence gate.
-   1. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:72`
+   1. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:72`
 2. Trail processor still uses quality/stale/speed checks with no confidence threshold.
-   1. `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt:163`
+   1. `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt:163`
 3. Wind indicator validity path still uses quality + speed only (no confidence).
-   1. `feature/map/src/main/java/com/example/xcpro/map/FlightDataManagerSupport.kt:55`
+   1. `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManagerSupport.kt:55`
 4. Card wind formatting still uses quality + speed only (no confidence).
    1. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt:415`
    2. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt:445`
 5. Thresholds remain inconsistent across live surfaces.
-   1. `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt:42` (`0.2 m/s`)
-   2. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:72` (`>0.5 m/s`)
-   3. `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt:183` (`0.5 m/s`)
+   1. `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt:42` (`0.2 m/s`)
+   2. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:72` (`>0.5 m/s`)
+   3. `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt:183` (`0.5 m/s`)
 
 ## Phase 3 Misses (Event-Based Reliability Telemetry)
 
 1. No controller-generated transition events are emitted.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:15`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:15`
 2. No event counters for grace-hold and dwell-block are aggregated.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:394`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:394`
 3. No diagnostics sink currently includes source-transition telemetry.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/VarioDiagnosticsSample.kt:5`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioDiagnosticsSample.kt:5`
 
 ## Phase 4 Misses (Live Engine Shared-State Hardening)
 
 1. Shared live samples are mutable non-volatile vars written/read across coroutines.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:81`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:82`
-   3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:83`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:81`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:82`
+   3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:83`
    4. Writer collectors:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:140`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:141`
-      3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:142`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:140`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:141`
+      3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:142`
    5. Reader points:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:194`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:306`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:194`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:306`
 2. `stop()` still clears only `latestAirspeedSample`, not `latestWindState`/`latestFlightState`.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:224`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:224`
 3. Shared `FlightDataEmissionState` remains mutable state across both loops and emitter.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:141`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:174`
-   3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:293`
-   4. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt:152`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:141`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:174`
+   3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:293`
+   4. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt:152`
 4. No dedicated engine tests found for stop/reset cache clear on these shared fields.
 
 ## Phase 5 Misses (Flight-State Alignment)
 
 1. Flight-state detector still consumes raw airspeed source flow directly.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:30`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:69`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:30`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:69`
 2. `airspeedReal` is derived from raw sample validity, not stabilized TAS/IAS source decision.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:100`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:107`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:100`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:107`
 
 ## Phase 6 Misses (Live Tuning/Rollout)
 
@@ -336,10 +336,10 @@ Verify which parts of this phased plan are implemented and identify misses with 
 ### 9.3 Test Coverage Gaps (Plan-Specific)
 
 1. Heading conversion tests cover stale-wind behavior but not low-confidence wind behavior.
-   1. `feature/map/src/test/java/com/example/xcpro/ConvertToRealTimeFlightDataTest.kt:112`
+   1. `feature/map/src/test/java/com/trust3/xcpro/ConvertToRealTimeFlightDataTest.kt:112`
 2. Trail tests currently use `windState = null` scenarios and do not cover confidence-threshold gating.
-   1. `feature/map/src/test/java/com/example/xcpro/map/trail/TrailProcessorTest.kt:22`
-   2. `feature/map/src/test/java/com/example/xcpro/map/trail/TrailProcessorTest.kt:150`
+   1. `feature/map/src/test/java/com/trust3/xcpro/map/trail/TrailProcessorTest.kt:22`
+   2. `feature/map/src/test/java/com/trust3/xcpro/map/trail/TrailProcessorTest.kt:150`
 
 ### 9.4 Priority Order for Next Implementation Pass
 
@@ -364,70 +364,70 @@ This addendum is live-path only (`replay` intentionally excluded).
 
 1. Orientation pipeline still uses wind without confidence-aligned gating.
    1. Live path feeds `RealTimeFlightData` directly into orientation on every sample:
-      1. `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt:119`
+      1. `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt:119`
    2. `OrientationDataSource` accepts wind when speed is only `> 0` and does not check confidence:
-      1. `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt:245`
-      2. `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt:246`
-      3. `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt:247`
+      1. `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt:245`
+      2. `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt:246`
+      3. `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt:247`
    3. `HeadingResolver` adds another independent wind-speed threshold (`> 0.1`) with no confidence:
-      1. `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt:43`
+      1. `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt:43`
 
 2. Wind publication into UI model still relies on `isAvailable` (quality/stale) and omits confidence.
    1. `WindState.isAvailable` does not include confidence:
-      1. `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt:14`
+      1. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindState.kt:14`
    2. `applyWindState(...)` copies wind fields whenever `isAvailable` is true:
-      1. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt:179`
-      2. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt:193`
+      1. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt:179`
+      2. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt:193`
 
 3. Trail drift render path has a second independent wind-valid threshold outside trail ingestion policy.
    1. `SnailTrailMath` applies `point.windSpeedMs > 0.5` separately:
-      1. `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt:49`
-      2. `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt:50`
+      1. `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailMath.kt:49`
+      2. `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailMath.kt:50`
    2. This is separate from `TrailProcessor.resolveWindSample(...)` thresholding:
-      1. `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt:161`
-      2. `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt:166`
+      1. `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt:161`
+      2. `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt:166`
 
 4. Threshold centralization is still violated across live consumers.
-   1. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:72` (`> 0.5`)
-   2. `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt:43` (`> 0.1`)
-   3. `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt:42` (`0.2`)
-   4. `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt:183` (`0.5`)
-   5. `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt:50` (`0.5`)
+   1. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:72` (`> 0.5`)
+   2. `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt:43` (`> 0.1`)
+   3. `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt:42` (`0.2`)
+   4. `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt:183` (`0.5`)
+   5. `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailMath.kt:50` (`0.5`)
    6. `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt:415` (`> 0.5`)
 
 ## Additional Phase 4 Misses (Live Engine Shared-State Hardening)
 
 1. Cross-loop cached sensor fields remain broadly shared mutable state beyond the previously listed wind fields.
    1. Shared cache declarations:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:117`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:129`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:117`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:129`
    2. GPS loop writes cache values:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:258`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:265`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:258`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:265`
    3. Vario loop reads these cached values:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:115`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:123`
-      3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:173`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:115`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:123`
+      3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:173`
 
 2. Cached vario/baro results are also exchanged across loops without explicit synchronization boundaries.
    1. Vario loop writes:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:169`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:171`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:169`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:171`
    2. GPS loop reads:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:279`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:306`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:279`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:306`
 
 ### 10.2 Additional Test Coverage Gaps
 
 1. No test covers low-confidence wind behavior through the real orientation live path.
    1. Existing map-orientation tests use a fake source where `updateFromFlightData(...)` is a no-op:
-      1. `feature/map/src/test/java/com/example/xcpro/MapOrientationManagerTest.kt:152`
-      2. `feature/map/src/test/java/com/example/xcpro/MapOrientationManagerTest.kt:161`
+      1. `feature/map/src/test/java/com/trust3/xcpro/MapOrientationManagerTest.kt:152`
+      2. `feature/map/src/test/java/com/trust3/xcpro/MapOrientationManagerTest.kt:161`
 
 2. No direct unit tests found for wind-indicator validity helper behavior under confidence/threshold alignment cases.
    1. Helper path:
-      1. `feature/map/src/main/java/com/example/xcpro/map/FlightDataManagerSupport.kt:41`
-      2. `feature/map/src/main/java/com/example/xcpro/map/FlightDataManagerSupport.kt:55`
+      1. `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManagerSupport.kt:41`
+      2. `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManagerSupport.kt:55`
 
 3. Wind card tests assert quality/speed behavior but do not cover confidence-aligned gating scenarios.
    1. Current wind card tests:
@@ -452,43 +452,43 @@ Scope note:
 
 1. Transition telemetry is still frame-based for hold/block events, not episode-based.
    1. `AirspeedSourceStabilityController` records `WIND_GRACE_HOLD` on every grace-held evaluation and `WIND_DWELL_BLOCK` on every dwell-blocked evaluation:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:84`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:109`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:84`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:109`
    2. Counters aggregate each event occurrence directly:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:408`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:412`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:408`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:412`
    3. Impact: dwell/grace KPIs remain sample-rate sensitive and can be misread during tuning.
 
 2. Wind source-telemetry is emitted but still not visible in diagnostics UI.
    1. Counters are published in diagnostics samples:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/VarioDiagnosticsSample.kt:10`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/VarioDiagnosticsSample.kt:11`
-      3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:220`
-      4. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:222`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioDiagnosticsSample.kt:10`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioDiagnosticsSample.kt:11`
+      3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:220`
+      4. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:222`
    2. `VarioDiagnosticsScreen` currently renders only vario/filter metrics and does not surface these maps:
-      1. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:75`
-      2. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:137`
+      1. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:75`
+      2. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:137`
    3. Impact: transition/decision telemetry is available to logs/state but not reviewable in-app.
 
 3. Flight-state source classification is still permissive for unknown source labels.
    1. Live path treats airspeed as "real" when `tasValid=true` and label is not GPS-derived:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:118`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:118`
    2. GPS-derived classification currently accepts only `"GPS"` or blank:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:164`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:165`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:164`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:165`
    3. Impact: unexpected/future labels (for example `"UNKNOWN"`) can be treated as real airspeed in flying-state gating.
 
 4. Edge-case divergence remains possible between held WIND airspeed source and live wind-valid flag.
    1. During WIND-active dropout, controller can hold the last WIND estimate within grace:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:83`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:85`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:83`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:85`
    2. Live wind-valid policy still requires current `windState.vector` and `windState.isAvailable`:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/LiveWindValidityPolicy.kt:17`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/LiveWindValidityPolicy.kt:18`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LiveWindValidityPolicy.kt:17`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LiveWindValidityPolicy.kt:18`
    3. Consumers rely on that policy for UI/heading/trail wind visibility:
-      1. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:73`
-      2. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt:181`
-      3. `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt:187`
+      1. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:73`
+      2. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt:181`
+      3. `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt:187`
    4. Impact: in rare dropouts, IAS/TAS source can remain `WIND` while visible wind state is suppressed.
 
 ### 11.2 Additional Coverage Gaps
@@ -501,25 +501,25 @@ Scope note:
 Implemented in this pass:
 
 1. Transition hold/block telemetry now records once per contiguous episode instead of every frame.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:19`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:85`
-   3. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:118`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:19`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:85`
+   3. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:118`
 
 2. Grace-hold now requires a current wind candidate; missing current wind vector falls back immediately to GPS (prevents WIND-source hold without live wind state).
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:82`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:95`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:82`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:95`
 
 3. Flight-state source classification hardened: only trusted non-GPS labels (`WIND`, `SENSOR`) are treated as real airspeed.
-   1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:118`
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:164`
+   1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:118`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:164`
 
 4. Targeted regression tests added/updated for new behavior.
-   1. `feature/map/src/test/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:20`
-   2. `feature/map/src/test/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:193`
-   3. `feature/map/src/test/java/com/example/xcpro/sensors/FlightStateRepositoryAglFreshnessTest.kt:113`
+   1. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:20`
+   2. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:193`
+   3. `feature/map/src/test/java/com/trust3/xcpro/sensors/FlightStateRepositoryAglFreshnessTest.kt:113`
 
 Validation run:
-1. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.AirspeedSourceStabilityControllerTest" --tests "com.example.xcpro.sensors.FlightStateRepositoryAglFreshnessTest" --tests "com.example.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest"`
+1. `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.domain.AirspeedSourceStabilityControllerTest" --tests "com.trust3.xcpro.sensors.FlightStateRepositoryAglFreshnessTest" --tests "com.trust3.xcpro.sensors.domain.CalculateFlightMetricsUseCaseTest"`
 2. Result: PASS.
 
 ## 13. Comprehensive Live-Only Code Pass (Post-Implementation, 2026-03-01)
@@ -534,37 +534,37 @@ Scope note:
 Closed in code:
 1. Frame-based grace/dwell event spam:
    1. Events are now emitted once per contiguous episode.
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:90`
-   3. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:122`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:90`
+   3. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:122`
 2. Unknown airspeed source labels treated as real in flying-state path:
    1. Source trust-list is now explicit (`WIND`, `SENSOR`).
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:118`
-   3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:164`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:118`
+   3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:164`
 3. Grace-hold/source-visibility divergence when current wind candidate is missing:
    1. Missing current wind candidate now forces immediate fallback to GPS.
-   2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:89`
+   2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:89`
 
 Still open:
 1. Transition/decision counters are not yet surfaced in diagnostics UI.
    1. Counters are emitted in diagnostics samples:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:220`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:222`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:220`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:222`
    2. Diagnostics screen still does not render those fields:
-      1. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:75`
+      1. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:75`
 
 ### 13.2 Additional Misses Found In This Pass
 
 1. No use-case-level regression asserts episode-based transition counting semantics end-to-end.
    1. Controller unit tests assert episode behavior:
-      1. `feature/map/src/test/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:195`
+      1. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:195`
    2. Use-case transition-counter test still only checks `>= 1` and does not lock episode cardinality:
-      1. `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt:677`
+      1. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt:677`
    3. Impact: future wiring changes can regress episode semantics without failing use-case tests.
 
 2. Diagnostics telemetry remains cumulative-only (lifetime counters), with no built-in interval-delta view.
    1. Counters are accumulated in mutable maps and exposed as totals:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:67`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:397`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:67`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:397`
    2. Impact: tuning interpretation can still require manual differencing when reviewing live sessions.
 
 ### 13.3 Updated Priority (After This Comprehensive Pass)
@@ -584,19 +584,19 @@ Scope note:
 
 1. Grace-hold "last wind estimate" cache is updated before eligibility filtering, allowing rejected wind candidates to overwrite held state.
    1. Controller updates `lastWindEstimate` whenever `windCandidate` exists, before checking `windDecision.eligible`:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:39`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:40`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:39`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:40`
    2. During WIND-active grace-hold, returned estimate is `lastWindEstimate`:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:90`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:95`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:90`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt:95`
    3. Because of (1), ineligible current wind (for example low confidence) can replace the prior accepted estimate and still drive the grace-held output.
    4. Impact: source stability can appear preserved while value stability degrades under rejected-wind intervals.
 
 ### 14.2 Additional Coverage Gap
 
 1. Current controller tests assert source/events across grace-hold but do not assert that held numeric airspeed remains pinned to last accepted estimate when current candidate is rejected.
-   1. `feature/map/src/test/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:20`
-   2. `feature/map/src/test/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:195`
+   1. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:20`
+   2. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt:195`
 
 ### 14.3 Saturation Status
 
@@ -622,7 +622,7 @@ Implementation:
 3. Preserve episode-based transition event semantics implemented in Section 12.
 
 Likely file:
-1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
+1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityController.kt`
 
 Tests:
 1. Run controller unit tests plus Item 2 regression test.
@@ -645,7 +645,7 @@ Implementation:
 2. Keep assertions exact for IAS/TAS numeric values (not only source/events).
 
 Likely file:
-1. `feature/map/src/test/java/com/example/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt`
+1. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/AirspeedSourceStabilityControllerTest.kt`
 
 Exit criteria:
 1. Test fails against pre-fix behavior and passes with Item 1 fix.
@@ -661,7 +661,7 @@ Implementation:
 3. Keep coverage for `GPS_TO_WIND`, `WIND_TO_GPS`, `WIND_GRACE_HOLD`, and `WIND_DWELL_BLOCK`.
 
 Likely file:
-1. `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt`
+1. `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt`
 
 Exit criteria:
 1. Use-case-level tests fail if episode semantics regress to frame-based counting.
@@ -677,8 +677,8 @@ Implementation:
 3. Optional enhancement in same pass if low risk: show interval delta since previous sample/session reset to reduce manual differencing burden.
 
 Likely files:
-1. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt`
-2. `feature/map/src/main/java/com/example/xcpro/sensors/VarioDiagnosticsSample.kt` (only if display contract needs adjustment)
+1. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/sensors/VarioDiagnosticsSample.kt` (only if display contract needs adjustment)
 
 Tests:
 1. Add/update diagnostics rendering tests for counter visibility where test harness exists.
@@ -706,52 +706,52 @@ Scope note:
 
 1. Counter snapshot access is not synchronized while counters are mutated in synchronized execute path.
    1. Mutable counters are stateful use-case fields:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:67`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:68`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:67`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:68`
    2. Counters are mutated inside `@Synchronized execute(...)`:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:70`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:403`
-      3. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:408`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:70`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:403`
+      3. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:408`
    3. Snapshot getters are unsynchronized and can run concurrently with execute on parallel emit paths:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:397`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:400`
-      3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:220`
-      4. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:223`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:397`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:400`
+      3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:220`
+      4. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:223`
    4. Impact:
       1. Risk of inconsistent diagnostics snapshots under loop interleave.
       2. Potential runtime map iteration race if counter access overlaps mutation.
 
 2. Wind-direction finite-value hardening is incomplete before heading/wind UI consumption.
    1. Live wind usability policy checks speed but not direction finiteness:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/LiveWindValidityPolicy.kt:19`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LiveWindValidityPolicy.kt:19`
    2. Heading resolver accepts any non-null `windFromDeg` and does not require finite direction:
-      1. `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt:43`
-      2. `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt:45`
+      1. `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt:43`
+      2. `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt:45`
    3. Wind vectors are published without explicit finite-component guard:
-      1. `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:336`
-      2. `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindVector.kt:23`
+      1. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:336`
+      2. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindVector.kt:23`
    4. Impact:
       1. Non-finite wind direction can propagate to heading and wind UI paths.
       2. Can produce invalid heading outputs while source appears valid.
 
 3. Source-label normalization remains inconsistent across live consumers.
    1. Live wind usability policy uses exact-case source match:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/LiveWindValidityPolicy.kt:6`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LiveWindValidityPolicy.kt:6`
    2. Flying-state trust-list uses case-insensitive matching:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:165`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:166`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:165`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:166`
    3. Impact:
       1. Future source-label case drift can create UI/flight-state divergence.
       2. Reduces fail-safe consistency of source semantics.
 
 4. Wind mapping contract is still split across two steps (converter + observer patch-up).
    1. Converter computes heading with wind-eligibility but emits default wind fields:
-      1. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:73`
-      2. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:83`
-      3. `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:143`
+      1. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:73`
+      2. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:83`
+      3. `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:143`
    2. Wind fields are then completed in `MapScreenObservers.applyWindState(...)`:
-      1. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt:92`
-      2. `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt:179`
+      1. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt:92`
+      2. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt:179`
    3. Impact:
       1. Correctness depends on an implicit call-order contract.
       2. Future callsites of converter alone can produce internally inconsistent UI models.
@@ -782,41 +782,41 @@ Scope note:
 
 1. `stop()` can race with synchronized `execute(...)` because reset path is unsynchronized while sensor collectors remain active.
    1. Use-case compute path is synchronized:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:70`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:70`
    2. Reset path is not synchronized:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:379`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:379`
    3. Engine `stop()` invokes use-case reset:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:191`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:202`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:191`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:202`
    4. Long-lived collector jobs are launched in `init` and are not canceled in `stop()`:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:139`
-      2. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:152`
-      3. `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:167`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:139`
+      2. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:152`
+      3. `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:167`
    5. Impact:
       1. Partial reset/interleave risk across source controller, counters, and smoothing state.
       2. Increases chance of transient TAS/IAS source flips or diagnostics discontinuities during stop/reset transitions.
 
 2. Wind fusion invalid-input short-circuit can bypass stale/decay progression for existing wind state.
    1. Non-finite `trackRad` or `groundSpeedMs` causes immediate return:
-      1. `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:179`
+      1. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:179`
    2. Stale expiration is only evaluated later in `processSample(...)`, after this early return:
-      1. `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:286`
+      1. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:286`
    3. `handleNoData()` reset path is only used when GPS is `null`, not when GPS exists but values are non-finite:
-      1. `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:125`
-      2. `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:148`
+      1. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:125`
+      2. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:148`
    4. Impact:
       1. Existing wind can remain published/available longer than intended during invalid-GPS episodes.
       2. IAS/TAS wind eligibility and wind UI consumers may continue using frozen wind state until valid samples resume.
 
 3. Diagnostics UI still renders literal placeholders for key live metrics because string interpolation is escaped.
    1. Health chips display literal `${...}` text instead of current values:
-      1. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:145`
-      2. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:146`
-      3. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:147`
+      1. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:145`
+      2. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:146`
+      3. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:147`
    2. Chart min/now/max labels also display literal placeholders:
-      1. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:199`
-      2. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:201`
-      3. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:205`
+      1. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:199`
+      2. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:201`
+      3. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt:205`
    3. Impact:
       1. Live reliability tuning visibility is degraded because operators cannot read actual on-screen diagnostics values.
       2. Reduces confidence when validating Phase 2/3 behavior changes in field sessions.
@@ -840,13 +840,13 @@ Scope note:
 Implemented in code:
 1. Use-case thread-safety hardening:
    1. `reset()` and counter snapshot getters are now synchronized in:
-      1. `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+      1. `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
 2. Wind fusion non-finite GPS handling:
    1. Non-finite GPS samples now run stale/decay refresh logic instead of immediate no-op return in:
-      1. `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
+      1. `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt`
 3. Diagnostics interpolation fix:
    1. Health chips and chart labels now render live numeric values (no escaped placeholders) in:
-      1. `feature/map/src/main/java/com/example/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt`
+      1. `feature/map/src/main/java/com/trust3/xcpro/screens/diagnostics/VarioDiagnosticsScreen.kt`
 4. Regression coverage added:
    1. Non-finite GPS stale progression test:
-      1. `feature/map/src/test/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepositoryTest.kt`
+      1. `feature/map/src/test/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepositoryTest.kt`

@@ -69,7 +69,7 @@ If raw capture is added to the repo as parser fixtures:
 
 Preferred fixture format:
 - executable fixtures live under
-  `feature/variometer/src/test/resources/com/example/xcpro/variometer/bluetooth/lxnav/fixtures/`
+  `feature/variometer/src/test/resources/com/trust3/xcpro/variometer/bluetooth/lxnav/fixtures/`
 - use `@session start` / `@session end` markers for session boundaries
 - use `@event monoMs=<n> type=error error=<ENUM>` markers for terminal transport
   errors observed during capture

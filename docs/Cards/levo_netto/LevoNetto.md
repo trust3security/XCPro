@@ -26,23 +26,23 @@ This keeps STF safe (it ignores invalid glide-netto) while letting the UI show a
 
 ## Sensor -> domain pipeline
 1) Wind + airspeed inputs
-   - Wind fusion output: feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt
-   - WindState: feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt
-   - IAS/TAS estimate: feature/map/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt
+   - Wind fusion output: feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt
+   - WindState: feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindState.kt
+   - IAS/TAS estimate: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/WindEstimator.kt
 
 2) Core computation
    - CalculateFlightMetricsUseCase.execute():
-     feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
+     feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
    - LevoNettoCalculator:
-     feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt
+     feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculator.kt
    - StillAirSinkProvider (polar sink):
-     feature/map/src/main/java/com/example/xcpro/glider/StillAirSinkProvider.kt
+     feature/map/src/main/java/com/trust3/xcpro/glider/StillAirSinkProvider.kt
 
 3) Domain -> UI
    - FlightDisplayMapper -> CompleteFlightData:
-     feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt
+     feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDisplayMapper.kt
    - convertToRealTimeFlightData():
-     feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt
+     feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt
    - Card formatting:
      dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt
 
@@ -81,8 +81,8 @@ This uses EnhancedFlightDataCard's secondary line (bottom-aligned small text).
 - Secondary line shows Levo Netto numeric (units stripped) even if invalid.
 - When wind or polar is missing, the secondary label color is error red.
 - Files:
-  - feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt
-  - feature/map/src/main/java/com/example/xcpro/map/ui/widgets/VariometerWidgetImpl.kt
+  - feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt
+  - feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/VariometerWidgetImpl.kt
 
 ## Formatting details
 - Primary: UnitsFormatter.verticalSpeed (respect unit prefs).
@@ -109,8 +109,8 @@ This uses EnhancedFlightDataCard's secondary line (bottom-aligned small text).
   - Footer shows "8kt/287Deg" when wind present.
 
 ## Related files
-- LevoNettoCalculator: feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt
-- CalculateFlightMetricsUseCase: feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
+- LevoNettoCalculator: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculator.kt
+- CalculateFlightMetricsUseCase: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
 - CardFormatSpec: dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt
 - EnhancedFlightDataCard: dfcards-library/src/main/java/com/example/dfcards/dfcards/EnhancedFlightDataCard.kt
 - Wind formatting helpers: dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt

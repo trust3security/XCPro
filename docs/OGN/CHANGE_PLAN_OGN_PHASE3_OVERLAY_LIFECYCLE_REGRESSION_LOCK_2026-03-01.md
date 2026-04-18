@@ -29,10 +29,10 @@ Read first:
 
 Implemented now:
 - Added a minimal injectable overlay-factory seam in:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
   - preserves default runtime behavior; enables deterministic lifecycle unit tests.
 - Added focused Phase 3 regression lock tests:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
   - covers:
     - render-path one-time initialization for created traffic overlay
     - style-recreate lifecycle (`cleanup` old + `initialize` new + render cached data)
@@ -41,8 +41,8 @@ Implemented now:
 Verification run:
 - `python scripts/arch_gate.py` passed
 - `./gradlew enforceRules` passed
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapOverlayManagerOgnLifecycleTest"` passed
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapOverlayManagerOgnLifecycleTest" --tests "com.example.xcpro.map.ui.MapRuntimeControllerWeatherStyleTest" --tests "com.example.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest"` passed
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapOverlayManagerOgnLifecycleTest"` passed
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapOverlayManagerOgnLifecycleTest" --tests "com.trust3.xcpro.map.ui.MapRuntimeControllerWeatherStyleTest" --tests "com.trust3.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest"` passed
 - `./gradlew assembleDebug` passed
 
 Note:
@@ -56,7 +56,7 @@ Note:
 - Evidence:
   - Existing OGN map tests include formatter/policy and trail trim tests but no
     manager lifecycle lock test:
-    - `feature/map/src/test/java/com/example/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
+    - `feature/map/src/test/java/com/trust3/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
     - no `MapOverlayManagerOgnLifecycleTest` currently present.
 - Impact:
   - Future refactors can accidentally reintroduce init-on-render or break style
@@ -65,7 +65,7 @@ Note:
 2. Pending render cancellation on detach is implemented but not directly tested.
 - Evidence:
   - `MapOverlayManager.onMapDetached()` cancels pending OGN jobs:
-    `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`.
+    `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`.
   - No focused test currently asserts deferred render jobs do not execute after
     detach.
 - Impact:
@@ -138,7 +138,7 @@ No wall/monotonic cross-subtraction introduced.
 - Goal:
   - add failing/expectation tests that reproduce current lifecycle blind spots.
 - Files:
-  - new tests under `feature/map/src/test/java/com/example/xcpro/map/`
+  - new tests under `feature/map/src/test/java/com/trust3/xcpro/map/`
 - Exit:
   - failing/pending expectations prove current coverage gaps.
 
@@ -147,7 +147,7 @@ No wall/monotonic cross-subtraction introduced.
 - Goal:
   - make `MapOverlayManager` OGN lifecycle testable without changing runtime behavior.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
 - Change:
   - add small injectable overlay-factory seam (constructor defaults keep current behavior).
 - Tests:
@@ -211,7 +211,7 @@ No wall/monotonic cross-subtraction introduced.
   - `./gradlew testDebugUnitTest`
   - `./gradlew assembleDebug`
 - Focused reruns:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.*Ogn*"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.*Ogn*"`
 - Exit:
   - docs and tests reflect final Phase 3 contract.
 

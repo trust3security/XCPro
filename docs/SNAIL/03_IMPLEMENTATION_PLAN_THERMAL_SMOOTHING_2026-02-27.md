@@ -35,8 +35,8 @@ Implementation sketch
 - Use `isCircling` in update path to choose live sample interval.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/TrailStore.kt` (or wrapper policy)
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/TrailStore.kt` (or wrapper policy)
 
 Acceptance criteria
 - In circling mode, stored live points are >= 2x denser than current.
@@ -56,8 +56,8 @@ Implementation sketch
 - Keep full-geometry re-render gated by sample updates; only tail is frame-synced.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
 
 Acceptance criteria
 - Tail endpoint tracks icon smoothly between stored samples.
@@ -76,7 +76,7 @@ Implementation sketch
 - Keep replay smoothing unchanged.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt`
 - optionally new config constants in same file.
 
 Acceptance criteria
@@ -95,7 +95,7 @@ Implementation sketch
 - In planner, when `isCircling == true`, lower live distance factor.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailRenderPlanner.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailRenderPlanner.kt`
 
 Acceptance criteria
 - Circle arcs retain shape at medium/high zoom.
@@ -114,7 +114,7 @@ Implementation sketch
 - Keep raw store unchanged.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailMath.kt`
 - or new helper in trail package.
 
 Acceptance criteria

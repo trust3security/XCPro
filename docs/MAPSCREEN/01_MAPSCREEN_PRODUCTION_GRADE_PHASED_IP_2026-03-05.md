@@ -83,15 +83,15 @@ SLO thresholds are defined in:
 
 | Hotspot | Primary Code Anchor |
 |---|---|
-| Weather/traffic/ownship front-order churn | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` |
-| Additional traffic bring-to-front path | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` |
-| Startup map/overlay ordering coupling | `feature/map/src/main/java/com/example/xcpro/map/MapInitializerDataLoader.kt` |
-| Dual display-frame cadence pressure | `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt` |
-| Compose frame-loop display-frame trigger | `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt` |
-| Replay/map bind callback churn | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt` |
-| ADS-B select-path duplicate sort | `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt` |
-| Weather rain frame-cache identity risk | `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt` |
-| Root-level list-keyed effect restart pressure | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt` |
+| Weather/traffic/ownship front-order churn | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` |
+| Additional traffic bring-to-front path | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` |
+| Startup map/overlay ordering coupling | `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializerDataLoader.kt` |
+| Dual display-frame cadence pressure | `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt` |
+| Compose frame-loop display-frame trigger | `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt` |
+| Replay/map bind callback churn | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt` |
+| ADS-B select-path duplicate sort | `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt` |
+| Weather rain frame-cache identity risk | `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt` |
+| Root-level list-keyed effect restart pressure | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt` |
 
 ## 3) Architecture Contract
 
@@ -493,8 +493,8 @@ Verification snapshot for this checkpoint:
 - `./gradlew enforceRules` passed.
 - `./gradlew testDebugUnitTest` passed.
 - `./gradlew assembleDebug` passed.
-- `./gradlew :feature:map:testDebugUnitTest --tests com.example.xcpro.map.ui.MapScreenRootEffectsTest` passed.
-- `./gradlew :feature:map:testDebugUnitTest --tests com.example.xcpro.ogn.OgnAddressingTest --tests com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest --tests com.example.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest` passed.
+- `./gradlew :feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.ui.MapScreenRootEffectsTest` passed.
+- `./gradlew :feature:map:testDebugUnitTest --tests com.trust3.xcpro.ogn.OgnAddressingTest --tests com.trust3.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest --tests com.trust3.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest` passed.
 - `powershell -ExecutionPolicy Bypass -File scripts/qa/run_mapscreen_pkg_e1_evidence_capture.ps1` passed.
 - `powershell -ExecutionPolicy Bypass -File scripts/qa/seed_mapscreen_metric_templates.ps1` passed.
 - `powershell -ExecutionPolicy Bypass -File scripts/qa/run_mapscreen_evidence_threshold_checks.ps1 -AllowPending` passed.

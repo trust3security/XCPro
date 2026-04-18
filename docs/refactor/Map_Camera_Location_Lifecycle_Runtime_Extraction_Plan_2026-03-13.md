@@ -167,22 +167,22 @@
 - In scope:
   - Dedicated production-grade extraction plan for the camera/location/lifecycle runtime cluster.
   - Shell fan-out narrowing around:
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenManagers.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapCameraEffects.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenManagers.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraEffects.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
   - Runtime-cluster extraction for:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleEffects.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleEffects.kt`
 - Out of scope:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` as an owner move in the first cycle
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` line-budget work
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt` as an owner move in the first cycle
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` line-budget work
   - Unrelated repo-health failures in app/map tests
 - User-visible impact:
   - No intended product behavior change.
@@ -194,24 +194,24 @@ These files are part of the problem, not incidental cleanup:
 
 | File | Why it matters | Planned role |
 |---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenManagers.kt` | Shell currently constructs the concrete runtime managers directly | Keep as shell `remember...` wrapper; narrow what it constructs and exposes |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Fans concrete manager types through the UI shell | Narrow to shell-safe runtime handles/ports |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt` | Data carrier for concrete manager types in the scaffold path | Narrow to shell-safe runtime handles/ports |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | Thin shell bridge still forwards concrete manager types into the live content path | Keep shell-owned; switch it to narrowed shell-safe handles during shell fan-out narrowing |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | Live content host still threads `LocationManager` and `MapCameraManager` through the main map body | Narrow to shell-safe runtime handles/ports before owner moves |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | Shell anchor still sets profile state on the concrete `LocationManager` and creates the concrete permission launcher | Keep shell-owned; switch it to shell-safe location/lifecycle handles during shell fan-out narrowing |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt` | Still feeds concrete `MapCameraManager` into `MapCameraEffects` through `rememberMapRuntimeController(...)` | Keep shell-owned; switch it to the narrowed camera-facing contract during shell fan-out narrowing |
-| `feature/map/src/main/java/com/example/xcpro/map/MapCameraEffects.kt` | Direct Compose dependency on `MapCameraManager` | Keep shell-owned; consume a narrower camera-facing contract |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt` | Direct shell dependency on `LocationManager` and `MapLifecycleManager` | Keep shell-owned; consume shell bridges or narrow runtime ports |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt` | Direct Compose/runtime dependency on `LocationManager` for permissions, live/replay updates, display-pose cadence, and frame dispatch | Keep shell-owned; move to a narrow location-facing runtime port rather than the concrete class |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt` | Direct shell/runtime dependency on `LocationManager` for display-pose snapshots, frame listeners, and snail-trail updates | Keep shell-owned; consume a narrow display-pose/runtime port instead of the concrete manager |
-| `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt` | Gesture shell calls directly into `LocationManager` and `MapCameraManager` for user interaction and AAT edit camera control | Keep shell-owned; consume narrow gesture-facing camera/location ports |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/LocationPermissionUi.kt` | Permission launcher callback is wired directly to `LocationManager` | Keep shell-owned; consume a permission-facing location port rather than the concrete manager |
-| `feature/map/src/main/java/com/example/xcpro/map/MapTaskIntegration.kt` | AAT edit flow calls `MapCameraManager.restoreAATCameraPosition()` directly | Keep shell-owned; consume a narrow AAT camera action port |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayActions.kt` | Shell wrapper passes concrete `MapCameraManager` into the AAT FAB path | Keep shell-owned; forward only the narrowed camera action port |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` | Live shell host still carries `MapInitializer`, `LocationManager`, and `MapCameraManager` through the rendered map stack | Retain as shell consumer; do not treat as an incidental follow-up |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt` | `MapMainLayers` / `MapViewHost` still thread `MapInitializer` and `LocationManager` through the live map host | Retain as shell consumer; keep owner move separate from map-host wiring |
-| `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` | Still co-constructed beside the runtime cluster | Explicitly out of scope for first owner-move cycle; shell must remain coherent without moving it |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenManagers.kt` | Shell currently constructs the concrete runtime managers directly | Keep as shell `remember...` wrapper; narrow what it constructs and exposes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Fans concrete manager types through the UI shell | Narrow to shell-safe runtime handles/ports |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt` | Data carrier for concrete manager types in the scaffold path | Narrow to shell-safe runtime handles/ports |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | Thin shell bridge still forwards concrete manager types into the live content path | Keep shell-owned; switch it to narrowed shell-safe handles during shell fan-out narrowing |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | Live content host still threads `LocationManager` and `MapCameraManager` through the main map body | Narrow to shell-safe runtime handles/ports before owner moves |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | Shell anchor still sets profile state on the concrete `LocationManager` and creates the concrete permission launcher | Keep shell-owned; switch it to shell-safe location/lifecycle handles during shell fan-out narrowing |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt` | Still feeds concrete `MapCameraManager` into `MapCameraEffects` through `rememberMapRuntimeController(...)` | Keep shell-owned; switch it to the narrowed camera-facing contract during shell fan-out narrowing |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraEffects.kt` | Direct Compose dependency on `MapCameraManager` | Keep shell-owned; consume a narrower camera-facing contract |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt` | Direct shell dependency on `LocationManager` and `MapLifecycleManager` | Keep shell-owned; consume shell bridges or narrow runtime ports |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt` | Direct Compose/runtime dependency on `LocationManager` for permissions, live/replay updates, display-pose cadence, and frame dispatch | Keep shell-owned; move to a narrow location-facing runtime port rather than the concrete class |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt` | Direct shell/runtime dependency on `LocationManager` for display-pose snapshots, frame listeners, and snail-trail updates | Keep shell-owned; consume a narrow display-pose/runtime port instead of the concrete manager |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt` | Gesture shell calls directly into `LocationManager` and `MapCameraManager` for user interaction and AAT edit camera control | Keep shell-owned; consume narrow gesture-facing camera/location ports |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/LocationPermissionUi.kt` | Permission launcher callback is wired directly to `LocationManager` | Keep shell-owned; consume a permission-facing location port rather than the concrete manager |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskIntegration.kt` | AAT edit flow calls `MapCameraManager.restoreAATCameraPosition()` directly | Keep shell-owned; consume a narrow AAT camera action port |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayActions.kt` | Shell wrapper passes concrete `MapCameraManager` into the AAT FAB path | Keep shell-owned; forward only the narrowed camera action port |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt` | Live shell host still carries `MapInitializer`, `LocationManager`, and `MapCameraManager` through the rendered map stack | Retain as shell consumer; do not treat as an incidental follow-up |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt` | `MapMainLayers` / `MapViewHost` still thread `MapInitializer` and `LocationManager` through the live map host | Retain as shell consumer; keep owner move separate from map-host wiring |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt` | Still co-constructed beside the runtime cluster | Explicitly out of scope for first owner-move cycle; shell must remain coherent without moving it |
 
 ### 1.1A Method-Level Shell Surface
 
@@ -447,9 +447,9 @@ MapScreenRoot
   - extract or confirm the narrow runtime-facing contracts needed for camera/location/lifecycle ownership without moving concrete implementations yet
 - Files to change:
   - new or updated runtime-facing contracts in `feature:map-runtime`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
 - Tests to add/update:
   - targeted contract tests for camera/location/lifecycle runtime APIs
 - Exit criteria:
@@ -475,14 +475,14 @@ MapScreenRoot
 - Goal:
   - narrow the shell signatures so the moved runtime cluster is not still dragged through the scaffold/effects path as concrete manager types
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenManagers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenManagers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
   - one new shell-local render-frame binding bridge in `feature:map`
   - keep `MapLifecycleEffects.kt` shell-owned
 - Tests to add/update:
@@ -504,7 +504,7 @@ MapScreenRoot
 - Goal:
   - narrow `MapCameraManager.kt` off direct shell handle ownership, then move it into `:feature:map-runtime`
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
   - one narrow camera-surface bridge for shell-owned `MapLibreMap` / `MapView` access
   - any narrow camera-facing contract files from Phase A/B
 - Tests to add/update:
@@ -525,16 +525,16 @@ MapScreenRoot
 - Goal:
   - move `LocationManager.kt` and its runtime-owned display-pose pipeline into `:feature:map-runtime`
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
   - directly-owned runtime pipeline collaborators proven clean by seam review, likely including:
-    - `feature/map/src/main/java/com/example/xcpro/map/LocationSensorsController.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapUserInteractionController.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/DisplayPoseRenderCoordinator.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapPositionController.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/RenderFrameSync.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/DisplayPoseCoordinator.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/DisplayPosePipeline.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/LocationFeedAdapter.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/LocationSensorsController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapUserInteractionController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/DisplayPoseRenderCoordinator.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapPositionController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/RenderFrameSync.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/DisplayPoseCoordinator.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/DisplayPosePipeline.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/LocationFeedAdapter.kt`
     - plus any required shell-bridge ports for `MapCameraControllerProvider.kt`, `MapViewSizeProvider.kt`, `MapCameraUpdateGate.kt`, and `MapTrackingCameraController.kt`
 - Tests to add/update:
   - replay/location parity tests
@@ -555,8 +555,8 @@ MapScreenRoot
   - move `MapLifecycleManager.kt` runtime class into `:feature:map-runtime`
   - keep `MapLifecycleEffects.kt` shell-owned
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleEffects.kt`
 - Tests to add/update:
   - lifecycle parity tests
 - Exit criteria:
@@ -652,7 +652,7 @@ Optional when relevant:
 - Moved runtime files compile in `:feature:map-runtime`
 - Required verification commands are rerun for each implementation phase
 - No new failures are introduced beyond the current known unrelated blockers:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` line-budget gate
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` line-budget gate
   - existing unrelated test failures outside this extraction scope
 
 ## 8) Rollback Plan

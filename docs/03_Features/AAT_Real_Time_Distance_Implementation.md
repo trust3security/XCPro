@@ -86,7 +86,7 @@ Distance calculation MUST use **target point**, not area center, because:
 
 ### Phase 1: AATTaskCalculator Enhancement
 
-**File**: `app/src/main/java/com/example/xcpro/tasks/aat/AATTaskCalculator.kt`
+**File**: `app/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskCalculator.kt`
 
 **Add New Method**:
 ```kotlin
@@ -133,7 +133,7 @@ fun calculateDistanceToTargetPoint(
 
 ### Phase 2: AATTaskManager Enhancement
 
-**File**: `app/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt`
+**File**: `app/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt`
 
 **Add New Method**:
 ```kotlin
@@ -161,7 +161,7 @@ fun calculateDistanceToCurrentTargetPoint(gpsLat: Double, gpsLon: Double): Doubl
 
 ### Phase 3: TaskManagerCoordinator Update
 
-**File**: `app/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
+**File**: `app/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
 
 **Update Existing Method** (lines 556-572):
 ```kotlin
@@ -390,17 +390,17 @@ Use this checklist when implementing:
 ## " Related Files
 
 **AAT Task Files** (modify these):
-- `app/src/main/java/com/example/xcpro/tasks/aat/AATTaskCalculator.kt` - Add distance calculation
-- `app/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt` - Expose through manager
-- `app/src/main/java/com/example/xcpro/tasks/aat/models/AATWaypoint.kt` - Verify TargetPoint exists
-- `app/src/main/java/com/example/xcpro/tasks/aat/AATGeometryUtils.kt` - Verify haversineDistance exists
-- `app/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` - Update routing (lines 556-572)
+- `app/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskCalculator.kt` - Add distance calculation
+- `app/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt` - Expose through manager
+- `app/src/main/java/com/trust3/xcpro/tasks/aat/models/AATWaypoint.kt` - Verify TargetPoint exists
+- `app/src/main/java/com/trust3/xcpro/tasks/aat/AATGeometryUtils.kt` - Verify haversineDistance exists
+- `app/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` - Update routing (lines 556-572)
 
 **Reference Files** (don't modify, use as examples):
-- `app/src/main/java/com/example/xcpro/tasks/racing/RacingTaskCalculator.kt` - See lines 127-222
-- `app/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt` - See lines 368-383
-- `app/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt` - Already handles GPS (lines 106-122)
-- `app/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt` - Already provides GPS (lines 265-289)
+- `app/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskCalculator.kt` - See lines 127-222
+- `app/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt` - See lines 368-383
+- `app/src/main/java/com/trust3/xcpro/tasks/BottomSheetState.kt` - Already handles GPS (lines 106-122)
+- `app/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt` - Already provides GPS (lines 265-289)
 
 ## "-- Architecture Diagram
 

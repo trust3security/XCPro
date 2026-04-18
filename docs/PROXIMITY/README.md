@@ -113,25 +113,25 @@ Emergency ineligibility reason contract:
 ## SSOT Ownership
 
 - Raw ADS-B target cache + trend memory + tier decision:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
 - Trend evaluator state machine:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
 - Repository wiring and publish cadence:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
   - Runtime mutation ordering is single-writer and serialized on repository scope:
     all external mutators (`setEnabled`, center/ownship/filter updates, reconnect)
     are enqueued onto one runtime dispatcher lane before store/FSM mutation.
   - emergency-audio rollout master/shadow gates are sourced from ADS-B preferences SSOT.
 - KPI accumulation (monotonic denominator, anti-nuisance counters, determinism guard):
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioKpiAccumulator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioKpiAccumulator.kt`
 - Rollout + rollback controls SSOT:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbEmergencyAudioRolloutPort.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioRolloutPort.kt`
 - Runtime rollout + rollback gating:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
 - Map tier->color mapping:
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbProximityColorPolicy.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbProximityColorPolicy.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
 
 ## KPI Contract
 
@@ -165,18 +165,18 @@ When latched:
 ## Test Map
 
 - Evaluator hardening:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluatorTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbProximityTrendEvaluatorTest.kt`
 - Store hardening:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreFilteringAndOrderingTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTrendTransitionsTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreEmergencyGeometryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreCirclingEmergencyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTierHysteresisTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreFilteringAndOrderingTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTrendTransitionsTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreEmergencyGeometryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreCirclingEmergencyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTierHysteresisTest.kt`
 - Repository deterministic transitions:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
 - KPI math + replay KPI parity:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbEmergencyAudioKpiAccumulatorTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbEmergencyAudioReplayDeterminismTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioKpiAccumulatorTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioReplayDeterminismTest.kt`
 
 ## Required Verification
 

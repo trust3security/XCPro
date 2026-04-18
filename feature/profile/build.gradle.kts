@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.profile"
+    namespace = "com.trust3.xcpro.profile"
     compileSdk = 35
 
     defaultConfig {

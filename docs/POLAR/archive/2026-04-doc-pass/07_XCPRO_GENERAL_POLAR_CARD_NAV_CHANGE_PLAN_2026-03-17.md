@@ -51,11 +51,11 @@ For this plan, "General Polar" means the profile-scoped active polar edited thro
 
 Current entrypoint:
 
-- `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt`
+- `app/src/main/java/com/trust3/xcpro/appshell/settings/GeneralSettingsRouteSubSheets.kt`
 
 Authoritative owner:
 
-- `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt`
 
 It includes:
 
@@ -154,8 +154,8 @@ Confirm dependency flow remains:
 |---|---|---|---|
 | `docs/POLAR/05_XCPRO_POLAR_PHASE0_PHASE1_CHANGE_PLAN_2026-03-12.md` | completed flight-only polar slice | keep cards formatting-only; keep polar math upstream | broaden from flight-only to full card/nav surface |
 | `docs/POLAR/06_XCPRO_TASK_AWARE_GLIDE_CARD_PLAN_2026-03-12.md` | completed finish-glide MVP seam | keep finish-glide solved upstream and mapped into cards | extend beyond finish cards to current-leg/task metrics |
-| `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt` | current active-polar compute seam | keep one injected compute port over repository-owned polar state | add a read-only provenance snapshot alongside compute port |
-| `feature/map/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt` | current domain owner for finish-glide math | keep solver pure and adapter-free | do not let waypoint/task metrics drift into the formatter layer |
+| `feature/profile/src/main/java/com/trust3/xcpro/glider/PolarStillAirSinkProvider.kt` | current active-polar compute seam | keep one injected compute port over repository-owned polar state | add a read-only provenance snapshot alongside compute port |
+| `feature/map/src/main/java/com/trust3/xcpro/glide/FinalGlideUseCase.kt` | current domain owner for finish-glide math | keep solver pure and adapter-free | do not let waypoint/task metrics drift into the formatter layer |
 
 ### 2.2B Boundary Moves
 
@@ -171,8 +171,8 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/PolarPreviewCard.kt` | direct `PolarCalculator.sinkMs(...)` call | active-polar read contract + focused preview use case/mapper | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | direct `TaskManagerCoordinator.taskSnapshotFlow` dependency | narrow runtime task read port + `TaskNavigationController.racingState` | Phase 3 |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarPreviewCard.kt` | direct `PolarCalculator.sinkMs(...)` call | active-polar read contract + focused preview use case/mapper | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/glide/GlideTargetRepository.kt` | direct `TaskManagerCoordinator.taskSnapshotFlow` dependency | narrow runtime task read port + `TaskNavigationController.racingState` | Phase 3 |
 | `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt` for `wpt_dist`, `wpt_brg`, `wpt_eta`, `task_spd`, `task_dist`, `start_alt` | formatter placeholders standing in for missing domain data | adapter-fed card snapshot fields | Phase 4-6 |
 | future card-side polar provenance logic | formatter infers fallback/no-polar state ad hoc | upstream snapshot fields and explicit invalid/degraded labels | Phase 4 |
 
@@ -180,19 +180,19 @@ Confirm dependency flow remains:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/flight-runtime/src/main/java/com/example/xcpro/glider/ActivePolarReadPort.kt` | New | cross-feature read-only contract for active polar snapshot | runtime and card/navigation domains can depend on a narrow contract | cards/UI must not depend directly on profile repository internals | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/glider/ActivePolarSnapshot.kt` | New | immutable model for active polar provenance/availability | shared contract model belongs with the read port | avoid leaking profile data classes across boundaries | No |
-| `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt` | Existing | General Polar SSOT and snapshot emission | existing owner of selected/effective model and config | do not duplicate polar ownership in map/runtime | No |
-| `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt` | Existing | compute port implementation over General Polar | current injected seam already exists | solver/runtime math should not read repository state ad hoc | No |
-| `feature/profile/src/main/java/com/example/xcpro/glider/ActivePolarSnapshotMapper.kt` | New | maps repository state to the read-port snapshot | keeps repository focused on state ownership | avoid turning UI into the snapshot mapper | No |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/PolarPreviewCard.kt` | Existing | render-only preview screen | General Polar UI already lives here | preview math/policy should move out to a domain mapper/use case | No |
-| `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | Existing | finish-glide target owner | current finish-target owner already exists | cards or adapters must not own finish-target selection | No |
-| `feature/map/src/main/java/com/example/xcpro/navigation/NavigationTargetRepository.kt` | New | current-leg/selected/home navigation target owner | separates waypoint-target ownership from finish-glide owner | `CardFormatSpec` and `MapScreenUtils` are not target owners | No |
-| `feature/map/src/main/java/com/example/xcpro/navigation/NavigationCardUseCase.kt` | New | waypoint ETA and related navigation card policy | domain logic for `wpt_*` belongs outside cards | formatter and observer layers should not compute ETA policy | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/usecase/TaskPerformanceCardUseCase.kt` | New | task-speed/distance/start-alt domain policy | competition/task semantics belong with task domain | card formatter and map adapter should not own competition math | No |
-| `feature/map/src/main/java/com/example/xcpro/map/MapCardDataJoiner.kt` | New | combines flight, glide, navigation, and task card snapshots into one adapter-friendly model | keeps `MapScreenObservers` narrow | avoid turning `MapScreenObservers` into a mixed-purpose joiner | Yes; create this instead of enlarging observers |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` | Existing | orchestration only | existing runtime flow owner | should launch collections, not grow new business logic | No |
-| `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt` | Existing | card/UI adapter only | current adapter seam already exists | do not let domain math leak here | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/glider/ActivePolarReadPort.kt` | New | cross-feature read-only contract for active polar snapshot | runtime and card/navigation domains can depend on a narrow contract | cards/UI must not depend directly on profile repository internals | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/glider/ActivePolarSnapshot.kt` | New | immutable model for active polar provenance/availability | shared contract model belongs with the read port | avoid leaking profile data classes across boundaries | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt` | Existing | General Polar SSOT and snapshot emission | existing owner of selected/effective model and config | do not duplicate polar ownership in map/runtime | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/glider/PolarStillAirSinkProvider.kt` | Existing | compute port implementation over General Polar | current injected seam already exists | solver/runtime math should not read repository state ad hoc | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/glider/ActivePolarSnapshotMapper.kt` | New | maps repository state to the read-port snapshot | keeps repository focused on state ownership | avoid turning UI into the snapshot mapper | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarPreviewCard.kt` | Existing | render-only preview screen | General Polar UI already lives here | preview math/policy should move out to a domain mapper/use case | No |
+| `feature/map/src/main/java/com/trust3/xcpro/glide/GlideTargetRepository.kt` | Existing | finish-glide target owner | current finish-target owner already exists | cards or adapters must not own finish-target selection | No |
+| `feature/map/src/main/java/com/trust3/xcpro/navigation/NavigationTargetRepository.kt` | New | current-leg/selected/home navigation target owner | separates waypoint-target ownership from finish-glide owner | `CardFormatSpec` and `MapScreenUtils` are not target owners | No |
+| `feature/map/src/main/java/com/trust3/xcpro/navigation/NavigationCardUseCase.kt` | New | waypoint ETA and related navigation card policy | domain logic for `wpt_*` belongs outside cards | formatter and observer layers should not compute ETA policy | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/usecase/TaskPerformanceCardUseCase.kt` | New | task-speed/distance/start-alt domain policy | competition/task semantics belong with task domain | card formatter and map adapter should not own competition math | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapCardDataJoiner.kt` | New | combines flight, glide, navigation, and task card snapshots into one adapter-friendly model | keeps `MapScreenObservers` narrow | avoid turning `MapScreenObservers` into a mixed-purpose joiner | Yes; create this instead of enlarging observers |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt` | Existing | orchestration only | existing runtime flow owner | should launch collections, not grow new business logic | No |
+| `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt` | Existing | card/UI adapter only | current adapter seam already exists | do not let domain math leak here | No |
 | `dfcards-library/src/main/java/com/example/dfcards/FlightDataSources.kt` | Existing | card-facing immutable data contract | canonical card data model lives here | cards must format values provided to them, not reach elsewhere | No |
 | `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt` | Existing | pure formatting and placeholder/degraded labels only | current formatter owner | business logic must stay upstream | No |
 
@@ -230,10 +230,10 @@ If an intermediate coordinator-to-task-state adapter is temporarily required whi
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| still-air sink from active polar | `feature/profile/src/main/java/com/example/xcpro/glider/PolarCalculator.kt` | sink provider, preview, tests | General Polar math is profile-owned and already canonical here | No |
-| polar availability and IAS bounds | `feature/profile/src/main/java/com/example/xcpro/glider/GliderSpeedBounds.kt` | sink provider, STF, glide solver, tests | one owner for "has polar" and speed bounds | No |
-| best L/D and L/D-at-speed derivation | `feature/profile/src/main/java/com/example/xcpro/glider/GlidePolarMetrics.kt` | flight metrics, cards, preview/supporting UI | one owner for derived polar performance values | No |
-| finish-glide altitude-loss and required-glide solution | `feature/map/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt` | finish cards, replay tests | already the domain owner of finish-glide math | No |
+| still-air sink from active polar | `feature/profile/src/main/java/com/trust3/xcpro/glider/PolarCalculator.kt` | sink provider, preview, tests | General Polar math is profile-owned and already canonical here | No |
+| polar availability and IAS bounds | `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderSpeedBounds.kt` | sink provider, STF, glide solver, tests | one owner for "has polar" and speed bounds | No |
+| best L/D and L/D-at-speed derivation | `feature/profile/src/main/java/com/trust3/xcpro/glider/GlidePolarMetrics.kt` | flight metrics, cards, preview/supporting UI | one owner for derived polar performance values | No |
+| finish-glide altitude-loss and required-glide solution | `feature/map/src/main/java/com/trust3/xcpro/glide/FinalGlideUseCase.kt` | finish cards, replay tests | already the domain owner of finish-glide math | No |
 | waypoint ETA policy | new `NavigationCardUseCase.kt` | `wpt_eta`, supporting nav UI | ETA semantics must not be invented in adapters/cards | No |
 | task-speed/distance/start-alt policy | new `TaskPerformanceCardUseCase.kt` | `task_spd`, `task_dist`, `start_alt` | competition/task math belongs with task domain | No |
 

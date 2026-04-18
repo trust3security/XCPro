@@ -1,4 +1,4 @@
-﻿# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md -- Autonomous Refactor Contract
+# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md -- Autonomous Refactor Contract
 
 Date: 2026-03-02
 Owner: XCPro Team / Codex
@@ -70,26 +70,26 @@ Target files and required post-refactor budget:
 
 | # | File | Target |
 |---|---|---:|
-| 1 | `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt` | split, each file <= 450 |
-| 2 | `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt` | split, each file <= 450 |
-| 3 | `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt` | facade <= 350 |
-| 4 | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` | <= 350 |
-| 5 | `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt` | <= 350 |
-| 6 | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt` | <= 300 |
-| 7 | `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt` | split, each file <= 450 |
-| 8 | `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt` | split, each file <= 450 |
-| 9 | `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt` | facade <= 300 |
-| 10 | `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt` | <= 350 |
-| 11 | `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt` | <= 350 |
-| 12 | `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt` | split, each file <= 450 |
-| 13 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt` | <= 300 |
-| 14 | `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt` | <= 320 |
-| 15 | `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt` | <= 300 |
-| 16 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | <= 300 |
-| 17 | `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt` | <= 350 |
-| 18 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/AdsbSettingsScreen.kt` | keep <= 500 |
+| 1 | `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt` | split, each file <= 450 |
+| 2 | `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt` | split, each file <= 450 |
+| 3 | `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt` | facade <= 350 |
+| 4 | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` | <= 350 |
+| 5 | `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt` | <= 350 |
+| 6 | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt` | <= 300 |
+| 7 | `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt` | split, each file <= 450 |
+| 8 | `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt` | split, each file <= 450 |
+| 9 | `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt` | facade <= 300 |
+| 10 | `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt` | <= 350 |
+| 11 | `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayController.kt` | <= 350 |
+| 12 | `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt` | split, each file <= 450 |
+| 13 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt` | <= 300 |
+| 14 | `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt` | <= 320 |
+| 15 | `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt` | <= 300 |
+| 16 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | <= 300 |
+| 17 | `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt` | <= 350 |
+| 18 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/AdsbSettingsScreen.kt` | keep <= 500 |
 | 19 | `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardPreferences.kt` | keep <= 500 |
-| 20 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt` | <= 300 |
+| 20 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt` | <= 300 |
 
 ## 1.3 Non-Goals
 - Feature redesign or behavior expansion.

@@ -100,10 +100,10 @@ Mandatory hard gate:
 - At `>= 450` lines, split before adding new logic.
 
 Current slice hotspots:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`: `500`
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`: `485`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`: `472`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`: `416` (monitor)
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`: `500`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`: `485`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`: `472`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`: `416` (monitor)
 
 Action:
 - Split `AdsbTrafficRepositoryRuntimePolling.kt` before/with first behavior edit (for example move snapshot/audio publish helpers) so post-change is `< 500`.
@@ -142,7 +142,7 @@ Cross-phase exit gate:
 - Goal:
   - Implement circling RED+audio eligibility policy as pure logic in ADS-B domain/store path.
 - Files (planned):
-  - new policy file in `feature/map/src/main/java/com/example/xcpro/adsb/` (for example `AdsbCirclingEmergencyPolicy.kt`)
+  - new policy file in `feature/map/src/main/java/com/trust3/xcpro/adsb/` (for example `AdsbCirclingEmergencyPolicy.kt`)
   - `AdsbTrafficStore.kt`
   - `AdsbTrafficModels.kt` (new explicit field for audio eligibility/reason)
 - Tests:

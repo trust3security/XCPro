@@ -1,6 +1,6 @@
 param(
-    [string]$ApplicationId = "com.example.openxcpro.debug",
-    [string]$Activity = "com.example.xcpro.MainActivity",
+    [string]$ApplicationId = "com.trust3.xcpro.debug",
+    [string]$Activity = "com.trust3.xcpro.MainActivity",
     [int]$Iterations = 10,
     [int]$BackgroundDelayMs = 800
 )

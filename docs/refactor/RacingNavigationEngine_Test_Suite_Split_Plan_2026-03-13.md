@@ -11,7 +11,7 @@
 ## 1) Scope
 
 - Problem statement:
-  - `feature/tasks/src/test/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngineTest.kt`
+  - `feature/tasks/src/test/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngineTest.kt`
     is a large mixed-concern regression suite.
   - Start behavior, finish behavior, altitude/close-time policy, and basic
     course progression currently fail in one file, which slows diagnosis.

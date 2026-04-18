@@ -91,8 +91,8 @@ Dependency flow remains:
 `UI -> domain/usecase -> data`
 
 Planned touched files:
-- `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/...` (new helper tests)
+- `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/...` (new helper tests)
 
 Boundary risk:
 - Must keep all MapLibre style/image/property operations in runtime map layer.
@@ -172,7 +172,7 @@ Barbs path stays:
 - Goal:
   - Add pure helper logic to convert legend stops into speed-color mapping suitable for arrows.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
 - Changes:
   - Add helper(s) for legend stop normalization and fallback.
   - Ensure robust handling for empty/invalid stop lists.
@@ -186,7 +186,7 @@ Barbs path stays:
 - Goal:
   - Apply speed-color mapping in arrow mode only.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
 - Changes:
   - Update arrow image/property setup to use speed-color mapping.
   - Keep barb branch untouched.
@@ -201,7 +201,7 @@ Barbs path stays:
 - Goal:
   - Guarantee graceful rendering when legend is absent or stale.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
 - Changes:
   - Explicit fallback to black arrows when legend unavailable.
   - Preserve map stability on style reload and overlay mode changes.

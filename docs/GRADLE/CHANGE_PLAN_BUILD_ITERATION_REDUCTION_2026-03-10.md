@@ -143,10 +143,10 @@ Goal: keep runtime ownership and SSOT behavior stable while reducing how much
     `feature:map` behind a narrow facade
 - Files to change:
   - likely start with:
-    - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsAdsb.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsAdsb.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt`
     - supporting config/helper classes
 - Tests to add/update:
   - targeted map overlay/render tests

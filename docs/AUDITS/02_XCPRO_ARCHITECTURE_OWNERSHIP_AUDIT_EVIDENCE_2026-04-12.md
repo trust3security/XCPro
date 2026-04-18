@@ -51,7 +51,7 @@ This is an audit evidence note, not a proposal.
 ### Fused-flight-data SSOT is in the right place
 
 - `AGENTS.md` states that `FlightDataRepository` is the fused-flight-data SSOT.
-- `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
+- `feature/flight-runtime/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt`
   keeps a single `flightData` state flow and protects active source ownership so
   live and replay do not overwrite each other silently.
 
@@ -59,17 +59,17 @@ This is an audit evidence note, not a proposal.
 
 - `docs/ARCHITECTURE/CODING_RULES.md` says cross-feature task reads must use
   `TaskManagerCoordinator.taskSnapshotFlow` or `currentSnapshot()`.
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt:55`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt:55`
   exposes `taskSnapshotFlow`.
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt:111`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt:111`
   exposes `currentSnapshot()`.
-- `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt:48`
+- `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt:48`
   reads task declaration data from `taskCoordinator.currentSnapshot().task`.
 
 ### Final glide runtime ownership is substantially aligned
 
 - `AGENTS.md` says glide policy/math belongs in dedicated runtime/domain owners.
-- `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideComputationRepository.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/glide/GlideComputationRepository.kt`
   combines:
   - `FlightDataRepository.flightData`
   - `WindSensorFusionRepository.windState`
@@ -97,7 +97,7 @@ This is an audit evidence note, not a proposal.
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt`
 
 Evidence:
 
@@ -119,7 +119,7 @@ Why it matters:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardPreferences.kt`
 
 Evidence:
@@ -141,8 +141,8 @@ Why it matters:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/map/FlightDataUiAdapter.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataUiAdapter.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt`
 
 Evidence:
 
@@ -162,10 +162,10 @@ Why it matters:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt`
-- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/SensorData.kt`
-- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt`
+- `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/SensorData.kt`
+- `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt`
 
 Evidence:
 
@@ -191,7 +191,7 @@ Why it matters:
 
 File:
 
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskRepository.kt`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt`
 
 Evidence:
 
@@ -213,7 +213,7 @@ Why it matters:
 
 File:
 
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
 
 Evidence:
 
@@ -234,7 +234,7 @@ Why it matters:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
 
 Evidence:
 
@@ -258,7 +258,7 @@ Why it matters:
 
 File:
 
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`
 
 Evidence:
 
@@ -275,7 +275,7 @@ Why it matters:
 
 File:
 
-- `feature/tasks/src/main/java/com/example/xcpro/tasks/aat/validation/AATValidationBridge.kt`
+- `feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/validation/AATValidationBridge.kt`
 
 Evidence:
 
@@ -292,7 +292,7 @@ Why it matters:
 
 File:
 
-- `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt`
 
 Evidence:
 

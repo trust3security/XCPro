@@ -45,7 +45,7 @@ The visible `ld_curr` card now reads a new fused upstream metric:
 
 The new authoritative owner is:
 
-- `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdRepository.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/currentld/PilotCurrentLdRepository.kt`
 
 This owner lives in `feature:map-runtime` because visible Current L/D depends
 on:

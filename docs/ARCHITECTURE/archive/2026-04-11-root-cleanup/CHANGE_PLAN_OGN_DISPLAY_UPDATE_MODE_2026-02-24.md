@@ -64,12 +64,12 @@ Dependency flow remains:
 `UI -> domain/use-case -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/*`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettings*`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettings*`
 - Boundary risk:
   - Accidentally throttling ingest instead of UI rendering.
   - Accidentally moving policy into Composables.

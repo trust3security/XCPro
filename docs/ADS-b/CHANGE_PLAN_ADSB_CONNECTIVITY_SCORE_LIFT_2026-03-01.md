@@ -197,8 +197,8 @@ After:
   - Add score-gate checklist section in plan docs and test names tied to deductions.
 - Files:
   - `docs/ADS-b/CHANGE_PLAN_ADSB_CONNECTIVITY_UX_STALE_HOUSEKEEPING_OBSERVABILITY_2026-03-01.md`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/TrafficDebugPanelAutoDismissPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/TrafficDebugPanelAutoDismissPolicyTest.kt`
 - Tests:
   - baseline assertions for current release UX limitations and telemetry coverage.
 - Exit criteria:
@@ -217,12 +217,12 @@ After:
   - Auto-collapse only after stable `Active` dwell (proposed 8-12s).
   - Do not block map gestures or sheet interactions.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
   - optional: new support file for ADS-B status policy mapping.
 - Tests:
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/TrafficDebugPanelAutoDismissPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/TrafficDebugPanelAutoDismissPolicyTest.kt`
   - add status policy tests:
     - visible states
     - recovery dwell collapse
@@ -241,8 +241,8 @@ After:
   - `networkOnlineTransitionCount: Int`
   - `currentOfflineDwellMs: Long`
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
   - map debug support mapping where needed.
 - Tests:
   - add/extend `AdsbTrafficRepositoryTest`:
@@ -264,7 +264,7 @@ After:
   - rapid flaps (xN) with stable convergence
   - reconnect after auth fallback state
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
   - if needed: instrumentation test under `app` for release UI status visibility.
 - Exit criteria:
   - Transition suite is stable and non-flaky across repeated local runs.

@@ -221,7 +221,7 @@ provides the right owner.
 ### 4.1 Variometer-owned runtime additions
 
 Current location:
-- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/`
+- `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/`
 
 Current examples already in repo:
 - `BondedBluetoothDevice.kt`
@@ -239,7 +239,7 @@ Current examples already in repo:
 ### 4.2 Profile-owned settings additions
 
 Current location:
-- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/`
+- `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/`
 
 Current examples already in repo:
 - `BluetoothVarioSettingsUseCase.kt`

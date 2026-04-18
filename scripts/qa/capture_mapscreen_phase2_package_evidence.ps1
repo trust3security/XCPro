@@ -152,10 +152,10 @@ $packageConfig = @{
             "DET-04" = "MapLifecycleManagerResumeSyncTest, LocationManagerRenderSyncTest, DisplayPoseRenderCoordinatorTest"
         }
         focused_tests = @(
-            "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
-            "com.example.xcpro.map.LocationManagerRenderSyncTest",
-            "com.example.xcpro.map.DisplayPoseRenderCoordinatorTest",
-            "com.example.xcpro.map.ui.MapScreenTrailRuntimeEffectsPolicyTest"
+            "com.trust3.xcpro.map.MapLifecycleManagerResumeSyncTest",
+            "com.trust3.xcpro.map.LocationManagerRenderSyncTest",
+            "com.trust3.xcpro.map.DisplayPoseRenderCoordinatorTest",
+            "com.trust3.xcpro.map.ui.MapScreenTrailRuntimeEffectsPolicyTest"
         )
     }
     "pkg-d1" = [ordered]@{
@@ -169,10 +169,10 @@ $packageConfig = @{
         )
         slo_ids = @("MS-ENG-03", "MS-ENG-04", "MS-ENG-07", "MS-ENG-11")
         focused_tests = @(
-            "com.example.xcpro.map.AdsbDisplayMotionSmootherTest",
-            "com.example.xcpro.adsb.AdsbTrafficStoreTest",
-            "com.example.xcpro.ogn.OgnAddressingTest",
-            "com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest"
+            "com.trust3.xcpro.map.AdsbDisplayMotionSmootherTest",
+            "com.trust3.xcpro.adsb.AdsbTrafficStoreTest",
+            "com.trust3.xcpro.ogn.OgnAddressingTest",
+            "com.trust3.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest"
         )
     }
     "pkg-g1" = [ordered]@{
@@ -189,8 +189,8 @@ $packageConfig = @{
             "DET-03" = "MapReplaySelectionFlowTest"
         }
         focused_tests = @(
-            "com.example.xcpro.map.MapReplaySelectionFlowTest",
-            "com.example.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest"
+            "com.trust3.xcpro.map.MapReplaySelectionFlowTest",
+            "com.trust3.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest"
         )
     }
     "pkg-w1" = [ordered]@{
@@ -203,8 +203,8 @@ $packageConfig = @{
         )
         slo_ids = @("MS-ENG-08")
         focused_tests = @(
-            "com.example.xcpro.map.WeatherRainOverlayPolicyTest",
-            "com.example.xcpro.map.MapOverlayManagerWeatherRainTest"
+            "com.trust3.xcpro.map.WeatherRainOverlayPolicyTest",
+            "com.trust3.xcpro.map.MapOverlayManagerWeatherRainTest"
         )
     }
     "pkg-e1" = [ordered]@{
@@ -222,8 +222,8 @@ $packageConfig = @{
             "DET-04" = "MapLifecycleManagerResumeSyncTest"
         }
         focused_tests = @(
-            "com.example.xcpro.map.MapLifecycleManagerResumeSyncTest",
-            "com.example.xcpro.map.TaskRenderSyncCoordinatorTest"
+            "com.trust3.xcpro.map.MapLifecycleManagerResumeSyncTest",
+            "com.trust3.xcpro.map.TaskRenderSyncCoordinatorTest"
         )
     }
 }
@@ -483,8 +483,8 @@ $timebaseCitations = @'
 
 Required citations:
 
-1. `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-2. `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+1. `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+2. `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 Package focus:
 

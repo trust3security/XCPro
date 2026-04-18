@@ -48,10 +48,10 @@ Confirmed unchanged:
 `UI -> domain -> data`
 
 - Modules/files touched (planned):
-  - `feature/map/src/main/java/com/example/xcpro/sensors/*`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/*`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/*`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/*`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/*`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/*`
   - `docs/ARCHITECTURE/*` evidence/plan updates
 - Boundary risk:
   - Medium: flight-state gating behavior can change if freshness policy is wrong.
@@ -235,8 +235,8 @@ After:
 
 ```bash
 ./gradlew enforceRules
-test-safe.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.FlightCalculationHelpersTest"
-test-safe.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.domain.FlyingStateDetectorTest"
+test-safe.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.FlightCalculationHelpersTest"
+test-safe.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.domain.FlyingStateDetectorTest"
 ./gradlew :feature:map:compileDebugKotlin
 ```
 
@@ -287,5 +287,5 @@ Optional when environment is available:
   - `git revert <merge_or_commit_sha>`
 - Post-rollback verification:
   1. `./gradlew enforceRules`
-  2. `test-safe.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.FlightCalculationHelpersTest"`
+  2. `test-safe.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.FlightCalculationHelpersTest"`
   3. `./gradlew assembleDebug`

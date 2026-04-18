@@ -87,8 +87,8 @@ Confirm dependency flow remains:
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
 | `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt` | existing owner for card value/subtitle formatting | display-only mapping from authoritative DTO fields to user-visible secondary labels | add `THERMAL` mapping for `ld_curr` |
-| `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt` | existing owner for `CompleteFlightData` -> `RealTimeFlightData` field exposure | pass through authoritative runtime flags without adding business logic | expose `isTurning` if needed |
-| `feature/map-runtime/src/main/java/com/example/xcpro/currentld/PilotCurrentLdModels.kt` | current fused source/status seam already exists | reuse `pilotCurrentLDSource` instead of inventing a second Current L/D state model | none |
+| `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt` | existing owner for `CompleteFlightData` -> `RealTimeFlightData` field exposure | pass through authoritative runtime flags without adding business logic | expose `isTurning` if needed |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/currentld/PilotCurrentLdModels.kt` | current fused source/status seam already exists | reuse `pilotCurrentLDSource` instead of inventing a second Current L/D state model | none |
 
 ### 2.2B Boundary Moves
 
@@ -107,13 +107,13 @@ Confirm dependency flow remains:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `core/flight/src/main/java/com/example/xcpro/core/flight/RealTimeFlightData.kt` | Existing | UI-safe cross-module DTO fields | existing card data contract owner | card layer must not read `CompleteFlightData` directly | No |
-| `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt` | Existing | `CompleteFlightData` -> `RealTimeFlightData` mapping | existing map-side DTO projection seam | no business math; simple pass-through only | No |
+| `core/flight/src/main/java/com/trust3/xcpro/core/flight/RealTimeFlightData.kt` | Existing | UI-safe cross-module DTO fields | existing card data contract owner | card layer must not read `CompleteFlightData` directly | No |
+| `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt` | Existing | `CompleteFlightData` -> `RealTimeFlightData` mapping | existing map-side DTO projection seam | no business math; simple pass-through only | No |
 | `dfcards-library/src/main/java/com/example/dfcards/CardStrings.kt` | Existing | card label contract | canonical place for formatter labels | avoid hard-coded literals in formatter/tests | No |
 | `dfcards-library/src/main/java/com/example/dfcards/AndroidCardStrings.kt` | Existing | Android resource-backed card labels | existing Android string binding owner | formatter must stay Android-agnostic | No |
 | `dfcards-library/src/main/res/values/strings.xml` | Existing | localized resource value for `THERMAL` label | Android resource source of truth | do not bury strings in Kotlin | No |
 | `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt` | Existing | display-only value/subtitle formatting | current `ld_curr` render owner | metric logic must remain upstream | No |
-| `feature/map/src/test/java/com/example/xcpro/ConvertToRealTimeFlightDataTest.kt` | Existing | DTO projection regression coverage | existing mapping test seam | keep mapper proof local | No |
+| `feature/map/src/test/java/com/trust3/xcpro/ConvertToRealTimeFlightDataTest.kt` | Existing | DTO projection regression coverage | existing mapping test seam | keep mapper proof local | No |
 | `dfcards-library/src/test/java/com/example/dfcards/CardFormatSpecTest.kt` | Existing | card subtitle/value regression coverage | existing formatter regression seam | no UI instrumentation needed for this slice | No |
 
 ### 2.2E Module and API Surface

@@ -13,8 +13,8 @@ See `ADSB_AircraftMetadata.md`.
 ## Current precedence (runtime)
 
 Implemented in:
-- `feature/map/src/main/java/com/example/xcpro/adsb/domain/AdsbAircraftClassResolver.kt`
-- `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/domain/AdsbAircraftClassResolver.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
 
 Resolution order:
 
@@ -75,7 +75,7 @@ Runtime prefix list includes:
 
 Validated by:
 
-- `feature/map/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
 
 Test coverage includes:
 

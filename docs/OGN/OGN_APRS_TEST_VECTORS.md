@@ -4,7 +4,7 @@ Purpose:
 Reference APRS frames and expected parser behavior for `OgnAprsLineParser`.
 
 Primary test file:
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnAprsLineParserTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnAprsLineParserTest.kt`
 
 ## Vector 1 - Canonical Aircraft Beacon
 
