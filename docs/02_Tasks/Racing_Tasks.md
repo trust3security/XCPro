@@ -5,7 +5,7 @@
 **Status:** ... Current - Consolidated from multiple sources
 **Module:** task logic in `feature/tasks/src/main/java/.../tasks/racing/`; rendering/edit surfaces in `feature/map`
 
-> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Rules Package](../RACING_TASK/README.md) | [Validation Algorithms](../RACING_TASK/validation_algorithms.md)
+> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [Racing ARCHITECTURE](../../feature/map/src/main/java/com/trust3/xcpro/tasks/racing/ARCHITECTURE.md) | [Racing Rules Package](../RACING_TASK/README.md) | [Validation Algorithms](../RACING_TASK/validation_algorithms.md)
 
 ---
 
@@ -310,7 +310,7 @@ if (result.isValid) {
 - [racing_task_definition.md](../RACING_TASK/racing_task_definition.md) - Racing task definition
 - [validation_algorithms.md](../RACING_TASK/validation_algorithms.md) - Validation and transition algorithms
 - [keyhole_task_spec.md](../../keyhole_task_spec.md) - Keyhole geometry details
-- [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/racing/ARCHITECTURE.md) - Module architecture
+- [racing/ARCHITECTURE.md](../../feature/map/src/main/java/com/trust3/xcpro/tasks/racing/ARCHITECTURE.md) - Module architecture
 
 ### Historical
 - [archive/2026-03-task-doc-cleanup/README.md](./archive/2026-03-task-doc-cleanup/README.md) - Archived racing implementation plans

@@ -25,6 +25,6 @@
 ## Task Separation Checks
 
 ```bash
-rg -n "import.*racing" feature/tasks/src/main/java/com/example/xcpro/tasks/aat
-rg -n "import.*aat" feature/tasks/src/main/java/com/example/xcpro/tasks/racing
+rg -n "import.*racing" feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat
+rg -n "import.*aat" feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing
 ```

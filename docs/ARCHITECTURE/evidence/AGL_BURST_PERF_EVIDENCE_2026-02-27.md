@@ -13,7 +13,7 @@
 ## Command
 
 ```bash
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.sensors.FlightCalculationHelpersPerfEvidenceTest" -PxcproEnablePerfEvidence=true --rerun-tasks
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.sensors.FlightCalculationHelpersPerfEvidenceTest" -PxcproEnablePerfEvidence=true --rerun-tasks
 ```
 
 ## Baseline vs After Model
@@ -24,7 +24,7 @@
 ## Result
 
 - Captured from:
-  - `feature/map/build/test-results/testDebugUnitTest/TEST-com.example.xcpro.sensors.FlightCalculationHelpersPerfEvidenceTest.xml`
+  - `feature/map/build/test-results/testDebugUnitTest/TEST-com.trust3.xcpro.sensors.FlightCalculationHelpersPerfEvidenceTest.xml`
 - Marker line:
   - `AGL_PERF_EVIDENCE before_p50_ms=0.4835 before_p95_ms=0.7653 after_p50_ms=1.1905 after_p95_ms=1.5024 before_alloc_p50_bytes=0 after_alloc_p50_bytes=1064 p50_delta_pct=146.2254 p95_delta_pct=96.3152 alloc_delta_pct=NaN runs=12 updates_per_run=5000`
 - Budget status marker:

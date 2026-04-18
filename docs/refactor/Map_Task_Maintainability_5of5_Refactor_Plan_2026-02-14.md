@@ -68,15 +68,15 @@ Compliance correction (2026-02-18):
   - AAT target-capable projection now includes `OPTIONAL` role in addition to `TURNPOINT`,
   - `TaskSheetViewModel` persisted import now batches waypoint adds without nested mutate/sync churn.
 - Verification rerun after pass #12:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskStoragePartitioningTest" --tests "com.example.xcpro.tasks.TaskStorageFailureModesTest"`: PASS
-  - `./gradlew --% :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.TaskFilesShareInstrumentedTest`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskStoragePartitioningTest" --tests "com.trust3.xcpro.tasks.TaskStorageFailureModesTest"`: PASS
+  - `./gradlew --% :app:connectedDebugAndroidTest --no-parallel -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.TaskFilesShareInstrumentedTest`: PASS
   - `./gradlew connectedDebugAndroidTest --no-parallel`: PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest"`: PASS
   - `./gradlew enforceRules`: PASS
   - `./gradlew testDebugUnitTest`: PASS
   - `./gradlew assembleDebug`: PASS
   - `./gradlew enforceRules testDebugUnitTest assembleDebug`: PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.tasks.domain.TaskRepositoryProjectionComplianceTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.tasks.domain.TaskRepositoryProjectionComplianceTest"`: PASS
 - Map/task files hardening items in
   `docs/ARCHITECTURE/CHANGE_PLAN_MAP_TASK_SLICE_HARDENING_2026-02-18.md`
   are now completed and re-verified for release-path confidence.
@@ -88,9 +88,9 @@ Compliance correction (2026-02-18):
 - Hardening implementation pass #14 (planned) will close this defect:
   - preserve radius authority from `AATRadiusAuthority` / point configurators.
   - remove radius-halving (`/ 2.0`) in:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATTaskRenderer.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt`
-    - `feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/AATValidationBridge.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATTaskRenderer.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/validation/AATValidationBridge.kt`
   - lock parity with focused JVM coverage and map/task integration checks.
 - Tracking docs:
   - `docs/UNITS/SI_REPASS_FINDINGS_2026-02-22.md`
@@ -250,13 +250,13 @@ Execution update (2026-02-14):
     - persisted OZ parameter parsing + serialization behavior
 - Boundary hardening (typed persisted OZ contract):
   - added `PersistedOzParams` in
-    `feature/map/src/main/java/com/example/xcpro/tasks/core/TaskWaypointCustomParams.kt`
+    `feature/map/src/main/java/com/trust3/xcpro/tasks/core/TaskWaypointCustomParams.kt`
     and routed OZ default/build/parse through it.
   - removed raw `ozParams["..."]` parsing from
-    `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`.
-  - updated `feature/map/src/main/java/com/example/xcpro/tasks/TaskPersistSerializer.kt`
+    `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`.
+  - updated `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskPersistSerializer.kt`
     to emit OZ maps via typed contract instead of string-key map literals.
-  - updated `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`
+  - updated `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`
     to emit racing custom parameters via `RacingWaypointCustomParams` instead
     of raw string-key map literals.
 - Guardrail add-on (contract regression prevention):
@@ -326,7 +326,7 @@ Execution update (2026-02-14):
     - `mapTasksRuntimeUseCase`
     - `mapFeatureFlags`
     - direct public `flightDataManager` and `orientationManager`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt` migrated to
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` migrated to
     `mapViewModel.runtimeDependencies.flightDataManager`.
 - Test-net expansion (MapScreenViewModel collaborator guards):
   - added `MapScreenViewModelStateBuildersTest.kt` coverage for:
@@ -367,12 +367,12 @@ Execution update (2026-02-14):
   - `./gradlew testDebugUnitTest` -> PASS
   - `./gradlew assembleDebug` -> PASS
   - `./gradlew enforceRules testDebugUnitTest assembleDebug` -> PASS
-  - `./gradlew :feature:map:compileDebugKotlin :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelStateBuildersTest" --tests "com.example.xcpro.tasks.core.TaskWaypointCustomParamsTest"` -> PASS
+  - `./gradlew :feature:map:compileDebugKotlin :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelStateBuildersTest" --tests "com.trust3.xcpro.tasks.core.TaskWaypointCustomParamsTest"` -> PASS
   - `./gradlew :feature:map:compileDebugKotlin` -> PASS (after tranche 2 split)
   - `./gradlew :feature:map:compileDebugKotlin` -> PASS (after tranche 3 split)
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.core.TaskWaypointCustomParamsTest"` -> PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelStateBuildersTest"` -> PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.map.MapScreenViewModelStateBuildersTest"` -> PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.core.TaskWaypointCustomParamsTest"` -> PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelStateBuildersTest"` -> PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.map.MapScreenViewModelStateBuildersTest"` -> PASS
   - `./gradlew :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"` -> PASS
 
 Post-pass hotspot snapshot (remaining > 350 LOC):
@@ -403,22 +403,22 @@ Post-pass hotspot snapshot (remaining > 350 LOC):
 
 Current largest map files:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`: 514
-- `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`: 403
-- `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`: 399
-- `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`: 356
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`: 347
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`: 514
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`: 403
+- `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`: 399
+- `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`: 356
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`: 347
 
 Current largest task files:
 
-- `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`: 510
-- `feature/map/src/main/java/com/example/xcpro/tasks/RulesBTTab.kt`: 469
-- `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskDisplay.kt`: 469
-- `feature/map/src/main/java/com/example/xcpro/tasks/aat/calculations/AATDistanceCalculator.kt`: 460
-- `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskCalculator.kt`: 454
-- `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskValidator.kt`: 441
-- `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt`: 418
-- `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`: 407
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`: 510
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/RulesBTTab.kt`: 469
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskDisplay.kt`: 469
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/calculations/AATDistanceCalculator.kt`: 460
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskCalculator.kt`: 454
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskValidator.kt`: 441
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt`: 418
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`: 407
 
 Test depth snapshot:
 
@@ -445,8 +445,8 @@ Dependency flow must remain:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/map/**`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/**`
   - `scripts/ci/enforce_rules.ps1`
   - targeted tests in `feature/map/src/test/**` and `app/src/androidTest/**`
 - Boundary risk:
@@ -547,10 +547,10 @@ Task UI intent -> ViewModel -> MapTasksUseCase -> task owner state
 - Goal:
   - Split high-risk map orchestrators into smaller units.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-  - new focused collaborators under `feature/map/src/main/java/com/example/xcpro/map/`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+  - new focused collaborators under `feature/map/src/main/java/com/trust3/xcpro/map/`
 - Tests to add/update:
   - replay coordinator routing/unit tests
   - camera policy unit tests
@@ -563,11 +563,11 @@ Task UI intent -> ViewModel -> MapTasksUseCase -> task owner state
 - Goal:
   - Ensure one render owner path and remove residual UI/manager bypasses.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapRenderRouter.kt`
   - task UI callsites under:
-    - `feature/map/src/main/java/com/example/xcpro/tasks/**`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/task/**`
+    - `feature/map/src/main/java/com/trust3/xcpro/tasks/**`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/**`
   - `scripts/ci/enforce_rules.ps1`
 - Tests to add/update:
   - `TaskRenderSyncCoordinatorTest`
@@ -582,11 +582,11 @@ Task UI intent -> ViewModel -> MapTasksUseCase -> task owner state
 - Goal:
   - Reduce change risk in largest task files while preserving behavior.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskCalculator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATTaskValidator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskCalculator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskValidator.kt`
   - optional follow-up: `RulesBTTab.kt`, `AATTaskDisplay.kt`
 - Tests to add/update:
   - deterministic geometry and boundary-policy tests
@@ -603,9 +603,9 @@ Task UI intent -> ViewModel -> MapTasksUseCase -> task owner state
 - Goal:
   - Raise confidence on risky paths to release-grade depth.
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/map/**`
-  - `feature/map/src/test/java/com/example/xcpro/tasks/**`
-  - `app/src/androidTest/java/com/example/xcpro/**`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/**`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/**`
+  - `app/src/androidTest/java/com/trust3/xcpro/**`
 - Tests to add/update:
   - map/task lifecycle and style-reload regression tests
   - replay parity tests (same input twice -> identical outputs)

@@ -56,11 +56,11 @@ function Get-PhaseConfig {
             PendingPack = "P1"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.TaskNavigationControllerTest",
-                "--tests", "com.example.xcpro.tasks.TaskManagerCoordinatorTest",
-                "--tests", "com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest",
-                "--tests", "com.example.xcpro.map.replay.RacingReplayLogBuilderTest",
-                "--tests", "com.example.xcpro.map.RacingReplayTaskHelpersTest"
+                "--tests", "com.trust3.xcpro.tasks.TaskNavigationControllerTest",
+                "--tests", "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest",
+                "--tests", "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest",
+                "--tests", "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest",
+                "--tests", "com.trust3.xcpro.map.RacingReplayTaskHelpersTest"
             )
         }
         2 = [ordered]@{
@@ -69,12 +69,12 @@ function Get-PhaseConfig {
             PendingPack = "P2"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.racing.RacingTaskStructureRulesTest",
-                "--tests", "com.example.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest",
-                "--tests", "com.example.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest",
-                "--tests", "com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest",
-                "--tests", "com.example.xcpro.map.RacingReplayTaskHelpersTest",
-                "--tests", "com.example.xcpro.map.replay.RacingReplayLogBuilderTest"
+                "--tests", "com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest",
+                "--tests", "com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest",
+                "--tests", "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest",
+                "--tests", "com.trust3.xcpro.map.RacingReplayTaskHelpersTest",
+                "--tests", "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"
             )
         }
         3 = [ordered]@{
@@ -83,9 +83,9 @@ function Get-PhaseConfig {
             PendingPack = "P3"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingStartEvaluatorTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest"
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingStartEvaluatorTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest"
             )
         }
         4 = [ordered]@{
@@ -94,9 +94,9 @@ function Get-PhaseConfig {
             PendingPack = "P4"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test",
-                "--tests", "com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest"
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test",
+                "--tests", "com.trust3.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest"
             )
         }
         5 = [ordered]@{
@@ -105,8 +105,8 @@ function Get-PhaseConfig {
             PendingPack = "P5"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest",
-                "--tests", "com.example.xcpro.tasks.core.TaskWaypointCustomParamsTest"
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest",
+                "--tests", "com.trust3.xcpro.tasks.core.TaskWaypointCustomParamsTest"
             )
         }
         6 = [ordered]@{
@@ -115,9 +115,9 @@ function Get-PhaseConfig {
             PendingPack = "P6"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest"
+                "--tests", "com.trust3.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest"
             )
         }
         7 = [ordered]@{
@@ -126,9 +126,9 @@ function Get-PhaseConfig {
             PendingPack = "P7"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.TaskSheetViewModelRacingRulesCommandTest",
-                "--tests", "com.example.xcpro.tasks.RulesRacingTaskParametersTest",
-                "--tests", "com.example.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest"
+                "--tests", "com.trust3.xcpro.tasks.TaskSheetViewModelRacingRulesCommandTest",
+                "--tests", "com.trust3.xcpro.tasks.RulesRacingTaskParametersTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest"
             )
         }
         8 = [ordered]@{
@@ -137,9 +137,9 @@ function Get-PhaseConfig {
             PendingPack = "P8-A/P8-B/P8-C"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.TaskPersistSerializerFidelityTest",
-                "--tests", "com.example.xcpro.tasks.TaskSheetViewModelImportTest",
-                "--tests", "com.example.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest"
+                "--tests", "com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest",
+                "--tests", "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest",
+                "--tests", "com.trust3.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest"
             )
         }
         9 = [ordered]@{
@@ -148,10 +148,10 @@ function Get-PhaseConfig {
             PendingPack = "P9-A/P9-B/P9-C/P9-D"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.map.replay.RacingReplayLogBuilderTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest",
-                "--tests", "com.example.xcpro.tasks.TaskNavigationControllerTest",
-                "--tests", "com.example.xcpro.map.RacingReplayTaskHelpersTest"
+                "--tests", "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest",
+                "--tests", "com.trust3.xcpro.tasks.TaskNavigationControllerTest",
+                "--tests", "com.trust3.xcpro.map.RacingReplayTaskHelpersTest"
             )
         }
         10 = [ordered]@{
@@ -160,10 +160,10 @@ function Get-PhaseConfig {
             PendingPack = "P10-A/P10-B/P10-C/P10-D"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.example.xcpro.tasks.TaskPersistSerializerFidelityTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest",
-                "--tests", "com.example.xcpro.tasks.TaskNavigationControllerTest",
-                "--tests", "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest"
+                "--tests", "com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest",
+                "--tests", "com.trust3.xcpro.tasks.TaskNavigationControllerTest",
+                "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest"
             )
         }
     }

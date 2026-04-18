@@ -34,16 +34,16 @@ The upcoming Bluetooth work must keep these owners unchanged:
 - `feature:variometer`
   - external-vario runtime owner for the Bluetooth slice
   - current anchors:
-    - `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioPreviewReadPort.kt`
-    - `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioUseCase.kt`
+    - `feature/variometer/src/main/java/com/trust3/xcpro/hawk/HawkVarioPreviewReadPort.kt`
+    - `feature/variometer/src/main/java/com/trust3/xcpro/hawk/HawkVarioUseCase.kt`
 - `feature:flight-runtime`
   - fused flight truth owner
   - current anchor:
-    - `feature/flight-runtime/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
+    - `feature/flight-runtime/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt`
 - `feature:map`
   - consumer-only for Bluetooth work
   - current anchor:
-    - `feature/map/src/main/java/com/example/xcpro/hawk/MapHawkRuntimeAdapters.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/hawk/MapHawkRuntimeAdapters.kt`
   - important nuance:
     - the existing temporary HAWK adapters in `feature:map` do not authorize
       Bluetooth transport, sentence parsing, or external-vs-phone arbitration
@@ -54,8 +54,8 @@ Related settings-side owner that remains unchanged:
 - `feature:profile`
   - settings UI owner for the existing HAWK preview/settings path
   - current anchors:
-    - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsUseCase.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntime.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsUseCase.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntime.kt`
 
 ## Baseline repo state
 

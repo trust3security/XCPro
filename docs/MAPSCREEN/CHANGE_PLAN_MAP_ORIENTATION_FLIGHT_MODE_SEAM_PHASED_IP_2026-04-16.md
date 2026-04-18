@@ -100,7 +100,7 @@ Boundary risk:
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
 | `docs/ARCHITECTURE/ADR_FLIGHT_MGMT_ROUTE_PORT_2026-04-06.md` | earlier Phase 1 map-shell hardening replaced a concrete runtime handle with a narrow map-owned seam | remove the highest-value boundary leak first and keep grouped runtime collaborators internal | use an internal callback seam if that is smaller than adding a named port type |
-| `feature/map/src/main/java/com/example/xcpro/map/FlightDataMgmtPort.kt` | existing narrow map-owned contract that avoids exposing a broader runtime bundle | create only the smallest seam required for the call path | no new cross-module contract is planned for this slice |
+| `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataMgmtPort.kt` | existing narrow map-owned contract that avoids exposing a broader runtime bundle | create only the smallest seam required for the call path | no new cross-module contract is planned for this slice |
 
 ### 2.2B Boundary Moves
 
@@ -119,11 +119,11 @@ Boundary risk:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` | Existing | own the narrow screen seam that applies orientation flight-mode selection | the ViewModel already owns map screen state/orchestration | no broader shell split is needed for one mutation seam | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | Existing | pass the narrow seam into the runtime effect path | screen root already wires root bindings and effects | avoids adding another bag or public route surface | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt` | Existing | thread the narrow seam into the orientation effect only | this file already composes runtime-effect helpers | do not move unrelated runtime effects in this slice | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt` | Existing | invoke the narrow seam from `LaunchedEffect` without knowing the concrete manager | this is the direct violation site | a new helper file is not needed if a callback is enough | No |
-| `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenOrientationRuntimeEffectsTest.kt` | Existing | verify effect forwarding through the replacement seam | this test already owns the targeted acceptance behavior | no broad integration test is needed | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` | Existing | own the narrow screen seam that applies orientation flight-mode selection | the ViewModel already owns map screen state/orchestration | no broader shell split is needed for one mutation seam | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | Existing | pass the narrow seam into the runtime effect path | screen root already wires root bindings and effects | avoids adding another bag or public route surface | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt` | Existing | thread the narrow seam into the orientation effect only | this file already composes runtime-effect helpers | do not move unrelated runtime effects in this slice | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt` | Existing | invoke the narrow seam from `LaunchedEffect` without knowing the concrete manager | this is the direct violation site | a new helper file is not needed if a callback is enough | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenOrientationRuntimeEffectsTest.kt` | Existing | verify effect forwarding through the replacement seam | this test already owns the targeted acceptance behavior | no broad integration test is needed | No |
 
 ### 2.2E Module and API Surface
 
@@ -154,8 +154,8 @@ Rules:
 
 | Risk | Rule Reference | Guard Type (lint/enforceRules/test/review) | File/Test |
 |---|---|---|---|
-| UI/effects directly mutates orientation runtime via concrete manager | `CODING_RULES.md` UI rules; `ARCHITECTURE.md` dependency direction | grep + targeted unit test + review | `rg -n "orientationManager\\.setFlightMode" feature/map/src/main/java/com/example/xcpro/map/ui`, `MapScreenOrientationRuntimeEffectsTest` |
-| target effect files keep depending on `MapOrientationManager` | `ARCHITECTURE.md` stable seams only | grep + compile + review | `rg -n "MapOrientationManager" feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt` |
+| UI/effects directly mutates orientation runtime via concrete manager | `CODING_RULES.md` UI rules; `ARCHITECTURE.md` dependency direction | grep + targeted unit test + review | `rg -n "orientationManager\\.setFlightMode" feature/map/src/main/java/com/trust3/xcpro/map/ui`, `MapScreenOrientationRuntimeEffectsTest` |
+| target effect files keep depending on `MapOrientationManager` | `ARCHITECTURE.md` stable seams only | grep + compile + review | `rg -n "MapOrientationManager" feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt` |
 | this slice grows into a broad runtime-port or bag refactor | `ARCHITECTURE.md` no broad dependency bags/service locators | plan review + diff review | this plan and PR review |
 
 ## 3) Data Flow (Before -> After)
@@ -193,11 +193,11 @@ After:
 - Goal:
   - remove the direct UI/effects call to `MapOrientationManager.setFlightMode(...)` with no intended behavior change
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenOrientationRuntimeEffectsTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenOrientationRuntimeEffectsTest.kt`
 - Ownership/file split changes in this phase:
   - move the concrete setter call out of UI/effects code and into ViewModel-owned or map-shell-owned wiring
 - Tests to add/update:
@@ -219,8 +219,8 @@ After:
   - `./gradlew enforceRules`
 - Acceptance commands:
   - `git diff --name-status`
-  - `rg -n "orientationManager\\.setFlightMode" feature/map/src/main/java/com/example/xcpro/map/ui`
-  - `rg -n "MapOrientationManager" feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+  - `rg -n "orientationManager\\.setFlightMode" feature/map/src/main/java/com/trust3/xcpro/map/ui`
+  - `rg -n "MapOrientationManager" feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
 - Connected/SLO tests:
   - not required unless the implementation expands beyond this narrow setter path
 

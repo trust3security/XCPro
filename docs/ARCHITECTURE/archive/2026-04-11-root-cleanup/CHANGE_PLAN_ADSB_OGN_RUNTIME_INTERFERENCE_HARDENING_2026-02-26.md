@@ -54,61 +54,61 @@ Read first:
    - `MapScreenTrafficCoordinator` forwards GPS/ownship/filter updates unconditionally.
    - `AdsbTrafficRepository` immediately calls `publishFromStore(...)` for those updates.
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt:85`
-     - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt:121`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt:210`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt:240`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt:85`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt:121`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt:210`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt:240`
 
 2. ADS-B ownship altitude path can drive high-frequency reselection while enabled:
    - altitude state is sourced from live flight data and forwarded every emission.
    - repository equality check is exact `Double` equality, then full reselection runs.
    - reselection cost includes multiple haversines + sorting in `AdsbTrafficStore.select(...)`.
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt:117`
-     - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt:121`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt:242`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt:41`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt:117`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt:121`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt:242`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt:41`
 
 3. OGN center updates trigger distance-refresh publishes that are not ingest-driven:
    - `updateCenter(...)` refreshes per-target distance and may publish every GPS movement.
    - thermal/trail repos consume the same target stream and re-run processing loops.
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt:211`
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt:550`
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt:96`
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt:66`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt:211`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt:550`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt:96`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt:66`
 
 4. OGN trail processing has avoidable sort cost on each upstream emission:
    - `processTargets(...)` sorts all targets before freshness checks.
    - distance-only updates still pay `sortedBy { it.id }` cost.
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt:104`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt:104`
 
 5. OGN thermal processing still loops full target list on no-fresh emissions:
    - freshness gating exists per target, but loop and downstream housekeeping work still run for all entries.
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt:123`
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt:142`
-     - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt:161`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt:123`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt:142`
+     - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt:161`
 
 6. Disabled overlay still causes render-path work in Compose:
    - effect keys are coupled to raw target lists and re-trigger while disabled.
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt:84`
-     - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt:102`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt:84`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt:102`
 
 7. ADS-B metadata enrichment is over-triggered by raw target updates:
    - list metadata flow is keyed by full target stream (distance/age churn included).
    - selected-target details path also re-queries metadata DB on target stream churn.
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt:26`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt:59`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt:75`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt:26`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt:59`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt:75`
 
 8. ADS-B interpolation runs at vsync while active (no explicit fps cap):
    - Evidence:
-     - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt:57`
-     - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt:273`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt:57`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt:273`
 
 ## 2) Architecture Contract
 
@@ -130,16 +130,16 @@ Dependency flow remains:
 `UI -> domain/use-case -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-  - related tests under `feature/map/src/test/java/com/example/xcpro/{adsb,ogn,map}`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+  - related tests under `feature/map/src/test/java/com/trust3/xcpro/{adsb,ogn,map}`
 - Boundary risk:
   - Accidentally moving business policy into Compose/runtime map classes.
   - Introducing duplicate target ownership while adding cache/trigger guards.
@@ -266,9 +266,9 @@ Authoritative ownership remains:
 - Goal:
   remove avoidable ADS-B computation while streaming is off and bound ownship-driven churn while on.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-  - (if needed) `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+  - (if needed) `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
 - Planned changes:
   - gate coordinator forwarding of ADS-B ownship/center updates by enabled path and seed-on-enable behavior.
   - in repository mutators, store inputs always but defer `publishFromStore(...)` when `_isEnabled` is false.
@@ -285,8 +285,8 @@ Authoritative ownership remains:
 - Goal:
   avoid metadata DB lookup work tied to ownship-relative target update frequency.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
-  - (if required) `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+  - (if required) `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt`
 - Planned changes:
   - key target metadata lookup by ICAO set changes + metadata revision, not by every raw target emission.
   - key selected-target metadata lookup by selected ICAO + metadata revision/sync transitions, not by distance-only raw churn.
@@ -301,9 +301,9 @@ Authoritative ownership remains:
 - Goal:
   reduce center-induced OGN target churn that cascades into thermal/trail loops.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt`
 - Planned changes:
   - add center distance-refresh policy (movement threshold + min interval gate).
   - add no-fresh fast-path in thermal/trail repos when input carries no fresh target samples and no suppression/state change requiring work.
@@ -320,9 +320,9 @@ Authoritative ownership remains:
 - Goal:
   eliminate disabled-overlay render churn and bound ADS-B interpolation render cost.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
 - Planned changes:
   - overlay-gated effect keys for ADS-B/OGN render updates.
   - no-op short-circuit in overlay manager when target list has not changed.

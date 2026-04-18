@@ -63,10 +63,10 @@ Confirmed flow remains:
 `UI -> ViewModel -> use-case -> repository`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/*`
-  - `feature/map/src/main/java/com/example/xcpro/map/Adsb*`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/*`
-  - `feature/map/src/test/java/com/example/xcpro/map/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/Adsb*`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/*`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/*`
   - `docs/ADS-b/ADSB.md`
   - `docs/ARCHITECTURE/PIPELINE.md` (if wiring semantics change)
 - Boundary risk:
@@ -160,9 +160,9 @@ Notes:
 - Goal:
   - Implement deterministic closure-trend state machine in repository/store path.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
-  - New: `feature/map/src/main/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
+  - New: `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
 - Tests to add/update:
   - New: `AdsbProximityTrendEvaluatorTest`
   - Update: `AdsbTrafficStoreTest`
@@ -180,9 +180,9 @@ Notes:
 - Goal:
   - Move map color decision to tier mapping; enforce "not closing -> normal color."
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbProximityColorPolicy.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt` (if mapper property wiring changes)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbProximityColorPolicy.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt` (if mapper property wiring changes)
 - Tests to add/update:
   - `AdsbProximityColorPolicyTest`
   - `AdsbGeoJsonMapperTest`
@@ -201,10 +201,10 @@ Notes:
 - Goal:
   - Make reason for color state understandable.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbSelectedTargetDetails.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
-  - Optional debug: `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbSelectedTargetDetails.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+  - Optional debug: `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt`
 - Tests to add/update:
   - Details sheet semantics tests.
   - `MapScreenViewModelTest` selected details correctness with ownship fallback.
@@ -216,8 +216,8 @@ Notes:
 - Goal:
   - Verify stability under jitter, stale transitions, replay, and edge cases.
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/*` targeted tests
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/*` targeted tests
   - `docs/ADS-b/ADSB.md` final behavior contract
   - `docs/ARCHITECTURE/PIPELINE.md` if flow ownership wording changes
 - Tests to add/update:
@@ -319,15 +319,15 @@ Optional when relevant:
 
 ### 10.2 Phase 4 Hardening Coverage Added
 
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluatorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbProximityTrendEvaluatorTest.kt`
   - closing -> diverging -> re-closing re-entry behavior
   - constant-distance jitter stability (no false closing oscillation)
   - same-sequence determinism across evaluator instances
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTest.kt`
   - re-entry tier re-escalation after de-escalation
   - stale age disables emergency escalation (`ageSec > 20`)
   - deterministic tier transition sequence for same input timeline
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
   - repository-level deterministic proximity-tier transition scenario across repeated runs
 
 ### 10.3 Required Verification Evidence

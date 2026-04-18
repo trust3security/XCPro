@@ -75,10 +75,10 @@ Confirm dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/**`
-  - `feature/map/src/main/java/com/example/xcpro/glide/**`
-  - `feature/map/src/main/java/com/example/xcpro/igc/data/**`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/**`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/glide/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/igc/data/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/**`
   - task DI wiring in `app` and/or `feature:tasks`
 - Any boundary risk:
   - accidental `feature:tasks -> feature:map` back-edge while moving AAT MapLibre code,
@@ -88,8 +88,8 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapTrafficCoordinatorAdapters.kt` | read-only ports with explicit mutation methods | private mutable, public read-only port, named mutators only | task snapshot is a public cross-module contract, not an internal shell helper |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt` | one downstream side-effect owner over authoritative task state | single owner, event-driven sync, no ad hoc external writes | task authority also carries persistence-relevant payload, not just render signatures |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapTrafficCoordinatorAdapters.kt` | read-only ports with explicit mutation methods | private mutable, public read-only port, named mutators only | task snapshot is a public cross-module contract, not an internal shell helper |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt` | one downstream side-effect owner over authoritative task state | single owner, event-driven sync, no ad hoc external writes | task authority also carries persistence-relevant payload, not just render signatures |
 
 ### 2.2B Boundary Moves
 
@@ -105,30 +105,30 @@ Confirm dependency flow remains:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | reads `TaskRepository.state` as task authority | derive from coordinator snapshot flow plus navigation state | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt` | reads `TaskRepository.state` as task authority | derive from coordinator snapshot flow | Phase 1 |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` | `sync()` mirrors coordinator state into repository and pushes AAT target state back | VM consumes projection flow only; mutations route through named use-case/coordinator intents | Phase 2 |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt` | manager `getCoreTask()` path strips target custom params before persistence | bridge persists canonical snapshot or a canonical mapper output with full target payload | Phase 3-4 |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | registers a coordinator listener without explicit owner teardown | flow-based observation or removable registration bound to caller scope | Phase 4 |
+| `feature/map/src/main/java/com/trust3/xcpro/glide/GlideTargetRepository.kt` | reads `TaskRepository.state` as task authority | derive from coordinator snapshot flow plus navigation state | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt` | reads `TaskRepository.state` as task authority | derive from coordinator snapshot flow | Phase 1 |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt` | `sync()` mirrors coordinator state into repository and pushes AAT target state back | VM consumes projection flow only; mutations route through named use-case/coordinator intents | Phase 2 |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt` | manager `getCoreTask()` path strips target custom params before persistence | bridge persists canonical snapshot or a canonical mapper output with full target payload | Phase 3-4 |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt` | registers a coordinator listener without explicit owner teardown | flow-based observation or removable registration bound to caller scope | Phase 4 |
 
 ### 2.2D File Ownership Plan
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Task_AAT_Ownership_Release_Grade_Phased_IP_2026-03-15.md` | New | remediation contract for this track | active phased plan belongs in `docs/refactor` | not a durable ADR by itself | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt` | Existing | canonical runtime authority and named task mutations | coordinator already routes task-type-specific behavior | not UI, not persistence adapter, not map runtime | Yes, if snapshot publishing pushes file near budget |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskRuntimeSnapshot.kt` | New | read-only cross-module task snapshot contract | snapshot belongs with the owner module | not in `feature:map` or UI projector | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskRepository.kt` | Existing | task UI projection only | task UI model shaping stays in task feature | should not own cross-feature runtime state | Possible rename/split after demotion |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt` | Existing | screen state, intents, orchestration only | task sheet VM remains the screen owner | not a task authority or persistence owner | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt` | Existing | coordinator-to-persistence bridge only | already sits between runtime owner and persistence service | not a manager or ViewModel concern | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt` | Existing | racing navigation orchestration over canonical task state | navigation controller already owns engine integration | listener lifetime should not hide in DI | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt` | Existing | AAT task mutation/orchestration only, no persistence/file I/O | manager remains the AAT mutation host for now | MapLibre runtime and persistence do not belong here | No |
-| `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | Existing | derived glide target projection | map feature owns glide consumer state | not authoritative task owner | No |
-| `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt` | Existing | derived IGC declaration snapshot | IGC data source owns declaration assembly | not authoritative task owner | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt` | Existing | map-runtime-owned task gesture contract carrying `MapLibreMap` runtime context | the contract is only used by map gesture/runtime wiring | not task-core while it remains map-typed | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt` | Existing | MapLibre gesture runtime for AAT edit interactions | active MapLibre gesture code belongs with map/runtime shell | not in task-core module | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt` | Existing | MapLibre projection/tap conversion helper shared by AAT map interaction code | reused by map-owned AAT interaction helpers | not task-core and should not anchor a reverse dependency | No |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditModeManager.kt` | Existing | task edit-state and target-update policy only | task feature still owns edit-state semantics | map-typed overlay/hit-test helpers were removed in Phase 5 | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt` | Existing | canonical runtime authority and named task mutations | coordinator already routes task-type-specific behavior | not UI, not persistence adapter, not map runtime | Yes, if snapshot publishing pushes file near budget |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskRuntimeSnapshot.kt` | New | read-only cross-module task snapshot contract | snapshot belongs with the owner module | not in `feature:map` or UI projector | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt` | Existing | task UI projection only | task UI model shaping stays in task feature | should not own cross-feature runtime state | Possible rename/split after demotion |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt` | Existing | screen state, intents, orchestration only | task sheet VM remains the screen owner | not a task authority or persistence owner | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt` | Existing | coordinator-to-persistence bridge only | already sits between runtime owner and persistence service | not a manager or ViewModel concern | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt` | Existing | racing navigation orchestration over canonical task state | navigation controller already owns engine integration | listener lifetime should not hide in DI | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt` | Existing | AAT task mutation/orchestration only, no persistence/file I/O | manager remains the AAT mutation host for now | MapLibre runtime and persistence do not belong here | No |
+| `feature/map/src/main/java/com/trust3/xcpro/glide/GlideTargetRepository.kt` | Existing | derived glide target projection | map feature owns glide consumer state | not authoritative task owner | No |
+| `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt` | Existing | derived IGC declaration snapshot | IGC data source owns declaration assembly | not authoritative task owner | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/gestures/TaskGestureHandler.kt` | Existing | map-runtime-owned task gesture contract carrying `MapLibreMap` runtime context | the contract is only used by map gesture/runtime wiring | not task-core while it remains map-typed | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/tasks/aat/gestures/AatGestureHandler.kt` | Existing | MapLibre gesture runtime for AAT edit interactions | active MapLibre gesture code belongs with map/runtime shell | not in task-core module | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt` | Existing | MapLibre projection/tap conversion helper shared by AAT map interaction code | reused by map-owned AAT interaction helpers | not task-core and should not anchor a reverse dependency | No |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/interaction/AATEditModeManager.kt` | Existing | task edit-state and target-update policy only | task feature still owns edit-state semantics | map-typed overlay/hit-test helpers were removed in Phase 5 | No |
 
 ### 2.2E Module and API Surface
 
@@ -158,7 +158,7 @@ Confirm dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| AAT target custom-parameter encoding (`targetLat`, `targetLon`, `targetParam`, `targetLocked`) | `feature/tasks/src/main/java/com/example/xcpro/tasks/core/TaskWaypointCustomParams.kt` | coordinator mapping, serializer, persistence bridge, managers | typed custom-parameter contract already exists here and should remain the only payload authority | No |
+| AAT target custom-parameter encoding (`targetLat`, `targetLon`, `targetParam`, `targetLocked`) | `feature/tasks/src/main/java/com/trust3/xcpro/tasks/core/TaskWaypointCustomParams.kt` | coordinator mapping, serializer, persistence bridge, managers | typed custom-parameter contract already exists here and should remain the only payload authority | No |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -344,11 +344,11 @@ Persistence -> TaskEnginePersistenceService / adapters only
 - Goal:
   - Move AAT target lock/param/position to the canonical task payload and remove duplicated state semantics.
 - Files to change:
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/data/persistence/AATCanonicalTaskStorage.kt`
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/data/persistence/AATCanonicalTaskStorage.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
   - `TaskPersistSerializer.kt`
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskCoreMappers.kt`
-  - `feature/tasks/src/test/java/com/example/xcpro/tasks/data/persistence/AATCanonicalTaskStorageTest.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskCoreMappers.kt`
+  - `feature/tasks/src/test/java/com/trust3/xcpro/tasks/data/persistence/AATCanonicalTaskStorageTest.kt`
   - coordinator / hydrate / serializer fidelity tests
 - Ownership/file split changes in this phase:
   - canonical task payload is now the only AAT persistence payload for service-backed autosave and named save/load.
@@ -396,10 +396,10 @@ Persistence -> TaskEnginePersistenceService / adapters only
 - Files to change:
   - `TaskManagerCoordinator.kt`
   - `MapScreenViewModel.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/gestures/TaskGestureHandlerFactory.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/gestures/TaskGestureHandler.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/gestures/TaskGestureHandlerFactory.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/tasks/aat/gestures/AatGestureHandler.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt`
   - `AATEditModeManager.kt`
   - `MapTasksUseCase.kt`
   - `feature/tasks/build.gradle.kts`

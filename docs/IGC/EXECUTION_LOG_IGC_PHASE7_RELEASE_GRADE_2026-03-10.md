@@ -156,26 +156,26 @@ Interpretation:
   - added focused contract/repository tests and updated existing fake
     repositories to the new boundary
 - Files touched:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintIssue.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintRuleSet.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintValidator.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcLintMessageMapper.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/di/IgcCoreBindingsModule.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcLintRuleSetTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/usecase/IgcLintMessageMapperTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcExportDiagnosticsRepositoryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcDownloadsRepositoryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintIssue.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintRuleSet.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintValidator.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/usecase/IgcLintMessageMapper.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcDownloadsRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/di/IgcCoreBindingsModule.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/domain/IgcLintRuleSetTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/usecase/IgcLintMessageMapperTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcExportDiagnosticsRepositoryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcDownloadsRepositoryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
 - Commands:
   - `git status --short`
     - Result: PASS; no unexpected unrelated dirty files observed before `P7-1`
-  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*Lint*" --tests "com.example.xcpro.igc.*Diagnostic*"`
+  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*Lint*" --tests "com.trust3.xcpro.igc.*Diagnostic*"`
     - Result: FAIL; overlapping Gradle output use on Windows caused a transient
       compile directory lock
   - `./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug`
@@ -185,7 +185,7 @@ Interpretation:
     - Result: PASS
   - `./gradlew :feature:map:assembleDebug --no-configuration-cache`
     - Result: PASS
-  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*Lint*" --tests "com.example.xcpro.igc.*Diagnostic*" --no-configuration-cache`
+  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*Lint*" --tests "com.trust3.xcpro.igc.*Diagnostic*" --no-configuration-cache`
     - Result: PASS
   - `./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug --no-configuration-cache`
     - Result: PASS
@@ -242,22 +242,22 @@ Interpretation:
   - synced android instrumentation repository construction to the new validator
     dependency to avoid later constructor drift
 - Files touched:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/StrictIgcLintValidator.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportValidationAdapter.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFileModels.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/di/IgcCoreBindingsModule.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/domain/StrictIgcLintValidatorTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcExportValidationAdapterTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
-  - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/StrictIgcLintValidator.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportValidationAdapter.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFileModels.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/di/IgcCoreBindingsModule.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/domain/StrictIgcLintValidatorTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcExportValidationAdapterTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
+  - `feature/igc/src/androidTest/java/com/trust3/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
 - Commands:
   - `rg -n "MediaStoreIgcFlightLogRepository\\(" feature app`
     - Result: PASS; constructor call-sites audited before build
-  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.*" --tests "com.example.xcpro.igc.domain.*Lint*" --no-configuration-cache`
+  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.*" --tests "com.trust3.xcpro.igc.domain.*Lint*" --no-configuration-cache`
     - Result: PASS
   - `./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug --no-configuration-cache`
     - Result: PASS
@@ -313,22 +313,22 @@ Interpretation:
   - updated `IgcFilesScreen` to render diagnostics from shared UI state
   - updated runtime/unit/instrumentation tests to the typed finalize contract
 - Files touched:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/IgcRecordingActionSink.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcFilesUseCase.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/screens/replay/IgcFilesScreen.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSinkTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseBRecordStreamTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/vario/VarioServiceManagerConstructionTest.kt`
-  - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/IgcRecordingActionSink.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/usecase/IgcFilesUseCase.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/ui/IgcFilesViewModel.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/screens/replay/IgcFilesScreen.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSinkTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCaseBRecordStreamTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/vario/VarioServiceManagerConstructionTest.kt`
+  - `feature/igc/src/androidTest/java/com/trust3/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
 - Commands:
-  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*Diagnostic*" --tests "com.example.xcpro.igc.ui.*" --no-configuration-cache`
+  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*Diagnostic*" --tests "com.trust3.xcpro.igc.ui.*" --no-configuration-cache`
     - Result: PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*" --no-configuration-cache`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.*" --no-configuration-cache`
     - Result: PASS
   - `./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug --no-configuration-cache`
     - Result: PASS
@@ -377,12 +377,12 @@ Interpretation:
   - kept production fixture parser validation green after the parser contract
     tighten-up
 - Files touched:
-  - `feature/igc/src/main/java/com/example/xcpro/replay/IgcParser.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/replay/IgcParserTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/replay/IgcParserLintParityTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcTextWriterTest.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/replay/IgcParser.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/replay/IgcParserTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/replay/IgcParserLintParityTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcTextWriterTest.kt`
 - Commands:
-  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.replay.Igc*" --tests "com.example.xcpro.igc.*" --no-configuration-cache`
+  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.replay.Igc*" --tests "com.trust3.xcpro.igc.*" --no-configuration-cache`
     - Result: PASS
   - `./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug --no-configuration-cache`
     - Result: PASS
@@ -550,22 +550,22 @@ Interpretation:
   - signer parity tests were added against the reference XCS digest fixtures
   - docs now contain a dedicated production compatibility note
 - Files touched:
-  - `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcGRecordSigner.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/domain/IgcGRecordSignerTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcRecoveryMetadataStoreTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcGRecordSigner.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/domain/IgcGRecordSignerTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcRecoveryMetadataStoreTest.kt`
   - `docs/IGC/README.md`
   - `docs/IGC/CHANGE_PLAN_IGC_FLIGHT_LOGGING_PRODUCTION_GRADE_PHASED_IP_2026-03-08.md`
   - `docs/IGC/AGENT_AUTOMATION_CONTRACT_IGC_PHASE7_RELEASE_GRADE_2026-03-10.md`
   - `docs/IGC/xcpro_igc_file_spec.md`
   - `docs/IGC/PRODUCTION_COMPATIBILITY_PROFILE_XCS_WEGLIDE_2026-03-10.md`
 - Commands:
-  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.domain.IgcGRecordSignerTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryRecoveryTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryRecoveryKillPointTest" --tests "com.example.xcpro.igc.data.IgcRecoveryMetadataStoreTest" :feature:igc:assembleDebug :feature:map:assembleDebug`
+  - `./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.domain.IgcGRecordSignerTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryRecoveryTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryRecoveryKillPointTest" --tests "com.trust3.xcpro.igc.data.IgcRecoveryMetadataStoreTest" :feature:igc:assembleDebug :feature:map:assembleDebug`
     - Result: PASS
 - Residual risks:
   - full `AGENTS.md` verification order still remains outstanding

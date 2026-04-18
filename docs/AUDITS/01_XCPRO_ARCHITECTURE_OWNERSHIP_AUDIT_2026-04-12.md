@@ -68,7 +68,7 @@ ways the repo explicitly tells contributors not to.
 ## C. Top 10 concrete issues
 
 1. Severity: **high**
-   - File: `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt`
    - What is wrong:
      `ProfileAndConfigurationEffects` loads persistence-backed mode visibility
      and performs fallback-mode selection inside a Composable effect.
@@ -81,7 +81,7 @@ ways the repo explicitly tells contributors not to.
      evaluates visibility, and selects a replacement mode.
 
 2. Severity: **high**
-   - File: `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt`
    - What is wrong:
      `FlightDataManager` reads `CardPreferences` directly to derive
      profile-visible flight modes.
@@ -92,7 +92,7 @@ ways the repo explicitly tells contributors not to.
      dependency direction the repo expects.
 
 3. Severity: **high**
-   - File: `feature/map/src/main/java/com/example/xcpro/map/FlightDataUiAdapter.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataUiAdapter.kt`
    - What is wrong:
      `feature:map` directly constructs `TrailProcessor()`, which is a stateful
      trail runtime owner.
@@ -103,7 +103,7 @@ ways the repo explicitly tells contributors not to.
      instantiates a runtime owner directly from the map shell.
 
 4. Severity: **medium**
-   - File: `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
    - What is wrong:
      Live flight time is derived from `data.gps?.timestamp ?: data.timestamp`,
      even though the repo has an explicit monotonic calculation time path.
@@ -115,7 +115,7 @@ ways the repo explicitly tells contributors not to.
      This path mixes live wall time into a runtime-derived display value.
 
 5. Severity: **medium**
-   - File: `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskRepository.kt`
+   - File: `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskRepository.kt`
    - What is wrong:
      The "UI projector" repository owns task-point conversion, observation-zone
      resolution, AAT target optimization, validation projection, and envelope
@@ -129,7 +129,7 @@ ways the repo explicitly tells contributors not to.
      but it owns too much business logic for its stated role.
 
 6. Severity: **medium**
-   - File: `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
+   - File: `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
    - What is wrong:
      The coordinator still owns too many responsibilities: task snapshot
      publication, persistence bridge triggering, AAT edit-mode sync, mutation
@@ -142,7 +142,7 @@ ways the repo explicitly tells contributors not to.
      it remains under the repo-wide hard line cap.
 
 7. Severity: **medium**
-   - File: `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
    - What is wrong:
      One observer class combines 11 inputs and owns live-data projection, trail
      updates, replay toasts, readiness flags, debug logging, and wind-state
@@ -154,7 +154,7 @@ ways the repo explicitly tells contributors not to.
      owner boundaries difficult to audit and maintain.
 
 8. Severity: **medium**
-   - File: `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt`
+   - File: `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt`
    - What is wrong:
      The class comment claims it maintains "a domain TaskRepository for
      validation/stats."
@@ -165,7 +165,7 @@ ways the repo explicitly tells contributors not to.
      projection only. The behavior is mostly aligned; the ownership label is not.
 
 9. Severity: **low**
-   - File: `feature/tasks/src/main/java/com/example/xcpro/tasks/aat/validation/AATValidationBridge.kt`
+   - File: `feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/validation/AATValidationBridge.kt`
    - What is wrong:
      Validation conversion silently generates IDs with `UUID.randomUUID()` when
      the source task ID is empty.
@@ -176,7 +176,7 @@ ways the repo explicitly tells contributors not to.
      deterministic ownership.
 
 10. Severity: **low**
-   - File: `feature/map/src/main/java/com/example/xcpro/igc/data/IgcMetadataSources.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/igc/data/IgcMetadataSources.kt`
    - What is wrong:
      `TaskRepositoryIgcTaskDeclarationSource` is named as if it reads from
      `TaskRepository`, but it actually reads from `TaskManagerCoordinator`.

@@ -47,37 +47,37 @@
 ## 1A) Deep-Pass Findings (What Was Missed)
 
 1. Provider position time is parsed but dropped before SSOT.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/OpenSkyStateVectorMapper.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/OpenSkyModels.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/OpenSkyStateVectorMapper.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/OpenSkyModels.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
 
 2. Provider response time is parsed but unused; ADS-B freshness still depends on device wall time.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/OpenSkyStateVectorMapper.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/OpenSkyStateVectorMapper.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
 
 3. All rows in a poll are stamped with the same local `receivedMonoMs`, so mixed fresh/stale rows become equally fresh at ingest.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
 
 4. Store writes are blind by ICAO; older geometry can overwrite newer geometry.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
 
 5. Staleness, expiry, emergency age gating, display ordering, and emergency-candidate selection all consume the wrong age semantics.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficSelectionOrdering.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficSelectionOrdering.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
 
 6. Target-motion/trend timing currently advances from local receipt time, so repeated stale coordinates can still look like fresh target updates.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTargetTrackEstimator.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTargetTrackEstimator.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
 
 7. Details UI exposes one ambiguous `Age` field, so operators cannot distinguish stale position from fresh contact.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbSelectedTargetDetails.kt`
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbSelectedTargetDetails.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
 
 8. The ADS-B display smoother retargets any coordinate delta with no explicit regression/teleport guard, so upstream timing mistakes become a visible backward animation.
-   - `feature/map/src/main/java/com/example/xcpro/map/AdsbDisplayMotionSmoother.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbDisplayMotionSmoother.kt`
 
 9. Current docs/tests codify the wrong contract.
    - `docs/ADS-b/ADSB.md`
@@ -86,21 +86,21 @@
    - existing ADS-B repository/store/detail tests currently do not vary provider position time meaningfully.
 
 10. GeoJSON/export and map animation-state helpers still assume one ambiguous freshness field.
-   - `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/AdsbEmergencyFlashPolicy.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlaySupport.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbEmergencyFlashPolicy.kt`
 
 11. The smoother currently compares whole `AdsbTrafficUiModel` objects, so adding explicit position/contact age fields would create render churn unless visual equality is narrowed to geometry/render-relevant fields.
-   - `feature/map/src/main/java/com/example/xcpro/map/AdsbDisplayMotionSmoother.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbDisplayMotionSmoother.kt`
 
 12. Store expiry is still keyed to local receive time only, so the implementation plan must explicitly decide whether contact-only refreshes are allowed to extend target lifetime. Current production behavior effectively says yes; the fix should say no for geometry authority.
-   - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
 
 13. Test fixtures and helper builders across ADS-B and map modules encode `receivedMonoMs` as freshness authority, which can mask regressions unless Phase 0 migrates the helpers first.
-   - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTestSupport.kt`
-   - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
-   - `feature/traffic/src/test/java/com/example/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTestSupport.kt`
-   - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTestSupport.kt`
+   - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTestSupport.kt`
+   - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
+   - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTestSupport.kt`
+   - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTestSupport.kt`
 
 ## 2) Architecture Contract
 
@@ -270,14 +270,14 @@ After:
 - Goal:
   - Reproduce the reverse-jump bug and lock current failure modes before changing timing semantics.
 - Files to change:
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTestSupport.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTestSupport.kt`
-  - new ADS-B repository/store timing tests under `feature/traffic/src/test/java/com/example/xcpro/adsb/`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbDisplayMotionSmootherTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbGeoJsonMapperTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbEmergencyFlashPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTestSupport.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTestSupport.kt`
+  - new ADS-B repository/store timing tests under `feature/traffic/src/test/java/com/trust3/xcpro/adsb/`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbDisplayMotionSmootherTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbGeoJsonMapperTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbEmergencyFlashPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
   - Mapscreen evidence artifacts under `artifacts/mapscreen/...` when executed
 - Tests to add/update:
   - older position after newer position for same ICAO
@@ -298,11 +298,11 @@ After:
 - Goal:
   - Carry authoritative provider timing through ADS-B SSOT without flipping all downstream policy in one step.
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/OpenSkyModels.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbSelectedTargetDetails.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/OpenSkyModels.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimePolling.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbSelectedTargetDetails.kt`
 - Tests to add/update:
   - repository mapping tests for response/position/contact time normalization
   - null/invalid provider timestamp fallback tests
@@ -318,12 +318,12 @@ After:
 - Goal:
   - Make store authority latest-position-wins and migrate stale/expiry/order/emergency gating to geometry freshness.
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficSelectionOrdering.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbEmergencyRiskStabilizer.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficThreatPolicies.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficSelectionOrdering.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbEmergencyRiskStabilizer.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
 - Tests to add/update:
   - latest-position-wins upsert tests
   - stale geometry does not remain fresh because contact is fresh
@@ -342,10 +342,10 @@ After:
 - Goal:
   - Prevent repeated stale coordinates from counting as fresh target-motion samples while preserving ownship-relative reselection behavior.
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTargetTrackEstimator.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTrendTransitionsTest.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTargetTrackEstimator.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTrendTransitionsTest.kt`
 - Tests to add/update:
   - repeated unchanged/old `timePositionSec` does not create fresh target-motion progress
   - ownship-only motion still republishes distance/bearing but does not upgrade stale target geometry to fresh target motion
@@ -361,16 +361,16 @@ After:
 - Goal:
   - Make stale-geometry state explicit to operators and prevent visible backward-animation regressions.
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbSelectedTargetDetails.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbDisplayMotionSmoother.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbEmergencyFlashPolicy.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbDisplayMotionSmootherTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbGeoJsonMapperTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbEmergencyFlashPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbSelectedTargetDetails.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbDisplayMotionSmoother.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlaySupport.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbEmergencyFlashPolicy.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbDisplayMotionSmootherTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbGeoJsonMapperTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbEmergencyFlashPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
 - Tests to add/update:
   - details show separate position age/contact age semantics
   - smoother snaps or holds on regressive/teleport corrections

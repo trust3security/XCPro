@@ -11,7 +11,7 @@
 ## 1) Scope
 
 - Problem statement:
-  - `enforceRules` currently fails because `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` is 356 lines (hotspot max 350).
+  - `enforceRules` currently fails because `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` is 356 lines (hotspot max 350).
 - Why now:
   - Rule gate blocks architecture verification and release-quality gates.
 - In scope:

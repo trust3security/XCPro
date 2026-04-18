@@ -12,8 +12,8 @@
   - 2026-03-12: Focused Phase 1 deep pass corrected the stale line-count snapshot and tightened sole-owner, delegation, and direct-test constraints so the split cannot degrade into forwarding churn.
   - 2026-03-12: Phase 1 implemented. `FlightMetricsDisplayRuntime` now owns display smoother, baseline smoother, both needle channels, and ground-zero state; `CalculateFlightMetricsRuntime.kt` is down to `392` lines and direct helper tests were added.
 - Driver:
-  - pre-Phase-1 snapshot: `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt` was `469` lines
-  - current post-Phase-1 snapshot: `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt` is `392` lines
+  - pre-Phase-1 snapshot: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt` was `469` lines
+  - current post-Phase-1 snapshot: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt` is `392` lines
   - correction from the earlier plan: the refactor used a fresh line-count snapshot, not the stale `506`-line figure
   - the latest polar slice added `polarLdCurrentSpeed` and `polarBestLd`, which increased pressure but did not change the core ownership model
 - Goal:
@@ -279,10 +279,10 @@ Notes:
   - close the specific coverage gaps that still matter for the planned seams
   - do it without adding noticeable compile-cost or test-harness churn
 - Files to change:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/DisplayVarioSmootherTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/NeedleVarioDynamicsTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestRuntime.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseExternalAirspeedTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/DisplayVarioSmootherTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/NeedleVarioDynamicsTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseExternalAirspeedTestRuntime.kt`
   - optionally a new display-focused runtime test file in the same package if the use-case file becomes noisy
 - Must add:
   - `DisplayVarioSmootherTest.kt` coverage for `smoothNetto(...)`
@@ -318,8 +318,8 @@ Notes:
   - move the stateful display behavior out of the main runtime
   - do it as a true ownership move, not a forwarding wrapper around runtime-owned state
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlightMetricsDisplayRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlightMetricsDisplayRuntime.kt`
 - Files explicitly not expected to change in Phase 1:
   - `CalculateFlightMetricsUseCase.kt`
   - `FlightMetricsRequest.kt`
@@ -414,8 +414,8 @@ Notes:
 - Goal:
   - move branch-heavy airspeed source logic and diagnostics out of the main runtime
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlightMetricsAirspeedResolver.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlightMetricsAirspeedResolver.kt`
   - optional tiny same-package model file only if necessary
 - Move:
   - external-airspeed freshness checks
@@ -441,7 +441,7 @@ Notes:
 - Goal:
   - finish line-budget compliance without inventing another helper class unless the code still demands it
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
 - Allowed:
   - private `buildResult(...)` helper inside the same file if the constructor block still dominates readability
   - small local grouping of intermediate values
@@ -472,10 +472,10 @@ Notes:
 Planned file set:
 
 - Keep:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsRuntime.kt`
 - Add:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlightMetricsDisplayRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlightMetricsAirspeedResolver.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlightMetricsDisplayRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlightMetricsAirspeedResolver.kt`
 - Not planned by default:
   - `FlightMetricsRuntimeState.kt`
   - `FlightMetricsResultAssembler.kt`
@@ -490,20 +490,20 @@ Rules:
 ## 7) Test plan
 
 - Unit tests:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/DisplayVarioSmootherTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/NeedleVarioDynamicsTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestRuntime.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseExternalAirspeedTestRuntime.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/DisplayVarioSmootherTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/NeedleVarioDynamicsTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseExternalAirspeedTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
   - existing low-level tests:
     - `AirspeedSourceStabilityControllerTest.kt`
     - `WindAirspeedEligibilityPolicyTest.kt`
     - `SensorFrontEndTest.kt`
 - Downstream / regression tests:
-  - `feature/map/src/test/java/com/example/xcpro/flightdata/FlightDisplayMapperTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ConvertToRealTimeFlightDataTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/FlightDataManagerSupportTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/replay/ReplayFinishRampTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/flightdata/FlightDisplayMapperTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ConvertToRealTimeFlightDataTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/FlightDataManagerSupportTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/replay/ReplayFinishRampTest.kt`
 - Nice-to-have only if a regression appears:
   - a focused `FlightDataEmitter` test for replay-vario/audio snapshot propagation
 - Compile-speed policy:

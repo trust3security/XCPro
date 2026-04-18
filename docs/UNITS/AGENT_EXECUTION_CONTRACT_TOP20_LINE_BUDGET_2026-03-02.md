@@ -1,4 +1,4 @@
-﻿# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md
+# AGENT_EXECUTION_CONTRACT_TOP20_LINE_BUDGET_2026-03-02.md
 
 Date: 2026-03-02
 Owner: XCPro Team / Codex
@@ -199,14 +199,14 @@ At final closeout:
 - Score: 94/100
 
 ## Post-implementation enforced-file sizes (hotspot paths)
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`: 5
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`: 5
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`: 5
-- `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt`: 5
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt`: 5
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`: 5
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`: 5
-- `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`: 5
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`: 5
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt`: 5
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`: 5
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`: 5
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`: 5
+- `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt`: 5
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt`: 5
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt`: 5
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`: 5
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`: 5
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`: 5
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt`: 5
 

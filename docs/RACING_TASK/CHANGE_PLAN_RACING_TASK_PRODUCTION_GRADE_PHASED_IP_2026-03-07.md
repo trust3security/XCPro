@@ -1,4 +1,4 @@
-﻿# CHANGE_PLAN_RACING_TASK_PRODUCTION_GRADE_PHASED_IP_2026-03-07.md
+# CHANGE_PLAN_RACING_TASK_PRODUCTION_GRADE_PHASED_IP_2026-03-07.md
 
 ## Purpose
 
@@ -61,14 +61,14 @@ Execution update (2026-03-07):
     - Determinism/timebase and architecture compliance: 19/20
     - Operational hardening and docs sync: 9/10
   - Evidence:
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.RacingTaskStructureRulesTest" --tests "com.example.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest" --tests "com.example.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest" --tests "com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.example.xcpro.map.RacingReplayTaskHelpersTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest" --tests "com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest" --tests "com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.trust3.xcpro.map.RacingReplayTaskHelpersTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"`: PASS
   - Residual gap (tracked under pending packs P9-A/P9-D):
     - replay precondition currently validates via strict default helper path rather than active profile propagation path.
 - Verification:
   - `python scripts/arch_gate.py`: PASS
   - `powershell -ExecutionPolicy Bypass -File scripts/ci/enforce_rules.ps1`: PASS
   - `./gradlew :feature:map:compileDebugKotlin`: PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskNavigationControllerTest" --tests "com.example.xcpro.tasks.TaskManagerCoordinatorTest" --tests "com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.example.xcpro.map.RacingReplayTaskHelpersTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.trust3.xcpro.map.RacingReplayTaskHelpersTest"`: PASS
   - `./gradlew enforceRules`: PASS
   - `./gradlew assembleDebug`: PASS
   - `./gradlew testDebugUnitTest`: PASS
@@ -199,8 +199,8 @@ Execution update (2026-03-07):
     - phase-4 jitter regression pack re-pass to confirm no auto-advance regressions from BORDER handling.
   - Verification:
     - `python scripts/arch_gate.py`: PASS
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test" --tests "com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest" --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest"`: PASS
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.example.xcpro.tasks.core.TaskWaypointCustomParamsTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test" --tests "com.trust3.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.trust3.xcpro.tasks.core.TaskWaypointCustomParamsTest"`: PASS
     - `./gradlew testDebugUnitTest`: PASS
     - `./gradlew assembleDebug`: PASS
     - `./gradlew enforceRules`: FAIL (branch-level unrelated line-budget miss: `MapScreenViewModel.kt` 351 > 350)
@@ -223,7 +223,7 @@ Execution update (2026-03-07):
     - `RacingTaskManager` rule persistence tests now verify full start/finish
       typed command persistence round-trip to canonical task waypoint params.
   - Verification:
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskSheetViewModelRacingRulesCommandTest" --tests "com.example.xcpro.tasks.RulesRacingTaskParametersTest" --tests "com.example.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest" --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.example.xcpro.tasks.AATEditControllerTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskSheetViewModelRacingRulesCommandTest" --tests "com.trust3.xcpro.tasks.RulesRacingTaskParametersTest" --tests "com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest" --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.trust3.xcpro.tasks.AATEditControllerTest"`: PASS
     - `./gradlew :feature:map:compileDebugKotlin`: PASS
     - `./gradlew enforceRules`: FAIL (branch-level unrelated line-budget miss: `MapScreenViewModel.kt` 351 > 350)
   - Area 7 score update: **99/100** (scoped, RT phase-7 slice).
@@ -252,15 +252,15 @@ Execution update (2026-03-07):
     - credited-start task-performance path.
     - replay determinism for rejected plus non-advancing tolerance start states.
   - Verification:
-    - `./gradlew :feature:tasks:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest" --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineStartPolicyTest" --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test" --tests "com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineFinishRulesTest" --tests "com.example.xcpro.tasks.TaskNavigationControllerTest" --tests "com.example.xcpro.tasks.navigation.NavigationRouteRepositoryTest"`: PASS
-    - `./gradlew :feature:map-runtime:testDebugUnitTest --tests "com.example.xcpro.taskperformance.TaskPerformanceRepositoryTest"`: PASS
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest"`: PASS
+    - `./gradlew :feature:tasks:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineStartPolicyTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineFinishRulesTest" --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest" --tests "com.trust3.xcpro.tasks.navigation.NavigationRouteRepositoryTest"`: PASS
+    - `./gradlew :feature:map-runtime:testDebugUnitTest --tests "com.trust3.xcpro.taskperformance.TaskPerformanceRepositoryTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"`: PASS
     - `./gradlew enforceRules`: PASS
     - `scripts\qa\run_root_unit_tests_reliable.bat`: PASS
     - `./gradlew assembleDebug`: PASS
 - Phase 8-10 code-pass advisory update (2026-03-08):
   - Evidence run:
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.tasks.TaskPersistSerializerFidelityTest" --tests "com.example.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.example.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest" --tests "com.example.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.example.xcpro.tasks.TaskNavigationControllerTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest" --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest"`: PASS
   - Current blockers found in production code:
     - Phase 8 (persistence fidelity):
       - `TaskPersistSerializer` has no explicit schema/version envelope and no v1->v2 migration path.
@@ -449,8 +449,8 @@ Forbidden:
   - Freeze current behavior with explicit failing tests for missing RT semantics.
   - Add CI guard placeholders for known regression classes.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/tasks/racing/**`
-  - `feature/map/src/test/java/com/example/xcpro/tasks/**`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/racing/**`
+  - `feature/map/src/test/java/com/trust3/xcpro/tasks/**`
   - `scripts/ci/enforce_rules.ps1`
 - Tests:
   - Add baseline RT rulebook gap tests marked expected-fail where needed.
@@ -729,7 +729,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.TaskNavigationControllerTest --tests com.example.xcpro.tasks.TaskManagerCoordinatorTest --tests com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest --tests com.example.xcpro.map.replay.RacingReplayLogBuilderTest --tests com.example.xcpro.map.RacingReplayTaskHelpersTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.TaskNavigationControllerTest --tests com.trust3.xcpro.tasks.TaskManagerCoordinatorTest --tests com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest --tests com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest --tests com.trust3.xcpro.map.RacingReplayTaskHelpersTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -748,7 +748,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.racing.RacingTaskStructureRulesTest --tests com.example.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest --tests com.example.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest --tests com.example.xcpro.tasks.TaskManagerCanonicalHydrateTest --tests com.example.xcpro.map.RacingReplayTaskHelpersTest --tests com.example.xcpro.map.replay.RacingReplayLogBuilderTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest --tests com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest --tests com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest --tests com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest --tests com.trust3.xcpro.map.RacingReplayTaskHelpersTest --tests com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -767,7 +767,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.racing.navigation.RacingStartEvaluatorTest --tests com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest --tests com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingStartEvaluatorTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -786,7 +786,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test --tests com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest --tests com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test --tests com.trust3.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -805,7 +805,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest --tests com.example.xcpro.tasks.core.TaskWaypointCustomParamsTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest --tests com.trust3.xcpro.tasks.core.TaskWaypointCustomParamsTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -824,7 +824,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest --tests com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest --tests com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.boundary.RacingBoundaryCrossingPlannerTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -843,7 +843,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.TaskSheetViewModelRacingRulesCommandTest --tests com.example.xcpro.tasks.RulesRacingTaskParametersTest --tests com.example.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.TaskSheetViewModelRacingRulesCommandTest --tests com.trust3.xcpro.tasks.RulesRacingTaskParametersTest --tests com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -862,7 +862,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.TaskPersistSerializerFidelityTest --tests com.example.xcpro.tasks.TaskSheetViewModelImportTest --tests com.example.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest --tests com.trust3.xcpro.tasks.TaskSheetViewModelImportTest --tests com.trust3.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -881,7 +881,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.map.replay.RacingReplayLogBuilderTest --tests com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest --tests com.example.xcpro.tasks.TaskNavigationControllerTest --tests com.example.xcpro.map.RacingReplayTaskHelpersTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest --tests com.trust3.xcpro.tasks.TaskNavigationControllerTest --tests com.trust3.xcpro.map.RacingReplayTaskHelpersTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -900,7 +900,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.tasks.TaskPersistSerializerFidelityTest --tests com.example.xcpro.tasks.racing.navigation.RacingReplayValidationTest --tests com.example.xcpro.tasks.TaskNavigationControllerTest --tests com.example.xcpro.tasks.racing.navigation.RacingNavigationEngineTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest --tests com.trust3.xcpro.tasks.TaskNavigationControllerTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):

@@ -11,7 +11,7 @@ This is preparatory work toward coordinator refactor items in
 ## Implemented
 
 Updated coordinator persistence wiring:
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt`
   - Constructor now accepts injected:
     - `TaskEnginePersistenceService`
     - `RacingTaskEngine`
@@ -27,25 +27,25 @@ Updated coordinator persistence wiring:
     - apply engine state back to managers when needed
 
 Updated DI construction:
-- `app/src/main/java/com/example/xcpro/di/AppModule.kt`
+- `app/src/main/java/com/trust3/xcpro/di/AppModule.kt`
   - `TaskManagerCoordinator` provider now injects service + engines + task managers.
 
 Updated startup call path:
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
   - `MapTasksUseCase.loadSavedTasks()` is suspend.
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
   - startup task restore now runs in `viewModelScope.launch`.
 
 Updated task files import path:
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt`
   - cup import now calls suspend coordinator `loadTask(taskName)`.
 
 Updated compatibility helper:
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCompat.kt`
   - uses `LaunchedEffect` to call suspend `loadSavedTasks()`.
 
 Added/updated tests:
-- `feature/map/src/test/java/com/example/xcpro/tasks/TaskManagerCoordinatorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskManagerCoordinatorTest.kt`
   - verifies restore routing to persistence service and engine sync
   - verifies named save routing to persistence service
 

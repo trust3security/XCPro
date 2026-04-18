@@ -19,10 +19,10 @@ Restrictions and compliance reminders:
 
 Runtime attribution implementation:
 - Map raster attribution payload:
-  - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-  - value source: `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainAttribution.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
+  - value source: `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRainAttribution.kt`
 - In-app fallback clickable source link:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
   - URL constant: `https://www.rainviewer.com`
 
 Manual verification checklist (release gate):

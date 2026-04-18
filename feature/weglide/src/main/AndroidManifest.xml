@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity
-            android:name="com.example.xcpro.weglide.auth.WeGlideRedirectActivity"
+            android:name="com.trust3.xcpro.weglide.auth.WeGlideRedirectActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

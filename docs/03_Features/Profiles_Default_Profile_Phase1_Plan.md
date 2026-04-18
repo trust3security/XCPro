@@ -94,14 +94,14 @@ If metadata timestamps are updated (`createdAt`, `lastUsed`), use existing repos
 
 ### Step 1: Add Default Profile Identity
 
-File: `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+File: `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 1. Add fixed default profile ID constant: `"default"`.
 2. Add default profile builder with deterministic baseline fields.
 
 ### Step 2: Add Reconciliation Pass
 
-File: `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+File: `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Add `reconcileProfilesAndActiveId(profiles, activeId)` logic that:
 
@@ -114,7 +114,7 @@ Trigger reconciliation in both collectors after loading current snapshots.
 
 ### Step 3: Add Delete Guard for Default
 
-File: `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+File: `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Reject delete when `profileId == defaultProfileId`.
 
@@ -122,8 +122,8 @@ Reject delete when `profileId == defaultProfileId`.
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionList.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionList.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt`
 
 Disable/hide delete affordance for default profile to match repository rule.
 
@@ -134,9 +134,9 @@ Ensure Phase 1 uses a single fallback identity policy.
 Reference files:
 
 1. `dfcards-library/src/main/java/com/example/dfcards/dfcards/FlightVisibility.kt`
-2. `feature/map/src/main/java/com/example/xcpro/ui/theme/Theme.kt`
-3. `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt`
-4. `feature/map/src/main/java/com/example/xcpro/flightdata/FlightMgmtPreferencesRepository.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/ui/theme/Theme.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt`
+4. `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightMgmtPreferencesRepository.kt`
 
 If fallback migration is not completed in this phase, document temporary compatibility rules
 explicitly in `Profiles_Current_Architecture.md`.
@@ -161,8 +161,8 @@ Implementation note:
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileViewModel.kt`
 
 Replace immediate `popBackStack()` on first null lookup with a hydration-aware flow:
 
@@ -173,8 +173,8 @@ Replace immediate `popBackStack()` on first null lookup with a hydration-aware f
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt`
-2. `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionContent.kt`
+2. `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
 
 Enforce active-profile invariant in selection flow:
 
@@ -185,8 +185,8 @@ Enforce active-profile invariant in selection flow:
 
 Files:
 
-1. `feature/map/src/main/java/com/example/xcpro/flightdata/FlightMgmtPreferencesViewModel.kt`
-2. `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataMgmt.kt`
+1. `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightMgmtPreferencesViewModel.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataMgmt.kt`
 
 Prevent transient mode application from fallback `"default"` key before resolved profile ID:
 
@@ -197,8 +197,8 @@ Prevent transient mode application from fallback `"default"` key before resolved
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Add profile-storage read fault handling:
 
@@ -210,8 +210,8 @@ Add profile-storage read fault handling:
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt`
 
 Add profile update contract checks:
 
@@ -222,7 +222,7 @@ Add profile update contract checks:
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Do not treat JSON parse failure as normal empty state:
 
@@ -234,7 +234,7 @@ Do not treat JSON parse failure as normal empty state:
 
 File:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 When deleting the active profile:
 
@@ -246,8 +246,8 @@ When deleting the active profile:
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionDialogs.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionDialogs.kt`
 
 Enforce repository-level create invariants:
 
@@ -272,8 +272,8 @@ Ensure clear-profile covers all card-profile state slices:
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionList.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionList.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt`
 
 Add explicit confirmation flow before delete dispatch:
 
@@ -285,8 +285,8 @@ Add explicit confirmation flow before delete dispatch:
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Add combined persistence API for profile-state transitions:
 
@@ -297,7 +297,7 @@ Add combined persistence API for profile-state transitions:
 
 File:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileViewModel.kt`
 
 Remove stale carry-forward projection:
 
@@ -308,7 +308,7 @@ Remove stale carry-forward projection:
 
 File:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Serialize mutation paths:
 
@@ -319,7 +319,7 @@ Serialize mutation paths:
 
 File:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 Ensure mutation outcomes are state-consistent:
 
@@ -330,7 +330,7 @@ Ensure mutation outcomes are state-consistent:
 
 File:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
 
 After create/delete/update mutation paths:
 
@@ -341,8 +341,8 @@ After create/delete/update mutation paths:
 
 Files:
 
-1. `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionContent.kt`
-2. `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
+1. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionContent.kt`
+2. `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileViewModel.kt`
 
 Prevent selection-flow exits during in-flight transitions:
 
@@ -380,8 +380,8 @@ Add tests for profile visibility persistence/switching:
 
 1. Consolidate color-theme ownership under one repository/use-case path.
    Current ownership is split between:
-   - `feature/map/src/main/java/com/example/xcpro/ui/theme/ThemePreferencesRepository.kt`
-   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/ui/theme/ThemePreferencesRepository.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelPreferences.kt`
 
 2. Split profile-selection and profile-creation semantics in repository API.
    Current `setActiveProfile(...)` behavior can implicitly insert missing profiles.
@@ -398,7 +398,7 @@ Add tests for profile visibility persistence/switching:
 
 Primary files:
 
-1. `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+1. `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt`
 2. `dfcards-library/src/test/java/com/example/dfcards/FlightDataViewModelUnitsTest.kt`
 
 Add:

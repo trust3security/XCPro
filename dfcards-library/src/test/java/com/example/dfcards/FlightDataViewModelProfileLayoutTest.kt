@@ -4,9 +4,9 @@ import com.example.dfcards.dfcards.CardState
 import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
 import com.example.dfcards.dfcards.FlightDataTemplateManagerFactory
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.xcpro.core.common.geometry.DensityScale
-import com.example.xcpro.core.common.geometry.IntSizePx
-import com.example.xcpro.core.time.FakeClock
+import com.trust3.xcpro.core.common.geometry.DensityScale
+import com.trust3.xcpro.core.common.geometry.IntSizePx
+import com.trust3.xcpro.core.time.FakeClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -175,3 +175,4 @@ private class MainDispatcherRule(
         Dispatchers.resetMain()
     }
 }
+

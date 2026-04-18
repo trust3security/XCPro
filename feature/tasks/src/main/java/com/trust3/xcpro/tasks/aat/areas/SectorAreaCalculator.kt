@@ -1,0 +1,191 @@
+package com.trust3.xcpro.tasks.aat.areas
+
+import com.trust3.xcpro.tasks.aat.calculations.AATMathUtils
+import com.trust3.xcpro.tasks.aat.models.AATLatLng
+import com.trust3.xcpro.tasks.aat.models.AreaGeometry
+import com.trust3.xcpro.tasks.aat.models.AssignedArea
+
+class SectorAreaCalculator {
+    private companion object {
+        const val METERS_PER_KILOMETER = 1000.0
+    }
+
+    fun isInsideArea(
+        point: AATLatLng,
+        center: AATLatLng,
+        innerRadius: Double?,
+        outerRadius: Double,
+        startBearing: Double,
+        endBearing: Double
+    ): Boolean {
+        val distanceMeters = distanceMeters(point, center)
+        if (distanceMeters > outerRadius) return false
+        if (innerRadius != null && distanceMeters < innerRadius) return false
+
+        val bearingToPoint = AATMathUtils.calculateBearing(center, point)
+        return AATMathUtils.isAngleBetween(bearingToPoint, startBearing, endBearing)
+    }
+
+    fun isInsideArea(point: AATLatLng, area: AssignedArea): Boolean {
+        return when (val geometry = area.geometry) {
+            is AreaGeometry.Sector -> {
+                isInsideArea(
+                    point,
+                    area.centerPoint,
+                    geometry.innerRadius,
+                    geometry.outerRadius,
+                    geometry.startBearing,
+                    geometry.endBearing
+                )
+            }
+            else -> false
+        }
+    }
+
+    fun nearestPointOnBoundary(
+        from: AATLatLng,
+        center: AATLatLng,
+        innerRadius: Double?,
+        outerRadius: Double,
+        startBearing: Double,
+        endBearing: Double
+    ): AATLatLng {
+        return SectorAreaGeometrySupport.nearestPointOnBoundary(
+            from = from,
+            center = center,
+            innerRadius = innerRadius,
+            outerRadius = outerRadius,
+            startBearing = startBearing,
+            endBearing = endBearing
+        )
+    }
+
+    fun farthestPointOnBoundary(
+        from: AATLatLng,
+        center: AATLatLng,
+        innerRadius: Double?,
+        outerRadius: Double,
+        startBearing: Double,
+        endBearing: Double
+    ): AATLatLng {
+        return SectorAreaGeometrySupport.farthestPointOnBoundary(
+            from = from,
+            center = center,
+            innerRadius = innerRadius,
+            outerRadius = outerRadius,
+            startBearing = startBearing,
+            endBearing = endBearing
+        )
+    }
+
+    fun calculateCreditedFix(track: List<AATLatLng>, area: AssignedArea): AATLatLng? {
+        val geometry = area.geometry
+        if (geometry !is AreaGeometry.Sector) {
+            return null
+        }
+        if (track.isEmpty()) {
+            return null
+        }
+
+        val pointsInArea = track.filter { point ->
+            isInsideArea(
+                point,
+                area.centerPoint,
+                geometry.innerRadius,
+                geometry.outerRadius,
+                geometry.startBearing,
+                geometry.endBearing
+            )
+        }
+        if (pointsInArea.isEmpty()) {
+            return null
+        }
+
+        return pointsInArea.maxByOrNull { point ->
+            distanceMeters(point, area.centerPoint)
+        }
+    }
+
+    fun calculateOptimalTouchPoint(
+        center: AATLatLng,
+        innerRadius: Double?,
+        outerRadius: Double,
+        startBearing: Double,
+        endBearing: Double,
+        approachFrom: AATLatLng,
+        exitTo: AATLatLng
+    ): AATLatLng {
+        val approachBearing = AATMathUtils.calculateBearing(approachFrom, center)
+        val exitBearing = AATMathUtils.calculateBearing(center, exitTo)
+
+        val optimalBearing = SectorAreaGeometrySupport.calculateOptimalBearing(
+            approachBearing = approachBearing,
+            exitBearing = exitBearing,
+            startBearing = startBearing,
+            endBearing = endBearing
+        )
+
+        return AATMathUtils.calculatePointAtBearing(
+            center,
+            optimalBearing,
+            metersToKilometers(outerRadius)
+        )
+    }
+
+    fun generateBoundaryPoints(
+        center: AATLatLng,
+        innerRadius: Double?,
+        outerRadius: Double,
+        startBearing: Double,
+        endBearing: Double,
+        numArcPoints: Int = 36
+    ): List<AATLatLng> {
+        return SectorAreaGeometrySupport.generateBoundaryPoints(
+            center = center,
+            innerRadius = innerRadius,
+            outerRadius = outerRadius,
+            startBearing = startBearing,
+            endBearing = endBearing,
+            numArcPoints = numArcPoints
+        )
+    }
+
+    fun calculateAreaSizeMeters2(
+        innerRadius: Double?,
+        outerRadius: Double,
+        startBearing: Double,
+        endBearing: Double
+    ): Double {
+        return SectorAreaGeometrySupport.calculateAreaSizeMeters2(
+            innerRadius = innerRadius,
+            outerRadius = outerRadius,
+            startBearing = startBearing,
+            endBearing = endBearing
+        )
+    }
+
+    fun doesTrackIntersectArea(
+        trackStart: AATLatLng,
+        trackEnd: AATLatLng,
+        center: AATLatLng,
+        innerRadius: Double?,
+        outerRadius: Double,
+        startBearing: Double,
+        endBearing: Double
+    ): Boolean {
+        if (isInsideArea(trackStart, center, innerRadius, outerRadius, startBearing, endBearing) ||
+            isInsideArea(trackEnd, center, innerRadius, outerRadius, startBearing, endBearing)
+        ) {
+            return true
+        }
+        return false
+    }
+
+    private fun distanceMeters(from: AATLatLng, to: AATLatLng): Double {
+        return AATMathUtils.calculateDistanceMeters(from, to)
+    }
+
+    private fun metersToKilometers(distanceMeters: Double): Double {
+        return distanceMeters / METERS_PER_KILOMETER
+    }
+}

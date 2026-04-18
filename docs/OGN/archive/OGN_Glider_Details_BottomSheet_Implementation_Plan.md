@@ -213,18 +213,18 @@ Secondary unchanged flow:
 - Goal:
   Add selected OGN target state path in ViewModel/scaffold contracts.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelMappers.kt` (if mapping helpers added)
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnSelectedTargetDetails.kt` (new, if separate model used)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelMappers.kt` (if mapping helpers added)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnSelectedTargetDetails.kt` (new, if separate model used)
 - Tests:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
     - select OGN target by id
     - clear when target disappears
     - clear when OGN overlay toggles off
@@ -243,9 +243,9 @@ Secondary unchanged flow:
 - Goal:
   Detect tapped OGN glider marker and return selected target id.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
 - Implementation notes:
   - Add stable target-id property into OGN GeoJSON features.
   - Add `findTargetAt(tap: LatLng): String?` to OGN overlay.
@@ -266,9 +266,9 @@ Secondary unchanged flow:
 - Goal:
   Add ADS-B-style OGN details sheet with half-open modal behavior.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt` (preferred host extraction)
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnMarkerDetailsSheet.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt` (preferred host extraction)
 - Implementation notes:
   - Use `ModalBottomSheet` with the same styling pattern as `AdsbMarkerDetailsSheet`.
   - Keep typography/row spacing/section structure visually aligned with ADS-B sheet.

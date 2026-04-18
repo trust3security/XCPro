@@ -92,7 +92,7 @@ Only SymbolLayer style constants (font/size/offset) change.
 - Goal:
   - Apply bold stack, +1 font size, and larger label offset.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
 - Proposed constants:
   - `LABEL_FONT_STACK`: `"Open Sans Bold", "Noto Sans Bold", "Arial Unicode MS Bold"`
   - `LABEL_TEXT_SIZE_SP`: `13f` (current `12f`)
@@ -104,7 +104,7 @@ Only SymbolLayer style constants (font/size/offset) change.
 - Goal:
   - Match ADS-B readability direction with bold + larger spacing.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
 - Proposed constants:
   - `LABEL_FONT_STACK`: `"Open Sans Bold", "Noto Sans Bold", "Arial Unicode MS Bold"`
   - `LABEL_TEXT_SIZE_BASE_SP`: `13f` (current `12f`)

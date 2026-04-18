@@ -48,13 +48,13 @@ Read first:
 ## 1A) Narrow Seam Findings
 
 1. The label authoring seam is already local to the OGN overlay feature build:
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
      builds per-target feature properties and writes `PROP_TOP_LABEL` /
      `PROP_BOTTOM_LABEL`.
    - This is narrower than introducing new ViewModel, repository, or settings state.
 
 2. Semantic label composition already has a dedicated owner:
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt`
      owns the semantic mapping between delta text, secondary label text, and
      top/bottom layout.
    - That owner should stay responsible for semantic label content, while a new
@@ -64,7 +64,7 @@ Read first:
      top/bottom swaps by altitude band.
 
 3. The existing rendered icon size is the narrowest safe policy input:
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
      already holds `currentIconSizePx`, which is now the runtime-resolved,
      zoom-adaptive rendered size.
    - Using rendered icon size avoids adding another zoom or settings state seam
@@ -84,9 +84,9 @@ Read first:
 
 6. Phase 2 must preserve semantic label position rather than forcing a
    positional keep-top/keep-bottom rule:
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
      already owns the resolved rendered icon size as `currentIconSizePx`.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
      still writes `mapping.topLabel` and `mapping.bottomLabel` directly.
    - The narrowest safe Phase 2 seam is therefore:
      `currentIconSizePx -> resolve declutter policy -> apply policy to semantic
@@ -101,8 +101,8 @@ Read first:
 
 | Data | Owner | Exposed As | Forbidden Duplicates |
 |---|---|---|---|
-| Base OGN label semantics (`deltaText`, secondary label text, top/bottom semantic mapping) | `feature/traffic/src/main/java/com/example/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt` | feature mapping output | UI, ViewModel, or settings owning alternate label semantics |
-| Effective OGN rendered icon size | `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` -> `OgnTrafficOverlay` | imperative runtime overlay size apply | a second zoom owner for label policy |
+| Base OGN label semantics (`deltaText`, secondary label text, top/bottom semantic mapping) | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt` | feature mapping output | UI, ViewModel, or settings owning alternate label semantics |
+| Effective OGN rendered icon size | `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` -> `OgnTrafficOverlay` | imperative runtime overlay size apply | a second zoom owner for label policy |
 | Effective OGN label declutter policy | new pure helper in `feature:traffic` map overlay slice | feature-build apply only | persisted state, ViewModel state, or Compose-owned authoritative state |
 
 ### 2.1A State Contract
@@ -128,9 +128,9 @@ Dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt` | pure render-only policy helper already exists for OGN icon declutter | keep label declutter as a pure helper in the same runtime slice | label policy returns text-visibility mode rather than pixel sizing |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt` | already owns semantic label content and placement | keep semantic mapping separate from declutter gating | apply declutter after semantic mapping instead of changing mapper ownership |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt` | current owner of OGN feature property creation | keep per-feature property mutation local to overlay support | add label apply step without widening runtime wiring |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportSizing.kt` | pure render-only policy helper already exists for OGN icon declutter | keep label declutter as a pure helper in the same runtime slice | label policy returns text-visibility mode rather than pixel sizing |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt` | already owns semantic label content and placement | keep semantic mapping separate from declutter gating | apply declutter after semantic mapping instead of changing mapper ownership |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt` | current owner of OGN feature property creation | keep per-feature property mutation local to overlay support | add label apply step without widening runtime wiring |
 
 ### 2.2B Boundary Moves
 
@@ -150,11 +150,11 @@ Dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/ARCHITECTURE/CHANGE_PLAN_OGN_WIDE_ZOOM_LABEL_DECLUTTER_2026-03-28.md` | New | phased execution contract | required for non-trivial overlay policy follow-up | not production code | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | New | pure render-only label visibility policy | keeps declutter thresholds/testability isolated | not settings or ViewModel; this is not persisted state | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt` | Existing | apply declutter policy when authoring feature label properties | current feature property owner | do not move feature-writing into runtime/controller code | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt` | Existing | pass current rendered icon size into the feature-build path | already owns current rendered icon size | do not add another zoom state owner | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficLabelDeclutterPolicyTest.kt` | New | pure policy coverage | lock thresholds/states without Android/runtime dependencies | not only integration tests; policy is pure | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficOverlayFeatureLabelDeclutterTest.kt` | New | feature-build wiring coverage | verifies label properties written to features match declutter mode | not UI-shell tests; feature authoring lives here | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | New | pure render-only label visibility policy | keeps declutter thresholds/testability isolated | not settings or ViewModel; this is not persisted state | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt` | Existing | apply declutter policy when authoring feature label properties | current feature property owner | do not move feature-writing into runtime/controller code | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt` | Existing | pass current rendered icon size into the feature-build path | already owns current rendered icon size | do not add another zoom state owner | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficLabelDeclutterPolicyTest.kt` | New | pure policy coverage | lock thresholds/states without Android/runtime dependencies | not only integration tests; policy is pure | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureLabelDeclutterTest.kt` | New | feature-build wiring coverage | verifies label properties written to features match declutter mode | not UI-shell tests; feature authoring lives here | No |
 
 ### 2.2E Module and API Surface
 
@@ -166,8 +166,8 @@ Dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| OGN wide-zoom label declutter thresholds and modes | `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | OGN feature-builder path and tests | this is a pure render-only policy, parallel to icon sizing | No |
-| OGN one-label retention rule (`identifier/distance` retained, relative-altitude hidden first) | `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | OGN feature-builder path and tests | semantic retention belongs with the declutter policy, not the mapper's positional output | No |
+| OGN wide-zoom label declutter thresholds and modes | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | OGN feature-builder path and tests | this is a pure render-only policy, parallel to icon sizing | No |
+| OGN one-label retention rule (`identifier/distance` retained, relative-altitude hidden first) | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | OGN feature-builder path and tests | semantic retention belongs with the declutter policy, not the mapper's positional output | No |
 
 ### 2.3 Time Base
 

@@ -18,9 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.screens.navdrawer.WeGlideSettingsContent
-import com.example.xcpro.screens.navdrawer.WeGlideSettingsTopAppBar
-import com.example.xcpro.screens.navdrawer.WeGlideSettingsViewModel
+import com.trust3.xcpro.screens.navdrawer.WeGlideSettingsContent
+import com.trust3.xcpro.screens.navdrawer.WeGlideSettingsTopAppBar
+import com.trust3.xcpro.screens.navdrawer.WeGlideSettingsViewModel
 import kotlinx.coroutines.flow.collect
 
 @OptIn(ExperimentalMaterial3Api::class)

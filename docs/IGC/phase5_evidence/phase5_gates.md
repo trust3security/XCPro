@@ -21,7 +21,7 @@ Commit: 25551da (working tree not committed)
    - Result: PASS (`ARCH GATE PASSED`)
 2. `./gradlew enforceRules`
    - Result: PASS (`Rule enforcement passed.`)
-3. `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"`
+3. `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.*"`
    - Result: PASS
 4. `./gradlew :feature:map:assembleDebug`
    - Result: PASS
@@ -37,18 +37,18 @@ Commit: 25551da (working tree not committed)
 ## Test Class Evidence
 
 - Unit:
-  - `feature/map/src/test/java/com/example/xcpro/igc/domain/IgcFileNamingPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/data/IgcDownloadsRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/domain/IgcFileNamingPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/data/IgcDownloadsRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcFilesUseCaseTest.kt`
 - Instrumentation:
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesListInstrumentedTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesShareInstrumentedTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesCopyToInstrumentedTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesReplayOpenInstrumentedTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesNavigationLabelInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesListInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesShareInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesCopyToInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesReplayOpenInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesNavigationLabelInstrumentedTest.kt`
 
 ## Scorecard (must total 100)
 

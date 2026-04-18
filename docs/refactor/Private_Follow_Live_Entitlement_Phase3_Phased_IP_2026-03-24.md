@@ -74,8 +74,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt` | Existing session transport owner | transport-local write token + gateway snapshot + repository-owned session state | add auth-aware start/read/patch logic without moving session SSOT |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/data/friends/CurrentApiActivePilotsDataSource.kt` | Existing browse data-source seam | narrow HTTP fetcher returning focused list models | add a separate following-live data source instead of widening the public fetcher |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/session/CurrentApiLiveFollowSessionGateway.kt` | Existing session transport owner | transport-local write token + gateway snapshot + repository-owned session state | add auth-aware start/read/patch logic without moving session SSOT |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/data/friends/CurrentApiActivePilotsDataSource.kt` | Existing browse data-source seam | narrow HTTP fetcher returning focused list models | add a separate following-live data source instead of widening the public fetcher |
 | `XCPro_Server/app/main.py` `/api/v2/me*` and follow-request handlers | Existing auth + relationship owner path | bearer validation and relationship lookup helpers | extend this owner with live entitlement helpers and v2 live endpoints |
 
 ### 2.2B Boundary Moves

@@ -31,7 +31,7 @@ That is the right shape for this phase.
 ## What is verified already
 Passed checks reported:
 - `:feature:traffic:testDebugUnitTest`
-- `:feature:map:testDebugUnitTest --tests "com.example.xcpro.map.LiveFollowWatchAircraftOverlayTest"`
+- `:feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.LiveFollowWatchAircraftOverlayTest"`
 - `enforceRules`
 
 Updated tests reported:

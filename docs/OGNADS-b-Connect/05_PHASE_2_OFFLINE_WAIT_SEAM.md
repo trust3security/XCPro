@@ -2,11 +2,11 @@
 
 ## Current seam evidence
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:90-127`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:90-127`  
   OGN retries via delay/backoff but has no explicit network wait.
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:150-270`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:150-270`  
   OGN only learns about transport failure from connect/read/stall behavior.
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt:24-99`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt:24-99`  
   ADS-B already has the explicit offline-wait seam to mirror at the architecture level.
 
 ## Implementation prompt
@@ -38,14 +38,14 @@ Implement only the offline-wait seam for OGN.
 
 ## Files likely touched
 
-- new: `feature/traffic/src/main/java/com/example/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt`
-- new: `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
+- new: `feature/traffic/src/main/java/com/trust3/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt`
+- new: `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
 - existing:
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
-  - optional `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
+  - optional `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
 - tests:
-  - `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
   - optional new network-port fake under test source
 
 ## Tests to add or update

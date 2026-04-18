@@ -12,11 +12,11 @@ Scope: docs + CI + local architecture gate
 ## Confirmed Clock/TimeSource Abstraction (do not guess)
 
 Canonical abstraction and DI anchor:
-- `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-- `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+- `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+- `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 Additional time adapter used in map-orientation path:
-- `feature/map/src/main/java/com/example/xcpro/orientation/OrientationClock.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/orientation/OrientationClock.kt`
 
 Current gate baseline (2026-03-01):
 - Command: `python scripts/arch_gate.py`

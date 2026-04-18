@@ -295,18 +295,18 @@ Plan impact:
 - Preserve existing ViewModel boundaries by handling sheet-open UI state locally in map UI layer.
 
 Likely touched files:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
-- New files under `feature/map/src/main/java/com/example/xcpro/map/ui/` for bottom tabs + sheet host state/arbiter.
-- New shared weather-settings contract files under `feature/map/src/main/java/com/example/xcpro/weather/rain/` (to avoid map->navdrawer coupling).
-- `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt` (if discoverability expansion behavior needs section-state wiring)
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenContract.kt` (if explicit drawer-open event is added)
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUiEventHandler.kt` (if explicit drawer-open event is handled)
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt`
+- New files under `feature/map/src/main/java/com/trust3/xcpro/map/ui/` for bottom tabs + sheet host state/arbiter.
+- New shared weather-settings contract files under `feature/map/src/main/java/com/trust3/xcpro/weather/rain/` (to avoid map->navdrawer coupling).
+- `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt` (if discoverability expansion behavior needs section-state wiring)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenContract.kt` (if explicit drawer-open event is added)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUiEventHandler.kt` (if explicit drawer-open event is handled)
 - Optional migration files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt` (only if new intents are needed for these options)
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt` (only for delegation wiring to shared contract)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayViewModel.kt` (only if new intents are needed for these options)
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt` (only for delegation wiring to shared contract)
 
 ### 2.2A Boundary Moves
 
@@ -755,18 +755,18 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   Add new focused composables without changing existing map behavior yet.
 
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabsModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabsState.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabsLayoutPolicy.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabsBar.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabsHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabsFooter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabsContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherTabViewModel.kt` (facade for `1B`)
-  - Shared weather settings contract files under `feature/map/src/main/java/com/example/xcpro/weather/rain/`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsState.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsLayoutPolicy.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsBar.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsFooter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherTabViewModel.kt` (facade for `1B`)
+  - Shared weather settings contract files under `feature/map/src/main/java/com/trust3/xcpro/weather/rain/`
   - Optional drawer-event hardening files:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapScreenContract.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUiEventHandler.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenContract.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUiEventHandler.kt`
 
 - Behavior:
   - 4 discrete compact tabs.
@@ -811,8 +811,8 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   Place bottom tab strip and sheet host into map UI layering with explicit coexistence rules.
 
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt`
 
 - Integration rules:
   - Keep deltas small in high-risk files; extract logic into new files.
@@ -858,10 +858,10 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
   Unify forecast entry paths only after parity with existing forecast controls is implemented and verified.
 
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt`
 
 - Migration approach:
   - Extract reusable forecast sheet content from modal wrapper.
@@ -923,12 +923,12 @@ Sensors -> Repository (SSOT) -> UseCases -> ViewModel -> UI
 ## 5) Test Plan
 
 - Unit/compose tests to add:
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/MapBottomSheetTabsStateTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsStateTest.kt`
     - `openTab()` selects and opens.
     - selecting same tab follows approved toggle policy.
     - dismiss clears visibility but preserves selected tab policy.
     - conflict rules (task panel non-hidden/details modal visible) are enforced.
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/MapBottomSheetTabsHostTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsHostTest.kt`
     - tab tap opens sheet.
     - selected tab changes visible content.
     - in-sheet footer tab taps update the same selected-tab owner as launcher tabs.

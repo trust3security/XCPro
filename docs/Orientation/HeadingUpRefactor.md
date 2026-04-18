@@ -74,13 +74,13 @@ This can replace the raw `atan2(y, x)` heading in `SensorRegistry`.
 
 ## Files to touch
 
-- `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
   - Split filters, add source selection + hysteresis.
-- `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt`
   - Renamed `compassHeadingDeg` to `primaryHeadingDeg` for clarity.
-- `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
   - No logic change; keep JITTER logging for verification.
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt`
   - Optional tilt-compensated heading (if needed).
 
 ## Risk assessment

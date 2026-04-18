@@ -1,0 +1,65 @@
+package com.trust3.xcpro.glide
+
+import com.trust3.xcpro.flightdata.FlightDataRepository
+import com.trust3.xcpro.tasks.TaskManagerCoordinator
+import com.trust3.xcpro.tasks.TaskRuntimeSnapshot
+import com.trust3.xcpro.tasks.navigation.NavigationRouteRepository
+import com.trust3.xcpro.tasks.navigation.NavigationRouteSnapshot
+import com.trust3.xcpro.weather.wind.data.WindSensorFusionRepository
+import com.trust3.xcpro.weather.wind.model.WindState
+import com.trust3.xcpro.sensors.CompleteFlightData
+import dagger.hilt.android.scopes.ViewModelScoped
+import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+
+@ViewModelScoped
+class GlideComputationRepository internal constructor(
+    flightDataFlow: Flow<CompleteFlightData?>,
+    windStateFlow: Flow<WindState>,
+    taskSnapshotFlow: Flow<TaskRuntimeSnapshot>,
+    routeFlow: Flow<NavigationRouteSnapshot>,
+    private val glideTargetProjector: GlideTargetProjector,
+    private val finalGlideUseCase: FinalGlideUseCase
+) {
+    @Inject
+    constructor(
+        flightDataRepository: FlightDataRepository,
+        windSensorFusionRepository: WindSensorFusionRepository,
+        taskManager: TaskManagerCoordinator,
+        navigationRouteRepository: NavigationRouteRepository,
+        glideTargetProjector: GlideTargetProjector,
+        finalGlideUseCase: FinalGlideUseCase
+    ) : this(
+        flightDataFlow = flightDataRepository.flightData,
+        windStateFlow = windSensorFusionRepository.windState,
+        taskSnapshotFlow = taskManager.taskSnapshotFlow,
+        routeFlow = navigationRouteRepository.route,
+        glideTargetProjector = glideTargetProjector,
+        finalGlideUseCase = finalGlideUseCase
+    )
+
+    val glide: Flow<GlideSolution> = combine(
+        flightDataFlow,
+        windStateFlow,
+        taskSnapshotFlow,
+        routeFlow,
+        ::resolveGlideSolution
+    ).distinctUntilChanged()
+
+    private fun resolveGlideSolution(
+        completeData: CompleteFlightData?,
+        windState: WindState,
+        taskSnapshot: TaskRuntimeSnapshot,
+        route: NavigationRouteSnapshot
+    ): GlideSolution {
+        val data = completeData ?: return GlideSolution.invalid(GlideInvalidReason.NO_POSITION)
+        val target = glideTargetProjector.project(taskSnapshot, route)
+        return finalGlideUseCase.solve(
+            completeData = data,
+            windState = windState,
+            target = target
+        )
+    }
+}

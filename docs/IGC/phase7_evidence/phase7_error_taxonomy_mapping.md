@@ -22,7 +22,7 @@ Purpose:
 
 ## Ownership
 
-- Lint issue definitions: `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintIssue.kt`
-- Severity/dispatch: `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintRuleSet.kt`
-- Finalize translation: `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportValidationAdapter.kt`
-- SSOT diagnostic sink: `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
+- Lint issue definitions: `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintIssue.kt`
+- Severity/dispatch: `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintRuleSet.kt`
+- Finalize translation: `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportValidationAdapter.kt`
+- SSOT diagnostic sink: `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`

@@ -29,11 +29,11 @@ Public mirror links:
 
 ### 1.2 XCPro existing trail and OGN palette implementation
 
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailPalette.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailSegmentBuilder.kt`
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalColorScale.kt`
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailPalette.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailMath.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailSegmentBuilder.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalColorScale.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
 
 ## 2) What Pilots Consistently Want (Evidence-Based)
 
@@ -76,8 +76,8 @@ Use existing 19-step XCPro vario ramp (already used by snail trail and thermal h
 
 Reference:
 
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailPalette.kt:58`
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalColorScale.kt:11`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailPalette.kt:58`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalColorScale.kt:11`
 
 ## 4.2 Width
 
@@ -104,7 +104,7 @@ This directly satisfies "greater sink = thinner darker navy" and "greater climb 
 ## 5) OGN Data Reality and Limits
 
 1. OGN currently provides `verticalSpeedMps` per target sample in XCPro parsing/model.
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt:42`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt:42`
 
 2. OGN trail style will represent observed glider vertical movement from OGN samples.
 - It is useful tactically, but not guaranteed to be pure airmass Netto.

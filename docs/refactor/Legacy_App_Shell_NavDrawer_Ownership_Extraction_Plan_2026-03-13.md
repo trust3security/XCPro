@@ -21,16 +21,16 @@
   - A dedicated plan avoids ad hoc moves and prevents broad `com.example.ui1.screens` churn.
 - In scope:
   - Long-term ownership for:
-    - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Support.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/About.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ManageAccount.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Task.kt`
+    - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Support.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/About.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ManageAccount.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Task.kt`
   - Boundary files and route helpers that block those moves:
-    - `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/TaskScreenUseCasesViewModel.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataModels.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SupportCopy.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/TaskScreenUseCasesViewModel.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataModels.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SupportCopy.kt`
   - Import/route cleanup in `AppNavGraph.kt`.
   - Compatibility-wrapper strategy so route names stay stable while ownership changes.
   - Identification of retained legacy route/helper blockers that must stay explicit if Phase 4 stops short of full package severance.
@@ -198,17 +198,17 @@ These findings came from the code pass and are the reason this plan is owner-fir
    - file pickers and gesture/camera state
    This means Phase 3 cannot assume the whole route body should move to `:feature:tasks`.
 12. The existing task-owned file UI in `:feature:tasks` is not a drop-in replacement for the legacy `Task.kt` bottom sheet:
-   - `feature/tasks/src/main/java/com/example/xcpro/tasks/TaskFilesTab.kt` manages persisted task import/export/share
-   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/tasks/TaskFilesSheetContent.kt` manages airspace, waypoint, and class toggles/imports
+   - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskFilesTab.kt` manages persisted task import/export/share
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/tasks/TaskFilesSheetContent.kt` manages airspace, waypoint, and class toggles/imports
    So Phase 3 must not force a wrong owner move just because a `FilesBTTab` already exists.
 13. `AppNavGraph.kt` is not the only retained legacy-package callsite. The following still keep the old package surface alive:
-   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeRouteSubSheets.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeRouteSubSheets.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
 14. The retained route/helper blockers after Phases 1-3 are likely:
-   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Files.kt`
-   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Logbook.kt`
-   - `feature/map/src/main/java/com/example/xcpro/screens/DFNavboxes.kt`
-   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt` (`GeneralSettingsSheetHost`)
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Files.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Logbook.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/DFNavboxes.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntime.kt` (`GeneralSettingsSheetHost`)
    - `feature/profile/src/main/java/com/example/ui1/screens/Profiles.kt`
    That means Phase 4 should be framed as explicit-import narrowing and blocker accounting, not guaranteed full package elimination.
 
@@ -235,10 +235,10 @@ These findings came from the code pass and are the reason this plan is owner-fir
   - Keep route names stable (`"support"`, `"about"`).
   - Preserve the current support bottom-sheet callback contract while ownership moves.
 - Files to change:
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   - new app-shell screen files under `:app`
   - temporary compatibility wrappers only if required
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SupportCopy.kt` only after route stabilization
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SupportCopy.kt` only after route stabilization
 - Phase 1 seam findings:
   - `Support.kt` and `About.kt` are genuinely low-risk app-shell candidates.
   - Both screens are simple route shells with `NavHostController` / `DrawerState` back behavior and no map-runtime ownership.
@@ -263,10 +263,10 @@ These findings came from the code pass and are the reason this plan is owner-fir
   - Move `ManageAccount.kt` content into `:feature:profile`.
   - Align the screen with the existing profile flow and workboard item for Edit Profile.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ManageAccount.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ManageAccount.kt`
   - new/updated profile-owned screen in `:feature:profile`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-  - if needed, `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+  - if needed, `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`
 - Phase 2 seam findings:
   - `ManageAccount.kt` is still a simple route/content screen with no map-runtime ownership.
   - The real blockers are route wiring and finishing the existing profile-owned `Edit Profile` path, not code complexity.
@@ -293,10 +293,10 @@ These findings came from the code pass and are the reason this plan is owner-fir
     - `onShowBottomSheet`
     - `onHideBottomSheet`
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Task.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/TaskScreenUseCasesViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Task.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/TaskScreenUseCasesViewModel.kt`
   - new task-owned content host in `:feature:tasks`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 - Phase 3 seam findings:
   - `Task.kt` is the only heavy/risky phase in this program.
   - It is a route/content split target, not a safe blind owner move.
@@ -316,7 +316,7 @@ These findings came from the code pass and are the reason this plan is owner-fir
   - Status: Implemented 2026-03-13
   - Notes:
     - The legacy `Task.kt` file is now a thin compatibility wrapper in `com.example.ui1.screens`.
-    - The real route body now lives in `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/TaskRouteScreen.kt`.
+    - The real route body now lives in `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/TaskRouteScreen.kt`.
     - `TaskScreenUseCasesViewModel` moved to the modern navdrawer package.
     - `assembleDebug` passed after the move.
 
@@ -327,11 +327,11 @@ These findings came from the code pass and are the reason this plan is owner-fir
   - Resolve remaining shared-model or wrapper dependencies deliberately.
   - Make retained legacy blockers explicit instead of hiding them behind wildcard imports.
 - Files to change:
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeRouteSubSheets.kt` if explicit imports there are also narrowed
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt` if `GeneralSettingsSheetHost` ownership changes by then
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeRouteSubSheets.kt` if explicit imports there are also narrowed
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt` if `GeneralSettingsSheetHost` ownership changes by then
   - any scoped wrappers/models that still force the wildcard import
-  - `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataModels.kt` if shared model extraction is needed
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataModels.kt` if shared model extraction is needed
 - Phase 4 seam findings:
   - This phase is explicit-import narrowing and blocker accounting, not guaranteed full package elimination.
   - `SettingsDfRuntime.kt` remains a concrete blocker because `GeneralSettingsSheetHost` is still consumed by `MapScreenScaffold.kt`.

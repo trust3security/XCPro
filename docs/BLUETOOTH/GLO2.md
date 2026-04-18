@@ -118,23 +118,23 @@ What does not exist yet:
 
 These files are the main current anchors:
 
-- `app/src/main/java/com/example/xcpro/appshell/settings/GeneralSettingsCategoryGrid.kt`
+- `app/src/main/java/com/trust3/xcpro/appshell/settings/GeneralSettingsCategoryGrid.kt`
   - current General settings entry still says `Bluetooth Vario`
-- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/BluetoothVarioSettingsScreen.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/BluetoothVarioSettingsScreen.kt`
   - current top-of-screen `Selected` and `Active` device labels
-- `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/BluetoothVarioSettingsUseCase.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/BluetoothVarioSettingsUseCase.kt`
   - current Bluetooth settings UI text mapping
-- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/AndroidBluetoothTransport.kt`
+- `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/AndroidBluetoothTransport.kt`
   - current Bluetooth Classic RFCOMM transport using the SPP UUID
-- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/NmeaLineFramer.kt`
+- `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/NmeaLineFramer.kt`
   - reusable ASCII newline-delimited line framing
-- `feature/variometer/src/main/java/com/example/xcpro/variometer/bluetooth/lxnav/LxSentenceParser.kt`
+- `feature/variometer/src/main/java/com/trust3/xcpro/variometer/bluetooth/lxnav/LxSentenceParser.kt`
   - current LX-only parser
-- `feature/variometer/src/test/java/com/example/xcpro/variometer/bluetooth/lxnav/runtime/LxExternalRuntimeRepositoryTest.kt`
+- `feature/variometer/src/test/java/com/trust3/xcpro/variometer/bluetooth/lxnav/runtime/LxExternalRuntimeRepositoryTest.kt`
   - shows that `GPRMC` is currently ignored by the LX runtime path
-- `feature/map/src/main/java/com/example/xcpro/sensors/UnifiedSensorManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/UnifiedSensorManager.kt`
   - current phone GPS producer
-- `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/SensorDataSource.kt`
+- `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/SensorDataSource.kt`
   - current GPS read seam into flight runtime
 
 ## Ownership Guidance For Future Work

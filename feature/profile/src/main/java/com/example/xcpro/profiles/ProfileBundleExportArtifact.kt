@@ -1,7 +1,0 @@
-package com.example.xcpro.profiles
-
-data class ProfileBundleExportArtifact(
-    val bundleJson: String,
-    val exportedAtWallMs: Long,
-    val suggestedFileName: String
-)

@@ -30,7 +30,7 @@ Execution update (2026-02-27):
 - Local secret handling guidance added in:
   - `docs/ARCHITECTURE/LOCAL_SECRETS_SETUP.md`
 - ADS-B regression hardening in test suite:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
   - Added `@Before` reset of ADS-B and OGN DataStore preferences to remove cross-test
     persistence leakage that can cause ADS-B overlay toggle wait timeouts in ordered runs.
 - Verification evidence update:

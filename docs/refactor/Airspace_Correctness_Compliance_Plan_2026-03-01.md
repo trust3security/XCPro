@@ -172,7 +172,7 @@ Import/parse path after hardening:
 - Goal:
   - Make parser/validation accept valid OpenAir geometry patterns and maintain deterministic output.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceParser.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceParser.kt`
 - Tests to add/update:
   - Expand `AirspaceParserTest` for directive normalization (trim/spacing/case-safe handling), `DP`, `DC`, `DA`, `DB`, and `V X=` center handling.
   - Add coordinate-format tests for decimal-minute tokens (`DDMM.MMM[N/S]`, `DDDMM.MMM[E/W]`).
@@ -187,10 +187,10 @@ Import/parse path after hardening:
 - Goal:
   - Remove runtime write-backs, enforce explicit clear semantics, and make apply sequencing deterministic.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceApply.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/airspace/AirspaceViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt` (cache-key canonicalization)
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceApply.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/airspace/AirspaceViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt` (cache-key canonicalization)
 - Tests to add/update:
   - `AirspaceApplyTest` for:
     - clear-on-empty-enabled-files,
@@ -211,9 +211,9 @@ Import/parse path after hardening:
 - Goal:
   - Preserve user intent in UI and ensure consistent map refresh behavior.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt` (only if refresh keying requires adjustment)
-  - `feature/map/src/main/java/com/example/xcpro/screens/flightdata/FlightDataAirspaceTab.kt` (optional messaging for "all classes hidden")
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/tasks/TaskFileSection.kt` (optional parity messaging)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt` (only if refresh keying requires adjustment)
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataAirspaceTab.kt` (optional messaging for "all classes hidden")
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/tasks/TaskFileSection.kt` (optional parity messaging)
 - Tests to add/update:
   - ViewModel/UI state tests for "all classes hidden" vs "no classes detected".
   - Existing map screen tests updated if effect keys change.
@@ -225,7 +225,7 @@ Import/parse path after hardening:
 - Goal:
   - Final robustness pass with full required checks and architecture self-audit.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceIO.kt` (display name guard)
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceIO.kt` (display name guard)
   - `docs/ARCHITECTURE/PIPELINE.md` (only if flow ownership/wiring text changes)
   - this plan doc status + completion notes.
 - Tests to add/update:

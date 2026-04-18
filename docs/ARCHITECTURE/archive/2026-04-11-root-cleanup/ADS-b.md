@@ -28,17 +28,17 @@
 ## 2) Re-pass Findings (What Was Missed)
 
 1. OGN range mismatch versus requested policy:
-   - `feature/map/src/main/java/com/example/xcpro/ogn/OgnIconSizing.kt` was `124..512`, not `124..248`.
+   - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnIconSizing.kt` was `124..512`, not `124..248`.
 
 2. ADS-b policy is still legacy:
-   - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbIconSizing.kt` was `50..124` default `56`.
+   - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbIconSizing.kt` was `50..124` default `56`.
 
 3. Startup callback uses stale binding values:
-   - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt` registers `getMapAsync` inside `AndroidView(factory=...)`.
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt` registers `getMapAsync` inside `AndroidView(factory=...)`.
    - `onMapReady(map)` is invoked twice (`before` and `after` `initializeMap`), but callback captures factory-time composition values.
 
 4. Overlay creation ownership is split and bypasses cached size:
-   - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` directly creates `OgnTrafficOverlay(context, map)` and `AdsbTrafficOverlay(context, map)` using default constructors.
+   - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt` directly creates `OgnTrafficOverlay(context, map)` and `AdsbTrafficOverlay(context, map)` using default constructors.
    - This bypasses `MapOverlayManager` cached size path (`createOgnTrafficOverlay`, `createAdsbTrafficOverlay`).
 
 5. Dead-path indication:
@@ -115,10 +115,10 @@ After (target):
 - Goal:
   - Align constants, clamping, and settings slider ranges for ADS-b and OGN.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbIconSizing.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnIconSizing.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/AdsbSettingsScreen.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbIconSizing.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnIconSizing.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/AdsbSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
   - repository clamp consumers already use these constants.
 - Exit criteria:
   - Both settings screens and repositories clamp to the same policy range.
@@ -133,11 +133,11 @@ After (target):
   - Stop direct OGN/ADS-b overlay construction in `MapInitializer.setupOverlays`; route through `MapOverlayManager` as single owner.
   - Keep blue-location/snail-trail/scale-bar setup responsibilities clear and unchanged unless required.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenManagers.kt` (if wiring ownership changes)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenManagers.kt` (if wiring ownership changes)
 - Exit criteria:
   - Cold start applies persisted OGN/ADS-b icon sizes without user interaction.
 
@@ -146,10 +146,10 @@ After (target):
 - Goal:
   - Lock behavior and prevent reintroduction.
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficPreferencesRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt` (constants/default exposure impacts)
-  - Add map-runtime regression test(s) for startup apply ordering (new test file in `feature/map/src/test/java/com/example/xcpro/map/`).
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficPreferencesRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt` (constants/default exposure impacts)
+  - Add map-runtime regression test(s) for startup apply ordering (new test file in `feature/map/src/test/java/com/trust3/xcpro/map/`).
 - Docs:
   - `docs/ARCHITECTURE/PIPELINE.md`
 - Exit criteria:

@@ -125,13 +125,13 @@ IGC -> IgcReplayController -> ReplaySensorSource -> FlightDataCalculatorEngine
 ```
 
 Key files:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
-- `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` (wrapped by `FlightDataUiAdapter`)
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayController.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/audio/VarioAudioEngine.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt` (wrapped by `FlightDataUiAdapter`)
 
 ---
 
@@ -189,7 +189,7 @@ Key files:
   - DataStore name: `profile_preferences`
   - Keys: `profiles_json`, `active_profile_id`
 - Profile sandbox contract:
-  - App identity is storage-critical. Keep `applicationId = "com.example.openxcpro"`
+  - App identity is storage-critical. Keep `applicationId = "com.trust3.xcpro"`
     and debug `applicationIdSuffix = ".debug"` unless a migration plan is approved.
   - Changing either value creates a new Android app sandbox and appears as an empty
     profile store to users.

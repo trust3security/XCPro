@@ -1,6 +1,6 @@
 param(
-    [string]$Package = "com.example.xcpro.debug",
-    [string]$Activity = "com.example.xcpro.MainActivity",
+    [string]$Package = "com.trust3.xcpro.debug",
+    [string]$Activity = "com.trust3.xcpro.MainActivity",
     [int]$DurationSec = 20,
     [switch]$AutoTap,
     [int]$TapX,

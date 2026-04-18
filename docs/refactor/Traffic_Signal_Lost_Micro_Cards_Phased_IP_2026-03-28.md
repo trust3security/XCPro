@@ -74,43 +74,43 @@ Dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | already owns compact traffic status mapping from snapshots | keep presentation policy pure and testable | extend from dot-only states to dot-or-lost-card states |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficPanelsAndSheets.kt` | already renders a copy-bearing ADS-B status badge | reuse compact badge copy styling and explicit text ownership | render in the top-right traffic host instead of bottom-left card surfacing |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt` | existing top-right status host that must not overlap | preserve the current top-right stacking contract | traffic may need a larger slot if the micro-card height grows |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | already owns compact traffic status mapping from snapshots | keep presentation policy pure and testable | extend from dot-only states to dot-or-lost-card states |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficPanelsAndSheets.kt` | already renders a copy-bearing ADS-B status badge | reuse compact badge copy styling and explicit text ownership | render in the top-right traffic host instead of bottom-left card surfacing |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt` | existing top-right status host that must not overlap | preserve the current top-right stacking contract | traffic may need a larger slot if the micro-card height grows |
 
 ### 2.2A.0 Narrow Seam / Code Pass (Phase 0)
 
 Actual code pass findings:
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
   exposes only `OgnTrafficSnapshot.connectionState` plus `lastError` for OGN
   health. There is no OGN snapshot subtype that distinguishes RF/signal-loss
   from other transport failures, so Phase 0 should freeze the OGN copy as
   `OGN connection lost`, not `OGN signal lost`.
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
   stamps `OgnConnectionState.ERROR` from caught connection/runtime failures and
   returns to `CONNECTING` / `CONNECTED` / `DISCONNECTED` explicitly. That makes
   OGN Phase 0 wording a connection-state contract, not a richer cause contract.
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
   already exposes the exact Phase 0 discriminators needed for wording:
   `connectionState`, `authMode`, `lastHttpStatus`, `lastNetworkFailureKind`,
   `networkOnline`, and `lastError`.
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbProviderClient.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbProviderClient.kt`
   proves ADS-B network failures are typed as `DNS`, `TIMEOUT`, `CONNECT`,
   `NO_ROUTE`, `TLS`, `MALFORMED_RESPONSE`, and `UNKNOWN`. Phase 0 should lock
   `ADS-B signal lost` to a conservative transport-loss subset only, not to all
   provider failures.
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt`
   explicitly stamps offline waiting as `AdsbConnectionState.Error(ADSB_ERROR_OFFLINE)`
   with `lastNetworkFailureKind = NO_ROUTE`. This is a strong Phase 0 anchor for
   when `ADS-B signal lost` is allowed.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficPanelsAndSheets.kt`
-  and `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficPanelsAndSheets.kt`
+  and `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
   already contain broader wording such as `ADS-B Offline`, `ADS-B Backoff`,
   `ADS-B Credential Issue`, and verbose debug reasons. These files are useful
   references but must not become the copy authority for the new top-right
   wording contract.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
   and its current tests show the existing red-dot model collapses
   `AuthFailed`, generic `BackingOff`, and `Error` into the same red state. That
   is exactly why Phase 0 must freeze the wording/exclusion rules before Phase 1
@@ -132,21 +132,21 @@ Phase 0 scope cut:
 
 Actual code pass findings:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
   is only 83 lines today and already owns the icon-only status mapping from
   snapshots. This is the narrowest safe Phase 1 owner for the new lost-card
   presentation policy.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficContentUiState.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficContentUiState.kt`
   is already 316 lines and mixes multiple derived traffic concerns. Phase 1
   should keep this file to wiring only:
   add or rename one derived field and call the pure builder; do not place new
   lost-state policy branches here.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficPanelsAndSheets.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficPanelsAndSheets.kt`
   has reusable compact-card styling, but its `persistentAdsbStatusPresentation(...)`
   models broader ADS-B degraded states (`Offline`, `Backoff`, `Credential Issue`,
   `Active`). Phase 1 must not reuse that mapping as-is for the narrower
   `signal lost` wording.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt`
   also has broader debug-oriented predicates and labels. It can be a reference
   for network-failure signals only; it should not become the direct owner of the
   new user-facing `signal lost` copy.
@@ -163,22 +163,22 @@ Phase 1 scope cut:
 
 Actual code pass findings:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicators.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicators.kt`
   is only 93 lines today and already owns the top-right traffic column layout,
   pill rendering, stack spacing, and `followingIndicatorTopOffset()` reserve
   math. This is the narrowest safe Phase 2 owner for dot-vs-micro-card
   rendering and any required reserved-height export.
-- `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorsUiTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorsUiTest.kt`
   is only 40 lines and already hosts an isolated Compose test for the traffic
   status host. This is the narrowest safe Phase 2 test owner for copy
   presence/absence and accessibility regression coverage.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
   is already 417 lines and currently consumes only a count-based traffic offset.
   Phase 2 must keep this file thin:
   consume a traffic-owned reserved-height seam if the lost-card height differs,
   but do not duplicate traffic card constants or branching here.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
-  and `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt`
+  and `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt`
   already consume a generic `Dp` offset and do not own traffic layout policy.
   They should stay read-only unless a signature-only pass-through is unavoidable.
 - Inference from current code:
@@ -205,16 +205,16 @@ Phase 2 scope cut:
 
 Actual code pass findings:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnRelativeAltitudeFeatureMapper.kt`
   already owns the band-to-style choice for OGN gliders:
   `ABOVE`, `BELOW`, and `NEAR/UNKNOWN`. The user request does not require
   changing this mapping; it only asks for brighter colors.
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayConfig.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayConfig.kt`
   owns the actual tint constants for those glider variants:
   `RELATIVE_GLIDER_ABOVE_TINT`, `RELATIVE_GLIDER_BELOW_TINT`, and
   `RELATIVE_GLIDER_NEAR_TINT`. This is the narrowest safe owner for the
   brightness change.
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
   only registers the tinted style images from those constants. It should stay
   read-only unless the image IDs or tint-generation flow itself must change.
 
@@ -244,13 +244,13 @@ Companion palette scope cut:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Traffic_Signal_Lost_Micro_Cards_Phased_IP_2026-03-28.md` | New | change plan and scope lock | required planning artifact | not production code | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | Existing | pure mapping from traffic snapshots to healthy-dot vs lost-card presentation | already owns traffic status presentation derivation and is still small | not in composables because the policy must stay testable | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicators.kt` | Existing | top-right traffic status rendering and reserved-height contract for following indicators | already owns the top-right traffic stack rendering and offset math | not in `feature:map`; traffic UI ownership should stay in traffic slice | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayConfig.kt` | Existing, conditional | relative-altitude OGN glider tint constants | already owns the `ABOVE` / `BELOW` / `NEAR` tint values | not in mapper because band selection and color constants are separate responsibilities | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficContentUiState.kt` | Existing | thin wiring of the new presentation model into traffic UI state | current file already passes the status model into the runtime UI state | not repository/viewmodel because this is display-only; keep this change thin because the file is already 316 lines | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt` | Existing | locks mapping rules | existing focused unit-test owner | not instrumentation because no runtime dependency is needed | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorsUiTest.kt` | Existing | locks rendering mode and copy presence/absence | existing focused UI test owner | not broader map tests because the host is isolated | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing, conditional | thin consumer of traffic-owned reserved top-right height for `Sharing Live` stacking | map shell already composes traffic and `Sharing Live` hosts together | not repository/viewmodel because this is layout-only and must not own traffic sizing constants | Only if card height exceeds current stack slot |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | Existing | pure mapping from traffic snapshots to healthy-dot vs lost-card presentation | already owns traffic status presentation derivation and is still small | not in composables because the policy must stay testable | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicators.kt` | Existing | top-right traffic status rendering and reserved-height contract for following indicators | already owns the top-right traffic stack rendering and offset math | not in `feature:map`; traffic UI ownership should stay in traffic slice | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayConfig.kt` | Existing, conditional | relative-altitude OGN glider tint constants | already owns the `ABOVE` / `BELOW` / `NEAR` tint values | not in mapper because band selection and color constants are separate responsibilities | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficContentUiState.kt` | Existing | thin wiring of the new presentation model into traffic UI state | current file already passes the status model into the runtime UI state | not repository/viewmodel because this is display-only; keep this change thin because the file is already 316 lines | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt` | Existing | locks mapping rules | existing focused unit-test owner | not instrumentation because no runtime dependency is needed | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorsUiTest.kt` | Existing | locks rendering mode and copy presence/absence | existing focused UI test owner | not broader map tests because the host is isolated | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing, conditional | thin consumer of traffic-owned reserved top-right height for `Sharing Live` stacking | map shell already composes traffic and `Sharing Live` hosts together | not repository/viewmodel because this is layout-only and must not own traffic sizing constants | Only if card height exceeds current stack slot |
 
 ### 2.2E Module and API Surface
 
@@ -466,7 +466,7 @@ Required checks for the implementation change set:
 Smallest useful pre-PR proof for this slice:
 
 ```bash
-./gradlew :feature:traffic:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest" --tests "com.example.xcpro.map.ui.MapTrafficConnectionIndicatorsUiTest"
+./gradlew :feature:traffic:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest" --tests "com.trust3.xcpro.map.ui.MapTrafficConnectionIndicatorsUiTest"
 ./gradlew :feature:map:compileDebugKotlin
 ```
 

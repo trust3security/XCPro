@@ -101,10 +101,10 @@ Required:
 
 - Tests/evidence required:
   - `dfcards-library/src/test/java/com/example/dfcards/dfcards/calculations/SimpleAglCalculatorTest.kt`
-  - `feature/flight-runtime/src/test/java/com/example/xcpro/sensors/FlightCalculationHelpersTest.kt`
-  - `feature/flight-runtime/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseQnhReplayTestRuntime.kt`
-  - `feature/map/src/test/java/com/example/xcpro/qnh/CalibrateQnhUseCaseTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/terrain/TerrainElevationRepositoryTest.kt`
+  - `feature/flight-runtime/src/test/java/com/trust3/xcpro/sensors/FlightCalculationHelpersTest.kt`
+  - `feature/flight-runtime/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseQnhReplayTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/qnh/CalibrateQnhUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/terrain/TerrainElevationRepositoryTest.kt`
   - standard AGENTS gates
 - SLO or latency impact:
   - none expected in Phase 1; this is a constructor seam and boundary cleanup

@@ -39,12 +39,12 @@ not just formulas.
 
 | Package | Owns | Notes |
 |---|---|---|
-| `com.example.xcpro.competition.aat.config` | config models and validator | rules profile, scoring mode, projection mode, visibility, finish closure |
-| `com.example.xcpro.competition.aat.model` | normalized scoring models | no `Task`, no IGC file models |
-| `com.example.xcpro.competition.aat.roster` | roster and identity models | stable pilot identity for scoring, not transport identity |
-| `com.example.xcpro.competition.aat.engine` | pure scoring engines | deterministic, replay-safe for same input sequence |
-| `com.example.xcpro.competition.aat.policy` | rule and ranking policy owners | canonical formulas and visibility policy |
-| `com.example.xcpro.competition.aat.ports` | input/output contracts | implemented in `feature:map-runtime` or `feature:igc` |
+| `com.trust3.xcpro.competition.aat.config` | config models and validator | rules profile, scoring mode, projection mode, visibility, finish closure |
+| `com.trust3.xcpro.competition.aat.model` | normalized scoring models | no `Task`, no IGC file models |
+| `com.trust3.xcpro.competition.aat.roster` | roster and identity models | stable pilot identity for scoring, not transport identity |
+| `com.trust3.xcpro.competition.aat.engine` | pure scoring engines | deterministic, replay-safe for same input sequence |
+| `com.trust3.xcpro.competition.aat.policy` | rule and ranking policy owners | canonical formulas and visibility policy |
+| `com.trust3.xcpro.competition.aat.ports` | input/output contracts | implemented in `feature:map-runtime` or `feature:igc` |
 
 ### Exact core models
 
@@ -83,7 +83,7 @@ These models belong in `feature:competition`.
 These contracts belong in `feature:competition` and are implemented elsewhere.
 
 ```kotlin
-package com.example.xcpro.competition.aat.ports
+package com.trust3.xcpro.competition.aat.ports
 
 interface AatTaskDefinitionPort {
     fun activeTask(): AatTaskDefinitionSnapshot?
@@ -158,11 +158,11 @@ the correct composition layer.
 
 | Package | Owns |
 |---|---|
-| `com.example.xcpro.map.competition.aat.runtime` | live runtime repository and runtime state |
-| `com.example.xcpro.map.competition.aat.adapter` | adapters from task snapshot, trackers, and accepted tracks |
-| `com.example.xcpro.map.competition.aat.roster` | roster loading and identity resolution |
-| `com.example.xcpro.map.competition.aat.mapper` | mapping from repo-specific models into competition models |
-| `com.example.xcpro.map.competition.aat.data` | draft/published persistence implementation |
+| `com.trust3.xcpro.map.competition.aat.runtime` | live runtime repository and runtime state |
+| `com.trust3.xcpro.map.competition.aat.adapter` | adapters from task snapshot, trackers, and accepted tracks |
+| `com.trust3.xcpro.map.competition.aat.roster` | roster loading and identity resolution |
+| `com.trust3.xcpro.map.competition.aat.mapper` | mapping from repo-specific models into competition models |
+| `com.trust3.xcpro.map.competition.aat.data` | draft/published persistence implementation |
 
 ### Exact runtime files
 
@@ -193,7 +193,7 @@ Persistence recommendation:
 This should be the authoritative runtime owner for live competition state.
 
 ```kotlin
-package com.example.xcpro.map.competition.aat.runtime
+package com.trust3.xcpro.map.competition.aat.runtime
 
 interface AatCompetitionRuntimeRepository {
     val state: kotlinx.coroutines.flow.StateFlow<AatCompetitionState>
@@ -264,9 +264,9 @@ Raw tracker targets also need normalization before they become scoring fixes.
 
 | Package | Owns |
 |---|---|
-| `com.example.xcpro.map.ui.competition.aat` | setup and leaderboard screens |
-| `com.example.xcpro.map.ui.competition.aat.detail` | pilot detail UI |
-| `com.example.xcpro.map.competition.aat` | host ViewModels only |
+| `com.trust3.xcpro.map.ui.competition.aat` | setup and leaderboard screens |
+| `com.trust3.xcpro.map.ui.competition.aat.detail` | pilot detail UI |
+| `com.trust3.xcpro.map.competition.aat` | host ViewModels only |
 
 ### Exact UI files
 

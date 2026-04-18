@@ -83,11 +83,11 @@ Dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnThermalOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - map tests under `feature/map/src/test/java/com/example/xcpro/map/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnThermalOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - map tests under `feature/map/src/test/java/com/trust3/xcpro/map/*`
 - Boundary risk:
   - Low: all changes remain in UI runtime layer and do not alter repository data.
 
@@ -164,7 +164,7 @@ After:
 - Goal:
   - establish current behavior/perf baseline and lock invariants with tests.
 - Files to change:
-  - add tests under `feature/map/src/test/java/com/example/xcpro/map/`
+  - add tests under `feature/map/src/test/java/com/trust3/xcpro/map/`
 - Tests to add/update:
   - verify repeated renders currently invoke initialization path checks.
   - lock style-change reinit behavior as baseline contract.

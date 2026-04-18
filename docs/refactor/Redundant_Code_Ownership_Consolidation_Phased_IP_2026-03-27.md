@@ -59,10 +59,10 @@ This plan does not introduce new authoritative runtime state. It consolidates sh
 
 | Data / responsibility | Owner | Exposed As | Forbidden Duplicates |
 |---|---|---|---|
-| Default-profile alias normalization | `core/common/src/main/java/com/example/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | pure helper API | repository-private `resolveProfileId(...)` copies |
-| Bearing normalization and shortest-angle delta math | `feature/flight-runtime/src/main/java/com/example/xcpro/orientation/OrientationMath.kt` | pure helper API | private copies in map-runtime camera/icon files |
+| Default-profile alias normalization | `core/common/src/main/java/com/trust3/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | pure helper API | repository-private `resolveProfileId(...)` copies |
+| Bearing normalization and shortest-angle delta math | `feature/flight-runtime/src/main/java/com/trust3/xcpro/orientation/OrientationMath.kt` | pure helper API | private copies in map-runtime camera/icon files |
 | Standard atmosphere density and pressure-altitude math | new shared helper in `feature:flight-runtime` | pure helper API | private copies in replay, flight-state, wind-input, and HAWK paths |
-| Map nav drawer component implementations | `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerComponents.kt` | Compose functions | unused duplicate implementation files |
+| Map nav drawer component implementations | `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerComponents.kt` | Compose functions | unused duplicate implementation files |
 | Vario dial label/config helper logic | new focused helper in `feature:variometer` | pure UI helper API | duplicate copies in map/profile UI files |
 
 ### 2.1A State Contract
@@ -98,8 +98,8 @@ Confirmed direction remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `core/common/src/main/java/com/example/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | Existing canonical owner for profile-ID alias policy | callers keep state ownership, shared helper owns normalization only | none |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/orientation/OrientationMath.kt` | Existing shared pure math owner reused by downstream runtime code | one pure helper file reused across modules | add a separate atmosphere helper file rather than expanding camera/UI files |
+| `core/common/src/main/java/com/trust3/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | Existing canonical owner for profile-ID alias policy | callers keep state ownership, shared helper owns normalization only | none |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/orientation/OrientationMath.kt` | Existing shared pure math owner reused by downstream runtime code | one pure helper file reused across modules | add a separate atmosphere helper file rather than expanding camera/UI files |
 
 ### 2.2B Boundary Moves
 
@@ -134,27 +134,27 @@ Confirmed direction remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Redundant_Code_Ownership_Consolidation_Phased_IP_2026-03-27.md` | New | change plan and rollout contract | plan belongs in `docs/refactor` | not an architecture-global invariant | No |
-| `core/common/src/main/java/com/example/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | Existing | canonical profile-ID alias helper | already the right owner | do not create a second helper | No |
-| `feature/profile/src/main/java/com/example/xcpro/MapOrientationPreferences.kt` | Existing | profile-owned settings storage | existing repo still owns this state | helper extraction only, no ownership move | No |
-| `feature/profile/src/main/java/com/example/xcpro/map/MapStyleRepository.kt` | Existing | profile-owned map-style persistence | existing repo still owns persisted style state | helper extraction only | No |
-| `feature/profile/src/main/java/com/example/xcpro/map/QnhPreferencesRepository.kt` | Existing | profile-owned QNH persistence | existing repo still owns persisted QNH state | helper extraction only | No |
-| `feature/profile/src/main/java/com/example/xcpro/map/trail/MapTrailPreferences.kt` | Existing | profile-owned trail persistence | existing repo still owns trail settings | helper extraction only | No |
-| `core/common/src/main/java/com/example/xcpro/common/units/UnitsRepository.kt` | Existing | units preference persistence | existing repo still owns unit preferences | helper extraction only | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/orientation/OrientationMath.kt` | Existing | canonical bearing math owner | already shared pure math | do not keep map-runtime copies | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/AtmosphereMath.kt` | New | canonical atmosphere helper owner | `feature:flight-runtime` owns flight math and is already depended on by map and variometer | avoids a speculative new core module | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt` | Existing | camera runtime owner using shared math | callsite belongs here | helper should not remain private here | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraPolicy.kt` | Existing | camera policy using shared math | callsite belongs here | helper should not remain private here | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt` | Existing | visual-only icon smoothing using shared math | callsite belongs here | helper should not remain private here | No |
-| `feature/map/src/main/java/com/example/xcpro/replay/ReplaySampleEmitter.kt` | Existing | replay sample owner using shared atmosphere math | replay emission remains local | helper should not remain private here | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt` | Existing | wind estimate owner using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt` | Existing | flight-state owner using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
-| `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputAdapter.kt` | Existing | wind-input adapter using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
-| `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioEngine.kt` | Existing | HAWK engine using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
-| `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerComponents.kt` | Existing | single nav drawer component owner | already active owner | no need for duplicate file | No |
-| `feature/map/src/main/java/com/example/xcpro/NavigationDrawerComponents.kt` | Existing | dead duplicate to delete | removal belongs where duplicate lives | keeping it adds dead code | No |
+| `core/common/src/main/java/com/trust3/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | Existing | canonical profile-ID alias helper | already the right owner | do not create a second helper | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/MapOrientationPreferences.kt` | Existing | profile-owned settings storage | existing repo still owns this state | helper extraction only, no ownership move | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/map/MapStyleRepository.kt` | Existing | profile-owned map-style persistence | existing repo still owns persisted style state | helper extraction only | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/map/QnhPreferencesRepository.kt` | Existing | profile-owned QNH persistence | existing repo still owns persisted QNH state | helper extraction only | No |
+| `feature/profile/src/main/java/com/trust3/xcpro/map/trail/MapTrailPreferences.kt` | Existing | profile-owned trail persistence | existing repo still owns trail settings | helper extraction only | No |
+| `core/common/src/main/java/com/trust3/xcpro/common/units/UnitsRepository.kt` | Existing | units preference persistence | existing repo still owns unit preferences | helper extraction only | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/orientation/OrientationMath.kt` | Existing | canonical bearing math owner | already shared pure math | do not keep map-runtime copies | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/AtmosphereMath.kt` | New | canonical atmosphere helper owner | `feature:flight-runtime` owns flight math and is already depended on by map and variometer | avoids a speculative new core module | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt` | Existing | camera runtime owner using shared math | callsite belongs here | helper should not remain private here | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapCameraPolicy.kt` | Existing | camera policy using shared math | callsite belongs here | helper should not remain private here | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/IconHeadingSmoother.kt` | Existing | visual-only icon smoothing using shared math | callsite belongs here | helper should not remain private here | No |
+| `feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySampleEmitter.kt` | Existing | replay sample owner using shared atmosphere math | replay emission remains local | helper should not remain private here | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/WindEstimator.kt` | Existing | wind estimate owner using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt` | Existing | flight-state owner using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputAdapter.kt` | Existing | wind-input adapter using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
+| `feature/variometer/src/main/java/com/trust3/xcpro/hawk/HawkVarioEngine.kt` | Existing | HAWK engine using shared atmosphere math | callsite belongs here | helper should not remain private here | No |
+| `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerComponents.kt` | Existing | single nav drawer component owner | already active owner | no need for duplicate file | No |
+| `feature/map/src/main/java/com/trust3/xcpro/NavigationDrawerComponents.kt` | Existing | dead duplicate to delete | removal belongs where duplicate lives | keeping it adds dead code | No |
 | `feature/variometer/src/main/java/com/example/ui1/VarioDialConfigSupport.kt` | New | shared vario dial helper logic | `feature:variometer` owns `VarioDialConfig` and dial UI types | avoids copying helper into map/profile again | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt` | Existing | map UI caller consuming shared dial helper | caller belongs here | helper should not remain private in this large file | Yes, consume helper rather than add more local logic |
-| `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntimeSupport.kt` | Existing | profile UI caller consuming shared dial helper | caller belongs here | helper should not remain private in this large file | Yes, consume helper rather than add more local logic |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt` | Existing | map UI caller consuming shared dial helper | caller belongs here | helper should not remain private in this large file | Yes, consume helper rather than add more local logic |
+| `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntimeSupport.kt` | Existing | profile UI caller consuming shared dial helper | caller belongs here | helper should not remain private in this large file | Yes, consume helper rather than add more local logic |
 
 ### 2.2E Module and API Surface
 
@@ -173,15 +173,15 @@ No new long-lived scopes are allowed in this plan.
 
 | Shim / Bridge | Owner | Reason | Target Replacement | Removal Trigger | Test Coverage |
 |---|---|---|---|---|---|
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileIdResolver.kt` | `feature:profile` | preserves existing profile-facing name while core/common owns the real normalization logic | direct `ProfileSettingsProfileIds` use or explicit supported alias decision | after all non-test production callsites are reviewed and either migrated or intentionally left on the wrapper | existing `app/src/test/java/com/example/xcpro/profiles/ProfileIdResolverTest.kt` |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileIdResolver.kt` | `feature:profile` | preserves existing profile-facing name while core/common owns the real normalization logic | direct `ProfileSettingsProfileIds` use or explicit supported alias decision | after all non-test production callsites are reviewed and either migrated or intentionally left on the wrapper | existing `app/src/test/java/com/trust3/xcpro/profiles/ProfileIdResolverTest.kt` |
 
 ### 2.2H Canonical Formula / Policy Owner
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| default-profile alias normalization | `core/common/src/main/java/com/example/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | profile/map/unit repos and tests | repo-wide profile alias policy already lives here | No |
-| bearing normalization + shortest-angle delta | `feature/flight-runtime/src/main/java/com/example/xcpro/orientation/OrientationMath.kt` | map-runtime camera and icon smoothing | shared pure orientation math already lives here | No |
-| density ratio + pressure-altitude helpers | `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/AtmosphereMath.kt` | replay, wind, flight-state, HAWK | flight/replay/airspeed math belongs with runtime math owners | No |
+| default-profile alias normalization | `core/common/src/main/java/com/trust3/xcpro/core/common/profiles/ProfileSettingsProfileIds.kt` | profile/map/unit repos and tests | repo-wide profile alias policy already lives here | No |
+| bearing normalization + shortest-angle delta | `feature/flight-runtime/src/main/java/com/trust3/xcpro/orientation/OrientationMath.kt` | map-runtime camera and icon smoothing | shared pure orientation math already lives here | No |
+| density ratio + pressure-altitude helpers | `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/AtmosphereMath.kt` | replay, wind, flight-state, HAWK | flight/replay/airspeed math belongs with runtime math owners | No |
 | vario dial label/config generation | `feature/variometer/src/main/java/com/example/ui1/VarioDialConfigSupport.kt` | map overlay UI and HAWK settings UI | helper depends on variometer-owned dial UI types | No |
 
 ### 2.3 Time Base
@@ -222,9 +222,9 @@ Explicitly forbidden comparisons remain unchanged:
 
 | Risk | Rule Reference | Guard Type (lint/enforceRules/test/review) | File/Test |
 |---|---|---|---|
-| duplicate profile-ID normalization survives | `ARCHITECTURE.md` canonical formula owner; `CODING_RULES.md` `15C` | unit test + review | `app/src/test/java/com/example/xcpro/profiles/ProfileIdResolverTest.kt`, `app/src/test/java/com/example/xcpro/common/units/UnitsRepositoryProfileScopeTest.kt`, `feature/map/src/test/java/com/example/xcpro/map/QnhPreferencesRepositoryTest.kt`, `feature/map/src/test/java/com/example/xcpro/map/trail/MapTrailPreferencesTest.kt` |
-| map-runtime bearing helper drift remains after cleanup | `ARCHITECTURE.md` canonical formula owner | unit test + review | `feature/flight-runtime/src/test/java/com/example/xcpro/orientation/OrientationMathTest.kt`, `feature/map-runtime/src/test/java/com/example/xcpro/map/MapCameraManagerBearingUpdateTest.kt`, `feature/map/src/test/java/com/example/xcpro/map/IconHeadingSmootherTest.kt` |
-| shared atmosphere math changes behavior | `ARCHITECTURE.md` canonical formula owner; replay determinism invariants | new helper tests + affected callsite tests | new `AtmosphereMathTest.kt`, `feature/map/src/test/java/com/example/xcpro/replay/ReplaySampleEmitterTest.kt`, `feature/flight-runtime/src/test/java/com/example/xcpro/sensors/domain/WindEstimatorTest.kt`, `feature/variometer/src/test/java/com/example/xcpro/hawk/HawkVarioEngineTest.kt` |
+| duplicate profile-ID normalization survives | `ARCHITECTURE.md` canonical formula owner; `CODING_RULES.md` `15C` | unit test + review | `app/src/test/java/com/trust3/xcpro/profiles/ProfileIdResolverTest.kt`, `app/src/test/java/com/trust3/xcpro/common/units/UnitsRepositoryProfileScopeTest.kt`, `feature/map/src/test/java/com/trust3/xcpro/map/QnhPreferencesRepositoryTest.kt`, `feature/map/src/test/java/com/trust3/xcpro/map/trail/MapTrailPreferencesTest.kt` |
+| map-runtime bearing helper drift remains after cleanup | `ARCHITECTURE.md` canonical formula owner | unit test + review | `feature/flight-runtime/src/test/java/com/trust3/xcpro/orientation/OrientationMathTest.kt`, `feature/map-runtime/src/test/java/com/trust3/xcpro/map/MapCameraManagerBearingUpdateTest.kt`, `feature/map/src/test/java/com/trust3/xcpro/map/IconHeadingSmootherTest.kt` |
+| shared atmosphere math changes behavior | `ARCHITECTURE.md` canonical formula owner; replay determinism invariants | new helper tests + affected callsite tests | new `AtmosphereMathTest.kt`, `feature/map/src/test/java/com/trust3/xcpro/replay/ReplaySampleEmitterTest.kt`, `feature/flight-runtime/src/test/java/com/trust3/xcpro/sensors/domain/WindEstimatorTest.kt`, `feature/variometer/src/test/java/com/trust3/xcpro/hawk/HawkVarioEngineTest.kt` |
 | dead duplicate file deletion breaks hidden callers | compile + review | `:feature:map:compileDebugKotlin` and repo search for remaining imports/calls |
 | vario dial helper split changes labels/config | unit test + compile | new variometer helper test plus `:feature:map:compileDebugKotlin` and `:feature:profile:compileDebugKotlin` |
 
@@ -270,12 +270,12 @@ No runtime authority or SSOT flow changes are intended.
 - Goal:
   - Remove dead duplicate UI artifacts and rewire the duplicate profile-ID helpers to the already-existing canonical owner.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/NavigationDrawerComponents.kt` (delete)
-  - `feature/profile/src/main/java/com/example/xcpro/MapOrientationPreferences.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/map/MapStyleRepository.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/map/QnhPreferencesRepository.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/map/trail/MapTrailPreferences.kt`
-  - `core/common/src/main/java/com/example/xcpro/common/units/UnitsRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/NavigationDrawerComponents.kt` (delete)
+  - `feature/profile/src/main/java/com/trust3/xcpro/MapOrientationPreferences.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/map/MapStyleRepository.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/map/QnhPreferencesRepository.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/map/trail/MapTrailPreferences.kt`
+  - `core/common/src/main/java/com/trust3/xcpro/common/units/UnitsRepository.kt`
 - Ownership/file split changes in this phase:
   - no state owner changes
   - one dead file removed
@@ -292,12 +292,12 @@ No runtime authority or SSOT flow changes are intended.
 - Goal:
   - Reuse existing bearing math and consolidate duplicate vario dial UI helpers without touching behavior.
 - Files to change:
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraPolicy.kt`
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapCameraPolicy.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/IconHeadingSmoother.kt`
   - `feature/variometer/src/main/java/com/example/ui1/VarioDialConfigSupport.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntimeSupport.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntimeSupport.kt`
 - Ownership/file split changes in this phase:
   - map-runtime stops owning copied bearing helpers
   - variometer owns the shared dial-config helper
@@ -316,12 +316,12 @@ No runtime authority or SSOT flow changes are intended.
 - Goal:
   - Move duplicated standard-atmosphere helpers into one shared pure owner in `feature:flight-runtime`.
 - Files to change:
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/AtmosphereMath.kt` (new)
-  - `feature/map/src/main/java/com/example/xcpro/replay/ReplaySampleEmitter.kt`
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt`
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
-  - `feature/flight-runtime/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
-  - `feature/variometer/src/main/java/com/example/xcpro/hawk/HawkVarioEngine.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/AtmosphereMath.kt` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySampleEmitter.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/WindEstimator.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt`
+  - `feature/flight-runtime/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputAdapter.kt`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/hawk/HawkVarioEngine.kt`
 - Ownership/file split changes in this phase:
   - one new shared pure helper owner
   - no runtime state ownership changes
@@ -354,17 +354,17 @@ No runtime authority or SSOT flow changes are intended.
 ## 5) Test Plan
 
 - Unit tests:
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileIdResolverTest.kt`
-  - `app/src/test/java/com/example/xcpro/common/units/UnitsRepositoryProfileScopeTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/QnhPreferencesRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/trail/MapTrailPreferencesTest.kt`
-  - `feature/flight-runtime/src/test/java/com/example/xcpro/orientation/OrientationMathTest.kt`
-  - `feature/map-runtime/src/test/java/com/example/xcpro/map/MapCameraManagerBearingUpdateTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/IconHeadingSmootherTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileIdResolverTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/common/units/UnitsRepositoryProfileScopeTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/QnhPreferencesRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/trail/MapTrailPreferencesTest.kt`
+  - `feature/flight-runtime/src/test/java/com/trust3/xcpro/orientation/OrientationMathTest.kt`
+  - `feature/map-runtime/src/test/java/com/trust3/xcpro/map/MapCameraManagerBearingUpdateTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/IconHeadingSmootherTest.kt`
   - new `AtmosphereMathTest.kt`
-  - `feature/flight-runtime/src/test/java/com/example/xcpro/sensors/domain/WindEstimatorTest.kt`
-  - `feature/variometer/src/test/java/com/example/xcpro/hawk/HawkVarioEngineTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/replay/ReplaySampleEmitterTest.kt`
+  - `feature/flight-runtime/src/test/java/com/trust3/xcpro/sensors/domain/WindEstimatorTest.kt`
+  - `feature/variometer/src/test/java/com/trust3/xcpro/hawk/HawkVarioEngineTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/replay/ReplaySampleEmitterTest.kt`
 - Replay/regression tests:
   - `ReplaySampleEmitterTest`
   - existing replay regressions that already cover airspeed reconstruction behavior

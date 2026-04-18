@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.core.geometry"
+    namespace = "com.trust3.xcpro.core.geometry"
     compileSdk = 35
 
     defaultConfig {

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.flight.runtime"
+    namespace = "com.trust3.xcpro.flight.runtime"
     compileSdk = 35
 
     defaultConfig {

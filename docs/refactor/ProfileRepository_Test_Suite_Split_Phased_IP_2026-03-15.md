@@ -23,7 +23,7 @@
 ## 1) Scope
 
 - Problem statement:
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt` is currently `907` lines and mixes repository mutation behavior, bootstrap/hydration/recovery behavior, import policy behavior, and explicit identity/time seam behavior in one file.
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt` is currently `907` lines and mixes repository mutation behavior, bootstrap/hydration/recovery behavior, import policy behavior, and explicit identity/time seam behavior in one file.
   - The file also carries two setup styles:
     - a scoped `RepositoryHarness` plus `createHarness(...)`
     - a second inline repository/storage fixture at the class level
@@ -72,7 +72,7 @@ The current file contains five distinct responsibilities:
   - The import block is large enough to stay under budget only if it gets its own file.
 - The identity/time ownership tests should not disappear into generic mutation coverage.
   - They validate a specific architecture seam introduced by the recent profile ownership work.
-- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTestSupport.kt` is already the correct pattern for dedicated support ownership.
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTestSupport.kt` is already the correct pattern for dedicated support ownership.
   - The new support file should mirror that style, but for generic repository behavior instead of bundle collaborators.
 - Adjacent repository suites already own specialized collaborator seams.
   - `ProfileRepositoryDeleteCascadeTest.kt` owns cleaner-specific delete behavior.
@@ -166,19 +166,19 @@ The current file contains five distinct responsibilities:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another File |
 |---|---|---|---|---|
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTestSupport.kt` | New | Generic repository harness, fake storage, write counters, diagnostics capture, and `createHarness(...)` | shared setup seam for all repository test families | bundle support stays bundle-specific |
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryMutationTest.kt` | New | create/update/set-active/delete repository behavior | one file for write API contracts | bootstrap/import concerns are separate |
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBootstrapRecoveryTest.kt` | New | hydration, parse failure, read error, fallback, and recovery contracts | one file for read-side repository lifecycle | mutation/import tests should not mix with read-status contracts |
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryImportTest.kt` | New | import collision policy, active-profile policy, validation skips, metadata preservation, and duplicate-ID behavior | largest distinct behavior cluster | keeping it in mutation/bootstrap files would recreate the same review problem |
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryIdentityTimeOwnershipTest.kt` | New | explicit injected clock/ID seam ownership coverage | preserves visibility of the ownership contract | these tests are architecture-specific and should not be buried |
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt` | Existing, then removed or reduced to zero | temporary migration host only | allows phased movement without rebasing every test at once | final state should not keep a giant umbrella file |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTestSupport.kt` | New | Generic repository harness, fake storage, write counters, diagnostics capture, and `createHarness(...)` | shared setup seam for all repository test families | bundle support stays bundle-specific |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryMutationTest.kt` | New | create/update/set-active/delete repository behavior | one file for write API contracts | bootstrap/import concerns are separate |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBootstrapRecoveryTest.kt` | New | hydration, parse failure, read error, fallback, and recovery contracts | one file for read-side repository lifecycle | mutation/import tests should not mix with read-status contracts |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryImportTest.kt` | New | import collision policy, active-profile policy, validation skips, metadata preservation, and duplicate-ID behavior | largest distinct behavior cluster | keeping it in mutation/bootstrap files would recreate the same review problem |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryIdentityTimeOwnershipTest.kt` | New | explicit injected clock/ID seam ownership coverage | preserves visibility of the ownership contract | these tests are architecture-specific and should not be buried |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt` | Existing, then removed or reduced to zero | temporary migration host only | allows phased movement without rebasing every test at once | final state should not keep a giant umbrella file |
 
 ### 3.2 Reference Pattern Check
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTestSupport.kt` | already isolates bundle-specific fake collaborators into a focused support file | dedicated support owner separate from scenario files | new support file will be generic repository support rather than bundle support |
-| `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt` | existing split between test support and scenario assertions | scenario-only test file with minimal setup noise | this plan applies the same separation to the main repository suite |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTestSupport.kt` | already isolates bundle-specific fake collaborators into a focused support file | dedicated support owner separate from scenario files | new support file will be generic repository support rather than bundle support |
+| `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt` | existing split between test support and scenario assertions | scenario-only test file with minimal setup noise | this plan applies the same separation to the main repository suite |
 
 ### 3.3 Support Seam Contract
 
@@ -383,7 +383,7 @@ Required checks per implementation phase:
 Suggested targeted lane during implementation:
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.profiles.*"
+./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.profiles.*"
 ```
 
 ## 7) Risks and Mitigations

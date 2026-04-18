@@ -65,8 +65,8 @@ Action:
 - Add regression test asserting deterministic order when priority keys are equal.
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTest.kt`
 
 Acceptance:
 - Repeated `select(...)` calls with equal-priority targets return stable ordering.
@@ -81,8 +81,8 @@ Action:
 - Make policy read/write ownership single-threaded under repository scope, or publish an immutable telemetry snapshot under synchronization/atomic semantics.
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbPollingHealthPolicy.kt`
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbPollingHealthPolicy.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
 
 Acceptance:
 - No unsynchronized cross-thread policy field reads.
@@ -101,8 +101,8 @@ Action:
   - continues polling while enabled
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
 
 Acceptance:
 - New regression test proves polling survives unexpected exception in non-provider branch.
@@ -117,9 +117,9 @@ Action:
 - Keep output semantics unchanged (no target correctness regressions).
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
 
 Acceptance:
 - Repeated same-value updates do not trigger unnecessary reselection.
@@ -135,8 +135,8 @@ Action:
 - Add stress-style unit coverage for concurrent on-demand completion paths.
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/metadata/AircraftMetadataRepositoryImplTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/AircraftMetadataRepositoryImplTest.kt`
 
 Acceptance:
 - Revision counter always advances for each successful hydration batch event.
@@ -152,8 +152,8 @@ Action:
 - Keep existing auth-state taxonomy unchanged.
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/OpenSkyTokenRepository.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/OpenSkyTokenRepository.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/OpenSkyTokenRepositoryTest.kt`
 
 Acceptance:
 - Concurrent stale-token requests produce at most one network token fetch.
@@ -168,8 +168,8 @@ Action:
 - Replace regex parsing with structured XML parser, or add strict compatibility guardrails + tests covering listing variants.
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/OpenSkyMetadataClient.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/metadata/OpenSkyMetadataClientTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/OpenSkyMetadataClient.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/OpenSkyMetadataClientTest.kt`
 
 Acceptance:
 - Listing parse remains correct across multiline/spacing/ordering variants.
@@ -184,8 +184,8 @@ Action:
 - Apply authoritative precedence for non-fixed-wing categories and add conflict regression tests.
 
 Target files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
 - `docs/ADS-b/ADSB_CategoryIconMapping.md`
 
 Acceptance:

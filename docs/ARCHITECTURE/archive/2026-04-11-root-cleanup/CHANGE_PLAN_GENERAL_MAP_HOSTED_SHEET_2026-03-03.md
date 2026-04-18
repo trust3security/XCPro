@@ -1,4 +1,4 @@
-﻿# CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
+# CHANGE_PLAN_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
 
 ## 0) Metadata
 
@@ -37,23 +37,23 @@
 Current-state findings after workspace re-pass:
 
 1) General is still route-owned and map entrypoints still navigate to route.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
   (`onSettingsTap -> navController.navigate(SettingsRoutes.GENERAL)`).
-- `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`
   (`Settings -> General -> navigate(SettingsRoutes.GENERAL)`).
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
   (`navController.navigate("settings")`).
 
 2) Route host remains active in NavGraph.
-- `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+- `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   still registers `composable(SettingsRoutes.GENERAL) { SettingsScreen(...) }`.
 
 3) Route close path remains back-stack based.
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
   uses `closeGeneralToMap/closeGeneralToDrawer` with `popBackStack("map", false)`.
 
 4) Regression test net shrank in related map scaffold area.
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenScaffoldPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenScaffoldPolicyTest.kt`
   is currently deleted in workspace changes; this plan now requires replacement
   coverage for map General entrypoint policy before migration cutover.
 
@@ -173,8 +173,8 @@ Compatibility path during rollout:
 - Goal:
   - Separate General content/sheet host into reusable composable(s) independent from nav-route ownership.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt` (if needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt` (if needed)
 - Tests to add/update:
   - `GeneralSettingsScreenPolicyTest` updates for extracted host.
 - Exit criteria:
@@ -184,9 +184,9 @@ Compatibility path during rollout:
 - Goal:
   - Extend map modal owner to include General visibility with deterministic back handling.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapModalManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapModalManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
 - Tests to add/update:
   - modal manager tests (open/close/back semantics, collision policy).
 - Exit criteria:
@@ -196,11 +196,11 @@ Compatibility path during rollout:
 - Goal:
   - Remove map-route General navigation for map-specific entrypoints.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt`
-  - `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt` (callback plumbing)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt` (if callback propagation changes)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navdrawer/NavigationDrawer.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt` (callback plumbing)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt` (if callback propagation changes)
 - Tests to add/update:
   - settings shortcut tap opens map-local General.
   - drawer General item opens map-local General.
@@ -211,9 +211,9 @@ Compatibility path during rollout:
 - Goal:
   - Migrate remaining external callers and retire or deprecate `SettingsRoutes.GENERAL` destination safely.
 - Files to change:
-  - `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-  - `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt` (if route is deprecated)
+  - `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navigation/SettingsRoutes.kt` (if route is deprecated)
 - Tests to add/update:
   - caller compatibility tests
   - no-stale-route tests
@@ -308,8 +308,8 @@ Executed on current workspace during comprehensive refresh:
 
 - `python scripts/arch_gate.py` -> PASS
 - `./gradlew enforceRules` -> PASS
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"` -> PASS
-- `./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.MapOverlayWidgetGesturesTest"` -> PASS
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"` -> PASS
+- `./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.MapOverlayWidgetGesturesTest"` -> PASS
 - `./gradlew testDebugUnitTest` -> PASS
 - `./gradlew assembleDebug` -> PASS
 
@@ -329,20 +329,20 @@ Delivered:
 - `AppNavGraph` keeps `SettingsRoutes.GENERAL` as a compatibility redirect shim to map + signal.
 
 Added/updated tests:
-- `feature/map/src/test/java/com/example/xcpro/map/MapModalManagerTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/navdrawer/DrawerMenuSectionsTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapModalManagerTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/navdrawer/DrawerMenuSectionsTest.kt`
 
 Phase gate verification:
 - Phase 2:
   - `./gradlew :app:assembleDebug` PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapModalManagerTest"` PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapModalManagerTest"` PASS
 - Phase 3:
   - `./gradlew :app:assembleDebug` PASS
-  - `./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.MapOverlayWidgetGesturesTest"` PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.navdrawer.DrawerMenuSectionsTest"` PASS
+  - `./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.MapOverlayWidgetGesturesTest"` PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.navdrawer.DrawerMenuSectionsTest"` PASS
 - Phase 4:
   - `./gradlew :app:assembleDebug` PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest" --tests "com.example.xcpro.navdrawer.DrawerMenuSectionsTest"` PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest" --tests "com.trust3.xcpro.navdrawer.DrawerMenuSectionsTest"` PASS
 
 ## 12) Final Verification Matrix (2026-03-03)
 

@@ -2,13 +2,13 @@
 
 ## Current seam evidence
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt:12-34`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt:12-34`  
   current OGN snapshot contract is small and coarse.
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt:386-389`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt:386-389`  
   `sanitizeError()` collapses failure information to throwable simple name.
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt:60-76`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt:60-76`  
   map UI semantics for OGN are minimal.
-- `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt:55, 87, 265`  
+- `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt:55, 87, 265`  
   existing tests cover policy reconnect and stall error, but not the full degraded-state contract.
 
 ## Implementation prompt
@@ -35,14 +35,14 @@ Implement the final telemetry and regression pass.
 
 ## Files likely touched
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt`
 - optional:
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`
 - tests:
-  - `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt`
 
 ## Tests to add or update
 

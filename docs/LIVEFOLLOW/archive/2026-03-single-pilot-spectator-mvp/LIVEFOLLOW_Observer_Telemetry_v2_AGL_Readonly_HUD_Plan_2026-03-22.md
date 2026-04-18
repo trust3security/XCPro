@@ -46,8 +46,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | existing browse-time row shaping | event carries display-only selection hint | add heading to keep switch-time HUD consistent |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | existing watch HUD projection owner | ViewModel-owned render state only | add `panelAglLabel` only from true watched transport data |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | existing browse-time row shaping | event carries display-only selection hint | add heading to keep switch-time HUD consistent |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | existing watch HUD projection owner | ViewModel-owned render state only | add `panelAglLabel` only from true watched transport data |
 
 ### File ownership plan
 

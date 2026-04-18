@@ -1,4 +1,4 @@
-﻿# AGENT_EXECUTION_CONTRACT_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
+# AGENT_EXECUTION_CONTRACT_GENERAL_MAP_HOSTED_SHEET_2026-03-03.md
 
 Date: 2026-03-03
 Owner: XCPro Team / Codex
@@ -65,8 +65,8 @@ Scope:
 - Add/refresh baseline tests for current shortcut/drawer/route behavior.
 
 Phase focused checks:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"`
-- `./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.MapOverlayWidgetGesturesTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"`
+- `./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.MapOverlayWidgetGesturesTest"`
 
 Phase exit:
 - Baseline tests pass.
@@ -79,11 +79,11 @@ Scope:
 - Keep behavior parity.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
 
 Phase focused checks:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.screens.navdrawer.GeneralSettingsScreenPolicyTest"`
 
 Phase exit:
 - Route-hosted General still functional.
@@ -97,9 +97,9 @@ Scope:
 - Wire General host into MapScreen runtime layer.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapModalManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapModalManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
 
 Phase focused checks:
 - modal manager/back-handler tests added and passing.
@@ -115,14 +115,14 @@ Scope:
 - Replace drawer General route navigation (from map context) with map-modal open callback.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-- `feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt`
-- `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/navdrawer/NavigationDrawer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
 
 Phase focused checks:
-- `./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.MapOverlayWidgetGesturesTest"`
+- `./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.MapOverlayWidgetGesturesTest"`
 - New/updated map entrypoint tests pass.
 
 Phase exit:
@@ -137,9 +137,9 @@ Scope:
 - Retire route-owner path only when no production caller remains.
 
 Primary files:
-- `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
-- `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-- `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt` (if deprecating)
+- `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
+- `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/navigation/SettingsRoutes.kt` (if deprecating)
 
 Phase focused checks:
 - caller migration tests.

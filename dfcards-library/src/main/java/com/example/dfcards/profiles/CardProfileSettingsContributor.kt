@@ -7,10 +7,10 @@ import com.example.dfcards.FlightModeSelection
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.dfcards.CardState
 import com.example.dfcards.dfcards.FlightData
-import com.example.xcpro.core.common.profiles.ProfileSettingsApplyContributor
-import com.example.xcpro.core.common.profiles.ProfileSettingsCaptureContributor
-import com.example.xcpro.core.common.profiles.ProfileSettingsProfileIds
-import com.example.xcpro.core.common.profiles.ProfileSettingsSectionContract
+import com.trust3.xcpro.core.common.profiles.ProfileSettingsApplyContributor
+import com.trust3.xcpro.core.common.profiles.ProfileSettingsCaptureContributor
+import com.trust3.xcpro.core.common.profiles.ProfileSettingsProfileIds
+import com.trust3.xcpro.core.common.profiles.ProfileSettingsSectionContract
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import javax.inject.Inject
@@ -201,3 +201,4 @@ private data class CardPositionPayload(
     val width: Float,
     val height: Float
 )
+

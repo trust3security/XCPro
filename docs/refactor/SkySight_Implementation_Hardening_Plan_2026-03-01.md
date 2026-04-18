@@ -58,12 +58,12 @@ Dependency flow remains:
 `UI -> domain/use-cases -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/*`
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettings*`
-  - `feature/map/src/test/java/com/example/xcpro/forecast/*`
-  - `feature/map/src/test/java/com/example/xcpro/map/*` and `.../ui/*` where relevant
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettings*`
+  - `feature/map/src/test/java/com/trust3/xcpro/forecast/*`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/*` and `.../ui/*` where relevant
   - `docs/SKYSIGHT/*` and `docs/refactor/*` for documentation sync
   - `scripts/integrations/capture_skysight_evidence.ps1`
 - Boundary risk:
@@ -166,10 +166,10 @@ After:
 - Goal:
   - Make settings auth state honest and harden credential storage behavior.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastCredentialsRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastCredentialsRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
 - Tests to add/update:
   - New tests for settings status mapping and auth-message correctness.
   - New tests for credential-storage fallback policy.
@@ -182,9 +182,9 @@ After:
 - Goal:
   - Apply `sourceLayerCandidates` deterministically at runtime to reduce blank overlays.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt` (if contract metadata adjustments are needed)
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt` (only if fallback status surfacing is needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt` (if contract metadata adjustments are needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt` (only if fallback status surfacing is needed)
 - Tests to add/update:
   - New `ForecastRasterOverlay` tests for candidate fallback and branch switching.
   - Extend `SkySightForecastProviderAdapterTest` for candidate ordering contract.
@@ -197,9 +197,9 @@ After:
 - Goal:
   - Add targeted tests for SkySight network configurator and satellite overlay runtime behavior.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt` (if testability seams needed)
-  - `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt` (only if bug fixes are required)
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (only if state transitions need correction)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt` (if testability seams needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt` (only if bug fixes are required)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` (only if state transitions need correction)
 - Tests to add/update:
   - New tests for host allowlist and `Origin` header injection behavior.
   - New tests for satellite frame selection, history window clamp, and clear/reapply behavior.
@@ -242,16 +242,16 @@ After:
   - Increase satellite history capacity while preserving directional animation clarity.
   - Replace secondary non-wind overlay toggle with one canonical non-wind overlay selection path.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastSettings.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayUseCases.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastSettings.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayUseCases.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
   - `docs/ARCHITECTURE/PIPELINE.md`
 - Tests to add/update:
   - Satellite animation order test explicitly verifying forward loop `1..N..1`.

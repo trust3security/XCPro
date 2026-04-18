@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MAX_REPORT_LINES = 200
 APP_BUILD_GRADLE = ROOT / "app" / "build.gradle.kts"
-EXPECTED_APPLICATION_ID = "com.example.openxcpro"
+EXPECTED_APPLICATION_ID = "com.trust3.xcpro"
 EXPECTED_DEBUG_APPLICATION_ID_SUFFIX = ".debug"
 RAW_LOG_ALLOWLIST = ROOT / "config" / "quality" / "raw_log_allowlist.txt"
 EXCLUDED_DIR_NAMES = {
@@ -45,8 +45,8 @@ ALLOW_DIR_PARTS = {
 
 # Adapter files that are allowed to bridge platform time APIs to Clock-like abstractions.
 ALLOW_PRODUCTION_FILES = {
-    "core/time/src/main/java/com/example/xcpro/core/time/Clock.kt",
-    "feature/map/src/main/java/com/example/xcpro/orientation/OrientationClock.kt",
+    "core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt",
+    "feature/map/src/main/java/com/trust3/xcpro/orientation/OrientationClock.kt",
 }
 
 KOTLIN_FILE_EXTS = {".kt", ".kts"}

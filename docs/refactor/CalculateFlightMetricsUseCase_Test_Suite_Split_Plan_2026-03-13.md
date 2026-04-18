@@ -11,7 +11,7 @@
 ## 1) Scope
 
 - Problem statement:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestRuntime.kt`
     has grown into a single large runtime regression suite with mixed concerns.
   - The file is hard to review, hard to navigate, and makes failure triage slower
     because unrelated behaviors fail in the same suite.

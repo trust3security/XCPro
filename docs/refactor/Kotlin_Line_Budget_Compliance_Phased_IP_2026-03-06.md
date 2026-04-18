@@ -55,12 +55,12 @@ Focused seam/code repass date: 2026-03-15.
 ### 2.1 Completed Phase 1: `AppProfileSettingsRestoreApplierTest.kt`
 
 - Landed files:
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTestSupport.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierOrderingAndFailureTest.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierProfileScopedSectionsTest.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierLocalGlobalSectionsTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTestSupport.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierOrderingAndFailureTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierProfileScopedSectionsTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierLocalGlobalSectionsTest.kt`
 - Removed file:
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
 - Preserved ownership:
   - support owns harness creation only
   - ordering/failure owns canonical order and fail-and-continue semantics
@@ -70,12 +70,12 @@ Focused seam/code repass date: 2026-03-15.
 ### 2.2 Completed Phase 2: `AdsbTrafficRepositoryFilterAndAuthTest.kt`
 
 - Landed files:
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositorySelectionAndFilterTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryAuthAndEnableQueueTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositorySelectionAndFilterTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryAuthAndEnableQueueTest.kt`
 - Removed file:
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryFilterAndAuthTest.kt`
 - Reused support owner:
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTestRuntime.kt`
 - Preserved ownership:
   - `SelectionAndFilterTest` owns cache reuse, ownship reference switching,
     display filters, bbox propagation, altitude filtering, and proximity tiers.
@@ -85,12 +85,12 @@ Focused seam/code repass date: 2026-03-15.
 ### 2.3 Completed Phase 3: `CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
 
 - Landed files:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindFallbackPolicyTestRuntime.kt`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyCountersTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindFallbackPolicyTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyCountersTestRuntime.kt`
 - Removed file:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseWindPolicyTestRuntime.kt`
 - Reused support owner:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestSupportRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTestSupportRuntime.kt`
 - Preserved ownership:
   - `WindFallbackPolicyTestRuntime` owns TE disable, stale/low-confidence wind,
     grace-period fallback, and dwell/hysteresis behavior.

@@ -26,8 +26,8 @@ Status legend:
 - Status: `proposed`
 - Hypothesis: Avoiding unthrottled overlay refresh reduces GPU/CPU spikes.
 - Current risk evidence:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDisplayUpdateMode.kt:13`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt:379`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDisplayUpdateMode.kt:13`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt:379`
 - Acceptance:
   - No functional regression in traffic awareness.
   - Lower average frame workload in profiling.

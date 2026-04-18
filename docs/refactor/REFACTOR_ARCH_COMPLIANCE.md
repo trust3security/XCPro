@@ -25,58 +25,58 @@ timebase correctness, and UI/VM isolation.
 ## Current deviations (evidence)
 UI / DI violations:
 - UI bypasses ViewModel and calls TaskManagerCoordinator directly:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageContent.kt:29`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingManageBTTab.kt:40`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATManageContent.kt:29`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingManageBTTab.kt:40`
 
 ViewModel contract violations:
 - MapScreenViewModel depends on Context + concrete managers (not use-cases only):
-  `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt:61`
-- TaskSheetViewModel depends on MapLibre: `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt:29`
-- UseCase constructs repository directly (DI violation): `feature/map/src/main/java/com/example/xcpro/tasks/TaskSheetUseCase.kt:6`
+  `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt:61`
+- TaskSheetViewModel depends on MapLibre: `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:29`
+- UseCase constructs repository directly (DI violation): `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetUseCase.kt:6`
 - TaskFilesUseCase depends on TaskManagerCoordinator (concrete manager, not use-case only):
-  `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesUseCase.kt:10`
+  `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:10`
 
 Timebase violations (domain/fusion logic):
-- AAT calculations use wall time: `feature/map/src/main/java/com/example/xcpro/tasks/aat/calculations/AATDistanceCalculator.kt:302`
-- AAT interactive models use wall time: `feature/map/src/main/java/com/example/xcpro/tasks/aat/calculations/AATInteractiveModels.kt:11`
-- AAT edit session uses wall time: `feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATEditModeState.kt:39`
-- AAT map coordinate converter uses wall time: `feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt:186`
-- Orientation models default to wall time: `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt:34`
-- QNH usecase/repo uses wall time: `feature/map/src/main/java/com/example/xcpro/qnh/CalibrateQnhUseCase.kt:130`,
-  `feature/map/src/main/java/com/example/xcpro/qnh/QnhRepositoryImpl.kt:77`
-- Audio engine uses wall/mono time directly: `feature/map/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt:180`
-- Orientation sensor source uses wall/mono time directly: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt:200`
-- Ballast controller uses uptime directly: `feature/map/src/main/java/com/example/xcpro/map/ballast/BallastController.kt:31`
-- Duplicate time abstraction: `feature/map/src/main/java/com/example/xcpro/orientation/OrientationClock.kt:1`
-- Profile models use wall time defaults (should be injected): `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileModels.kt:70`
+- AAT calculations use wall time: `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/calculations/AATDistanceCalculator.kt:302`
+- AAT interactive models use wall time: `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/calculations/AATInteractiveModels.kt:11`
+- AAT edit session uses wall time: `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/AATEditModeState.kt:39`
+- AAT map coordinate converter uses wall time: `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/AATMapCoordinateConverter.kt:186`
+- Orientation models default to wall time: `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt:34`
+- QNH usecase/repo uses wall time: `feature/map/src/main/java/com/trust3/xcpro/qnh/CalibrateQnhUseCase.kt:130`,
+  `feature/map/src/main/java/com/trust3/xcpro/qnh/QnhRepositoryImpl.kt:77`
+- Audio engine uses wall/mono time directly: `feature/map/src/main/java/com/trust3/xcpro/audio/VarioAudioEngine.kt:180`
+- Orientation sensor source uses wall/mono time directly: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt:200`
+- Ballast controller uses uptime directly: `feature/map/src/main/java/com/trust3/xcpro/map/ballast/BallastController.kt:31`
+- Duplicate time abstraction: `feature/map/src/main/java/com/trust3/xcpro/orientation/OrientationClock.kt:1`
+- Profile models use wall time defaults (should be injected): `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileModels.kt:70`
 
 SSOT duplication:
-- Two WaypointParser implementations: `feature/map/src/main/java/com/example/xcpro/utils/WaypointRepository.kt:32`
-  and `feature/map/src/main/java/com/example/xcpro/screens/flightdata/WaypointParser.kt:12`
+- Two WaypointParser implementations: `feature/map/src/main/java/com/trust3/xcpro/utils/WaypointRepository.kt:32`
+  and `feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/WaypointParser.kt:12`
 - Waypoint ownership split across multiple entry points:
-  - `feature/map/src/main/java/com/example/xcpro/map/WaypointLoader.kt:15`
-  - `feature/map/src/main/java/com/example/xcpro/flightdata/WaypointFilesRepository.kt:14`
-  - `feature/map/src/main/java/com/example/xcpro/utils/WaypointRepository.kt:13`
-- Home waypoint persistence duplicated: `core/common/src/main/java/com/example/xcpro/common/waypoint/WaypointModels.kt:61`
-  and `core/common/src/main/java/com/example/xcpro/common/waypoint/HomeWaypointRepository.kt:1`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/WaypointLoader.kt:15`
+  - `feature/map/src/main/java/com/trust3/xcpro/flightdata/WaypointFilesRepository.kt:14`
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/WaypointRepository.kt:13`
+- Home waypoint persistence duplicated: `core/common/src/main/java/com/trust3/xcpro/common/waypoint/WaypointModels.kt:61`
+  and `core/common/src/main/java/com/trust3/xcpro/common/waypoint/HomeWaypointRepository.kt:1`
 - Theme prefs split across multiple repositories and direct prefs use.
 - Airspace persistence split across multiple owners:
-  - `feature/map/src/main/java/com/example/xcpro/utils/AirspacePrefs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceIO.kt`
-  - `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/ConfigurationRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/utils/DFUtils.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspacePrefs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceIO.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ConfigurationRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/utils/DFUtils.kt`
 - Task persistence split across multiple owners:
-  - `feature/map/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistence.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/aat/persistence/AATTaskFileIO.kt`
-  - `feature/map/src/main/java/com/example/xcpro/tasks/racing/RacingTaskStorage.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskCoordinatorPersistence.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/persistence/AATTaskFileIO.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt`
 
 Global mutable singletons/caches:
-- Feature flags: `feature/map/src/main/java/com/example/xcpro/map/config/MapFeatureFlags.kt:10`,
-  `feature/map/src/main/java/com/example/xcpro/tasks/TaskFeatureFlags.kt:6`
-- Static caches: `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt:39`,
-  `feature/map/src/main/java/com/example/xcpro/ConfigurationRepository.kt:135`
-- Global logger uses static mutable state: `core/common/src/main/java/com/example/xcpro/core/common/logging/AppLogger.kt:12`
+- Feature flags: `feature/map/src/main/java/com/trust3/xcpro/map/config/MapFeatureFlags.kt:10`,
+  `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFeatureFlags.kt:6`
+- Static caches: `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt:39`,
+  `feature/map/src/main/java/com/trust3/xcpro/ConfigurationRepository.kt:135`
+- Global logger uses static mutable state: `core/common/src/main/java/com/trust3/xcpro/core/common/logging/AppLogger.kt:12`
 - Repository constructs another repository directly (DI violation):
 
 ## Plan

@@ -69,13 +69,13 @@ Status: Implemented (tab-hosted controls)
 
 ## Implemented File Touchpoints
 
-1. `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
-2. `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-3. `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-4. `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
-5. `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-6. `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt`
-7. `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
+1. `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+2. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+3. `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+4. `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt`
+5. `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+6. `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenState.kt`
+7. `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
 
 ## Verification
 

@@ -1,4 +1,4 @@
-﻿# CHANGE_PLAN_GENERAL_BOTTOM_SHEET_2026-03-02.md
+# CHANGE_PLAN_GENERAL_BOTTOM_SHEET_2026-03-02.md
 
 ## 0) Metadata
 
@@ -39,9 +39,9 @@ Follow-up (2026-03-03):
 ## 2) Comprehensive Code Pass Findings
 
 1) Entry points are centralized and stable.
-- Drawer path: `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`.
-- Map settings shortcut path: `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`.
-- Route registration: `app/src/main/java/com/example/xcpro/AppNavGraph.kt`.
+- Drawer path: `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`.
+- Map settings shortcut path: `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`.
+- Route registration: `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`.
 
 2) General screen behavior is currently inconsistent with sheet-style settings screens.
 - General back icon currently pops and opens drawer.
@@ -168,7 +168,7 @@ After:
 - Goal:
   - Separate content from host to prevent visual drift during host conversion.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`.
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`.
 - Required implementation quality:
   - Content composable remains route-host agnostic.
   - Keep exact row order, route mapping, spacing, and icon use.
@@ -183,7 +183,7 @@ After:
 - Goal:
   - Switch host to `ModalBottomSheet` and unify close behavior.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`.
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`.
 - Required implementation quality:
   - Use `rememberModalBottomSheetState(skipPartiallyExpanded = true)`.
   - Use one shared `closeToMap()` callback:
@@ -204,8 +204,8 @@ After:
 - Goal:
   - Remove duplicate-open edge cases and keep route ownership single.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`.
-  - `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`.
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`.
+  - `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`.
 - Required implementation quality:
   - Add `launchSingleTop = true` on `SettingsRoutes.GENERAL` navigation.
   - Keep existing task-mode drawer-block guard for settings shortcut.
@@ -220,7 +220,7 @@ After:
 - Goal:
   - Lock contract behavior for production confidence.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`.
+  - `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/GeneralSettingsScreenPolicyTest.kt`.
   - add `GeneralSettingsSheetBehaviorTest.kt` (same package) if needed.
   - optional device test under `app/src/androidTest` if environment supports it.
 - Required tests:

@@ -11,9 +11,9 @@ Status
 In this codebase, "SCIA" refers to OGN glider trail/wake rendering (not ownship snail trail).
 
 Primary runtime classes:
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnGliderTrailRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnGliderTrailRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
 
 ## 2) End-to-End Flow (Toggle To Pixels)
 

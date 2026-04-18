@@ -62,11 +62,11 @@ Dependency flow remains:
 `UI -> domain/use-case -> data`
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/*`
-  - `feature/map/src/main/java/com/example/xcpro/map/*`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/data/*` (lint-boundary alignment only)
-  - `feature/map/src/test/java/com/example/xcpro/ogn/*`
-  - `feature/map/src/test/java/com/example/xcpro/map/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/data/*` (lint-boundary alignment only)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/*`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/*`
   - `app/src/main/AndroidManifest.xml`
   - `feature/map/src/main/AndroidManifest.xml`
   - `docs/OGN/*`
@@ -165,9 +165,9 @@ No change to authoritative ownership:
 - Goal:
   harden OGN stream activity and reconnect behavior.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
 - Tests to add/update:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
 - Exit criteria:
   - low-traffic quiet periods no longer trigger false stall errors.
   - policy reconnect remains immediate.
@@ -177,8 +177,8 @@ No change to authoritative ownership:
 - Goal:
   remove brittle test access patterns and enforce render-policy helpers cleanly.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
 - Tests to add/update:
   - direct policy tests for render-cap helper.
 - Exit criteria:

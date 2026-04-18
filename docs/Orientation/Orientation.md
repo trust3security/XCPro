@@ -13,14 +13,14 @@ Note: app/device orientation is locked to portrait in the manifest (`app/src/mai
 ## User-facing entry points
 
 1) Settings > General > Orientation
-   - Screen: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OrientationSettingsScreen.kt`
-   - Entry in General settings grid: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-   - Navigation route: `app/src/main/java/com/example/xcpro/AppNavGraph.kt` (`orientation_settings`)
+   - Screen: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OrientationSettingsScreen.kt`
+   - Entry in General settings grid: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+   - Navigation route: `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` (`orientation_settings`)
    - Lets the user set separate modes for Cruise/Final Glide and Thermal/Circling, plus glider vertical offset.
 
 2) Map screen compass widget
-   - Toggle control: `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt` and
-     `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
+   - Toggle control: `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt` and
+     `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
    - Cycles: NORTH_UP -> TRACK_UP -> HEADING_UP -> NORTH_UP
    - Updates the active profile in preferences via `MapOrientationManager.setOrientationMode()`.
 
@@ -45,16 +45,16 @@ OrientationDataSource  <---- updateFromFlightData() ---- MapOrientationManager
 ```
 
 Key files:
-- Orientation contracts: `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
-- Orientation manager: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
-- Orientation data source: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
-- Heading resolver (HEADING_UP): `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt`
-- Location / camera updates: `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-- Camera effects and clamping: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-- Location jitter gate: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
-- Icon rotation policy: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
-- Icon rendering: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
-- Orientation UI: `feature/map/src/main/java/com/example/xcpro/CompassWidget.kt`
+- Orientation contracts: `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt`
+- Orientation manager: `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
+- Orientation data source: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
+- Heading resolver (HEADING_UP): `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt`
+- Location / camera updates: `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+- Camera effects and clamping: `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+- Location jitter gate: `feature/map/src/main/java/com/trust3/xcpro/map/MapLocationFilter.kt`
+- Icon rotation policy: `feature/map/src/main/java/com/trust3/xcpro/map/IconHeadingSmoother.kt`
+- Icon rendering: `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
+- Orientation UI: `feature/map/src/main/java/com/trust3/xcpro/CompassWidget.kt`
 
 ## Orientation modes (behavior summary)
 
@@ -180,7 +180,7 @@ Sources are the XCSoar repo under `C:\Users\Asus\AndroidStudioProjects\XCSoar`.
   That means Heading Up -> icon points up, Track Up -> icon shows drift.
     - `src/MapWindow/MapWindowRender.cpp`
 - XCPro now matches this convention.
-    - `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
 
 ## XCSoar parity implementation (Heading Up)
 

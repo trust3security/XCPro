@@ -62,10 +62,10 @@ Why this is the smallest safe fix:
 
 | File | Owner / Responsibility | Change |
 | --- | --- | --- |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | OGN runtime delegate; owns display-only OGN viewport zoom and projection invalidation | sync live camera zoom inside projection invalidation before rerender |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | ADS-B runtime delegate; owns display-only ADS-B viewport zoom and projection invalidation | sync live camera zoom inside projection invalidation before rerender, without adding an extra forced render path |
-| `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | OGN runtime delegate regression coverage | add test locking live-zoom sync on projection invalidation |
-| `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest.kt` | ADS-B runtime delegate regression coverage | add test locking live-zoom sync on projection invalidation |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | OGN runtime delegate; owns display-only OGN viewport zoom and projection invalidation | sync live camera zoom inside projection invalidation before rerender |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | ADS-B runtime delegate; owns display-only ADS-B viewport zoom and projection invalidation | sync live camera zoom inside projection invalidation before rerender, without adding an extra forced render path |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | OGN runtime delegate regression coverage | add test locking live-zoom sync on projection invalidation |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest.kt` | ADS-B runtime delegate regression coverage | add test locking live-zoom sync on projection invalidation |
 | `docs/aircraft-declutter-pass4-fix.md` | change record for this narrow pass | document root cause, narrow fix, verification, and residual risk |
 
 ## Ownership and State Contract
@@ -84,7 +84,7 @@ Time base:
 
 Focused proof run:
 
-- `.\gradlew :feature:traffic:testDebugUnitTest --tests "com.example.xcpro.map.MapOverlayManagerRuntimeOgnDelegateViewportZoomTest" --tests "com.example.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest"` -> PASS
+- `.\gradlew :feature:traffic:testDebugUnitTest --tests "com.trust3.xcpro.map.MapOverlayManagerRuntimeOgnDelegateViewportZoomTest" --tests "com.trust3.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest"` -> PASS
 - `.\gradlew enforceRules` -> PASS (`ARCH GATE PASSED`)
 
 Deferred:

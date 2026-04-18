@@ -221,8 +221,8 @@ Completed in implementation:
   - Stable chip test tags and selector-based tests hardened in tab suite.
   - Verification:
     - `./gradlew enforceRules :feature:map:testDebugUnitTest :feature:map:assembleDebug` -> pass.
-    - `./gradlew --no-daemon :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapBottomSheetTabsTest" --tests "com.example.xcpro.screens.navdrawer.WeatherSettingsScreenPolicyTest"` -> pass.
-    - `./gradlew --no-daemon --no-configuration-cache :feature:map:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true" "-Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.map.ui.MapBottomTabsLayerInstrumentedTest"` -> pass (class intentionally skipped with `@Ignore` due module harness limitation; risky behavior remains covered by Robolectric tests).
+    - `./gradlew --no-daemon :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapBottomSheetTabsTest" --tests "com.trust3.xcpro.screens.navdrawer.WeatherSettingsScreenPolicyTest"` -> pass.
+    - `./gradlew --no-daemon --no-configuration-cache :feature:map:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true" "-Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.map.ui.MapBottomTabsLayerInstrumentedTest"` -> pass (class intentionally skipped with `@Ignore` due module harness limitation; risky behavior remains covered by Robolectric tests).
 
 ## Second-Pass Findings (2026-03-04)
 
@@ -344,7 +344,7 @@ Completed in implementation:
 
 - Resolution:
   - Removed `WeatherSettingsScreenRuntimeSupport.kt` duplicate helper file.
-  - Repointed `WeatherSettingsScreenPolicyTest` imports to shared `com.example.xcpro.weather.ui` helpers.
+  - Repointed `WeatherSettingsScreenPolicyTest` imports to shared `com.trust3.xcpro.weather.ui` helpers.
   - Eliminated dual-source helper drift risk for RainViewer controls behavior.
 
 ### Closed Finding C (Medium): Compact-width strip hardening incomplete
@@ -452,8 +452,8 @@ Optional when relevant:
   - Normalize selected-border behavior.
   - Rename `Tab 4` copy to approved `Map4` copy.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/MapBottomSheetTabsTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsTest.kt`
 - Exit gate:
   - Parity assertions pass in unit/compose tests.
 
@@ -465,9 +465,9 @@ Optional when relevant:
   - Add adaptive/scroll behavior for tab strip.
   - Add explicit tab-role/group semantics.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/MapBottomSheetTabsTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/map/ui/*` (new)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/map/ui/*` (new)
 - Exit gate:
   - Compact-width and accessibility assertions pass.
 
@@ -552,9 +552,9 @@ Scoring normalization:
   - No architecture-rule policy changes proposed in this slice.
 - Required verification alignment:
   - `./gradlew --no-daemon enforceRules :feature:map:testDebugUnitTest :feature:map:assembleDebug` latest run: pass.
-  - `./gradlew --no-daemon :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapBottomSheetTabsTest" --tests "com.example.xcpro.screens.navdrawer.WeatherSettingsScreenPolicyTest"` latest run: pass.
+  - `./gradlew --no-daemon :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapBottomSheetTabsTest" --tests "com.trust3.xcpro.screens.navdrawer.WeatherSettingsScreenPolicyTest"` latest run: pass.
   - `./gradlew --no-daemon enforceRules testDebugUnitTest assembleDebug` latest run: fail due unrelated `app` test timeouts in `ProfileRepositoryTest` (`invalidEntriesAreIgnoredDuringHydration`, `nullEntriesAreIgnoredDuringHydration`).
-  - `./gradlew --no-daemon --no-configuration-cache :feature:map:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true" "-Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.map.ui.MapBottomTabsLayerInstrumentedTest"` latest run: pass (class skipped by intentional `@Ignore` due module compose harness limitation).
+  - `./gradlew --no-daemon --no-configuration-cache :feature:map:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true" "-Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.map.ui.MapBottomTabsLayerInstrumentedTest"` latest run: pass (class skipped by intentional `@Ignore` due module compose harness limitation).
 
 ## 13) Kotlin File Line-Budget Compliance (<500)
 
@@ -567,11 +567,11 @@ Current audited files:
 
 | File | Current Lines | Compliance | Action |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt` | 371 | Pass (`< 500`) | Stable; no split needed |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabContents.kt` | 182 | Pass (`< 500`) | Stable |
-| `feature/map/src/main/java/com/example/xcpro/weather/ui/WeatherSettingsContent.kt` | 420 | Pass (`< 500`) | Stable |
-| `feature/map/src/main/java/com/example/xcpro/weather/ui/WeatherSettingsUiSupport.kt` | 155 | Pass (`< 500`) | Stable |
-| `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt` | 86 | Pass (`< 500`) | Stable |
-| `feature/map/src/test/java/com/example/xcpro/map/ui/MapBottomSheetTabsTest.kt` | 341 | Pass (`< 500`) | Stable |
-| `feature/map/src/androidTest/java/com/example/xcpro/map/ui/MapBottomTabsLayerInstrumentedTest.kt` | 159 | Pass (`< 500`) | Stable; class currently ignored pending harness follow-up |
-| `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt` | 126 | Pass (`< 500`) | Stable |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt` | 371 | Pass (`< 500`) | Stable; no split needed |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabContents.kt` | 182 | Pass (`< 500`) | Stable |
+| `feature/map/src/main/java/com/trust3/xcpro/weather/ui/WeatherSettingsContent.kt` | 420 | Pass (`< 500`) | Stable |
+| `feature/map/src/main/java/com/trust3/xcpro/weather/ui/WeatherSettingsUiSupport.kt` | 155 | Pass (`< 500`) | Stable |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt` | 86 | Pass (`< 500`) | Stable |
+| `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapBottomSheetTabsTest.kt` | 341 | Pass (`< 500`) | Stable |
+| `feature/map/src/androidTest/java/com/trust3/xcpro/map/ui/MapBottomTabsLayerInstrumentedTest.kt` | 159 | Pass (`< 500`) | Stable; class currently ignored pending harness follow-up |
+| `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt` | 126 | Pass (`< 500`) | Stable |

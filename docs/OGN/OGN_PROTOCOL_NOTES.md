@@ -161,21 +161,21 @@ Behavior:
 ## Tests
 
 - Parser coverage:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnAprsLineParserTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnAprsLineParserTest.kt`
 - Distance and viewport math:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnSubscriptionPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnSubscriptionPolicyTest.kt`
 - Track stabilization:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrackStabilizerTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrackStabilizerTest.kt`
 - Repository policy helpers:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryPolicyTest.kt`
 - Repository connection and login identity:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnClientCallsignTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnClientCallsignTest.kt`
 - DDB parser:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbJsonParserTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnDdbJsonParserTest.kt`
 - Preferences and VM center wiring:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
 
 ## Reliability Hardening Plan (Implemented)
 

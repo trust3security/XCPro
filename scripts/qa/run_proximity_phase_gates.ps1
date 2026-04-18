@@ -188,8 +188,8 @@ $phaseNames = [ordered]@{
 
 $fastTestTaskSet = @(
     ":feature:map:testDebugUnitTest",
-    "--tests", "com.example.xcpro.adsb.*",
-    "--tests", "com.example.xcpro.map.*Adsb*"
+    "--tests", "com.trust3.xcpro.adsb.*",
+    "--tests", "com.trust3.xcpro.map.*Adsb*"
 )
 foreach ($pattern in $ExtraFastTestPatterns) {
     if (-not [string]::IsNullOrWhiteSpace($pattern)) {

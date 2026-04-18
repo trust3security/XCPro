@@ -12,8 +12,8 @@
 
 - Problem statement:
   - Production `runBlocking` still exists in two runtime-critical callsites:
-    - `app/src/main/java/com/example/xcpro/XCProApplication.kt`
-    - `feature/variometer/src/main/java/com/example/xcpro/audio/VarioBeepController.kt`
+    - `app/src/main/java/com/trust3/xcpro/XCProApplication.kt`
+    - `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioBeepController.kt`
   - `XCProApplication` blocks process startup while resetting SCIA startup state.
   - `VarioBeepController` blocks the caller thread during stop and also creates a hidden child scope.
   - `VarioAudioEngine` still exposes a convenience default scope and then nests another internal scope before creating the beep controller.
@@ -80,9 +80,9 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/flight-runtime/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt` | explicit runtime owner with its own documented scope | keep long-lived scope ownership explicit inside a named runtime owner | this slice needs a one-shot startup coordinator in `feature:traffic`, not a continuous collector |
-| `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt` | runtime bridge with explicit owner scope and thin orchestration | keep orchestration thin and push policy into the right owner instead of UI | this slice has no replay/state-machine work; it only needs startup/audio ownership cleanup |
-| `app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt` | Android lifecycle host owning async startup work | let Android lifecycle host trigger async work without blocking the main thread | `Application` startup does not have a natural cancel-on-destroy path, so the one-shot coordinator contract must be explicit |
+| `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt` | explicit runtime owner with its own documented scope | keep long-lived scope ownership explicit inside a named runtime owner | this slice needs a one-shot startup coordinator in `feature:traffic`, not a continuous collector |
+| `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt` | runtime bridge with explicit owner scope and thin orchestration | keep orchestration thin and push policy into the right owner instead of UI | this slice has no replay/state-machine work; it only needs startup/audio ownership cleanup |
+| `app/src/main/java/com/trust3/xcpro/service/VarioForegroundService.kt` | Android lifecycle host owning async startup work | let Android lifecycle host trigger async work without blocking the main thread | `Application` startup does not have a natural cancel-on-destroy path, so the one-shot coordinator contract must be explicit |
 
 ### 2.2B Boundary Moves
 
@@ -107,18 +107,18 @@ Confirm dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/RunBlocking_Removal_Release_Grade_Phased_IP_2026-03-30.md` | new | execution plan and release gates | canonical plan owner for this slice | do not hide plan state in global docs | no |
-| `app/src/main/java/com/example/xcpro/XCProApplication.kt` | existing | Android process-start trigger only | app lifecycle host | must not own reset policy or persisted state | no |
-| `app/src/main/java/com/example/xcpro/SciaStartupResetter.kt` | existing | actual SCIA reset side effects against repositories | already the focused reset side-effect owner | do not move reset I/O into `Application` | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnSciaStartupResetCoordinator.kt` | new | one-shot startup reset state owner and async launch coordination | feature-owned so traffic repos can depend on it without reversing module boundaries | `app` cannot own a state source consumed by feature repos | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt` | existing | reset-safe SCIA and target-selection reads | canonical persisted OGN preference owner | UI must not gate these values ad hoc | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt` | existing | reset-safe selected-aircraft reads | canonical persisted trail-selection owner | UI must not gate these values ad hoc | no |
-| `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt` | existing | explicit audio runtime scope owner | already owns engine lifecycle | `VarioBeepController` should not own a second long-lived scope | no |
-| `feature/variometer/src/main/java/com/example/xcpro/audio/VarioBeepController.kt` | existing | beep loop logic only | canonical beep-loop behavior owner | engine should not absorb beep timing logic | no |
-| `app/src/test/java/com/example/xcpro/XCProApplicationTest.kt` | existing | startup trigger regression coverage | direct application host coverage | avoid proving startup only via integration tests | no |
-| `app/src/test/java/com/example/xcpro/SciaStartupResetterTest.kt` | existing | reset side-effect coverage | direct reset owner coverage | no need to duplicate repository assertions elsewhere | no |
-| `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt` | existing | reset-safe startup read coverage for SCIA/target | canonical OGN preference test owner | keep DataStore read semantics close to repo | no |
-| `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepositoryTest.kt` | existing | reset-safe startup read coverage for selected aircraft | canonical trail-selection repo test owner | keep DataStore read semantics close to repo | no |
-| `feature/variometer/src/test/java/com/example/xcpro/audio/VarioBeepControllerTest.kt` | new | non-blocking stop/idempotency coverage | smallest owner for beep-loop stop semantics | do not rely on instrumentation for pure coroutine behavior | no |
+| `app/src/main/java/com/trust3/xcpro/XCProApplication.kt` | existing | Android process-start trigger only | app lifecycle host | must not own reset policy or persisted state | no |
+| `app/src/main/java/com/trust3/xcpro/SciaStartupResetter.kt` | existing | actual SCIA reset side effects against repositories | already the focused reset side-effect owner | do not move reset I/O into `Application` | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnSciaStartupResetCoordinator.kt` | new | one-shot startup reset state owner and async launch coordination | feature-owned so traffic repos can depend on it without reversing module boundaries | `app` cannot own a state source consumed by feature repos | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt` | existing | reset-safe SCIA and target-selection reads | canonical persisted OGN preference owner | UI must not gate these values ad hoc | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt` | existing | reset-safe selected-aircraft reads | canonical persisted trail-selection owner | UI must not gate these values ad hoc | no |
+| `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioAudioEngine.kt` | existing | explicit audio runtime scope owner | already owns engine lifecycle | `VarioBeepController` should not own a second long-lived scope | no |
+| `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioBeepController.kt` | existing | beep loop logic only | canonical beep-loop behavior owner | engine should not absorb beep timing logic | no |
+| `app/src/test/java/com/trust3/xcpro/XCProApplicationTest.kt` | existing | startup trigger regression coverage | direct application host coverage | avoid proving startup only via integration tests | no |
+| `app/src/test/java/com/trust3/xcpro/SciaStartupResetterTest.kt` | existing | reset side-effect coverage | direct reset owner coverage | no need to duplicate repository assertions elsewhere | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt` | existing | reset-safe startup read coverage for SCIA/target | canonical OGN preference test owner | keep DataStore read semantics close to repo | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepositoryTest.kt` | existing | reset-safe startup read coverage for selected aircraft | canonical trail-selection repo test owner | keep DataStore read semantics close to repo | no |
+| `feature/variometer/src/test/java/com/trust3/xcpro/audio/VarioBeepControllerTest.kt` | new | non-blocking stop/idempotency coverage | smallest owner for beep-loop stop semantics | do not rely on instrumentation for pure coroutine behavior | no |
 
 ### 2.2E Module and API Surface
 
@@ -138,7 +138,7 @@ Confirm dependency flow remains:
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
 | SCIA startup reset-safe read policy | `feature/traffic/.../OgnSciaStartupResetCoordinator.kt` plus traffic repos | traffic repos, app startup tests | startup reset policy belongs with SCIA feature ownership, not `Application` or UI | no |
-| audio stop non-blocking teardown policy | `feature/variometer/src/main/java/com/example/xcpro/audio/VarioBeepController.kt` | engine/tests | beep-loop stop behavior belongs in beep-loop owner | no |
+| audio stop non-blocking teardown policy | `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioBeepController.kt` | engine/tests | beep-loop stop behavior belongs in beep-loop owner | no |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -254,9 +254,9 @@ After:
 - Goal:
   - remove blocking audio stop and hidden beep-controller scope ownership
 - Files to change:
-  - `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
-  - `feature/variometer/src/main/java/com/example/xcpro/audio/VarioBeepController.kt`
-  - `feature/variometer/src/test/java/com/example/xcpro/audio/VarioBeepControllerTest.kt`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioAudioEngine.kt`
+  - `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioBeepController.kt`
+  - `feature/variometer/src/test/java/com/trust3/xcpro/audio/VarioBeepControllerTest.kt`
 - Ownership/file split changes in this phase:
   - `VarioAudioEngine` becomes the explicit audio runtime scope owner
   - `VarioBeepController` stops creating a long-lived child scope
@@ -271,7 +271,7 @@ After:
 - Current status:
   - implemented
   - focused verification passed:
-    - `./gradlew :feature:variometer:testDebugUnitTest --tests "com.example.xcpro.audio.VarioBeepControllerTest"`
+    - `./gradlew :feature:variometer:testDebugUnitTest --tests "com.trust3.xcpro.audio.VarioBeepControllerTest"`
     - `./gradlew :feature:variometer:testDebugUnitTest`
 
 ### Phase 2 - SCIA startup hardening
@@ -279,15 +279,15 @@ After:
 - Goal:
   - remove startup blocking while preserving reset-safe SCIA behavior from first observable app state
 - Files to change:
-  - `app/src/main/java/com/example/xcpro/XCProApplication.kt`
-  - `app/src/main/java/com/example/xcpro/SciaStartupResetter.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnSciaStartupResetCoordinator.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
-  - `app/src/test/java/com/example/xcpro/XCProApplicationTest.kt`
-  - `app/src/test/java/com/example/xcpro/SciaStartupResetterTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrailSelectionPreferencesRepositoryTest.kt`
+  - `app/src/main/java/com/trust3/xcpro/XCProApplication.kt`
+  - `app/src/main/java/com/trust3/xcpro/SciaStartupResetter.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnSciaStartupResetCoordinator.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepository.kt`
+  - `app/src/test/java/com/trust3/xcpro/XCProApplicationTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/SciaStartupResetterTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrailSelectionPreferencesRepositoryTest.kt`
 - Ownership/file split changes in this phase:
   - `Application` remains only the startup trigger host
   - `feature:traffic` owns bootstrap state and reset-safe read policy
@@ -302,9 +302,9 @@ After:
 - Current status:
   - implemented
   - focused verification passed:
-    - `./gradlew :feature:traffic:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest" --tests "com.example.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest"`
-    - `./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.AppOgnSciaStartupResetCoordinatorTest" --tests "com.example.xcpro.XCProApplicationTest" --tests "com.example.xcpro.SciaStartupResetterTest"`
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelOverlayPreferenceTest"`
+    - `./gradlew :feature:traffic:testDebugUnitTest --tests "com.trust3.xcpro.ogn.OgnTrafficPreferencesRepositoryTest" --tests "com.trust3.xcpro.ogn.OgnTrailSelectionPreferencesRepositoryTest"`
+    - `./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.AppOgnSciaStartupResetCoordinatorTest" --tests "com.trust3.xcpro.XCProApplicationTest" --tests "com.trust3.xcpro.SciaStartupResetterTest"`
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelOverlayPreferenceTest"`
 
 ### Phase 3 - Enforcement and merge proof
 

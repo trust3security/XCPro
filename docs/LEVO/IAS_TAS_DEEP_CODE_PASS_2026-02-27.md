@@ -1,4 +1,4 @@
-﻿# IAS/TAS Deep Code Pass (XCPro, Live/Flying Only)
+# IAS/TAS Deep Code Pass (XCPro, Live/Flying Only)
 
 Date: 2026-02-27
 Scope: live/flying IAS/TAS path only.
@@ -23,34 +23,34 @@ Scope: live/flying IAS/TAS path only.
 ## Canonical Models and Units
 
 - Core airspeed sample model:
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindInputs.kt:20`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindInputs.kt:20`
   - fields: `trueMs`, `indicatedMs`, `timestampMillis`, `clockMillis`, `valid`.
 - Selected airspeed model in metrics:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedModels.kt:3`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedModels.kt:3`
 - Source labels + TE eligibility:
   - `EXTERNAL -> "SENSOR"` (`energyHeightEligible = true`)
   - `WIND_VECTOR -> "WIND"` (`energyHeightEligible = true`)
   - `GPS_GROUND -> "GPS"` (`energyHeightEligible = false`)
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/AirspeedModels.kt:9`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/AirspeedModels.kt:9`
 
 ## Live Pipeline (End to End)
 
 ### 1) Live Source Wiring
 
 - DI binds live airspeed source to `ExternalAirspeedRepository`:
-  - `feature/map/src/main/java/com/example/xcpro/di/WindSensorModule.kt:57`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/WindSensorModule.kt:57`
 - Fusion factory chooses the live airspeed source for live mode:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/SensorFusionRepositoryFactory.kt:35`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorFusionRepositoryFactory.kt:35`
 - Engine collects selected `airspeedFlow` and caches latest sample:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngine.kt:142`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt:142`
 
 ### 2) Metrics Request Feed
 
 - Cached live sample is forwarded on both emit paths:
-  - baro-driven emit: `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:195`
-  - GPS fallback emit: `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:307`
+  - baro-driven emit: `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:195`
+  - GPS fallback emit: `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:307`
 - `FlightDataEmitter` passes this into `FlightMetricsRequest.externalAirspeedSample`:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt:85`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt:85`
 
 ### 3) External Sample Acceptance
 
@@ -62,9 +62,9 @@ Scope: live/flying IAS/TAS path only.
 - `indicatedMs` finite and `> 0.1`; otherwise uses `trueMs` as IAS fallback.
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:393`
-- freshness check: `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:410`
-- constants: `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:458`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:393`
+- freshness check: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:410`
+- constants: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:458`
 
 Timebase contract detail (live):
 
@@ -74,14 +74,14 @@ Timebase contract detail (live):
 - Practical producer contract for live mode: publish `clockMillis` in the same monotonic domain used by GPS/baro ingest; keep `timestampMillis` for wall-time metadata/logging.
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:410`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt:79`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:20`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:33`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:247`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:249`
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt:28`
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt:86`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:410`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt:79`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:20`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:33`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:247`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:249`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorData.kt:28`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt:86`
 
 ### 4) Wind-Derived TAS/IAS (Live)
 
@@ -93,8 +93,8 @@ Code:
 - computes IAS from TAS using QNH-aware density ratio.
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt:15`
-- density formula: `feature/map/src/main/java/com/example/xcpro/sensors/domain/WindEstimator.kt:40`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/WindEstimator.kt:15`
+- density formula: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/WindEstimator.kt:40`
 
 Wind eligibility used by metrics:
 
@@ -103,9 +103,9 @@ Wind eligibility used by metrics:
 - This differs from UI-facing "wind valid" semantics that are often tied to `isAvailable` only; TAS/TE wind usage is stricter and can drop earlier when confidence decays.
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:94`
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindState.kt:14`
-- confidence decay / stale horizon: `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:362`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:94`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindState.kt:14`
+- confidence decay / stale horizon: `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:362`
 
 ### 5) Final Selection Order
 
@@ -116,9 +116,9 @@ In `CalculateFlightMetricsUseCase.execute(...)`:
 3. GPS fallback (only if GPS speed finite and `> 0.5 m/s`, with IAS=TAS=GPS).
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:97`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:117`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:451`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:97`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:117`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:451`
 
 ### 6) Hold and Validity Semantics
 
@@ -128,15 +128,15 @@ Code:
 - Hold is only consulted when incoming `airspeedEstimate` is `null`; because source selection usually emits GPS fallback above `0.5 m/s`, hold is often bypassed during normal moving flight.
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt:59`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt:58`
-- constant: `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlightMetricsConstants.kt:22`
-- selection/fallback path: `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:108`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FusionBlackboard.kt:59`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SensorFrontEnd.kt:58`
+- constant: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlightMetricsConstants.kt:22`
+- selection/fallback path: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:108`
 
 `tasValid` rule:
 - `tasValid = activeEstimate != null && source.energyHeightEligible`
 - therefore `GPS` source yields `tasValid = false`.
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt:62`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SensorFrontEnd.kt:62`
 
 ## How Live IAS/TAS Is Used
 
@@ -150,18 +150,18 @@ Code:
 - TE altitude kinetic term is only applied for energy-eligible source.
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:120`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt:67`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:120`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SensorFrontEnd.kt:67`
 
 ### Netto and STF
 
 - Legacy netto path uses indicated airspeed first, then hold/fallback behavior:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt:363`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt:363`
 - Levo netto requires wind+polar+flying+straight conditions, sink lookup from IAS, and may scale smoothing using TAS:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt:49`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt:104`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculator.kt:49`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculator.kt:104`
 - STF computes IAS target and IAS delta vs current IAS:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/SpeedToFlyCalculator.kt:22`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SpeedToFlyCalculator.kt:22`
 
 ### Flying State
 
@@ -170,17 +170,17 @@ Code:
 - No explicit sample age/freshness gate is applied in `FlightStateRepository` before detector call.
 
 Code:
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:60`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:100`
-- detector logic: `feature/map/src/main/java/com/example/xcpro/sensors/domain/FlyingStateDetector.kt:38`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:60`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:100`
+- detector logic: `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FlyingStateDetector.kt:38`
 
 ## UI / Card Exposure
 
 - Domain output maps into SSOT with:
   - `trueAirspeed`, `indicatedAirspeed`, `airspeedSource`, `tasValid`
-  - `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt:64`
+  - `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDisplayMapper.kt:64`
 - SSOT maps to `RealTimeFlightData`:
-  - `feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt:135`
+  - `feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt:135`
 
 Card formatting behavior:
 
@@ -192,63 +192,63 @@ Card formatting behavior:
 Code:
 - `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt:135`
 - `dfcards-library/src/main/java/com/example/dfcards/CardFormatSpec.kt:146`
-- `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt:207`
-- `feature/map/src/main/java/com/example/xcpro/map/FlightDataManagerSupport.kt:21`
+- `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt:207`
+- `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManagerSupport.kt:21`
 
 ## Additional Live Details Found In This Intensive Pass
 
 1. Wind confidence decay is source-sensitive:
 - Auto wind (`CIRCLING`/`EKF`) decays with half-life `7 minutes` from `lastCirclingClockMillis`.
 - Manual/external wind uses base quality directly (no decay).
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:362`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:362`
 
 2. Wind stale threshold is long (`1 hour`):
 - `STALE_MS = 3_600_000L`.
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:377`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:377`
 
 3. Wind override default quality is `6`, but confidence normalization clamps with `MAX_MEASUREMENT_QUALITY=5`:
 - practical result: override confidence saturates at `1.0`.
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindOverride.kt:10`
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:364`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindOverride.kt:10`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:364`
 
 4. Wind candidate precedence is:
 - auto when newer than manual,
 - else external,
 - else manual,
 - else auto.
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindSelectionUseCase.kt:23`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindSelectionUseCase.kt:23`
 
 5. Production wind fusion receives `input.airspeed`, but current processing path does not read it.
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt:57`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt:57`
 
 6. Wind override write APIs exist but have no production callsites outside their repository:
 - `setManualWind(...)`, `updateExternalWind(...)`, `updateExternalWindVector(...)` are defined in `WindOverrideRepository`.
 - Search over `feature/map/src/main/java` shows no callsites beyond the repository itself.
-- `feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindOverrideRepository.kt:67`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindOverrideRepository.kt:67`
 
 ## Current Gaps / Risks (Live)
 
 1. External live ingest is unbound in production
 - `ExternalAirspeedRepository.updateAirspeed(...)` exists but no production callsite was found.
 - There is currently no integrated external airspeed device path in this codebase.
-- file: `feature/map/src/main/java/com/example/xcpro/weather/wind/data/ExternalAirspeedRepository.kt:16`
+- file: `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/ExternalAirspeedRepository.kt:16`
 
 2. External sample timebase mismatch can silently disable `SENSOR` airspeed
 - Freshness gating compares sample times to fusion `currentTimeMillis` (typically monotonic in live loops).
 - Producers emitting wall-time in `clockMillis` may fail freshness checks (`age < 0`) and be rejected.
 - files:
-  - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:410`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:249`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt:410`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt:249`
 
 3. Wind EKF is present but not integrated into production wind fusion path
 - `WindEkfUseCase` exists with tests but no production wiring found.
 - files:
-  - `feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindEkfUseCase.kt:12`
-  - `feature/map/src/test/java/com/example/xcpro/weather/wind/WindEkfUseCaseTest.kt:10`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindEkfUseCase.kt:12`
+  - `feature/map/src/test/java/com/trust3/xcpro/weather/wind/WindEkfUseCaseTest.kt:10`
 
 4. Flight-state path does not apply explicit airspeed freshness gating
 - It validates only `valid + finite` and forwards directly to detector.
-- file: `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt:100`
+- file: `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt:100`
 
 5. UI subtitle granularity is limited
 - IAS/TAS cards only show `EST` vs `GPS`; they do not distinguish `SENSOR` from `WIND`.
@@ -256,22 +256,22 @@ Code:
 
 6. Naming drift in legacy netto helper
 - `lastValidTAS` variable stores IAS candidate logic.
-- file: `feature/map/src/main/java/com/example/xcpro/sensors/FlightCalculationHelpers.kt:372`
+- file: `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightCalculationHelpers.kt:372`
 
 ## Live Test Coverage Snapshot
 
 Covered:
 - airspeed source priority + stale/fresh logic (`SENSOR`/`WIND`/`GPS`):
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt:358`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt:358`
 - airspeed hold behavior and expiry:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/SensorFrontEndTest.kt:87`
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/FusionBlackboardTest.kt:70`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/SensorFrontEndTest.kt:87`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/FusionBlackboardTest.kt:70`
 - wind-based IAS/TAS estimation and QNH effect:
-  - `feature/map/src/test/java/com/example/xcpro/sensors/domain/WindEstimatorTest.kt:12`
+  - `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/WindEstimatorTest.kt:12`
 - wind confidence half-life behavior:
-  - `feature/map/src/test/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepositoryTest.kt:27`
+  - `feature/map/src/test/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepositoryTest.kt:27`
 - `tasValid` and IAS/TAS mapping to card data model:
-  - `feature/map/src/test/java/com/example/xcpro/ConvertToRealTimeFlightDataTest.kt:81`
+  - `feature/map/src/test/java/com/trust3/xcpro/ConvertToRealTimeFlightDataTest.kt:81`
   - `dfcards-library/src/test/java/com/example/dfcards/CardDataFormatterTest.kt:147`
 
 Observed missing/weak coverage for live behavior:

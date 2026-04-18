@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.core.ui"
+    namespace = "com.trust3.xcpro.core.ui"
     compileSdk = 35
 
     defaultConfig {

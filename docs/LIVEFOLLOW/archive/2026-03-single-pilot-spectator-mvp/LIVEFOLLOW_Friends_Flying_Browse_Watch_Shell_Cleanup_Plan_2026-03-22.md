@@ -58,8 +58,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | already orchestrates map-entry-scoped LiveFollow actions from the nav graph | reuse shared map-entry-scoped ViewModel wiring | Friends Flying will call the shared watch ViewModel directly instead of routing through a transient entry screen |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | already owns map-side watch overlay injection | keep watch panel rendering on the map side | render a compact panel instead of the old verbose card |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | already orchestrates map-entry-scoped LiveFollow actions from the nav graph | reuse shared map-entry-scoped ViewModel wiring | Friends Flying will call the shared watch ViewModel directly instead of routing through a transient entry screen |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | already owns map-side watch overlay injection | keep watch panel rendering on the map side | render a compact panel instead of the old verbose card |
 
 ### 2.2B Boundary Moves
 
@@ -79,13 +79,13 @@
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/LIVEFOLLOW/LIVEFOLLOW_Friends_Flying_Browse_Watch_Shell_Cleanup_Plan_2026-03-22.md` | New | slice intent and ownership record | required in-repo plan for non-trivial shell change | not runtime code | No |
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | Existing | nav-graph orchestration into shared watch ViewModel | this is the current map-entry orchestration owner | not a feature ViewModel concern | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | Existing | sheet scaffold and grouped list rendering | route UI owns display-only sheet chrome | not repository/domain logic | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | Existing | list grouping/sorting/presentation mapping | presentation mapper already lives here | UI should not sort/group raw models directly | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | compact watch-panel display fields | presentation mapper already owns watch UI labels | map runtime layer should render, not derive labels | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | compact map-host panel rendering | current map-host watch surface already lives here | avoid inventing a new watch shell owner | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/friends/FriendsFlyingUiStateTest.kt` | Existing | grouped-list regressions | current UI mapper tests already live here | closest test owner | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiStateTest.kt` | Existing | compact watch-panel mapping regressions | current watch UI-state tests already live here | closest test owner | No |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | Existing | nav-graph orchestration into shared watch ViewModel | this is the current map-entry orchestration owner | not a feature ViewModel concern | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | Existing | sheet scaffold and grouped list rendering | route UI owns display-only sheet chrome | not repository/domain logic | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | Existing | list grouping/sorting/presentation mapping | presentation mapper already lives here | UI should not sort/group raw models directly | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | compact watch-panel display fields | presentation mapper already owns watch UI labels | map runtime layer should render, not derive labels | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | compact map-host panel rendering | current map-host watch surface already lives here | avoid inventing a new watch shell owner | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingUiStateTest.kt` | Existing | grouped-list regressions | current UI mapper tests already live here | closest test owner | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiStateTest.kt` | Existing | compact watch-panel mapping regressions | current watch UI-state tests already live here | closest test owner | No |
 
 ### 2.3 Time Base
 

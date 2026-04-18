@@ -104,8 +104,8 @@ Dependency direction remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/domain/AdsbAircraftClassResolver.kt` | current ADS-B class resolution owner | keep pure domain classification with no Android imports | add new fixed-wing refinement classes/branches only if needed |
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIcon.kt` | current icon projection owner | keep drawable/style mapping in one narrow UI enum | may add `PlaneJetMedium` and rebind `PlaneLight` asset |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/domain/AdsbAircraftClassResolver.kt` | current ADS-B class resolution owner | keep pure domain classification with no Android imports | add new fixed-wing refinement classes/branches only if needed |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIcon.kt` | current icon projection owner | keep drawable/style mapping in one narrow UI enum | may add `PlaneJetMedium` and rebind `PlaneLight` asset |
 | `docs/ADS-b/CHANGE_PLAN_ADSB_ICON_CORRECTNESS_RELEASE_GRADE_2026-03-09.md` | existing ADS-B icon workstream plan | reuse phased execution, focused scope, and release-gate style | this plan adds change-plan template sections and explicit state ownership tables |
 
 ### 2.2B Boundary Moves
@@ -126,13 +126,13 @@ Dependency direction remains:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/domain/AdsbAircraftClassResolver.kt` | Existing | canonical ADS-B classification policy | owns pure classification today | classification must not move into UI/overlay code | No |
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIcon.kt` | Existing | drawable/style mapping for ADS-B icons | current UI icon owner | drawables/style ids do not belong in domain resolver | No |
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt` | Existing | category labels + icon projection helpers | current label/projection seam | labels should stay out of repository/domain logic | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/AdsbStickyIconProjectionCache.kt` | Existing | sticky style id reuse for strong fixed-wing classes | projection cache already owns sticky rules | sticky visual behavior must not move into resolver | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayStyleImages.kt` | Existing | runtime style image registration | already registers all ADS-B icons | registration should remain below icon enum, not in docs/tests | No |
-| `feature/traffic/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt` | Existing | mapping/label regression tests | current high-signal test owner | category/icon truth should be locked near mapper | No |
-| `feature/traffic/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconTest.kt` | Existing | drawable/style id enum regression tests | current icon enum test owner | resource bindings should be locked near enum | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/domain/AdsbAircraftClassResolver.kt` | Existing | canonical ADS-B classification policy | owns pure classification today | classification must not move into UI/overlay code | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIcon.kt` | Existing | drawable/style mapping for ADS-B icons | current UI icon owner | drawables/style ids do not belong in domain resolver | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt` | Existing | category labels + icon projection helpers | current label/projection seam | labels should stay out of repository/domain logic | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbStickyIconProjectionCache.kt` | Existing | sticky style id reuse for strong fixed-wing classes | projection cache already owns sticky rules | sticky visual behavior must not move into resolver | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayStyleImages.kt` | Existing | runtime style image registration | already registers all ADS-B icons | registration should remain below icon enum, not in docs/tests | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt` | Existing | mapping/label regression tests | current high-signal test owner | category/icon truth should be locked near mapper | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconTest.kt` | Existing | drawable/style id enum regression tests | current icon enum test owner | resource bindings should be locked near enum | No |
 | `docs/ADS-b/ADSB_CategoryIconMapping.md` | Existing | runtime mapping contract documentation | current icon mapping contract owner | `ADSB.md` is broader runtime contract | No |
 | `docs/ADS-b/ADSB.md` | Existing | user-visible ADS-B runtime contract wording | current ADS-B runtime contract | detailed category mapping table belongs in the specialized doc | No |
 
@@ -157,7 +157,7 @@ No compatibility shim is planned.
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| ADS-B category + metadata/typecode -> aircraft class policy | `feature/traffic/src/main/java/com/example/xcpro/adsb/domain/AdsbAircraftClassResolver.kt` | icon mapper, labels, sticky projection, tests, docs | one pure classification owner avoids icon drift across UI/runtime paths | No |
+| ADS-B category + metadata/typecode -> aircraft class policy | `feature/traffic/src/main/java/com/trust3/xcpro/adsb/domain/AdsbAircraftClassResolver.kt` | icon mapper, labels, sticky projection, tests, docs | one pure classification owner avoids icon drift across UI/runtime paths | No |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -290,8 +290,8 @@ Target changes:
 - Goal:
   - give fixed-wing refinement a stable icon vocabulary owned by the correct module
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIcon.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconTest.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIcon.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconTest.kt`
   - none required by default in slice 1
 - Ownership/file split changes in this phase:
   - no owner moves beyond correct resource placement
@@ -308,10 +308,10 @@ Target changes:
 - Goal:
   - improve fixed-wing classification without touching runtime wiring
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/domain/AdsbAircraftClassResolver.kt`
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/AdsbStickyIconProjectionCacheTest.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/domain/AdsbAircraftClassResolver.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/AdsbStickyIconProjectionCacheTest.kt`
 - Ownership/file split changes in this phase:
   - none; resolver remains the one classification owner
 - Tests to add/update:
@@ -333,7 +333,7 @@ Target changes:
 - Goal:
   - make details truth explicit without widening the first release slice unnecessarily
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
   - `docs/ADS-b/ADSB_CategoryIconMapping.md`
   - `docs/ADS-b/ADSB.md`
 - Ownership/file split changes in this phase:
@@ -407,9 +407,9 @@ Optional when relevant:
 Targeted test commands:
 
 ```bash
-./gradlew :feature:traffic:testDebugUnitTest --tests com.example.xcpro.adsb.ui.AdsbAircraftIconMapperTest
-./gradlew :feature:traffic:testDebugUnitTest --tests com.example.xcpro.adsb.ui.AdsbAircraftIconTest
-./gradlew :feature:traffic:testDebugUnitTest --tests com.example.xcpro.map.AdsbStickyIconProjectionCacheTest
+./gradlew :feature:traffic:testDebugUnitTest --tests com.trust3.xcpro.adsb.ui.AdsbAircraftIconMapperTest
+./gradlew :feature:traffic:testDebugUnitTest --tests com.trust3.xcpro.adsb.ui.AdsbAircraftIconTest
+./gradlew :feature:traffic:testDebugUnitTest --tests com.trust3.xcpro.map.AdsbStickyIconProjectionCacheTest
 ```
 
 ## 6) Risks and Mitigations

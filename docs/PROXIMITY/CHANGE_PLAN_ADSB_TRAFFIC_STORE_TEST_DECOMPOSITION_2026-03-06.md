@@ -2,7 +2,7 @@
 
 Date: 2026-03-06  
 Owner: XCPro map/adsb test slice  
-Scope: `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTest.kt`
+Scope: `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTest.kt`
 
 ## Objective
 
@@ -94,7 +94,7 @@ Acceptance:
 - No test behavior changed.
 
 Verification:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbTrafficStoreTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbTrafficStoreTest"`
 
 ## Phase 1 - Shared DSL/Fixtures Extraction
 
@@ -113,7 +113,7 @@ Acceptance:
 - Support files remain `< 460` lines.
 
 Verification:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbTrafficStore*"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbTrafficStore*"`
 
 ## Phase 2 - Split Core Filtering/Ordering Tests
 
@@ -168,7 +168,7 @@ Changes:
 - Add or tighten local rule check for this hotspot to prevent regression above `460` lines (if enforce-rules config supports per-file caps).
 
 Acceptance:
-- No file in `feature/map/src/test/java/com/example/xcpro/adsb/` that belongs to this suite exceeds `460`.
+- No file in `feature/map/src/test/java/com/trust3/xcpro/adsb/` that belongs to this suite exceeds `460`.
 - Test names remain stable and readable.
 - No architectural deviations required.
 

@@ -113,13 +113,13 @@ Gate:
 - `KNOWN_DEVIATIONS.md` remains empty.
 
 ## Files Likely to Change (Initial List)
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileModels.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/*`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileModels.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/*`
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardStateRepositoryUpdates.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/*` (UI mapping)
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-- `feature/map/src/main/java/com/example/xcpro/flightdata/*` (new repository or adapter)
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/flightdata/*` (new repository or adapter)
 - `scripts/ci/enforce_rules.ps1` (optional follow-up)
 
 ## Open Questions / Missing Docs

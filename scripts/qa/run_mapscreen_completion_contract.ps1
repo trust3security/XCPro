@@ -19,8 +19,8 @@ param(
     [switch]$SkipFinalizeThresholdCheck,
     [int]$TierCaptureDurationSeconds = 90,
     [int]$SwipePauseMs = 350,
-    [string]$ApplicationId = "com.example.openxcpro.debug",
-    [string]$Activity = "com.example.xcpro.MainActivity",
+    [string]$ApplicationId = "com.trust3.xcpro.debug",
+    [string]$Activity = "com.trust3.xcpro.MainActivity",
     [switch]$NoGestures,
     [string]$StateFile
 )

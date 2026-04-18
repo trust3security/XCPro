@@ -63,8 +63,8 @@ Confirm dependency flow remains: `UI -> domain -> data`
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt` | explicit single-writer runtime ownership | writer-lane state mutation | OGN keeps blocking socket I/O off the writer lane |
-| `feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt` | explicit offline wait / resume seam | injected network port + online wait helper | OGN wraps socket reconnect timing instead of HTTP polling |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt` | explicit single-writer runtime ownership | writer-lane state mutation | OGN keeps blocking socket I/O off the writer lane |
+| `feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeNetworkWait.kt` | explicit offline wait / resume seam | injected network port + online wait helper | OGN wraps socket reconnect timing instead of HTTP polling |
 
 ### 2.2B Boundary Moves
 
@@ -85,22 +85,22 @@ Confirm dependency flow remains: `UI -> domain -> data`
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt` | existing | OGN snapshot and issue contract | canonical OGN model owner | UI should not own transport semantics | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt` | existing | OGN repository DI/runtime wiring | canonical repository owner | keep constructor wiring out of UI/use-case code | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt` | existing | runtime owner fields, writer/io scopes, entrypoints | runtime SSOT owner | keep ownership explicit in one runtime host | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt` | existing | reconnect loop and socket event production | canonical OGN transport policy owner | UI/use-case layers must not own reconnect policy | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt` | new | offline wait / resume helper | keeps connection file focused | separate from snapshot/UI mapping | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt` | existing | snapshot publication + domain-side runtime policies | existing owner for runtime helpers | avoid pushing snapshot logic into UI | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt` | new | OGN connectivity boundary contract | domain/data seam | runtime must not depend on Android APIs directly | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/data/AndroidOgnNetworkAvailabilityAdapter.kt` | new | Android connectivity adapter | Android-only ownership boundary | keep platform types out of runtime policy | no |
-| `feature/traffic/src/main/java/com/example/xcpro/ogn/data/OgnNetworkAvailabilityTracker.kt` | new | adapter-local online state tracker | small focused helper | avoid bloating adapter class | no |
-| `feature/traffic/src/main/java/com/example/xcpro/di/TrafficBindingsModule.kt` | existing | Hilt binding for the new OGN port | canonical traffic DI module | do not hide bindings in runtime class | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | existing | read-only mapping from snapshot semantics to indicator UI | current indicator owner | UI mapping belongs here, not in repository | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt` | existing | OGN debug labels | debug UI helper owner | keep label mapping out of repository | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt` | existing | debug panel rendering | UI-only owner | no business policy here | no |
-| `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTestSupport.kt` | existing | OGN runtime test helpers | canonical OGN connection test support | keep fake ports/sockets out of production code | no |
-| `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryReconnectHardeningTest.kt` | new | OGN reconnect/offline regression tests | focused regression owner | keep new behavior coverage small and explicit | no |
-| `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt` | existing | indicator semantics regression tests | direct UI mapping coverage | avoid proving UI via repository tests only | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt` | existing | OGN snapshot and issue contract | canonical OGN model owner | UI should not own transport semantics | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt` | existing | OGN repository DI/runtime wiring | canonical repository owner | keep constructor wiring out of UI/use-case code | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt` | existing | runtime owner fields, writer/io scopes, entrypoints | runtime SSOT owner | keep ownership explicit in one runtime host | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt` | existing | reconnect loop and socket event production | canonical OGN transport policy owner | UI/use-case layers must not own reconnect policy | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt` | new | offline wait / resume helper | keeps connection file focused | separate from snapshot/UI mapping | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeDomainPolicies.kt` | existing | snapshot publication + domain-side runtime policies | existing owner for runtime helpers | avoid pushing snapshot logic into UI | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt` | new | OGN connectivity boundary contract | domain/data seam | runtime must not depend on Android APIs directly | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/data/AndroidOgnNetworkAvailabilityAdapter.kt` | new | Android connectivity adapter | Android-only ownership boundary | keep platform types out of runtime policy | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/ogn/data/OgnNetworkAvailabilityTracker.kt` | new | adapter-local online state tracker | small focused helper | avoid bloating adapter class | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/di/TrafficBindingsModule.kt` | existing | Hilt binding for the new OGN port | canonical traffic DI module | do not hide bindings in runtime class | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModel.kt` | existing | read-only mapping from snapshot semantics to indicator UI | current indicator owner | UI mapping belongs here, not in repository | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsSupport.kt` | existing | OGN debug labels | debug UI helper owner | keep label mapping out of repository | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanelsOgn.kt` | existing | debug panel rendering | UI-only owner | no business policy here | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTestSupport.kt` | existing | OGN runtime test helpers | canonical OGN connection test support | keep fake ports/sockets out of production code | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryReconnectHardeningTest.kt` | new | OGN reconnect/offline regression tests | focused regression owner | keep new behavior coverage small and explicit | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt` | existing | indicator semantics regression tests | direct UI mapping coverage | avoid proving UI via repository tests only | no |
 
 ### 2.2E Module and API Surface
 
@@ -291,9 +291,9 @@ Required gate commands run:
 Supplemental diagnostics run after the root unit failure:
 
 ```bash
-./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.example.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest"
-./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.example.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"
-./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.example.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest" --tests "com.example.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.example.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"
+./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest"
+./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.trust3.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"
+./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"
 ```
 
 Results:
@@ -318,11 +318,11 @@ Results:
 
 Supplemental diagnostic results:
 
-- [x] `./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.example.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest"`
+- [x] `./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest"`
   - PASS
-- [x] `./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.example.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"`
+- [x] `./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.trust3.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"`
   - PASS
-- [ ] `./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.example.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest" --tests "com.example.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.example.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"`
+- [ ] `./gradlew :feature:traffic:testDebugUnitTest --console=plain --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryReconnectHardeningTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.map.ui.MapTrafficConnectionIndicatorModelTest"`
   - FAIL with the same `Test worker` OOM / connection-reset signature before a
     named assertion failure surfaced
 
@@ -359,9 +359,9 @@ Verification conclusion:
 - Architecture cleanliness: 4.5 / 5
   - Evidence:
     - injected connectivity seam in
-      `feature/traffic/src/main/java/com/example/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt`
+      `feature/traffic/src/main/java/com/trust3/xcpro/ogn/domain/OgnNetworkAvailabilityPort.kt`
     - authoritative mutation stays in
-      `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
+      `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt`
     - pipeline/ADR docs now record the ownership decision
   - Remaining risks:
     - writer-lane discipline could drift later if future transport edits mutate
@@ -369,9 +369,9 @@ Verification conclusion:
 - Maintainability / change safety: 4.0 / 5
   - Evidence:
     - offline-wait logic split into
-      `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
+      `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeNetworkWait.kt`
     - Android connectivity remains behind
-      `feature/traffic/src/main/java/com/example/xcpro/ogn/data/AndroidOgnNetworkAvailabilityAdapter.kt`
+      `feature/traffic/src/main/java/com/trust3/xcpro/ogn/data/AndroidOgnNetworkAvailabilityAdapter.kt`
     - ADR + change plan capture rollback and validation requirements
   - Remaining risks:
     - broad `feature:traffic` test-lane instability still makes final confidence

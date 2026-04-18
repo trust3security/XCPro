@@ -3,13 +3,13 @@ package com.example.dfcards
 import com.example.dfcards.dfcards.FlightCardsUseCaseFactory
 import com.example.dfcards.dfcards.FlightDataTemplateManagerFactory
 import com.example.dfcards.dfcards.FlightDataViewModel
-import com.example.xcpro.common.units.AltitudeUnit
-import com.example.xcpro.common.units.VerticalSpeedUnit
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.core.common.geometry.DensityScale
-import com.example.xcpro.core.common.geometry.IntSizePx
-import com.example.xcpro.core.flight.RealTimeFlightData
-import com.example.xcpro.core.time.FakeClock
+import com.trust3.xcpro.common.units.AltitudeUnit
+import com.trust3.xcpro.common.units.VerticalSpeedUnit
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.core.common.geometry.DensityScale
+import com.trust3.xcpro.core.common.geometry.IntSizePx
+import com.trust3.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.core.time.FakeClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -165,3 +165,4 @@ class FlightDataViewModelUnitsTest {
         assertEquals(null, viewModel.getProfileTemplateId(profileId, FlightModeSelection.FINAL_GLIDE))
     }
 }
+

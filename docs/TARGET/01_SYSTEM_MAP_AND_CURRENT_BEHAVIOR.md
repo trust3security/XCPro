@@ -15,11 +15,11 @@ Purpose
 5. Bottom sheet currently supports only `Show Scia for this aircraft` toggle (trail visibility).
 
 Primary files
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnMarkerDetailsSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnMarkerDetailsSheet.kt`
 
 ## 2) Current OGN overlay runtime path
 
@@ -35,11 +35,11 @@ Data ingress to runtime
 - `MapScreenRoot.kt` -> `MapScreenOverlayEffects(...)` -> `overlayManager.updateOgnTrafficTargets(...)` and related methods.
 
 Primary files
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
 
 ## 3) Current preference/state ownership relevant to Target
 

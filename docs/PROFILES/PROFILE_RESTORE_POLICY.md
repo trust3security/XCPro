@@ -21,7 +21,7 @@ Define release-grade behavior for profile restore, reinstall, and clean-start te
 
 - Startup truth is the app-private DataStore profile store.
 - For the debug app package, the canonical private file is:
-  - `/data/user/0/com.example.openxcpro.debug/files/datastore/profile_preferences.preferences_pb`
+  - `/data/user/0/com.trust3.xcpro.debug/files/datastore/profile_preferences.preferences_pb`
 - The managed Downloads mirror is not startup truth. It is user-visible export/debug output only:
   - `/sdcard/Download/XCPro/profiles/`
   - `*_bundle_latest.json`
@@ -42,9 +42,9 @@ Define release-grade behavior for profile restore, reinstall, and clean-start te
 ## QA Guidance
 
 - To test a true clean start, clear app data:
-  - `adb shell pm clear com.example.openxcpro.debug`
+  - `adb shell pm clear com.trust3.xcpro.debug`
 - To inspect private stored profile state:
-  - `adb shell run-as com.example.openxcpro.debug ls /data/user/0/com.example.openxcpro.debug/files/datastore`
+  - `adb shell run-as com.trust3.xcpro.debug ls /data/user/0/com.trust3.xcpro.debug/files/datastore`
 - To inspect the public managed backup mirror:
   - `adb shell ls /sdcard/Download/XCPro/profiles`
 - Uninstall/reinstall alone is not a reliable clean-start test while Android backup restore is enabled.

@@ -121,8 +121,8 @@ This contract aligns with `AGENTS.md` and `docs/ARCHITECTURE/AGENT.md` by enforc
    - `manifest.json`, `metrics.json`, `trace_index.json`, `gate_result.json`,
      `arch_gate_result.txt`, `timebase_citations.md`
 4. timebase citation continuity:
-   - `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-   - `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+   - `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+   - `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 ## 6) Failure and Resume Rules
 

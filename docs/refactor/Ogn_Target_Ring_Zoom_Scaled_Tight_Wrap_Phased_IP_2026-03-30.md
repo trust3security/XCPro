@@ -76,8 +76,8 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt` | same overlay family, same rendered icon-size input | overlay-local style-property updates from runtime-owned icon size | target ring uses circle radius/stroke, not icon bitmaps |
-| `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | already locks zoom -> rendered icon size propagation to OGN overlays | keep delegate as the single zoom-size owner | add ring-specific policy tests instead of new delegate owner |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt` | same overlay family, same rendered icon-size input | overlay-local style-property updates from runtime-owned icon size | target ring uses circle radius/stroke, not icon bitmaps |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | already locks zoom -> rendered icon size propagation to OGN overlays | keep delegate as the single zoom-size owner | add ring-specific policy tests instead of new delegate owner |
 
 ### 2.2B Boundary Moves
 
@@ -95,9 +95,9 @@ Confirm dependency flow remains:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt` | existing | yellow target-ring layer creation and ring sizing math | canonical owner of the visual ring | ViewModel/UI should not own map layer geometry | no |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnTargetRingOverlaySizingTest.kt` | new | focused regression tests for ring radius/stroke policy | smallest unit test owner for the new sizing contract | avoid proving sizing only indirectly through broad runtime tests | no |
-| `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | existing | locks zoom-derived icon-size propagation to target ring | existing boundary test owner | no need for a new delegate test file unless scope expands | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt` | existing | yellow target-ring layer creation and ring sizing math | canonical owner of the visual ring | ViewModel/UI should not own map layer geometry | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTargetRingOverlaySizingTest.kt` | new | focused regression tests for ring radius/stroke policy | smallest unit test owner for the new sizing contract | avoid proving sizing only indirectly through broad runtime tests | no |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` | existing | locks zoom-derived icon-size propagation to target ring | existing boundary test owner | no need for a new delegate test file unless scope expands | no |
 
 ### 2.2E Module and API Surface
 
@@ -109,8 +109,8 @@ Confirm dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| yellow target-ring radius/stroke sizing | `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt` | target-ring style updates and sizing tests | it is the only layer that renders the ring | no |
-| zoom-derived rendered OGN icon size | `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | traffic overlay + target ring overlay | delegate already owns OGN overlay zoom/icon application | no |
+| yellow target-ring radius/stroke sizing | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt` | target-ring style updates and sizing tests | it is the only layer that renders the ring | no |
+| zoom-derived rendered OGN icon size | `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | traffic overlay + target ring overlay | delegate already owns OGN overlay zoom/icon application | no |
 
 ### 2.3 Time Base
 
@@ -190,7 +190,7 @@ After:
   - make ring radius and stroke derive from the delegate-provided rendered icon
     size so the ring stays tight around the glider across existing zoom bands
 - Files to change:
-  - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTargetRingOverlay.kt`
+  - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTargetRingOverlay.kt`
 - Ownership/file split changes in this phase:
   - no ownership move; make the ring sizing policy explicit inside the existing
     ring overlay owner
@@ -212,8 +212,8 @@ Phase 1 implementation note:
 - Goal:
   - prove zoom propagation and target interaction behavior remain intact
 - Files to change:
-  - `feature/traffic/src/test/java/com/example/xcpro/map/OgnTargetRingOverlaySizingTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` if additional assertion is needed
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTargetRingOverlaySizingTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt` if additional assertion is needed
 - Ownership/file split changes in this phase:
   - none
 - Tests to add/update:
@@ -264,7 +264,7 @@ Required checks:
 Focused implementation loop:
 
 ```bash
-./gradlew :feature:traffic:testDebugUnitTest --tests "com.example.xcpro.map.OgnTargetRingOverlaySizingTest" --tests "com.example.xcpro.map.MapOverlayManagerRuntimeOgnDelegateTargetTapTest" --tests "com.example.xcpro.map.MapOverlayManagerRuntimeOgnDelegateViewportZoomTest"
+./gradlew :feature:traffic:testDebugUnitTest --tests "com.trust3.xcpro.map.OgnTargetRingOverlaySizingTest" --tests "com.trust3.xcpro.map.MapOverlayManagerRuntimeOgnDelegateTargetTapTest" --tests "com.trust3.xcpro.map.MapOverlayManagerRuntimeOgnDelegateViewportZoomTest"
 ```
 
 Manual validation:

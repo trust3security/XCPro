@@ -70,9 +70,9 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | existing Friends Flying sheet shell | keep route-local sheet chrome and list rendering | split expanded sheet content into a focused file |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | existing watched overlay/task attachment seam | keep map overlay attachment in map runtime layer | remove only the top watch card callback/render plumbing |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | existing watched presentation owner | keep stale/task separation in UI-state mapper | tighten selection-hint fallback so live watch state wins once resolved |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | existing Friends Flying sheet shell | keep route-local sheet chrome and list rendering | split expanded sheet content into a focused file |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | existing watched overlay/task attachment seam | keep map overlay attachment in map runtime layer | remove only the top watch card callback/render plumbing |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | existing watched presentation owner | keep stale/task separation in UI-state mapper | tighten selection-hint fallback so live watch state wins once resolved |
 
 ### 2.2B Boundary Moves
 
@@ -91,16 +91,16 @@
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/LIVEFOLLOW/LiveFollow_Friends_Flying_Viewer_UI_v1_2026-03-23.md` | New | slice plan and ownership record | required for non-trivial change | not runtime code | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | Existing | route shell, sheet state, and map-first scaffold wiring | route UI already owns this | avoid pushing UI chrome into ViewModel | Yes |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingSheetContent.kt` | New | expanded sheet header/tabs/search/content layout | focused UI owner for the new sheet behavior | keep `FriendsFlyingScreen.kt` from becoming a mixed-responsibility file | Yes |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | Existing | browse row mapping plus pure search filtering helper | presentation mapper already lives here | filtering does not belong in repositories or composables ad hoc | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | watch presentation fallback rules and stale/task separation | canonical watch UI mapper | sheet UI must not own freshness logic | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | watched telemetry strip host only after top-card removal | current watch map-host seam already lives here | avoid duplicating watch HUD rendering elsewhere | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | map attachment/detachment and watch HUD callsite | current map runtime owner | not Friends Flying sheet responsibility | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/friends/FriendsFlyingUiStateTest.kt` | Existing | search/filter mapping regressions | closest owner | n/a | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/watch/LiveFollowWatchUiStateTest.kt` | Existing | stale/task separation regressions in watch UI mapper | closest owner | n/a | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/data/watch/WatchTrafficRepositoryTest.kt` | Existing | repository guard that task clear does not drive stale state | liveness owner lives here | not a UI-only test | No |
-| `feature/map/src/test/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayerTest.kt` | Existing | watched task attachment regression after host cleanup | closest map-layer owner | n/a | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingScreen.kt` | Existing | route shell, sheet state, and map-first scaffold wiring | route UI already owns this | avoid pushing UI chrome into ViewModel | Yes |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingSheetContent.kt` | New | expanded sheet header/tabs/search/content layout | focused UI owner for the new sheet behavior | keep `FriendsFlyingScreen.kt` from becoming a mixed-responsibility file | Yes |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingUiState.kt` | Existing | browse row mapping plus pure search filtering helper | presentation mapper already lives here | filtering does not belong in repositories or composables ad hoc | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiState.kt` | Existing | watch presentation fallback rules and stale/task separation | canonical watch UI mapper | sheet UI must not own freshness logic | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | Existing | watched telemetry strip host only after top-card removal | current watch map-host seam already lives here | avoid duplicating watch HUD rendering elsewhere | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | map attachment/detachment and watch HUD callsite | current map runtime owner | not Friends Flying sheet responsibility | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/friends/FriendsFlyingUiStateTest.kt` | Existing | search/filter mapping regressions | closest owner | n/a | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchUiStateTest.kt` | Existing | stale/task separation regressions in watch UI mapper | closest owner | n/a | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/data/watch/WatchTrafficRepositoryTest.kt` | Existing | repository guard that task clear does not drive stale state | liveness owner lives here | not a UI-only test | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayerTest.kt` | Existing | watched task attachment regression after host cleanup | closest map-layer owner | n/a | No |
 
 ### 2.3 Time Base
 

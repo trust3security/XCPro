@@ -94,8 +94,8 @@ Required flow remains:
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
 | `feature/traffic/.../WeGlidePreferencesRepository.kt` | Temporary direct settings shape (`pilotId`, `token`) | Replace with account/connectivity and upload-preference state only | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt` | Temptation to upload directly in finalize callback | Queue/prompt use case only | Phase 4 |
-| `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt` | Temptation to perform provider call directly from ViewModel | Manual upload use case -> repository enqueue/execute | Phase 4 |
+| `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt` | Temptation to upload directly in finalize callback | Queue/prompt use case only | Phase 4 |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/ui/IgcFilesViewModel.kt` | Temptation to perform provider call directly from ViewModel | Manual upload use case -> repository enqueue/execute | Phase 4 |
 | WeGlide UI | Ad hoc validation in Compose | Pure use cases for connect, mapping resolution, and queue eligibility | Phase 3 and Phase 4 |
 
 ### 2.3 Time Base
@@ -290,9 +290,9 @@ WeGlide worker
 - Goal:
   - Wire upload intent sources without running direct network work in UI or finalize paths.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcFilesUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/ui/IgcFilesViewModel.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/usecase/IgcFilesUseCase.kt`
   - WeGlide queue use cases and schedulers
 - Tests to add/update:
   - finalize-trigger use case tests

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.weather"
+    namespace = "com.trust3.xcpro.weather"
     compileSdk = 35
 
     defaultConfig {

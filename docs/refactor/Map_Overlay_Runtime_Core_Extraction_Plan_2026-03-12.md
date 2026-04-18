@@ -57,7 +57,7 @@
     - `MapOverlayManagerRuntimeBaseOpsDelegate.kt` is the next clean runtime-owner payload; it remains part of the same overlay/runtime cluster already being moved
     - the current delegate still carries an unused `SnailTrailManager` constructor dependency and import; remove that in C3 instead of dragging trail ownership into the slice
     - there is no dedicated `MapOverlayManagerRuntimeBaseOpsDelegateTest`; behavior coverage continues to come through the shell-owned `MapOverlayManager*` tests in `feature:map`
-    - moving the delegate into `:feature:map-runtime` requires making its debug logging explicit because the module namespace is `com.example.xcpro.map.runtime`; do not rely on the shell module's implicit `BuildConfig`
+    - moving the delegate into `:feature:map-runtime` requires making its debug logging explicit because the module namespace is `com.trust3.xcpro.map.runtime`; do not rely on the shell module's implicit `BuildConfig`
     - `MapOverlayRuntimeMapLifecycleDelegate.kt`, `MapOverlayRuntimeStatusCoordinator.kt`, and `MapOverlayManagerRuntimeStatus.kt` stay shell-owned for C3
   - 2026-03-12: Phase C3 implemented:
     - moved `MapOverlayManagerRuntimeBaseOpsDelegate.kt` into `:feature:map-runtime`

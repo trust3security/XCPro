@@ -31,26 +31,26 @@
 
 | # | File | Current Lines | Required Target |
 |---|---|---:|---:|
-| 1 | `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt` | 2478 | <= 500 |
-| 2 | `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt` | 1203 | <= 500 |
-| 3 | `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt` | 1123 | <= 500 |
-| 4 | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` | 1026 | <= 500 |
-| 5 | `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt` | 1008 | <= 500 |
-| 6 | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt` | 860 | <= 500 |
-| 7 | `feature/map/src/test/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt` | 938 | <= 500 |
-| 8 | `feature/map/src/test/java/com/example/xcpro/ogn/OgnThermalRepositoryTest.kt` | 844 | <= 500 |
-| 9 | `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt` | 828 | <= 500 |
-| 10 | `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt` | 760 | <= 500 |
-| 11 | `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt` | 692 | <= 500 |
-| 12 | `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt` | 725 | <= 500 |
-| 13 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt` | 716 | <= 500 |
-| 14 | `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt` | 600 | <= 500 |
-| 15 | `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt` | 626 | <= 500 |
-| 16 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | 591 | <= 500 |
-| 17 | `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt` | 536 | <= 500 |
-| 18 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/AdsbSettingsScreen.kt` | 460 | keep <= 500 |
+| 1 | `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt` | 2478 | <= 500 |
+| 2 | `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt` | 1203 | <= 500 |
+| 3 | `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt` | 1123 | <= 500 |
+| 4 | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` | 1026 | <= 500 |
+| 5 | `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt` | 1008 | <= 500 |
+| 6 | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt` | 860 | <= 500 |
+| 7 | `feature/map/src/test/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCaseTest.kt` | 938 | <= 500 |
+| 8 | `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnThermalRepositoryTest.kt` | 844 | <= 500 |
+| 9 | `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt` | 828 | <= 500 |
+| 10 | `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt` | 760 | <= 500 |
+| 11 | `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayController.kt` | 692 | <= 500 |
+| 12 | `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt` | 725 | <= 500 |
+| 13 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt` | 716 | <= 500 |
+| 14 | `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt` | 600 | <= 500 |
+| 15 | `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt` | 626 | <= 500 |
+| 16 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | 591 | <= 500 |
+| 17 | `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt` | 536 | <= 500 |
+| 18 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/AdsbSettingsScreen.kt` | 460 | keep <= 500 |
 | 19 | `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardPreferences.kt` | 434 | keep <= 500 |
-| 20 | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt` | 563 | <= 500 |
+| 20 | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsScreen.kt` | 563 | <= 500 |
 
 ## 1B) Recurring Repass x5 (Completed)
 

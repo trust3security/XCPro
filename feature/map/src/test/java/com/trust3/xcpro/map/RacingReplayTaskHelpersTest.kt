@@ -1,0 +1,100 @@
+package com.trust3.xcpro.map
+
+import com.trust3.xcpro.common.waypoint.SearchWaypoint
+import com.trust3.xcpro.tasks.TaskManagerCoordinator
+import com.trust3.xcpro.tasks.aat.AATTaskManager
+import com.trust3.xcpro.tasks.core.TaskType
+import com.trust3.xcpro.tasks.racing.RacingTaskManager
+import com.trust3.xcpro.tasks.racing.models.RacingStartPointType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class RacingReplayTaskHelpersTest {
+
+    @Test
+    fun currentRacingTaskOrNull_returnsCanonicalTaskForValidRacingTask() {
+        val coordinator = createCoordinator()
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
+        coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        coordinator.addWaypoint(searchWaypoint("tp1", 0.0, 0.03))
+        coordinator.addWaypoint(searchWaypoint("tp2", 0.0, 0.06))
+        coordinator.addWaypoint(searchWaypoint("finish", 0.0, 0.1))
+
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
+
+        assertNotNull(replayTask)
+        assertEquals(coordinator.taskSnapshotFlow.value.task.id, replayTask?.id)
+        assertEquals(coordinator.taskSnapshotFlow.value.task.waypoints, replayTask?.waypoints)
+    }
+
+    @Test
+    fun currentRacingTaskOrNull_returnsNullWhenRacingTaskIsInvalid() {
+        val coordinator = createCoordinator()
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
+        coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
+
+        assertNull(replayTask)
+    }
+
+    @Test
+    fun currentRacingTaskOrNull_returnsNullWhenTaskTypeIsNotRacing() {
+        val coordinator = createCoordinator()
+        coordinator.setTaskTypeForTesting(TaskType.AAT)
+        coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        coordinator.addWaypoint(searchWaypoint("finish", 0.0, 0.1))
+
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
+
+        assertNull(replayTask)
+    }
+
+    @Test
+    fun currentRacingTaskOrNull_returnsNullForStrictProfileCylinderStartTask() {
+        val coordinator = createCoordinator()
+        coordinator.setTaskTypeForTesting(TaskType.RACING)
+        coordinator.addWaypoint(searchWaypoint("start", 0.0, 0.0))
+        coordinator.addWaypoint(searchWaypoint("tp1", 0.0, 0.03))
+        coordinator.addWaypoint(searchWaypoint("tp2", 0.0, 0.06))
+        coordinator.addWaypoint(searchWaypoint("finish", 0.0, 0.1))
+        coordinator.updateWaypointPointType(
+            index = 0,
+            startType = RacingStartPointType.START_CYLINDER,
+            finishType = null,
+            turnType = null,
+            gateWidthMeters = null,
+            keyholeInnerRadiusMeters = null,
+            keyholeAngle = null,
+            faiQuadrantOuterRadiusMeters = null
+        )
+
+        val replayTask = currentRacingTaskOrNull(coordinator.taskSnapshotFlow.value)
+
+        assertNull(replayTask)
+    }
+
+    private fun createCoordinator(): TaskManagerCoordinator =
+        TaskManagerCoordinator(
+            taskEnginePersistenceService = null,
+            racingTaskEngine = null,
+            aatTaskEngine = null,
+            racingTaskManager = RacingTaskManager(),
+            aatTaskManager = AATTaskManager(),
+            coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        )
+
+    private fun searchWaypoint(id: String, lat: Double, lon: Double): SearchWaypoint =
+        SearchWaypoint(
+            id = id,
+            title = id,
+            subtitle = "",
+            lat = lat,
+            lon = lon
+        )
+}

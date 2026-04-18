@@ -199,7 +199,7 @@ After:
 - Goal:
   - Ensure instrumentation can control network/provider deterministically.
 - Planned files:
-  - `feature/map/src/main/java/com/example/xcpro/di/MapBindingsModule.kt` (only if binding seam is needed)
+  - `feature/map/src/main/java/com/trust3/xcpro/di/MapBindingsModule.kt` (only if binding seam is needed)
   - `app/src/debug/...` and/or `app/src/androidTest/...` seam/test fake files
   - optional gradle/test dependencies for instrumentation DI overrides
 - Work:
@@ -216,7 +216,7 @@ After:
 - Goal:
   - Complete deterministic transition matrix at unit/integration level.
 - Planned files:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryTest.kt`
   - optional helper fakes under `feature/map/src/test/.../adsb/support`
 - Scenario matrix to cover:
   - `NT-01` startup offline -> online recovery
@@ -237,11 +237,11 @@ After:
 - Goal:
   - Validate release-visible ADS-B issue/recovery UX end-to-end.
 - Planned files:
-  - `app/src/androidTest/java/com/example/xcpro/adsb/AdsbNetworkTransitionInstrumentedTest.kt` (new)
-  - `app/src/androidTest/java/com/example/xcpro/adsb/support/...` (new helper fakes/harness)
+  - `app/src/androidTest/java/com/trust3/xcpro/adsb/AdsbNetworkTransitionInstrumentedTest.kt` (new)
+  - `app/src/androidTest/java/com/trust3/xcpro/adsb/support/...` (new helper fakes/harness)
   - UI files only if semantic hooks are missing:
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapAdsbPersistentStatus.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapAdsbPersistentStatus.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt`
 - Instrumented scenarios:
   - `UI-01` offline-at-start shows persistent degraded status quickly.
   - `UI-02` reconnect transitions to healthy then auto-dismisses after configured dwell.

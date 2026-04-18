@@ -23,29 +23,29 @@ Latest baseline (2026-03-04):
 
 Newly confirmed gaps from repass #8:
 1. Password trimming corrupts valid credentials on save/load/UI pre-submit path.
-   - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastCredentialsRepository.kt`
-   - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastCredentialsRepository.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
 2. SkySight URL contract validates hosts but does not enforce `https` scheme.
-   - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightHttpContract.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightHttpContract.kt`
 3. Forecast vector-fill legend/color continuity bug:
    - Existing fill layer keeps stale color expression when tile changes and legend fetch is absent.
-   - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlayRuntime.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlayRuntime.kt`
 4. Source-layer fallback false-positive risk:
    - Fallback decision based on a single camera-center rendered-feature query.
-   - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlayRuntime.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlayRuntime.kt`
 5. Satellite z-order anchor gap for wind BARB layers:
    - Satellite anchor list omits `forecast-*-wind-barb-layer-*`.
-   - `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt`
 6. Dual-rain arbitration gap:
    - SkySight non-wind rain (`accrain`) and RainViewer can both be enabled without explicit composition policy.
-   - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`
 7. Missing direct tests for `ForecastOverlayRuntimeEffects` transition policy (`loading` guard vs clear/apply sequencing).
-   - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
 8. Contract drift risk:
    - Host/origin policy duplicated between request contract and MapLibre network configurator.
-   - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightHttpContract.kt`
-   - `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightHttpContract.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
 
 Phased execution refresh (production-grade hard path):
 - Phase A (Security/Auth gate): remove password trimming, enforce HTTPS contract, add focused auth/credential regression tests.
@@ -61,21 +61,21 @@ Phased execution refresh (production-grade hard path):
 
 Implemented in this pass:
 - Dual-rain runtime arbitration completed and test-locked:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/SkySightUiMessagePolicy.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffectsPolicyTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/SkySightUiMessagePolicyTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/SkySightUiMessagePolicy.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffectsPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/SkySightUiMessagePolicyTest.kt`
 - Auth verification transient retry/backoff added (429/5xx/retryable-network), cancellation-safe:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastAuthRepository.kt`
-  - `feature/map/src/test/java/com/example/xcpro/forecast/ForecastAuthRepositoryTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastAuthRepository.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastAuthRepositoryTest.kt`
 - Provider request execution hardened with fail-closed API-key requirement for key-required SkySight hosts:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightRequestExecutor.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightHttpContract.kt`
-  - `feature/map/src/test/java/com/example/xcpro/forecast/SkySightHttpContractTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/forecast/SkySightForecastProviderAdapterNetworkContractTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightRequestExecutor.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightHttpContract.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/forecast/SkySightHttpContractTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapterNetworkContractTest.kt`
 - MapLibre SkySight client policy made explicit with bounded timeout contract:
-  - `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
 - Architecture/doc sync updated for runtime ownership and rain-arbitration behavior:
   - `docs/ARCHITECTURE/PIPELINE.md`
   - `docs/TABS/2Tab.md`
@@ -156,50 +156,50 @@ First phase where each category reaches >=94 (planned):
 - `SKYSIGHT_API_KEY` is injected into `BuildConfig` for both debug and release.
 - Files:
   - `feature/map/build.gradle.kts`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastAuthRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastAuthRepository.kt`
 - Risk: static extraction from APK; does not meet production-grade credential-hardening bar.
 
 2. Credential hardening gap:
 - `ForecastCredentialsRepository` silently falls back to plaintext storage.
 - File:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastCredentialsRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastCredentialsRepository.kt`
 - Risk: security downgrade remains auto-enabled without explicit user consent policy.
 
 3. Network cancellation responsiveness gap:
 - SkySight auth/provider network calls use blocking `execute()` directly and are not cancellation-aware.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastAuthRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastAuthRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
 - Risk: in-flight requests can outlive cancelled UI jobs and degrade responsiveness/reliability under poor networks.
 
 4. Network contract gap:
 - SkySight forecast/auth currently use unqualified shared `OkHttpClient` policy.
 - No SkySight-specific retry/backoff/timeout/host-policy contract.
 - File area:
-  - `feature/map/src/main/java/com/example/xcpro/di/`
+  - `feature/map/src/main/java/com/trust3/xcpro/di/`
 - Risk: contract drift and hidden coupling with unrelated network clients.
 
 5. Privacy/error-surface gap (newly confirmed):
 - Provider HTTP error strings include full URLs; point-query URL embeds user latitude/longitude.
 - File:
-  - `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
 - Risk: sensitive coordinates may appear in user-facing error surface or crash reports.
 
 6. Runtime churn gap:
 - Satellite overlay is re-applied on minute-level time changes while enabled, and apply currently rebuilds sources/layers each time.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt` (satellite effect keyed by `selectedTimeUtcMs`)
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntime.kt` (satellite-only `selectedTimeUtcMs = nowUtcMs`)
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntimeSelectionSupport.kt` (minute ticker cadence)
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` (config equality uses raw `referenceTimeUtcMs`)
-  - `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt` (full remove/rebuild in render path)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt` (satellite effect keyed by `selectedTimeUtcMs`)
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntime.kt` (satellite-only `selectedTimeUtcMs = nowUtcMs`)
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntimeSelectionSupport.kt` (minute ticker cadence)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` (config equality uses raw `referenceTimeUtcMs`)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt` (full remove/rebuild in render path)
 - Risk: avoidable layer churn, flicker risk, and unnecessary CPU/memory work.
 
 7. Runtime state consistency gap:
 - OGN satellite-contrast icon state is toggled before satellite apply success is known.
 - On apply failure, no explicit rollback to previous icon-contrast state is performed.
 - File:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
 - Risk: map can present contrast icon mode that does not match effective satellite overlay state after failure.
 
 8. Runtime rollback/test gap:
@@ -208,14 +208,14 @@ First phase where each category reaches >=94 (planned):
 9. Message normalization contract gap:
 - Forecast runtime warning aggregation joins with spaces, while SkySight UI policy splits by `|`.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/SkySightUiMessagePolicy.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/SkySightUiMessagePolicy.kt`
 - Risk: warning dedupe/normalization can miss duplicates across channels.
 
 10. SkySight control UX gap (newly confirmed):
 - Non-wind parameter chips are disabled when non-wind overlay is off.
 - File:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt`
 - Risk: users cannot preselect next parameter (e.g., Rain) before enabling overlay; avoidable friction and support churn.
 
 11. Auth coverage gap:
@@ -225,20 +225,20 @@ First phase where each category reaches >=94 (planned):
 12. Test isolation gap:
 - Forecast preference test setup does not reset SkySight satellite preference keys before each test.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/forecast/ForecastPreferencesRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastPreferencesRepositoryTest.kt`
 - Risk: order-dependent test leakage can mask regressions or cause flaky results.
 
 13. SkySight UI interaction coverage gap:
 - No focused Compose tests currently lock SkySight control behavior in `ForecastOverlayControlsContent` (satellite toggles/history slider/error presentation).
 - File area:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt`
 - Risk: user-facing regressions can slip through despite lower-layer unit tests.
 
 14. MapLibre network client policy explicitness gap:
 - `SkySightMapLibreNetworkConfigurator` installs a global MapLibre OkHttp client with interceptor only, without explicit timeout/retry policy contract coverage.
 - File:
-  - `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
 - Risk: policy drift and hard-to-audit behavior under degraded networks.
 
 15. Tooling/docs confidence gap:
@@ -250,14 +250,14 @@ First phase where each category reaches >=94 (planned):
 16. Forecast apply exception-isolation gap (newly confirmed):
 - Forecast apply/reapply calls are not wrapped in failure isolation (`runCatching`/error-state channel) unlike satellite/weather paths.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
 - Risk: runtime map/style layer exceptions from forecast overlay can escape and destabilize map UI path.
 
 17. Forecast refresh continuity gap (newly confirmed):
 - UI effect clears forecast overlays whenever both active tile specs are temporarily null; during refresh windows this can produce blank/flicker behavior.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntime.kt`
 - Risk: avoidable visual discontinuity and user perception of unstable overlay behavior.
 
 18. Implementation-plan path drift gap (newly found in repass #7):
@@ -269,9 +269,9 @@ First phase where each category reaches >=94 (planned):
 19. Satellite cadence integration coverage gap (newly confirmed):
 - Existing temporal tests lock frame order math, but no integration-level test locks minute-tick -> runtime-effect -> manager apply cadence dedupe behavior.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt` (unit-only)
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt` (unit-only)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
 - Risk: future regressions can reintroduce high-frequency layer rebuild churn without failing tests.
 
 ## 2) Architecture Contract for This IP
@@ -309,14 +309,14 @@ Work:
   - path-split sanity checks in plan/doc references (prevent targeting stale file names).
 
 Files:
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastAuthRepositoryTest.kt` (new)
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt` (extend)
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerForecastWarningTest.kt` (extend with failure-isolation cases)
-- `feature/map/src/test/java/com/example/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt` (extend)
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffectsTest.kt` (new, cadence + continuity contracts)
-- `feature/map/src/test/java/com/example/xcpro/map/ui/SkySightUiMessagePolicyTest.kt` (extend)
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt` (test-fixture reset update)
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastPreferencesRepositoryTest.kt` (test-fixture reset update)
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastAuthRepositoryTest.kt` (new)
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt` (extend)
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerForecastWarningTest.kt` (extend with failure-isolation cases)
+- `feature/map/src/test/java/com/trust3/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt` (extend)
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffectsTest.kt` (new, cadence + continuity contracts)
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/SkySightUiMessagePolicyTest.kt` (extend)
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt` (test-fixture reset update)
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastPreferencesRepositoryTest.kt` (test-fixture reset update)
 - `docs/refactor/SkySight_94plus_Phased_IP_2026-03-02.md` (path-reference cleanup)
 
 Expected score after phase:
@@ -343,13 +343,13 @@ Work:
 
 Files:
 - `feature/map/build.gradle.kts`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastCredentialsRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastCredentialStorageMode.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastAuthRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
-- tests under `feature/map/src/test/java/com/example/xcpro/forecast/` and `.../screens/navdrawer/`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastCredentialsRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastCredentialStorageMode.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastAuthRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+- tests under `feature/map/src/test/java/com/trust3/xcpro/forecast/` and `.../screens/navdrawer/`
 
 Expected score after phase:
 - Architecture 89
@@ -376,12 +376,12 @@ Work:
 - Add deterministic auth retry policy tests (`retryable` vs `non-retryable` paths).
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/di/` (new SkySight network module/qualifier)
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastAuthRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/SkySightMapLibreNetworkConfiguratorTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/forecast/SkySightForecastProviderAdapterTest.kt` (extend)
+- `feature/map/src/main/java/com/trust3/xcpro/di/` (new SkySight network module/qualifier)
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastAuthRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfigurator.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/SkySightMapLibreNetworkConfiguratorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapterTest.kt` (extend)
 
 Expected score after phase:
 - Architecture 90
@@ -407,16 +407,16 @@ Work:
   - ownship/traffic overlays always top-priority.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntime.kt`
-- `feature/map/src/main/java/com/example/xcpro/forecast/ForecastOverlayRuntimeSelectionSupport.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerForecastWarningTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffectsTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntime.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRuntimeSelectionSupport.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerSkySightSatelliteErrorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerForecastWarningTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/SkySightSatelliteOverlayTemporalPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/ForecastOverlayRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffectsTest.kt`
 
 Expected score after phase:
 - Architecture 92
@@ -439,11 +439,11 @@ Work:
 - Add focused UI tests for bottom-sheet control interactions and visual error/warning state.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/ui/` (new/extended SkySight UI tests)
-- `feature/map/src/androidTest/java/com/example/xcpro/map/ui/` (new targeted integration tests)
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheetControls.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/` (new/extended SkySight UI tests)
+- `feature/map/src/androidTest/java/com/trust3/xcpro/map/ui/` (new targeted integration tests)
 
 Expected score after phase:
 - Architecture 94
@@ -466,9 +466,9 @@ Work:
 - Add deterministic flake-safe harness coverage for SkySight slice.
 
 Files:
-- `feature/map/src/test/java/com/example/xcpro/forecast/` (extended)
-- `feature/map/src/test/java/com/example/xcpro/map/` (extended)
-- `feature/map/src/androidTest/java/com/example/xcpro/map/` (extended)
+- `feature/map/src/test/java/com/trust3/xcpro/forecast/` (extended)
+- `feature/map/src/test/java/com/trust3/xcpro/map/` (extended)
+- `feature/map/src/androidTest/java/com/trust3/xcpro/map/` (extended)
 
 Expected score after phase:
 - Architecture 94

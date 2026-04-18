@@ -22,28 +22,28 @@ I did **not** apply production-code fixes in this pass. I did not find a fail-le
 ### OGN
 
 1. True coordinates in
-   - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
    - `latestOgnTargets` remains the runtime cache of true `OgnTrafficTarget` data.
 2. Projection step
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
    - `render(...)` builds `TrafficProjectionSeed` values from true target lat/lon in `buildDeclutterSeeds(...)`.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
    - `resolveTrafficDeclutteredDisplayCoordinates(...)` projects those seeds with `map.projection.toScreenLocation(...)`.
 3. Declutter step
-   - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterEngine.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterEngine.kt`
    - `TrafficScreenDeclutterEngine.layout(...)` computes deterministic offsets per crowded screen-space group.
 4. Unprojection step
-   - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
    - displaced screen points are converted back with `map.projection.fromScreenLocation(...)`.
 5. GeoJSON emission
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
    - `render(...)` passes `displayCoordinatesByKey` into `renderOgnTrafficFrame(...)`.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
    - `buildOgnTrafficOverlayFeatures(...)` writes display coordinates into the emitted `Feature` geometry.
 6. Hit-testing path
-   - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
    - `findTargetAt(...)` checks selected-ring hit-testing first, then traffic-layer hit-testing.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
    - `findTargetAt(...)` calls `map.queryRenderedFeatures(...)` on the OGN icon and label layers backed by the displaced GeoJSON source.
 
 Selected-target alignment path:
@@ -56,35 +56,35 @@ Selected-target alignment path:
 ### ADS-B
 
 1. True coordinates in
-   - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
    - `latestAdsbTargets` remains the runtime cache of true `AdsbTrafficUiModel` data.
 2. Smoothing step
-   - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
    - `render(...)` feeds true target updates into `AdsbDisplayMotionSmoother`.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbDisplayMotionSmoother.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbDisplayMotionSmoother.kt`
    - `snapshot(...)` returns the current smoothed frame.
 3. Projection step
-   - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
    - `renderFrame(...)` builds `TrafficProjectionSeed` values from the smoothed frame.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
    - `resolveTrafficDeclutteredDisplayCoordinates(...)` projects those positions with `map.projection.toScreenLocation(...)`.
 4. Declutter step
-   - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterEngine.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterEngine.kt`
    - `TrafficScreenDeclutterEngine.layout(...)` computes per-aircraft display offsets.
 5. Unprojection step
-   - `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
    - displaced screen points are converted back with `map.projection.fromScreenLocation(...)`.
 6. GeoJSON emission
-   - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
    - `renderFrame(...)` passes `displayCoordinatesByKey` into `renderAdsbTrafficFrame(...)`.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlaySupport.kt`
    - `buildAdsbTrafficOverlayFeatures(...)` writes those display coordinates via `AdsbGeoJsonMapper.toFeatureInternal(...)`.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
    - the emitted `Feature` geometry uses the temporary display coordinate when present.
 7. Hit-testing path
-   - `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
    - `findAdsbTargetAt(...)` forwards to the runtime ADS-B overlay.
-   - `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
    - `findTargetAt(...)` calls `map.queryRenderedFeatures(...)` on the rendered ADS-B icon and label layers backed by the displaced GeoJSON source.
 
 ## Findings Table
@@ -119,33 +119,33 @@ Selected-target alignment path:
 
 - `docs/aircraft-declutter-implementation.md`
 - `docs/DECLUTTERMAP/CODEX_AIRCRAFT_DECLUTTER_PASS3_AUDIT.md`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterEngine.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlaySupport.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/AdsbDisplayMotionSmoother.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayInteractionCadencePolicy.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnHelpers.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficHelpers.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt`
-- `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/TrafficScreenDeclutterEngineTest.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
-- `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapInitializerOgnViewportZoomTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterEngine.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficScreenDeclutterRuntimeSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlaySupport.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayFeatureProjection.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbDisplayMotionSmoother.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayInteractionCadencePolicy.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnHelpers.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficHelpers.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/TrafficScreenDeclutterEngineTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateViewportZoomTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateViewportZoomTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapInitializerOgnViewportZoomTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerOgnLifecycleTest.kt`
 
 ## Small Fixes Applied
 

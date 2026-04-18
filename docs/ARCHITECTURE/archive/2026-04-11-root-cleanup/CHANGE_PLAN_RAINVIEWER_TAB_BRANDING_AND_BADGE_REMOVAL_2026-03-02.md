@@ -45,8 +45,8 @@
 `UI -> domain/use-cases -> data` remains unchanged.
 
 - Modules/files touched:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/*`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/*`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/*`
   - this plan doc
 - Boundary risk:
   - Avoid introducing business logic into Compose while adding visual state cue.

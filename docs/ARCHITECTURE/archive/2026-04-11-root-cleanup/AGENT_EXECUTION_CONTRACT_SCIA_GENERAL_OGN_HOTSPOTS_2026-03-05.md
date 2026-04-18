@@ -69,8 +69,8 @@ Scope:
 - Ensure baseline tests are green before edits.
 
 Phase focused checks:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapBottomSheetTabsTest"`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapBottomSheetTabsTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"`
 
 Exit:
 - Baseline tests pass.
@@ -83,13 +83,13 @@ Scope:
 - No map tab UI removals yet.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsUiState.kt`
 
 Phase focused checks:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.screens.navdrawer.*Ogn*"`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.screens.navdrawer.*Ogn*"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"`
 
 Exit:
 - OGN settings layer owns SCIA state/intents via existing repository SSOT path.
@@ -102,12 +102,12 @@ Scope:
 - Align OGN sub-sheet host pattern with Hotspots host pattern.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeSheets.kt`
 
 Phase focused checks:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.screens.navdrawer.*Settings*"`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapBottomSheetTabsTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.screens.navdrawer.*Settings*"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapBottomSheetTabsTest"`
 
 Exit:
 - SCIA control is at top of General OGN settings.
@@ -121,14 +121,14 @@ Scope:
 - Keep map-tab behavior for OGN overlay + per-aircraft trail selection.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabContents.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` (if required)
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabContents.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` (if required)
 
 Phase focused checks:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.ui.MapBottomSheetTabsTest"`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.*Traffic*"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.ui.MapBottomSheetTabsTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.*Traffic*"`
 
 Exit:
 - No duplicate SCIA global toggle exists in map OGN tab.

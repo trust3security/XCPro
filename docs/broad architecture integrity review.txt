@@ -1,0 +1,87 @@
+Review this change as a second-pass seam/code review.
+
+This is NOT a bug hunt, style pass, or refactor suggestion exercise.
+
+Read the actual code and judge whether the change introduces structural problems that should not exist in this codebase.
+
+Focus only on real architectural issues. Ignore minor polish, naming preferences, and speculative cleanup.
+
+Assess specifically for:
+
+1. Boundary violations
+- feature/module ownership crossed incorrectly
+- UI/presentation depending on runtime, infra, datasource, or storage details
+- domain logic placed in the wrong layer
+- duplicate paths doing the same job across different modules
+- presentation code taking ownership of authoritative runtime decisions
+
+2. Dependency direction
+- dependencies must point toward stable, domain-facing seams
+- no inward layers depending on outward implementation details
+- no direct dependency from UI/domain on infra, platform, transport, persistence, or remote code unless explicitly intended by architecture
+- no rename-only wrapper chains that hide poor dependency shape
+
+3. Ownership correctness
+- each responsibility should have one clear owner
+- detect split ownership, duplicated ownership, or unclear ownership
+- detect “coordinator drift” where one class is gradually absorbing responsibilities from multiple owners
+- detect runtime ownership placed in presentation or convenience layers
+
+4. Architecture fit
+- check whether the implementation fits the project’s declared architecture and documented seams
+- check whether it introduces a parallel path, side channel, fallback path, or bypass around the intended owner
+- check whether docs say one thing while production code now does another
+- check whether the implementation preserves deterministic, testable, low-churn structure
+
+5. Coupling and cohesion
+- overly wide ViewModels, coordinators, managers, repositories, or runtime classes
+- dependency bags
+- classes with mixed responsibilities
+- weak seams that expose too much surface area
+- high coupling between features that should remain isolated
+- low-value abstraction layers that add tax without adding policy, orchestration, or protection
+
+6. Hidden drift
+- anything that technically works but weakens structure
+- silent fallbacks masking missing ownership
+- temporary logic likely to become permanent
+- compatibility glue that has become production architecture
+- special-case branching that bypasses the proper lane
+- leaked assumptions that will make future work harder
+
+7. Boilerplate vs value
+- identify where abstraction is justified
+- identify where abstraction is pure forwarding, rename-only wrapping, or architecture tax
+- identify where the codebase is paying structural cost without clear maintainability benefit
+
+Rules for this review:
+- do not propose ad hoc cleanup
+- do not recommend refactors unless there is a real structural problem
+- do not list minor issues
+- do not score cosmetic matters
+- do not assume intent; judge the actual code
+- prefer narrow, evidence-based findings
+
+Output format:
+
+A. Real issues only
+For each issue provide:
+- Title
+- Classification: boundary / ownership / dependency / cohesion / architecture-fit / drift
+- Why it is a problem
+- Evidence: exact files/classes/functions involved
+- Why it matters for long-term maintainability
+- Severity: low / medium / high / critical
+
+B. Explicit non-issues
+- note anything that may look suspicious at first glance but is actually acceptable and why
+
+C. PASS/FAIL
+- PASS only if architecture integrity remains sound
+- FAIL if the change introduces meaningful structural drift or ownership/boundary problems
+
+D. Final judgment
+Answer plainly:
+- What should not be in this codebase?
+- Is this change adding any of that?
+- What is the single biggest architectural concern, if any?

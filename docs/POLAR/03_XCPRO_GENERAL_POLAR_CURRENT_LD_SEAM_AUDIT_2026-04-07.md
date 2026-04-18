@@ -32,10 +32,10 @@ Authoritative owner path:
 
 Relevant current files:
 
-- `feature/profile/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
-- `feature/profile/src/main/java/com/example/xcpro/glider/PolarStillAirSinkProvider.kt`
-- `core/common/src/main/java/com/example/xcpro/glider/PolarCalculator.kt`
-- `core/common/src/main/java/com/example/xcpro/glider/GliderSpeedBounds.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/glider/PolarStillAirSinkProvider.kt`
+- `core/common/src/main/java/com/trust3/xcpro/glider/PolarCalculator.kt`
+- `core/common/src/main/java/com/trust3/xcpro/glider/GliderSpeedBounds.kt`
 
 Current source priority:
 

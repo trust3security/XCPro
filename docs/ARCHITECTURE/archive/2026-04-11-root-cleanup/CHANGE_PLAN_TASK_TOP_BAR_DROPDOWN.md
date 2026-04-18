@@ -87,12 +87,12 @@ Dependency flow remains:
 `UI -> domain -> data`
 
 - Modules/files touched:
-  `feature/map/src/main/java/com/example/xcpro/map/ui/task/*`
-  `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
-  `feature/map/src/main/java/com/example/xcpro/tasks/*` (presentation container only)
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
-  tests under `feature/map/src/test/java/com/example/xcpro/map/ui/task/*`
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/*`
+  `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/tasks/*` (presentation container only)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt`
+  tests under `feature/map/src/test/java/com/trust3/xcpro/map/ui/task/*`
 - Boundary risk:
   Pulling task domain logic into new top panel composables while refactoring layout.
   Mitigation: keep container refactor isolated; re-use existing tab content composables and ViewModel.
@@ -240,11 +240,11 @@ Phase ownership:
   Introduce panel-state naming that supports top drop-down behavior without breaking existing callers.
 - Owner: Map/Task UI maintainers (XCPro Team)
 - Files to change:
-  `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
-  `feature/map/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt` (or replacement enum/file)
-  `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt` (remove `showTaskScreen` dependency)
-  `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt` (remove no-op search overlay hook)
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` (keep `add_task` entrypoint semantics aligned with new transition table)
+  `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/tasks/BottomSheetState.kt` (or replacement enum/file)
+  `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt` (remove `showTaskScreen` dependency)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt` (remove no-op search overlay hook)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` (keep `add_task` entrypoint semantics aligned with new transition table)
 - Tests to add/update:
   New/updated unit tests for state transitions (open, collapse, expand, dismiss).
 - Exit criteria:
@@ -259,12 +259,12 @@ Phase ownership:
   Replace `SwipeableTaskBottomSheet` container with a top drop-down container while reusing tab content, and keep visual/motion parity with current bottom-sheet values as the baseline.
 - Owner: Map/Task UI maintainers (XCPro Team)
 - Files to change:
-  `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
-  `feature/map/src/main/java/com/example/xcpro/tasks/SwipeableTaskBottomSheet.kt` (either refactor or replace with top-panel composable)
-  `feature/map/src/main/java/com/example/xcpro/tasks/TaskSearchBarsOverlay.kt` (remove as obsolete, or keep only if still used elsewhere)
-  optional new file: `feature/map/src/main/java/com/example/xcpro/tasks/TaskTopDropdownPanel.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/tasks/SwipeableTaskBottomSheet.kt` (either refactor or replace with top-panel composable)
+  `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSearchBarsOverlay.kt` (remove as obsolete, or keep only if still used elsewhere)
+  optional new file: `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskTopDropdownPanel.kt`
 - Tests to add/update:
-  `feature/map/src/test/java/com/example/xcpro/map/ui/task/MapTaskScreenUiTest.kt` visibility tags and behavior.
+  `feature/map/src/test/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUiTest.kt` visibility tags and behavior.
   Add tests for empty-task open state and add-waypoint affordance visibility.
   Add tests that panel gestures consume input within panel bounds only.
 - Exit criteria:
@@ -278,14 +278,14 @@ Phase ownership:
   Resolve conflicts with existing top UI components and gesture layering.
 - Owner: Map UI integration maintainers (XCPro Team)
 - Files to change:
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt` (GPS banner spacing/insets if needed)
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` (z-index ordering if needed)
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt` (card layer coexistence/inset handling if needed)
-  `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt` (visibility/z-index assumptions tied to bottom sheet)
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` (explicit back handling integration)
-  `feature/map/src/main/java/com/example/xcpro/map/MapModalManager.kt` (back consume integration point)
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSideEffects.kt` (if back-handling effect routing is required)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt` (GPS banner spacing/insets if needed)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt` (z-index ordering if needed)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt` (card layer coexistence/inset handling if needed)
+  `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt` (visibility/z-index assumptions tied to bottom sheet)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` (explicit back handling integration)
+  `feature/map/src/main/java/com/trust3/xcpro/map/MapModalManager.kt` (back consume integration point)
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSideEffects.kt` (if back-handling effect routing is required)
 - Tests to add/update:
   Compose tests for top bar visibility with GPS banner present and with active top widgets.
   Compose test for modal/panel precedence (modal visible while task panel requested).
@@ -302,8 +302,8 @@ Phase ownership:
   Remove bottom-sheet-only camera-fit assumptions and align with top occlusion model.
 - Owner: Map camera + AAT maintainers (XCPro Team)
 - Files to change:
-  `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-  `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt` (if occlusion parameter plumbing changes)
+  `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt` (if occlusion parameter plumbing changes)
 - Tests to add/update:
   Unit test(s) for zoom-fit calculation inputs if available.
   Manual validation script for AAT edit entry/exit with top panel shown.

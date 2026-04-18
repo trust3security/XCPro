@@ -17,7 +17,7 @@
   - Phase 1 is complete: identity codec, staged metadata parser, and neutral downloads storage-path owner are extracted.
   - Phase 2 is complete: staging file IO now lives in `IgcRecoveryStagingStore`, and MediaStore/legacy publish branches now live in `IgcFlightLogPublishTransport`.
   - Phase 3 is complete: persisted finalized-entry lookup now lives in `IgcRecoveryDownloadsLookup`, and duplicate-match / pending-row cleanup now live in `IgcRecoveryFinalizedEntryResolver`.
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt` is now `260` lines and remains the recovery/finalize coordinator only.
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt` is now `260` lines and remains the recovery/finalize coordinator only.
   - The shared `IgcDownloadsRepository` port stayed unchanged, and the metadata-gated no-metadata recovery outcome is preserved.
 
 ## 1) Scope
@@ -25,7 +25,7 @@
 - Problem statement:
   - The IGC finalize/recovery path started as a `552` line mixed-responsibility hotspot.
   - After Phases 1 and 2,
-    `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
+    `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
     is down to `375` lines, but the same coordinator file still owns:
     - repository contract and no-op wiring
     - finalize transaction orchestration
@@ -117,8 +117,8 @@ Confirm dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt` | thin coordinator over focused collaborators in the same IGC slice | coordinator owns transaction order while collaborators own signing/metadata/publish details | `IgcFlightLogRepository` is repository/data-owner facing, not an action sink |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` | recent successful split from mixed owner into thin coordinator plus leaf owners | shrink mixed owner by extracting focused leaf owners first, keep coordinator ABI stable | IGC leaves are storage/recovery owners rather than runtime delegates |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt` | thin coordinator over focused collaborators in the same IGC slice | coordinator owns transaction order while collaborators own signing/metadata/publish details | `IgcFlightLogRepository` is repository/data-owner facing, not an action sink |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` | recent successful split from mixed owner into thin coordinator plus leaf owners | shrink mixed owner by extracting focused leaf owners first, keep coordinator ABI stable | IGC leaves are storage/recovery owners rather than runtime delegates |
 
 ### 2.2B Boundary Moves
 
@@ -148,25 +148,25 @@ Confirm dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Igc_Flight_Log_Repository_Release_Grade_Phased_IP_2026-03-14.md` | New | execution plan and acceptance contract | required non-trivial refactor plan | production code must not carry execution planning | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt` | Existing | repository port + current thin finalize/recovery coordinator | kept the stable entrypoint and avoided churn while Phase 1/2 owners moved out | the file is now below the hotspot budget, so a separate coordinator file is optional rather than automatic | maybe, Phase 4 only if still justified |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/MediaStoreIgcFlightLogRepository.kt` | Deferred | optional dedicated coordinator file | only create if Phase 4 evidence shows port/coordinator colocation is still a review or ownership burden | forcing a new file before it is justified would be churn | deferred |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryStagingStore.kt` | New | staging artifact IO owner | file IO belongs in one focused data helper | parser or coordinator should not own direct file operations | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcStagedRecoveryMetadataParser.kt` | New | pure staged header parser | parsing logic should be testable without Android/file writes | transport/store should not own parse policy | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsStoragePaths.kt` | New | canonical downloads relative path and legacy subdir constants | publish and downloads-query code must not depend on another concrete implementation for path literals | reusing `MediaStoreIgcDownloadsRepository` constants keeps the concrete-owner leak alive | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogPublishTransport.kt` | New | MediaStore/legacy publish side effects | isolates platform write path and pending finalization details | repository coordinator should not own branchy platform code | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryFinalizedEntryResolver.kt` | New | duplicate finalized match lookup and pending-row cleanup | isolates recovery resolution semantics | downloads repository should remain file-list owner, not session-recovery owner | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryDownloadsLookup.kt` | New | recovery-only finalized-entry snapshot/query boundary | avoids broadening the shared downloads repository port just for recovery | unrelated file-list and use-case consumers should not absorb recovery-only API churn | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSessionFileIdentityCodec.kt` | New | canonical normalization/prefix identity policy | keeps file identity normalization with naming policy semantics | repository helpers must not duplicate this policy | no |
-| `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcFileNamingPolicy.kt` | Existing | naming policy owner reusing canonical identity codec | keeps naming as the durable file-name authority | resolver should reuse policy pieces, not copy them | no |
-| `feature/igc/src/main/java/com/example/xcpro/di/IgcCoreBindingsModule.kt` | Existing | DI wiring for new leaf helpers if constructor injection requires it | keep construction explicit and stable | ad hoc constructor wiring in tests/owners is not acceptable in production | no |
-| `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt` | Existing | finalize-path behavior lock | existing parity coverage | replacing it would lose baseline behavior proof | no |
-| `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt` | Existing | idempotent finalize cache behavior lock | keeps `publishedBySessionId` semantics explicit during the split | broader recovery tests do not directly prove finalize idempotency | no |
-| `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt` | Existing | recovery-path parity lock | existing recovery coverage | broader integration tests are too slow for seam locking | no |
-| `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt` | Existing | crash-window recovery parity lock | existing release-critical kill-point coverage | coordinator split must stay covered at kill points | no |
-| `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcStagedRecoveryMetadataParserTest.kt` | New | pure parser coverage | locks extracted parser logic directly | repository tests alone would hide parser drift | no |
-| `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcRecoveryFinalizedEntryResolverTest.kt` | New | duplicate-match and pending-row cleanup coverage | locks extracted recovery resolver semantics directly | repository tests alone obscure resolver ownership | no |
-| `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcRecoveryDownloadsLookupTest.kt` | New | recovery-only Downloads lookup coverage | locks the new lookup boundary without touching unrelated file-list tests | repository tests alone would hide lookup-boundary churn | no |
-| `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt` | Existing | real MediaStore restart recovery proof | release-grade proof for pending-row cleanup and single-file publish | unit tests cannot fully prove platform behavior | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt` | Existing | repository port + current thin finalize/recovery coordinator | kept the stable entrypoint and avoided churn while Phase 1/2 owners moved out | the file is now below the hotspot budget, so a separate coordinator file is optional rather than automatic | maybe, Phase 4 only if still justified |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/MediaStoreIgcFlightLogRepository.kt` | Deferred | optional dedicated coordinator file | only create if Phase 4 evidence shows port/coordinator colocation is still a review or ownership burden | forcing a new file before it is justified would be churn | deferred |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecoveryStagingStore.kt` | New | staging artifact IO owner | file IO belongs in one focused data helper | parser or coordinator should not own direct file operations | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcStagedRecoveryMetadataParser.kt` | New | pure staged header parser | parsing logic should be testable without Android/file writes | transport/store should not own parse policy | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcDownloadsStoragePaths.kt` | New | canonical downloads relative path and legacy subdir constants | publish and downloads-query code must not depend on another concrete implementation for path literals | reusing `MediaStoreIgcDownloadsRepository` constants keeps the concrete-owner leak alive | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogPublishTransport.kt` | New | MediaStore/legacy publish side effects | isolates platform write path and pending finalization details | repository coordinator should not own branchy platform code | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecoveryFinalizedEntryResolver.kt` | New | duplicate finalized match lookup and pending-row cleanup | isolates recovery resolution semantics | downloads repository should remain file-list owner, not session-recovery owner | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecoveryDownloadsLookup.kt` | New | recovery-only finalized-entry snapshot/query boundary | avoids broadening the shared downloads repository port just for recovery | unrelated file-list and use-case consumers should not absorb recovery-only API churn | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcSessionFileIdentityCodec.kt` | New | canonical normalization/prefix identity policy | keeps file identity normalization with naming policy semantics | repository helpers must not duplicate this policy | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcFileNamingPolicy.kt` | Existing | naming policy owner reusing canonical identity codec | keeps naming as the durable file-name authority | resolver should reuse policy pieces, not copy them | no |
+| `feature/igc/src/main/java/com/trust3/xcpro/di/IgcCoreBindingsModule.kt` | Existing | DI wiring for new leaf helpers if constructor injection requires it | keep construction explicit and stable | ad hoc constructor wiring in tests/owners is not acceptable in production | no |
+| `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryTest.kt` | Existing | finalize-path behavior lock | existing parity coverage | replacing it would lose baseline behavior proof | no |
+| `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt` | Existing | idempotent finalize cache behavior lock | keeps `publishedBySessionId` semantics explicit during the split | broader recovery tests do not directly prove finalize idempotency | no |
+| `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt` | Existing | recovery-path parity lock | existing recovery coverage | broader integration tests are too slow for seam locking | no |
+| `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt` | Existing | crash-window recovery parity lock | existing release-critical kill-point coverage | coordinator split must stay covered at kill points | no |
+| `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcStagedRecoveryMetadataParserTest.kt` | New | pure parser coverage | locks extracted parser logic directly | repository tests alone would hide parser drift | no |
+| `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcRecoveryFinalizedEntryResolverTest.kt` | New | duplicate-match and pending-row cleanup coverage | locks extracted recovery resolver semantics directly | repository tests alone obscure resolver ownership | no |
+| `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcRecoveryDownloadsLookupTest.kt` | New | recovery-only Downloads lookup coverage | locks the new lookup boundary without touching unrelated file-list tests | repository tests alone would hide lookup-boundary churn | no |
+| `feature/igc/src/androidTest/java/com/trust3/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt` | Existing | real MediaStore restart recovery proof | release-grade proof for pending-row cleanup and single-file publish | unit tests cannot fully prove platform behavior | no |
 | `docs/ARCHITECTURE/PIPELINE.md` | Existing | end-to-end ownership map | pipeline wiring changes must be documented in the same change | plan doc is not the runtime wiring source of truth | no |
 
 ### 2.2E Module and API Surface
@@ -196,9 +196,9 @@ Confirm dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| session file identity normalization (`manufacturerId`, `sessionSerial`, date prefix) | `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSessionFileIdentityCodec.kt` | `IgcFileNamingPolicy`, recovery resolver | both naming and recovery match logic depend on the same normalized identity | no |
-| final IGC file name generation | `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcFileNamingPolicy.kt` | repository coordinator | naming remains a domain policy, not a repository helper concern | no |
-| IGC downloads storage location constants | `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsStoragePaths.kt` | downloads repository, publish transport, MediaStore androidTest helpers | publish and query paths must share the same storage contract without concrete implementation reach-through | no |
+| session file identity normalization (`manufacturerId`, `sessionSerial`, date prefix) | `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcSessionFileIdentityCodec.kt` | `IgcFileNamingPolicy`, recovery resolver | both naming and recovery match logic depend on the same normalized identity | no |
+| final IGC file name generation | `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcFileNamingPolicy.kt` | repository coordinator | naming remains a domain policy, not a repository helper concern | no |
+| IGC downloads storage location constants | `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcDownloadsStoragePaths.kt` | downloads repository, publish transport, MediaStore androidTest helpers | publish and query paths must share the same storage contract without concrete implementation reach-through | no |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -335,12 +335,12 @@ IgcRecordingRuntimeActionSink
   - remove the concrete `MediaStoreIgcDownloadsRepository.DOWNLOAD_RELATIVE_PATH`
     reach-through before the transport split starts
 - Files to change:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcSessionFileIdentityCodec.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcFileNamingPolicy.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcStagedRecoveryMetadataParser.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsStoragePaths.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcSessionFileIdentityCodec.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcFileNamingPolicy.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcStagedRecoveryMetadataParser.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcDownloadsStoragePaths.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcDownloadsRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
   - focused parser/naming tests
 - Ownership/file split changes in this phase:
   - normalization and staged parsing move out of the repository
@@ -360,9 +360,9 @@ IgcRecordingRuntimeActionSink
 - Goal:
   - remove direct file IO and publish-transport branching from the repository
 - Files to change:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryStagingStore.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogPublishTransport.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecoveryStagingStore.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogPublishTransport.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
   - publish-path tests
 - Ownership/file split changes in this phase:
   - staging artifact lifecycle moves to the store
@@ -385,9 +385,9 @@ IgcRecordingRuntimeActionSink
 - Goal:
   - remove finalized-entry matching and pending-row cleanup from the repository coordinator
 - Files to change:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryFinalizedEntryResolver.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryDownloadsLookup.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecoveryFinalizedEntryResolver.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecoveryDownloadsLookup.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
   - recovery tests and kill-point tests
 - Ownership/file split changes in this phase:
   - recovery duplicate guard and pending-row cleanup move to a focused resolver with separate `findExistingFinalizedMatch(...)` and `cleanupPendingRows(...)` methods
@@ -434,8 +434,8 @@ IgcRecordingRuntimeActionSink
 - Goal:
   - finish the split only if still justified and prove the path is release-grade
 - Files to change:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/MediaStoreIgcFlightLogRepository.kt` only if the final coordinator split is still warranted
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/MediaStoreIgcFlightLogRepository.kt` only if the final coordinator split is still warranted
   - `docs/ARCHITECTURE/PIPELINE.md`
   - targeted tests/docs only as required
 - Ownership/file split changes in this phase:

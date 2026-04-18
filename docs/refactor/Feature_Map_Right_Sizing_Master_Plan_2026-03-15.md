@@ -247,19 +247,19 @@ Target dependency flow:
 
 | Bypass Callsite | Current Bypass | Planned Replacement | Phase |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/screens/**` | owner feature screens are still hosted in `feature:map` | move screens to owner modules; keep only app/map route registration seams | Phase 1 |
-| `feature/map/src/main/java/com/example/xcpro/sensors/**` and `weather/wind/data/**` | non-map runtime/fusion code is map-owned | move behind `feature:flight-runtime` ports | Phase 2 |
-| residual runtime owners inside `feature/map/src/main/java/com/example/xcpro/map/**` | runtime code still compiled with the shell | move remaining runtime owners to `feature:map-runtime` | Phase 3 |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/**` | owner feature screens are still hosted in `feature:map` | move screens to owner modules; keep only app/map route registration seams | Phase 1 |
+| `feature/map/src/main/java/com/trust3/xcpro/sensors/**` and `weather/wind/data/**` | non-map runtime/fusion code is map-owned | move behind `feature:flight-runtime` ports | Phase 2 |
+| residual runtime owners inside `feature/map/src/main/java/com/trust3/xcpro/map/**` | runtime code still compiled with the shell | move remaining runtime owners to `feature:map-runtime` | Phase 3 |
 
 ### 2.2D File Ownership Plan
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Feature_Map_Right_Sizing_Master_Plan_2026-03-15.md` | New | active right-sizing contract for `feature:map` | consolidate the fragmented map-size plans | planning belongs in docs, not code comments | No |
-| `feature/map/src/main/java/com/example/xcpro/screens/**` | Existing | owner-screen inventory to reduce in Phase 1 | this is the largest non-runtime non-shell block left in `feature:map` | not a map runtime concern | Yes |
-| `feature/map/src/main/java/com/example/xcpro/sensors/**` | Existing | target Phase 2 extraction set | biggest remaining non-map business/runtime logic block | not shell UI and not MapLibre runtime | Yes |
-| `feature/map/src/main/java/com/example/xcpro/orientation/**` and `weather/wind/data/**` | Existing | target Phase 2 extraction set | tightly coupled to flight/sensor fusion | should move with the fusion owner, not independently | Yes |
-| `feature/map/src/main/java/com/example/xcpro/map/**` | Existing | must end as shell-only plus map-specific adapters | core map package is still too mixed | not all of it belongs in `feature:map-runtime`; shell remains here | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/screens/**` | Existing | owner-screen inventory to reduce in Phase 1 | this is the largest non-runtime non-shell block left in `feature:map` | not a map runtime concern | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/sensors/**` | Existing | target Phase 2 extraction set | biggest remaining non-map business/runtime logic block | not shell UI and not MapLibre runtime | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/orientation/**` and `weather/wind/data/**` | Existing | target Phase 2 extraction set | tightly coupled to flight/sensor fusion | should move with the fusion owner, not independently | Yes |
+| `feature/map/src/main/java/com/trust3/xcpro/map/**` | Existing | must end as shell-only plus map-specific adapters | core map package is still too mixed | not all of it belongs in `feature:map-runtime`; shell remains here | Yes |
 
 ### 2.2E Module and API Surface
 
@@ -392,7 +392,7 @@ app
   - that settings lane is now complete; the next active slice is Phase 2
     flight-runtime extraction after an ADR-backed seam pass
 - Files to change:
-  - `app/src/main/java/com/example/xcpro/appshell/settings/**`
+  - `app/src/main/java/com/trust3/xcpro/appshell/settings/**`
   - app/map route registration seams
   - owner modules for moved screens
 - Ownership/file split changes in this phase:
@@ -422,11 +422,11 @@ app
     4. fusion engine move after those ports land
     5. orientation input extraction
 - Files to change:
-  - HAWK runtime owners under `feature/map/src/main/java/com/example/xcpro/hawk/**`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/**`
-  - runtime-only owners in `feature/map/src/main/java/com/example/xcpro/weather/wind/data/**`
-  - runtime-only owners in `feature/map/src/main/java/com/example/xcpro/flightdata/**`
-  - reusable orientation input owners in `feature/map/src/main/java/com/example/xcpro/orientation/**`
+  - HAWK runtime owners under `feature/map/src/main/java/com/trust3/xcpro/hawk/**`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/**`
+  - runtime-only owners in `feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/**`
+  - runtime-only owners in `feature/map/src/main/java/com/trust3/xcpro/flightdata/**`
+  - reusable orientation input owners in `feature/map/src/main/java/com/trust3/xcpro/orientation/**`
   - target new `feature:flight-runtime`
 - Ownership/file split changes in this phase:
   - `feature:variometer` becomes the HAWK runtime owner
@@ -487,7 +487,7 @@ app
 - Goal:
   - move remaining heavy non-UI map runtime owners from `feature:map` to `feature:map-runtime`
 - Files to change:
-  - residual `feature/map/src/main/java/com/example/xcpro/map/**` runtime owners
+  - residual `feature/map/src/main/java/com/trust3/xcpro/map/**` runtime owners
   - start with real runtime owners still compiled in `feature:map`, which is
     why the first landed slice moved the visual/runtime primitive set
     (`BlueLocationOverlay`, `SailplaneIconBitmapFactory`,

@@ -1,7 +1,7 @@
 package com.example.ui1.screens
 
 import androidx.compose.runtime.Composable
-import com.example.xcpro.screens.navdrawer.WeatherSettingsSheet
+import com.trust3.xcpro.screens.navdrawer.WeatherSettingsSheet
 
 @Composable
 fun WeatherSettingsSubSheet(

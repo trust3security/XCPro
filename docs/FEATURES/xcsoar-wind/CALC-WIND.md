@@ -12,17 +12,17 @@ Scope:
 - Map display smoothing is UI-only and does not affect wind math.
 
 Related code (primary):
-- feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorFusionRepository.kt
-- feature/map/src/main/java/com/example/xcpro/weather/wind/data/WindSensorInputAdapter.kt
-- feature/map/src/main/java/com/example/xcpro/weather/wind/domain/CirclingWind.kt
-- feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindStore.kt
-- feature/map/src/main/java/com/example/xcpro/weather/wind/domain/WindMeasurementList.kt
-- feature/map/src/main/java/com/example/xcpro/weather/wind/model/WindVector.kt
-- feature/map/src/main/java/com/example/xcpro/sensors/CirclingDetector.kt
-- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
-- feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt
-- feature/map/src/main/java/com/example/xcpro/map/WindIndicatorState.kt
-- feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt
+- feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorFusionRepository.kt
+- feature/map/src/main/java/com/trust3/xcpro/weather/wind/data/WindSensorInputAdapter.kt
+- feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/CirclingWind.kt
+- feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindStore.kt
+- feature/map/src/main/java/com/trust3/xcpro/weather/wind/domain/WindMeasurementList.kt
+- feature/map/src/main/java/com/trust3/xcpro/weather/wind/model/WindVector.kt
+- feature/map/src/main/java/com/trust3/xcpro/sensors/CirclingDetector.kt
+- feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
+- feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt
+- feature/map/src/main/java/com/trust3/xcpro/map/WindIndicatorState.kt
+- feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt
 - feature/variometer/src/main/java/com/example/ui1/UIVariometer.kt
 
 ## Data sources (phone-only)
@@ -191,12 +191,12 @@ derived state being cached inside Compose:
    - Holds the last known wind-from direction (degrees) and validity.
    - Updates only when wind is valid (quality > 0 and speed > 0.5 m/s).
    - When wind becomes invalid, it keeps the last direction but marks isValid=false.
-   - Source: feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt
+   - Source: feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt
 
 2) MapScreenViewModel.windArrowState
    - Combines WindIndicatorState with orientationFlow.
    - Produces screen-relative direction: windFromDeg - mapBearing.
-   - Source: feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt
+   - Source: feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt
 
 UI rendering (UIVariometer):
 - Takes windDirectionScreenDeg (already screen-relative) and windIsValid.

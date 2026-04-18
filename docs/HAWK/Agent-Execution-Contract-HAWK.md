@@ -257,7 +257,7 @@ Agent must report:
 
 Suggested package/module layout to keep HAWK removable:
 
-- feature/map/src/main/java/com/example/xcpro/hawk/
+- feature/map/src/main/java/com/trust3/xcpro/hawk/
   - HawkSensorAdapter.kt
   - HawkVarioEngine.kt
   - HawkConfig.kt

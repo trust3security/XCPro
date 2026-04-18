@@ -1,0 +1,29 @@
+package com.trust3.xcpro.livefollow.watch
+
+import com.trust3.xcpro.livefollow.data.session.LiveFollowSessionLifecycle
+import com.trust3.xcpro.livefollow.model.LiveFollowSourceType
+import com.trust3.xcpro.livefollow.model.LiveFollowTaskSnapshot
+import com.trust3.xcpro.livefollow.state.LiveFollowSessionState
+
+enum class LiveFollowTaskRenderPolicy {
+    AVAILABLE,
+    HIDDEN,
+    READ_ONLY_UNAVAILABLE,
+    BLOCKED_AMBIGUOUS
+}
+
+data class LiveFollowMapRenderState(
+    val isVisible: Boolean = false,
+    val sessionId: String? = null,
+    val shareCode: String? = null,
+    val lifecycle: LiveFollowSessionLifecycle = LiveFollowSessionLifecycle.IDLE,
+    val sourceState: LiveFollowSessionState = LiveFollowSessionState.STOPPED,
+    val activeSource: LiveFollowSourceType? = null,
+    val displayLabel: String? = null,
+    val latitudeDeg: Double? = null,
+    val longitudeDeg: Double? = null,
+    val trackDeg: Double? = null,
+    val ageMs: Long? = null,
+    val taskSnapshot: LiveFollowTaskSnapshot? = null,
+    val taskRenderPolicy: LiveFollowTaskRenderPolicy = LiveFollowTaskRenderPolicy.HIDDEN
+)

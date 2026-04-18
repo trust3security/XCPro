@@ -1,0 +1,32 @@
+package com.trust3.xcpro.map
+
+data class MapOverlayRuntimeCounters(
+    val overlayFrontOrderApplyCount: Long,
+    val overlayFrontOrderSkippedCount: Long,
+    val aatPreviewForwardCount: Long,
+    val adsbIconUnknownRenderCount: Long,
+    val adsbIconLegacyUnknownRenderCount: Long,
+    val adsbIconResolveLatencySampleCount: Long,
+    val adsbIconResolveLatencyLastMs: Long?,
+    val adsbIconResolveLatencyMaxMs: Long?,
+    val adsbIconResolveLatencyAverageMs: Long?,
+    val adsbDefaultMediumUnknownIconEnabled: Boolean,
+    val adsbAnimationFrameScheduledCount: Long,
+    val adsbAnimationFrameRenderedCount: Long,
+    val adsbAnimationFrameSkippedCount: Long,
+    val adsbActiveAnimatedTargetCount: Int,
+    val adsbEmergencyAnimatedTargetCount: Int,
+    val adsbInteractionReducedMotionActive: Boolean,
+    val ognTrafficCollectorEmissionCount: Long,
+    val ognTrafficCollectorDedupedCount: Long,
+    val ognTrafficPortUpdateCount: Long,
+    val ognTargetVisualCollectorEmissionCount: Long,
+    val ognTargetVisualCollectorDedupedCount: Long,
+    val ognTargetVisualPortUpdateCount: Long,
+    val adsbTrafficCollectorEmissionCount: Long,
+    val adsbTrafficCollectorDedupedCount: Long,
+    val adsbTrafficPortUpdateCount: Long,
+    val ognThermalCollectorEmissionCount: Long,
+    val ognTrailCollectorEmissionCount: Long,
+    val selectedOgnThermalCollectorEmissionCount: Long
+)

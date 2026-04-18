@@ -1,7 +1,7 @@
 package com.example.dfcards
 
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.core.flight.RealTimeFlightData
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Locale
@@ -247,3 +247,4 @@ class CardDataFormatterTest {
         override fun formatLocalTime(epochMillis: Long): Pair<String, String> = time to seconds
     }
 }
+

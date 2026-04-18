@@ -11,7 +11,7 @@
 ## 1) Scope
 
 - Problem statement:
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt` is currently 889 lines and concentrates bootstrap, hydration, import, bundle, persistence, and backup-sync orchestration in one file.
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt` is currently 889 lines and concentrates bootstrap, hydration, import, bundle, persistence, and backup-sync orchestration in one file.
 - Why now:
   - Reduce review risk and regression surface.
   - Bring hotspot maintainability in line with production-grade refactor policy.
@@ -47,8 +47,8 @@ Confirmed flow remains:
 `UI -> ProfileViewModel -> ProfileUseCase -> ProfileRepository -> ProfileStorage/ProfileBackupSink/ProfileSettings* adapters`
 
 - Modules/files touched:
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/*` (new helper files + repository trim)
-  - `app/src/test/java/com/example/xcpro/profiles/*` (test lock/updates)
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/*` (new helper files + repository trim)
+  - `app/src/test/java/com/trust3/xcpro/profiles/*` (test lock/updates)
 - Boundary risk:
   - Helper extraction must not move business logic into UI/ViewModel.
   - Repository remains the only mutation entrypoint.
@@ -128,7 +128,7 @@ SSOT ownership remains in repository state flows; helpers are collaborators, not
 - Goal:
   - Freeze current behavior with existing tests; add characterization tests only if gaps are found.
 - Files to change:
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt` (only if gap found)
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt` (only if gap found)
   - Existing profile repository test files (only if gap found)
 - Tests to add/update:
   - Bootstrap parse-failure and fallback edge coverage if missing.
@@ -141,7 +141,7 @@ SSOT ownership remains in repository state flows; helpers are collaborators, not
 - Goal:
   - Remove parse/sanitize/default provisioning and active-profile resolution policy from `ProfileRepository.kt`.
 - Files to change:
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
   - New helper files (`ProfileHydrationPolicy.kt`, `ProfileBootstrapProvisioner.kt`)
 - Tests to add/update:
   - Reuse existing bootstrap/read-failure tests; add only if behavior seam requires.

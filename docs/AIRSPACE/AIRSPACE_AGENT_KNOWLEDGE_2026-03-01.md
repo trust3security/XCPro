@@ -36,14 +36,14 @@ Map runtime flow:
 
 Primary files:
 
-- `feature/map/src/main/java/com/example/xcpro/airspace/AirspaceViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/airspace/AirspaceUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/utils/AirspaceRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/utils/AirspaceParser.kt`
-- `feature/map/src/main/java/com/example/xcpro/utils/AirspaceApply.kt`
-- `feature/map/src/main/java/com/example/xcpro/utils/AirspaceIO.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/airspace/AirspaceViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/airspace/AirspaceUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceParser.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceApply.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/utils/AirspaceIO.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
 
 ## Confirmed Defects (March 1, 2026)
 

@@ -25,15 +25,15 @@
 - Problem statement:
   - The profile/export slice still hides ID and wall-time creation inside persistent models and helper defaults instead of showing those decisions at owner call sites.
   - The most concrete current examples are:
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileModels.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBundleCodec.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/AircraftProfileFileNames.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryMutationCoordinator.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryImportCoordinator.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryImportHelpers.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryBundleCoordinator.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBackupSink.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileExportImport.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileModels.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileBundleCodec.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AircraftProfileFileNames.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryMutationCoordinator.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryImportCoordinator.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryImportHelpers.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleCoordinator.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileBackupSink.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileExportImport.kt`
   - The result is weak ownership visibility:
     - reviewers cannot see who owns ID/timestamp policy from creation/import/export call sites
     - tests rely on hidden randomness/time behavior unless they override every path deliberately
@@ -74,9 +74,9 @@
 
 ### 2.2 Existing Seams To Reuse
 
-- `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
+- `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
   - existing injected wall-time seam
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBackupSink.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileBackupSink.kt`
   - already uses explicit `generatedAtWallMs` for backup payload documents; that is the correct owner shape to extend to bundle export metadata
 
 ## 3) Target Identity/Time Ownership Standard
@@ -152,9 +152,9 @@ Boundary rules:
 | Risk | Guard type | File/test |
 |---|---|---|
 | hidden ID/time defaults remain in model types | targeted grep + tests + review | `ProfileModels.kt`, `ProfileBundleCodec.kt`, `AircraftProfileFileNames.kt` |
-| create/import paths still hide identity policy | repository tests | `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt` |
-| export timestamp and filename drift | bundle/export tests | `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`, `app/src/test/java/com/example/xcpro/profiles/ProfileExportImportTest.kt`, `app/src/test/java/com/example/xcpro/profiles/AircraftProfileFileNamesTest.kt` |
-| backup payload metadata remains mixed implicit/explicit | backup contract tests | `feature/profile/src/test/java/com/example/xcpro/profiles/ProfileBackupSinkContractTest.kt` |
+| create/import paths still hide identity policy | repository tests | `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt` |
+| export timestamp and filename drift | bundle/export tests | `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt`, `app/src/test/java/com/trust3/xcpro/profiles/ProfileExportImportTest.kt`, `app/src/test/java/com/trust3/xcpro/profiles/AircraftProfileFileNamesTest.kt` |
+| backup payload metadata remains mixed implicit/explicit | backup contract tests | `feature/profile/src/test/java/com/trust3/xcpro/profiles/ProfileBackupSinkContractTest.kt` |
 
 ## 5) Implementation Phases
 
@@ -177,7 +177,7 @@ Boundary rules:
   - Add the smallest explicit seams needed so owner code can create IDs and wall-time metadata without relying on model/helper defaults.
 - Files to change:
   - new slice-local profile ID seam, for example:
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileIdGenerator.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileIdGenerator.kt`
   - profile repository wiring files needed to inject or pass:
     - existing `Clock`
     - the new ID seam
@@ -196,14 +196,14 @@ Boundary rules:
 - Goal:
   - Move profile identity/time decisions out of `UserProfile` defaults and into the mutation/bootstrap/import owners.
 - Files to change:
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileModels.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryMutationCoordinator.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryBootstrapHelpers.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryImportCoordinator.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryImportHelpers.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileModels.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryMutationCoordinator.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryBootstrapHelpers.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryImportCoordinator.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryImportHelpers.kt`
   - any narrow repository wiring files required by constructor changes
 - Tests to add/update:
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt`
   - targeted tests for:
     - new profile creation metadata
     - copied profile metadata rules
@@ -221,17 +221,17 @@ Boundary rules:
 - Goal:
   - Move export and backup timestamp decisions to one explicit owner path and stop relying on document/helper defaults.
 - Files to change:
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBundleCodec.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepositoryBundleCoordinator.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBackupSink.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/AircraftProfileFileNames.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileExportImport.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileBundleCodec.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleCoordinator.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileBackupSink.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AircraftProfileFileNames.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileExportImport.kt`
   - narrow repository/use-case/ViewModel files if export result shape must carry explicit metadata
 - Tests to add/update:
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileExportImportTest.kt`
-  - `app/src/test/java/com/example/xcpro/profiles/AircraftProfileFileNamesTest.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/ProfileBackupSinkContractTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileExportImportTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/AircraftProfileFileNamesTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/ProfileBackupSinkContractTest.kt`
 - Exit criteria:
   - `ProfileBundleDocument` receives explicit `exportedAtWallMs`
   - `AircraftProfileFileNames` requires explicit timestamp input
@@ -274,7 +274,7 @@ Boundary rules:
   - `./gradlew testDebugUnitTest`
   - `./gradlew assembleDebug`
 - Targeted test slices to run during the phases:
-  - `./gradlew app:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileRepositoryTest"`
-  - `./gradlew app:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileRepositoryBundleTest"`
-  - `./gradlew app:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileExportImportTest"`
-  - `./gradlew :feature:profile:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileBackupSinkContractTest"`
+  - `./gradlew app:testDebugUnitTest --tests "com.trust3.xcpro.profiles.ProfileRepositoryTest"`
+  - `./gradlew app:testDebugUnitTest --tests "com.trust3.xcpro.profiles.ProfileRepositoryBundleTest"`
+  - `./gradlew app:testDebugUnitTest --tests "com.trust3.xcpro.profiles.ProfileExportImportTest"`
+  - `./gradlew :feature:profile:testDebugUnitTest --tests "com.trust3.xcpro.profiles.ProfileBackupSinkContractTest"`

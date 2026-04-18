@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.core.time"
+    namespace = "com.trust3.xcpro.core.time"
     compileSdk = 35
 
     defaultConfig {

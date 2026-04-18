@@ -12,7 +12,7 @@ Commands used:
 - `rg -n "TaskManagerCoordinator|getAATTaskManager\(|getRacingTaskManager\(|taskManager\." feature/map/src/main/java app/src/main/java -g "*.kt"`
 - `rg -n "TaskManagerCoordinator" feature/map/src/main/java app/src/main/java -g "*.kt"`
 - `rg -n "getAATTaskManager\(|getRacingTaskManager\(" feature/map/src/main/java -g "*.kt"`
-- `rg -n "taskManager\.(addWaypoint|setTaskType|removeWaypoint|reorderWaypoints|replaceWaypoint|setActiveLeg|plotOnMap|setMapInstance|currentTask|currentLeg|taskType)" feature/map/src/main/java/com/example/xcpro/tasks feature/map/src/main/java/com/example/xcpro/map/ui/task -g "*.kt"`
+- `rg -n "taskManager\.(addWaypoint|setTaskType|removeWaypoint|reorderWaypoints|replaceWaypoint|setActiveLeg|plotOnMap|setMapInstance|currentTask|currentLeg|taskType)" feature/map/src/main/java/com/trust3/xcpro/tasks feature/map/src/main/java/com/trust3/xcpro/map/ui/task -g "*.kt"`
 - `rg -n "TaskManagerCoordinator|updateAATTargetPoint|calculateSimpleSegmentDistance|setTaskType\(|addWaypoint\(|removeWaypoint\(|reorderWaypoints\(" feature/map/src/test/java -g "*.kt"`
 
 ## 2) Inventory Summary
@@ -27,20 +27,20 @@ Commands used:
 ## 3) High-Risk Bypass Call Sites (Current)
 
 Representative direct bypasses:
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskSearchBarsOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskTopDropdownPanel.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/SwipeableTaskBottomSheet.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATManageList.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSearchBarsOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskTopDropdownPanel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/SwipeableTaskBottomSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/BottomSheetState.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATManageList.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`
 
 ## 4) Safety-Net Test Expansion
 
 Expanded in:
-- `feature/map/src/test/java/com/example/xcpro/tasks/TaskManagerCoordinatorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/tasks/TaskManagerCoordinatorTest.kt`
 
 Added coverage:
 - Racing add/remove/reorder waypoint behavior.

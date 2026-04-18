@@ -1,4 +1,4 @@
-﻿param(
+param(
     [ValidateRange(0, 4)]
     [int]$FromPhase = 0,
     [ValidateRange(0, 4)]
@@ -185,17 +185,17 @@ $basicBuildTaskSet = @(":app:assembleDebug")
 
 $phaseFocusedTaskSets = [ordered]@{
     0 = @(
-        ":feature:map:testDebugUnitTest --tests com.example.xcpro.map.ui.MapBottomSheetTabsTest",
-        ":feature:map:testDebugUnitTest --tests com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"
+        ":feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.ui.MapBottomSheetTabsTest",
+        ":feature:map:testDebugUnitTest --tests com.trust3.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"
     )
     1 = @(
-        ":feature:map:testDebugUnitTest --tests com.example.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"
+        ":feature:map:testDebugUnitTest --tests com.trust3.xcpro.ogn.OgnTrafficPreferencesRepositoryTest"
     )
     2 = @(
-        ":feature:map:testDebugUnitTest --tests com.example.xcpro.map.ui.MapBottomSheetTabsTest"
+        ":feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.ui.MapBottomSheetTabsTest"
     )
     3 = @(
-        ":feature:map:testDebugUnitTest --tests com.example.xcpro.map.ui.MapBottomSheetTabsTest"
+        ":feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.ui.MapBottomSheetTabsTest"
     )
     4 = @(
         ":feature:map:testDebugUnitTest"

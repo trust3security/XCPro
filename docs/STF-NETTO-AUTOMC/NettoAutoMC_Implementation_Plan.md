@@ -157,7 +157,7 @@ while preserving `levoNettoValid` for glide-netto gating. Add a wind speed/direc
 
 Implementation steps:
 1) Domain fallback (LevoNettoCalculator)
-   - File: feature/map/src/main/java/com/example/xcpro/sensors/domain/LevoNettoCalculator.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculator.kt
    - When wind or polar is missing, return a fallback value instead of freezing or blanking:
      - sink = sinkAtSpeed(IAS) if polar and IAS valid; else sink = 0.
      - value = w_meas - sink (w_meas is baseline vario).
@@ -165,7 +165,7 @@ Implementation steps:
    - Preserve distance-window smoothing only for valid glide-netto updates.
 
 2) Flight metrics wiring
-   - File: feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
    - Keep `levoNettoHasWind` / `levoNettoHasPolar` as availability flags.
    - Ensure `levoNettoMs` is set from the (possibly fallback) calculator output,
      but `levoNettoValid` remains true only for glide-netto.
@@ -180,12 +180,12 @@ Implementation steps:
    - If wind missing -> show "NO WIND" in footer.
 
 4) Levo Vario UI (secondary line remains numeric)
-   - File: feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt
+   - File: feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt
    - Keep numeric Levo Netto on the secondary line regardless of validity.
    - Keep red error tint when wind or polar is missing.
 
 5) Tests
-   - feature/map/src/test/java/com/example/xcpro/sensors/domain/LevoNettoCalculatorTest.kt
+   - feature/map/src/test/java/com/trust3/xcpro/sensors/domain/LevoNettoCalculatorTest.kt
      - Add cases for no wind / no polar -> value uses w_meas - sink (sink=0 if polar missing), valid=false.
    - dfcards-library/src/test/java/com/example/dfcards/CardFormatSpecTest.kt
      - Add LEVO_NETTO cases for footer formatting and NO WIND/NO POLAR fallbacks.

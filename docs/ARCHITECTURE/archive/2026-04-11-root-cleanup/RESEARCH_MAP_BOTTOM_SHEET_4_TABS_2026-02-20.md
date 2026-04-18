@@ -62,44 +62,44 @@ Locked defaults applied to plan:
 
 ### Existing sheet patterns
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
   - Owns local `showForecastSheet` state.
   - Opens `ForecastOverlayBottomSheet`.
   - Also hosts OGN/thermal/ADS-B details modal sheets.
   - Forecast modal and details modal composition paths are independent today.
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/ForecastOverlayBottomSheet.kt`
   - Uses `ModalBottomSheet` with `rememberModalBottomSheetState(skipPartiallyExpanded = true)`.
   - Is self-contained as a full modal container (content is not currently separable from its sheet wrapper).
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
   - Already owns a separate task panel state machine (top panel, not bottom).
 
 ### Existing trigger patterns
 
-- `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt`
   - FAB stack currently toggles traffic, circles, and opens forecast sheet.
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt`
   - Good integration point for adding a new bottom tab-strip layer.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
   - `onHamburgerTap` currently emits `MapUiEvent.ToggleDrawer` (toggle semantics, not explicit open).
-- `feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/navdrawer/NavigationDrawer.kt`
   - `gesturesEnabled = false`; drawer open on map route is programmatic.
 
 ### Back and layering behavior
 
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
   - Back handling order today: drawer -> modal manager -> task panel -> nav back.
   - New sheet must either self-handle back (ModalBottomSheet) or be added to this order.
-- `feature/map/src/main/java/com/example/xcpro/map/MapModalManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapModalManager.kt`
   - Airspace modal overlay renders at high z-index and consumes taps.
   - `isAnyModalOpen()` reflects airspace modal only, not modal bottom sheets.
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenContract.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenContract.kt`
   - UI effects expose `OpenDrawer`/`CloseDrawer`, but UI events currently expose `ToggleDrawer` and `SetDrawerOpen` only.
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUiEventHandler.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUiEventHandler.kt`
   - `setDrawerOpen(true)` mutates UI state but does not emit `OpenDrawer` effect; explicit-open semantics require separate wiring.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt`
   - Task top panel uses high z-index and has its own expansion state.
 
 ### Current z-index occupancy (deep pass)
@@ -115,16 +115,16 @@ Implication:
 
 ### Important implementation constraints
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` is at line-budget limit (350).
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` is near limit (320 max).
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` is near/over tight budget.
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` is at line-budget limit (350).
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` is near limit (320 max).
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` is near/over tight budget.
 - Best approach is new focused UI files + minimal callsite deltas.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
   - Already very large; integration should be done via extracted layer composables.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
   - Has existing drawer callback path (`onHamburgerTap`), but it is currently toggle-based and shared with hamburger widget semantics.
   - Reusing it directly for `2A` Weather advanced action risks toggle misfire and block-bypass behavior in AAT edit mode.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
   - Bottom-start debug panels and bottom-end replay/demo buttons already occupy lower screen space.
 - No `feature/map/src/androidTest` folder currently exists; map UI interaction coverage is primarily JVM + Robolectric compose tests.
 - Bottom overlays currently do not apply explicit navigation-bar insets in map UI code.
@@ -374,66 +374,66 @@ Implication:
 ## Weather Settings Ownership and Scope (Verified in Code)
 
 - Read path in map:
-  - `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayViewModel.kt`
   - Exposes runtime `overlayState` only.
   - Applied to map rendering by:
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
 
 - Write path today:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsUseCase.kt`
   - Mutates `WeatherOverlayPreferencesRepository` for weather settings.
   - Current mutation contract lives under navdrawer package ownership, which is a coupling risk for map-tab reuse.
 
 - Existing full weather controls + attribution UI:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
   - Includes radar metadata/status details and source attribution link action.
 
 - Existing weather settings entrypoint remains active:
-  - `feature/map/src/main/java/com/example/xcpro/navigation/SettingsRoutes.kt`
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navigation/SettingsRoutes.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
 
 ## Weather Advanced-Settings Discoverability (Verified in Code)
 
 - Drawer-open trigger from map flow:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
   - `onHamburgerTap = { mapViewModel.onEvent(MapUiEvent.ToggleDrawer) }`
   - No direct `weather_settings` deep-link callback on this path today.
 
 - Drawer interaction model on map:
-  - `feature/map/src/main/java/com/example/xcpro/navdrawer/NavigationDrawer.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navdrawer/NavigationDrawer.kt`
   - `gesturesEnabled = false` (drawer opens programmatically).
 
 - Drawer route to settings:
-  - `feature/map/src/main/java/com/example/xcpro/navdrawer/DrawerMenuSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt`
   - `Settings` section contains `General` item that navigates to `settings`.
 
 - Settings route to weather screen:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
   - card label is `RainViewer`, and that card navigates to `SettingsRoutes.WEATHER_SETTINGS`.
   - This is the current label users must recognize from a Weather-tab advanced action.
 
 - Weather settings route target:
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   - `SettingsRoutes.WEATHER_SETTINGS` maps to `WeatherSettingsScreen`.
 
 - Persisted discoverability variable:
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   - `settingsExpanded` is restored from config and can be user-collapsed.
 
 ## Drawer Block Enforcement Gap (Verified in Code)
 
 - Current enforcement location:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
   - Block/close logic runs in `LaunchedEffect(isAATEditMode, taskType)`.
 
 - Current open request path:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
   - hamburger sends `MapUiEvent.ToggleDrawer`.
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUiEventHandler.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUiEventHandler.kt`
   - `toggleDrawer()` emits `MapUiEffect.OpenDrawer` when mirrored state says closed.
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSideEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSideEffects.kt`
   - `MapUiEffect.OpenDrawer -> drawerState.open()`.
 
 - Implication:
@@ -443,17 +443,17 @@ Implication:
 ## Task-Panel Visibility Semantics Gap (Verified in Code)
 
 - Back-handler visibility predicate:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
   - `isTaskPanelVisible = panelState != MapTaskScreenManager.TaskPanelState.HIDDEN`.
   - `MapScreenBackHandler` is enabled using that non-hidden predicate.
 
 - Task-panel states:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
   - states include `HIDDEN`, `COLLAPSED`, `EXPANDED_PARTIAL`, `EXPANDED_FULL`.
   - `handleBackGesture()` closes panel for any non-hidden state.
 
 - Button-path visibility source differs:
-  - `feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt`
   - reads `showTaskBottomSheet`, which is true only for expanded states.
   - `COLLAPSED` is treated differently on this path.
 
@@ -462,7 +462,7 @@ Implication:
 
 ## SkySight Tab Option Mapping (Verified in Code)
 
-Verified in `feature/map/src/main/java/com/example/xcpro/forecast/SkySightForecastProviderAdapter.kt`:
+Verified in `feature/map/src/main/java/com/trust3/xcpro/forecast/SkySightForecastProviderAdapter.kt`:
 
 - `Thermal Tops` (UI label) -> `ForecastParameterId("dwcrit")`
   - Current metadata label is `Thermal Height`.

@@ -45,10 +45,10 @@ Recommended discipline:
 - Current task runtime owner:
   - `TaskManagerCoordinator.taskSnapshotFlow`
 - Current glide target owner:
-  - `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/glide/GlideTargetRepository.kt`
 - Current final-glide solve owner:
-  - `feature/map/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt`
-  - invoked from `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/glide/FinalGlideUseCase.kt`
+  - invoked from `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
 - Current known route limitation:
   - remaining-route projection is waypoint-center based and is not yet
     boundary-aware
@@ -164,8 +164,8 @@ Confirmed target dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Non-UI runtime owner consumed by the map shell | narrow runtime owner + shell adapter split | final glide uses data flows instead of map overlay callbacks |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt` | Cross-feature task-derived runtime orchestration | upstream owner in runtime layer, map shell as consumer | final glide outputs a value flow instead of issuing render sync side effects |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` | Non-UI runtime owner consumed by the map shell | narrow runtime owner + shell adapter split | final glide uses data flows instead of map overlay callbacks |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt` | Cross-feature task-derived runtime orchestration | upstream owner in runtime layer, map shell as consumer | final glide outputs a value flow instead of issuing render sync side effects |
 
 ### 2.2B Boundary Moves
 
@@ -187,17 +187,17 @@ Confirmed target dependency flow remains:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteSnapshot.kt` | New | cross-feature route model | task runtime contract | route is task-owned, not map-owned | no |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteRepository.kt` | New | route projector / read-only flow owner | near task runtime + boundary helpers | avoids map-layer route ownership | maybe split projector helper if file grows |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteProjector.kt` | New | pure parity projector for Phase 1A | isolates route derivation logic from the flow owner | avoids mixed responsibility in repository | no |
-| `feature/tasks/src/main/java/com/example/xcpro/tasks/navigation/NavigationRouteGeometryResolver.kt` | New | boundary-aware racing touchpoint resolver for Phase 1B | keeps route geometry with task/runtime owners | avoids boundary math in map/UI or a mixed repository file | no |
-| `feature/tasks/src/test/java/com/example/xcpro/tasks/navigation/NavigationRouteRepositoryTest.kt` | New | parity + boundary route tests | route owner tests | keeps route correctness near owner | no |
-| `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideComputationRepository.kt` | New | derived glide flow owner | non-UI runtime layer already depends on tasks + flight-runtime | avoids solve ownership in map shell | no |
-| `feature/map-runtime/src/main/java/com/example/xcpro/glide/FinalGlideUseCase.kt` | Existing/moved | final-glide math + runtime route-leg solving | solver belongs with derived runtime owner | not task-owned because it combines flight + wind + route + polar | maybe helper split later only if needed |
-| `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideTargetProjector.kt` | New in phase 3 | explicit glide-policy/status projection owner | shared policy mapping used by runtime and compatibility shim | keeps status/finish-rule mapping out of UI and out of duplicate shims | no |
-| `feature/map-runtime/src/test/java/com/example/xcpro/glide/GlideComputationRepositoryTest.kt` | New | repository wiring tests | owner-local proof | keeps new behavior testable without map shell | no |
-| `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt` | Existing | adapter only | consumer of upstream glide result | must stop owning solve orchestration | no |
-| `feature/map/src/main/java/com/example/xcpro/glide/GlideTargetRepository.kt` | Deleted in phase 4 | retired compatibility bridge | Phase 4 removes the dead map shim after the authoritative path is fully upstream | no durable owner remains | no |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/navigation/NavigationRouteSnapshot.kt` | New | cross-feature route model | task runtime contract | route is task-owned, not map-owned | no |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/navigation/NavigationRouteRepository.kt` | New | route projector / read-only flow owner | near task runtime + boundary helpers | avoids map-layer route ownership | maybe split projector helper if file grows |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/navigation/NavigationRouteProjector.kt` | New | pure parity projector for Phase 1A | isolates route derivation logic from the flow owner | avoids mixed responsibility in repository | no |
+| `feature/tasks/src/main/java/com/trust3/xcpro/tasks/navigation/NavigationRouteGeometryResolver.kt` | New | boundary-aware racing touchpoint resolver for Phase 1B | keeps route geometry with task/runtime owners | avoids boundary math in map/UI or a mixed repository file | no |
+| `feature/tasks/src/test/java/com/trust3/xcpro/tasks/navigation/NavigationRouteRepositoryTest.kt` | New | parity + boundary route tests | route owner tests | keeps route correctness near owner | no |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/glide/GlideComputationRepository.kt` | New | derived glide flow owner | non-UI runtime layer already depends on tasks + flight-runtime | avoids solve ownership in map shell | no |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/glide/FinalGlideUseCase.kt` | Existing/moved | final-glide math + runtime route-leg solving | solver belongs with derived runtime owner | not task-owned because it combines flight + wind + route + polar | maybe helper split later only if needed |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/glide/GlideTargetProjector.kt` | New in phase 3 | explicit glide-policy/status projection owner | shared policy mapping used by runtime and compatibility shim | keeps status/finish-rule mapping out of UI and out of duplicate shims | no |
+| `feature/map-runtime/src/test/java/com/trust3/xcpro/glide/GlideComputationRepositoryTest.kt` | New | repository wiring tests | owner-local proof | keeps new behavior testable without map shell | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt` | Existing | adapter only | consumer of upstream glide result | must stop owning solve orchestration | no |
+| `feature/map/src/main/java/com/trust3/xcpro/glide/GlideTargetRepository.kt` | Deleted in phase 4 | retired compatibility bridge | Phase 4 removes the dead map shim after the authoritative path is fully upstream | no durable owner remains | no |
 
 ### 2.2E Module and API Surface
 
@@ -211,7 +211,7 @@ Confirmed target dependency flow remains:
 
 ### 2.2F Transitional Task Runtime Read
 
-- `feature/map-runtime/src/main/java/com/example/xcpro/glide/GlideTargetProjector.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/glide/GlideTargetProjector.kt`
   may read `TaskRuntimeSnapshot` only to map the current racing finish rule and
   fallback finish label into `GlideTargetSnapshot`.
 - It must not derive remaining-route geometry or become a second route owner;

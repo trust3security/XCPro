@@ -9,7 +9,7 @@ Phase 1 goal from `docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Comp
 ## Implemented
 
 Added pure task-engine contracts and state models:
-- `feature/map/src/main/java/com/example/xcpro/tasks/domain/engine/TaskEngineContracts.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/TaskEngineContracts.kt`
   - `TaskEngineState`
   - `RacingTaskEngineState`
   - `AATTaskEngineState`
@@ -18,7 +18,7 @@ Added pure task-engine contracts and state models:
   - `AATTaskEngine`
 
 Added persistence/settings contracts:
-- `feature/map/src/main/java/com/example/xcpro/tasks/domain/persistence/TaskPersistenceContracts.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/persistence/TaskPersistenceContracts.kt`
   - `TaskTypeSettingsRepository`
   - `RacingTaskPersistencePort`
   - `AATTaskPersistencePort`

@@ -137,7 +137,7 @@ After:
 - Goal:
   - Define a canonical fallback "club" polar model in `core/common`.
 - Files to change:
-  - `core/common/src/main/java/com/example/xcpro/common/glider/GliderModels.kt`.
+  - `core/common/src/main/java/com/trust3/xcpro/common/glider/GliderModels.kt`.
 - Tests to add/update:
   - Model validity test (non-empty usable polar definition).
 - Exit criteria:
@@ -149,9 +149,9 @@ After:
   - Resolve effective model in repository.
   - Make `PolarCalculator` safe for empty/degenerate point lists.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/glider/GliderRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/glider/StillAirSinkProvider.kt`
-  - `feature/map/src/main/java/com/example/xcpro/glider/PolarCalculator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/glider/GliderRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/glider/StillAirSinkProvider.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/glider/PolarCalculator.kt`
 - Tests to add/update:
   - Repository fallback resolution tests:
     - no selected ID
@@ -170,9 +170,9 @@ After:
 - Goal:
   - Surface "fallback polar active" warning in polar settings/preview.
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/glider/GliderUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/glider/GliderViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/PolarPreviewCard.kt` (or equivalent screen component).
+  - `feature/map/src/main/java/com/trust3/xcpro/glider/GliderUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/glider/GliderViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/PolarPreviewCard.kt` (or equivalent screen component).
 - Tests to add/update:
   - ViewModel/UI state tests for fallback flag.
 - Exit criteria:

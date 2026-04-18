@@ -20,13 +20,13 @@ Icon identity is resolved through this path:
 
 ### 0.2 Primary source files
 
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/domain/AdsbAircraftClassResolver.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIcon.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbStickyIconProjectionCache.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayStyleImages.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/domain/AdsbAircraftClassResolver.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIcon.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbStickyIconProjectionCache.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayStyleImages.kt`
 
 ### 0.3 Current architecture contract
 
@@ -58,12 +58,12 @@ Status:
 
 In scope:
 - Keep existing tests green:
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
-  - `feature/traffic/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbGeoJsonMapperTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbStickyIconProjectionCacheTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/AdsbIconTelemetryTrackerTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbGeoJsonMapperTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbStickyIconProjectionCacheTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/AdsbIconTelemetryTrackerTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegateTest.kt`
 
 Acceptance:
 - No baseline regressions in unknown semantic mapping and unknown telemetry counters.
@@ -77,12 +77,12 @@ Status:
 - Completed.
 
 In scope:
-- `feature/traffic/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
   - Confirm `prioritizedLookupOrder(...)` ordering:
     - ambiguous/non-fixed-wing targets first,
     - metadata-hinted second,
     - regular third.
-- `feature/traffic/src/test/java/com/example/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTest.kt`
+- `feature/traffic/src/test/java/com/trust3/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTest.kt`
   - Keep/extend ordering tests:
     - `targetsWithMetadata_prioritizesTargetsWithExistingMetadataHintsAboveRegularTargets`
     - `targetsWithMetadata_prioritizesMetadataHintsForRegularCategoryTargets`
@@ -99,9 +99,9 @@ Status:
 - Completed.
 
 In scope:
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlayStyleImages.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlayStyleImages.kt`
   - Replace legacy registration source to `R.drawable.ic_adsb_unknown` for `ADSB_ICON_STYLE_UNKNOWN_LEGACY`.
-- `feature/map/src/test/java/com/example/xcpro/map/AdsbTrafficOverlayStyleImagesTest.kt` (new)
+- `feature/map/src/test/java/com/trust3/xcpro/map/AdsbTrafficOverlayStyleImagesTest.kt` (new)
   - Add regression test proving:
     - `ADSB_ICON_STYLE_UNKNOWN_LEGACY` uses `ic_adsb_unknown`.
     - default unknown still uses `AdsbAircraftIcon.Unknown.resId`.
@@ -120,12 +120,12 @@ Status:
 
 In scope:
 - Run focused unit suites:
-  - `./gradlew :feature:traffic:testDebugUnitTest --tests com.example.xcpro.adsb.metadata.AdsbMetadataEnrichmentUseCaseTest`
-  - `./gradlew :feature:traffic:testDebugUnitTest --tests com.example.xcpro.adsb.ui.AdsbAircraftIconMapperTest`
-  - `./gradlew :feature:traffic:testDebugUnitTest --tests com.example.xcpro.adsb.ui.AdsbAircraftIconTest`
-  - `./gradlew :feature:map:testDebugUnitTest --tests com.example.xcpro.map.AdsbGeoJsonMapperTest`
-  - `./gradlew :feature:map:testDebugUnitTest --tests com.example.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateTest`
-  - `./gradlew :feature:map:testDebugUnitTest --tests com.example.xcpro.map.AdsbTrafficOverlayStyleImagesTest`
+  - `./gradlew :feature:traffic:testDebugUnitTest --tests com.trust3.xcpro.adsb.metadata.AdsbMetadataEnrichmentUseCaseTest`
+  - `./gradlew :feature:traffic:testDebugUnitTest --tests com.trust3.xcpro.adsb.ui.AdsbAircraftIconMapperTest`
+  - `./gradlew :feature:traffic:testDebugUnitTest --tests com.trust3.xcpro.adsb.ui.AdsbAircraftIconTest`
+  - `./gradlew :feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.AdsbGeoJsonMapperTest`
+  - `./gradlew :feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.MapOverlayManagerRuntimeTrafficDelegateTest`
+  - `./gradlew :feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.AdsbTrafficOverlayStyleImagesTest`
 - Verify counters/logging behavior in map delegate tests.
 
 Acceptance:

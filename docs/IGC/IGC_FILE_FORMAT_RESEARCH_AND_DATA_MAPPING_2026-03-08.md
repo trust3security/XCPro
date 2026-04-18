@@ -1,4 +1,4 @@
-﻿# IGC_FILE_FORMAT_RESEARCH_AND_DATA_MAPPING_2026-03-08.md
+# IGC_FILE_FORMAT_RESEARCH_AND_DATA_MAPPING_2026-03-08.md
 
 ## Purpose
 
@@ -68,21 +68,21 @@ From CIVL Section 7H (2025):
 
 Replay and parser foundations:
 
-- `feature/map/src/main/java/com/example/xcpro/replay/IgcParser.kt`
-- `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt`
-- `feature/map/src/main/java/com/example/xcpro/replay/ReplaySampleEmitter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/IgcParser.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayController.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySampleEmitter.kt`
 
 Sensor/flight SSOT and lifecycle:
 
-- `feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt`
-- `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDataRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightStateRepository.kt`
-- `app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorData.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightStateRepository.kt`
+- `app/src/main/java/com/trust3/xcpro/service/VarioForegroundService.kt`
 
 Download/export patterns:
 
-- `feature/map/src/main/java/com/example/xcpro/tasks/TaskFilesRepository.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBackupSink.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileBackupSink.kt`
 
 ## Key Compliance and Product Decisions
 

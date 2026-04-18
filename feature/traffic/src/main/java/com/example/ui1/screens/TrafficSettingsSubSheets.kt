@@ -15,13 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.screens.navdrawer.AdsbSettingsContent
-import com.example.xcpro.screens.navdrawer.AdsbSettingsViewModel
-import com.example.xcpro.screens.navdrawer.HotspotsSettingsContent
-import com.example.xcpro.screens.navdrawer.HotspotsSettingsViewModel
-import com.example.xcpro.screens.navdrawer.OgnSettingsContent
-import com.example.xcpro.screens.navdrawer.OgnSettingsViewModel
-import com.example.xcpro.screens.navdrawer.TrafficSettingsTopAppBar
+import com.trust3.xcpro.screens.navdrawer.AdsbSettingsContent
+import com.trust3.xcpro.screens.navdrawer.AdsbSettingsViewModel
+import com.trust3.xcpro.screens.navdrawer.HotspotsSettingsContent
+import com.trust3.xcpro.screens.navdrawer.HotspotsSettingsViewModel
+import com.trust3.xcpro.screens.navdrawer.OgnSettingsContent
+import com.trust3.xcpro.screens.navdrawer.OgnSettingsViewModel
+import com.trust3.xcpro.screens.navdrawer.TrafficSettingsTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -38,15 +38,15 @@ Current integration quality: solid baseline, not yet top tier.
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Metadata polling is fixed cadence only (no adaptive backoff). | `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Can over-poll during 429/network failures and delay recovery policy. | Phase 1 |
-| Medium | No explicit stale/live UX state on map for users. | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Users can interpret stale frames as live radar. | Phase 2 |
-| Medium | Metadata refresh is not single-flight protected in repository. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Duplicate refresh calls are possible with multiple collectors/routes. | Phase 1 |
-| Low | Weather settings state for advanced controls lacked explicit test coverage in the baseline. | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt` | Settings drift risk during future UI refactors. | Phase 5 |
-| Low | Vendor-specific text appears in production Weather settings copy. | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Conflicts with vendor-neutral architecture policy. | Phase 4 |
-| Low | Core runtime paths lack focused tests (use-case frame selection, renderer behavior). | `feature/map/src/test/java/com/example/xcpro/weather/rain/*` | Lower change safety on highest-risk behavior. | Phase 5 |
+| Medium | Metadata polling is fixed cadence only (no adaptive backoff). | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Can over-poll during 429/network failures and delay recovery policy. | Phase 1 |
+| Medium | No explicit stale/live UX state on map for users. | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Users can interpret stale frames as live radar. | Phase 2 |
+| Medium | Metadata refresh is not single-flight protected in repository. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Duplicate refresh calls are possible with multiple collectors/routes. | Phase 1 |
+| Low | Weather settings state for advanced controls lacked explicit test coverage in the baseline. | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt` | Settings drift risk during future UI refactors. | Phase 5 |
+| Low | Vendor-specific text appears in production Weather settings copy. | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Conflicts with vendor-neutral architecture policy. | Phase 4 |
+| Low | Core runtime paths lack focused tests (use-case frame selection, renderer behavior). | `feature/map/src/test/java/com/trust3/xcpro/weather/rain/*` | Lower change safety on highest-risk behavior. | Phase 5 |
 
 Verification rerun during deep pass:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.weather.rain.*"`: PASS
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.weather.rain.*"`: PASS
 - `./gradlew enforceRules`: PASS
 
 Execution update (2026-02-20):
@@ -78,7 +78,7 @@ Execution update (2026-02-20):
   - completed runtime stale-render policy and churn controls: transient stale semantics, status-only render suppression, and stale overlay dimming.
   - expanded weather test coverage for repository semantics and transition/frame-quality policies.
 - Verification rerun after tranche B:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.weather.rain.*"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.weather.rain.*"`: PASS
   - `./gradlew enforceRules`: PASS
   - `./gradlew testDebugUnitTest`: PASS
   - `./gradlew assembleDebug`: PASS
@@ -94,11 +94,11 @@ Second deep-pass delta findings (2026-02-20):
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| High | 30-minute playback still includes oldest boundary frame without quality guard. | `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Blurred/low-value boundary frame can persist in ping-pong cycle; largest UX complaint source in 30m mode. | Phase 3A |
-| High | Transition duration is not window-aware (10/20/30 share one policy). | `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`, `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlaySettings.kt` | 30m mode can look muddy at fast/balanced/smooth due to high blend fraction. | Phase 3B |
-| Medium | Stale policy marks non-OK as stale immediately even with fresh last-success metadata. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlaySettings.kt` | "Stale" flicker during short transient failures/rate-limit events. | Phase 2B |
-| Medium | Provider attribution exception is not yet explicitly documented against vendor-neutral policy. | `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`, `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` | Compliance ambiguity for legally required attribution string. | Phase 4B |
-| Low | Overlay re-apply can trigger on status-only changes with unchanged frame/opacity/duration. | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` | Avoidable render churn; low risk but unnecessary work. | Phase 3C |
+| High | 30-minute playback still includes oldest boundary frame without quality guard. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Blurred/low-value boundary frame can persist in ping-pong cycle; largest UX complaint source in 30m mode. | Phase 3A |
+| High | Transition duration is not window-aware (10/20/30 share one policy). | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`, `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlaySettings.kt` | 30m mode can look muddy at fast/balanced/smooth due to high blend fraction. | Phase 3B |
+| Medium | Stale policy marks non-OK as stale immediately even with fresh last-success metadata. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlaySettings.kt` | "Stale" flicker during short transient failures/rate-limit events. | Phase 2B |
+| Medium | Provider attribution exception is not yet explicitly documented against vendor-neutral policy. | `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`, `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` | Compliance ambiguity for legally required attribution string. | Phase 4B |
+| Low | Overlay re-apply can trigger on status-only changes with unchanged frame/opacity/duration. | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` | Avoidable render churn; low risk but unnecessary work. | Phase 3C |
 
 Modeled impact estimates from current runtime behavior:
 - Phase 3A (frame quality filtering): removes blurred-frame exposure by ~16.7% to ~33.3% of 30m displayed frames when one bad frame exists in a 4-frame cycle.
@@ -110,57 +110,57 @@ Third deep-pass delta findings (2026-02-20):
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Animation ticker is keyed to full preferences object; any preference write (for example opacity) restarts tick to zero. | `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Playback jumps/restarts during live setting changes; unnecessary animation jitter. | Phase 3D |
-| Medium | Weather metadata repository uses unqualified shared `OkHttpClient` currently provided from ADS-B network module. | `feature/map/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`, `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Cross-feature coupling risk; ADS-B transport changes can unintentionally affect RainViewer metadata fetch behavior. | Phase 1B |
-| Medium | Metadata version handling is strict `2.x` hard-fail. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Provider major-version bump can hard-break overlay even if payload is otherwise compatible. | Phase 1C |
-| Low | Refresh rapid-dedupe uses wall-clock attempt time. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | System wall-clock rewind can over-suppress refresh attempts until wall time catches up. | Phase 1D |
-| Low | Phase 2C controls are now exposed, but they still need dedicated ViewModel/Compose regression coverage. | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt` | Future UI changes can regress manual-frame/render-toggle semantics without failing fast. | Phase 5C |
-| Low | No focused tests for map-side weather runtime glue (`MapWeatherOverlayEffects`, `MapOverlayManager` weather branch, `WeatherRainOverlay`). | `feature/map/src/test/java/com/example/xcpro` | Reduced regression confidence on style reload/reapply/render-churn behavior. | Phase 5B |
+| Medium | Animation ticker is keyed to full preferences object; any preference write (for example opacity) restarts tick to zero. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Playback jumps/restarts during live setting changes; unnecessary animation jitter. | Phase 3D |
+| Medium | Weather metadata repository uses unqualified shared `OkHttpClient` currently provided from ADS-B network module. | `feature/map/src/main/java/com/trust3/xcpro/di/AdsbNetworkModule.kt`, `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Cross-feature coupling risk; ADS-B transport changes can unintentionally affect RainViewer metadata fetch behavior. | Phase 1B |
+| Medium | Metadata version handling is strict `2.x` hard-fail. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Provider major-version bump can hard-break overlay even if payload is otherwise compatible. | Phase 1C |
+| Low | Refresh rapid-dedupe uses wall-clock attempt time. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | System wall-clock rewind can over-suppress refresh attempts until wall time catches up. | Phase 1D |
+| Low | Phase 2C controls are now exposed, but they still need dedicated ViewModel/Compose regression coverage. | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt` | Future UI changes can regress manual-frame/render-toggle semantics without failing fast. | Phase 5C |
+| Low | No focused tests for map-side weather runtime glue (`MapWeatherOverlayEffects`, `MapOverlayManager` weather branch, `WeatherRainOverlay`). | `feature/map/src/test/java/com/trust3/xcpro` | Reduced regression confidence on style reload/reapply/render-churn behavior. | Phase 5B |
 
 Fourth deep-pass delta findings (2026-02-20):
 - Status: mostly implemented; remaining item is in-map confidence signaling (Phase 2D).
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Host normalization in metadata repository uses locale-sensitive lowercase without explicit locale. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Locale edge cases (for example Turkish locale casing) can cause avoidable host normalization mismatches. | Phase 1F |
-| Medium | Stale/live status is visible in Weather settings only; no in-map user signal when radar is stale/error. | `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Pilot can view stale radar on map without immediate confidence cue. | Phase 2D |
-| Medium | Freshness age is derived from `lastSuccessfulFetchWallMs` update logic keyed only to metadata `generated`, not general successful fetch/content change. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Age semantics can drift from operator expectation ("last fetch" vs "last generated change"), causing interpretation ambiguity. | Phase 1E |
-| Low | Metadata frame list is sorted but not deduplicated. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Duplicate frame entries can increase animation redundancy and reduce visual quality in edge payloads. | Phase 3E |
-| Low | Runtime state does not expose explicit selected-frame age metric (only formatted UTC timestamp and metadata freshness age). | `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Harder to reason about "how old is the visible radar image" under degraded metadata conditions. | Phase 2E |
+| Medium | Host normalization in metadata repository uses locale-sensitive lowercase without explicit locale. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Locale edge cases (for example Turkish locale casing) can cause avoidable host normalization mismatches. | Phase 1F |
+| Medium | Stale/live status is visible in Weather settings only; no in-map user signal when radar is stale/error. | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Pilot can view stale radar on map without immediate confidence cue. | Phase 2D |
+| Medium | Freshness age is derived from `lastSuccessfulFetchWallMs` update logic keyed only to metadata `generated`, not general successful fetch/content change. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt` | Age semantics can drift from operator expectation ("last fetch" vs "last generated change"), causing interpretation ambiguity. | Phase 1E |
+| Low | Metadata frame list is sorted but not deduplicated. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Duplicate frame entries can increase animation redundancy and reduce visual quality in edge payloads. | Phase 3E |
+| Low | Runtime state does not expose explicit selected-frame age metric (only formatted UTC timestamp and metadata freshness age). | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Harder to reason about "how old is the visible radar image" under degraded metadata conditions. | Phase 2E |
 
 Fifth deep-pass delta findings (2026-02-20):
 - Status: implemented.
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| High | Map render path ignores stale/error semantics; overlay keeps rendering full-strength when metadata is stale/error as long as a cached frame exists. | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt` | Users can continue seeing stale radar as authoritative map content, especially without opening Weather settings. | Phase 2F |
-| Medium | Metadata fetch path has no conditional request/cache validators (`ETag`/`If-Modified-Since`) or explicit HTTP cache policy. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt` | Extra network/battery usage and avoidable provider load during frequent polling windows. | Phase 1G |
+| High | Map render path ignores stale/error semantics; overlay keeps rendering full-strength when metadata is stale/error as long as a cached frame exists. | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt` | Users can continue seeing stale radar as authoritative map content, especially without opening Weather settings. | Phase 2F |
+| Medium | Metadata fetch path has no conditional request/cache validators (`ETag`/`If-Modified-Since`) or explicit HTTP cache policy. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/main/java/com/trust3/xcpro/di/AdsbNetworkModule.kt` | Extra network/battery usage and avoidable provider load during frequent polling windows. | Phase 1G |
 
 Sixth deep-pass delta findings (2026-02-20):
 - Status: partially implemented; remaining item is Phase 5C UI-level regression coverage for settings controls.
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Low | Manual-frame slider remained visible in Weather settings even when frame source was `LATEST` or cycle mode was enabled. | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Avoidable UI clutter weakened discoverability of active control path. | Phase 2C-Polish |
-| Medium | No dedicated UI-level regression tests exist for newly exposed Phase 2C settings controls (`frameMode`, manual index, `smooth`, `snow`). | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`, `feature/map/src/test/java/com/example/xcpro` | Control-surface regressions can slip through despite use-case tests passing. | Phase 5C |
+| Low | Manual-frame slider remained visible in Weather settings even when frame source was `LATEST` or cycle mode was enabled. | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | Avoidable UI clutter weakened discoverability of active control path. | Phase 2C-Polish |
+| Medium | No dedicated UI-level regression tests exist for newly exposed Phase 2C settings controls (`frameMode`, manual index, `smooth`, `snow`). | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`, `feature/map/src/test/java/com/trust3/xcpro` | Control-surface regressions can slip through despite use-case tests passing. | Phase 5C |
 
 Phase 2C-Polish execution update (2026-02-20):
 - implemented conditional visibility for manual-frame controls:
   - manual slider is shown only when overlay is enabled, cycle mode is off, frame mode is `MANUAL`, and frames are available.
   - frame-source chips are visible but disabled while cycle mode is enabled to avoid non-actionable interaction.
 - added settings-visibility policy tests:
-  - `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt`
 
 Seventh deep-pass delta findings (2026-02-20, Phase 2D re-pass):
 - Status: implemented (Phase 2D confidence signal + mapping + tests are in).
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | In-map weather confidence indicator is still missing while rain overlay is active. | `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt` | Users can still misread stale/error radar as live without opening Weather settings. | Phase 2D |
-| Medium | No compose/UI tests exist for weather confidence state mapping on map. | `feature/map/src/test/java/com/example/xcpro/map/ui/` | Phase 2D regressions can ship undetected even when weather use-case tests pass. | Phase 2D + Phase 5C |
-| Low | Weather status text mapping is private to settings UI and not reusable by map UI. | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | High drift risk between settings and map confidence semantics. | Phase 2D |
-| Low | Top-center map UI is already occupied by GPS/forecast chips; weather-chip placement policy is not yet specified. | `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt` | New confidence chip can overlap or clutter critical map overlays. | Phase 2D |
-| Low | Weather runtime state is currently consumed only by side-effect wiring, not shared map presentation state. | `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | Adding Phase 2D UI naively can duplicate collectors/mapping and weaken SSOT clarity. | Phase 2D |
+| Medium | In-map weather confidence indicator is still missing while rain overlay is active. | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt` | Users can still misread stale/error radar as live without opening Weather settings. | Phase 2D |
+| Medium | No compose/UI tests exist for weather confidence state mapping on map. | `feature/map/src/test/java/com/trust3/xcpro/map/ui/` | Phase 2D regressions can ship undetected even when weather use-case tests pass. | Phase 2D + Phase 5C |
+| Low | Weather status text mapping is private to settings UI and not reusable by map UI. | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | High drift risk between settings and map confidence semantics. | Phase 2D |
+| Low | Top-center map UI is already occupied by GPS/forecast chips; weather-chip placement policy is not yet specified. | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt` | New confidence chip can overlap or clutter critical map overlays. | Phase 2D |
+| Low | Weather runtime state is currently consumed only by side-effect wiring, not shared map presentation state. | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | Adding Phase 2D UI naively can duplicate collectors/mapping and weaken SSOT clarity. | Phase 2D |
 
 Phase 2D implementation recommendations (2026-02-20 re-pass):
 - Hoist weather overlay runtime state once in map root wiring and pass it to both:
@@ -192,20 +192,20 @@ Phase 2D execution update (2026-02-20):
   - added `resolveWeatherMapConfidenceState` for deterministic map-chip state mapping.
   - removed settings-only private status label mapping and switched Weather settings to the shared mapper.
 - added regression coverage:
-  - policy tests: `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherOverlayUiMappingTest.kt`
-  - compose tests: `feature/map/src/test/java/com/example/xcpro/map/ui/WeatherMapConfidenceChipTest.kt`
+  - policy tests: `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherOverlayUiMappingTest.kt`
+  - compose tests: `feature/map/src/test/java/com/trust3/xcpro/map/ui/WeatherMapConfidenceChipTest.kt`
 - targeted verification:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.weather.rain.WeatherOverlayUiMappingTest" --tests "com.example.xcpro.map.ui.WeatherMapConfidenceChipTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.weather.rain.WeatherOverlayUiMappingTest" --tests "com.trust3.xcpro.map.ui.WeatherMapConfidenceChipTest"`: PASS
 
 Eighth deep-pass delta findings (2026-02-20, Phase 4B re-pass):
 - Status: not implemented; attribution/policy decision remains open.
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Vendor-neutrality policy conflict is still unresolved for required provider literals in production code (`rainviewer.com` host allowlists, metadata endpoint, tile attribution). | `docs/ARCHITECTURE/ARCHITECTURE.md`, `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`, `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`, `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Compliance ambiguity remains auditable risk until policy decision is explicit (bounded exception or architecture wording update). | Phase 4B |
+| Medium | Vendor-neutrality policy conflict is still unresolved for required provider literals in production code (`rainviewer.com` host allowlists, metadata endpoint, tile attribution). | `docs/ARCHITECTURE/ARCHITECTURE.md`, `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`, `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`, `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Compliance ambiguity remains auditable risk until policy decision is explicit (bounded exception or architecture wording update). | Phase 4B |
 | Medium | Required bounded-exception path is not documented yet in architecture deviations registry. | `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` | Merge/review ambiguity: current plan allows exception path, but current deviations state remains empty. | Phase 4B |
-| Medium | Attribution visibility is configured in raster tile metadata but lacks explicit runtime evidence documentation (where/how user sees it). | `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`, `docs/RAINVIEWER/evidence/RAINVIEWER_PERMISSION_NOTE.md` | Legal attribution may be present technically but not yet auditable as user-visible behavior in XCPro runtime documentation. | Phase 4B |
-| Low | No focused regression/smoke check exists for attribution metadata retention across style reload/reapply paths. | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`, `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`, `feature/map/src/test/java/com/example/xcpro/map/` | Future refactors could unintentionally drop attribution metadata without failing fast. | Phase 4B + Phase 5B |
+| Medium | Attribution visibility is configured in raster tile metadata but lacks explicit runtime evidence documentation (where/how user sees it). | `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`, `docs/RAINVIEWER/evidence/RAINVIEWER_PERMISSION_NOTE.md` | Legal attribution may be present technically but not yet auditable as user-visible behavior in XCPro runtime documentation. | Phase 4B |
+| Low | No focused regression/smoke check exists for attribution metadata retention across style reload/reapply paths. | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`, `feature/map/src/test/java/com/trust3/xcpro/map/` | Future refactors could unintentionally drop attribution metadata without failing fast. | Phase 4B + Phase 5B |
 
 Phase 4B implementation recommendations (2026-02-20 re-pass):
 - Choose and document one compliance path explicitly:
@@ -227,8 +227,8 @@ Ninth deep-pass delta findings (2026-02-20, Phase 4B second re-pass):
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Weather raster attribution uses plain domain text (`rainviewer.com`) instead of explicit link form despite provider terms requesting source mention with link. | `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`, `https://www.rainviewer.com/api.html` | Potential compliance gap between provider expectation ("with link") and runtime attribution payload. | Phase 4B |
-| Medium | Attribution control visibility is implicit (default MapLibre behavior) with no explicit enable/verification step in map initialization. | `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`, `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt` | Future SDK/default changes could hide attribution without immediate detection. | Phase 4B |
+| Medium | Weather raster attribution uses plain domain text (`rainviewer.com`) instead of explicit link form despite provider terms requesting source mention with link. | `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`, `https://www.rainviewer.com/api.html` | Potential compliance gap between provider expectation ("with link") and runtime attribution payload. | Phase 4B |
+| Medium | Attribution control visibility is implicit (default MapLibre behavior) with no explicit enable/verification step in map initialization. | `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt` | Future SDK/default changes could hide attribution without immediate detection. | Phase 4B |
 | Low | Evidence doc still does not capture an explicit in-app attribution verification path (where to check and expected text/link shape). | `docs/RAINVIEWER/evidence/RAINVIEWER_PERMISSION_NOTE.md` | Compliance evidence remains weak for PR/release audits. | Phase 4B |
 
 Phase 4B second re-pass recommendations (2026-02-20):
@@ -246,8 +246,8 @@ Tenth deep-pass delta findings (2026-02-20, Phase 4B third re-pass):
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Full-screen custom gesture overlay likely intercepts taps, so MapLibre attribution link/button click-through is not guaranteed during normal map use. | `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`, `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt`, `feature/map/src/main/java/com/example/xcpro/gestures/CustomMapGestures.kt` | Even if attribution text is rendered, required "with link" behavior can fail in practice. | Phase 4B |
-| Medium | No explicit in-app fallback attribution link exists in Weather settings/about surfaces. | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | If map attribution visibility/clickability regresses, there is no secondary compliant attribution path. | Phase 4B |
+| Medium | Full-screen custom gesture overlay likely intercepts taps, so MapLibre attribution link/button click-through is not guaranteed during normal map use. | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt`, `feature/map/src/main/java/com/trust3/xcpro/gestures/CustomMapGestures.kt` | Even if attribution text is rendered, required "with link" behavior can fail in practice. | Phase 4B |
+| Medium | No explicit in-app fallback attribution link exists in Weather settings/about surfaces. | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt` | If map attribution visibility/clickability regresses, there is no secondary compliant attribution path. | Phase 4B |
 | Low | Permission evidence note is only a session summary and does not reference a primary provider artifact (email/contract/ticket ID). | `docs/RAINVIEWER/evidence/RAINVIEWER_PERMISSION_NOTE.md` | Compliance audit traceability remains weak for release review and future maintainers. | Phase 4B |
 
 Phase 4B third re-pass recommendations (2026-02-20):
@@ -284,10 +284,10 @@ Eleventh deep-pass delta findings (2026-02-20, Phase 5B re-pass):
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | No focused tests verify `MapOverlayManager` weather dedupe matrix (`status`-only no-render vs `stale`/render-driving changes). | `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` | Render churn/stale-dimming regressions can return silently during refactors. | Phase 5B |
-| Medium | No explicit regression test covers style reload reapply path across runtime command callback (`MapRuntimeController`) and weather overlay reattachment (`MapOverlayManager.onMapStyleChanged`). | `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt`, `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` | Style swaps can regress weather overlay reapply behavior without failing tests. | Phase 5B |
-| Low | No lifecycle cleanup test verifies weather overlay teardown/nulling on destroy/cleanup paths. | `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt` | Overlay/resource cleanup regressions can leak runtime map artifacts across map recreation. | Phase 5B |
-| Medium | `WeatherRainOverlay` map-style runtime behaviors remain untested (legacy artifact cleanup, cache prune cap, anchor fallback ordering). | `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt` | Layer/source ordering or cache regressions can degrade radar rendering quality and stability. | Phase 5B |
+| Medium | No focused tests verify `MapOverlayManager` weather dedupe matrix (`status`-only no-render vs `stale`/render-driving changes). | `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` | Render churn/stale-dimming regressions can return silently during refactors. | Phase 5B |
+| Medium | No explicit regression test covers style reload reapply path across runtime command callback (`MapRuntimeController`) and weather overlay reattachment (`MapOverlayManager.onMapStyleChanged`). | `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` | Style swaps can regress weather overlay reapply behavior without failing tests. | Phase 5B |
+| Low | No lifecycle cleanup test verifies weather overlay teardown/nulling on destroy/cleanup paths. | `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt` | Overlay/resource cleanup regressions can leak runtime map artifacts across map recreation. | Phase 5B |
+| Medium | `WeatherRainOverlay` map-style runtime behaviors remain untested (legacy artifact cleanup, cache prune cap, anchor fallback ordering). | `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt` | Layer/source ordering or cache regressions can degrade radar rendering quality and stability. | Phase 5B |
 
 Phase 5B re-pass recommendations (2026-02-20):
 - Add a dedicated map-runtime weather regression tranche that includes manager, runtime controller, lifecycle, and renderer-policy tests.
@@ -343,13 +343,13 @@ Dependency flow remains:
 `UI -> domain/use-case -> data`
 
 Files touched (planned):
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayModels.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
-- new/updated tests under `feature/map/src/test/java/com/example/xcpro/weather/rain/`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- new/updated tests under `feature/map/src/test/java/com/trust3/xcpro/weather/rain/`
 
 Boundary risk:
 - keep MapLibre-specific logic in `WeatherRainOverlay`/map runtime only.
@@ -443,9 +443,9 @@ Goal:
 - prevent duplicate refresh calls and reduce pressure during failures.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlaySettings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlaySettings.kt`
 
 Changes:
 - add single-flight protection (`Mutex`) around refresh.
@@ -469,9 +469,9 @@ Goal:
 - decouple RainViewer metadata transport from ADS-B network client behavior.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/di/AdsbNetworkModule.kt`
-- `feature/map/src/main/java/com/example/xcpro/di/*` (weather network provider module, qualifier)
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/di/AdsbNetworkModule.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/di/*` (weather network provider module, qualifier)
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
 
 Changes:
 - add weather-specific qualified `OkHttpClient` binding for RainViewer metadata fetches.
@@ -490,8 +490,8 @@ Goal:
 - avoid avoidable outages from strict provider-version checks.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
 
 Changes:
 - replace strict major-version hard-fail with compatibility-first validation:
@@ -512,8 +512,8 @@ Goal:
 - keep rapid-call dedupe robust under wall-clock changes.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
 
 Changes:
 - use monotonic time for in-process rapid dedupe, or explicitly handle wall-clock rewind by resetting dedupe gate.
@@ -530,11 +530,11 @@ Goal:
 - make freshness semantics explicit and consistent with user-visible wording.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayModels.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayModels.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt`
 
 Changes:
 - define and persist two explicit freshness concepts if needed:
@@ -555,8 +555,8 @@ Goal:
 - eliminate locale-sensitive string normalization in security-critical host checks.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
 
 Changes:
 - replace `lowercase()` usage with explicit locale-safe normalization (`Locale.US`).
@@ -573,9 +573,9 @@ Goal:
 - reduce unnecessary metadata transfer cost while preserving realtime behavior.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`
 - weather-qualified network module from Phase 1B
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
 
 Changes:
 - add conditional request support where provider headers allow:
@@ -595,10 +595,10 @@ Goal:
 - make stale/live status explicit to user and runtime.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayModels.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`
 
 Changes:
 - add runtime fields: freshness age, stale flag, derived status label.
@@ -617,10 +617,10 @@ Goal:
 - avoid false "Stale" labeling during short provider/network blips when last-success metadata is still fresh.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlaySettings.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherOverlaySettingsTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlaySettings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherOverlaySettingsTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt`
 
 Changes:
 - split freshness from transport status:
@@ -641,10 +641,10 @@ Goal:
 - remove dead hidden controls or expose them intentionally.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayPreferencesRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayPreferencesRepository.kt`
 
 Changes:
 - decide one path and document it:
@@ -663,7 +663,7 @@ Goal:
 - reduce control-surface clutter by showing manual-frame controls only when relevant.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
 
 Changes:
 - conditionally display (not only disable) manual-frame slider/help text when:
@@ -684,9 +684,9 @@ Goal:
 - show stale/error confidence directly on map while overlay is active.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/*` (map overlay/status UI host)
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/*` (map overlay/status UI host)
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayModels.kt`
 
 Changes:
 - add minimal in-map weather status badge/chip (for example Live/Stale/Error).
@@ -704,9 +704,9 @@ Goal:
 - expose how old the currently displayed frame is.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayModels.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
 - optional map status UI files from Phase 2D
 
 Changes:
@@ -725,9 +725,9 @@ Goal:
 - prevent stale/error radar from appearing fully authoritative on map.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayModels.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayModels.kt`
 - map UI files used by Phase 2D
 
 Changes:
@@ -755,8 +755,8 @@ Execution order within Phase 3:
 - 3E: metadata frame dedupe normalization
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
 
 Changes:
 - keep deterministic frame cache behavior under rapid window/speed changes.
@@ -797,13 +797,13 @@ Goal:
 - align implementation with repo policies and provider obligations.
 
 Files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt`
-- `feature/map/src/main/java/com/example/xcpro/gestures/CustomMapGestures.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainAttribution.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/gestures/CustomMapGestures.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRainAttribution.kt`
 - `docs/RAINVIEWER/evidence/RAINVIEWER_PERMISSION_NOTE.md`
 - `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` (only if exception is required)
 
@@ -829,9 +829,9 @@ Goal:
 - increase confidence for ongoing changes.
 
 Files:
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt` (new)
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRainOverlayTest.kt` (new if feasible)
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt` (new)
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRainOverlayTest.kt` (new if feasible)
 
 Tests:
 - frame window selection for 10/20/30 mins.
@@ -849,14 +849,14 @@ Goal:
 - add targeted regression tests for map-side weather glue, style callback wiring, and runtime cleanup behavior.
 
 Files:
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerWeatherRainTest.kt` (new)
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapRuntimeControllerWeatherStyleTest.kt` (new)
-- `feature/map/src/test/java/com/example/xcpro/map/MapLifecycleManagerWeatherCleanupTest.kt` (new)
-- `feature/map/src/test/java/com/example/xcpro/map/WeatherRainOverlayPolicyTest.kt` (new)
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects*` (new if feasible without DI churn)
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerWeatherRainTest.kt` (new)
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapRuntimeControllerWeatherStyleTest.kt` (new)
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapLifecycleManagerWeatherCleanupTest.kt` (new)
+- `feature/map/src/test/java/com/trust3/xcpro/map/WeatherRainOverlayPolicyTest.kt` (new)
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects*` (new if feasible without DI churn)
 - optional seam-only updates if needed for deterministic tests:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
 
 Tests:
 - `MapOverlayManager` weather dedupe behavior:
@@ -880,17 +880,17 @@ Exit:
 
 Phase 5B execution update (2026-02-20):
 - implemented new map-runtime weather regression tests:
-  - `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerWeatherRainTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/ui/MapRuntimeControllerWeatherStyleTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapLifecycleManagerWeatherCleanupTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/WeatherRainOverlayPolicyTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerWeatherRainTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapRuntimeControllerWeatherStyleTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapLifecycleManagerWeatherCleanupTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/WeatherRainOverlayPolicyTest.kt`
 - coverage added in this tranche:
   - `MapOverlayManager` dedupe matrix (`status`-only no-render, stale-driven reapply, clear/reset dedupe invalidation, explicit reapply after overlay replacement).
   - runtime style callback protection in `MapRuntimeController` (stale callback ignore and clear-map invalidation).
   - lifecycle cleanup guarantees for weather overlay teardown in `MapLifecycleManager`.
   - `WeatherRainOverlay` renderer policy checks for zero-duration frame switch handling, cache-cap pruning, and legacy artifact cleanup.
 - verification rerun for Phase 5B implementation:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapOverlayManagerWeatherRainTest" --tests "com.example.xcpro.map.ui.MapRuntimeControllerWeatherStyleTest" --tests "com.example.xcpro.map.MapLifecycleManagerWeatherCleanupTest" --tests "com.example.xcpro.map.WeatherRainOverlayPolicyTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapOverlayManagerWeatherRainTest" --tests "com.trust3.xcpro.map.ui.MapRuntimeControllerWeatherStyleTest" --tests "com.trust3.xcpro.map.MapLifecycleManagerWeatherCleanupTest" --tests "com.trust3.xcpro.map.WeatherRainOverlayPolicyTest"`: PASS
   - `./gradlew enforceRules`: PASS
   - `./gradlew testDebugUnitTest`: PASS
   - `./gradlew assembleDebug`: PASS
@@ -900,11 +900,11 @@ Twelfth deep-pass delta findings (2026-02-20, Phase 5C re-pass):
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Locale-safety is implemented in production host normalization, but tests do not force non-US locale (for example Turkish) to lock regression behavior. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`, `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`, `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRainTileUrlBuilderTest.kt` | Future locale-related regressions in host normalization could slip through CI. | Phase 5C |
-| Medium | Freshness regression tests assert `metadataFreshnessAgeMs` evolution, but do not explicitly lock `selectedFrameAgeMs` and `metadataContentAgeMs` semantics under unchanged payload/fresh fetch cycles. | `feature/map/src/main/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`, `feature/map/src/test/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt` | Drift between fetch-age/content-age/frame-age semantics can regress without failing tests. | Phase 5C |
-| Medium | Transient-error stale semantics are tested for `NETWORK_ERROR`, but not explicitly for `RATE_LIMIT` with fresh last-success metadata. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlaySettings.kt`, `feature/map/src/test/java/com/example/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt` | Rate-limit status behavior can regress toward stale flicker without deterministic guard. | Phase 5C |
-| Low | HTTP 304-without-cache fallback path in metadata repository is implemented but not directly tested. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Degraded bootstrap edge-case semantics can drift undetected. | Phase 5C |
-| Low | Weather settings policy tests currently verify control visibility/link policy, but not user-visible freshness/content/frame-age label semantics across live/stale/error states. | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt` | UI-facing confidence semantics can regress even if use-case tests still pass. | Phase 5C |
+| Medium | Locale-safety is implemented in production host normalization, but tests do not force non-US locale (for example Turkish) to lock regression behavior. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRainTileUrlBuilder.kt`, `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt`, `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRainTileUrlBuilderTest.kt` | Future locale-related regressions in host normalization could slip through CI. | Phase 5C |
+| Medium | Freshness regression tests assert `metadataFreshnessAgeMs` evolution, but do not explicitly lock `selectedFrameAgeMs` and `metadataContentAgeMs` semantics under unchanged payload/fresh fetch cycles. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCase.kt`, `feature/map/src/test/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt` | Drift between fetch-age/content-age/frame-age semantics can regress without failing tests. | Phase 5C |
+| Medium | Transient-error stale semantics are tested for `NETWORK_ERROR`, but not explicitly for `RATE_LIMIT` with fresh last-success metadata. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlaySettings.kt`, `feature/map/src/test/java/com/trust3/xcpro/weather/rain/ObserveWeatherOverlayStateUseCaseTest.kt` | Rate-limit status behavior can regress toward stale flicker without deterministic guard. | Phase 5C |
+| Low | HTTP 304-without-cache fallback path in metadata repository is implemented but not directly tested. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt` | Degraded bootstrap edge-case semantics can drift undetected. | Phase 5C |
+| Low | Weather settings policy tests currently verify control visibility/link policy, but not user-visible freshness/content/frame-age label semantics across live/stale/error states. | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt`, `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt` | UI-facing confidence semantics can regress even if use-case tests still pass. | Phase 5C |
 
 Phase 5C re-pass recommendations (2026-02-20):
 - Add locale-forced normalization tests:
@@ -921,7 +921,7 @@ Thirteenth deep-pass delta findings (2026-02-20, Phase 5C implementation-readine
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Low | No focused ViewModel/UseCase regression tests exist for Weather settings state wiring and setter passthrough (`overlayEnabled`, `animatePastWindow`, `animationWindow`, `animationSpeed`, `transitionQuality`, `frameMode`, `manualFrameIndex`, `smooth`, `snow`). | `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`, `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsUseCase.kt`, `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt` | Preference wiring regressions can ship undetected even when UI control-visibility tests still pass. | Phase 5C |
+| Low | No focused ViewModel/UseCase regression tests exist for Weather settings state wiring and setter passthrough (`overlayEnabled`, `animatePastWindow`, `animationWindow`, `animationSpeed`, `transitionQuality`, `frameMode`, `manualFrameIndex`, `smooth`, `snow`). | `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsViewModel.kt`, `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsUseCase.kt`, `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenPolicyTest.kt` | Preference wiring regressions can ship undetected even when UI control-visibility tests still pass. | Phase 5C |
 
 Phase 5C implementation-readiness recommendations (2026-02-20):
 - Add `WeatherSettingsUseCaseTest` for flow projection and setter delegation against the weather preferences repository contract.
@@ -932,8 +932,8 @@ Fourteenth deep-pass delta findings (2026-02-20, Phase 5C re-pass #2):
 
 | Severity | Finding | Evidence | Impact | Planned Fix Phase |
 |---|---|---|---|---|
-| Medium | Metadata repository `NO_FRAMES` degraded path is implemented but not directly regression-tested (including fallback to cached metadata and detail semantics). | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt` | Provider payloads with empty `radar.past` can regress fallback behavior without failing CI. | Phase 5C |
-| Low | Weather confidence mapping tests validate hard-error behavior with `PARSE_ERROR`, but not explicit `NO_FRAMES`-with-frame and `RATE_LIMIT`-fresh branches. | `feature/map/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayUiMapping.kt`, `feature/map/src/test/java/com/example/xcpro/weather/rain/WeatherOverlayUiMappingTest.kt` | Map-chip semantics can drift for degraded/transient states while status-label tests still pass. | Phase 5C |
+| Medium | Metadata repository `NO_FRAMES` degraded path is implemented but not directly regression-tested (including fallback to cached metadata and detail semantics). | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepository.kt`, `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherRadarMetadataRepositoryTest.kt` | Provider payloads with empty `radar.past` can regress fallback behavior without failing CI. | Phase 5C |
+| Low | Weather confidence mapping tests validate hard-error behavior with `PARSE_ERROR`, but not explicit `NO_FRAMES`-with-frame and `RATE_LIMIT`-fresh branches. | `feature/map/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayUiMapping.kt`, `feature/map/src/test/java/com/trust3/xcpro/weather/rain/WeatherOverlayUiMappingTest.kt` | Map-chip semantics can drift for degraded/transient states while status-label tests still pass. | Phase 5C |
 
 Phase 5C re-pass #2 recommendations (2026-02-20):
 - Add `WeatherRadarMetadataRepositoryTest` coverage for `NO_FRAMES` responses:
@@ -949,8 +949,8 @@ Goal:
 - lock behavior for freshness semantics and user-visible confidence signals.
 
 Files:
-- `feature/map/src/test/java/com/example/xcpro/weather/rain/*`
-- `feature/map/src/test/java/com/example/xcpro/screens/navdrawer/WeatherSettings*.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/weather/rain/*`
+- `feature/map/src/test/java/com/trust3/xcpro/screens/navdrawer/WeatherSettings*.kt`
 - compose/map UI tests for Phase 2D/2E where applicable
 
 Tests:

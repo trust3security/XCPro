@@ -67,9 +67,9 @@ Code-pass update (2026-03-01, Phase 3 deep pass + implementation):
 1. DDB `NotDue` path does not advance repository-side cadence anchor.
 - Evidence:
   - `lastDdbRefreshSuccessWallMs == Long.MIN_VALUE` gate remains true
-    (`feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt:942`).
+    (`feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt:942`).
   - `OgnDdbRefreshResult.NotDue -> Unit` with no state update
-    (`feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt:960`).
+    (`feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt:960`).
 - Impact:
   - Causes unnecessary periodic refresh launch attempts during active sessions.
   - Functionally correct, but avoidable CPU wakeups and scheduling churn.
@@ -78,9 +78,9 @@ Code-pass update (2026-03-01, Phase 3 deep pass + implementation):
 - Evidence:
   - Snapshot already includes counters:
     `droppedOutOfOrderSourceFrames`, `droppedImplausibleMotionFrames`
-    (`feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficModels.kt:32`).
+    (`feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficModels.kt:32`).
   - `OgnDebugPanel` currently does not render those fields
-    (`feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt`).
+    (`feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt`).
 - Impact:
   - Harder field diagnosis when pilots report icon jitter/filtering behavior.
 
@@ -88,8 +88,8 @@ Code-pass update (2026-03-01, Phase 3 deep pass + implementation):
 - Evidence:
   - Existing map overlay tests include airspace/weather and a trail render policy test,
     but no dedicated OGN traffic/thermal/trail lifecycle test lock:
-    `feature/map/src/test/java/com/example/xcpro/map/MapOverlayManagerAirspaceTest.kt`,
-    `feature/map/src/test/java/com/example/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`.
+    `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayManagerAirspaceTest.kt`,
+    `feature/map/src/test/java/com/trust3/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`.
 - Impact:
   - Future map/style lifecycle refactors can accidentally reintroduce render-time
     initialization overhead or break style-recreate behavior.
@@ -149,8 +149,8 @@ No wall/monotonic cross-subtraction in new logic.
 - Goal:
   - Add failing/expectation tests before behavior changes.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/*` (new OGN lifecycle tests)
+  - `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/*` (new OGN lifecycle tests)
 - Exit:
   - Tests reproduce current `NotDue` cadence behavior and lifecycle assumptions.
 
@@ -159,7 +159,7 @@ No wall/monotonic cross-subtraction in new logic.
 - Goal:
   - Prevent repeated unnecessary refresh-launch attempts when DDB is not due.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
 - Change:
   - On `OgnDdbRefreshResult.NotDue`, advance repository cadence anchor
     (`lastDdbRefreshSuccessWallMs`) using a safe wall-time value.
@@ -173,8 +173,8 @@ No wall/monotonic cross-subtraction in new logic.
 - Goal:
   - Surface existing dropped-frame counters in OGN debug panel.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt`
-  - tests: `feature/map/src/test/java/com/example/xcpro/map/ui/*`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt`
+  - tests: `feature/map/src/test/java/com/trust3/xcpro/map/ui/*`
 - Change:
   - Render `droppedOutOfOrderSourceFrames` and `droppedImplausibleMotionFrames`.
 - Exit:
@@ -187,7 +187,7 @@ No wall/monotonic cross-subtraction in new logic.
 - Detailed implementation plan:
   - `docs/OGN/CHANGE_PLAN_OGN_PHASE3_OVERLAY_LIFECYCLE_REGRESSION_LOCK_2026-03-01.md`
 - Files:
-  - new tests under `feature/map/src/test/java/com/example/xcpro/map/`
+  - new tests under `feature/map/src/test/java/com/trust3/xcpro/map/`
     (for traffic/thermal/trail overlay lifecycle and manager wiring)
 - Change:
   - Add tests covering:
@@ -202,7 +202,7 @@ No wall/monotonic cross-subtraction in new logic.
 - Goal:
   - Lock DDB refresh behavior directly in repository tests.
 - Files:
-  - new `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbRepositoryTest.kt`
+  - new `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnDdbRepositoryTest.kt`
 - Change:
   - Add tests for:
     - `NotDue` vs `Updated` semantics
@@ -222,8 +222,8 @@ No wall/monotonic cross-subtraction in new logic.
   - `./gradlew testDebugUnitTest`
   - `./gradlew assembleDebug`
 - Focused reruns:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.ogn.*" --rerun-tasks`
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.*Ogn*" --rerun-tasks`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.ogn.*" --rerun-tasks`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.*Ogn*" --rerun-tasks`
 
 ## 5) Acceptance Gates
 

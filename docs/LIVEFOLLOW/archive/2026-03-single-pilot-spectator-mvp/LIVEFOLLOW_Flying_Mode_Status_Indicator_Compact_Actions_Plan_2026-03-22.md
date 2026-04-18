@@ -61,9 +61,9 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | existing map-side LiveFollow overlay seam | keep overlay injection on the map side | add pilot overlay beside the existing watch overlay |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | existing compact top-safe-area LiveFollow overlay host | reuse top-safe-area overlay placement and lightweight controls | render a tiny tappable indicator plus menu instead of a card |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt` | existing app-shell flags threaded to content/overlay seams | reuse explicit input threading | add Flying-mode gate to overlay inputs |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | existing map-side LiveFollow overlay seam | keep overlay injection on the map side | add pilot overlay beside the existing watch overlay |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | existing compact top-safe-area LiveFollow overlay host | reuse top-safe-area overlay placement and lightweight controls | render a tiny tappable indicator plus menu instead of a card |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSectionInputs.kt` | existing app-shell flags threaded to content/overlay seams | reuse explicit input threading | add Flying-mode gate to overlay inputs |
 
 ### 2.2B Boundary Moves
 
@@ -83,16 +83,16 @@
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/LIVEFOLLOW/LIVEFOLLOW_Flying_Mode_Status_Indicator_Compact_Actions_Plan_2026-03-22.md` | New | slice plan and ownership record | required non-trivial change plan | not runtime code | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotUiState.kt` | Existing | derived share indicator state mapping | pilot presentation mapping already lives here | keep map UI free of pilot-state derivation logic | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotViewModel.kt` | Existing | start/stop command ownership and failure hint tracking | command owner already lives here | avoid map-side command bookkeeping | No |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt` | New | tiny indicator and temporary surface rendering | focused Flying overlay UI | not suitable for the standalone pilot screen file | Yes, intentional split |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | compose both watch and pilot overlays | current map-side LiveFollow seam | keep overlay composition out of app/nav layers | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSectionInputs.kt` | Existing | overlay input contract | existing content/overlay input owner | avoid hidden globals | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Existing | thread Flying gate to content/overlay inputs | current screen input assembly owner | not ViewModel/domain state | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing | pass overlay inputs to LiveFollow runtime layer | current content host owner | not a new overlay owner | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | Existing | remove obsolete centered debug launcher | current debug launcher owner | avoid stale duplicate mode-entry UI | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotUiStateTest.kt` | Existing | indicator-state mapping regressions | closest owner | n/a | No |
-| `feature/livefollow/src/test/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotViewModelTest.kt` | Existing | auto-start failure and command-state regressions | closest owner | n/a | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotUiState.kt` | Existing | derived share indicator state mapping | pilot presentation mapping already lives here | keep map UI free of pilot-state derivation logic | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotViewModel.kt` | Existing | start/stop command ownership and failure hint tracking | command owner already lives here | avoid map-side command bookkeeping | No |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotMapStatusHost.kt` | New | tiny indicator and temporary surface rendering | focused Flying overlay UI | not suitable for the standalone pilot screen file | Yes, intentional split |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapLiveFollowRuntimeLayer.kt` | Existing | compose both watch and pilot overlays | current map-side LiveFollow seam | keep overlay composition out of app/nav layers | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSectionInputs.kt` | Existing | overlay input contract | existing content/overlay input owner | avoid hidden globals | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt` | Existing | thread Flying gate to content/overlay inputs | current screen input assembly owner | not ViewModel/domain state | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` | Existing | pass overlay inputs to LiveFollow runtime layer | current content host owner | not a new overlay owner | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt` | Existing | remove obsolete centered debug launcher | current debug launcher owner | avoid stale duplicate mode-entry UI | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotUiStateTest.kt` | Existing | indicator-state mapping regressions | closest owner | n/a | No |
+| `feature/livefollow/src/test/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotViewModelTest.kt` | Existing | auto-start failure and command-state regressions | closest owner | n/a | No |
 
 ### 2.3 Time Base
 

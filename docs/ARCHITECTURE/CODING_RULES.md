@@ -112,8 +112,8 @@ Enforcement artifacts:
 - Fast architecture gate: `./gradlew enforceArchitectureFast`
 - Underlying local static gate: `scripts/arch_gate.py`
 - CI workflow: `.github/workflows/quality-gates.yml`
-- Canonical time abstraction for production code: `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-- DI binding anchor: `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+- Canonical time abstraction for production code: `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+- DI binding anchor: `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 - Raw-log freeze baseline: `config/quality/raw_log_allowlist.txt`
 
 Local validation minimum:

@@ -37,51 +37,51 @@ Remaining from this plan:
 
 1. `EMERGENCY` can flicker because geometry is sampled frame-by-frame with no emergency hysteresis.
    - Evidence: `AdsbTrafficStore` promotes/demotes directly from `isEmergencyCollisionRisk` each select cycle.
-   - File: `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
 
 2. Projected CPA/TCPA is bypassed when motion context is missing, falling back to heading-only emergency.
    - Risk: false emergency during low-speed/noisy-heading segments.
    - Evidence: fallback branch returns `true` after heading gate.
-   - File: `feature/map/src/main/java/com/example/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
 
 3. Ownship motion quality fields (`bearingAccuracyDeg`, `speedAccuracyMs`) are not used in emergency gating.
    - Risk: unstable emergency when GPS heading/speed confidence is degraded.
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/map/model/MapUiModels.kt`
-     - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/model/MapUiModels.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
 
 4. `AdsbTrafficRepository.updateOwnshipMotion(...)` is a default no-op in the interface.
    - Risk: fake/test implementations can silently ignore required wiring.
-   - File: `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
 
 5. Debug/marker details do not expose why emergency audio is not eligible (no projected-conflict reason path).
    - Risk: pilot/developer cannot distinguish "safe pass" vs "missing motion confidence."
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
 
 6. Trend decisions are tied to target sample timestamp only; ownship-only movement updates do not create fresh trend samples.
    - Risk: emergency/post-pass decisions can lag until next provider update.
    - Evidence: trend evaluator receives `sampleMonoMs = target.receivedMonoMs` on each select path.
-   - File: `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
 
 7. Stationary-heading behavior does not use a true pointing source; ADS-B motion uses GPS bearing only.
    - Risk: when stationary/slow, ownship heading used for motion projection is unreliable or absent.
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-     - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelMappers.kt`
-     - `feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelMappers.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorData.kt`
 
 8. Emergency geometry hard-requires target `trackDeg`; targets with missing track are forced non-emergency even when clearly converging by position trend.
    - Risk: false negatives (missed high-risk alerts) on incomplete provider vectors.
-   - File: `feature/map/src/main/java/com/example/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
+   - File: `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
 
 9. Emergency audio candidate can only reason from current boolean eligibility, without an explicit eligibility-reason contract in snapshot/UI.
    - Risk: poor explainability during pilot debugging ("Not eligible" ambiguity remains).
    - Files:
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
-     - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntimeSnapshot.kt`
+     - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
 
 ## 2) Architecture Contract
 
@@ -116,9 +116,9 @@ Forbidden comparisons remain unchanged: monotonic vs wall, replay vs wall.
 - Goal:
   - Lock current regressions with tests before changing behavior.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbTrafficStoreTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbCollisionRiskEvaluatorTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTrafficSelectionTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbTrafficStoreTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbCollisionRiskEvaluatorTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTrafficSelectionTest.kt`
 - Tests to add:
   - emergency flicker around heading/cpa threshold sequence.
   - low-speed/noisy-heading fallback sequence.
@@ -128,16 +128,16 @@ Forbidden comparisons remain unchanged: monotonic vs wall, replay vs wall.
 - Exit:
   - new tests fail on current behavior where expected.
 - Fast gate (phase end):
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.*" --tests "com.example.xcpro.map.MapScreenViewModelTrafficSelectionTest"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.*" --tests "com.trust3.xcpro.map.MapScreenViewModelTrafficSelectionTest"`
 
 ## Phase 1 - Motion Quality Gating
 
 - Goal:
   - Introduce explicit motion-confidence gating for projected emergency logic.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepositoryRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbCollisionRiskEvaluator.kt`
 - Changes:
   - pass normalized motion quality signals (heading/speed confidence).
   - use explicit heading-source policy for ownship motion:
@@ -148,15 +148,15 @@ Forbidden comparisons remain unchanged: monotonic vs wall, replay vs wall.
 - Exit:
   - no emergency on low-confidence/no-motion context unless circling rule explicitly applies.
 - Fast gate:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbCollisionRiskEvaluatorTest"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbCollisionRiskEvaluatorTest"`
 
 ## Phase 2 - Trend Cadence Correction + Emergency Hysteresis FSM
 
 - Goal:
   - Remove `EMERGENCY <-> non-EMERGENCY` flicker near thresholds.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbProximityTrendEvaluator.kt`
 - Changes:
   - decouple trend freshness from target-only sample cadence where safe:
     - either synthesize trend updates on meaningful ownship delta, or
@@ -170,16 +170,16 @@ Forbidden comparisons remain unchanged: monotonic vs wall, replay vs wall.
 - Exit:
   - deterministic de-escalation without red/green ping-pong.
 - Fast gate:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.AdsbTrafficStoreTest" --tests "com.example.xcpro.adsb.AdsbProximityTrendEvaluatorTest"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.AdsbTrafficStoreTest" --tests "com.trust3.xcpro.adsb.AdsbProximityTrendEvaluatorTest"`
 
 ## Phase 3 - Reason Surfacing and Audio Eligibility Transparency
 
 - Goal:
   - Surface why emergency/audio is blocked in UI/debug telemetry.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficModels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficStore.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficModels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
 - Changes:
   - extend reason model for key blocked states:
     - projected_conflict_not_likely
@@ -191,16 +191,16 @@ Forbidden comparisons remain unchanged: monotonic vs wall, replay vs wall.
 - Exit:
   - pilot/dev can explain each emergency/audio decision from UI.
 - Fast gate:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.*MarkerDetails*"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.*MarkerDetails*"`
 
 ## Phase 4 - Interface/Test Safety Hardening
 
 - Goal:
   - Remove silent no-op interface risk and harden fakes/tests.
 - Files:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTestSupport.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTestRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTestSupport.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTestRuntime.kt`
 - Changes:
   - make `updateOwnshipMotion(...)` abstract (no default body).
   - update all fakes/mocks to implement and expose last motion values.
@@ -208,15 +208,15 @@ Forbidden comparisons remain unchanged: monotonic vs wall, replay vs wall.
 - Exit:
   - compile-time enforcement for future implementations.
 - Fast gate:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.*Traffic*"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.*Traffic*"`
 
 ## Phase 5 - Deterministic Replay + Release Gates
 
 - Goal:
   - prove turn-aware emergency stability and anti-nuisance behavior in deterministic replay.
 - Files:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/AdsbEmergencyAudioReplayDeterminismTest.kt`
-  - new focused replay test(s) under `feature/map/src/test/java/com/example/xcpro/adsb/`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/AdsbEmergencyAudioReplayDeterminismTest.kt`
+  - new focused replay test(s) under `feature/map/src/test/java/com/trust3/xcpro/adsb/`
   - `docs/ARCHITECTURE/PIPELINE.md` (if wiring semantics changed)
 - Changes:
   - add replay traces for:
@@ -227,7 +227,7 @@ Forbidden comparisons remain unchanged: monotonic vs wall, replay vs wall.
 - Exit:
   - identical outputs across repeated runs for same replay data.
 - Fast gate:
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.*Replay*"`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.*Replay*"`
 
 ## 4) Verification Strategy
 

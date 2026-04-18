@@ -19,11 +19,11 @@ Primary flow:
 - `SnailTrailOverlay` writes MapLibre sources/layers.
 
 Key files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailOverlay.kt`
 
 ## 2. Ownship Icon And Layering
 
@@ -36,10 +36,10 @@ Layer ordering:
 - `SnailTrailManager.initialize()` re-brings blue overlay to front.
 
 Key files:
-- `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/SailplaneIconBitmapFactory.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/SailplaneIconBitmapFactory.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
 
 ## 3. Thermal And Circling Semantics
 
@@ -58,9 +58,9 @@ Thermal-specific trail behavior:
 - No separate "thermal style" override exists for ownship trail.
 
 Key files:
-- `feature/map/src/main/java/com/example/xcpro/map/trail/domain/ResolveCirclingUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/CirclingDetector.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/ResolveCirclingUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/CirclingDetector.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailMath.kt`
 
 ## 4. Sampling, Timing, And Storage
 
@@ -79,10 +79,10 @@ Store behavior:
 - New point `driftFactor` is altitude-derived sigmoid.
 
 Key files:
-- `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailProcessor.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/TrailStore.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/domain/ReplayTrailInterpolator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/domain/TrailWindSmoother.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/TrailStore.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/ReplayTrailInterpolator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailWindSmoother.kt`
 
 ## 5. Rendering Plan Rules
 
@@ -98,10 +98,10 @@ Segment generation:
 - Dots/lines selected by `TrailType` and vario sign.
 
 Key files:
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailRenderPlanner.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailMath.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailSegmentBuilder.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailPalette.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailRenderPlanner.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailMath.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailSegmentBuilder.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailPalette.kt`
 
 ## 6. UI Settings Path
 
@@ -112,10 +112,10 @@ Persistence path:
 - `LookAndFeelScreen -> SnailTrailSettingsViewModel -> MapTrailSettingsUseCase -> MapTrailPreferences`
 
 Key files:
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/LookAndFeelSheets.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/lookandfeel/SnailTrailSettingsViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/trail/MapTrailPreferences.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelScreen.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/LookAndFeelSheets.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/lookandfeel/SnailTrailSettingsViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/MapTrailPreferences.kt`
 
 ## 7. Known Current Constraint
 

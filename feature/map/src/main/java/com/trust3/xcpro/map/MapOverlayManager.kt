@@ -1,0 +1,130 @@
+package com.trust3.xcpro.map
+
+import android.content.Context
+import android.util.Log
+import com.trust3.xcpro.core.time.TimeBridge
+import com.trust3.xcpro.common.units.AltitudeUnit
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.airspace.AirspaceUseCase
+import com.trust3.xcpro.flightdata.WaypointFilesUseCase
+import com.trust3.xcpro.loadAndApplyAirspace
+import com.trust3.xcpro.loadAndApplyWaypoints
+import com.trust3.xcpro.map.trail.SnailTrailManager
+import kotlinx.coroutines.CoroutineScope
+
+class MapOverlayManager(
+    context: Context,
+    mapState: MapScreenState,
+    mapStateReader: MapStateReader,
+    taskRenderSyncCoordinator: TaskRenderSyncCoordinator,
+    taskWaypointCountProvider: () -> Int,
+    stateActions: MapStateActions,
+    snailTrailManager: SnailTrailManager,
+    coroutineScope: CoroutineScope,
+    airspaceUseCase: AirspaceUseCase,
+    waypointFilesUseCase: WaypointFilesUseCase,
+    ognTrafficOverlayFactory: OgnTrafficOverlayFactory = TrafficOverlayFactories::createOgnTrafficOverlay,
+    ognTargetRingOverlayFactory: OgnTargetRingOverlayFactory =
+        TrafficOverlayFactories::createOgnTargetRingOverlay,
+    ognTargetLineOverlayFactory: OgnTargetLineOverlayFactory =
+        TrafficOverlayFactories::createOgnTargetLineOverlay,
+    ognOwnshipTargetBadgeOverlayFactory: OgnOwnshipTargetBadgeOverlayFactory =
+        TrafficOverlayFactories::createOgnOwnshipTargetBadgeOverlay,
+    ognThermalOverlayFactory: OgnThermalOverlayFactory =
+        TrafficOverlayFactories::createOgnThermalOverlay,
+    ognGliderTrailOverlayFactory: OgnGliderTrailOverlayFactory =
+        TrafficOverlayFactories::createOgnGliderTrailOverlay,
+    ognSelectedThermalOverlayFactory: OgnSelectedThermalOverlayFactory =
+        TrafficOverlayFactories::createOgnSelectedThermalOverlay,
+    adsbTrafficOverlayFactory: AdsbTrafficOverlayFactory =
+        TrafficOverlayFactories::createAdsbTrafficOverlay,
+    renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
+    monoTimeMs: () -> Long = TimeBridge::nowMonoMs
+) : MapOverlayManagerRuntime(
+    context = context,
+    taskRenderSyncCoordinator = taskRenderSyncCoordinator,
+    coroutineScope = coroutineScope,
+    trafficRuntimeState = MapOverlayRuntimeStateAdapter(mapState),
+    forecastWeatherRuntimeState = MapForecastWeatherOverlayRuntimeStateAdapter(mapState),
+    ognTrafficOverlayFactory = ognTrafficOverlayFactory,
+    ognTargetRingOverlayFactory = ognTargetRingOverlayFactory,
+    ognTargetLineOverlayFactory = ognTargetLineOverlayFactory,
+    ognOwnshipTargetBadgeOverlayFactory = ognOwnshipTargetBadgeOverlayFactory,
+    ognThermalOverlayFactory = ognThermalOverlayFactory,
+    ognGliderTrailOverlayFactory = ognGliderTrailOverlayFactory,
+    ognSelectedThermalOverlayFactory = ognSelectedThermalOverlayFactory,
+    adsbTrafficOverlayFactory = adsbTrafficOverlayFactory,
+    nowMonoMs = monoTimeMs
+) {
+    private val baseOpsDelegate = MapOverlayManagerRuntimeBaseOpsDelegate(
+        mapStateReader = mapStateReader,
+        taskRenderSyncCoordinator = taskRenderSyncCoordinator,
+        taskWaypointCountProvider = taskWaypointCountProvider,
+        stateActions = stateActions,
+        coroutineScope = coroutineScope,
+        refreshAirspaceFn = { map ->
+            loadAndApplyAirspace(map, airspaceUseCase)
+        },
+        refreshWaypointsFn = { map ->
+            val (files, checks) = waypointFilesUseCase.loadWaypointFiles()
+            loadAndApplyWaypoints(context, map, files, checks)
+        }
+    )
+
+    private val lifecyclePort = MapOverlayRuntimeMapLifecycleDelegate(
+        context = context,
+        mapState = mapState,
+        baseOpsDelegate = baseOpsDelegate,
+        taskRenderSyncCoordinator = taskRenderSyncCoordinator,
+        initializeTrafficOverlaysFn = ::initializeTrafficOverlaysRuntime,
+        forecastOnMapStyleChanged = ::handleForecastMapStyleChangedRuntime,
+        forecastOnInitialize = ::handleForecastInitializeRuntime,
+        bringTrafficOverlaysToFront = ::bringTrafficOverlaysToFrontRuntime,
+        snailTrailManager = snailTrailManager
+    )
+
+    private val statusReporter = MapOverlayRuntimeStatusCoordinator(
+        mapState = mapState,
+        showDistanceCircles = { mapStateReader.showDistanceCircles.value },
+        taskWaypointCount = taskWaypointCountProvider,
+        ognStatusSnapshot = ::ognStatusSnapshotRuntime,
+        latestAdsbTargetsCount = ::latestAdsbTargetsCountRuntime,
+        runtimeCounters = ::runtimeCountersSnapshot,
+        forecastWeatherStatus = ::forecastWeatherStatusRuntime,
+        renderSurfaceStatus = {
+            renderSurfaceDiagnostics.buildStatus(header = "Render Surface Diagnostics")
+        }
+    )
+
+    init {
+        attachShellPorts(
+            lifecyclePort = lifecyclePort,
+            statusReporter = statusReporter
+        )
+    }
+
+    internal fun recordOgnTrafficCollectorEmission() = recordOgnTrafficCollectorEmissionRuntime()
+
+    internal fun recordOgnTrafficCollectorDeduped() = recordOgnTrafficCollectorDedupedRuntime()
+
+    internal fun recordOgnTrafficPortUpdate() = recordOgnTrafficPortUpdateRuntime()
+
+    internal fun recordOgnTargetVisualCollectorEmission() = recordOgnTargetVisualCollectorEmissionRuntime()
+
+    internal fun recordOgnTargetVisualCollectorDeduped() = recordOgnTargetVisualCollectorDedupedRuntime()
+
+    internal fun recordOgnTargetVisualPortUpdate() = recordOgnTargetVisualPortUpdateRuntime()
+
+    internal fun recordAdsbTrafficCollectorEmission() = recordAdsbTrafficCollectorEmissionRuntime()
+
+    internal fun recordAdsbTrafficCollectorDeduped() = recordAdsbTrafficCollectorDedupedRuntime()
+
+    internal fun recordAdsbTrafficPortUpdate() = recordAdsbTrafficPortUpdateRuntime()
+
+    internal fun recordOgnThermalCollectorEmission() = recordOgnThermalCollectorEmissionRuntime()
+
+    internal fun recordOgnTrailCollectorEmission() = recordOgnTrailCollectorEmissionRuntime()
+
+    internal fun recordSelectedOgnThermalCollectorEmission() =
+        recordSelectedOgnThermalCollectorEmissionRuntime()
+}

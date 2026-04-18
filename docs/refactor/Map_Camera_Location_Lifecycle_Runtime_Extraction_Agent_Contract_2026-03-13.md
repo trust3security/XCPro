@@ -37,19 +37,19 @@ Success means:
 
 ### 2.1 In Scope
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleEffects.kt`
 - shell fan-out files and helper graph explicitly listed in the dedicated plan
 
 ### 2.2 Explicitly Out of Scope
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt` as an owner move in the first cycle
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` as an owner move
-- `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` line-budget cleanup
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt` as an owner move in the first cycle
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt` as an owner move
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` line-budget cleanup
 - unrelated repo test failures already known outside this extraction
 
 Do not widen scope unless the dedicated plan is updated first.
@@ -275,7 +275,7 @@ At the end of the whole program, report:
 
 These are baseline issues and must not be mixed into this program:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt` line-budget gate
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt` line-budget gate
 - unrelated app/map test failures already documented outside this extraction
 
 The agent may mention them in verification, but must not expand scope to fix them under this contract.

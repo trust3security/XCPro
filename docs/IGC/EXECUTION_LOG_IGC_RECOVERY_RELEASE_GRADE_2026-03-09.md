@@ -29,36 +29,36 @@ Primary references:
 
 Recorded before Phase 0 implementation:
 
-- `app/src/test/java/com/example/xcpro/profiles/ProfileActionButtonsTest.kt`
-- `app/src/test/java/com/example/xcpro/profiles/ProfileExportImportTest.kt`
-- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`
-- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileActionButtonsTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileExportImportTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt`
 - `docs/ARCHITECTURE/PIPELINE.md`
 - `docs/IGC/CHANGE_PLAN_IGC_FLIGHT_LOGGING_PRODUCTION_GRADE_PHASED_IP_2026-03-08.md`
 - `docs/IGC/README.md`
 - `docs/PROFILES/EXECUTION_LOG_PROFILE_PHASES_0_6.md`
 - `docs/PROFILES/PROFILE_STORAGE_AND_SETTINGS_SCOPE.md`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-- `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
-- `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Profiles.kt`
-- `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileActionButtons.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileBundleCodec.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileExportImport.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileRepository.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSelectionScreen.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsScreen.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileViewModel.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ui/ProfileSelectionList.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcDownloadsRepository.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+- `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Profiles.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileActionButtons.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileBundleCodec.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileExportImport.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileRepository.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSelectionScreen.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsScreen.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileViewModel.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ui/ProfileSelectionList.kt`
 - `docs/IGC/AGENT_AUTOMATION_CONTRACT_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
 - `docs/IGC/CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
 - `docs/IGC/REVIEW_IGC_RECOVERY_FOCUSED_CODE_PASS_2026-03-09.md`
 - `docs/PROFILES/AGENT_CONTRACT_PROFILE_IMPLEMENTATION_AUTOMATION_2026-03-09.md`
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcRecoveryContract.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcRetentionContract.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcShareContract.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcRecoveryContract.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcRetentionContract.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcShareContract.kt`
 
 Rule:
 
@@ -126,19 +126,19 @@ Interpretation:
   - `Finalizing` snapshots still route terminal recovery through the repository
   - startup pipeline docs updated to reflect the new owner
 - Files touched:
-  - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
-  - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
   - `docs/ARCHITECTURE/PIPELINE.md`
   - `docs/IGC/CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
   - `docs/IGC/EXECUTION_LOG_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
 - Commands:
   - `./gradlew --no-daemon --no-configuration-cache :feature:map:clean :feature:profile:clean`
     - Result: PASS
-  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest"`
+  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest"`
     - Result: PASS
-  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.IgcRecordingUseCaseTest"`
+  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.IgcRecordingUseCaseTest"`
     - Result: PASS
   - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:igc:assembleDebug :feature:map:assembleDebug`
     - Result: PASS
@@ -170,25 +170,25 @@ Interpretation:
     fails, as long as stored metadata exists
   - short-form `HFDTE` recovery parsing is now covered and accepted
 - Files touched:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecoveryMetadataStore.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/di/IgcCoreBindingsModule.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
-  - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcRecoveryMetadataStoreTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSinkTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
-  - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecoveryMetadataStore.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/di/IgcCoreBindingsModule.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcRecoveryMetadataStoreTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSinkTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryIdempotencyTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryTest.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
   - `docs/ARCHITECTURE/PIPELINE.md`
   - `docs/IGC/CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
   - `docs/IGC/EXECUTION_LOG_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
 - Commands:
-  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.IgcRecoveryMetadataStoreTest" --tests "com.example.xcpro.igc.data.IgcRecordingRuntimeActionSinkTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryIdempotencyTest" --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryRecoveryTest"`
+  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.IgcRecoveryMetadataStoreTest" --tests "com.trust3.xcpro.igc.data.IgcRecordingRuntimeActionSinkTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryIdempotencyTest" --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryRecoveryTest"`
     - Result: PASS
-  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest" --tests "com.example.xcpro.igc.usecase.IgcRecordingUseCaseTest"`
+  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest" --tests "com.trust3.xcpro.igc.usecase.IgcRecordingUseCaseTest"`
     - Result: PASS
   - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:igc:assembleDebug :feature:map:assembleDebug`
     - Result: PASS
@@ -211,13 +211,13 @@ Interpretation:
   - added named restart-after-snapshot-clear coverage for `K7`
   - restart continuity for `Recording` snapshots remains explicitly proven
 - Files touched:
-  - `feature/igc/src/test/java/com/example/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
+  - `feature/igc/src/test/java/com/trust3/xcpro/igc/data/IgcFlightLogRepositoryRecoveryKillPointTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCaseTest.kt`
   - `docs/IGC/CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
   - `docs/IGC/EXECUTION_LOG_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
 - Commands:
-  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.IgcFlightLogRepositoryRecoveryKillPointTest" :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest" --tests "com.example.xcpro.igc.usecase.IgcRecordingUseCaseTest"`
+  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.IgcFlightLogRepositoryRecoveryKillPointTest" :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest" --tests "com.trust3.xcpro.igc.usecase.IgcRecordingUseCaseTest"`
     - Result: PASS
 - Score after Phase 3:
   - Architecture and ownership clarity: `24/25`
@@ -235,7 +235,7 @@ Interpretation:
 - Status: completed
 - Outcome:
   - added real MediaStore restart instrumentation:
-    `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
+    `feature/igc/src/androidTest/java/com/trust3/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
   - instrumentation path now proves, at source level, one restart scenario:
     orphan pending row present + staged recovery payload present -> recovery
     deletes pending row, republishes final file, and does not duplicate on rerun
@@ -243,7 +243,7 @@ Interpretation:
   - execution passed on connected Android device with explicit `ANDROID_SERIAL`
     pinning to avoid stale emulator targeting
 - Files touched:
-  - `feature/igc/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
+  - `feature/igc/src/androidTest/java/com/trust3/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
   - `docs/IGC/CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
   - `docs/IGC/EXECUTION_LOG_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
 - Commands:
@@ -251,7 +251,7 @@ Interpretation:
     - Result: PASS
   - `adb devices -l`
     - Result: physical device `R5CT2084XHN` available; stale unauthorized emulator was bypassed by targeting the physical device explicitly
-  - `$env:ANDROID_SERIAL="R5CT2084XHN"; ./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" "-Pandroid.testInstrumentationRunnerArguments.class=com.example.xcpro.igc.IgcRecoveryRestartInstrumentedTest" :feature:igc:connectedDebugAndroidTest --no-parallel`
+  - `$env:ANDROID_SERIAL="R5CT2084XHN"; ./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" "-Pandroid.testInstrumentationRunnerArguments.class=com.trust3.xcpro.igc.IgcRecoveryRestartInstrumentedTest" :feature:igc:connectedDebugAndroidTest --no-parallel`
     - Result: PASS
   - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" enforceRules`
     - Result: PASS
@@ -283,12 +283,12 @@ Interpretation:
   - Phase 6 evidence pack populated for kill matrix, gate results, and manual
     release checklist
 - Files touched:
-  - `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcRecoveryDiagnosticsReporter.kt`
-  - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
-  - `feature/map/src/test/java/com/example/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
-  - `app/src/main/java/com/example/xcpro/igc/AppIgcRecoveryDiagnosticsReporter.kt`
-  - `app/src/main/java/com/example/xcpro/di/AppModule.kt`
-  - `app/src/test/java/com/example/xcpro/igc/AppIgcRecoveryDiagnosticsReporterTest.kt`
+  - `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcRecoveryDiagnosticsReporter.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCase.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/IgcRecoveryBootstrapUseCaseTest.kt`
+  - `app/src/main/java/com/trust3/xcpro/igc/AppIgcRecoveryDiagnosticsReporter.kt`
+  - `app/src/main/java/com/trust3/xcpro/di/AppModule.kt`
+  - `app/src/test/java/com/trust3/xcpro/igc/AppIgcRecoveryDiagnosticsReporterTest.kt`
   - `docs/ARCHITECTURE/PIPELINE.md`
   - `docs/IGC/README.md`
   - `docs/IGC/CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
@@ -297,9 +297,9 @@ Interpretation:
   - `docs/IGC/phase6_evidence/phase6_manual_checklist.md`
   - `docs/IGC/EXECUTION_LOG_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
 - Commands:
-  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest"`
+  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.IgcRecoveryBootstrapUseCaseTest"`
     - Result: PASS
-  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :app:testDebugUnitTest --tests "com.example.xcpro.igc.AppIgcRecoveryDiagnosticsReporterTest"`
+  - `./gradlew --no-daemon --no-configuration-cache "-Pksp.incremental=false" :app:testDebugUnitTest --tests "com.trust3.xcpro.igc.AppIgcRecoveryDiagnosticsReporterTest"`
     - Result: PASS
 - Score after Phase 5:
   - Architecture and ownership clarity: `24/25`
@@ -323,8 +323,8 @@ Interpretation:
   - started local emulator `codex_recovery_api36` and completed the full repo
     connected suite successfully
 - Files touched:
-  - `feature/igc/src/androidTest/java/com/example/xcpro/screens/replay/IgcFilesShareIntentsInstrumentedTest.kt`
-  - `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcFilesShareInstrumentedTest.kt`
+  - `feature/igc/src/androidTest/java/com/trust3/xcpro/screens/replay/IgcFilesShareIntentsInstrumentedTest.kt`
+  - `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcFilesShareInstrumentedTest.kt`
   - `docs/IGC/CHANGE_PLAN_IGC_RECOVERY_RELEASE_GRADE_2026-03-09.md`
   - `docs/IGC/phase6_evidence/phase6_gates.md`
   - `docs/IGC/phase6_evidence/phase6_manual_checklist.md`

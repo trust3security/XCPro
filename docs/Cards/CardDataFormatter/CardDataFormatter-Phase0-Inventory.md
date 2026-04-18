@@ -11,12 +11,12 @@ Scope: Discovery and alignment for CardDataFormatter refactor.
 - dfcards-library/src/main/java/com/example/dfcards/FlightTemplates.kt
 - dfcards-library/src/main/java/com/example/dfcards/dfcards/CardStateRepository.kt
 - dfcards-library/src/main/java/com/example/dfcards/dfcards/CardStateRepositoryUpdates.kt
-- feature/map/src/main/java/com/example/xcpro/MapScreenUtils.kt
-- feature/map/src/main/java/com/example/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
-- feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt
-- feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt
-- feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt
-- feature/map/src/main/java/com/example/xcpro/sensors/SensorData.kt
+- feature/map/src/main/java/com/trust3/xcpro/MapScreenUtils.kt
+- feature/map/src/main/java/com/trust3/xcpro/map/MapScreenObservers.kt (wrapped by FlightDataUiAdapter)
+- feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt
+- feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt
+- feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt
+- feature/map/src/main/java/com/trust3/xcpro/sensors/SensorData.kt
 
 ## Card ID inventory (catalog vs formatter vs templates)
 All CardDefinition ids in the card catalog aggregation are handled in CardDataFormatter (39 of 39).

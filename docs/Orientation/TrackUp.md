@@ -12,13 +12,13 @@ See `docs/Orientation/Orientation.md` for shared architecture, data flow, and cr
 ## User-facing entry points
 
 1) Settings > General > Orientation
-   - Screen: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OrientationSettingsScreen.kt`
-   - Entry in General settings grid: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
-   - Navigation route: `app/src/main/java/com/example/xcpro/AppNavGraph.kt` (`orientation_settings`)
+   - Screen: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OrientationSettingsScreen.kt`
+   - Entry in General settings grid: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
+   - Navigation route: `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` (`orientation_settings`)
    - Lets the user set separate modes for Cruise/Final Glide and Thermal/Circling, plus glider vertical offset.
 
 2) Map screen compass widget
-   - Toggle control: `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt` and `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
+   - Toggle control: `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt` and `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
    - Cycles: NORTH_UP -> TRACK_UP -> HEADING_UP -> NORTH_UP
    - This updates the *active profile* (cruise or circling) in preferences via `MapOrientationManager.setOrientationMode`.
 
@@ -43,17 +43,17 @@ OrientationDataSource  <---- updateFromFlightData() ---- MapOrientationManager
 ```
 
 Key files:
-- Orientation contracts: `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
-- Orientation manager: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
-- Orientation data source: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
-- Heading resolver (HEADING_UP): `feature/map/src/main/java/com/example/xcpro/orientation/HeadingResolver.kt`
-- Location / camera updates: `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-- Camera effects and clamping: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
-- Camera bearing resolver (legacy helper; currently unused in tracking path): `feature/map/src/main/java/com/example/xcpro/map/CameraBearingResolver.kt`
-- Location jitter gate: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
-- Icon rotation policy: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
-- Icon rendering: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
-- Orientation UI: `feature/map/src/main/java/com/example/xcpro/CompassWidget.kt`
+- Orientation contracts: `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt`
+- Orientation manager: `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
+- Orientation data source: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
+- Heading resolver (HEADING_UP): `feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingResolver.kt`
+- Location / camera updates: `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+- Camera effects and clamping: `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
+- Camera bearing resolver (legacy helper; currently unused in tracking path): `feature/map/src/main/java/com/trust3/xcpro/map/CameraBearingResolver.kt`
+- Location jitter gate: `feature/map/src/main/java/com/trust3/xcpro/map/MapLocationFilter.kt`
+- Icon rotation policy: `feature/map/src/main/java/com/trust3/xcpro/map/IconHeadingSmoother.kt`
+- Icon rendering: `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
+- Orientation UI: `feature/map/src/main/java/com/trust3/xcpro/CompassWidget.kt`
 
 ## Orientation modes overview
 
@@ -66,7 +66,7 @@ Key files:
 ## Track Up behavior (core logic)
 
 ### 1) Orientation calculation (MapOrientationManager)
-File: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
+File: `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
 
 When `currentMode == TRACK_UP`:
 - `calculateBearing()` uses `OrientationSensorData.track` (GPS track) as the bearing.
@@ -85,7 +85,7 @@ Track stale timeout (XCSoar parity):
   and `bearingSource = NONE` with `isValid = false`. This mirrors XCSoar's `track_available` expiry.
 
 ### 2) Track Up data inputs (OrientationDataSource)
-File: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
+File: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
 
 `OrientationDataSource` builds `OrientationSensorData` from:
 - Flight data (`RealTimeFlightData`) for track, ground speed, wind, etc.
@@ -113,7 +113,7 @@ B) **Not tracking (user has panned; return button is shown)**
 - Small changes are ignored (`bearingChanged` threshold ~2 degrees).
 
 ### 4) Icon orientation for Track Up
-File: `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+File: `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
 
 For Track Up:
 - The icon shows **drift**: `heading - track` (XCSoar convention).
@@ -152,28 +152,28 @@ These components interact to create or reduce jumpiness:
 
 1) Orientation update throttle
 - `MapOrientationManager.BEARING_UPDATE_THROTTLE_MS = 66` (~15Hz)
-- File: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
 
 2) Heading smoothing (HEADING_UP only)
 - `OrientationDataSource.SMOOTHING_FACTOR = 0.3`
-- File: `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
 
 3) GPS motion gate (location jitter)
 - `MapLocationFilter` rejects location updates if screen movement < `thresholdPx`.
 - Defaults: `MapFeatureFlags.locationJitterThresholdPx = 0.5f` and history size 30.
-- File: `feature/map/src/main/java/com/example/xcpro/map/MapLocationFilter.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/map/MapLocationFilter.kt`
 
 4) Track-bearing clamp (display)
 - `MapPositionController.clampBearingStep()` limits the displayed track to 5 deg/step.
-- File: `feature/map/src/main/java/com/example/xcpro/map/MapPositionController.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/map/MapPositionController.kt`
 
 5) Icon rotation clamp (visual)
 - `IconHeadingSmoother` applies a time-based max angular velocity and deadband.
-- File: `feature/map/src/main/java/com/example/xcpro/map/IconHeadingSmoother.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/map/IconHeadingSmoother.kt`
 
 6) Camera bearing clamp (only when NOT tracking)
 - `MapCameraManager.updateBearing()` limits rotation step to 5 deg/step.
-- File: `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
 
 7) Compass widget animation
 - `CompassWidget` uses `animateFloatAsState` with 300ms tween.
@@ -185,7 +185,7 @@ These components interact to create or reduce jumpiness:
 
 9) Track stale timeout (XCSoar parity)
 - `MapOrientationManager` forces Track Up bearing to 0 after ~10s without a valid track.
-- File: `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
 
 ## Why Track Up can feel jumpy live (current behavior)
 
@@ -214,7 +214,7 @@ If you are looking to reduce jumpiness or change Track Up behavior, these are th
 1) **Apply camera bearing smoothing while tracking**
 - Option: clamp camera bearing in `MapPositionController.applyAcceptedSample()` similar to the icon clamp.
 - Option: reuse `MapCameraManager.updateBearing()` even while tracking.
-- Files: `feature/map/src/main/java/com/example/xcpro/map/MapPositionController.kt`, `feature/map/src/main/java/com/example/xcpro/map/MapCameraManager.kt`
+- Files: `feature/map/src/main/java/com/trust3/xcpro/map/MapPositionController.kt`, `feature/map/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt`
 
 2) **Use `orientationData.bearing` instead of raw GPS track for the camera**
 - `orientationData` already applies validity gating and last-known behavior.
@@ -223,7 +223,7 @@ If you are looking to reduce jumpiness or change Track Up behavior, these are th
 3) **Introduce explicit bearing low-pass for Track Up**
 - Right now, Track Up has no smoothing on bearing.
 - You can port the `smoothBearingTransition()` concept from `OrientationDataSource` or use `DisplayPoseSmoother`.
-- `DisplayPoseSmoother` exists but is unused: `feature/map/src/main/java/com/example/xcpro/map/DisplayPoseSmoother.kt`.
+- `DisplayPoseSmoother` exists but is unused: `feature/map/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt`.
 
 4) **Tune min-speed threshold**
 - Preferences: `MapOrientationPreferences.setMinSpeedThreshold()`
@@ -251,7 +251,7 @@ If you are looking to reduce jumpiness or change Track Up behavior, these are th
 - Implemented: when `MapLocationFilter.accept(...)` is false, the location is not moved,
   but the camera bearing still updates using `orientationData.bearing` while tracking.
 - UX effect: fewer "stuck then jump" rotations at low speed.
-- File: `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
+- File: `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
 
 ## Adding a new orientation mode (checklist)
 

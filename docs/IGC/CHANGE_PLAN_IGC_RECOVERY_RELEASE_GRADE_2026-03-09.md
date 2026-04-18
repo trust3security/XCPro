@@ -34,8 +34,8 @@ Read first:
 - Status: Signed Off
 - Depends on:
   - current recovery slice implementation in:
-    - `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-    - `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+    - `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt`
   - Phase 6 recovery contract in:
     - `docs/IGC/CHANGE_PLAN_IGC_FLIGHT_LOGGING_PRODUCTION_GRADE_PHASED_IP_2026-03-08.md`
 
@@ -239,11 +239,11 @@ Required direction remains:
 
 Modules/files expected to change:
 
-- `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt`
 - new recovery bootstrap owner under `feature/map/.../igc/usecase/` or
   `feature/igc/.../usecase/`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcSessionStateSnapshotStore.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcSessionStateSnapshotStore.kt`
 - new recovery metadata adapter under `feature/igc/.../data/`
 
 Boundary risk:
@@ -358,7 +358,7 @@ Goal:
 
 Files to change:
 
-- `feature/map/src/main/java/com/example/xcpro/igc/usecase/IgcRecordingUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/igc/usecase/IgcRecordingUseCase.kt`
 - new `IgcRecoveryBootstrapUseCase.kt`
 - DI bindings where required
 
@@ -457,7 +457,7 @@ Goal:
 
 Files to change:
 
-- `feature/map/src/androidTest/java/com/example/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
+- `feature/map/src/androidTest/java/com/trust3/xcpro/igc/IgcRecoveryRestartInstrumentedTest.kt`
 - supporting test fakes/utilities if needed
 
 Tests to add/update:
@@ -549,8 +549,8 @@ Required checks:
 Recovery-focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.*Recovery*"
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.usecase.*Recovery*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.*Recovery*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.usecase.*Recovery*"
 ```
 
 When device/emulator is available:

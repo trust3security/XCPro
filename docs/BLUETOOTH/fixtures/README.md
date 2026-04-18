@@ -5,7 +5,7 @@ Bluetooth capture notes for the LXNAV S100 work.
 
 Committed executable fixture files now live under:
 
-- `feature/variometer/src/test/resources/com/example/xcpro/variometer/bluetooth/lxnav/fixtures/`
+- `feature/variometer/src/test/resources/com/trust3/xcpro/variometer/bluetooth/lxnav/fixtures/`
 
 Those resources are consumed only by JVM/unit fixture replay tests in
 `:feature:variometer`; production code does not read this directory.

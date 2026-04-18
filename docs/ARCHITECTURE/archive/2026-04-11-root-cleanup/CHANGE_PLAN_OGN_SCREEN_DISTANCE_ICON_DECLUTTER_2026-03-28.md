@@ -54,7 +54,7 @@ Read first:
 ## 1A) Narrow Seam Findings
 
 1. The current OGN icon layer explicitly permits overlap:
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt`
      sets `iconAllowOverlap(true)` and `iconIgnorePlacement(true)`.
    - The current issue is therefore consistent with the implementation, not a
      hidden renderer bug.
@@ -65,7 +65,7 @@ Read first:
    - Existing label declutter does not affect icon collision.
 
 3. The narrowest safe screen-distance seam already exists:
-   - `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
+   - `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
      owns both `MapLibreMap` projection access and the resolved rendered OGN icon
      size.
    - That makes `OgnTrafficOverlay` the correct runtime owner for projecting
@@ -132,10 +132,10 @@ Dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficViewportSizing.kt` | render-only OGN declutter helper already exists | keep screen-distance grouping as a pure helper next to existing render policy helpers | output render grouping instead of icon size |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | recent OGN declutter work already isolates pure render logic | keep feature-build gating in helper + overlay support | this change adds grouped markers, not only label stripping |
-| `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt` | existing feature:traffic -> feature:map-runtime overlay handle seam | extend the same seam for grouped hit results if needed | additive typed hit result instead of raw `String?` |
-| `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt` | viewport-derived declutter policy already exists in traffic overlay slice | keep camera/viewport-derived rendering runtime-owned | OGN uses exact screen-distance grouping, not ADS-B label gating |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficViewportSizing.kt` | render-only OGN declutter helper already exists | keep screen-distance grouping as a pure helper next to existing render policy helpers | output render grouping instead of icon size |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficLabelDeclutterPolicy.kt` | recent OGN declutter work already isolates pure render logic | keep feature-build gating in helper + overlay support | this change adds grouped markers, not only label stripping |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt` | existing feature:traffic -> feature:map-runtime overlay handle seam | extend the same seam for grouped hit results if needed | additive typed hit result instead of raw `String?` |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficViewportDeclutterPolicy.kt` | viewport-derived declutter policy already exists in traffic overlay slice | keep camera/viewport-derived rendering runtime-owned | OGN uses exact screen-distance grouping, not ADS-B label gating |
 
 ### 2.2B Boundary Moves
 
@@ -157,17 +157,17 @@ Dependency flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/ARCHITECTURE/CHANGE_PLAN_OGN_SCREEN_DISTANCE_ICON_DECLUTTER_2026-03-28.md` | New | phased execution contract | required for non-trivial overlay/runtime change | not production code | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | New | pure screen-distance grouping rules and deterministic group identity | render-only policy owner belongs with OGN map helpers | not repository or ViewModel state | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterModels.kt` | New | small render-item / hit-result models if file split keeps policy file focused | keeps models out of mixed-purpose files | avoids expanding `TrafficOverlayRuntimeState.kt` with helper internals | Maybe |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt` | Existing | project targets to screen space, call helper, render grouped result, hit-test grouped markers | already owns map projection and rendered icon size | do not move MapLibre projection into pure helper or delegate | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlaySupport.kt` | Existing | author features/layers for single-target and grouped-marker render items | current OGN feature authoring owner | do not build GeoJSON in delegate or UI | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/TrafficOverlayRuntimeState.kt` | Existing | additive OGN hit-result overlay contract if grouped taps need typed output | current cross-module overlay handle seam | do not encode clusters as fake target IDs | No |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | runtime handling of grouped taps (`zoom to expand`) and existing target selection path | current OGN runtime owner | do not let UI decide cluster semantics directly | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | pass additive grouped-hit result through the runtime shell | current runtime bridge owner | do not bypass runtime shell from UI | No |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` | Existing | map tap routing for grouped OGN markers | current map tap routing owner | do not hide grouped behavior inside composables elsewhere | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicyTest.kt` | New | pure grouping math coverage | deterministic grouping needs isolated tests | not only integration tests; policy is pure | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficOverlayFeatureScreenDeclutterTest.kt` | New | grouped-marker feature-build coverage | verifies render items map to correct feature properties | not UI-shell tests | No |
-| `feature/traffic/src/test/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegateClusterTapTest.kt` | New | grouped tap action coverage | cluster tap must not select wrong aircraft | not only manual validation | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | New | pure screen-distance grouping rules and deterministic group identity | render-only policy owner belongs with OGN map helpers | not repository or ViewModel state | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterModels.kt` | New | small render-item / hit-result models if file split keeps policy file focused | keeps models out of mixed-purpose files | avoids expanding `TrafficOverlayRuntimeState.kt` with helper internals | Maybe |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt` | Existing | project targets to screen space, call helper, render grouped result, hit-test grouped markers | already owns map projection and rendered icon size | do not move MapLibre projection into pure helper or delegate | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlaySupport.kt` | Existing | author features/layers for single-target and grouped-marker render items | current OGN feature authoring owner | do not build GeoJSON in delegate or UI | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficOverlayRuntimeState.kt` | Existing | additive OGN hit-result overlay contract if grouped taps need typed output | current cross-module overlay handle seam | do not encode clusters as fake target IDs | No |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | runtime handling of grouped taps (`zoom to expand`) and existing target selection path | current OGN runtime owner | do not let UI decide cluster semantics directly | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | pass additive grouped-hit result through the runtime shell | current runtime bridge owner | do not bypass runtime shell from UI | No |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt` | Existing | map tap routing for grouped OGN markers | current map tap routing owner | do not hide grouped behavior inside composables elsewhere | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicyTest.kt` | New | pure grouping math coverage | deterministic grouping needs isolated tests | not only integration tests; policy is pure | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureScreenDeclutterTest.kt` | New | grouped-marker feature-build coverage | verifies render items map to correct feature properties | not UI-shell tests | No |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegateClusterTapTest.kt` | New | grouped tap action coverage | cluster tap must not select wrong aircraft | not only manual validation | No |
 
 ### 2.2E Module and API Surface
 
@@ -180,9 +180,9 @@ Dependency flow remains:
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| OGN screen-distance grouping radius from rendered icon size | `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | OGN overlay render path and tests | exact screen declutter is a render-only policy | No |
-| Deterministic grouped-marker key creation | `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | grouped features + tap routing tests | identity belongs with grouping owner | No |
-| Cluster tap action policy (`zoom to expand`, not wrong-aircraft selection) | `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | OGN runtime delegate + map tap routing | camera action is runtime behavior, not pure policy | No |
+| OGN screen-distance grouping radius from rendered icon size | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | OGN overlay render path and tests | exact screen declutter is a render-only policy | No |
+| Deterministic grouped-marker key creation | `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficScreenDeclutterPolicy.kt` | grouped features + tap routing tests | identity belongs with grouping owner | No |
+| Cluster tap action policy (`zoom to expand`, not wrong-aircraft selection) | `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | OGN runtime delegate + map tap routing | camera action is runtime behavior, not pure policy | No |
 
 ### 2.3 Time Base
 

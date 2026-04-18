@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xcpro.traffic"
+    namespace = "com.trust3.xcpro.traffic"
     compileSdk = 35
 
     defaultConfig {

@@ -62,7 +62,7 @@ After each phase, run only fast/basic verification:
 
 ```bash
 ./gradlew enforceRules
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.*" --tests "com.example.xcpro.map.*Adsb*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.*" --tests "com.trust3.xcpro.map.*Adsb*"
 ./gradlew :feature:map:assembleDebug
 ```
 
@@ -70,7 +70,7 @@ Windows:
 
 ```bat
 .\gradlew.bat enforceRules
-.\gradlew.bat :feature:map:testDebugUnitTest --tests "com.example.xcpro.adsb.*" --tests "com.example.xcpro.map.*Adsb*"
+.\gradlew.bat :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.*" --tests "com.trust3.xcpro.map.*Adsb*"
 .\gradlew.bat :feature:map:assembleDebug
 ```
 

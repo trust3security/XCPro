@@ -10,7 +10,7 @@ plugins {
 val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPropertiesExtension>()
 
 android {
-    namespace = "com.example.xcpro.weglide"
+    namespace = "com.trust3.xcpro.weglide"
     compileSdk = 35
 
     defaultConfig {

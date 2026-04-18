@@ -83,9 +83,9 @@ Boundary risk:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/DisplayPoseSmoother.kt` | canonical owner for visual-only map pose smoothing and outlier clamp | keep visual smoothing policy local to the smoothing owner | add an explicit long-gap re-anchor rule ahead of normal clamp behavior |
-| `feature/map/src/test/java/com/example/xcpro/map/DisplayPoseSmootherTest.kt` | existing regression home for smoothing/clamp policy | extend focused policy tests instead of adding broad integration scaffolding first | add resume-gap coverage instead of only same-session clamp coverage |
-| `feature/map/src/test/java/com/example/xcpro/map/DisplayPoseCoordinatorTest.kt` | existing owner test for reset and time-base transitions | keep time-base/reset behavior verified at the coordinator seam | no functional change planned unless implementation proves coordinator needs explicit gap handling |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | canonical owner for visual-only map pose smoothing and outlier clamp | keep visual smoothing policy local to the smoothing owner | add an explicit long-gap re-anchor rule ahead of normal clamp behavior |
+| `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseSmootherTest.kt` | existing regression home for smoothing/clamp policy | extend focused policy tests instead of adding broad integration scaffolding first | add resume-gap coverage instead of only same-session clamp coverage |
+| `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseCoordinatorTest.kt` | existing owner test for reset and time-base transitions | keep time-base/reset behavior verified at the coordinator seam | no functional change planned unless implementation proves coordinator needs explicit gap handling |
 
 ### 2.2B Boundary Moves
 
@@ -104,8 +104,8 @@ No bypass removal is planned. Existing flow remains:
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_RESUME_REANCHOR_PHASED_IP_2026-03-31.md` | New | task-level plan and architecture contract for this slice | required for non-trivial map-runtime change | not an ADR because no durable boundary move is planned | No |
-| `feature/map/src/test/java/com/example/xcpro/map/DisplayPoseSmootherTest.kt` | Existing | regression tests for visual smoothing/re-anchor policy | existing focused home for display smoothing policy | not a broad map integration test first; phase 0 should lock the exact policy seam | No |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/DisplayPoseSmoother.kt` | Existing | visual-only smoothing, outlier clamp, and large-gap re-anchor owner | this file already owns visual pose policy | not lifecycle manager, not overlay renderer, not repository | No |
+| `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseSmootherTest.kt` | Existing | regression tests for visual smoothing/re-anchor policy | existing focused home for display smoothing policy | not a broad map integration test first; phase 0 should lock the exact policy seam | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | Existing | visual-only smoothing, outlier clamp, and large-gap re-anchor owner | this file already owns visual pose policy | not lifecycle manager, not overlay renderer, not repository | No |
 | `mapposition.md` | Existing | user-facing/maintainer-facing map visual behavior contract | display smoothing semantics change here | not `PIPELINE.md` unless runtime wiring changes | No |
 
 ### 2.2E Module and API Surface
@@ -124,7 +124,7 @@ No compatibility shim is planned.
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| large-gap display-pose re-anchor threshold and policy | `feature/map-runtime/src/main/java/com/example/xcpro/map/DisplayPoseSmoother.kt` | `DisplayPoseSmootherTest.kt`, `mapposition.md` | this file already owns the related visual-only clamp/smoothing policy | No |
+| large-gap display-pose re-anchor threshold and policy | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | `DisplayPoseSmootherTest.kt`, `mapposition.md` | this file already owns the related visual-only clamp/smoothing policy | No |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -230,7 +230,7 @@ FlightDataRepository
   - Confirm the failing seam and lock it with focused tests before production edits.
 - Files to change:
   - this plan
-  - `feature/map/src/test/java/com/example/xcpro/map/DisplayPoseSmootherTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseSmootherTest.kt`
 - Ownership/file split changes in this phase:
   - none
 - Tests to add/update:
@@ -251,8 +251,8 @@ Phase 0 seam/code pass outcome:
 - Goal:
   - Add explicit large-gap re-anchor behavior in the display-pose owner.
 - Files to change:
-  - `feature/map-runtime/src/main/java/com/example/xcpro/map/DisplayPoseSmoother.kt`
-  - `feature/map/src/test/java/com/example/xcpro/map/DisplayPoseSmootherTest.kt`
+  - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseSmootherTest.kt`
   - `mapposition.md`
 - Ownership/file split changes in this phase:
   - keep the policy in `DisplayPoseSmoother`

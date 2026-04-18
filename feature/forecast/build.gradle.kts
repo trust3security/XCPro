@@ -11,7 +11,7 @@ val xcproSecrets = extensions.getByType<com.example.xcpro.buildlogic.SecretPrope
 val skySightApiKey = xcproSecrets.read("SKYSIGHT_API_KEY")
 
 android {
-    namespace = "com.example.xcpro.forecast"
+    namespace = "com.trust3.xcpro.forecast"
     compileSdk = 35
 
     defaultConfig {

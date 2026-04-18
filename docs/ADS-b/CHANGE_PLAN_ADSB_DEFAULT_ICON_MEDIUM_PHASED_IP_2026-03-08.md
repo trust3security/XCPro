@@ -16,7 +16,7 @@ Execution update (2026-03-08):
   - Phase 3 sticky icon anti-flicker projection cache is implemented.
   - Phase 4 rollout flag + rollback/kill-switch path is implemented in ADS-B preferences and overlay runtime wiring.
 - Targeted test evidence (green):
-  - `.\test-safe.bat :feature:map:testDebugUnitTest --tests com.example.xcpro.adsb.ui.AdsbAircraftIconMapperTest --tests com.example.xcpro.adsb.ui.AdsbAircraftIconTest --tests com.example.xcpro.map.AdsbGeoJsonMapperTest --tests com.example.xcpro.adsb.metadata.AircraftMetadataRepositoryImplTest --tests com.example.xcpro.adsb.metadata.AdsbMetadataEnrichmentUseCaseTest`
+  - `.\test-safe.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.adsb.ui.AdsbAircraftIconMapperTest --tests com.trust3.xcpro.adsb.ui.AdsbAircraftIconTest --tests com.trust3.xcpro.map.AdsbGeoJsonMapperTest --tests com.trust3.xcpro.adsb.metadata.AircraftMetadataRepositoryImplTest --tests com.trust3.xcpro.adsb.metadata.AdsbMetadataEnrichmentUseCaseTest`
 
 ## 1) Objective
 
@@ -96,11 +96,11 @@ Scope:
   - no wall-time math in domain/projection decisions.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/metadata/AircraftMetadataRepositoryImplTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/AdsbGeoJsonMapperTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/AircraftMetadataRepositoryImplTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/AdsbGeoJsonMapperTest.kt`
 
 Exit criteria:
 - Runtime counters can be sampled in debug diagnostics and are monotonic-safe.
@@ -119,9 +119,9 @@ Scope:
 - Keep non-fixed-wing authoritative precedence untouched.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
-- `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIcon.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIcon.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
 - icon/projection tests and docs.
 
 Exit criteria:
@@ -140,9 +140,9 @@ Scope:
 - Add measurable latency/throttle counters for regression detection.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/metadata/AircraftMetadataRepositoryImplTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/AircraftMetadataRepositoryImplTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/AdsbMetadataEnrichmentUseCaseTest.kt`
 
 Exit criteria:
 - p95 metadata lookup latency reduced versus Phase 0 baseline.
@@ -161,9 +161,9 @@ Scope:
 - Use injected monotonic clock and bounded cache cleanup.
 
 Primary files:
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
-- dedicated sticky TTL and downgrade-rule tests in `feature/map/src/test/java/com/example/xcpro/map/`.
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- dedicated sticky TTL and downgrade-rule tests in `feature/map/src/test/java/com/trust3/xcpro/map/`.
 
 Exit criteria:
 - Reduced icon flicker and fewer fallback oscillations.

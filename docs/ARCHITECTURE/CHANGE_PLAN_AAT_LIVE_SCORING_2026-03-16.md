@@ -96,8 +96,8 @@ Confirm dependency flow remains:
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
 | `docs/ARCHITECTURE/ADR_TASK_RUNTIME_AUTHORITY_2026-03-15.md` | existing cross-feature SSOT decision | one authoritative runtime read seam | add a second authority for competition state, not task state |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapTasksUseCase.kt` | higher-level composition over task state | use `feature:map-runtime` as composition layer | compose scoring domain and accepted-track adapters there |
-| `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileStorage.kt` | DataStore-backed JSON snapshot with recoverable read status | keep draft/published-day storage behind a repository snapshot flow that survives read errors | competition storage will persist scoring-day JSON rather than profile JSON |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapTasksUseCase.kt` | higher-level composition over task state | use `feature:map-runtime` as composition layer | compose scoring domain and accepted-track adapters there |
+| `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileStorage.kt` | DataStore-backed JSON snapshot with recoverable read status | keep draft/published-day storage behind a repository snapshot flow that survives read errors | competition storage will persist scoring-day JSON rather than profile JSON |
 
 ### 2.2B Boundary Moves
 

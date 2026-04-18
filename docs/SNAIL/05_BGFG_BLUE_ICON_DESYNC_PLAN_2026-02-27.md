@@ -43,7 +43,7 @@ Change
 - Ensure `positionController.updateOverlay(...)` is not blocked by camera update early-return.
 
 Implementation target
-- `feature/map/src/main/java/com/example/xcpro/map/DisplayPoseRenderCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/DisplayPoseRenderCoordinator.kt`
 
 Acceptance criteria
 - Blue icon update attempts occur every display frame with valid pose, even if camera controller is unavailable.
@@ -55,8 +55,8 @@ Change
 - In `BlueLocationOverlay.updateLocation(...)`, when style/source/layer is missing, attempt bounded re-init/rebind before returning.
 
 Implementation targets
-- `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt` (if needed for central re-init path)
+- `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt` (if needed for central re-init path)
 
 Acceptance criteria
 - Returning to app no longer leaves icon stuck due to missing layer/source.
@@ -68,8 +68,8 @@ Change
 - On lifecycle resume, force one immediate icon sync from latest display pose snapshot.
 
 Implementation targets
-- `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt` or render coordinator helper
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt` or render coordinator helper
 
 Acceptance criteria
 - First visible frame after resume has icon aligned with current ownship pose.
@@ -82,8 +82,8 @@ Change
 - Add bounded suppression to avoid log spam.
 
 Implementation targets
-- `feature/map/src/main/java/com/example/xcpro/map/trail/SnailTrailManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapPositionController.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapPositionController.kt`
 
 Acceptance criteria
 - Debug diagnostics provide clear evidence if desync reappears.
@@ -126,15 +126,15 @@ Manual verification script
 
 Completed in code:
 - Phase 1: decoupled icon overlay updates from camera update null returns.
-  - `feature/map/src/main/java/com/example/xcpro/map/DisplayPoseRenderCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/DisplayPoseRenderCoordinator.kt`
 - Phase 2: added bounded blue overlay self-heal for missing image/source/layer runtime objects.
-  - `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
 - Phase 3: added one-shot display-frame sync on lifecycle resume.
-  - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
 
 Added regression coverage:
-- `feature/map/src/test/java/com/example/xcpro/map/DisplayPoseRenderCoordinatorTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapLifecycleManagerResumeSyncTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseRenderCoordinatorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapLifecycleManagerResumeSyncTest.kt`
 
 Rollback plan
 - Keep changes localized to icon/render lifecycle path.

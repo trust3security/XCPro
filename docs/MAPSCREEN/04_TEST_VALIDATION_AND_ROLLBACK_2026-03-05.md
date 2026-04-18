@@ -61,8 +61,8 @@ For each phase/package, attach:
 4. `gate_result.json` with pass/fail by SLO ID and rollback recommendation.
 5. `arch_gate_result.txt` with `scripts/arch_gate.py` status.
 6. `timebase_citations.md` citing:
-   - `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-   - `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+   - `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+   - `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 Required path convention:
 `artifacts/mapscreen/<phase>/<package-id>/<timestamp>/`.

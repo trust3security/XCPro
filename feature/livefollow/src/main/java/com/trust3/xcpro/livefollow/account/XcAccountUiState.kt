@@ -1,0 +1,30 @@
+package com.trust3.xcpro.livefollow.account
+
+data class XcAccountUiState(
+    val isLoading: Boolean = true,
+    val isSignedIn: Boolean = false,
+    val needsProfileCompletion: Boolean = false,
+    val userId: String? = null,
+    val authMethodLabel: String? = null,
+    val handle: String = "",
+    val displayName: String = "",
+    val compNumber: String = "",
+    val privacy: XcPrivacySettings = XcPrivacySettings.DEFAULT,
+    val searchQuery: String = "",
+    val searchResults: List<XcSearchPilot> = emptyList(),
+    val hasSearchedUsers: Boolean = false,
+    val incomingFollowRequests: List<XcFollowRequestItem> = emptyList(),
+    val outgoingFollowRequests: List<XcFollowRequestItem> = emptyList(),
+    val signInCapabilities: List<XcAccountSignInCapability> = emptyList(),
+    val isSigningIn: Boolean = false,
+    val isSavingProfile: Boolean = false,
+    val isSavingPrivacy: Boolean = false,
+    val isSearchingUsers: Boolean = false,
+    val isUpdatingRelationships: Boolean = false,
+    val profileSaveEnabled: Boolean = false,
+    val privacySaveEnabled: Boolean = false,
+    val searchEnabled: Boolean = false,
+    val canSendFollowRequests: Boolean = false,
+    val statusMessage: String? = null,
+    val errorMessage: String? = null
+)

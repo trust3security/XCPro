@@ -54,9 +54,9 @@ Implementation sketch
 - Consolidate trail-selection flow collection to a single UI boundary point and pass derived state downward.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- optionally `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- optionally `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
 
 Acceptance criteria
 - No large-list filtering in Compose binding path.
@@ -82,10 +82,10 @@ Implementation sketch
 - Guard toggle mutation entry with a lightweight mutex/token so only one SCIA/OGN toggle mutation runs at a time.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
 
 Acceptance criteria
 - Immediate visual acknowledgement on tap.
@@ -109,9 +109,9 @@ Implementation sketch
 - Update coordinator toggle logic to use consolidated method.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
 
 Acceptance criteria
 - User-toggle SCIA-on path persists in one transaction.
@@ -134,8 +134,8 @@ Implementation sketch
 - Add stale-job cancellation to avoid queue buildup.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
 
 Acceptance criteria
 - Heavy feature construction removed from UI coroutine path.
@@ -162,9 +162,9 @@ Implementation sketch
 - De-duplicate map-ready and first compose-effect trail push to avoid redundant heavy comparisons.
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-- optionally `feature/map/src/main/java/com/example/xcpro/map/OgnGliderTrailOverlay.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+- optionally `feature/map/src/main/java/com/trust3/xcpro/map/OgnGliderTrailOverlay.kt`
 
 Acceptance criteria
 - No perceptible first-enable render stall attributable to cadence delay.
@@ -187,8 +187,8 @@ Implementation sketch
 - Render clear action text ("select aircraft to show trails").
 
 Likely files
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContent.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContent.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
 
 Acceptance criteria
 - Reduced confusion for "SCIA enabled but no trails visible".
@@ -210,9 +210,9 @@ Change
   - background feature build correctness.
 
 Likely test files
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
-- new focused tests in `feature/map/src/test/java/com/example/xcpro/map/`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/OgnGliderTrailOverlayRenderPolicyTest.kt`
+- new focused tests in `feature/map/src/test/java/com/trust3/xcpro/map/`
 
 Required verification commands
 - `./gradlew enforceRules`

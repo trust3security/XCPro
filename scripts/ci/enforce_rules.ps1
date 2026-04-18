@@ -368,7 +368,7 @@ $script:LineCountByPath = $null
 $repoRoot = Resolve-Path (Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath "..") -ChildPath "..")
 Set-Location $repoRoot
 $approvedRememberTaskManagerCoordinatorPaths = @(
-    "feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt"
+    "feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCompat.kt"
 )
 $productionKotlinFiles = @()
 $viewModelConstructorBoundaryHits = @()
@@ -492,7 +492,7 @@ if ($runArchitectureRules) {
         "-n",
         '\b(VarioServiceManager|varioServiceManager)\.(start|stop)\(',
         "--glob", "**/src/main/java/**/*.kt",
-        "--glob", "!app/src/main/java/com/example/xcpro/service/VarioForegroundService.kt"
+        "--glob", "!app/src/main/java/com/trust3/xcpro/service/VarioForegroundService.kt"
     )
     Assert-NoMatches -Name "Vario runtime ownership bypass via direct VarioServiceManager start/stop" -RgArgs $varioManagerOwnerBypassArgs
 
@@ -509,8 +509,8 @@ if ($runArchitectureRules) {
     $taskManagerMapLibreImportsArgs = @(
         "-n",
         "org\.maplibre\.android",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt"
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt",
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt"
     )
     Assert-NoMatches -Name "MapLibre imports in task managers" -RgArgs $taskManagerMapLibreImportsArgs
 
@@ -534,9 +534,9 @@ if ($runArchitectureRules) {
     $taskGestureRuntimeOwnersInMapArgs = @(
         "-n",
         "(interface\s+TaskGestureHandler\b|object\s+TaskGestureHandlerFactory\b|object\s+NoOpTaskGestureHandler\b|class\s+AatGestureHandler\b|class\s+AATMapCoordinateConverter\b|object\s+AATMapCoordinateConverterFactory\b)",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/gestures/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/gestures/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/gestures/*.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/gestures/*.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/*.kt"
     )
     Assert-NoMatches -Name "Follow-on guard: task gesture runtime owners reintroduced in feature:map" -RgArgs $taskGestureRuntimeOwnersInMapArgs
 
@@ -544,7 +544,7 @@ if ($runArchitectureRules) {
     $legacyAatOverlayStackArgs = @(
         "-n",
         "(class\s+AATInteractiveTurnpointManager\b|fun\s+rememberAATInteractiveTurnpointManager\b|fun\s+AATInteractiveTurnpointIntegration\b|class\s+AATMapInteractionHandler\b|fun\s+rememberAATMapInteractionHandler\b|class\s+AATTargetPointDragHandler\b|fun\s+rememberAATTargetPointDragHandler\b|class\s+AATEditModeStateManager\b|fun\s+rememberAATEditModeState\b|fun\s+AATInteractiveOverlay\b|fun\s+AATDisplayOverlay\b|object\s+AATOverlayFactory\b|fun\s+AATLongPressOverlay\b|fun\s+AATEditModeOverlay\b|fun\s+AATMapVisualIndicators\b|fun\s+AnimatedTargetPointIndicator\b|fun\s+EditModeStatusIndicator\b)",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/**/*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/**/*.kt"
     )
     Assert-NoMatches -Name "Legacy AAT overlay/manager stack reintroduced in feature:map" -RgArgs $legacyAatOverlayStackArgs
 
@@ -552,7 +552,7 @@ if ($runArchitectureRules) {
     $mapGeneralSettingsHostArgs = @(
         "-n",
         "(fun\s+SettingsScreen\b|fun\s+GeneralSettingsSheetHost\b|enum\s+class\s+GeneralSubSheet\b|fun\s+GeneralSettingsCategoryGrid\b|fun\s+GeneralSettingsSubSheetContent\b|fun\s+closeGeneralToMap\b|fun\s+closeGeneralToDrawer\b)",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/**/*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/**/*.kt"
     )
     Assert-NoMatches -Name "Phase-1A guard: General Settings host/registry reintroduced in feature:map" -RgArgs $mapGeneralSettingsHostArgs
 
@@ -560,9 +560,9 @@ if ($runArchitectureRules) {
     $mapOwnerSettingsWrappersArgs = @(
         "-n",
         "(fun\s+ForecastSettingsScreen\b|fun\s+WeatherSettingsScreen\b|fun\s+WeatherSettingsSheet\b|fun\s+UnitsSettingsScreen\b|class\s+UnitsSettingsViewModel\b|fun\s+ThermallingSettingsScreen\b|fun\s+ThermallingSettingsSubSheet\b|class\s+ThermallingSettingsViewModel\b|class\s+ThermallingSettingsUseCase\b|data\s+class\s+ThermallingSettingsUiState\b|fun\s+PolarSettingsScreen\b|class\s+GliderViewModel\b|class\s+GliderUseCase\b|object\s+PolarCalculator\b|interface\s+StillAirSinkProvider\b|class\s+PolarStillAirSinkProvider\b|object\s+GlidePolarMetricsResolver\b|fun\s+LayoutScreen\b|class\s+LayoutViewModel\b|class\s+LayoutPreferencesUseCase\b|data\s+class\s+LayoutUiState\b|fun\s+ColorsScreen\b|class\s+ColorsViewModel\b|class\s+ThemePreferencesUseCase\b|fun\s+HawkVarioSettingsScreen\b|class\s+HawkVarioSettingsViewModel\b|class\s+HawkVarioSettingsUseCase\b)",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/screens/navdrawer/**/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/glider/**/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/ui/theme/**/*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/**/*.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/glider/**/*.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/ui/theme/**/*.kt"
     )
     Assert-NoMatches -Name "Phase-2 guard: owner settings wrappers reintroduced in feature:map" -RgArgs $mapOwnerSettingsWrappersArgs
 
@@ -570,7 +570,7 @@ if ($runArchitectureRules) {
     $mapGenericColorPickerArgs = @(
         "-n",
         "(fun\s+ModernColorPicker\b|internal\s+fun\s+CompactColorPreviewHeader\b|internal\s+fun\s+drawCompactHueRing\b|internal\s+fun\s+CompactColorInputMethods\b)",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/ui/components/ColorPicker*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/ui/components/ColorPicker*.kt"
     )
     Assert-NoMatches -Name "Phase-3B.2 guard: generic color-picker UI reintroduced in feature:map" -RgArgs $mapGenericColorPickerArgs
 
@@ -578,7 +578,7 @@ if ($runArchitectureRules) {
     $mapHawkRuntimeOwnersArgs = @(
         "-n",
         "(class\s+HawkVarioRepository\b|class\s+HawkConfigRepository\b|class\s+HawkVarioUseCase\b|class\s+HawkVarioEngine\b|data\s+class\s+HawkOutput\b|data\s+class\s+HawkConfig\b|class\s+AdaptiveAccelTrust\b|object\s+BaroQc\b|class\s+RollingVarianceWindow\b|data\s+class\s+HawkVarioUiState\b|enum\s+class\s+HawkConfidence\b|interface\s+HawkVarioPreviewReadPort\b)",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/hawk/*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/hawk/*.kt"
     )
     Assert-NoMatches -Name "Parent Phase-2A guard: HAWK runtime owners reintroduced in feature:map" -RgArgs $mapHawkRuntimeOwnersArgs
 
@@ -586,8 +586,8 @@ if ($runArchitectureRules) {
     $taskManagerMapApiArgs = @(
         "-n",
         "(fun\s+plotRacingOnMap\(|fun\s+clearRacingFromMap\(|fun\s+plotAATOnMap\(|fun\s+clearAATFromMap\(|fun\s+plotAATEditOverlay\(|fun\s+clearAATEditOverlay\(|fun\s+checkTargetPointHit\()",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt"
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt",
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt"
     )
     Assert-NoMatches -Name "Legacy map APIs in task managers" -RgArgs $taskManagerMapApiArgs
 
@@ -595,16 +595,16 @@ if ($runArchitectureRules) {
     $taskDomainUiImportsArgs = @(
         "-n",
         "^import\s+(android\.|androidx\.|org\.maplibre\.android)",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/domain/**/*.kt"
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/**/*.kt"
     )
     Assert-NoMatches -Name "Android/UI imports in task domain packages" -RgArgs $taskDomainUiImportsArgs
 
     # 11) Task UI boundary: no TaskManagerCoordinator type leaks in composable task/map-task surfaces.
     $taskComposableGlobs = @(
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt",
-        "--glob", "!feature/map/src/main/java/com/example/xcpro/tasks/TaskManagerCompat.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/ui/task/**/*.kt",
+        "--glob", "!feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCompat.kt"
     )
     Assert-NoMatchesInComposableFiles `
         -Name "TaskManagerCoordinator type leaks in task composable surfaces" `
@@ -615,7 +615,7 @@ if ($runArchitectureRules) {
     $taskCoordinatorLegacyHelperArgs = @(
         "-n",
         "(fun\s+getTaskSpecificWaypoint\(|fun\s+haversineDistance\()",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt"
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt"
     )
     Assert-NoMatches -Name "Legacy TaskManagerCoordinator helper escape hatches" -RgArgs $taskCoordinatorLegacyHelperArgs
 
@@ -638,8 +638,8 @@ if ($runArchitectureRules) {
         "-n",
         "TaskMapRenderRouter\.(syncTaskVisuals|clearAllTaskVisuals|plotCurrentTask)\(",
         "--glob", "feature/map/src/main/java/**/*.kt",
-        "--glob", "!feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt",
-        "--glob", "!feature/map/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt"
+        "--glob", "!feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapRenderRouter.kt",
+        "--glob", "!feature/map/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt"
     )
     Assert-NoMatches -Name "Direct task render-router calls outside sync coordinator owner" -RgArgs $taskRenderRouterBypassArgs
 
@@ -647,8 +647,8 @@ if ($runArchitectureRules) {
     $profileSettingsSwitchboardOwnerImportArgs = @(
         "-n",
         "com\.example\.xcpro\.(forecast\.|weather\.|ogn\.|adsb\.|variometer\.layout\.)",
-        "--glob", "feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt",
-        "--glob", "feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt"
+        "--glob", "feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt",
+        "--glob", "feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt"
     )
     Assert-NoMatches -Name "Profile settings switchboards importing migrated owner-module packages" -RgArgs $profileSettingsSwitchboardOwnerImportArgs
 
@@ -680,9 +680,9 @@ if ($runArchitectureRules) {
     $taskManagerCompatBypassArgs = @(
         "-n",
         "rememberTaskManagerCoordinator\(",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/task/**/*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/ui/task/**/*.kt"
     )
     foreach ($approvedPath in $approvedRememberTaskManagerCoordinatorPaths) {
         $taskManagerCompatBypassArgs += @("--glob", "!$approvedPath")
@@ -693,12 +693,12 @@ if ($runArchitectureRules) {
     $mapManagerComposeStateArgs = @(
         "-n",
         "(mutableStateOf\(|derivedStateOf\()",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapModalManager.kt",
-        "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATEditModeState.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/map/AATTargetPointDragHandler.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapModalManager.kt",
+        "--glob", "feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/AATEditModeState.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/AATTargetPointDragHandler.kt"
     )
     Assert-NoMatches -Name "Compose runtime state in non-UI runtime manager/state classes" -RgArgs $mapManagerComposeStateArgs
 }
@@ -708,9 +708,9 @@ if ($runHygieneRules) {
     $mapTaskTodoArgs = @(
         "-n",
         "TODO",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/map/**/*.kt",
-        "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-        "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt"
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/**/*.kt",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+        "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt"
     )
     Assert-NoMatches -Name "TODO markers in production map/task code paths" -RgArgs $mapTaskTodoArgs
 }
@@ -722,8 +722,8 @@ if ($runRegressionContractRules) {
 $rawOzParamsArgs = @(
     "-n",
     'ozParams\["',
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt"
 )
     Assert-NoMatches -Name "Raw ozParams string-key indexing in task production code" -RgArgs $rawOzParamsArgs
 
@@ -731,8 +731,8 @@ $rawOzParamsArgs = @(
 $rawTaskParamLiteralPairsArgs = @(
     "-n",
     '"(targetLat|targetLon|targetParam|targetLocked|keyholeInnerRadius|keyholeAngle|faiQuadrantOuterRadius|aatMinimumTimeSeconds|aatMaximumTimeSeconds|radiusMeters|outerRadiusMeters|innerRadiusMeters|startAngleDegrees|endAngleDegrees|lineWidthMeters|isTargetPointCustomized)"\s+to',
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt"
 )
 Assert-NoMatches -Name "Raw task custom-parameter literals in task production code" -RgArgs $rawTaskParamLiteralPairsArgs
 
@@ -740,8 +740,8 @@ Assert-NoMatches -Name "Raw task custom-parameter literals in task production co
 $rawCustomParametersIndexArgs = @(
     "-n",
     'customParameters\s*\[\s*"',
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt"
 )
 Assert-NoMatches -Name "Raw customParameters string-key indexing in task production code" -RgArgs $rawCustomParametersIndexArgs
 
@@ -749,9 +749,9 @@ Assert-NoMatches -Name "Raw customParameters string-key indexing in task product
 $aatKmDistancePromotionArgs = @(
     "-n",
     "AATMathUtils\.calculateDistance\([^\)]*\)\s*\*\s*METERS_PER_KILOMETER",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/replay/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/replay/**/*.kt"
 )
 Assert-NoMatches -Name "SI drift: AAT km distance helper promoted to meter contract in internals" -RgArgs $aatKmDistancePromotionArgs
 
@@ -759,7 +759,7 @@ Assert-NoMatches -Name "SI drift: AAT km distance helper promoted to meter contr
 $replayDistanceFieldArgs = @(
     "-n",
     "distanceMeters\s*=\s*speedMs",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/replay/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/replay/**/*.kt"
 )
 Assert-NoMatches -Name "Replay movement contract: distanceMeters assigned from speedMs" -RgArgs $replayDistanceFieldArgs
 
@@ -767,7 +767,7 @@ Assert-NoMatches -Name "Replay movement contract: distanceMeters assigned from s
 $ognKmHelperArgs = @(
     "-n",
     "(haversineKm\(|shouldReconnectByCenterMove\(|isWithinReceiveRadiusKm\()",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/ogn/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/ogn/**/*.kt"
 )
 Assert-NoMatches -Name "OGN km helper reintroduction in production internals" -RgArgs $ognKmHelperArgs
 
@@ -775,9 +775,9 @@ Assert-NoMatches -Name "OGN km helper reintroduction in production internals" -R
 $hardCodedDistanceLabelsArgs = @(
     "-n",
     '\"[^\"]*(km|NM|mi)[^\"]*\"',
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/DistanceCirclesCanvas.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/CommonTaskComponents.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/BottomSheetState.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/DistanceCirclesCanvas.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/CommonTaskComponents.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/BottomSheetState.kt"
 )
 Assert-NoMatches -Name "Hard-coded distance-unit labels in shared distance display surfaces" -RgArgs $hardCodedDistanceLabelsArgs
 
@@ -785,8 +785,8 @@ Assert-NoMatches -Name "Hard-coded distance-unit labels in shared distance displ
 $aatMeterVariableSourceArgs = @(
     "-n",
     "(distanceMeters|crossTrackDistanceMeters|alongTrackToCenterMeters)\s*=\s*AATMathUtils\.calculate(Distance|CrossTrackDistance|AlongTrackDistance)\(",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/**/*.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/**/*.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/**/*.kt"
 )
 Assert-NoMatches -Name "SI drift: meter-labeled variables assigned from km-returning AAT helpers" -RgArgs $aatMeterVariableSourceArgs
 
@@ -794,8 +794,8 @@ Assert-NoMatches -Name "SI drift: meter-labeled variables assigned from km-retur
 $legacyHelperFilesArgs = @(
     "-n",
     ".",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/gestures/AirspaceGestureMath.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/KeyholeVerification.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/gestures/AirspaceGestureMath.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/KeyholeVerification.kt"
 )
 Assert-NoMatches -Name "Legacy dead helper files reintroduced (AirspaceGestureMath/KeyholeVerification)" -RgArgs $legacyHelperFilesArgs
 
@@ -803,7 +803,7 @@ Assert-NoMatches -Name "Legacy dead helper files reintroduced (AirspaceGestureMa
 $distanceCirclesOverlayResidualArgs = @(
     "-n",
     "(class\s+DistanceCirclesOverlay\b|\bdistanceCirclesOverlay\b)",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/**/*.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/**/*.kt"
 )
 Assert-NoMatches -Name "Parent Phase-4 guard: dead DistanceCirclesOverlay path reintroduced" -RgArgs $distanceCirclesOverlayResidualArgs
 
@@ -811,10 +811,10 @@ Assert-NoMatches -Name "Parent Phase-4 guard: dead DistanceCirclesOverlay path r
 $mapShellRawLogArgs = @(
     "-n",
     "\bLog\.[dwei]\(",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapInitializerDataLoader.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapInitializerDataLoader.kt"
 )
 Assert-NoMatches -Name "Parent Phase-4 guard: raw Log reintroduced in hardened map shell files" -RgArgs $mapShellRawLogArgs
 
@@ -822,7 +822,7 @@ Assert-NoMatches -Name "Parent Phase-4 guard: raw Log reintroduced in hardened m
 $aatEditGeometryKmWrappersArgs = @(
     "-n",
     "(fun\s+generateCircleCoordinates\(|fun\s+generateSectorCoordinates\(|fun\s+calculateDestinationPoint\(|fun\s+haversineDistance\()",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/interaction/AATEditGeometry.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/interaction/AATEditGeometry.kt"
 )
 Assert-NoMatches -Name "AATEditGeometry km compatibility wrappers reintroduced" -RgArgs $aatEditGeometryKmWrappersArgs
 
@@ -830,7 +830,7 @@ Assert-NoMatches -Name "AATEditGeometry km compatibility wrappers reintroduced" 
 $aatGeometryGeneratorKmWrappersArgs = @(
     "-n",
     "(fun\s+generateCircleCoordinates\(|fun\s+generateStartLine\(|fun\s+generateFinishLine\(|fun\s+calculateDestinationPoint\()",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/geometry/AATGeometryGenerator.kt"
 )
 Assert-NoMatches -Name "AATGeometryGenerator km compatibility wrappers reintroduced" -RgArgs $aatGeometryGeneratorKmWrappersArgs
 
@@ -838,7 +838,7 @@ Assert-NoMatches -Name "AATGeometryGenerator km compatibility wrappers reintrodu
 $aatLongPressLocalHaversineArgs = @(
     "-n",
     "private\s+fun\s+haversineDistance\(",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/AATLongPressOverlay.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ui/AATLongPressOverlay.kt"
 )
 Assert-NoMatches -Name "AATLongPressOverlay local km haversine helper reintroduced" -RgArgs $aatLongPressLocalHaversineArgs
 
@@ -846,7 +846,7 @@ Assert-NoMatches -Name "AATLongPressOverlay local km haversine helper reintroduc
 $aatQuickValidationKm2ContractArgs = @(
     "-n",
     "calculateAreaSizeKm2\(",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt"
 )
 Assert-NoMatches -Name "AAT quick-validation area-size km2 internal contract reintroduced" -RgArgs $aatQuickValidationKm2ContractArgs
 
@@ -854,7 +854,7 @@ Assert-NoMatches -Name "AAT quick-validation area-size km2 internal contract rei
 $aatQuickValidationLinearKmLabelArgs = @(
     "-n",
     "areaSize\w*\)\}\s*km\)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt"
 )
 Assert-NoMatches -Name "AAT quick-validation area-size warnings missing squared unit label" -RgArgs $aatQuickValidationLinearKmLabelArgs
 
@@ -862,11 +862,11 @@ Assert-NoMatches -Name "AAT quick-validation area-size warnings missing squared 
 $aatPointTypeLegacyRouteArgs = @(
     "-n",
     "(onUpdateAATWaypointPointType\(|updateAATWaypointPointType\()",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/AATCoordinatorDelegate.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/AATCoordinatorDelegate.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt"
 )
 Assert-NoMatches -Name "#18 guard: legacy AAT point-type wrapper route reintroduced" -RgArgs $aatPointTypeLegacyRouteArgs
 
@@ -874,10 +874,10 @@ Assert-NoMatches -Name "#18 guard: legacy AAT point-type wrapper route reintrodu
 $aatGestureRadiusKmContractArgs = @(
     "-n",
     "(\bradiusKm\b|turnpointRadiusKm\b)",
-    "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/gestures/TaskGestureHandler.kt",
-    "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/tasks/aat/gestures/AatGestureHandler.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt",
-    "--glob", "feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt"
+    "--glob", "feature/map-runtime/src/main/java/com/trust3/xcpro/gestures/TaskGestureHandler.kt",
+    "--glob", "feature/map-runtime/src/main/java/com/trust3/xcpro/tasks/aat/gestures/AatGestureHandler.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt",
+    "--glob", "feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt"
 )
 Assert-NoMatches -Name "#18 guard: km-based AAT gesture/camera radius contracts reintroduced" -RgArgs $aatGestureRadiusKmContractArgs
 
@@ -885,13 +885,13 @@ Assert-NoMatches -Name "#18 guard: km-based AAT gesture/camera radius contracts 
 $legacyKmWrapperSurfaceArgs = @(
     "-n",
     "(resolvedCustomRadiusKm\(|fun\s+calculateDistance\(|fun\s+calculateDistanceKm\(|fun\s+calculateCrossTrackDistance\(|fun\s+calculateAlongTrackDistance\(|fun\s+calculateAreaSizeKm2\(|fun\s+haversineDistance\()",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/core/Models.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/calculations/AATMathUtils.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/areas/CircleAreaCalculator.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaCalculator.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingGeometryUtils.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/core/Models.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/calculations/AATMathUtils.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/AreaBoundaryCalculator.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/CircleAreaCalculator.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/SectorAreaCalculator.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingGeometryUtils.kt"
 )
 Assert-NoMatches -Name "#18 guard: removed km compatibility wrapper surfaces reintroduced" -RgArgs $legacyKmWrapperSurfaceArgs
 
@@ -899,7 +899,7 @@ Assert-NoMatches -Name "#18 guard: removed km compatibility wrapper surfaces rei
 $racingWaypointKmViewArgs = @(
     "-n",
     "(val\s+gateWidth:\s*Double|val\s+keyholeInnerRadius:\s*Double|val\s+faiQuadrantOuterRadius:\s*Double)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/models/RacingWaypoint.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingWaypoint.kt"
 )
 Assert-NoMatches -Name "#18 guard: deprecated racing km view properties reintroduced" -RgArgs $racingWaypointKmViewArgs
 
@@ -907,7 +907,7 @@ Assert-NoMatches -Name "#18 guard: deprecated racing km view properties reintrod
 $racingRuntimeUuidArgs = @(
     "-n",
     "UUID\.randomUUID\(",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingTaskInitializer.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskInitializer.kt"
 )
 Assert-NoMatches -Name "RT hardening: UUID randomness in racing runtime init path" -RgArgs $racingRuntimeUuidArgs
 
@@ -915,12 +915,12 @@ Assert-NoMatches -Name "RT hardening: UUID randomness in racing runtime init pat
 $taskPointTypeAnyBridgeArgs = @(
     "-n",
     "Any\?",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetCoordinatorUseCase.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/AATCoordinatorDelegate.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetCoordinatorUseCase.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/AATCoordinatorDelegate.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt"
 )
 Assert-NoMatches -Name "RT hardening: Any? point-type mutation bridge reintroduced" -RgArgs $taskPointTypeAnyBridgeArgs
 
@@ -928,8 +928,8 @@ Assert-NoMatches -Name "RT hardening: Any? point-type mutation bridge reintroduc
 $racingValidityShortcutArgs = @(
     "-n",
     "waypoints\.size\s*>=\s*2",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt"
 )
 Assert-NoMatches -Name "RT hardening: inline racing validity shortcut reintroduced" -RgArgs $racingValidityShortcutArgs
 
@@ -937,8 +937,8 @@ Assert-NoMatches -Name "RT hardening: inline racing validity shortcut reintroduc
 $runtimeSimpleTaskBypassArgs = @(
     "-n",
     "toSimpleRacingTask\(",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/tasks/TaskMapRenderRouter.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapRenderRouter.kt"
 )
 Assert-NoMatches -Name "Phase-1 guard: runtime toSimpleRacingTask bypass reintroduced" -RgArgs $runtimeSimpleTaskBypassArgs
 
@@ -946,8 +946,8 @@ Assert-NoMatches -Name "Phase-1 guard: runtime toSimpleRacingTask bypass reintro
 $waypointOnlyHydrateArgs = @(
     "-n",
     "initializeFromGenericWaypoints\(",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskCoordinatorPersistenceBridge.kt"
 )
 Assert-NoMatches -Name "Phase-1 guard: waypoint-only coordinator hydrate path reintroduced" -RgArgs $waypointOnlyHydrateArgs
 
@@ -955,7 +955,7 @@ Assert-NoMatches -Name "Phase-1 guard: waypoint-only coordinator hydrate path re
 $racingReplayHelperSimpleBypassArgs = @(
     "-n",
     "toSimpleRacingTask\(",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt"
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt"
 )
 Assert-NoMatches -Name "Phase-1 guard: replay helper simple-task bypass reintroduced" -RgArgs $racingReplayHelperSimpleBypassArgs
 
@@ -963,7 +963,7 @@ Assert-NoMatches -Name "Phase-1 guard: replay helper simple-task bypass reintrod
 $coordinatorSimpleStateArgs = @(
     "-n",
     "currentRacingTask\.",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskManagerCoordinator.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt"
 )
 Assert-NoMatches -Name "Phase-1 guard: coordinator simple-task state authority reintroduced" -RgArgs $coordinatorSimpleStateArgs
 
@@ -971,10 +971,10 @@ Assert-NoMatches -Name "Phase-1 guard: coordinator simple-task state authority r
 $racingValidatorBypassArgs = @(
     "-n",
     "hasMinimumWaypoints\(",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/RacingReplayTaskHelpers.kt",
-    "--glob", "feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt",
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt",
+    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt"
 )
 Assert-NoMatches -Name "Phase-2 guard: racing validity shortcut bypass reintroduced" -RgArgs $racingValidatorBypassArgs
 
@@ -982,7 +982,7 @@ Assert-NoMatches -Name "Phase-2 guard: racing validity shortcut bypass reintrodu
 $startCandidateLatestSelectionArgs = @(
     "-n",
     "selectedStartCandidateIndex\s*=\s*state\.startCandidates\.lastIndex",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationStartTransition.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationStartTransition.kt"
 )
 Assert-NoMatches -Name "Phase-3 guard: latest-only start candidate selection reintroduced" -RgArgs $startCandidateLatestSelectionArgs
 
@@ -990,7 +990,7 @@ Assert-NoMatches -Name "Phase-3 guard: latest-only start candidate selection rei
 $startAltitudeMslOnlyArgs = @(
     "-n",
     "fix\.altitudeMslMeters\s*>\s*rules\.maxStartAltitudeMeters",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingStartEvaluator.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingStartEvaluator.kt"
 )
 Assert-NoMatches -Name "Phase-3 guard: MSL-only start altitude comparison reintroduced" -RgArgs $startAltitudeMslOnlyArgs
 
@@ -998,7 +998,7 @@ Assert-NoMatches -Name "Phase-3 guard: MSL-only start altitude comparison reintr
 $faiQuadrantNullCrossingArgs = @(
     "-n",
     "RacingTurnPointType\.FAI_QUADRANT\s*->\s*null",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
 )
 Assert-NoMatches -Name "Phase-4 guard: FAI quadrant null crossing fallback reintroduced" -RgArgs $faiQuadrantNullCrossingArgs
 
@@ -1006,7 +1006,7 @@ Assert-NoMatches -Name "Phase-4 guard: FAI quadrant null crossing fallback reint
 $nearMissAutoAdvanceArgs = @(
     "-n",
     "TURNPOINT_NEAR_MISS\s*->\s*true",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingAdvanceState.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingAdvanceState.kt"
 )
 Assert-NoMatches -Name "Phase-4 guard: near-miss auto-advance regression reintroduced" -RgArgs $nearMissAutoAdvanceArgs
 
@@ -1015,7 +1015,7 @@ $nearMissThresholdDriftArgs = @(
     "-n",
     "-P",
     "TURNPOINT_NEAR_MISS_DISTANCE_METERS\s*=\s*(?!\s*500(?:\.0+)?\s*$)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngineSupport.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngineSupport.kt"
 )
 Assert-NoMatches -Name "Phase-4 guard: near-miss threshold drifted from 500m" -RgArgs $nearMissThresholdDriftArgs
 
@@ -1023,7 +1023,7 @@ Assert-NoMatches -Name "Phase-4 guard: near-miss threshold drifted from 500m" -R
 $finishLineCoarseFallbackArgs = @(
     "-n",
     "crossing\s*!=\s*null\s*\|\|\s*\(lineTransitionAllowed\s*&&\s*!insidePrevious\s*&&\s*insideNow\)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
 )
 Assert-NoMatches -Name "Phase-5 guard: finish line coarse fallback trigger reintroduced" -RgArgs $finishLineCoarseFallbackArgs
 
@@ -1031,7 +1031,7 @@ Assert-NoMatches -Name "Phase-5 guard: finish line coarse fallback trigger reint
 $finishEarlyReturnBypassArgs = @(
     "-n",
     "RacingNavigationStatus\.FINISHED\s*\|\|\s*state\.status\s*==\s*RacingNavigationStatus\.INVALIDATED",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt"
 )
 Assert-NoMatches -Name "Phase-5 guard: FINISHED early-return bypass reintroduced" -RgArgs $finishEarlyReturnBypassArgs
 
@@ -1039,7 +1039,7 @@ Assert-NoMatches -Name "Phase-5 guard: FINISHED early-return bypass reintroduced
 $finishRulesControllerBypassArgs = @(
     "-n",
     "startRules\s*=\s*startRules\s*\)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskNavigationController.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskNavigationController.kt"
 )
 Assert-NoMatches -Name "Phase-5 guard: controller finish-rules wiring bypass reintroduced" -RgArgs $finishRulesControllerBypassArgs
 
@@ -1050,7 +1050,7 @@ $finishCloseOrderingRegressionArgs = @(
     "--multiline",
     "-P",
     "val\s+finishCloseTimeMillis\s*=\s*finishRules\.closeTimeMillis[\s\S]*if\s*\(\s*finishCloseTimeMillis\s*!=\s*null\s*&&\s*fix\.timestampMillis\s*>\s*finishCloseTimeMillis\s*\)\s*\{[\s\S]*var\s+crossing\s*:\s*RacingBoundaryCrossing\?\s*=\s*null",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationFinishTransition.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationFinishTransition.kt"
 )
 Assert-NoMatches -Name "Phase-5 guard: close-time outlanding preempts crossing interpolation" -RgArgs $finishCloseOrderingRegressionArgs
 
@@ -1058,7 +1058,7 @@ Assert-NoMatches -Name "Phase-5 guard: close-time outlanding preempts crossing i
 $lineCrossingCoarseRadiusArgs = @(
     "-n",
     "if\s*\(\s*previousDistance\s*>\s*radiusMeters\s*\|\|\s*currentDistance\s*>\s*radiusMeters\s*\)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt"
 )
 Assert-NoMatches -Name "Phase-6 guard: line-crossing coarse radius short-circuit reintroduced" -RgArgs $lineCrossingCoarseRadiusArgs
 
@@ -1066,7 +1066,7 @@ Assert-NoMatches -Name "Phase-6 guard: line-crossing coarse radius short-circuit
 $borderBlanketDropArgs = @(
     "-n",
     "if\s*\(\s*previousRelation\s*==\s*ZoneRelation\.BORDER\s*\|\|\s*currentRelation\s*==\s*ZoneRelation\.BORDER\s*\)",
-    "--glob", "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt"
 )
 Assert-NoMatches -Name "Phase-6 guard: BORDER transition blanket-drop reintroduced" -RgArgs $borderBlanketDropArgs
 
@@ -1112,255 +1112,255 @@ if ($runLineBudgetRules) {
     # 34) Maintainability size budget for map/task hotspots.
     Assert-MaxLines `
     -Name "MapCameraManager line budget" `
-    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/MapCameraManager.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapCameraManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "MapScreenReplayCoordinator line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "MapScreenViewModel line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "MapScreenRoot line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt" `
     -MaxLines 250
 Assert-MaxLines `
     -Name "MapScreenRootStateBindings line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt" `
     -MaxLines 120
 Assert-MaxLines `
     -Name "MapScreenRootHelpers line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt" `
     -MaxLines 250
 Assert-MaxLines `
     -Name "MapScreenRootEffects line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt" `
     -MaxLines 220
 Assert-MaxLines `
     -Name "MapScreenScaffoldInputs line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt" `
     -MaxLines 320
 Assert-MaxLines `
     -Name "MapScreenContentOverlays line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt" `
     -MaxLines 250
 Assert-MaxLines `
     -Name "MapTrafficDebugPanels line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels.kt" `
     -MaxLines 250
 Assert-MaxLines `
     -Name "MapReplayDiagnosticsLogger line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/ui/MapReplayDiagnosticsLogger.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapReplayDiagnosticsLogger.kt" `
     -MaxLines 120
 Assert-MaxLines `
     -Name "LocationManager line budget" `
-    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/LocationManager.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/trust3/xcpro/map/LocationManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "FlightDataManager line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt" `
     -MaxLines 320
 Assert-MaxLines `
     -Name "BlueLocationOverlay line budget" `
-    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingNavigationEngine line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/navigation/RacingNavigationEngine.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATTaskManager line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskManager.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingTaskManager line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingTaskManager.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "TaskSheetViewModel line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/TaskSheetViewModel.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt" `
     -MaxLines 320
 Assert-MaxLines `
     -Name "RulesBTTab line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/RulesBTTab.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/RulesBTTab.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RulesBTTabComponents line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/RulesBTTabComponents.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/RulesBTTabComponents.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RulesBTTabParameters line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/RulesBTTabParameters.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/RulesBTTabParameters.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATDistanceCalculator line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/calculations/AATDistanceCalculator.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/calculations/AATDistanceCalculator.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATTaskDisplay line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskDisplay.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskDisplay.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATTaskCalculator line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskCalculator.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskCalculator.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATTaskValidator line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskValidator.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskValidator.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATTaskQuickValidationEngine line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATTaskQuickValidationEngine.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATInteractiveDistanceCalculator line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/calculations/AATInteractiveDistanceCalculator.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/calculations/AATInteractiveDistanceCalculator.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "MapActionButtons line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtons.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "MapActionButtonItems line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/components/MapActionButtonItems.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtonItems.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "SectorAreaCalculator line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaCalculator.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/SectorAreaCalculator.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "SectorAreaGeometrySupport line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingReplayLogBuilder line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayLogBuilder.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingReplayAnchorBuilder line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/replay/RacingReplayAnchorBuilder.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingTask model line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/models/RacingTask.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTask.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingTaskValidationModels line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/models/RacingTaskValidationModels.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTaskValidationModels.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingTaskResultModels line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/models/RacingTaskResultModels.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/models/RacingTaskResultModels.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "SnailTrailOverlay line budget" `
-    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/trail/SnailTrailOverlay.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailOverlay.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "SnailTrailTailRenderer line budget" `
-    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/trail/SnailTrailTailRenderer.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailTailRenderer.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATManageList line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATManageList.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATManageList.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATManageListItems line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATManageListItems.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATManageListItems.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingWaypointList line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointList.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointList.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingWaypointListItems line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/RacingWaypointListItems.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingWaypointListItems.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATPathOptimizer line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATPathOptimizer.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATPathOptimizer.kt" `
     -MaxLines 250
 Assert-MaxLines `
     -Name "AATPathOptimizerSupport line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATPathOptimizerSupport.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATPathOptimizerSupport.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATManageListTypeInference line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/AATManageListTypeInference.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/AATManageListTypeInference.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATAreaTapDetector line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/map/AATAreaTapDetector.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/map/AATAreaTapDetector.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATMovablePointManager line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/map/AATMovablePointManager.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/map/AATMovablePointManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATMovablePointGeometrySupport line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/map/AATMovablePointGeometrySupport.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/map/AATMovablePointGeometrySupport.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATMovablePointStrategySupport line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/map/AATMovablePointStrategySupport.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/map/AATMovablePointStrategySupport.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATMapRenderer line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATMapRenderer.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATMapRenderer.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATTargetPointPinRenderer line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/tasks/aat/rendering/AATTargetPointPinRenderer.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATTargetPointPinRenderer.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "FAIComplianceRules line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/validation/FAIComplianceRules.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/validation/FAIComplianceRules.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "FAIComplianceTaskRules line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/validation/FAIComplianceTaskRules.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/validation/FAIComplianceTaskRules.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "FAIComplianceAreaRules line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/validation/FAIComplianceAreaRules.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/validation/FAIComplianceAreaRules.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATWaypointManager line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/waypoints/AATWaypointManager.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/waypoints/AATWaypointManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATWaypointInitializationSupport line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/waypoints/AATWaypointInitializationSupport.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/waypoints/AATWaypointInitializationSupport.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATWaypointMutationSupport line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/aat/waypoints/AATWaypointMutationSupport.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/waypoints/AATWaypointMutationSupport.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "DefaultAATTaskEngine line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/domain/engine/DefaultAATTaskEngine.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultAATTaskEngine.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "AATTaskWaypointCodec line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/domain/engine/AATTaskWaypointCodec.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/AATTaskWaypointCodec.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingBoundaryCrossingPlanner line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/boundary/RacingBoundaryCrossingPlanner.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingBoundaryCrossingMath line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/boundary/RacingBoundaryCrossingMath.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/boundary/RacingBoundaryCrossingMath.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "KeyholeGeometry line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/turnpoints/KeyholeGeometry.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/KeyholeGeometry.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "KeyholeShapeSupport line budget" `
-    -FilePath "feature/tasks/src/main/java/com/example/xcpro/tasks/racing/turnpoints/KeyholeShapeSupport.kt" `
+    -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/KeyholeShapeSupport.kt" `
     -MaxLines 350
 
     # 35) Top-20 hotspot line budgets (RULES-20260302-LINEBUDGET500).
@@ -1368,43 +1368,43 @@ Assert-MaxLines `
     # authoritative hotspot owners once the runtime file carries the behavior.
     Assert-MaxLines `
     -Name "Top20: OgnTrafficRepository line budget" `
-    -FilePath "feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt" `
+    -FilePath "feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: MapOverlayManager line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: AdsbTrafficRepository line budget" `
-    -FilePath "feature/traffic/src/main/java/com/example/xcpro/adsb/AdsbTrafficRepository.kt" `
+    -FilePath "feature/traffic/src/main/java/com/trust3/xcpro/adsb/AdsbTrafficRepository.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: ForecastRasterOverlay line budget" `
-    -FilePath "feature/map-runtime/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt" `
+    -FilePath "feature/map-runtime/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt" `
     -MaxLines 300
 Assert-MaxLines `
     -Name "Top20: OgnThermalRepository line budget" `
-    -FilePath "feature/traffic/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt" `
+    -FilePath "feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: IgcReplayController line budget" `
-    -FilePath "feature/map/src/main/java/com/example/xcpro/replay/IgcReplayController.kt" `
+    -FilePath "feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayController.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: ForecastOverlayRepository line budget" `
-    -FilePath "feature/forecast/src/main/java/com/example/xcpro/forecast/ForecastOverlayRepository.kt" `
+    -FilePath "feature/forecast/src/main/java/com/trust3/xcpro/forecast/ForecastOverlayRepository.kt" `
     -MaxLines 320
 Assert-MaxLines `
     -Name "Top20: WeatherSettingsScreen line budget" `
-    -FilePath "feature/weather/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreen.kt" `
+    -FilePath "feature/weather/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreen.kt" `
     -MaxLines 300
 Assert-MaxLines `
     -Name "Top20: CalculateFlightMetricsUseCase line budget" `
-    -FilePath "feature/flight-runtime/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt" `
+    -FilePath "feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "Top20: AdsbSettingsScreen line budget" `
-    -FilePath "feature/traffic/src/main/java/com/example/xcpro/screens/navdrawer/AdsbSettingsScreen.kt" `
+    -FilePath "feature/traffic/src/main/java/com/trust3/xcpro/screens/navdrawer/AdsbSettingsScreen.kt" `
     -MaxLines 500
 Assert-MaxLines `
     -Name "Top20: CardPreferences line budget" `
@@ -1412,7 +1412,7 @@ Assert-MaxLines `
     -MaxLines 500
     Assert-MaxLines `
         -Name "Top20: HawkVarioSettingsScreen line budget" `
-        -FilePath "feature/profile/src/main/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntime.kt" `
+        -FilePath "feature/profile/src/main/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsScreenRuntime.kt" `
         -MaxLines 450
 }
 

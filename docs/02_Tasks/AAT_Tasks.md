@@ -5,7 +5,7 @@
 **Status:** ... Current - Consolidated from multiple sources
 **Module:** task logic in `feature/tasks/src/main/java/.../tasks/aat/`; rendering/edit surfaces in `feature/map` and `feature/map-runtime`
 
-> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [AAT ARCHITECTURE](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md)
+> **Quick Links:** [Task Separation Rules](./Task_Type_Separation.md) | [Default Values](./Default_Values.md) | [AAT ARCHITECTURE](../../feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ARCHITECTURE.md)
 
 ---
 
@@ -215,7 +215,7 @@ app/src/main/java/.../tasks/aat/
 - Zero debug statements
 - Production-ready
 
-See [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) for details.
+See [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ARCHITECTURE.md) for details.
 
 ---
 
@@ -235,7 +235,7 @@ See [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/task
 - `ComprehensiveAATValidator.kt` - Full FAI compliance
 - `FAIComplianceRules.kt` - Official rule specifications
 
-See [aat/validation/README.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/README.md) for complete guide.
+See [aat/validation/README.md](../../feature/map/src/main/java/com/trust3/xcpro/tasks/aat/validation/README.md) for complete guide.
 
 ### Competition Classes
 
@@ -393,8 +393,8 @@ AAT pilots continuously optimize during flight:
 - [Racing_Tasks.md](./Racing_Tasks.md) - Comparison with Racing
 
 ### AAT-Specific
-- [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/ARCHITECTURE.md) - Module architecture
-- [aat/validation/README.md](../../feature/map/src/main/java/com/example/xcpro/tasks/aat/validation/README.md) - Validation guide
+- [aat/ARCHITECTURE.md](../../feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ARCHITECTURE.md) - Module architecture
+- [aat/validation/README.md](../../feature/map/src/main/java/com/trust3/xcpro/tasks/aat/validation/README.md) - Validation guide
 - [AAT_PIN_DRAGGING_IMPLEMENTATION.md](./AAT_PIN_DRAGGING_IMPLEMENTATION.md) - Current AAT edit-mode interaction notes
 
 ### Historical

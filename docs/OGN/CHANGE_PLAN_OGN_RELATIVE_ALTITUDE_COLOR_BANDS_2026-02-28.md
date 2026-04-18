@@ -1,4 +1,4 @@
-﻿# CHANGE_PLAN_OGN_RELATIVE_ALTITUDE_COLOR_BANDS_2026-02-28
+# CHANGE_PLAN_OGN_RELATIVE_ALTITUDE_COLOR_BANDS_2026-02-28
 
 ## Purpose
 
@@ -172,7 +172,7 @@ SSOT ownership remains unchanged; all new logic is display-only.
 - Goal:
   - Lock baseline behavior and add tests for newly discovered risk points from code pass.
 - Files to change:
-  - New/updated tests under `feature/map/src/test/java/com/example/xcpro/map/`.
+  - New/updated tests under `feature/map/src/test/java/com/trust3/xcpro/map/`.
 - Tests to add/update:
   - Threshold color policy cases (`> +100 ft`, `< -100 ft`, `within +-100 ft`, nulls).
   - Boundary tests at exactly `+100 ft` and `-100 ft` (black, inclusive).

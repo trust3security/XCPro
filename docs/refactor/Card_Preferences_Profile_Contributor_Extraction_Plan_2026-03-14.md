@@ -60,10 +60,10 @@ Read first:
 
 - Problem statement:
   - `CARD_PREFERENCES` is still implemented directly in:
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
   - The payload DTO still lives in:
-    - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
+    - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
   - Current tests prove that the card section is present in bundle export/import,
     but they do not deeply lock card payload shape or restore side effects.
   - A clean owner-owned contributor in `dfcards-library` is currently blocked by
@@ -95,9 +95,9 @@ Read first:
 
 Current tests only prove card-section presence, not card-section behavior:
 
-- `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
-- `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
-- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`
+- `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
+- `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt`
 
 The current test suite does **not** explicitly lock:
 
@@ -119,8 +119,8 @@ mixed-contributor integration harnesses instead of small orchestration tests.
 
 Examples:
 
-- `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt:88`
-- `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt:82`
+- `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt:88`
+- `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt:82`
 
 ### 2.3 Missed Structural Blocker: Contract Module Is Not Below Card Owner
 
@@ -128,9 +128,9 @@ The current shared contract placement prevents an owner-owned card contributor:
 
 - `core/common/build.gradle.kts:28`
   - `implementation(project(":dfcards-library"))`
-- `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt:3`
+- `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt:3`
   - imports `com.example.dfcards.RealTimeFlightData`
-- `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt:61`
+- `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt:61`
   - `updateFromFlightData(flightData: RealTimeFlightData)`
 
 That means `dfcards-library` cannot depend on the profile contributor contract
@@ -160,7 +160,7 @@ Required boundary correction before that is legal:
 Files likely touched:
 
 - `core/common/build.gradle.kts`
-- `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
+- `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt`
 - `feature/map/**` orientation callsites if contract changes
 - `dfcards-library/**`
 - `feature/profile/**`
@@ -200,9 +200,9 @@ Rules:
 - Goal:
   - Add missing regression coverage for card payload content and restore side effects.
 - Files to change:
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt`
 - Tests to add/update:
   - assert serialized card payload fields explicitly
   - assert restore calls for:
@@ -223,8 +223,8 @@ Rules:
 - Goal:
   - Reduce giant profile tests to orchestration behavior only.
 - Files to change:
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
   - new focused card bundle tests under `feature/profile` and/or `dfcards-library`
 - Tests to add/update:
   - keep orchestration-only tests for:
@@ -243,7 +243,7 @@ Rules:
     owner-owned card contributor.
 - Files to change:
   - `core/common/build.gradle.kts`
-  - `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
+  - `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt`
   - orientation consumers in `feature/map/**` as needed
 - Expected change:
   - replace `RealTimeFlightData` in the shared orientation contract with a
@@ -267,10 +267,10 @@ Phase 2 result:
   - Move card capture/apply out of `feature:profile` and into the card owner module.
 - Files to change:
   - new card contributor and DI binding under `dfcards-library`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
-  - `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsContributorSupport.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
+  - `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsContributorSupport.kt`
 - Exit criteria:
   - `CARD_PREFERENCES` no longer has custom capture/apply branches in the
     profile switchboards

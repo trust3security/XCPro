@@ -74,9 +74,9 @@ Confirmed dependency flow remains:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/traffic/src/main/java/com/example/xcpro/map/TrafficPackedGroupLabelControl.kt` | shared Phase 2A packed-group runtime owner | deterministic screen-space grouping with stable keys and no randomness | label admission only; no icon displacement |
-| `feature/traffic/src/test/java/com/example/xcpro/map/OgnTrafficOverlayFeatureLabelsTest.kt` | feature-property label behavior test | assert feature label properties directly | add packed-group admission assertions |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayEffects.kt` | map shell to runtime overlay boundary | forward runtime-only inputs through existing render port | extend the existing port with selected ids only |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficPackedGroupLabelControl.kt` | shared Phase 2A packed-group runtime owner | deterministic screen-space grouping with stable keys and no randomness | label admission only; no icon displacement |
+| `feature/traffic/src/test/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureLabelsTest.kt` | feature-property label behavior test | assert feature label properties directly | add packed-group admission assertions |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficOverlayEffects.kt` | map shell to runtime overlay boundary | forward runtime-only inputs through existing render port | extend the existing port with selected ids only |
 
 ### 2.2B Boundary Moves
 
@@ -93,16 +93,16 @@ None. Ownership stays in the existing traffic runtime overlay path.
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/DECLUTTERMAP/xcpro-phase-2a-close-proximity-declutter-plan.md` | New | change-plan contract | required for non-trivial work | not runtime code | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/TrafficPackedGroupLabelControl.kt` | New | canonical packed-group detection + primary-label admission | shared runtime display policy for both overlays | not repository/VM/domain because it is screen-space display policy | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt` | Existing | OGN runtime render owner | already owns OGN map render path | not repository/VM | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt` | Existing | ADS-B runtime render owner | already owns ADS-B map render path | not repository/VM | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/OgnTrafficOverlayFeatureSupport.kt` | Existing | OGN feature emission | owns feature label properties | not style/VM | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt` | Existing | ADS-B feature emission | owns feature label properties | not style/VM | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayEffects.kt` | Existing | render-port contract | existing UI -> runtime seam | not ViewModel direct call | no |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayUiAdapters.kt` | Existing | map-shell adapter | existing shell wiring owner | not overlay runtime | no |
-| `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | runtime-shell forwarder | central runtime shell seam | not UI or repository | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | OGN runtime cache/render orchestration | existing OGN runtime owner | not UI or repository | no |
-| `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | Existing | ADS-B runtime cache/render orchestration | existing ADS-B runtime owner | not UI or repository | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficPackedGroupLabelControl.kt` | New | canonical packed-group detection + primary-label admission | shared runtime display policy for both overlays | not repository/VM/domain because it is screen-space display policy | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt` | Existing | OGN runtime render owner | already owns OGN map render path | not repository/VM | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt` | Existing | ADS-B runtime render owner | already owns ADS-B map render path | not repository/VM | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlayFeatureSupport.kt` | Existing | OGN feature emission | owns feature label properties | not style/VM | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt` | Existing | ADS-B feature emission | owns feature label properties | not style/VM | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficOverlayEffects.kt` | Existing | render-port contract | existing UI -> runtime seam | not ViewModel direct call | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficOverlayUiAdapters.kt` | Existing | map-shell adapter | existing shell wiring owner | not overlay runtime | no |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` | Existing | runtime-shell forwarder | central runtime shell seam | not UI or repository | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt` | Existing | OGN runtime cache/render orchestration | existing OGN runtime owner | not UI or repository | no |
+| `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt` | Existing | ADS-B runtime cache/render orchestration | existing ADS-B runtime owner | not UI or repository | no |
 
 ### 2.3 Time Base
 

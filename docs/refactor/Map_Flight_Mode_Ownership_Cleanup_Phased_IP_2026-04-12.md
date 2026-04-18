@@ -34,25 +34,25 @@ Non-goals:
 ## 2) Current Seam Evidence
 
 Current direct bypasses found in the narrow pass:
-- `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt`
   - owns `_visibleModes`, `visibleModesFlow`, `loadVisibleModes(...)`, `isCurrentModeVisible(...)`, and `getFallbackMode()`.
   - reads `CardPreferences` visibility directly.
   - exposes `currentFlightModeFlow`.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt`
   - calls `flightDataManager.loadVisibleModes(...)`.
   - calls `isCurrentModeVisible(...)` and `getFallbackMode()`.
   - calls `flightDataManager.updateFlightMode(...)` from a UI effect.
   - calls `prepareCardsForProfile(...)` using manager-backed `currentFlightModeSelection`.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
   - collects `flightDataManager.visibleModesFlow`.
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt`
   - collects `flightDataManager.currentFlightModeFlow`.
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelLifecycle.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelLifecycle.kt`
   - passes `flightDataManager.visibleModesFlow` into thermalling runtime.
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
   - passes `applyFlightMode = ::setFlightMode` into thermalling wiring.
   - `setFlightMode(...)` currently mutates `MapStateStore`, `FlightDataManager`, and `sensorsUseCase` directly in one step.
-- `feature/map-runtime/src/main/java/com/example/xcpro/mapruntime/state/MapStateReader.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/mapruntime/state/MapStateReader.kt`
   - currently exposes only `currentMode`. Do not widen this cross-module API unless implementation proves a runtime consumer genuinely needs it.
 
 Existing correct owner:
@@ -104,7 +104,7 @@ Map-side runtime mode state:
 ## 5) Policy Contract
 
 Create:
-- `feature/map/src/main/java/com/example/xcpro/map/MapFlightModePolicy.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapFlightModePolicy.kt`
 
 Add:
 - `internal enum class MapFlightModeSource { REQUESTED, RUNTIME_OVERRIDE, FALLBACK_CRUISE }`
@@ -145,8 +145,8 @@ Implement as one complete cleanup. Phases are ordering checkpoints, not permissi
 ### Phase 1 - Pure Policy and Tests
 
 Create:
-- `feature/map/src/main/java/com/example/xcpro/map/MapFlightModePolicy.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapFlightModePolicyTest.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapFlightModePolicy.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapFlightModePolicyTest.kt`
 
 Test:
 - empty visibility map means all three modes visible in correct order.
@@ -161,8 +161,8 @@ Test:
 ### Phase 2 - MapStateStore and ViewModel Ownership
 
 Modify:
-- `feature/map/src/main/java/com/example/xcpro/map/MapStateStore.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapStateStore.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
 
 `MapStateStore` must:
 - add private `MutableStateFlow`s for `requestedFlightMode`, `runtimeFlightModeOverride`, `visibleFlightModes`, and `effectiveFlightModeSource`.
@@ -198,8 +198,8 @@ Modify:
 ### Phase 3 - Bridge dfcards Visibility Into Map Owner
 
 Modify:
-- `feature/map/src/main/java/com/example/xcpro/map/CardIngestionCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelCardIngestion.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/CardIngestionCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelCardIngestion.kt`
 
 Bridge rules:
 - Extend `CardIngestionCoordinator.bindCards(flightViewModel)` to collect `flightViewModel.profileModeVisibilities` and `flightViewModel.activeProfileId`.
@@ -218,19 +218,19 @@ Tests:
 ### Phase 4 - Runtime, UI, and Card Preparation Rewire
 
 Modify as needed:
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelLifecycle.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenThermallingRuntimeStarter.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenThermallingRuntimeBinding.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ThermallingModeRuntimeWiring.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/effects/MapComposeEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/gestures/CustomMapGestures.kt` if it still consumes map mode visibility.
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelLifecycle.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenThermallingRuntimeStarter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenThermallingRuntimeBinding.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ThermallingModeRuntimeWiring.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/effects/MapComposeEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenOrientationRuntimeEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/gestures/CustomMapGestures.kt` if it still consumes map mode visibility.
 
 Thermalling runtime rules:
 - Stop passing `applyFlightMode = ::setFlightMode` into thermalling automation.
@@ -259,7 +259,7 @@ UI and card preparation rules:
 ### Phase 5 - FlightDataManager Cleanup
 
 Modify:
-- `feature/map/src/main/java/com/example/xcpro/map/FlightDataManager.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataManager.kt`
 - any factory/DI/callsite that passes `CardPreferences` only for mode visibility.
 
 Remove:
@@ -338,10 +338,10 @@ Run and include results:
 - `rg -n "visibleModesFlow|loadVisibleModes\\(|isCurrentModeVisible\\(|getFallbackMode\\(" feature/map`
 - `rg -n "currentFlightModeFlow" feature/map`
 - `rg -n "currentFlightModeSelection" feature/map`
-- `rg -n "applyFlightMode = ::setFlightMode|::setFlightMode" feature/map/src/main/java/com/example/xcpro/map`
+- `rg -n "applyFlightMode = ::setFlightMode|::setFlightMode" feature/map/src/main/java/com/trust3/xcpro/map`
 - `rg -n "updateFlightModeFromEnum|updateFlightMode\\(" feature/map`
 - `rg -n "setCurrentMode\\(" feature/map`
-- `rg -n "FlightDataManager.*visible|visibleModes" feature/map/src/main/java/com/example/xcpro/map`
+- `rg -n "FlightDataManager.*visible|visibleModes" feature/map/src/main/java/com/trust3/xcpro/map`
 
 Expected outcome:
 - no direct `CardPreferences` visibility reads in `feature/map`.

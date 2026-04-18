@@ -69,30 +69,30 @@ Relevant files (XCSoar)
 XCPro TC30s pipeline
 
 1) Sensors
-   - Baro + accel read in `feature/map/src/main/java/com/example/xcpro/sensors/SensorRegistry.kt`.
+   - Baro + accel read in `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt`.
    - Baro sensor registered at `SensorManager.SENSOR_DELAY_GAME` (faster).
 
 2) High-speed baro loop (50 Hz)
-   - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
    - Uses monotonic timestamps where available.
 
 3) Pressure smoothing and vario
-   - `feature/map/src/main/java/com/example/xcpro/sensors/PressureKalmanFilter.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/sensors/PressureKalmanFilter.kt`
    - `dfcards-library/src/main/java/com/example/dfcards/filters/KalmanFilter.kt`
      (`AdvancedBarometricFilter`)
    - `ModernVarioResult.verticalSpeed` is the primary baro vario.
 
 4) Sensor snapshot + brutto selection
-   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/SensorFrontEnd.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/SensorFrontEnd.kt`
    - TE vario is used when available; otherwise pressure vario or GPS vario.
 
 5) TC30s averaging
-   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
      picks `avgVarioSample` (TE -> pressure vario -> pressure altitude vario
      -> GPS vario -> brutto).
-   - `feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FusionBlackboard.kt`
      owns the 30-second rolling window.
-   - `feature/map/src/main/java/com/example/xcpro/sensors/WindowFill.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/sensors/WindowFill.kt`
      adds one sample per elapsed second.
    - **Time base for TC30s averaging uses the GPS timestamp**
      (`tc30TimeMillis = request.gpsTimestampMillis`), so the window advances
@@ -100,7 +100,7 @@ XCPro TC30s pipeline
      Baro time still drives fast display/vario updates.
 
 6) Display
-   - `feature/map/src/main/java/com/example/xcpro/flightdata/FlightDisplayMapper.kt`
+   - `feature/map/src/main/java/com/trust3/xcpro/flightdata/FlightDisplayMapper.kt`
    - `dfcards-library/src/main/java/com/example/dfcards/CardDataFormatter.kt`
      shows TC30s on card `thermal_avg`.
 
@@ -111,11 +111,11 @@ XCPro key behavior implications
 - Window resets on time going backwards or circling state toggles.
 
 Relevant files (XCPro)
-- `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/domain/FusionBlackboard.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/WindowFill.kt`
-- `feature/map/src/main/java/com/example/xcpro/sensors/PressureKalmanFilter.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/domain/FusionBlackboard.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/WindowFill.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/sensors/PressureKalmanFilter.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/filters/KalmanFilter.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/CardDataFormatter.kt`
 
@@ -153,7 +153,7 @@ Debug hooks
 
 XCPro
 - Enable thermal logs in `FlightDataConstants.LOG_THERMAL_METRICS` and read:
-  `Thermal metrics: TC30=...` in `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataEmitter.kt`.
+  `Thermal metrics: TC30=...` in `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt`.
 
 XCSoar
 - TC30s is the InfoBox "Thermal climb, last 30 s" -> `UpdateInfoBoxThermal30s()`

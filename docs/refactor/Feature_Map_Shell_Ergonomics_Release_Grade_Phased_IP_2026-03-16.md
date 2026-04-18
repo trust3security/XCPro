@@ -88,9 +88,9 @@ into `feature:map`.
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootStateBindings.kt` | already splits shell binding responsibility cleanly | focused binding/state helper files instead of one broad host | new splits may target bottom-sheet or overlay composition instead of root state |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt` | already groups shell runtime composition into narrower sections | split by composition responsibility with no new owner state | follow-on may create more section-level files if a shell file still mixes multiple panels |
-| `feature/map/src/main/java/com/example/xcpro/map/FlightDataUiAdapter.kt` | keeps conversion/orchestration outside the main ViewModel | narrow adapter/helper extraction from broad shell files | only when it reduces shell API breadth without creating a hidden owner |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootStateBindings.kt` | already splits shell binding responsibility cleanly | focused binding/state helper files instead of one broad host | new splits may target bottom-sheet or overlay composition instead of root state |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt` | already groups shell runtime composition into narrower sections | split by composition responsibility with no new owner state | follow-on may create more section-level files if a shell file still mixes multiple panels |
+| `feature/map/src/main/java/com/trust3/xcpro/map/FlightDataUiAdapter.kt` | keeps conversion/orchestration outside the main ViewModel | narrow adapter/helper extraction from broad shell files | only when it reduces shell API breadth without creating a hidden owner |
 
 ### 2.2B Boundary Moves
 
@@ -113,7 +113,7 @@ into `feature:map`.
 | `docs/refactor/Feature_Map_Shell_Ergonomics_Release_Grade_Phased_IP_2026-03-16.md` | New | execution contract for the new program | this is a new refactor track | parent plan should stay summary-level | no |
 | `docs/refactor/Feature_Map_Right_Sizing_Master_Plan_2026-03-15.md` | Existing | parent program status and pointer to the follow-on plan | keeps the program history canonical | follow-on details do not belong inline in the old plan | no |
 | `docs/refactor/Feature_Map_Autonomous_Agent_Execution_Contract_2026-03-15.md` | Existing | handoff note from closed program to new follow-on plan | avoids autonomous confusion | a new contract is not needed until implementation starts | no |
-| shell hotspot files under `feature/map/src/main/java/com/example/xcpro/map/ui/**` | Existing | shell-only composition and binding | these are already shell owners | no new module move should happen without a seam lock | maybe, phase-dependent |
+| shell hotspot files under `feature/map/src/main/java/com/trust3/xcpro/map/ui/**` | Existing | shell-only composition and binding | these are already shell owners | no new module move should happen without a seam lock | maybe, phase-dependent |
 
 ### 2.2E Module and API Surface
 
@@ -150,8 +150,8 @@ No time-base changes are planned by default.
 If a later phase touches replay cadence, sensor cadence, or timer-driven shell
 behavior, it must cite:
 
-- `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-- `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+- `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+- `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 ### 2.4 Threading and Cadence
 
@@ -217,10 +217,10 @@ review boundaries, not a new runtime architecture.
 - Goal:
   - reduce the heaviest shell-composition files without changing ownership
 - Primary targets:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/OverlayPanels.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
 - Ownership/file split changes in this phase:
   - split broad shell files into narrower shell section/binding files only
   - do not create a new owner or new cross-module API
@@ -237,11 +237,11 @@ review boundaries, not a new runtime architecture.
 - Goal:
   - reduce broad shell fan-out around the screen/viewmodel boundary
 - Primary targets:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindingGroups.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootHelpers.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindingGroups.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootHelpers.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
 - Ownership/file split changes in this phase:
   - extract narrower shell binders/adapters/helpers only when they reduce API breadth
   - do not move business logic into the ViewModel or UI

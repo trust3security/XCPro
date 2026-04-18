@@ -176,12 +176,12 @@ Gate:
 ## 6) File-level implementation targets
 
 Primary likely targets:
-- `feature/map/src/main/java/com/example/xcpro/forecast/`
+- `feature/map/src/main/java/com/trust3/xcpro/forecast/`
   - add real adapter(s), DTOs, mappers
   - keep existing ports and overlay repository contracts stable
-- `feature/map/src/main/java/com/example/xcpro/di/ForecastModule.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/di/ForecastModule.kt`
   - switch binding to real adapter
-- `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettings*`
+- `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettings*`
   - keep auth/region configuration path aligned with adapter needs
 
 Evidence and docs:

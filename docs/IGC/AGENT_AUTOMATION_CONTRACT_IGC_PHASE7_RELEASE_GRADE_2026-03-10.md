@@ -227,8 +227,8 @@ Phase 7 must use the plan verification order exactly:
 ```bash
 python scripts/arch_gate.py
 ./gradlew enforceRules
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*" --tests "com.example.xcpro.replay.Igc*"
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*" --tests "com.trust3.xcpro.replay.Igc*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.*"
 ./gradlew :feature:igc:assembleDebug
 ./gradlew :feature:map:assembleDebug
 ./gradlew :feature:igc:connectedDebugAndroidTest --no-parallel
@@ -282,17 +282,17 @@ Scope:
 
 Primary files:
 
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintValidator.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintIssue.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/domain/IgcLintRuleSet.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/usecase/IgcLintMessageMapper.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcDownloadsRepository.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintValidator.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintIssue.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/domain/IgcLintRuleSet.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/usecase/IgcLintMessageMapper.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportDiagnosticsRepository.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcDownloadsRepository.kt`
 
 Focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*Lint*" --tests "com.example.xcpro.igc.*Diagnostic*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*Lint*" --tests "com.trust3.xcpro.igc.*Diagnostic*"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -312,14 +312,14 @@ Scope:
 
 Primary files:
 
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcExportValidationAdapter.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFlightLogRepository.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcFileModels.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcExportValidationAdapter.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFlightLogRepository.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcFileModels.kt`
 
 Focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.data.*" --tests "com.example.xcpro.igc.domain.*Lint*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.data.*" --tests "com.trust3.xcpro.igc.domain.*Lint*"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -338,17 +338,17 @@ Scope:
 
 Primary files:
 
-- `feature/igc/src/main/java/com/example/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
-- `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
-- `feature/igc/src/main/java/com/example/xcpro/igc/ui/IgcFilesViewModel.kt`
-- `feature/igc/src/main/java/com/example/xcpro/screens/replay/IgcFilesScreen.kt`
-- `feature/igc/src/main/java/com/example/xcpro/screens/replay/IgcFilesShareIntents.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/data/IgcRecordingRuntimeActionSink.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/igc/ui/IgcFilesViewModel.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/screens/replay/IgcFilesScreen.kt`
+- `feature/igc/src/main/java/com/trust3/xcpro/screens/replay/IgcFilesShareIntents.kt`
 
 Focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.igc.*Diagnostic*" --tests "com.example.xcpro.igc.ui.*"
-./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.igc.*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.igc.*Diagnostic*" --tests "com.trust3.xcpro.igc.ui.*"
+./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.igc.*"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -368,14 +368,14 @@ Scope:
 
 Primary files:
 
-- `feature/igc/src/test/java/com/example/xcpro/igc/data/*`
-- `feature/igc/src/test/java/com/example/xcpro/replay/*`
-- `feature/map/src/test/java/com/example/xcpro/igc/usecase/*`
+- `feature/igc/src/test/java/com/trust3/xcpro/igc/data/*`
+- `feature/igc/src/test/java/com/trust3/xcpro/replay/*`
+- `feature/map/src/test/java/com/trust3/xcpro/igc/usecase/*`
 
 Focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.replay.Igc*" --tests "com.example.xcpro.igc.*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.replay.Igc*" --tests "com.trust3.xcpro.igc.*"
 ./gradlew :feature:igc:assembleDebug :feature:map:assembleDebug
 ```
 
@@ -400,7 +400,7 @@ Primary files:
 Focused checks:
 
 ```bash
-./gradlew :feature:igc:testDebugUnitTest --tests "com.example.xcpro.replay.Igc*"
+./gradlew :feature:igc:testDebugUnitTest --tests "com.trust3.xcpro.replay.Igc*"
 ./gradlew :feature:igc:assembleDebug
 ```
 
@@ -497,8 +497,8 @@ Minimum required evidence references:
 
 - `scripts/arch_gate.py` status
 - time abstraction reference paths:
-  - `core/time/src/main/java/com/example/xcpro/core/time/Clock.kt`
-  - `app/src/main/java/com/example/xcpro/di/TimeModule.kt`
+  - `core/time/src/main/java/com/trust3/xcpro/core/time/Clock.kt`
+  - `app/src/main/java/com/trust3/xcpro/di/TimeModule.kt`
 
 Required evidence destinations:
 

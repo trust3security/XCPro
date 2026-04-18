@@ -1,13 +1,13 @@
 package com.example.dfcards
 
-import com.example.xcpro.common.units.AltitudeM
-import com.example.xcpro.common.units.DistanceM
-import com.example.xcpro.common.units.SpeedMs
-import com.example.xcpro.common.units.UnitsFormatter
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.common.units.VerticalSpeedUnit
-import com.example.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.common.units.AltitudeM
+import com.trust3.xcpro.common.units.DistanceM
+import com.trust3.xcpro.common.units.SpeedMs
+import com.trust3.xcpro.common.units.UnitsFormatter
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.common.units.VerticalSpeedMs
+import com.trust3.xcpro.common.units.VerticalSpeedUnit
+import com.trust3.xcpro.core.flight.RealTimeFlightData
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -302,3 +302,4 @@ internal fun hawkStatusText(liveData: RealTimeFlightData): String {
     }
     return "$accelText $baroText $confText"
 }
+

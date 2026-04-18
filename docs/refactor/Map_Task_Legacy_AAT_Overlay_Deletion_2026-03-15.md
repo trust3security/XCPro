@@ -56,8 +56,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/map/src/main/java/com/example/xcpro/map/MapGestureSetup.kt` | current production AAT/task gesture owner | keep one explicit map-shell gesture path | none |
-| `feature/map/src/main/java/com/example/xcpro/tasks/TaskMapOverlay.kt` | current production task render-sync shell | preserve shell-only task overlay path | none |
+| `feature/map/src/main/java/com/trust3/xcpro/map/MapGestureSetup.kt` | current production AAT/task gesture owner | keep one explicit map-shell gesture path | none |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskMapOverlay.kt` | current production task render-sync shell | preserve shell-only task overlay path | none |
 
 ### 2.2B Boundary Moves
 
@@ -77,11 +77,11 @@
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
 | `docs/refactor/Map_Task_Legacy_AAT_Overlay_Deletion_2026-03-15.md` | New | focused execution record for this cleanup | separate follow-on deletion slice | not part of prior runtime move plan | No |
-| `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt` | Existing | delete dead legacy manager | not a live production owner | not worth migrating because it is unused | No |
-| `feature/map/src/main/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointIntegration.kt` | Existing | delete dead integration wrapper | only feeds deleted legacy overlay path | not a live shell seam | No |
-| `feature/map/src/main/java/com/example/xcpro/tasks/aat/map/*.kt` legacy stack files | Existing | delete dead map-side legacy interaction state/drag helpers | second interaction path is no longer allowed | live owner already exists elsewhere | No |
-| `feature/map/src/main/java/com/example/xcpro/tasks/aat/ui/*.kt` legacy stack files | Existing | delete dead legacy overlay UI pieces | only serve the deleted legacy path | not part of the live shell path | No |
-| `feature/map/src/test/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManagerValidationTest.kt` | Existing | delete test for deleted owner | ownership-aligned with removed code | not valid once owner is gone | No |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATInteractiveTurnpointManager.kt` | Existing | delete dead legacy manager | not a live production owner | not worth migrating because it is unused | No |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/AATInteractiveTurnpointIntegration.kt` | Existing | delete dead integration wrapper | only feeds deleted legacy overlay path | not a live shell seam | No |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/map/*.kt` legacy stack files | Existing | delete dead map-side legacy interaction state/drag helpers | second interaction path is no longer allowed | live owner already exists elsewhere | No |
+| `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/ui/*.kt` legacy stack files | Existing | delete dead legacy overlay UI pieces | only serve the deleted legacy path | not part of the live shell path | No |
+| `feature/map/src/test/java/com/trust3/xcpro/tasks/aat/AATInteractiveTurnpointManagerValidationTest.kt` | Existing | delete test for deleted owner | ownership-aligned with removed code | not valid once owner is gone | No |
 | `scripts/ci/enforce_rules.ps1` | Existing | enforce absence of deleted legacy stack and remove obsolete line budgets | repository guard owner | not appropriate in app/module code | No |
 
 ### 2.2E Module and API Surface
@@ -106,7 +106,7 @@
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| AAT area tap detection | `feature/tasks/src/main/java/com/example/xcpro/tasks/aat/map/AATAreaTapDetector.kt` | live task edit/runtime owners | task-core-owned hit-testing policy already exists there | No |
+| AAT area tap detection | `feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/map/AATAreaTapDetector.kt` | live task edit/runtime owners | task-core-owned hit-testing policy already exists there | No |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -192,8 +192,8 @@ After:
 - Outcome:
   - Completed 2026-03-15. Deleted the legacy AAT interaction manager/integration, map interaction state/drag helpers, overlay UI pieces, and the dead validation test.
 - Files to change:
-  - legacy `feature/map/src/main/java/com/example/xcpro/tasks/aat/**` cluster
-  - legacy `feature/map/src/test/java/com/example/xcpro/tasks/aat/AATInteractiveTurnpointManagerValidationTest.kt`
+  - legacy `feature/map/src/main/java/com/trust3/xcpro/tasks/aat/**` cluster
+  - legacy `feature/map/src/test/java/com/trust3/xcpro/tasks/aat/AATInteractiveTurnpointManagerValidationTest.kt`
 - Ownership/file split changes in this phase:
   - live map shell path remains
   - dead legacy path is removed

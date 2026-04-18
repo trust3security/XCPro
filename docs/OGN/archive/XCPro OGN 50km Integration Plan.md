@@ -7,23 +7,23 @@ Current code uses a 150 km radius (300 km diameter) around ownship GPS.
 ## Implemented Architecture
 
 - Repository:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepository.kt`
 - Parser:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnAprsLineParser.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnAprsLineParser.kt`
 - DDB enrichment:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnDdbRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnDdbRepository.kt`
 - Use case:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt` (`OgnTrafficUseCase`)
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt` (`OgnTrafficUseCase`)
 - ViewModel/traffic coordination:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
 - Runtime overlay:
-  - `feature/map/src/main/java/com/example/xcpro/map/OgnTrafficOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/OgnTrafficOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
 - User preferences:
-  - `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/OgnSettingsScreen.kt`
 
 ## Behavior Contract In Code
 
@@ -59,12 +59,12 @@ Not implemented:
 
 ## Tests Covering Implementation
 
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnAprsLineParserTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnSubscriptionPolicyTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrackStabilizerTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnDdbJsonParserTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnAprsLineParserTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnSubscriptionPolicyTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrackStabilizerTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnDdbJsonParserTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepositoryTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTest.kt`
 
 ## Source Of Truth
 

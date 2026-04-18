@@ -23,7 +23,7 @@ Harden OGN reconnect/runtime behavior so it is easier to reason about, easier to
 ## Current seam summary
 
 ### 1) Clean EOF can loop forever at the minimum retry cadence and stay mostly invisible
-Current behavior in `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`:
+Current behavior in `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt`:
 
 - `runConnectionLoop()` resets `backoffMs` to the start value after any non-throwing `connectAndRead()` return.
 - `connectAndRead()` returns `ConnectionExitReason.StreamEnded` on `readLine() == null`.

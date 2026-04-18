@@ -10,30 +10,30 @@ Phase 3 goal from `docs/refactor/archive/2026-04-doc-pass/Task_Architecture_Comp
 ## Implemented
 
 Added domain persistence service:
-- `feature/map/src/main/java/com/example/xcpro/tasks/domain/persistence/TaskEnginePersistenceService.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/persistence/TaskEnginePersistenceService.kt`
   - Restores task type + autosaved tasks into engines
   - Supports autosave and named task load/save/delete by task type
 
 Added persistence adapters and mapping layer:
-- `feature/map/src/main/java/com/example/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/data/persistence/TaskPersistenceAdapters.kt`
   - `SharedPrefsTaskTypeSettingsRepository`
   - `RacingTaskPersistenceAdapter` (wraps existing racing persistence/storage stack)
   - `AATTaskPersistenceAdapter` (wraps existing `AATTaskFileIO`)
   - Core `Task` <-> legacy racing/AAT model mapping helpers
 
 Updated contracts:
-- `feature/map/src/main/java/com/example/xcpro/tasks/domain/persistence/TaskPersistenceContracts.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/persistence/TaskPersistenceContracts.kt`
   - `RacingTaskPersistence`
   - `AATTaskPersistence`
   - `TaskTypeSettingsRepository`
 
 Added DI wiring:
-- `feature/map/src/main/java/com/example/xcpro/di/TaskPersistenceModule.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/di/TaskPersistenceModule.kt`
   - Binds persistence adapters to domain interfaces
   - Provides singleton `RacingTaskEngine` and `AATTaskEngine`
 
 Added unit tests:
-- `feature/map/src/test/java/com/example/xcpro/tasks/domain/persistence/TaskEnginePersistenceServiceTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/tasks/domain/persistence/TaskEnginePersistenceServiceTest.kt`
 
 ## Notes
 - Existing coordinator/UI call paths remain unchanged in this phase.

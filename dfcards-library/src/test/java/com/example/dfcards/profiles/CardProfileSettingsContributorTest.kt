@@ -3,7 +3,7 @@ package com.example.dfcards.profiles
 import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightTemplate
 import com.example.dfcards.dfcards.CardState
-import com.example.xcpro.core.common.profiles.ProfileSettingsSectionContract
+import com.trust3.xcpro.core.common.profiles.ProfileSettingsSectionContract
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -207,3 +207,4 @@ class CardProfileSettingsContributorTest {
         )
     }
 }
+

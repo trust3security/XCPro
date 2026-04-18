@@ -16,10 +16,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcpro.profile.R
-import com.example.xcpro.screens.navdrawer.SettingsTopAppBar
-import com.example.xcpro.screens.navdrawer.ThermallingSettingsContent
-import com.example.xcpro.screens.navdrawer.ThermallingSettingsViewModel
+import com.trust3.xcpro.profile.R
+import com.trust3.xcpro.screens.navdrawer.SettingsTopAppBar
+import com.trust3.xcpro.screens.navdrawer.ThermallingSettingsContent
+import com.trust3.xcpro.screens.navdrawer.ThermallingSettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

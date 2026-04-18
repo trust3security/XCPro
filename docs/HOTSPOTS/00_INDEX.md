@@ -71,12 +71,12 @@ Implementation update (2026-02-25):
 
 ## Primary code owners
 
-- Hotspot runtime and policy: `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`
-- Thermal model: `feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalModels.kt`
-- Display share bounds/clamp: `feature/map/src/main/java/com/example/xcpro/ogn/OgnHotspotsDisplayPercent.kt`
-- Preferences: `feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
-- Hotspots settings UI: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HotspotsSettingsScreen.kt`
-- Settings navigation entry: `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`
+- Hotspot runtime and policy: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`
+- Thermal model: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalModels.kt`
+- Display share bounds/clamp: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnHotspotsDisplayPercent.kt`
+- Preferences: `feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`
+- Hotspots settings UI: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HotspotsSettingsScreen.kt`
+- Settings navigation entry: `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`
 
 ## Architecture guardrails
 

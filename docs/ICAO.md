@@ -27,11 +27,11 @@ What OpenSky provides for this feature:
   - `icao24` at state-vector index `0`
   - `callsign` at index `1`
   - `category` at index `17`
-  - code: `feature/map/src/main/java/com/example/xcpro/adsb/OpenSkyStateVectorMapper.kt`
+  - code: `feature/map/src/main/java/com/trust3/xcpro/adsb/OpenSkyStateVectorMapper.kt`
 - ICAO metadata lookup:
   - endpoint: `https://opensky-network.org/api/metadata/aircraft/icao/{icao24}`
   - useful fields: `typecode`, `icaoAircraftType`, fallback `icaoAircraftClass`
-  - code: `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/OpenSkyIcaoMetadataClient.kt`
+  - code: `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/OpenSkyIcaoMetadataClient.kt`
 
 Critical behavior detail:
 
@@ -42,13 +42,13 @@ Critical behavior detail:
 Fixes implemented in this pass:
 
 - Unknown icon now maps to `ic_adsb_unknown` (no misleading plane fallback).
-  - code: `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIcon.kt`
+  - code: `feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIcon.kt`
 - Metadata lookup throughput increased for missing ICAOs:
   - on-demand batch size raised from `3` to `8`
-  - code: `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
+  - code: `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/AircraftMetadataRepositoryImpl.kt`
 - Lookup order now prioritizes targets likely to render `Unknown`:
   - unknown/unsupported category and no metadata hints are looked up first
-  - code: `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
+  - code: `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/AdsbMetadataEnrichmentUseCase.kt`
 
 ## 1B) End-to-End Data and Icon Pipeline (How It Should Work)
 
@@ -120,9 +120,9 @@ When icon is wrong or delayed:
 Helpful local scans:
 
 ```bash
-rg -n "IDX_CALLSIGN|IDX_CATEGORY|extended=1" feature/map/src/main/java/com/example/xcpro/adsb
-rg -n "metadataRevision|targetsWithMetadata|selectedTargetDetails" feature/map/src/main/java/com/example/xcpro/adsb
-rg -n "iconForAircraft|iconForCategory|Unknown" feature/map/src/main/java/com/example/xcpro/adsb/ui
+rg -n "IDX_CALLSIGN|IDX_CATEGORY|extended=1" feature/map/src/main/java/com/trust3/xcpro/adsb
+rg -n "metadataRevision|targetsWithMetadata|selectedTargetDetails" feature/map/src/main/java/com/trust3/xcpro/adsb
+rg -n "iconForAircraft|iconForCategory|Unknown" feature/map/src/main/java/com/trust3/xcpro/adsb/ui
 ```
 
 ## 1E) External References and GitHub Search Pointers
@@ -151,7 +151,7 @@ For XCPro repository searches on GitHub:
 
 Observed in current code:
 
-- Classification logic lives in UI mapper (`feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`).
+- Classification logic lives in UI mapper (`feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`).
 - One function currently mixes source precedence, ICAO decode, category fallback, and UI icon selection.
 - The `icaoAircraftType` middle digit is currently treated as size; it should represent engine count in ICAO aircraft class notation (example: `L2J` means landplane, 2 engines, jet).
 - No explicit confidence/source model for "why this icon was chosen".
@@ -168,11 +168,11 @@ Goal:
 Changes:
 
 - Add domain models:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/domain/AircraftClassification.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/domain/AircraftKind.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/domain/ClassificationSource.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/domain/AircraftClassification.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/domain/AircraftKind.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/domain/ClassificationSource.kt`
 - Add use-case contract:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/domain/ResolveAircraftClassificationUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/domain/ResolveAircraftClassificationUseCase.kt`
 
 Rules:
 
@@ -204,10 +204,10 @@ Conflict rule:
 Files:
 
 - Add resolver implementation:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/domain/DefaultResolveAircraftClassificationUseCase.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/domain/DefaultResolveAircraftClassificationUseCase.kt`
 - Refactor:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/AdsbGeoJsonMapper.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapper.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/AdsbGeoJsonMapper.kt`
 
 Exit criteria:
 
@@ -224,9 +224,9 @@ Changes:
 - Add reference table source:
   - `feature/map/src/main/assets/adsb/typecode_reference.csv`
 - Add parser/repository:
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/TypecodeReferenceParser.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/domain/TypecodeReferenceRepository.kt`
-  - `feature/map/src/main/java/com/example/xcpro/adsb/metadata/data/TypecodeReferenceRepositoryImpl.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/TypecodeReferenceParser.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/domain/TypecodeReferenceRepository.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/adsb/metadata/data/TypecodeReferenceRepositoryImpl.kt`
 - Add DI bindings in existing ADS-B module.
 
 Minimum table columns:
@@ -259,8 +259,8 @@ Changes:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbSelectedTargetDetails.kt`
-- `feature/map/src/main/java/com/example/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbSelectedTargetDetails.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/AdsbMarkerDetailsSheet.kt`
 
 Exit criteria:
 
@@ -288,9 +288,9 @@ Retain existing:
 
 Files:
 
-- `feature/map/src/main/java/com/example/xcpro/adsb/ui/AdsbAircraftIcon.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIcon.kt`
 - drawables in `feature/map/src/main/res/drawable/`
-- `feature/map/src/main/java/com/example/xcpro/map/AdsbTrafficOverlay.kt` (image registration remains enum-driven)
+- `feature/map/src/main/java/com/trust3/xcpro/map/AdsbTrafficOverlay.kt` (image registration remains enum-driven)
 
 ### Phase F2 - Mapping policy from classification to icon
 
@@ -347,10 +347,10 @@ Unit tests (required):
 
 Files:
 
-- `feature/map/src/test/java/com/example/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt` (refactor to mapper-only expectations)
+- `feature/map/src/test/java/com/trust3/xcpro/adsb/ui/AdsbAircraftIconMapperTest.kt` (refactor to mapper-only expectations)
 - add:
-  - `feature/map/src/test/java/com/example/xcpro/adsb/domain/ResolveAircraftClassificationUseCaseTest.kt`
-  - `feature/map/src/test/java/com/example/xcpro/adsb/metadata/TypecodeReferenceRepositoryTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/domain/ResolveAircraftClassificationUseCaseTest.kt`
+  - `feature/map/src/test/java/com/trust3/xcpro/adsb/metadata/TypecodeReferenceRepositoryTest.kt`
 
 Instrumentation (when relevant):
 

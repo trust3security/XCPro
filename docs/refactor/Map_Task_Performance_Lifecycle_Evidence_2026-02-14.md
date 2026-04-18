@@ -14,13 +14,13 @@ This document records the Workstream G evidence pack for the map/task slice:
 - Host: Windows (PowerShell)
 - Device: `SM-S908E` (adb id: `R5CT2084XHN`)
 - App package: `com.example.openxcpro.debug`
-- Activity: `com.example.xcpro.MainActivity`
+- Activity: `com.trust3.xcpro.MainActivity`
 
 ## 1) Task Render Dispatch Latency Check
 
 Guard test:
 
-- `feature/map/src/test/java/com/example/xcpro/map/TaskRenderSyncCoordinatorPerformanceTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/TaskRenderSyncCoordinatorPerformanceTest.kt`
 
 Budget:
 

@@ -121,9 +121,9 @@ Core gates:
 - `./gradlew assembleDebug`
 
 Focused map loop:
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.*Scia*"`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest"`
-- `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.map.MapScreenViewModelTest.onToggleOgnScia_enablingForcesOgnTrafficOn"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.*Scia*"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.OgnGliderTrailOverlayRenderPolicyTest"`
+- `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.map.MapScreenViewModelTest.onToggleOgnScia_enablingForcesOgnTrafficOn"`
 
 Windows lock-safe fallback:
 - `test-safe.bat :feature:map:testDebugUnitTest`

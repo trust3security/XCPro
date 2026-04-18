@@ -60,8 +60,8 @@
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `app/src/main/java/com/example/xcpro/appshell/settings/MapGeneralSettingsNavigation.kt` | one-shot map saved-state navigation signal | saved-state request/consume helper | signal is startup/livefollow-specific instead of settings-specific |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | existing map-backed LiveFollow handoff | ensure `map` host exists before watch flow consumes shared state | Flying path uses pilot auto-start instead of watch join |
+| `app/src/main/java/com/trust3/xcpro/appshell/settings/MapGeneralSettingsNavigation.kt` | one-shot map saved-state navigation signal | saved-state request/consume helper | signal is startup/livefollow-specific instead of settings-specific |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/watch/LiveFollowWatchEntryRoute.kt` | existing map-backed LiveFollow handoff | ensure `map` host exists before watch flow consumes shared state | Flying path uses pilot auto-start instead of watch join |
 
 ### 2.2B Boundary Moves
 
@@ -79,14 +79,14 @@
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `app/src/main/java/com/example/xcpro/startup/StartupChooserScreen.kt` | New | chooser rendering and permission/action forwarding | app-shell entry UI | not domain/data; not a LiveFollow SSOT owner | no |
-| `app/src/main/java/com/example/xcpro/startup/StartupChooserNavigation.kt` | New | chooser route and one-shot map handoff helpers | app-shell navigation concern | avoids spreading startup routing rules across screens | no |
-| `app/src/main/java/com/example/xcpro/AppNavGraph.kt` | Existing | route registration and route-to-route handoff | navigation owner already lives here | avoids new navigation host layer | no |
-| `app/src/main/java/com/example/xcpro/MainActivityScreen.kt` | Existing | app-shell launch gate state | screen already owns root nav/controller composition | not domain state | no |
-| `app/src/main/java/com/example/xcpro/MainActivity.kt` | Existing | remove app-launch pilot side effect | activity previously owned it | chooser now owns launch request timing | no |
-| `feature/livefollow/src/main/java/com/example/xcpro/livefollow/pilot/LiveFollowPilotViewModel.kt` | Existing | one-shot auto-start orchestration using existing use case | ViewModel already owns pilot intent orchestration | start command must stay out of UI | no |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreen.kt` | Existing | map UI parameter threading only | map UI shell already owns these arguments | avoids hidden global gate | no |
-| `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` | Existing | combine app-shell gate with existing replay gate | map runtime entry point already owns sensor-start wiring | avoids repository pollution | no |
+| `app/src/main/java/com/trust3/xcpro/startup/StartupChooserScreen.kt` | New | chooser rendering and permission/action forwarding | app-shell entry UI | not domain/data; not a LiveFollow SSOT owner | no |
+| `app/src/main/java/com/trust3/xcpro/startup/StartupChooserNavigation.kt` | New | chooser route and one-shot map handoff helpers | app-shell navigation concern | avoids spreading startup routing rules across screens | no |
+| `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt` | Existing | route registration and route-to-route handoff | navigation owner already lives here | avoids new navigation host layer | no |
+| `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt` | Existing | app-shell launch gate state | screen already owns root nav/controller composition | not domain state | no |
+| `app/src/main/java/com/trust3/xcpro/MainActivity.kt` | Existing | remove app-launch pilot side effect | activity previously owned it | chooser now owns launch request timing | no |
+| `feature/livefollow/src/main/java/com/trust3/xcpro/livefollow/pilot/LiveFollowPilotViewModel.kt` | Existing | one-shot auto-start orchestration using existing use case | ViewModel already owns pilot intent orchestration | start command must stay out of UI | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreen.kt` | Existing | map UI parameter threading only | map UI shell already owns these arguments | avoids hidden global gate | no |
+| `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` | Existing | combine app-shell gate with existing replay gate | map runtime entry point already owns sensor-start wiring | avoids repository pollution | no |
 
 ### 2.3 Time Base
 

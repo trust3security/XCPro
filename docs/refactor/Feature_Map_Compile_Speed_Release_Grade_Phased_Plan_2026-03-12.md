@@ -175,7 +175,7 @@
     - interpretation: weather-owned edits are now isolated to `feature:weather`, but the remaining `feature:map` shell is still too large and continues to dominate map-owned edit latency
   - 2026-03-12: Phase 5 repass found the no-churn task seam is smaller than `feature:map/tasks/*` as a whole:
     - `tasks` totals about `220` production files / `30,853` lines
-    - about `156` production files / `20,114` lines are task-owned core/runtime/state code without direct Compose, MapLibre, or `com.example.xcpro.map.*` imports
+    - about `156` production files / `20,114` lines are task-owned core/runtime/state code without direct Compose, MapLibre, or `com.trust3.xcpro.map.*` imports
     - about `64` production files / `10,739` lines are map-shell/render/UI glue and should remain in `feature:map` for the first extraction
   - 2026-03-12: Phase 5 repass also found task ownership already crosses module boundaries:
     - `app` currently provides the singleton task graph (`RacingTaskManager`, `AATTaskManager`, `TaskManagerCoordinator`)
@@ -581,10 +581,10 @@ Expected build impact:
 - Goal:
   - remove the map-agnostic forecast implementation and its Hilt/KSP owners from `feature:map` while leaving the map/runtime compatibility shell in place
 - Phase 2B repass findings:
-  - the entire `feature:map/src/main/java/com/example/xcpro/forecast` package is map-agnostic and should move as a unit instead of being split internally
+  - the entire `feature:map/src/main/java/com/trust3/xcpro/forecast` package is map-agnostic and should move as a unit instead of being split internally
   - that package is about `17` production files / `2406` lines today, and it is the main forecast business/runtime surface still forcing `feature:map` recompilation
   - Phase 2B should also move `ForecastSettingsUseCase`, `ForecastSettingsViewModel`, and the three forecast DI files; together that adds about `5` more production files / `369` lines plus the secret/config owner
-  - `ForecastSettingsScreen` is still called directly from [AppNavGraph.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/app/src/main/java/com/example/xcpro/AppNavGraph.kt) and from the map-owned local sub-sheet host, so moving the screen in this phase would force a new app dependency and extra nav churn
+  - `ForecastSettingsScreen` is still called directly from [AppNavGraph.kt](/C:/Users/Asus/AndroidStudioProjects/XCPro/app/src/main/java/com/trust3/xcpro/AppNavGraph.kt) and from the map-owned local sub-sheet host, so moving the screen in this phase would force a new app dependency and extra nav churn
   - `ForecastOverlayBottomSheetRuntime.kt`, `SkySightUiMessagePolicy.kt`, `MapScreenContentRuntime*`, and the MapLibre overlay classes are the correct compatibility shell to keep in `feature:map`
   - `feature:forecast` does not yet own the runtime/bootstrap pieces required for this move:
     - `SKYSIGHT_API_KEY` `BuildConfig` field
@@ -594,17 +594,17 @@ Expected build impact:
   - `feature:forecast` now owns the `SKYSIGHT_API_KEY` `BuildConfig` field and the moved forecast DI/runtime stack
   - `SkySightHttpContract` is now the explicit cross-module compatibility seam because the retained `feature:map` MapLibre network shim still consumes it
 - Files to change:
-  - move the full `feature:map/src/main/java/com/example/xcpro/forecast/*` package into `feature:forecast`
-  - move `feature:map/src/main/java/com/example/xcpro/di/ForecastModule.kt`
-  - move `feature:map/src/main/java/com/example/xcpro/di/ForecastNetworkModule.kt`
-  - move `feature:map/src/main/java/com/example/xcpro/di/ForecastNetworkQualifiers.kt`
-  - move `feature:map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
-  - move `feature:map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
+  - move the full `feature:map/src/main/java/com/trust3/xcpro/forecast/*` package into `feature:forecast`
+  - move `feature:map/src/main/java/com/trust3/xcpro/di/ForecastModule.kt`
+  - move `feature:map/src/main/java/com/trust3/xcpro/di/ForecastNetworkModule.kt`
+  - move `feature:map/src/main/java/com/trust3/xcpro/di/ForecastNetworkQualifiers.kt`
+  - move `feature:map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsUseCase.kt`
+  - move `feature:map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsViewModel.kt`
   - extend `feature:forecast/build.gradle.kts` so the moved runtime/auth/viewmodel slice compiles without depending on `feature:map`
 - Explicitly keep in `feature:map` for this phase:
   - `screens/navdrawer/ForecastSettingsScreen.kt`
   - `screens/navdrawer/SettingsDfRuntimeRouteSubSheets.kt` forecast sub-sheet entry
-  - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
+  - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
   - `map/ui/ForecastOverlayBottomSheetRuntime.kt`
   - `map/ui/SkySightUiMessagePolicy.kt`
   - `map/ui/MapScreenContentRuntime.kt`
@@ -615,8 +615,8 @@ Expected build impact:
   - `map/SkySightSatelliteOverlay.kt`
   - `map/SkySightMapLibreNetworkConfigurator.kt`
 - Tests to add/update:
-  - move the remaining forecast package unit tests from `feature:map/src/test/java/com/example/xcpro/forecast/*` into `feature:forecast`
-  - move `feature:map/src/test/java/com/example/xcpro/screens/navdrawer/ForecastSettingsViewModelTest.kt` with the moved settings VM/use-case owner
+  - move the remaining forecast package unit tests from `feature:map/src/test/java/com/trust3/xcpro/forecast/*` into `feature:forecast`
+  - move `feature:map/src/test/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsViewModelTest.kt` with the moved settings VM/use-case owner
   - keep map UI/runtime tests in `feature:map`, including:
     - `MapBottomSheetTabsTest`
     - `MapBottomTabsLayerInstrumentedTest`
@@ -907,7 +907,7 @@ Expected build impact:
   - the moved UI is forecast-owned presentation with no `MapLibreMap` dependency
   - `MapAuxiliaryPanelsAndSheetsSection` can keep the map projection math and simply render feature-owned hosts
   - it shrinks the live shell around an actively used path instead of chasing older compatibility wrappers
-  - `feature:forecast` already owns the `com.example.xcpro.map.ui` package for shared map-facing forecast hosts, so this follows the established no-churn package pattern
+  - `feature:forecast` already owns the `com.trust3.xcpro.map.ui` package for shared map-facing forecast hosts, so this follows the established no-churn package pattern
 - Tests to add/update:
   - add targeted owner-module coverage for the moved auxiliary hosts
   - low-churn default:
@@ -959,12 +959,12 @@ Expected build impact:
   - `MapAuxiliaryPanelsAndSheetsSection` consumes `MapAuxiliaryPanelsInputs`
   - `MapBottomTabsSection`, `QnhDialogHost`, and `QnhDialog` stay where they are
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
   - add a dedicated auxiliary-host input/state type or sibling auxiliary host to avoid pass-through churn instead of widening the generic scaffold input model
   - if needed, add a small `MapScreenScaffold` render seam (`auxiliaryHost` lambda or equivalent content slot) so the scaffold wrapper no longer imports `WeGlideUploadPromptUiState`
 - Explicitly keep unchanged in this phase:
@@ -999,18 +999,18 @@ Expected build impact:
   - `MapBottomSheetTabs.kt`, `MapTaskScreenUi.kt`, and legacy `Task.kt` remain mixed map/runtime shells and are not low-churn Phase 6D candidates
   - `MapScreenContentOverlays.kt` is mostly thin wrappers and is lower compile-payoff than the forecast settings route
 - Files to change:
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
-  - add a forecast-owned content host / body composable in `feature/forecast/src/main/java/com/example/xcpro/screens/navdrawer/`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+  - add a forecast-owned content host / body composable in `feature/forecast/src/main/java/com/trust3/xcpro/screens/navdrawer/`
   - keep call sites in:
-    - `app/src/main/java/com/example/xcpro/AppNavGraph.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/SettingsDfRuntimeRouteSubSheets.kt`
+    - `app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/SettingsDfRuntimeRouteSubSheets.kt`
 - Explicitly keep unchanged in this phase:
   - route names and nav destinations
   - `SettingsTopAppBar` ownership in `feature:map`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
-  - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Task.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Task.kt`
   - MapLibre/runtime ownership and map settings routing
 - Tests to add/update:
   - targeted owner-side tests for the moved forecast settings content only
@@ -1047,17 +1047,17 @@ Expected build impact:
     - `MapInitializer`
     - `TaskRenderSyncCoordinator`
   - the heaviest remaining runtime-side files are already concentrated in a coherent runtime cluster:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` (`483` lines)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt` (`473`)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt` (`373`)
-    - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntime.kt` (`307`)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt` (`291`)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt` (`250`)
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Task.kt` (`247`)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt` (`212`)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt` (`198`)
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenManagers.kt` (`174`)
-    - `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt` (`155`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeForecastWeatherDelegate.kt` (`483` lines)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt` (`473`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt` (`373`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntime.kt` (`307`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt` (`291`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt` (`250`)
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Task.kt` (`247`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt` (`212`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt` (`198`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenManagers.kt` (`174`)
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt` (`155`)
   - not all of those files should move in the first split:
     - `MapScreenRoot.kt`, `MapScreenScaffold*`, route shells, and compatibility wrappers are still the best shell anchor
     - `MapBottomSheetTabs.kt`, `MapTaskScreenUi.kt`, and `Task.kt` remain mixed wrappers and should stay in the shell initially unless the new module boundary proves more movement is needed
@@ -1083,7 +1083,7 @@ Expected build impact:
       - it should stay in `feature:map` for 7A and only be narrowed or relocated after a real runtime facade exists
     - `TrailSettings` is the one remaining trail-owned type leaking through `MapStateReader`; the low-churn 7A option is to trim `trailSettings` off `MapStateReader` and thread it separately, rather than drag the broader trail package into the first contract extraction
   - the first split also has two compatibility blockers:
-    - `MapTaskScreenManager` still imports `com.example.xcpro.tasks.BottomSheetState`, so that manager should stay in the shell initially unless the compatibility shim is relocated or deleted
+    - `MapTaskScreenManager` still imports `com.trust3.xcpro.tasks.BottomSheetState`, so that manager should stay in the shell initially unless the compatibility shim is relocated or deleted
     - `MapRuntimeController` still depends on `MapCommand`, `MapStyleUrlResolver`, and `BuildConfig.DEBUG`; it is safe to defer until those helpers have a clear runtime owner
   - `MapScreenContentRuntime.kt`, `MapScreenContentRuntimeSections.kt`, and `MapScreenScaffoldInputs.kt` are more shell-mixed than the prior plan stated:
     - they depend on `hiltViewModel()` entrypoints, feature-owned forecast/weather view-models, `FlightDataViewModel`, shell bindings, and long concrete runtime parameter lists
@@ -1093,36 +1093,36 @@ Expected build impact:
   - keep `:feature:map` as the stable shell / compatibility module
   - add `:feature:map-runtime` for heavy MapLibre, overlay, manager, and runtime orchestration code
 - Keep in `:feature:map` during the first runtime split:
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreen.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRoot.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffold.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenSections.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentOverlays.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenContract.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel*.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapStateStore.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapStateActionsDelegate.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenRuntimeDependencies.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenUseCases.kt` shell-owned view-model/use-case wrappers outside the runtime-owned subset
-  - `feature/map/src/main/java/com/example/xcpro/map/MapRuntimeController.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffold.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldContentHost.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentOverlays.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeEffects.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntimeSections.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenContract.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel*.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapStateStore.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapStateActionsDelegate.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenRuntimeDependencies.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenUseCases.kt` shell-owned view-model/use-case wrappers outside the runtime-owned subset
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapRuntimeController.kt`
   - route and settings shells such as:
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Task.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
-    - `feature/map/src/main/java/com/example/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Task.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ForecastSettingsScreen.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/WeatherSettingsScreenRuntime.kt`
   - mixed shell wrappers kept stable for the first split:
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapBottomSheetTabs.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/task/MapTaskScreenUi.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapBottomSheetTabs.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/task/MapTaskScreenUi.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
 - Move into `:feature:map-runtime` in the first split:
   - runtime contracts and runtime-owned grouped dependencies first:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapStateReader.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapStateActions.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapStateReader.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapStateActions.kt`
     - top-level replacements or extracted homes for:
       - `MapStateStore.MapPoint`
       - `MapStateStore.MapSize`
@@ -1134,26 +1134,26 @@ Expected build impact:
       - `MapSensorsUseCase`
       - `MapTasksUseCase`
   - manager/runtime construction and runtime orchestration after the contract extraction:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapScreenState.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenManagers.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapOverlayStack.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapTrafficOverlayUiAdapters.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenState.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenManagers.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapOverlayStack.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapTrafficOverlayUiAdapters.kt`
   - direct map runtime implementations:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManager*.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntime*.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer*.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapCamera*.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/LocationManager.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/TaskRenderSyncCoordinator.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay*.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManager*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntime*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapCamera*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/LocationManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/TaskRenderSyncCoordinator.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt`
   - defer these until after the initial runtime split proves stable:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapRuntimeController.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenContentRuntime*.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/MapWeatherOverlayEffects.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapRuntimeController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenContentRuntime*.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapWeatherOverlayEffects.kt`
   - move additional direct MapLibre helpers only when imports prove they are runtime-owned and the shell does not need to edit them frequently
 - Implementation order:
   - Phase 7A: runtime contract extraction
@@ -1214,7 +1214,7 @@ Expected build impact:
           - `MapTrackingCameraController`
           - `DisplayPoseRenderCoordinator`
           - `RenderFrameSync`
-        - it still references `com.example.xcpro.map.BuildConfig.DEBUG`
+        - it still references `com.trust3.xcpro.map.BuildConfig.DEBUG`
         - it still owns the nested `DisplayPoseSnapshot` type that shell effects consume
       - `DisplayPoseRenderCoordinator` is still coupled to `LocationManager.DisplayPoseSnapshot`, so a top-level runtime-owned snapshot contract is needed before `LocationManager` can move cleanly
       - `SnailTrailManager` is still coupled to:
@@ -1309,7 +1309,7 @@ Expected build impact:
           - remove the currently unused `SnailTrailManager` dependency from that delegate instead of dragging trail ownership into the move
           - keep `MapOverlayRuntimeMapLifecycleDelegate.kt`, `MapOverlayRuntimeStatusCoordinator.kt`, and `MapOverlayManagerRuntimeStatus.kt` shell-owned for C3
           - there is no dedicated `MapOverlayManagerRuntimeBaseOpsDelegateTest`; existing behavior coverage remains through the shell-owned `MapOverlayManager*` tests
-          - because `:feature:map-runtime` uses the `com.example.xcpro.map.runtime` namespace, the moved delegate must not rely on the shell module's implicit `BuildConfig` resolution
+          - because `:feature:map-runtime` uses the `com.trust3.xcpro.map.runtime` namespace, the moved delegate must not rely on the shell module's implicit `BuildConfig` resolution
         - implemented 2026-03-12:
           - moved `MapOverlayManagerRuntimeBaseOpsDelegate.kt` into `:feature:map-runtime`
           - replaced direct shell use-case/helper dependencies with shell-supplied refresh closures from `MapOverlayManager.kt`
@@ -1360,7 +1360,7 @@ Expected build impact:
   - `AppNavGraph.kt`
   - extracted owner-module boundaries for `feature:forecast`, `feature:weather`, `feature:tasks`, and `feature:weglide`
   - `MapScreenViewModel.kt` line-budget cleanup; that is a separate repo-health concern, not part of the compile-speed phase
-  - existing `com.example.xcpro.map*` package names, unless a later cleanup proves a rename is necessary
+  - existing `com.trust3.xcpro.map*` package names, unless a later cleanup proves a rename is necessary
 - Tests to add/update:
   - compile verification for both modules:
     - `./gradlew :feature:map-runtime:compileDebugKotlin`
@@ -1416,9 +1416,9 @@ to prevent ad hoc refactors that add surface area without materially improving
   - Do not queue speculative follow-up phases without a fresh hotspot pass.
 - Treat unrelated red repo items as separate tracks and do not mix them into
   compile-speed work:
-  - `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModel.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt`
     line-budget gate
-  - `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryTest.kt`
+  - `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryTest.kt`
 - Stop rule:
   - if the next candidate phase does not promise a broad module-boundary win or
     remove a concrete runtime-boundary blocker, stop structural refactoring and

@@ -25,7 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.xcpro.core.flight.RealTimeFlightData
+import com.trust3.xcpro.core.flight.RealTimeFlightData
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -309,3 +309,4 @@ private fun calculateQNH(baroAltitude: Double, gpsAltitude: Double): Int {
     val qnh = (standardPressure + pressureAdjustment).roundToInt()
     return qnh.coerceIn(950, 1050)
 }
+

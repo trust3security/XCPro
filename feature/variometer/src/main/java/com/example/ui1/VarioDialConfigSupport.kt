@@ -1,9 +1,9 @@
 package com.example.ui1
 
-import com.example.xcpro.common.units.UnitsFormatter
-import com.example.xcpro.common.units.UnitsPreferences
-import com.example.xcpro.common.units.VerticalSpeedMs
-import com.example.xcpro.common.units.VerticalSpeedUnit
+import com.trust3.xcpro.common.units.UnitsFormatter
+import com.trust3.xcpro.common.units.UnitsPreferences
+import com.trust3.xcpro.common.units.VerticalSpeedMs
+import com.trust3.xcpro.common.units.VerticalSpeedUnit
 
 fun stripUnit(formatted: UnitsFormatter.FormattedValue): String =
     formatted.text.replace(formatted.unitLabel, "").trim()

@@ -1,7 +1,7 @@
 package com.example.dfcards.dfcards.calculations
 
 import android.content.Context
-import com.example.xcpro.core.common.logging.AppLogger
+import com.trust3.xcpro.core.common.logging.AppLogger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -273,3 +273,4 @@ private class SrtmTile(
         return if (elevation == -32768) null else elevation.toDouble()
     }
 }
+

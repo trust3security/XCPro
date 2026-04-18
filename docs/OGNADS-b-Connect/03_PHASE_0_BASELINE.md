@@ -2,11 +2,11 @@
 
 ## Current seam evidence
 
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntime.kt:44-149`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntime.kt:44-149`  
   OGN owns runtime state today and mutates it from several contexts.
-- `feature/traffic/src/main/java/com/example/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:90-140`  
+- `feature/traffic/src/main/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryRuntimeConnectionPolicies.kt:90-140`  
   Current reconnect loop structure.
-- `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt:55, 87, 265`  
+- `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt:55, 87, 265`  
   Existing coverage already locks policy reconnect and stall-to-error, but not repeated EOF or offline wait.
 
 ## Implementation prompt
@@ -30,10 +30,10 @@ Implement only the baseline phase. Do not change production behavior yet.
 ## Files likely touched
 
 - `docs/ARCHITECTURE/...` only if the repo expects the plan to live there
-- `feature/traffic/src/test/java/com/example/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
-- optional new test helper files under `feature/traffic/src/test/java/com/example/xcpro/ogn/`
+- `feature/traffic/src/test/java/com/trust3/xcpro/ogn/OgnTrafficRepositoryConnectionTest.kt`
+- optional new test helper files under `feature/traffic/src/test/java/com/trust3/xcpro/ogn/`
 - optional new UI model test file path if missing:
-  - `feature/traffic/src/test/java/com/example/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt`
+  - `feature/traffic/src/test/java/com/trust3/xcpro/map/ui/MapTrafficConnectionIndicatorModelTest.kt`
 
 ## Tests to add or prep
 

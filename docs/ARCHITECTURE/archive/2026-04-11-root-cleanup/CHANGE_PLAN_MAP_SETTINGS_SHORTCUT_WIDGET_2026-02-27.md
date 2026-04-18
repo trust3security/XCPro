@@ -229,7 +229,7 @@ Required checks:
   - `./gradlew --no-daemon enforceRules` PASS
   - `./gradlew --no-daemon assembleDebug` PASS
   - Focused tests PASS:
-    - `:feature:map:testDebugUnitTest --tests com.example.xcpro.map.widgets.MapWidgetLayoutUseCaseTest`
-    - `:app:testDebugUnitTest --tests com.example.xcpro.MapOverlayWidgetGesturesTest`
+    - `:feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.widgets.MapWidgetLayoutUseCaseTest`
+    - `:app:testDebugUnitTest --tests com.trust3.xcpro.MapOverlayWidgetGesturesTest`
   - `./gradlew --no-daemon testDebugUnitTest` BLOCKED by external concurrent Gradle run in another session repeatedly locking:
     - `feature/map/build/test-results/testDebugUnitTest/binary/output.bin`

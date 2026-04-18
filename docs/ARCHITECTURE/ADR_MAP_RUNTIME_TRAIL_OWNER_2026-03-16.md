@@ -44,7 +44,7 @@ Required boundary choice:
   - `SnailTrailManager`
   - `SnailTrailOverlay`
   - trail render helpers and trail domain/runtime files under
-    `com.example.xcpro.map.trail/**`
+    `com.trust3.xcpro.map.trail/**`
   - `TrailProcessor`, `TrailUpdateInput`, `TrailUpdateResult`,
     `TrailRenderState`, and `TrailTimeBase`
   - `SnailTrailRuntimeState` as the narrow shell/runtime bridge

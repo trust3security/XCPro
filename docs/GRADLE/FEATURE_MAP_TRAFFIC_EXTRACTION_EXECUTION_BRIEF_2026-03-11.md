@@ -79,18 +79,18 @@ Stop condition:
 4. No profile/QNH/widget repository moves in this workstream.
 5. Do not claim build-speed wins for same-module file shuffles.
 6. Keep replay behavior unchanged.
-7. Preserve the existing map-facing package contract `com.example.xcpro.map`
+7. Preserve the existing map-facing package contract `com.trust3.xcpro.map`
    where practical to minimize call-site churn.
 
 ## Important Constraint
 
 `feature:traffic` already contains a map-facing transitional surface:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficMapApi.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficMapModels.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- traffic debug panels already moved under `feature/traffic/src/main/java/com/example/xcpro/map/ui`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficMapApi.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficMapModels.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- traffic debug panels already moved under `feature/traffic/src/main/java/com/trust3/xcpro/map/ui`
 
 That is the preferred landing zone for this workstream.
 
@@ -132,44 +132,44 @@ Do not widen many existing `internal` types to `public` just to force the move.
 
 These should be treated as the target home and extended, not duplicated:
 
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapTrafficUseCases.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficMapApi.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/TrafficMapModels.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeTrafficHelpers.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
-- `feature/traffic/src/main/java/com/example/xcpro/map/ui/MapTrafficDebugPanels*.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapTrafficUseCases.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficMapApi.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/TrafficMapModels.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeTrafficHelpers.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeOgnDelegate.kt`
+- `feature/traffic/src/main/java/com/trust3/xcpro/map/ui/MapTrafficDebugPanels*.kt`
 
 ### Remaining traffic-heavy files still in `feature:map`
 
 Primary targets:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelTrafficSelection.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelTrafficSelection.kt`
 - traffic-specific builder functions currently in
-  `feature/map/src/main/java/com/example/xcpro/map/MapScreenViewModelStateBuilders.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenBindings.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenBindings.kt`
 - traffic fields in
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputModel.kt`
 - traffic setup in
-  `feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenScaffoldInputs.kt`
+  `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt`
 
 Secondary targets:
 
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeCounters.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeStatusCoordinator.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeStatus.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapAdsbPersistentStatus.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/MapAdsbStatusTestTags.kt`
-- `feature/map/src/main/java/com/example/xcpro/map/ui/OgnTargetPolicy.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeCounters.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeStatusCoordinator.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeStatus.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapAdsbPersistentStatus.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapAdsbStatusTestTags.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/map/ui/OgnTargetPolicy.kt`
 
 Existing tests to preserve/update:
 
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenTrafficCoordinatorOgnTargetTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapScreenViewModelTrafficSelectionTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/ui/MapScreenRootEffectsTest.kt`
-- `feature/map/src/test/java/com/example/xcpro/map/MapOverlayRuntimeStatusCoordinatorTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenTrafficCoordinatorOgnTargetTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapScreenViewModelTrafficSelectionTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/ui/MapScreenRootEffectsTest.kt`
+- `feature/map/src/test/java/com/trust3/xcpro/map/MapOverlayRuntimeStatusCoordinatorTest.kt`
 
 ## Phased Execution
 

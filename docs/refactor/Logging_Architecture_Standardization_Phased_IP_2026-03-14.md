@@ -18,7 +18,7 @@
   - Phase 0 complete: logging drift, privacy risk, and hotspot clusters were baselined; temporary deviation recorded.
   - Phase 1 complete: `AppLogger` now has an explicit seam contract, lazy rate-limited/sampled debug helpers, locale-stable coordinate formatting, and focused contract coverage in app-side JVM tests.
   - Phase 2 complete: the scoped privacy-risk files no longer print exact profile identifiers, waypoint names/coordinates, or session IDs directly from raw `Log.*` callsites.
-  - Phase 3 in progress: the `feature/variometer` audio hotspot cluster now routes production logging through `AppLogger`, uses shared rate limiting for recurring loop/focus/audio-track failure paths, and no longer contains raw `Log.*` callsites in `com.example.xcpro.audio`.
+  - Phase 3 in progress: the `feature/variometer` audio hotspot cluster now routes production logging through `AppLogger`, uses shared rate limiting for recurring loop/focus/audio-track failure paths, and no longer contains raw `Log.*` callsites in `com.trust3.xcpro.audio`.
   - Phase 3 in progress: the map gesture/runtime cluster removed pure gesture drag spam from `VariometerWidget`, moved `LocationSensorsController` to rate-limited operational logging through `AppLogger`, and replaced raw `MapUserInteractionController` logs with minimal canonical diagnostics.
   - Phase 3 in progress: the remaining map widget gesture cluster removed low-value dropdown and drag debug chatter from `FlightModeMenu`, `FlightModeMenuImpl`, `SideHamburgerMenu`, and `SideHamburgerMenuImpl` without changing widget behavior.
   - Phase 3 in progress: the map bootstrap cluster reduced `MapInitializer` to canonical bootstrap/timeout/error diagnostics only, deleting gesture chatter and moving retained logs onto `AppLogger`.
@@ -39,10 +39,10 @@
     - `AppLogger` usage in about `34` production files / `194` references
     - `0` production uses of `AppLogger.redactLatLon(...)` or `AppLogger.redactCoord(...)`
   - Current raw-log drift includes privacy-sensitive and review-noisy examples such as:
-    - `feature/tasks/src/main/java/com/example/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
+    - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
     - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/OpenMeteoElevationApi.kt`
-    - `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
-    - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+    - `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
   - Hot-path and hotspot clusters remain concentrated in:
     - `feature/variometer`
     - `feature/map`
@@ -86,14 +86,14 @@
 
 ### 2.2 Existing Seams To Reuse
 
-- `core/common/src/main/java/com/example/xcpro/core/common/logging/AppLogger.kt`
+- `core/common/src/main/java/com/trust3/xcpro/core/common/logging/AppLogger.kt`
   - existing canonical logging seam
   - already provides debug gating, rate limiting, sampling, and coordinate redaction helpers
 - Existing healthy callsite patterns:
-  - `feature/map/src/main/java/com/example/xcpro/map/BlueLocationOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/map/DistanceCirclesOverlay.kt`
-  - `feature/map/src/main/java/com/example/xcpro/replay/IgcReplayControllerRuntime.kt`
-  - `feature/map/src/main/java/com/example/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/BlueLocationOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/map/DistanceCirclesOverlay.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntime.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt`
 
 ### 2.3 Dependency Barrier Check
 
@@ -216,7 +216,7 @@ Rules:
 - Goal:
   - Make `AppLogger` an explicitly acceptable professional boundary instead of an implicit mutable utility.
 - Files to change:
-  - `core/common/src/main/java/com/example/xcpro/core/common/logging/AppLogger.kt`
+  - `core/common/src/main/java/com/trust3/xcpro/core/common/logging/AppLogger.kt`
   - logger unit tests in `core/common` or the owning module
   - docs only if minor clarification is required
 - Tests to add/update:
@@ -237,10 +237,10 @@ Rules:
 - Goal:
   - Remove or centralize the highest-risk raw logs that print coordinates, names, IDs, or session identifiers.
 - Files to change:
-  - `feature/tasks/src/main/java/com/example/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
+  - `feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/turnpoints/FinishLineDisplay.kt`
   - `dfcards-library/src/main/java/com/example/dfcards/dfcards/calculations/OpenMeteoElevationApi.kt`
-  - `app/src/main/java/com/example/xcpro/MainActivityScreen.kt`
-  - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+  - `app/src/main/java/com/trust3/xcpro/MainActivityScreen.kt`
+  - `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
   - any narrow supporting logging helpers needed by the chosen callsite shape
 - Tests to add/update:
   - targeted regression tests where logging helpers change code shape materially
@@ -257,12 +257,12 @@ Rules:
   - Reduce uncontrolled logging in the largest hotspot files and modules without broad churn.
 - Files to change:
   - top hotspot clusters first, likely including:
-    - `feature/variometer/src/main/java/com/example/xcpro/audio/VarioAudioEngine.kt`
-    - `feature/variometer/src/main/java/com/example/xcpro/audio/VarioToneGenerator.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/LocationSensorsController.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/VariometerWidget.kt`
-    - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapUserInteractionController.kt`
+    - `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioAudioEngine.kt`
+    - `feature/variometer/src/main/java/com/trust3/xcpro/audio/VarioToneGenerator.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/LocationSensorsController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/VariometerWidget.kt`
+    - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapUserInteractionController.kt`
 - Tests to add/update:
   - targeted tests only where logging helper changes affect branching or guard conditions
   - hotspot grep/count evidence attached in review notes
@@ -270,7 +270,7 @@ Rules:
   - top hotspot files no longer use uncontrolled raw `Log.*` for feature-level debug noise
   - kept hot-path logs use shared rate limiting/sampling or are explicitly justified as platform edges
 - Progress note:
-  - First cluster completed 2026-03-14 in `feature/variometer/src/main/java/com/example/xcpro/audio`.
+  - First cluster completed 2026-03-14 in `feature/variometer/src/main/java/com/trust3/xcpro/audio`.
   - Raw `Log.*` callsites in the audio slice were reduced from `49` to `0` by migrating:
     - `VarioAudioEngine.kt`
     - `VarioToneGenerator.kt`
@@ -279,35 +279,35 @@ Rules:
     - `AudioFocusManager.kt`
   - Repeated audio-engine stats, focus-denied warnings, beep-loop failures, and AudioTrack reset/write failures now use shared rate limiting instead of uncontrolled per-loop logging.
   - Second cluster completed 2026-03-14 across:
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/VariometerWidget.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/LocationSensorsController.kt`
-    - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapUserInteractionController.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/VariometerWidget.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/LocationSensorsController.kt`
+    - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapUserInteractionController.kt`
   - The widget now emits no gesture debug spam, the sensor controller keeps only rate-limited operational logs, and the runtime controller keeps only minimal return/recenter diagnostics through `AppLogger`.
   - Third cluster completed 2026-03-14 across:
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/FlightModeMenu.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/FlightModeMenuImpl.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/SideHamburgerMenu.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/ui/widgets/SideHamburgerMenuImpl.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/FlightModeMenu.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/FlightModeMenuImpl.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/SideHamburgerMenu.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/ui/widgets/SideHamburgerMenuImpl.kt`
   - The menu widgets now emit no drag or dropdown debug chatter; the cluster was closed by deleting low-value logs instead of re-routing them through `AppLogger`.
   - Fourth cluster completed 2026-03-14 in:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapInitializer.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapInitializer.kt`
   - `MapInitializer` now keeps only bootstrap/timeout/error diagnostics through `AppLogger`; stale style, idle-camera, gesture begin/end, and return-button chatter were deleted instead of migrated.
   - Fifth cluster completed 2026-03-14 across:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt`
-    - `feature/map/src/main/java/com/example/xcpro/map/MapLifecycleSurfaceAdapter.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapOverlayRuntimeMapLifecycleDelegate.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapLifecycleSurfaceAdapter.kt`
   - The lifecycle/bootstrap seam now keeps only error or warning diagnostics that belong to lifecycle owners; raw style-reload, overlay-init, map-view lifecycle, and snapshot-success chatter were deleted instead of migrated.
   - Sixth cluster completed 2026-03-14 across:
-    - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
-    - `feature/map-runtime/src/main/java/com/example/xcpro/map/MapLifecycleManager.kt`
+    - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapOverlayManagerRuntimeBaseOpsDelegate.kt`
+    - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/MapLifecycleManager.kt`
   - The map-runtime overlay/lifecycle seam now keeps only failure diagnostics through `AppLogger`; success/cancel/replay-skip chatter was removed, and waypoint refresh now logs coroutine failures inside the launched owner scope instead of pretending synchronous success.
   - Seventh cluster completed 2026-03-14 in:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapTaskScreenManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapTaskScreenManager.kt`
   - The task-panel seam now emits no raw task-panel lifecycle/UI chatter; only save failure remains, through `AppLogger`, so panel state transitions and navigation-toggle noise no longer consume raw-log budget.
   - Eighth cluster completed 2026-03-14 in:
-    - `feature/map/src/main/java/com/example/xcpro/vario/VarioServiceManager.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt`
   - The service-runtime seam now keeps only startup/readiness warnings and true failure diagnostics through `AppLogger`; start/stop chatter, GPS cadence success logs, sensor-retry success logs, and IGC session event chatter were removed, and repeated retry warnings now use shared rate limiting.
   - Ninth cluster completed 2026-03-15 in:
-    - `feature/map/src/main/java/com/example/xcpro/map/MapScreenReplayCoordinator.kt`
+    - `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`
   - The replay coordinator seam now emits no raw replay-start chatter or coordinate-bearing racing debug logs; only replay-start failures remain, through `AppLogger`, so demo/replay orchestration no longer carries its own ad hoc debug policy.
   - Tenth cluster completed 2026-03-15 in:
     - `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardPreferences.kt`

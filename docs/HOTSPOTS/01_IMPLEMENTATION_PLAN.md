@@ -49,12 +49,12 @@ Confirm flow remains:
 `UI -> domain/usecase -> data/repository`
 
 - Modules/files touched:
-`feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalRepository.kt`,
-`feature/map/src/main/java/com/example/xcpro/ogn/OgnThermalModels.kt`,
-`feature/map/src/main/java/com/example/xcpro/ogn/OgnTrafficPreferencesRepository.kt`,
-`feature/map/src/main/java/com/example/xcpro/screens/navdrawer/HotspotsSettings*.kt`,
-`feature/map/src/main/java/com/example/xcpro/screens/navdrawer/Settings-df.kt`,
-`app/src/main/java/com/example/xcpro/AppNavGraph.kt`.
+`feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalRepository.kt`,
+`feature/map/src/main/java/com/trust3/xcpro/ogn/OgnThermalModels.kt`,
+`feature/map/src/main/java/com/trust3/xcpro/ogn/OgnTrafficPreferencesRepository.kt`,
+`feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/HotspotsSettings*.kt`,
+`feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/Settings-df.kt`,
+`app/src/main/java/com/trust3/xcpro/AppNavGraph.kt`.
 - Any boundary risk:
 time-base mixing risk between monotonic and wall-time paths.
 
@@ -261,9 +261,9 @@ Severity-ordered findings from Hotspots display-path code re-pass:
 
 | Severity | Finding | Evidence |
 |---|---|---|
-| High | Hotspots toggle does not auto-enable OGN overlay, so hotspot rendering path receives `emptyList()` when OGN is off. | `MapScreenTrafficCoordinator.onToggleOgnThermals` only flips thermal pref (`feature/map/src/main/java/com/example/xcpro/map/MapScreenTrafficCoordinator.kt:214`), while render gate requires `ognOverlayEnabled && showOgnThermalsEnabled` (`feature/map/src/main/java/com/example/xcpro/map/ui/MapScreenRootEffects.kt:89`). |
-| High | Overlay anchor lists for forecast/weather/satellite do not include thermal layer IDs, enabling z-order where thermal circles can be occluded. | `ForecastRasterOverlay.ANCHOR_LAYER_IDS` (`feature/map/src/main/java/com/example/xcpro/map/ForecastRasterOverlay.kt:777`), `WeatherRainOverlay.baseOverlayAnchors` (`feature/map/src/main/java/com/example/xcpro/map/WeatherRainOverlay.kt:311`), `SkySightSatelliteOverlay.SKY_SIGHT_ANCHOR_LAYER_IDS` (`feature/map/src/main/java/com/example/xcpro/map/SkySightSatelliteOverlay.kt:350`). |
-| Low | Legacy TH FAB component is currently unused in active map UI composition paths. | `OgnThermalsButton` only appears in its own file (`feature/map/src/main/java/com/example/xcpro/map/components/OgnThermalsButton.kt:16`). |
+| High | Hotspots toggle does not auto-enable OGN overlay, so hotspot rendering path receives `emptyList()` when OGN is off. | `MapScreenTrafficCoordinator.onToggleOgnThermals` only flips thermal pref (`feature/map/src/main/java/com/trust3/xcpro/map/MapScreenTrafficCoordinator.kt:214`), while render gate requires `ognOverlayEnabled && showOgnThermalsEnabled` (`feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRootEffects.kt:89`). |
+| High | Overlay anchor lists for forecast/weather/satellite do not include thermal layer IDs, enabling z-order where thermal circles can be occluded. | `ForecastRasterOverlay.ANCHOR_LAYER_IDS` (`feature/map/src/main/java/com/trust3/xcpro/map/ForecastRasterOverlay.kt:777`), `WeatherRainOverlay.baseOverlayAnchors` (`feature/map/src/main/java/com/trust3/xcpro/map/WeatherRainOverlay.kt:311`), `SkySightSatelliteOverlay.SKY_SIGHT_ANCHOR_LAYER_IDS` (`feature/map/src/main/java/com/trust3/xcpro/map/SkySightSatelliteOverlay.kt:350`). |
+| Low | Legacy TH FAB component is currently unused in active map UI composition paths. | `OgnThermalsButton` only appears in its own file (`feature/map/src/main/java/com/trust3/xcpro/map/components/OgnThermalsButton.kt:16`). |
 
 Proposed remediation intent:
 

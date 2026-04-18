@@ -17,12 +17,12 @@
   - the shared orientation contract now uses
     `OrientationFlightDataSnapshot`
   - shared units types used by `core/common` moved under
-    `core/common/src/main/java/com/example/xcpro/common/units/`
+    `core/common/src/main/java/com/trust3/xcpro/common/units/`
   - orientation consumers in `feature:map` were updated without changing
     orientation behavior
 - Verification completed:
   - `./gradlew :core:common:compileDebugKotlin --no-configuration-cache`
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.example.xcpro.MapOrientationManagerTest" --no-configuration-cache`
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.MapOrientationManagerTest" --no-configuration-cache`
   - `./gradlew :feature:map:compileDebugKotlin --no-configuration-cache "-Pksp.incremental=false"`
   - `./gradlew enforceRules --no-configuration-cache`
   - `./gradlew testDebugUnitTest --no-configuration-cache`
@@ -78,9 +78,9 @@ Reference files reviewed:
 
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
-| `feature/weather/src/main/java/com/example/xcpro/weather/rain/WeatherOverlayProfileSettingsContributor.kt` | owner-owned settings contributor already migrated out of `feature:profile` | feature-owned capture/apply contributor with private payload DTO | card contributor will live in `dfcards-library`, not a `feature:*` module |
-| `feature/weather/src/main/java/com/example/xcpro/weather/rain/WeatherProfileSettingsBindingsModule.kt` | current contributor multibinding pattern | `@IntoSet` binding for capture/apply owners | same pattern, different owner module |
-| `app/src/main/java/com/example/xcpro/di/AppModule.kt` | repo already has the canonical DI provider for `CardPreferences` | injected singleton owner from app graph | UI cleanup should reuse this provider instead of constructing `CardPreferences(context)` |
+| `feature/weather/src/main/java/com/trust3/xcpro/weather/rain/WeatherOverlayProfileSettingsContributor.kt` | owner-owned settings contributor already migrated out of `feature:profile` | feature-owned capture/apply contributor with private payload DTO | card contributor will live in `dfcards-library`, not a `feature:*` module |
+| `feature/weather/src/main/java/com/trust3/xcpro/weather/rain/WeatherProfileSettingsBindingsModule.kt` | current contributor multibinding pattern | `@IntoSet` binding for capture/apply owners | same pattern, different owner module |
+| `app/src/main/java/com/trust3/xcpro/di/AppModule.kt` | repo already has the canonical DI provider for `CardPreferences` | injected singleton owner from app graph | UI cleanup should reuse this provider instead of constructing `CardPreferences(context)` |
 
 No new discovery pattern is needed.
 
@@ -90,11 +90,11 @@ No new discovery pattern is needed.
 
 Current owner leak:
 
-- `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
   - still captures `CARD_PREFERENCES` directly via `CardPreferences`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
   - still parses and applies `CARD_PREFERENCES` directly via `CardPreferences`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
   - still owns the card payload DTOs
 
 Implication:
@@ -109,7 +109,7 @@ Current blocker:
 
 - `core/common/build.gradle.kts`
   - `implementation(project(":dfcards-library"))`
-- `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
+- `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt`
   - imports `com.example.dfcards.RealTimeFlightData`
   - `OrientationController.updateFromFlightData(...)` depends on that type
 
@@ -128,7 +128,7 @@ The good news:
 
 Direct constructions that were present before Phase C:
 
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileQuickActions.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileQuickActions.kt`
   - `FlightModeIndicator(...)` creates `CardPreferences(context)` inside a
     composable and reads DataStore directly
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardLibraryModal.kt`
@@ -173,11 +173,11 @@ Goal:
 Files to modify:
 
 - `core/common/build.gradle.kts`
-- `core/common/src/main/java/com/example/xcpro/common/orientation/OrientationContracts.kt`
-- `feature/map/src/main/java/com/example/xcpro/OrientationSensorSource.kt`
-- `feature/map/src/main/java/com/example/xcpro/OrientationDataSource.kt`
-- `feature/map/src/main/java/com/example/xcpro/MapOrientationManager.kt`
-- orientation-related tests under `feature/map/src/test/java/com/example/xcpro/`
+- `core/common/src/main/java/com/trust3/xcpro/common/orientation/OrientationContracts.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/OrientationSensorSource.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt`
+- `feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt`
+- orientation-related tests under `feature/map/src/test/java/com/trust3/xcpro/`
 
 Locked rule:
 
@@ -199,12 +199,12 @@ Files to add:
 
 Files to modify:
 
-- `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
-- `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
-- `feature/profile/src/test/java/com/example/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
-- `app/src/test/java/com/example/xcpro/profiles/ProfileRepositoryBundleTest.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProvider.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplier.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileSettingsSectionSnapshots.kt`
+- `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsSnapshotProviderTest.kt`
+- `feature/profile/src/test/java/com/trust3/xcpro/profiles/AppProfileSettingsRestoreApplierTest.kt`
+- `app/src/test/java/com/trust3/xcpro/profiles/ProfileRepositoryBundleTest.kt`
 
 Locked rule:
 
@@ -221,7 +221,7 @@ Goal:
 
 Planned files:
 
-- `feature/profile/src/main/java/com/example/xcpro/profiles/ProfileQuickActions.kt`
+- `feature/profile/src/main/java/com/trust3/xcpro/profiles/ProfileQuickActions.kt`
 - `dfcards-library/src/main/java/com/example/dfcards/dfcards/CardLibraryModal.kt`
 - the owning host/viewmodel files needed to pass a DI-owned `CardPreferences`
   instance or a narrower contract down into UI
@@ -263,8 +263,8 @@ Required after the first implementation batch:
 Focused slice checks:
 
 ```bash
-./gradlew :feature:profile:testDebugUnitTest --tests "com.example.xcpro.profiles.AppProfileSettingsSnapshotProviderTest" --tests "com.example.xcpro.profiles.AppProfileSettingsRestoreApplierTest" --tests "com.example.xcpro.profiles.ProfileSettingsContributorRegistryTest"
-./gradlew :app:testDebugUnitTest --tests "com.example.xcpro.profiles.ProfileRepositoryBundleTest" --tests "com.example.xcpro.profiles.ProfileRepositoryBackupSyncTest"
+./gradlew :feature:profile:testDebugUnitTest --tests "com.trust3.xcpro.profiles.AppProfileSettingsSnapshotProviderTest" --tests "com.trust3.xcpro.profiles.AppProfileSettingsRestoreApplierTest" --tests "com.trust3.xcpro.profiles.ProfileSettingsContributorRegistryTest"
+./gradlew :app:testDebugUnitTest --tests "com.trust3.xcpro.profiles.ProfileRepositoryBundleTest" --tests "com.trust3.xcpro.profiles.ProfileRepositoryBackupSyncTest"
 ./gradlew :dfcards-library:testDebugUnitTest
 ```
 

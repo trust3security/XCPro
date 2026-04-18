@@ -1,0 +1,26 @@
+package com.trust3.xcpro.sensors
+
+import com.trust3.xcpro.audio.VarioAudioSettings
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Abstraction over the fused sensor pipeline. Implementations own sensor flows, filtering, and
+ * downstream flight metrics while presenting read-only data streams to the rest of the app.
+ */
+interface SensorFusionRepository {
+    val flightDataFlow: StateFlow<CompleteFlightData?>
+    val diagnosticsFlow: StateFlow<VarioDiagnosticsSample?>
+    val audioSettings: StateFlow<VarioAudioSettings>
+
+    fun updateAudioSettings(settings: VarioAudioSettings)
+    fun setHawkAudioEnabled(enabled: Boolean)
+    fun setManualQnh(qnhHPa: Double)
+    fun resetQnhToStandard()
+    fun setMacCreadySetting(value: Double)
+    fun setMacCreadyRisk(value: Double)
+    fun setAutoMcEnabled(enabled: Boolean)
+    fun setTotalEnergyCompensationEnabled(enabled: Boolean)
+    fun setFlightMode(mode: com.trust3.xcpro.common.flight.FlightMode)
+    fun updateReplayRealVario(realVarioMs: Double?, timestampMillis: Long)
+    fun stop()
+}

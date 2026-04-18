@@ -1,0 +1,26 @@
+Do a second-pass architecture seam/code review.
+
+Not a bug pass. Not a style pass.
+
+Judge the actual code for:
+- boundary violations
+- wrong ownership
+- bad dependency direction
+- architecture drift from documented seams
+- overly wide coordinators/ViewModels/managers
+- duplicate or competing paths
+- silent fallbacks and shortcut logic
+- abstraction tax with little value
+
+Only report real issues that should not exist in a tight production Android codebase.
+
+For each issue give:
+- classification
+- exact evidence
+- why it is structurally bad
+- severity
+
+Then give:
+- explicit non-issues
+- PASS/FAIL on architecture integrity
+- the single biggest concern

@@ -1,0 +1,24 @@
+package com.trust3.xcpro.tasks
+
+import com.trust3.xcpro.tasks.core.TaskWaypoint
+import com.trust3.xcpro.tasks.racing.RacingTaskManager
+
+/**
+ * Racing counterpart to the AAT delegate so the coordinator can dispatch without
+ * branching on task type for common operations.
+ */
+internal class RacingCoordinatorDelegate(
+    private val taskManager: RacingTaskManager,
+    private val log: (String) -> Unit
+) : TaskTypeCoordinatorDelegate {
+
+    override fun clearTask() {
+        taskManager.clearRacingTask()
+        log("Cleared Racing task state")
+    }
+
+    override fun calculateDistanceMeters(): Double = taskManager.calculateRacingTaskDistanceMeters()
+
+    override fun calculateSegmentDistanceMeters(from: TaskWaypoint, to: TaskWaypoint): Double =
+        taskManager.calculateSegmentDistanceMeters(from.lat, from.lon, to.lat, to.lon)
+}

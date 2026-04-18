@@ -107,11 +107,11 @@ Required:
 ## Validation
 
 - Tests/evidence required:
-  - `feature/profile/src/test/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsUseCaseTest.kt`
-  - `feature/profile/src/test/java/com/example/xcpro/screens/navdrawer/HawkVarioSettingsViewModelTest.kt`
-  - `feature/variometer/src/test/java/com/example/xcpro/hawk/HawkVarioUiStateTest.kt`
-  - `feature/variometer/src/test/java/com/example/xcpro/hawk/HawkVarioEngineTest.kt`
-  - `feature/variometer/src/test/java/com/example/xcpro/hawk/HawkVarioRepositoryTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsUseCaseTest.kt`
+  - `feature/profile/src/test/java/com/trust3/xcpro/screens/navdrawer/HawkVarioSettingsViewModelTest.kt`
+  - `feature/variometer/src/test/java/com/trust3/xcpro/hawk/HawkVarioUiStateTest.kt`
+  - `feature/variometer/src/test/java/com/trust3/xcpro/hawk/HawkVarioEngineTest.kt`
+  - `feature/variometer/src/test/java/com/trust3/xcpro/hawk/HawkVarioRepositoryTest.kt`
   - app General Settings policy coverage keeps the HAWK tile/sub-sheet contract
   - standard AGENTS gates
 - SLO or latency impact:
