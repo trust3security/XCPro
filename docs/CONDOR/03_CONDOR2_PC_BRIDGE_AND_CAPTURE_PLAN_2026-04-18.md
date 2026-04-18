@@ -22,7 +22,7 @@ Reason:
 
 - Condor already outputs NMEA through serial-style channels
 - Android can consume RFCOMM/SPP with established patterns
-- this keeps Condor-specific PC bridging outside the Android app’s core fusion
+- this keeps Condor-specific PC bridging outside the Android app's core fusion
   design
 
 ## Bridge responsibilities

@@ -125,7 +125,7 @@ Current phone-only assumptions that implementation must remove or narrow:
 - `feature/map/.../SensorFusionModule.provideSensorFusionRepository(...)`
 - `feature/map/.../WindSensorModule.provideLiveSensorDataSource(...)`
 
-These are not bugs in today’s phone-only flow. They are the exact ownership
+These are not bugs in today's phone-only flow. They are the exact ownership
 pressure points for Condor.
 
 ## Canonical after-state routing
