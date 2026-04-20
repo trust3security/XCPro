@@ -12,7 +12,8 @@ import kotlinx.coroutines.launch
 internal class LocationSensorsController(
     private val context: Context,
     private val scope: CoroutineScope,
-    private val sensorsUseCase: MapSensorsUseCase
+    private val sensorsUseCase: MapSensorsUseCase,
+    private val phoneHealthUseCase: MapPhoneHealthUseCase
 ) : MapLocationSensorsPort {
     companion object {
         private const val TAG = "LocationManager"
@@ -22,6 +23,22 @@ internal class LocationSensorsController(
     private var restartJob: Job? = null
 
     override fun onLocationPermissionsResult(fineLocationGranted: Boolean) {
+        if (!phoneHealthUseCase.isPhoneLiveSelected()) {
+            scope.launch {
+                runCatching { ensureSensorsRunning() }
+                    .onFailure { error ->
+                        if (error is CancellationException) {
+                            throw error
+                        }
+                        errorRateLimited(
+                            key = "ensure_after_non_phone_permission_result_failure",
+                            message = "Failed to ensure selected runtime after non-phone permission result",
+                            error = error
+                        )
+                    }
+            }
+            return
+        }
         if (fineLocationGranted) {
             debugRateLimited(
                 key = "permissions_granted",
@@ -48,7 +65,23 @@ internal class LocationSensorsController(
         }
     }
 
-    override fun requestLocationPermissions(permissionRequester: MapLocationPermissionRequester) {
+    override fun ensureSelectedRuntimeReady(permissionRequester: MapLocationPermissionRequester) {
+        if (!phoneHealthUseCase.isPhoneLiveSelected()) {
+            scope.launch {
+                runCatching { ensureSensorsRunning() }
+                    .onFailure { error ->
+                        if (error is CancellationException) {
+                            throw error
+                        }
+                        errorRateLimited(
+                            key = "ensure_non_phone_runtime_failure",
+                            message = "Failed to ensure selected runtime while bypassing phone permission request",
+                            error = error
+                        )
+                    }
+            }
+            return
+        }
         val fineLocationGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
         if (fineLocationGranted) {
@@ -91,10 +124,14 @@ internal class LocationSensorsController(
      * This ensures GPS and other sensors resume properly when screen turns back on
      */
     override fun restartSensorsIfNeeded() {
+        if (!phoneHealthUseCase.isPhoneLiveSelected()) {
+            restartJob?.cancel()
+            return
+        }
         restartJob?.cancel()
         restartJob = scope.launch {
             runCatching {
-                val sensorStatus = sensorsUseCase.sensorStatus()
+                val sensorStatus = phoneHealthUseCase.sensorStatus()
 
                 // Restart if any critical sensor is not running (common after doze/background)
                 val needsRestart = (
@@ -170,7 +207,7 @@ internal class LocationSensorsController(
         }
     }
 
-    override fun isGpsEnabled(): Boolean = sensorsUseCase.isGpsEnabled()
+    override fun isGpsEnabled(): Boolean = phoneHealthUseCase.isGpsEnabled()
 
     private fun safeStartSensors(): Boolean {
         return runCatching { sensorsUseCase.startSensors() }
@@ -188,7 +225,18 @@ internal class LocationSensorsController(
     }
 
     private suspend fun ensureSensorsRunning() {
-        val status = sensorsUseCase.sensorStatus()
+        if (!phoneHealthUseCase.isPhoneLiveSelected()) {
+            if (startRequested) return
+            startRequested = safeStartSensors()
+            if (!startRequested) {
+                warnRateLimited(
+                    key = "start_deferred_non_phone",
+                    message = "Selected runtime start deferred"
+                )
+            }
+            return
+        }
+        val status = phoneHealthUseCase.sensorStatus()
         if (startRequested && status.gpsStarted) {
             return
         }
@@ -241,7 +289,7 @@ internal class LocationSensorsController(
     }
 
     private fun stopSensors() {
-        val status = sensorsUseCase.sensorStatus()
+        val status = phoneHealthUseCase.sensorStatus()
         val runtimeActive = status.gpsStarted ||
             status.baroStarted ||
             status.accelStarted ||

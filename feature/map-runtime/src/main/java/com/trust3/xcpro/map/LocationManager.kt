@@ -146,8 +146,8 @@ class LocationManager(
         sensorsPort.onLocationPermissionsResult(fineLocationGranted)
     }
 
-    override fun requestLocationPermissions(permissionRequester: MapLocationPermissionRequester) {
-        sensorsPort.requestLocationPermissions(permissionRequester)
+    override fun ensureSelectedRuntimeReady(permissionRequester: MapLocationPermissionRequester) {
+        sensorsPort.ensureSelectedRuntimeReady(permissionRequester)
     }
 
     override fun stopLocationTracking(force: Boolean) {
@@ -167,7 +167,7 @@ class LocationManager(
     override fun setActiveProfileId(profileId: String) {
         locationPreferences.setActiveProfileId(profileId)
     }
-    override fun updateLocationFromGPS(
+    override fun updateLocationFromLiveFix(
         location: MapLocationUiModel,
         orientation: OrientationData
     ) {
