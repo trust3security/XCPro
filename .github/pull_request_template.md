@@ -9,12 +9,16 @@
 - [ ] MVVM + UDF + SSOT respected (no state duplication).
 - [ ] UI does not import `data` layer.
 - [ ] Domain/use-cases do not import Android/UI types.
-- [ ] ViewModels depend on use-cases only (no platform APIs, no persistence).
-- [ ] No raw manager/controller escape hatches exposed through use-cases or ViewModels.
+- [ ] ViewModels depend on use-cases or focused stable domain-facing seams only (no platform APIs, no low-level adapters, no dependency bags).
+- [ ] No raw manager/controller escape hatches exposed through use-cases, seams, or ViewModels.
 - [ ] No Compose runtime state primitives used in non-UI managers/domain.
 - [ ] No MapLibre types in domain/task managers.
 - [ ] Timebase rules respected (no monotonic vs wall/replay mixing).
 - [ ] Replay remains deterministic for identical inputs.
+- [ ] Non-trivial change had a written plan when required by `AGENTS.md` / `PLAN_MODE_START_HERE.md`.
+- [ ] The plan distinguishes `Confirmed Boundaries / Verified Facts` from `Actual Assumptions / Defaults Chosen`.
+- [ ] Remaining assumptions are non-discoverable only.
+- [ ] Second-pass architecture integrity review completed for non-trivial refactors, runtime wiring changes, or DI changes.
 - [ ] If any rule is knowingly violated, it is recorded in `docs/ARCHITECTURE/KNOWN_DEVIATIONS.md` with issue ID, owner, expiry.
 
 ## Verification

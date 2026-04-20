@@ -29,6 +29,41 @@ Read first:
 - User-visible impact:
 - Rule class touched: Invariant | Default | Guideline
 
+## 1A) Confirmed Boundaries / Verified Facts (Mandatory)
+
+List verified repo/system facts that shape the plan.
+
+Rules:
+
+- If a fact can be checked in repo docs, code, configs, tests, or local system
+  state, verify it first.
+- Do not place discoverable facts in the assumptions section.
+- Cite the source of truth when the owner or boundary is non-obvious.
+
+| Fact | Source of Truth | Why It Matters |
+|---|---|---|
+| | | |
+
+## 1B) Actual Assumptions / Defaults Chosen (Mandatory)
+
+List only non-discoverable defaults, tradeoffs, or unanswered product choices.
+
+If there are none, write `None`.
+
+| Assumption / Default | Why It Is Not Discoverable | Impact If Wrong | Follow-up / Owner |
+|---|---|---|---|
+| | | | |
+
+## 1C) Unresolved Decisions / Questions (Mandatory)
+
+List decisions that still need an answer before or during implementation.
+
+If there are none, write `None`.
+
+| Decision / Question | Why It Matters | Owner / Decision Maker | Blocking? | Resolution Plan |
+|---|---|---|---|---|
+| | | | | |
+
 ## 2) Architecture Contract
 
 ### 2.1 SSOT Ownership
@@ -262,6 +297,7 @@ Optional when relevant:
 ## 7) Acceptance Gates
 
 - No rule violations from `ARCHITECTURE.md` and `CODING_RULES.md`
+- No discoverable repo/system fact remains listed only as an assumption
 - No duplicate SSOT ownership introduced
 - Time base handling is explicit in code and tests
 - Replay behavior remains deterministic
