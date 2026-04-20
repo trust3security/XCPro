@@ -29,6 +29,7 @@ class FollowingLiveRepository(
     private val mutableState = MutableStateFlow(
         followingLiveSnapshotFor(
             runtimeMode = runtimeModeSource.runtimeMode.value,
+            liveSourceKind = runtimeModeSource.liveSourceKind.value,
             isSignedIn = accountRepository.state.value.isSignedIn,
             replayPolicy = replayPolicy
         )
@@ -38,8 +39,12 @@ class FollowingLiveRepository(
 
     init {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            runtimeModeSource.runtimeMode.collectLatest { runtimeMode ->
-                val replayDecision = replayPolicy.evaluate(runtimeMode)
+            kotlinx.coroutines.flow.combine(
+                runtimeModeSource.runtimeMode,
+                runtimeModeSource.liveSourceKind
+            ) { runtimeMode, liveSourceKind ->
+                runtimeMode to replayPolicy.evaluate(runtimeMode, liveSourceKind)
+            }.collectLatest { (runtimeMode, replayDecision) ->
                 val signedIn = accountRepository.state.value.isSignedIn
                 mutableState.value = mutableState.value.copy(
                     runtimeMode = runtimeMode,
@@ -166,10 +171,11 @@ data class FollowingLiveSnapshot(
 
 private fun followingLiveSnapshotFor(
     runtimeMode: LiveFollowRuntimeMode,
+    liveSourceKind: com.trust3.xcpro.livesource.LiveSourceKind,
     isSignedIn: Boolean,
     replayPolicy: LiveFollowReplayPolicy
 ): FollowingLiveSnapshot {
-    val replayDecision = replayPolicy.evaluate(runtimeMode)
+    val replayDecision = replayPolicy.evaluate(runtimeMode, liveSourceKind)
     return FollowingLiveSnapshot(
         runtimeMode = runtimeMode,
         sideEffectsAllowed = replayDecision.sideEffectsAllowed,

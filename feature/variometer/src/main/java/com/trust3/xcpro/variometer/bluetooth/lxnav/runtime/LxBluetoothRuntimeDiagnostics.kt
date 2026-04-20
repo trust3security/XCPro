@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
 
 internal data class LxBluetoothRuntimeDiagnostics(
     val sessionStartMonoMs: Long? = null,
@@ -12,3 +12,4 @@ internal data class LxBluetoothRuntimeDiagnostics(
     val parseFailureCount: Int = 0,
     val lastTransportError: BluetoothConnectionError? = null
 )
+

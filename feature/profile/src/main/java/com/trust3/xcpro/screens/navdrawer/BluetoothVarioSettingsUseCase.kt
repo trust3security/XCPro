@@ -1,6 +1,6 @@
 package com.trust3.xcpro.screens.navdrawer
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.BluetoothBondedDeviceItem
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDisconnectReason
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothReconnectBlockReason
@@ -205,3 +205,5 @@ class BluetoothVarioSettingsUseCase @Inject constructor(
         }
     }
 }
+
+

@@ -27,6 +27,7 @@ class LiveFollowSessionRepository(
         sessionSnapshotFor(
             gatewaySnapshot = localGatewayState.value,
             runtimeMode = ownshipSnapshotSource.runtimeMode.value,
+            liveSourceKind = ownshipSnapshotSource.liveSourceKind.value,
             replayPolicy = replayPolicy
         )
     )
@@ -43,11 +44,13 @@ class LiveFollowSessionRepository(
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             combine(
                 localGatewayState,
-                ownshipSnapshotSource.runtimeMode
-            ) { gatewaySnapshot, runtimeMode ->
+                ownshipSnapshotSource.runtimeMode,
+                ownshipSnapshotSource.liveSourceKind
+            ) { gatewaySnapshot, runtimeMode, liveSourceKind ->
                 sessionSnapshotFor(
                     gatewaySnapshot = gatewaySnapshot,
                     runtimeMode = runtimeMode,
+                    liveSourceKind = liveSourceKind,
                     replayPolicy = replayPolicy
                 )
             }.collect { sessionSnapshot ->
@@ -281,9 +284,10 @@ class LiveFollowSessionRepository(
 private fun sessionSnapshotFor(
     gatewaySnapshot: LiveFollowSessionGatewaySnapshot,
     runtimeMode: com.trust3.xcpro.livefollow.state.LiveFollowRuntimeMode,
+    liveSourceKind: com.trust3.xcpro.livesource.LiveSourceKind,
     replayPolicy: LiveFollowReplayPolicy
 ): LiveFollowSessionSnapshot {
-    val replayDecision = replayPolicy.evaluate(runtimeMode)
+    val replayDecision = replayPolicy.evaluate(runtimeMode, liveSourceKind)
     return LiveFollowSessionSnapshot(
         sessionId = gatewaySnapshot.sessionId,
         ownerUserId = gatewaySnapshot.ownerUserId,

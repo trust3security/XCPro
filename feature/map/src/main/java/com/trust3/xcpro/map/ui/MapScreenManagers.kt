@@ -30,6 +30,7 @@ import com.trust3.xcpro.map.MapScreenSizeProvider
 import com.trust3.xcpro.map.MapStateActions
 import com.trust3.xcpro.map.MapStateReader
 import com.trust3.xcpro.map.MapOrientationRuntimePort
+import com.trust3.xcpro.map.MapPhoneHealthUseCase
 import com.trust3.xcpro.map.MapSensorsUseCase
 import com.trust3.xcpro.map.MapTaskScreenManager
 import com.trust3.xcpro.map.TaskRenderSyncCoordinator
@@ -79,6 +80,7 @@ internal fun rememberMapScreenManagers(
     orientationRuntimePort: MapOrientationRuntimePort,
     onOrientationUserInteraction: () -> Unit,
     sensorsUseCase: MapSensorsUseCase,
+    phoneHealthUseCase: MapPhoneHealthUseCase,
     replaySessionState: StateFlow<SessionState>,
     replayHeadingProvider: (Long) -> Double?,
     replayFixProvider: (Long) -> ReplayDisplayPose?,
@@ -168,11 +170,12 @@ internal fun rememberMapScreenManagers(
     val locationPreferences = remember(orientationPreferences) {
         MapLocationPreferencesAdapter(orientationPreferences)
     }
-    val sensorsPort = remember(context, coroutineScope, sensorsUseCase) {
+    val sensorsPort = remember(context, coroutineScope, sensorsUseCase, phoneHealthUseCase) {
         LocationSensorsController(
             context = context,
             scope = coroutineScope,
-            sensorsUseCase = sensorsUseCase
+            sensorsUseCase = sensorsUseCase,
+            phoneHealthUseCase = phoneHealthUseCase
         )
     }
     val cameraControllerProvider = remember(mapState) {

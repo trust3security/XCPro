@@ -8,6 +8,8 @@ import com.trust3.xcpro.igc.IgcRecordingActionSink
 import com.trust3.xcpro.igc.data.IgcFinalizeResult
 import com.trust3.xcpro.igc.data.IgcSessionStateSnapshotStore
 import com.trust3.xcpro.igc.domain.IgcSessionStateMachine
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.ResolvedLiveSourceState
 import com.trust3.xcpro.map.buildCompleteFlightData
 import com.trust3.xcpro.map.defaultGps
 import com.trust3.xcpro.sensors.CompleteFlightData
@@ -254,6 +256,54 @@ class IgcRecordingUseCaseBRecordStreamTest {
             )
         )
 
+        flightDataRepository.update(
+            data = liveFlightData(timestampMs = 10_000L),
+            source = FlightDataRepository.Source.LIVE
+        )
+        advanceUntilIdle()
+
+        val line = withTimeoutOrNull(200L) {
+            useCase.bRecordLines.first()
+        }
+        assertNull(line)
+    }
+
+    @Test
+    fun doesNotEmitWhenSimulatorSourceBecomesActive() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L)
+        val flightStateFlow = MutableStateFlow(FlyingState())
+        val flightDataRepository = FlightDataRepository()
+        val liveSourceState = MutableStateFlow(ResolvedLiveSourceState(kind = LiveSourceKind.PHONE))
+        val useCase = buildIgcRecordingUseCase(
+            flightStateSource = flightStateSource(flightStateFlow),
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            snapshotStore = InMemorySnapshotStore(),
+            defaultDispatcher = dispatcher,
+            config = IgcSessionStateMachine.Config(
+                armingDebounceMs = 0L,
+                takeoffDebounceMs = 0L,
+                landingDebounceMs = 0L,
+                baselineWindowMs = 1_000L,
+                finalizeTimeoutMs = 10_000L
+            ),
+            liveSourceStatePort = object : com.trust3.xcpro.livesource.LiveSourceStatePort {
+                override val state = liveSourceState
+
+                override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
+            }
+        )
+
+        clock.setMonoMs(1_000L)
+        flightStateFlow.value = FlyingState(isFlying = false, onGround = true)
+        advanceUntilIdle()
+        clock.setMonoMs(2_000L)
+        flightStateFlow.value = FlyingState(isFlying = true, onGround = false)
+        advanceUntilIdle()
+        assertEquals(IgcSessionStateMachine.Phase.Recording, useCase.state.value.phase)
+
+        liveSourceState.value = ResolvedLiveSourceState(kind = LiveSourceKind.SIMULATOR_CONDOR2)
         flightDataRepository.update(
             data = liveFlightData(timestampMs = 10_000L),
             source = FlightDataRepository.Source.LIVE

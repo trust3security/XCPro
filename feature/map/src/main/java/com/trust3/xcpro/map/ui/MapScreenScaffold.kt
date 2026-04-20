@@ -71,6 +71,9 @@ private fun GpsStatusBanner(status: GpsStatusUiModel, modifier: Modifier = Modif
         GpsStatusUiModel.Disabled -> "GPS is off" to Color(0xFFB00020)
         is GpsStatusUiModel.LostFix -> "Waiting for GPS" to Color(0xFFCA8A04)
         GpsStatusUiModel.Searching -> "Searching for GPS" to Color(0xFFCA8A04)
+        GpsStatusUiModel.CondorDisconnected -> "Condor bridge disconnected" to Color(0xFFB00020)
+        GpsStatusUiModel.CondorStale -> "Condor stream stale" to Color(0xFFCA8A04)
+        GpsStatusUiModel.CondorTransportError -> "Condor transport error" to Color(0xFFB00020)
         is GpsStatusUiModel.Ok -> return
     }
     Surface(

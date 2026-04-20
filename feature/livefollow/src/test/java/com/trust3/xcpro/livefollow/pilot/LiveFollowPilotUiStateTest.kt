@@ -55,6 +55,24 @@ class LiveFollowPilotUiStateTest {
     }
 
     @Test
+    fun simulatorBlockedSession_showsSimulatorSpecificStatus() {
+        val uiState = buildLiveFollowPilotUiState(
+            session = sessionSnapshot(
+                sideEffectsAllowed = false,
+                replayBlockReason = LiveFollowReplayBlockReason.SIMULATOR_SOURCE
+            ),
+            ownshipSnapshot = ownshipSnapshot(),
+            actionState = LiveFollowPilotActionState()
+        )
+
+        assertEquals("Simulator Source", uiState.replayBlockReasonLabel)
+        assertEquals(
+            "LiveFollow sharing is blocked while a simulator source is active.",
+            uiState.statusMessage
+        )
+    }
+
+    @Test
     fun activePilotSession_enablesStopSharing() {
         val uiState = buildLiveFollowPilotUiState(
             session = sessionSnapshot(

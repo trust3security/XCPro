@@ -35,6 +35,7 @@ dependencies {
     implementation(project(":core:geometry"))
     implementation(project(":core:time"))
     implementation(project(":core:ui"))
+    implementation(project(":feature:bluetooth-devices"))
     implementation(project(":feature:flight-runtime"))
 
     implementation(libs.androidx.core.ktx)

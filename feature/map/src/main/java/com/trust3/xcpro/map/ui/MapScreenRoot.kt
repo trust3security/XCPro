@@ -94,6 +94,7 @@ internal fun MapScreenRoot(
         orientationRuntimePort = orientationManager,
         onOrientationUserInteraction = orientationManager::onUserInteraction,
         sensorsUseCase = runtimeDependencies.sensorsUseCase,
+        phoneHealthUseCase = runtimeDependencies.phoneHealthUseCase,
         replaySessionState = mapViewModel.replaySessionState,
         replayHeadingProvider = mapViewModel::getInterpolatedReplayHeadingDeg,
         replayFixProvider = mapViewModel::getInterpolatedReplayPose,

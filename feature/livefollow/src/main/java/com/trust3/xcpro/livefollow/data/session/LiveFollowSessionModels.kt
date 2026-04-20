@@ -1,9 +1,11 @@
 package com.trust3.xcpro.livefollow.data.session
 
+import com.trust3.xcpro.livesource.LiveSourceKind
 import com.trust3.xcpro.livefollow.model.LiveFollowIdentityProfile
 import com.trust3.xcpro.livefollow.model.LiveFollowTransportAvailability
 import com.trust3.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.trust3.xcpro.livefollow.state.LiveFollowReplayBlockReason
+import com.trust3.xcpro.livefollow.state.LiveFollowReplayPolicy
 import com.trust3.xcpro.livefollow.state.LiveFollowRuntimeMode
 
 enum class LiveFollowSessionRole {
@@ -87,24 +89,24 @@ sealed interface LiveFollowCommandResult {
 
 internal fun idleSessionSnapshot(
     runtimeMode: LiveFollowRuntimeMode = LiveFollowRuntimeMode.LIVE,
+    liveSourceKind: LiveSourceKind = LiveSourceKind.PHONE,
     transportAvailability: LiveFollowTransportAvailability = liveFollowAvailableTransport()
-): LiveFollowSessionSnapshot = LiveFollowSessionSnapshot(
-    sessionId = null,
-    ownerUserId = null,
-    role = LiveFollowSessionRole.NONE,
-    lifecycle = LiveFollowSessionLifecycle.IDLE,
-    visibility = null,
-    runtimeMode = runtimeMode,
-    watchIdentity = null,
-    directWatchAuthorized = false,
-    transportAvailability = transportAvailability,
-    sideEffectsAllowed = runtimeMode == LiveFollowRuntimeMode.LIVE,
-    replayBlockReason = if (runtimeMode == LiveFollowRuntimeMode.LIVE) {
-        LiveFollowReplayBlockReason.NONE
-    } else {
-        LiveFollowReplayBlockReason.REPLAY_MODE
-    },
-    lastError = null,
-    shareCode = null,
-    watchLookup = null
-)
+): LiveFollowSessionSnapshot {
+    val replayDecision = LiveFollowReplayPolicy().evaluate(runtimeMode, liveSourceKind)
+    return LiveFollowSessionSnapshot(
+        sessionId = null,
+        ownerUserId = null,
+        role = LiveFollowSessionRole.NONE,
+        lifecycle = LiveFollowSessionLifecycle.IDLE,
+        visibility = null,
+        runtimeMode = runtimeMode,
+        watchIdentity = null,
+        directWatchAuthorized = false,
+        transportAvailability = transportAvailability,
+        sideEffectsAllowed = replayDecision.sideEffectsAllowed,
+        replayBlockReason = replayDecision.blockReason,
+        lastError = null,
+        shareCode = null,
+        watchLookup = null
+    )
+}

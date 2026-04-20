@@ -87,7 +87,7 @@ class VarioForegroundService : Service() {
                 if (!sensorsStarted) {
                     Log.w(
                         TAG,
-                        "Foreground service active but waiting for GPS permission before publishing data"
+                        "Foreground service active but live runtime is not yet ready to publish data"
                     )
                 }
             }

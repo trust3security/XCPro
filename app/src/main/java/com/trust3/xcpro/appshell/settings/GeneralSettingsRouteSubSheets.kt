@@ -15,6 +15,7 @@ import com.example.ui1.screens.OgnSettingsSubSheet
 import com.example.ui1.screens.ProfilesScreen
 import com.example.ui1.screens.WeGlideSettingsSubSheet
 import com.trust3.xcpro.screens.navdrawer.BluetoothVarioSettingsScreen
+import com.trust3.xcpro.screens.navdrawer.CondorBridgeSettingsScreen
 import com.trust3.xcpro.screens.navdrawer.ForecastSettingsScreen
 import com.trust3.xcpro.screens.navdrawer.HawkVarioSettingsScreen
 import com.trust3.xcpro.screens.navdrawer.LayoutScreen
@@ -185,6 +186,25 @@ internal fun BluetoothVarioSettingsSubSheet(
 ) {
     SettingsRouteSubSheetContainer(onDismiss = onDismiss) {
         BluetoothVarioSettingsScreen(
+            navController = navController,
+            drawerState = drawerState,
+            onNavigateUp = onDismiss,
+            onSecondaryNavigate = onNavigateToDrawer,
+            onNavigateToMap = onNavigateToMap
+        )
+    }
+}
+
+@Composable
+internal fun CondorBridgeSettingsSubSheet(
+    navController: NavHostController,
+    drawerState: DrawerState,
+    onDismiss: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
+    onNavigateToMap: () -> Unit
+) {
+    SettingsRouteSubSheetContainer(onDismiss = onDismiss) {
+        CondorBridgeSettingsScreen(
             navController = navController,
             drawerState = drawerState,
             onNavigateUp = onDismiss,

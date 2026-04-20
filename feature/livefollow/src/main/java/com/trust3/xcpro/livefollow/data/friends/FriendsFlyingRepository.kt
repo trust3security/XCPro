@@ -25,15 +25,23 @@ class FriendsFlyingRepository(
 ) {
     private val refreshMutex = Mutex()
     private val mutableState = MutableStateFlow(
-        friendsFlyingSnapshotFor(runtimeModeSource.runtimeMode.value, replayPolicy)
+        friendsFlyingSnapshotFor(
+            runtimeMode = runtimeModeSource.runtimeMode.value,
+            liveSourceKind = runtimeModeSource.liveSourceKind.value,
+            replayPolicy = replayPolicy
+        )
     )
 
     val state: StateFlow<FriendsFlyingSnapshot> = mutableState.asStateFlow()
 
     init {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            runtimeModeSource.runtimeMode.collect { runtimeMode ->
-                val replayDecision = replayPolicy.evaluate(runtimeMode)
+            kotlinx.coroutines.flow.combine(
+                runtimeModeSource.runtimeMode,
+                runtimeModeSource.liveSourceKind
+            ) { runtimeMode, liveSourceKind ->
+                replayPolicy.evaluate(runtimeMode, liveSourceKind) to runtimeMode
+            }.collect { (replayDecision, runtimeMode) ->
                 mutableState.value = mutableState.value.copy(
                     runtimeMode = runtimeMode,
                     sideEffectsAllowed = replayDecision.sideEffectsAllowed,
@@ -124,9 +132,10 @@ data class FriendsFlyingSnapshot(
 
 private fun friendsFlyingSnapshotFor(
     runtimeMode: LiveFollowRuntimeMode,
+    liveSourceKind: com.trust3.xcpro.livesource.LiveSourceKind,
     replayPolicy: LiveFollowReplayPolicy
 ): FriendsFlyingSnapshot {
-    val replayDecision = replayPolicy.evaluate(runtimeMode)
+    val replayDecision = replayPolicy.evaluate(runtimeMode, liveSourceKind)
     return FriendsFlyingSnapshot(
         runtimeMode = runtimeMode,
         sideEffectsAllowed = replayDecision.sideEffectsAllowed,

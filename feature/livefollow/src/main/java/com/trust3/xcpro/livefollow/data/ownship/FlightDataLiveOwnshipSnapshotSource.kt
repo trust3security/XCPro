@@ -2,6 +2,8 @@ package com.trust3.xcpro.livefollow.data.ownship
 
 import com.trust3.xcpro.core.flight.calculations.ConfidenceLevel
 import com.trust3.xcpro.flightdata.FlightDataRepository
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.LiveSourceStatePort
 import com.trust3.xcpro.livefollow.model.LiveFollowAircraftIdentity
 import com.trust3.xcpro.livefollow.model.LiveFollowAircraftIdentityType
 import com.trust3.xcpro.livefollow.model.LiveFollowConfidence
@@ -25,18 +27,29 @@ import kotlinx.coroutines.launch
 class FlightDataLiveOwnshipSnapshotSource(
     scope: CoroutineScope,
     flightDataRepository: FlightDataRepository,
+    liveSourceStatePort: LiveSourceStatePort,
     ownFlarmHexFlow: Flow<String?>,
     ownIcaoHexFlow: Flow<String?>
 ) : LiveOwnshipSnapshotSource {
+    private val mutableLiveSourceKind = MutableStateFlow(liveSourceStatePort.state.value.kind)
     private val mutableRuntimeMode = MutableStateFlow(
         toRuntimeMode(flightDataRepository.activeSource.value)
     )
     private val mutableSnapshot = MutableStateFlow<LiveOwnshipSnapshot?>(null)
 
+    override val liveSourceKind: StateFlow<LiveSourceKind> = mutableLiveSourceKind.asStateFlow()
     override val runtimeMode: StateFlow<LiveFollowRuntimeMode> = mutableRuntimeMode.asStateFlow()
     override val snapshot: StateFlow<LiveOwnshipSnapshot?> = mutableSnapshot.asStateFlow()
 
     init {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            liveSourceStatePort.state
+                .map { it.kind }
+                .collect { kind ->
+                    mutableLiveSourceKind.value = kind
+                }
+        }
+
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             flightDataRepository.activeSource
                 .map(::toRuntimeMode)

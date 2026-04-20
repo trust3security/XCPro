@@ -1,7 +1,7 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.control
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
-import com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BondedBluetoothDevice
 import com.trust3.xcpro.variometer.bluetooth.lxnav.runtime.LxExternalRuntimeSnapshot
 
 internal data class ControlStateInputs(
@@ -81,3 +81,5 @@ internal fun buildLxBluetoothControlState(
         canDisconnect = canDisconnect
     )
 }
+
+

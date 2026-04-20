@@ -13,6 +13,7 @@ internal data class MapScreenRuntimeDependencies(
     val flightDataManager: FlightDataManager,
     val orientationManager: MapOrientationManager,
     val sensorsUseCase: MapSensorsUseCase,
+    val phoneHealthUseCase: MapPhoneHealthUseCase,
     val tasksUseCase: MapTasksUseCase,
     val airspaceUseCase: AirspaceUseCase,
     val waypointFilesUseCase: WaypointFilesUseCase,

@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav
 
-import com.trust3.xcpro.variometer.bluetooth.NmeaLine
+import com.trust3.xcpro.bluetooth.NmeaLine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -189,3 +189,4 @@ class LxSentenceParserTest {
         private const val TEST_RECEIVED_MONO_MS = 1_234L
     }
 }
+

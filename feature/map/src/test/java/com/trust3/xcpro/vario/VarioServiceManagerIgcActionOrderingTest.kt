@@ -14,6 +14,11 @@ import com.trust3.xcpro.igc.data.IgcFinalizeResult
 import com.trust3.xcpro.igc.data.IgcLogEntry
 import com.trust3.xcpro.igc.domain.IgcSessionStateMachine
 import com.trust3.xcpro.igc.usecase.IgcRecordingUseCase
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.LiveRuntimeStartResult
+import com.trust3.xcpro.livesource.LiveSourceStatePort
+import com.trust3.xcpro.livesource.ResolvedLiveSourceState
+import com.trust3.xcpro.livesource.SelectedLiveRuntimeBackendPort
 import com.trust3.xcpro.profiles.AircraftType
 import com.trust3.xcpro.profiles.ProfilePreferences
 import com.trust3.xcpro.profiles.ProfileRepository
@@ -24,8 +29,6 @@ import com.trust3.xcpro.profiles.UserProfile
 import com.trust3.xcpro.sensors.CompleteFlightData
 import com.trust3.xcpro.sensors.FlightStateSource
 import com.trust3.xcpro.sensors.SensorFusionRepository
-import com.trust3.xcpro.sensors.SensorStatus
-import com.trust3.xcpro.sensors.UnifiedSensorManager
 import com.trust3.xcpro.sensors.VarioDiagnosticsSample
 import com.trust3.xcpro.sensors.domain.FlyingState
 import com.trust3.xcpro.testing.MainDispatcherRule
@@ -47,6 +50,7 @@ import com.trust3.xcpro.weglide.notifications.WeGlidePostFlightPromptNotificatio
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -81,9 +85,8 @@ class VarioServiceManagerIgcActionOrderingTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
         val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
-        val unifiedSensorManager = mock<UnifiedSensorManager>()
-        whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
-        whenever(unifiedSensorManager.getSensorStatus()).thenReturn(readySensorStatus())
+        val runtimeBackend = mock<SelectedLiveRuntimeBackendPort>()
+        whenever(runtimeBackend.start()).thenReturn(LiveRuntimeStartResult.READY)
 
         val flightDataRepository = FlightDataRepository()
         val levoRepo = mock<LevoVarioPreferencesRepository>()
@@ -160,7 +163,8 @@ class VarioServiceManagerIgcActionOrderingTest {
 
         val manager = VarioServiceManager(
             audioFocusManager = audioFocusManager,
-            unifiedSensorManager = unifiedSensorManager,
+            selectedLiveRuntimeBackendPort = runtimeBackend,
+            liveSourceStatePort = fixedLiveSourceStatePort(),
             sensorFusionRepository = FakeSensorFusionRepository(),
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
@@ -237,22 +241,6 @@ class VarioServiceManagerIgcActionOrderingTest {
         override fun stop() = Unit
     }
 
-    private fun readySensorStatus(): SensorStatus {
-        return SensorStatus(
-            gpsAvailable = true,
-            gpsStarted = true,
-            baroAvailable = true,
-            baroStarted = true,
-            compassAvailable = true,
-            compassStarted = true,
-            accelAvailable = true,
-            accelStarted = true,
-            rotationAvailable = true,
-            rotationStarted = true,
-            hasLocationPermissions = true
-        )
-    }
-
     private fun testUserProfile(): UserProfile {
         return UserProfile(
             id = "profile-1",
@@ -281,5 +269,16 @@ class VarioServiceManagerIgcActionOrderingTest {
             ),
             fileName = documentRef.displayName ?: "vario-finalize-ordering.igc"
         )
+    }
+
+    private fun fixedLiveSourceStatePort(
+        kind: LiveSourceKind = LiveSourceKind.PHONE
+    ): LiveSourceStatePort {
+        return object : LiveSourceStatePort {
+            override val state: StateFlow<ResolvedLiveSourceState> =
+                MutableStateFlow(ResolvedLiveSourceState(kind = kind))
+
+            override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
+        }
     }
 }

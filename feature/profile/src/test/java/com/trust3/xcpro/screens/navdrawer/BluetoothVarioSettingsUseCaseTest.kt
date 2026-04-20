@@ -1,7 +1,7 @@
 package com.trust3.xcpro.screens.navdrawer
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.BluetoothBondedDeviceItem
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDisconnectReason
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothReconnectState
@@ -44,7 +44,7 @@ class BluetoothVarioSettingsUseCaseTest {
                     activeDeviceAddress = "AA:BB",
                     activeDeviceName = "LXNAV S100",
                     connectionState = BluetoothConnectionState.Connected(
-                        device = com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice(
+                        device = com.trust3.xcpro.bluetooth.BondedBluetoothDevice(
                             address = "AA:BB",
                             displayName = "LXNAV S100"
                         )
@@ -179,3 +179,5 @@ class BluetoothVarioSettingsUseCaseTest {
         verify(controlPort).onPermissionResult(true)
     }
 }
+
+

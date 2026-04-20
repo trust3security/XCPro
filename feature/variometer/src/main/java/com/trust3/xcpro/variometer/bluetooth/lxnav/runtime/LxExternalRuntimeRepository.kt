@@ -8,10 +8,10 @@ import com.trust3.xcpro.external.ExternalInstrumentReadPort
 import com.trust3.xcpro.external.TimedExternalValue
 import com.trust3.xcpro.weather.wind.data.ExternalAirspeedWritePort
 import com.trust3.xcpro.weather.wind.model.AirspeedSample
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
-import com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk
-import com.trust3.xcpro.variometer.bluetooth.BluetoothTransport
-import com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothReadChunk
+import com.trust3.xcpro.bluetooth.BluetoothTransport
+import com.trust3.xcpro.bluetooth.BondedBluetoothDevice
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxDeviceInfo
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxParseOutcome
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxSentenceSession
@@ -270,3 +270,5 @@ class LxExternalRuntimeRepository @Inject constructor(
         )
     }
 }
+
+

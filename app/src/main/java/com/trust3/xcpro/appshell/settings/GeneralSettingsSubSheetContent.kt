@@ -82,6 +82,13 @@ internal fun GeneralSettingsSubSheetContent(
             onNavigateToDrawer = onNavigateToDrawer,
             onNavigateToMap = onNavigateToMap
         )
+        GeneralSubSheet.CONDOR_BRIDGE -> CondorBridgeSettingsSubSheet(
+            navController = navController,
+            drawerState = drawerState,
+            onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
+            onNavigateToDrawer = onNavigateToDrawer,
+            onNavigateToMap = onNavigateToMap
+        )
         GeneralSubSheet.LAYOUTS -> LayoutSettingsSubSheet(
             navController = navController,
             drawerState = drawerState,

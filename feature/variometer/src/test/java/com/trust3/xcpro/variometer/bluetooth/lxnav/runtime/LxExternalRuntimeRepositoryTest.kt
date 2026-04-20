@@ -2,11 +2,11 @@ package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
 import com.trust3.xcpro.core.time.FakeClock
 import com.trust3.xcpro.external.ExternalInstrumentFlightSnapshot
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
-import com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk
-import com.trust3.xcpro.variometer.bluetooth.BluetoothTransport
-import com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothReadChunk
+import com.trust3.xcpro.bluetooth.BluetoothTransport
+import com.trust3.xcpro.bluetooth.BondedBluetoothDevice
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -510,3 +510,4 @@ class LxExternalRuntimeRepositoryTest {
         val TEST_DEVICE_B = BondedBluetoothDevice("AA:BB:CC:DD:EE:02", "LXNAV S100 B")
     }
 }
+

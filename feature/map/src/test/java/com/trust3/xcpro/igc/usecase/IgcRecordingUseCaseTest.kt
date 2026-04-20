@@ -10,6 +10,9 @@ import com.trust3.xcpro.igc.data.IgcSessionStateSnapshotStore
 import com.trust3.xcpro.igc.domain.IgcRecoveryErrorCode
 import com.trust3.xcpro.igc.domain.IgcRecoveryResult
 import com.trust3.xcpro.igc.domain.IgcSessionStateMachine
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.LiveSourceStatePort
+import com.trust3.xcpro.livesource.ResolvedLiveSourceState
 import com.trust3.xcpro.sensors.FlightStateSource
 import com.trust3.xcpro.sensors.domain.FlyingState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -359,6 +362,42 @@ class IgcRecordingUseCaseTest {
         assertNull(store.loadSnapshot())
     }
 
+    @Test
+    fun simulatorSource_doesNotStartOrFinalizeRecordingFromFlightSignals() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val clock = FakeClock(monoMs = 0L)
+        val source = MutableStateFlow(FlyingState())
+        val flightDataRepository = FlightDataRepository()
+        val liveSourceState = MutableStateFlow(ResolvedLiveSourceState(kind = LiveSourceKind.PHONE))
+        val useCase = buildIgcRecordingUseCase(
+            flightStateSource = flightStateSource(source),
+            flightDataRepository = flightDataRepository,
+            clock = clock,
+            snapshotStore = InMemorySnapshotStore(),
+            defaultDispatcher = dispatcher,
+            config = zeroDebounceConfig(),
+            liveSourceStatePort = mutableLiveSourceStatePort(liveSourceState)
+        )
+
+        clock.setMonoMs(1_000L)
+        source.value = FlyingState(isFlying = false, onGround = true)
+        advanceUntilIdle()
+        clock.setMonoMs(2_000L)
+        source.value = FlyingState(isFlying = true, onGround = false)
+        advanceUntilIdle()
+        assertEquals(IgcSessionStateMachine.Phase.Recording, useCase.state.value.phase)
+
+        liveSourceState.value = ResolvedLiveSourceState(kind = LiveSourceKind.SIMULATOR_CONDOR2)
+        clock.setMonoMs(3_000L)
+        source.value = FlyingState(isFlying = false, onGround = true)
+        advanceUntilIdle()
+        clock.setMonoMs(4_000L)
+        source.value = FlyingState(isFlying = false, onGround = true)
+        advanceUntilIdle()
+
+        assertEquals(IgcSessionStateMachine.Phase.Recording, useCase.state.value.phase)
+    }
+
     private fun emit(
         machine: IgcSessionStateMachine,
         monoTimeMs: Long,
@@ -379,6 +418,14 @@ class IgcRecordingUseCaseTest {
         source: MutableStateFlow<FlyingState>
     ): FlightStateSource = object : FlightStateSource {
         override val flightState = source
+    }
+
+    private fun mutableLiveSourceStatePort(
+        state: MutableStateFlow<ResolvedLiveSourceState>
+    ): LiveSourceStatePort = object : LiveSourceStatePort {
+        override val state = state
+
+        override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
     }
 
     private fun zeroDebounceConfig(): IgcSessionStateMachine.Config {

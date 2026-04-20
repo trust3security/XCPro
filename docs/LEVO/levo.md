@@ -144,8 +144,13 @@ Responsibilities:
 ------------------------------------------------------------------------------
 SENSOR LAYER (LIVE)
 ------------------------------------------------------------------------------
-UnifiedSensorManager is the primary live SensorDataSource.
-File: feature/map/src/main/java/com/trust3/xcpro/sensors/UnifiedSensorManager.kt
+ResolverSelectedSensorDataSource is the primary live SensorDataSource seam.
+Files:
+- feature/flight-runtime/src/main/java/com/trust3/xcpro/livesource/ResolverSelectedSensorDataSource.kt
+- feature/map/src/main/java/com/trust3/xcpro/sensors/UnifiedSensorManager.kt
+- feature/simulator/src/main/java/com/trust3/xcpro/simulator/condor/CondorLiveSensorDataSource.kt
+
+UnifiedSensorManager remains the phone live adapter. Condor simulator samples are provided by simulator-owned adapters. Runtime selection between phone and Condor is owned by flight-runtime resolver seams; `FlightDataRepository.Source` remains `LIVE` or `REPLAY` only.
 
 It exposes StateFlow for:
 - gpsFlow: GPSData from LocationManager
@@ -509,9 +514,13 @@ Hilt binds live and replay sources.
 See: feature/map/src/main/java/com/trust3/xcpro/di/WindSensorModule.kt
 
 Bindings:
-- @LiveSource SensorDataSource -> UnifiedSensorManager
+- @PhoneLiveSensorSource SensorDataSource -> UnifiedSensorManager
+- @CondorLiveSensorSource SensorDataSource -> CondorLiveSensorDataSource
+- @LiveSource SensorDataSource -> ResolverSelectedSensorDataSource
 - @ReplaySource SensorDataSource -> ReplaySensorSource
-- @LiveSource AirspeedDataSource -> ExternalAirspeedRepository
+- @PhoneLiveAirspeedSource AirspeedDataSource -> ExternalAirspeedRepository
+- @CondorLiveAirspeedSource AirspeedDataSource -> CondorLiveAirspeedDataSource
+- @LiveSource AirspeedDataSource -> ResolverSelectedAirspeedDataSource
 - @ReplaySource AirspeedDataSource -> ReplayAirspeedRepository
 
 This enables replay and live pipelines to share the same fusion code.

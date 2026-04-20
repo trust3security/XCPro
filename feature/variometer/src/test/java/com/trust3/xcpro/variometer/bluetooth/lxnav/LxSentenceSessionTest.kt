@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk
+import com.trust3.xcpro.bluetooth.BluetoothReadChunk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -188,3 +188,4 @@ class LxSentenceSessionTest {
         return "\$$payloadWithoutDollar*${checksum.toString(16).uppercase().padStart(2, '0')}"
     }
 }
+

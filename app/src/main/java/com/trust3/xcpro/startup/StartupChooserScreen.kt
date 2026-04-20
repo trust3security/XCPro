@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -25,9 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.trust3.xcpro.R
-import com.trust3.xcpro.service.VarioForegroundService
+import com.trust3.xcpro.livesource.LiveStartupRequirement
+import dagger.hilt.android.EntryPointAccessors
 
 @Composable
 internal fun StartupChooserScreen(
@@ -35,11 +36,17 @@ internal fun StartupChooserScreen(
     onOpenFriendsFlying: () -> Unit
 ) {
     val context = LocalContext.current
+    val runtimeEntryPoint = remember(context) {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            StartupChooserRuntimeEntryPoint::class.java
+        )
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            VarioForegroundService.startIfPermitted(context)
+            runtimeEntryPoint.varioRuntimeControlPort().ensureRunningIfPermitted()
             onOpenFlying()
         } else {
             Toast.makeText(
@@ -51,15 +58,15 @@ internal fun StartupChooserScreen(
     }
 
     fun openFlying() {
-        val hasLocationPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasLocationPermission) {
-            VarioForegroundService.startIfPermitted(context)
-            onOpenFlying()
-        } else {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        when (runtimeEntryPoint.liveSourceStatePort().state.value.startupRequirement) {
+            LiveStartupRequirement.ANDROID_FINE_LOCATION_PERMISSION -> {
+                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+
+            LiveStartupRequirement.NONE -> {
+                runtimeEntryPoint.varioRuntimeControlPort().ensureRunningIfPermitted()
+                onOpenFlying()
+            }
         }
     }
 
