@@ -298,6 +298,9 @@ internal class CondorTcpBridgeTransport @Inject constructor(
                     }
                     val ageMs = (clock.nowMonoMs() - lastReceiveMs).coerceAtLeast(0L)
                     if (ageMs > STREAM_STALE_MS) {
+                        if (currentState.session.freshness != CondorStreamFreshness.STALE) {
+                            liveSampleRepository.onStreamStale()
+                        }
                         mutableState.value = currentState.copy(
                             session = currentState.session.copy(
                                 freshness = CondorStreamFreshness.STALE

@@ -39,6 +39,8 @@ class LiveSourceResolverTest {
             effectiveSource = EffectiveLiveSource.PHONE,
             selectedSensorDataSource = SelectedLiveSensorDataSource.PHONE_SENSORS,
             selectedAirspeedSource = SelectedLiveAirspeedSource.PHONE_OR_NONE,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.DEFAULT_LIVE_EXTERNAL_INSTRUMENT,
             startupRequirement = LiveStartupRequirement.NONE,
             status = LiveSourceStatus.PhoneReady,
             kind = LiveSourceKind.PHONE
@@ -64,6 +66,8 @@ class LiveSourceResolverTest {
             effectiveSource = EffectiveLiveSource.PHONE,
             selectedSensorDataSource = SelectedLiveSensorDataSource.PHONE_SENSORS,
             selectedAirspeedSource = SelectedLiveAirspeedSource.PHONE_OR_NONE,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.DEFAULT_LIVE_EXTERNAL_INSTRUMENT,
             startupRequirement = LiveStartupRequirement.ANDROID_FINE_LOCATION_PERMISSION,
             status = LiveSourceStatus.PhoneDegraded(
                 PhoneLiveDegradedReason.LOCATION_PERMISSION_MISSING
@@ -91,6 +95,8 @@ class LiveSourceResolverTest {
             effectiveSource = EffectiveLiveSource.PHONE,
             selectedSensorDataSource = SelectedLiveSensorDataSource.PHONE_SENSORS,
             selectedAirspeedSource = SelectedLiveAirspeedSource.PHONE_OR_NONE,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.DEFAULT_LIVE_EXTERNAL_INSTRUMENT,
             startupRequirement = LiveStartupRequirement.NONE,
             status = LiveSourceStatus.PhoneDegraded(
                 PhoneLiveDegradedReason.LOCATION_PROVIDER_DISABLED
@@ -129,6 +135,8 @@ class LiveSourceResolverTest {
             effectiveSource = EffectiveLiveSource.CONDOR2,
             selectedSensorDataSource = SelectedLiveSensorDataSource.CONDOR_SIMULATOR,
             selectedAirspeedSource = SelectedLiveAirspeedSource.CONDOR_SIMULATOR,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.CONDOR_SIMULATOR,
             startupRequirement = LiveStartupRequirement.NONE,
             status = LiveSourceStatus.CondorReady,
             kind = LiveSourceKind.SIMULATOR_CONDOR2
@@ -159,6 +167,8 @@ class LiveSourceResolverTest {
             effectiveSource = EffectiveLiveSource.CONDOR2,
             selectedSensorDataSource = SelectedLiveSensorDataSource.CONDOR_SIMULATOR,
             selectedAirspeedSource = SelectedLiveAirspeedSource.CONDOR_SIMULATOR,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.CONDOR_SIMULATOR,
             startupRequirement = LiveStartupRequirement.NONE,
             status = LiveSourceStatus.CondorDegraded(CondorLiveDegradedReason.STALE_STREAM),
             kind = LiveSourceKind.SIMULATOR_CONDOR2
@@ -194,6 +204,8 @@ class LiveSourceResolverTest {
             effectiveSource = EffectiveLiveSource.CONDOR2,
             selectedSensorDataSource = SelectedLiveSensorDataSource.CONDOR_SIMULATOR,
             selectedAirspeedSource = SelectedLiveAirspeedSource.CONDOR_SIMULATOR,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.CONDOR_SIMULATOR,
             startupRequirement = LiveStartupRequirement.NONE,
             status = LiveSourceStatus.CondorReady,
             kind = LiveSourceKind.SIMULATOR_CONDOR2
@@ -223,6 +235,8 @@ class LiveSourceResolverTest {
             effectiveSource = EffectiveLiveSource.PHONE,
             selectedSensorDataSource = SelectedLiveSensorDataSource.PHONE_SENSORS,
             selectedAirspeedSource = SelectedLiveAirspeedSource.PHONE_OR_NONE,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.DEFAULT_LIVE_EXTERNAL_INSTRUMENT,
             startupRequirement = LiveStartupRequirement.ANDROID_FINE_LOCATION_PERMISSION,
             status = LiveSourceStatus.PhoneDegraded(
                 PhoneLiveDegradedReason.LOCATION_PERMISSION_MISSING
@@ -238,6 +252,7 @@ class LiveSourceResolverTest {
         effectiveSource: EffectiveLiveSource,
         selectedSensorDataSource: SelectedLiveSensorDataSource,
         selectedAirspeedSource: SelectedLiveAirspeedSource,
+        selectedExternalInstrumentSource: SelectedLiveExternalInstrumentSource,
         startupRequirement: LiveStartupRequirement,
         status: LiveSourceStatus,
         kind: LiveSourceKind
@@ -246,6 +261,7 @@ class LiveSourceResolverTest {
         assertEquals(effectiveSource, state.effectiveSource)
         assertEquals(selectedSensorDataSource, state.selectedSensorDataSource)
         assertEquals(selectedAirspeedSource, state.selectedAirspeedSource)
+        assertEquals(selectedExternalInstrumentSource, state.selectedExternalInstrumentSource)
         assertEquals(startupRequirement, state.startupRequirement)
         assertEquals(status, state.status)
         assertEquals(kind, state.kind)

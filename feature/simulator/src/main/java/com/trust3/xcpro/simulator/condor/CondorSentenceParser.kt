@@ -1,6 +1,7 @@
 package com.trust3.xcpro.simulator.condor
 
 import com.trust3.xcpro.bluetooth.NmeaLine
+import com.trust3.xcpro.common.units.UnitsConverter
 import javax.inject.Inject
 import kotlin.math.floor
 
@@ -22,6 +23,10 @@ sealed interface CondorSentence {
 
     data class LxWp0(
         val airspeedKph: Double,
+        val pressureAltitudeM: Double?,
+        val totalEnergyVarioMps: Double?,
+        val windDirectionFromDeg: Double?,
+        val windSpeedMs: Double?,
         override val receivedMonoMs: Long
     ) : CondorSentence
 }
@@ -76,12 +81,19 @@ class CondorSentenceParser @Inject constructor() {
     }
 
     private fun parseLxWp0(fields: List<String>, receivedMonoMs: Long): CondorSentence.LxWp0? {
-        val airspeedKph = fields.getOrNull(2)?.toDoubleOrNull()
-            ?: fields.getOrNull(1)?.toDoubleOrNull()
-            ?: return null
+        val airspeedKph = fields.getOrNull(2)?.toFiniteDouble() ?: return null
         if (!airspeedKph.isFinite() || airspeedKph <= 0.0) return null
+        val windDirectionFromDeg = fields.getOrNull(11)?.toFiniteDouble()?.let(::reciprocalBearing)
+        val windSpeedMs = fields.getOrNull(12)?.toFiniteDouble()
+            ?.takeIf { it >= 0.0 }
+            ?.let(UnitsConverter::kmhToMs)
+            ?.takeIf { it.isFinite() && it >= 0.0 }
         return CondorSentence.LxWp0(
             airspeedKph = airspeedKph,
+            pressureAltitudeM = fields.getOrNull(3)?.toFiniteDouble(),
+            totalEnergyVarioMps = fields.getOrNull(4)?.toFiniteDouble(),
+            windDirectionFromDeg = windDirectionFromDeg,
+            windSpeedMs = windSpeedMs,
             receivedMonoMs = receivedMonoMs
         )
     }
@@ -113,4 +125,13 @@ class CondorSentenceParser @Inject constructor() {
             else -> null
         }
     }
+
+    private fun String?.toFiniteDouble(): Double? =
+        this?.toDoubleOrNull()?.takeIf { it.isFinite() }
+
+    private fun reciprocalBearing(directionToDeg: Double): Double =
+        normalizeBearing(directionToDeg + 180.0)
+
+    private fun normalizeBearing(directionDeg: Double): Double =
+        ((directionDeg % 360.0) + 360.0) % 360.0
 }

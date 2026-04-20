@@ -38,11 +38,13 @@ Condor runtime ownership is split as follows:
   connect-permission seams, and bonded-device models shared by simulator and
   variometer features.
 - `:feature:flight-runtime` owns the read-only Condor runtime seam
-  `CondorLiveStatePort` and the cross-module models needed to expose Condor
-  session state and selected transport kind.
+  `CondorLiveStatePort`, the live-source selector contracts for Condor, and the
+  cross-module models needed to expose Condor session state and selected
+  transport kind.
 - `:feature:simulator` owns Condor transport selection, persisted Bluetooth
   bridge selection, persisted TCP listen port, active-session state, reconnect
-  policy, diagnostics, and all Condor mutations through `CondorBridgeControlPort`.
+  policy, diagnostics, Condor sentence parsing, simulator runtime sample
+  publication, and all Condor mutations through `CondorBridgeControlPort`.
 - `:feature:profile` owns Condor settings projection and rendering only.
 - `:app` owns General Settings navigation wiring only.
 
@@ -50,6 +52,9 @@ This slice keeps Bluetooth and TCP listener setup inside one simulator-owned
 runtime owner while preserving transport-blind downstream behavior. Condor live
 samples feed the selected live runtime path, and `LiveSourceResolver` continues
 to expose Condor as one simulator source instead of two separate runtime modes.
+Condor pressure altitude and TE vario now cross into fusion through a selected
+external-instrument seam, and direct Condor wind enters the wind runtime only
+through `ExternalWindWritePort`.
 
 Dependency direction impact:
 
@@ -63,14 +68,21 @@ API/module surface impact:
 - New module: `:feature:bluetooth-devices`
 - New module: `:feature:simulator`
 - New cross-module read seam: `CondorLiveStatePort`
+- New live-source selector contract:
+  `SelectedLiveExternalInstrumentSource`
 - New simulator control seam: `CondorBridgeControlPort`
 - New simulator-owned transport adapters: Bluetooth bridge runtime and TCP
   listener runtime
+- New wind write seam: `ExternalWindWritePort`
 
 Time-base/determinism impact:
 
 - Condor bridge freshness uses injected monotonic time via `Clock.nowMonoMs()`.
 - No wall-clock authority is introduced into the runtime bridge owner.
+- Condor external-instrument freshness uses simulator sample monotonic receive
+  time and existing flight-runtime freshness arbitration.
+- Condor external wind uses the existing wind override wall-time contract and
+  is cleared on simulator stream stale / disconnect boundaries.
 - This slice does not alter replay or fused-flight determinism paths.
 
 Concurrency/buffering/cadence impact:
@@ -101,10 +113,12 @@ Concurrency/buffering/cadence impact:
 - Downstream live-source, map, and fusion code stays transport-agnostic.
 - Settings UI can expose meaningful diagnostics without becoming a runtime
   authority.
+- Condor pressure altitude, TE vario, and wind now enter XCPro through owned
+  runtime seams instead of UI or transport-side special cases.
 
 ### Costs
 - Adds TCP listener/network-info adapters and transport-preference persistence.
-- Richer Condor sentence support still requires a later parser expansion slice.
+- Adds one live-source selector seam and one wind write seam to keep ownership explicit.
 
 ### Risks
 - Shared Bluetooth module changes affect variometer imports and tests.
@@ -116,7 +130,8 @@ Concurrency/buffering/cadence impact:
 - Tests/evidence required:
   `enforceRules`, root `testDebugUnitTest`, `assembleDebug`, focused simulator
   and profile unit tests for transport selection, bridge persistence, TCP
-  listener reconnect states, and settings mapping.
+  listener reconnect states, Condor sentence parsing, selected external
+  instrument routing, and external wind policy.
 - SLO or latency impact:
   No new UI-frame or map-path SLO impact in this slice. Runtime cadence is
   limited to Bluetooth chunk reads and a 1s freshness ticker inside simulator.
@@ -129,7 +144,8 @@ Concurrency/buffering/cadence impact:
 
 - `ARCHITECTURE.md`: No change
 - `CODING_RULES.md`: No change
-- `PIPELINE.md`: No change in this slice
+- `PIPELINE.md`: Update live-source selection rule with the selected external
+  instrument seam and external wind write seam
 - `CONTRIBUTING.md`: No change
 - `KNOWN_DEVIATIONS.md`: No change
 
@@ -142,5 +158,5 @@ Concurrency/buffering/cadence impact:
   Variometer regressions from the shared Bluetooth extraction or unstable Condor
   reconnect behavior.
 - How this ADR is superseded or retired:
-  Supersede it when Condor sentence parsing and live-source resolution are
-  promoted into the next accepted runtime/fusion ADR.
+  Supersede it when Condor runtime ownership changes again beyond the current
+  transport + selected-external-instrument + external-wind boundary.

@@ -24,7 +24,8 @@ class CondorTcpBridgeTransportTest {
         }
         val liveSampleRepository = CondorLiveSampleRepository(
             parser = CondorSentenceParser(),
-            clock = clock
+            clock = clock,
+            externalWindWritePort = TestExternalWindWritePort()
         )
         val transport = CondorTcpBridgeTransport(
             tcpServerPort = tcpServerPort,
@@ -116,7 +117,8 @@ class CondorTcpBridgeTransportTest {
         }
         val liveSampleRepository = CondorLiveSampleRepository(
             parser = CondorSentenceParser(),
-            clock = clock
+            clock = clock,
+            externalWindWritePort = TestExternalWindWritePort()
         )
         val transport = CondorTcpBridgeTransport(
             tcpServerPort = tcpServerPort,
@@ -142,7 +144,8 @@ class CondorTcpBridgeTransportTest {
         val tcpServerPort = FakeCondorTcpServerPort()
         val liveSampleRepository = CondorLiveSampleRepository(
             parser = CondorSentenceParser(),
-            clock = clock
+            clock = clock,
+            externalWindWritePort = TestExternalWindWritePort()
         )
         val transport = CondorTcpBridgeTransport(
             tcpServerPort = tcpServerPort,

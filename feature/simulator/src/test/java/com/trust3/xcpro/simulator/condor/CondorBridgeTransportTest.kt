@@ -24,7 +24,8 @@ class CondorBridgeTransportTest {
         )
         val liveSampleRepository = CondorLiveSampleRepository(
             parser = CondorSentenceParser(),
-            clock = clock
+            clock = clock,
+            externalWindWritePort = TestExternalWindWritePort()
         )
         val transport = CondorBridgeTransport(
             bluetoothTransport = bluetoothTransport,

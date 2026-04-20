@@ -43,6 +43,11 @@ enum class SelectedLiveAirspeedSource {
     CONDOR_SIMULATOR
 }
 
+enum class SelectedLiveExternalInstrumentSource {
+    DEFAULT_LIVE_EXTERNAL_INSTRUMENT,
+    CONDOR_SIMULATOR
+}
+
 enum class LiveStartupRequirement {
     NONE,
     ANDROID_FINE_LOCATION_PERMISSION
@@ -73,6 +78,8 @@ data class ResolvedLiveSourceState(
         SelectedLiveSensorDataSource.PHONE_SENSORS,
     val selectedAirspeedSource: SelectedLiveAirspeedSource =
         SelectedLiveAirspeedSource.PHONE_OR_NONE,
+    val selectedExternalInstrumentSource: SelectedLiveExternalInstrumentSource =
+        SelectedLiveExternalInstrumentSource.DEFAULT_LIVE_EXTERNAL_INSTRUMENT,
     val startupRequirement: LiveStartupRequirement = LiveStartupRequirement.NONE,
     val status: LiveSourceStatus = LiveSourceStatus.PhoneReady,
     val kind: LiveSourceKind = LiveSourceKind.PHONE

@@ -30,7 +30,7 @@ private val KEY_WIND_TIMESTAMP_MS = longPreferencesKey("manual_wind_timestamp_ms
 class WindOverrideRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val clock: Clock
-) : WindOverrideSource {
+) : WindOverrideSource, ExternalWindWritePort {
     override val manualWind: Flow<WindOverride?> = context.windDataStore.data
         .map { preferences ->
             val speed = preferences[KEY_WIND_SPEED_MS]
@@ -99,10 +99,14 @@ class WindOverrideRepository @Inject constructor(
         updateExternalWindVector(vector, clock.nowWallMs())
     }
 
-    fun updateExternalWindVector(
+    override fun updateExternalWindVector(
         vector: WindVector,
         timestampMillis: Long
     ) {
+        if (!vector.east.isFinite() || !vector.north.isFinite() || vector.speed < MIN_SPEED_MS) {
+            _externalWind.value = null
+            return
+        }
         _externalWind.value = WindOverride(
             vector = vector,
             timestampMillis = timestampMillis,
@@ -110,7 +114,7 @@ class WindOverrideRepository @Inject constructor(
         )
     }
 
-    fun clearExternalWind() {
+    override fun clearExternalWind() {
         _externalWind.value = null
     }
 

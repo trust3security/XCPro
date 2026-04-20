@@ -467,7 +467,8 @@ class CondorBridgeControllerTest {
             CondorTransportPreferencesRepository(FakeCondorTransportPreferencesStorage(), Unit)
         val liveSampleRepository = CondorLiveSampleRepository(
             parser = CondorSentenceParser(),
-            clock = clock
+            clock = clock,
+            externalWindWritePort = TestExternalWindWritePort()
         )
         val bridgeTransport = CondorBridgeTransport(
             bluetoothTransport = bluetoothTransport,

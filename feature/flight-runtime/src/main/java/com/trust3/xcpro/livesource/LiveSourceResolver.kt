@@ -99,6 +99,8 @@ class LiveSourceResolver @Inject constructor(
             effectiveSource = EffectiveLiveSource.PHONE,
             selectedSensorDataSource = SelectedLiveSensorDataSource.PHONE_SENSORS,
             selectedAirspeedSource = SelectedLiveAirspeedSource.PHONE_OR_NONE,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.DEFAULT_LIVE_EXTERNAL_INSTRUMENT,
             startupRequirement = startupRequirement,
             status = status,
             kind = LiveSourceKind.PHONE
@@ -114,6 +116,8 @@ class LiveSourceResolver @Inject constructor(
             effectiveSource = EffectiveLiveSource.CONDOR2,
             selectedSensorDataSource = SelectedLiveSensorDataSource.CONDOR_SIMULATOR,
             selectedAirspeedSource = SelectedLiveAirspeedSource.CONDOR_SIMULATOR,
+            selectedExternalInstrumentSource =
+                SelectedLiveExternalInstrumentSource.CONDOR_SIMULATOR,
             startupRequirement = LiveStartupRequirement.NONE,
             status = condorState.toStatus(),
             kind = LiveSourceKind.SIMULATOR_CONDOR2

@@ -25,3 +25,11 @@ annotation class PhoneLiveAirspeedSource
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class CondorLiveAirspeedSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DefaultLiveExternalInstrumentSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CondorLiveExternalInstrumentSource
