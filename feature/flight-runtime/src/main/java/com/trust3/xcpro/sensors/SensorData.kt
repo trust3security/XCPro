@@ -182,6 +182,7 @@ data class CompleteFlightData(
     val varioGPS: VerticalSpeedMs = VerticalSpeedMs(0.0),            // GPS vertical speed
     val varioComplementary: VerticalSpeedMs = VerticalSpeedMs(0.0),  // Complementary filter (future)
     val realIgcVario: VerticalSpeedMs? = null,
+    val condorVario: VerticalSpeedMs? = null,
 
     // Energy / MacCready metadata
     val teAltitude: AltitudeM = AltitudeM(0.0),

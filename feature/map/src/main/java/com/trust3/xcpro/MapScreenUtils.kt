@@ -172,6 +172,7 @@ internal fun convertToRealTimeFlightData(
         varioGPS = completeData.varioGPS.value,
         varioComplementary = completeData.varioComplementary.value,
         realIgcVario = completeData.realIgcVario?.value,
+        condorVario = completeData.condorVario?.value,
         baselineVario = completeData.baselineVario.value,
         baselineDisplayVario = completeData.baselineDisplayVario.value,
         baselineVarioValid = completeData.baselineVarioValid,

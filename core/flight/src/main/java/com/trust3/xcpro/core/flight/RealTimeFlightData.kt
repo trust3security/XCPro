@@ -67,6 +67,7 @@ data class RealTimeFlightData(
     val varioGPS: Double = 0.0,
     val varioComplementary: Double = 0.0,
     val realIgcVario: Double? = null,
+    val condorVario: Double? = null,
     val baselineVario: Double = 0.0,
     val baselineDisplayVario: Double = 0.0,
     val baselineVarioValid: Boolean = false,

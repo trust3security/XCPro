@@ -71,8 +71,8 @@ internal val varioCards = listOf(
     ),
     CardDefinition(
         id = "real_igc_vario",
-        title = "REAL IGC",
-        description = "Raw lift/sink directly from the active IGC replay sample",
+        title = "CONDOR VARIO",
+        description = "Live Condor total-energy variometer (replay fallback)",
         category = CardCategory.VARIO,
         icon = Icons.Filled.Route,
         unit = "m/s",

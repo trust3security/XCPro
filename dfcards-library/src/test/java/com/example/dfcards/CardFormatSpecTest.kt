@@ -512,6 +512,23 @@ class CardFormatSpecTest {
         assertEquals(strings.noStart, startAlt.second)
     }
 
+    @Test
+    fun realIgc_vario_prefers_condor_data_when_available() {
+        val liveData = RealTimeFlightData(
+            condorVario = 2.5,
+            realIgcVario = 1.5
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.REAL_IGC_VARIO]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("+2.5 m/s", primary)
+        assertEquals(strings.realIgc, secondary)
+    }
+
     private class StubTimeFormatter : CardTimeFormatter {
         var lastEpoch: Long? = null
 

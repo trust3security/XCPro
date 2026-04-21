@@ -20,6 +20,7 @@ class FlightDisplayMapper {
         val metrics = snapshot.metrics
         val varioResults = snapshot.varioResults
         val replayIgcVario = snapshot.replayIgcVario
+        val condorVario = snapshot.condorVario
 
         return CompleteFlightData(
             gps = snapshot.gps,
@@ -79,6 +80,7 @@ class FlightDisplayMapper {
             varioGPS = VerticalSpeedMs(varioResults["gps"] ?: 0.0),
             varioComplementary = VerticalSpeedMs(varioResults["complementary"] ?: 0.0),
             realIgcVario = replayIgcVario?.let { VerticalSpeedMs(it) },
+            condorVario = condorVario?.let { VerticalSpeedMs(it) },
             teAltitude = AltitudeM(metrics.teAltitude),
             macCready = snapshot.macCready,
             macCreadyRisk = snapshot.macCreadyRisk,
@@ -112,6 +114,7 @@ data class FlightDisplaySnapshot(
     val aglUpdatedAtMonoMs: Long = 0L,
     val varioResults: Map<String, Double>,
     val replayIgcVario: Double?,
+    val condorVario: Double? = null,
     val audioVario: Double,
     val dataQuality: String,
     val timestamp: Long,
