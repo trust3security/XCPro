@@ -20,6 +20,7 @@ class SnailTrailRenderPlannerTest {
                 currentLocation = TrailGeoPoint(0.0, 0.0),
                 currentTimeMillis = 100L,
                 isCircling = false,
+                isTurnSmoothing = false,
                 currentZoom = 10f,
                 isReplay = false,
                 useRenderFrameSync = false,
@@ -41,6 +42,7 @@ class SnailTrailRenderPlannerTest {
                 currentLocation = TrailGeoPoint(120.0, 0.0),
                 currentTimeMillis = 100L,
                 isCircling = false,
+                isTurnSmoothing = false,
                 currentZoom = 10f,
                 isReplay = false,
                 useRenderFrameSync = false,
@@ -62,6 +64,7 @@ class SnailTrailRenderPlannerTest {
                 currentLocation = TrailGeoPoint(0.0, 0.0),
                 currentTimeMillis = 200L,
                 isCircling = false,
+                isTurnSmoothing = false,
                 currentZoom = 10f,
                 isReplay = true,
                 useRenderFrameSync = false,
@@ -71,6 +74,52 @@ class SnailTrailRenderPlannerTest {
 
         assertNotNull(plan)
         assertEquals(30.0, plan?.minDistanceMeters ?: -1.0, 0.0)
+    }
+
+    @Test
+    fun plan_usesTighterDistanceForCirclingLive() {
+        val planner = SnailTrailRenderPlanner(FakeMetersPerPixelProvider(10.0))
+
+        val plan = planner.plan(
+            SnailTrailRenderPlanner.Input(
+                points = listOf(point(0.0, 0.0, 100L), point(0.0002, 0.0002, 200L)),
+                settings = TrailSettings(),
+                currentLocation = TrailGeoPoint(0.0, 0.0),
+                currentTimeMillis = 200L,
+                isCircling = true,
+                isTurnSmoothing = false,
+                currentZoom = 10f,
+                isReplay = false,
+                useRenderFrameSync = false,
+                density = 2f
+            )
+        )
+
+        assertNotNull(plan)
+        assertEquals(10.0, plan?.minDistanceMeters ?: -1.0, 0.0)
+    }
+
+    @Test
+    fun plan_tightensDistanceForLiveTurnSmoothing() {
+        val planner = SnailTrailRenderPlanner(FakeMetersPerPixelProvider(10.0))
+
+        val plan = planner.plan(
+            SnailTrailRenderPlanner.Input(
+                points = listOf(point(0.0, 0.0, 100L), point(0.0002, 0.0002, 200L)),
+                settings = TrailSettings(),
+                currentLocation = TrailGeoPoint(0.0, 0.0),
+                currentTimeMillis = 200L,
+                isCircling = false,
+                isTurnSmoothing = true,
+                currentZoom = 10f,
+                isReplay = false,
+                useRenderFrameSync = false,
+                density = 2f
+            )
+        )
+
+        assertNotNull(plan)
+        assertEquals(8.0, plan?.minDistanceMeters ?: -1.0, 0.0)
     }
 
     @Test
@@ -88,6 +137,7 @@ class SnailTrailRenderPlannerTest {
                 currentLocation = TrailGeoPoint(0.0, 0.0),
                 currentTimeMillis = 200L,
                 isCircling = false,
+                isTurnSmoothing = false,
                 currentZoom = 10f,
                 isReplay = false,
                 useRenderFrameSync = false,
@@ -108,6 +158,7 @@ class SnailTrailRenderPlannerTest {
             currentLocation = TrailGeoPoint(0.0, 0.0),
             currentTimeMillis = 200L,
             isCircling = false,
+            isTurnSmoothing = false,
             currentZoom = 10f,
             isReplay = false,
             useRenderFrameSync = false,

@@ -150,6 +150,7 @@ class SnailTrailOverlay(
         windSpeedMs: Double,
         windDirectionFromDeg: Double,
         isCircling: Boolean,
+        isTurnSmoothing: Boolean,
         currentZoom: Float,
         isReplay: Boolean,
         frameId: Long? = null
@@ -194,6 +195,7 @@ class SnailTrailOverlay(
                 currentLocation = TrailGeoPoint(currentLocation.latitude, currentLocation.longitude),
                 currentTimeMillis = currentTimeMillis,
                 isCircling = isCircling,
+                isTurnSmoothing = isTurnSmoothing,
                 currentZoom = currentZoom,
                 isReplay = isReplay,
                 useRenderFrameSync = featureFlags.useRenderFrameSync,

@@ -14,6 +14,7 @@ internal class SnailTrailRenderPlanner(
         val currentLocation: TrailGeoPoint,
         val currentTimeMillis: Long,
         val isCircling: Boolean,
+        val isTurnSmoothing: Boolean,
         val currentZoom: Float,
         val isReplay: Boolean,
         val useRenderFrameSync: Boolean,
@@ -49,6 +50,7 @@ internal class SnailTrailRenderPlanner(
         )
         val distanceFactor = when {
             input.isReplay -> REPLAY_DISTANCE_FACTOR
+            input.isTurnSmoothing -> LIVE_TURN_DISTANCE_FACTOR
             input.isCircling -> LIVE_CIRCLING_DISTANCE_FACTOR
             else -> LIVE_DISTANCE_FACTOR
         }
@@ -110,7 +112,8 @@ internal class SnailTrailRenderPlanner(
     private companion object {
         private const val REPLAY_DISTANCE_FACTOR = 1.0
         private const val LIVE_DISTANCE_FACTOR = 3.0
-        private const val LIVE_CIRCLING_DISTANCE_FACTOR = 1.5
+        private const val LIVE_TURN_DISTANCE_FACTOR = 0.8
+        private const val LIVE_CIRCLING_DISTANCE_FACTOR = 1.0
         private const val REPLAY_MAX_DISTANCE_METERS = 30.0
         private const val MAX_METERS_PER_PIXEL_FOR_SCALING = 6000.0
     }

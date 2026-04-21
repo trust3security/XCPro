@@ -89,6 +89,7 @@ class SnailTrailManager(
             windSpeedMs = renderState.windSpeedMs,
             windDirectionFromDeg = renderState.windDirectionFromDeg,
             isCircling = renderState.isCircling,
+            isTurnSmoothing = renderState.isTurnSmoothing,
             currentZoom = currentZoom,
             timeBase = renderState.timeBase
         )
@@ -214,6 +215,7 @@ class SnailTrailManager(
             windSpeedMs = context.windSpeedMs,
             windDirectionFromDeg = context.windDirectionFromDeg,
             isCircling = context.isCircling,
+            isTurnSmoothing = context.isTurnSmoothing,
             currentZoom = context.currentZoom,
             isReplay = isReplay,
             frameId = frameId
@@ -226,6 +228,7 @@ class SnailTrailManager(
         val windSpeedMs: Double,
         val windDirectionFromDeg: Double,
         val isCircling: Boolean,
+        val isTurnSmoothing: Boolean,
         val currentZoom: Float,
         val timeBase: TrailTimeBase
     )

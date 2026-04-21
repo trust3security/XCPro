@@ -41,6 +41,7 @@ class SnailTrailManagerTest {
             eq(0.0),
             eq(0.0),
             eq(false),
+            eq(false),
             eq(10f),
             eq(false),
             eq(null)
@@ -151,6 +152,7 @@ class SnailTrailManagerTest {
             windSpeedMs = 0.0,
             windDirectionFromDeg = 0.0,
             isCircling = false,
+            isTurnSmoothing = false,
             isReplay = false,
             timeBase = TrailTimeBase.LIVE_MONOTONIC
         ),
