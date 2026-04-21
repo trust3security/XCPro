@@ -16,10 +16,10 @@ class MapTrackingCameraController(
     private val cameraUpdateGate: MapCameraUpdateGate,
     private val biasResetter: MapShiftBiasResetter,
     private val cameraControllerProvider: () -> MapCameraController?,
+    private val distancePerPixelMetersProvider: (Double) -> Double?,
+    private val followCameraCadencePolicy: MapFollowCameraCadencePolicy,
     private val featureFlags: MapFeatureFlags,
-    private val initialZoomLevel: Double,
-    private val minUpdateIntervalMs: Long,
-    private val bearingEpsDeg: Double
+    private val initialZoomLevel: Double
 ) {
     data class FrameInput(
         val location: LatLng,
@@ -46,6 +46,7 @@ class MapTrackingCameraController(
 
     fun onTimeBaseChanged(location: LatLng) {
         biasResetter.reset()
+        followCameraCadencePolicy.reset()
         cameraUpdateGate.resetTo(location)
         lastCameraUpdateMs = 0L
     }
@@ -68,6 +69,13 @@ class MapTrackingCameraController(
             // Keep glider vertical-position preference responsive even when camera movement
             // is gated (for example stationary ownship after returning from settings).
             positionController.applyPadding(cameraController, padding)
+            val cadence = followCameraCadencePolicy.resolve(
+                MapFollowCameraCadencePolicy.Input(
+                    timeBase = input.timeBase,
+                    visibleWidthMeters = visibleMapWidthMeters(input.location),
+                    orientationMode = input.orientationMode
+                )
+            )
             val shouldUpdate = cameraPolicy.shouldUpdateCamera(
                 input = MapCameraPolicy.CameraUpdateInput(
                     timeBase = input.timeBase,
@@ -76,8 +84,8 @@ class MapTrackingCameraController(
                     targetBearing = input.cameraTargetBearing,
                     nowMs = input.nowMs,
                     lastCameraUpdateMs = lastCameraUpdateMs,
-                    minUpdateIntervalMs = minUpdateIntervalMs,
-                    bearingEpsDeg = bearingEpsDeg
+                    minUpdateIntervalMs = cadence.minUpdateIntervalMs,
+                    bearingEpsDeg = cadence.bearingEpsDeg
                 )
             ) {
                 cameraUpdateGate.accept(input.location)
@@ -103,6 +111,15 @@ class MapTrackingCameraController(
             cameraBearing = cameraController.cameraPosition.bearing,
             initialCenteredZoom = initialCenteredZoom
         )
+    }
+
+    private fun visibleMapWidthMeters(location: LatLng): Double? {
+        val widthPx = mapSizeProvider.size().widthPx
+        if (widthPx <= 0) return null
+        val distancePerPixel = distancePerPixelMetersProvider(location.latitude)
+            ?.takeIf { it.isFinite() && it > 0.0 }
+            ?: return null
+        return widthPx.toDouble() * distancePerPixel
     }
 
     private fun ensureInitialCentering(

@@ -31,8 +31,6 @@ class LocationManager(
     companion object {
         private const val TAG = "LocationManager"
         private const val INITIAL_ZOOM_LEVEL = 10.0
-        private const val CAMERA_MIN_UPDATE_INTERVAL_MS = 25L
-        private const val CAMERA_BEARING_EPS_DEG = 0.5
         private const val FRAME_LOG_INTERVAL_MS = 100L
     }
 
@@ -101,10 +99,10 @@ class LocationManager(
         cameraControllerProvider = {
             cameraControllerProvider.controllerOrNull()
         },
+        distancePerPixelMetersProvider = displayPoseSurfacePort::distancePerPixelMetersAt,
+        followCameraCadencePolicy = MapFollowCameraCadencePolicy(),
         featureFlags = featureFlags,
-        initialZoomLevel = INITIAL_ZOOM_LEVEL,
-        minUpdateIntervalMs = CAMERA_MIN_UPDATE_INTERVAL_MS,
-        bearingEpsDeg = CAMERA_BEARING_EPS_DEG
+        initialZoomLevel = INITIAL_ZOOM_LEVEL
     )
     private val frameLogger = DisplayPoseFrameLogger(
         tag = TAG,

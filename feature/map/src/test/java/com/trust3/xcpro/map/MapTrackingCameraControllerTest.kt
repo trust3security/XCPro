@@ -234,7 +234,9 @@ class MapTrackingCameraControllerTest {
         actions: MapStateActions,
         cameraController: FakeCameraController,
         featureFlags: MapFeatureFlags,
-        paddingProvider: () -> IntArray = { PADDING.copyOf() }
+        paddingProvider: () -> IntArray = { PADDING.copyOf() },
+        mapViewSize: MapViewSize = MapViewSize(widthPx = 0, heightPx = 0),
+        distancePerPixelMetersProvider: (Double) -> Double? = { null }
     ): ControllerDeps {
         val biasCalculator = MapShiftBiasCalculator()
         val positionController = MapPositionController(locationOverlayPort = NoOpLocationOverlayPort)
@@ -253,7 +255,7 @@ class MapTrackingCameraControllerTest {
         )
         val gate = ResettableGate()
         val biasResetter = CountingBiasResetter(biasCalculator)
-        val mapSizeProvider = FixedMapSizeProvider()
+        val mapSizeProvider = FixedMapSizeProvider(mapViewSize)
         val controller = MapTrackingCameraController(
             mapSizeProvider = mapSizeProvider,
             mapStateReader = store,
@@ -266,10 +268,10 @@ class MapTrackingCameraControllerTest {
             cameraUpdateGate = gate,
             biasResetter = biasResetter,
             cameraControllerProvider = { cameraController },
+            distancePerPixelMetersProvider = distancePerPixelMetersProvider,
+            followCameraCadencePolicy = MapFollowCameraCadencePolicy(),
             featureFlags = featureFlags,
-            initialZoomLevel = 10.0,
-            minUpdateIntervalMs = 80L,
-            bearingEpsDeg = 2.0
+            initialZoomLevel = 10.0
         )
         return ControllerDeps(controller, gate, biasResetter)
     }
@@ -322,8 +324,10 @@ class MapTrackingCameraControllerTest {
         }
     }
 
-    private class FixedMapSizeProvider : MapViewSizeProvider {
-        override fun size(): MapViewSize = MapViewSize(widthPx = 0, heightPx = 0)
+    private class FixedMapSizeProvider(
+        private val size: MapViewSize
+    ) : MapViewSizeProvider {
+        override fun size(): MapViewSize = size
     }
 
     private object NoOpLocationOverlayPort : MapLocationOverlayPort {
