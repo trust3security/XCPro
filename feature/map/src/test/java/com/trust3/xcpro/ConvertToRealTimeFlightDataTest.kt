@@ -161,7 +161,7 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(12_345L, result.timestamp)
         assertEquals(9_999L, result.lastUpdateTime)
         assertEquals("TE", result.varioSource)
-        assertEquals(1.6, result.condorVario, 1e-6)
+        assertEquals(1.6, requireNotNull(result.condorVario), 1e-6)
     }
 
     @Test
