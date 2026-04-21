@@ -1,5 +1,6 @@
 package com.trust3.xcpro.livefollow.data.friends
 
+import com.trust3.xcpro.livesource.LiveSourceKind
 import com.trust3.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
 import com.trust3.xcpro.livefollow.model.LiveFollowActivePilot
 import com.trust3.xcpro.livefollow.model.liveFollowAvailableTransport
@@ -96,6 +97,43 @@ class FriendsFlyingRepositoryTest {
     }
 
     @Test
+    fun simulatorTransition_clearsLoadedItems_andBlocksFurtherRefresh() = runTest {
+        val scope = repoScope()
+        try {
+            val runtimeSource = FakeOwnshipSnapshotSource()
+            val dataSource = FakeActivePilotsDataSource(
+                ActivePilotsFetchResult.Success(listOf(pilot()))
+            )
+            val repository = FriendsFlyingRepository(
+                scope = scope,
+                runtimeModeSource = runtimeSource,
+                dataSource = dataSource
+            )
+
+            repository.refresh()
+            advanceUntilIdle()
+            assertEquals(1, repository.state.value.items.size)
+
+            runtimeSource.mutableLiveSourceKind.value = LiveSourceKind.SIMULATOR_CONDOR2
+            advanceUntilIdle()
+
+            assertTrue(repository.state.value.items.isEmpty())
+            assertFalse(repository.state.value.sideEffectsAllowed)
+            assertEquals(
+                LiveFollowReplayBlockReason.SIMULATOR_SOURCE,
+                repository.state.value.replayBlockReason
+            )
+
+            repository.refresh()
+            advanceUntilIdle()
+
+            assertEquals(1, dataSource.fetchCalls)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun refresh_emptySuccess_keepsNeutralBrowseState() = runTest {
         val scope = repoScope()
         try {
@@ -143,6 +181,8 @@ class FriendsFlyingRepositoryTest {
         override val snapshot: StateFlow<com.trust3.xcpro.livefollow.model.LiveOwnshipSnapshot?> =
             MutableStateFlow(null)
     ) : LiveOwnshipSnapshotSource {
+        val mutableLiveSourceKind = MutableStateFlow(LiveSourceKind.PHONE)
+        override val liveSourceKind: StateFlow<LiveSourceKind> = mutableLiveSourceKind
         val mutableRuntimeMode = MutableStateFlow(LiveFollowRuntimeMode.LIVE)
         override val runtimeMode: StateFlow<LiveFollowRuntimeMode> = mutableRuntimeMode
     }

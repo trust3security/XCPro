@@ -4,6 +4,7 @@ import com.trust3.xcpro.common.di.DefaultDispatcher
 import com.trust3.xcpro.common.di.IoDispatcher
 import com.trust3.xcpro.core.time.Clock
 import com.trust3.xcpro.flightdata.FlightDataRepository
+import com.trust3.xcpro.livesource.LiveSourceStatePort
 import com.trust3.xcpro.livefollow.account.XcAccountRepository
 import com.trust3.xcpro.livefollow.data.following.CurrentApiFollowingActivePilotsDataSource
 import com.trust3.xcpro.livefollow.data.following.FollowingActivePilotsDataSource
@@ -73,12 +74,14 @@ object LiveFollowDataModule {
     @Singleton
     fun provideLiveOwnshipSnapshotSource(
         flightDataRepository: FlightDataRepository,
+        liveSourceStatePort: LiveSourceStatePort,
         ognTrafficPreferencesRepository: OgnTrafficPreferencesRepository,
         @LiveFollowRuntimeScope scope: CoroutineScope
     ): LiveOwnshipSnapshotSource {
         return FlightDataLiveOwnshipSnapshotSource(
             scope = scope,
             flightDataRepository = flightDataRepository,
+            liveSourceStatePort = liveSourceStatePort,
             ownFlarmHexFlow = ognTrafficPreferencesRepository.ownFlarmHexFlow,
             ownIcaoHexFlow = ognTrafficPreferencesRepository.ownIcaoHexFlow
         )

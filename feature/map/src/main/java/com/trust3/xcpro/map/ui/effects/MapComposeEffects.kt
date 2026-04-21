@@ -52,33 +52,39 @@ internal fun shouldRunComposeDisplayPoseLoop(useRenderFrameSync: Boolean): Boole
 object MapComposeEffects {
 
     @Composable
-    fun LocationAndPermissionEffects(
+    fun RuntimeStartupEffects(
         locationManager: MapLocationRuntimePort,
         locationPermissionRequester: MapLocationPermissionRequester,
+        allowSensorStart: Boolean = true,
+        renderLocalOwnship: Boolean = true
+    ) {
+        LaunchedEffect(locationManager, locationPermissionRequester, allowSensorStart, renderLocalOwnship) {
+            if (allowSensorStart && renderLocalOwnship) {
+                locationManager.ensureSelectedRuntimeReady(locationPermissionRequester)
+            }
+        }
+    }
+
+    @Composable
+    fun LiveOwnshipEffects(
+        locationManager: MapLocationRuntimePort,
         currentLocationFlow: StateFlow<MapLocationUiModel?>,
         orientationFlow: StateFlow<OrientationData>,
         suppressLiveGps: Boolean = false,
-        allowSensorStart: Boolean = true,
         renderLocalOwnship: Boolean = true
     ) {
         val suppressLiveGpsState = rememberUpdatedState(suppressLiveGps)
         val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
 
-        LaunchedEffect(renderLocalOwnship) {
+        LaunchedEffect(locationManager, renderLocalOwnship) {
             locationManager.setLocalOwnshipRenderEnabled(renderLocalOwnship)
         }
 
-        LaunchedEffect(allowSensorStart, renderLocalOwnship) {
-            if (allowSensorStart && renderLocalOwnship) {
-                locationManager.requestLocationPermissions(locationPermissionRequester)
-            }
-        }
-
-        LaunchedEffect(locationManager, currentLocationFlow) {
+        LaunchedEffect(locationManager, currentLocationFlow, orientationFlow) {
             currentLocationFlow.collectLatest { currentLocation ->
                 if (renderLocalOwnshipState.value && !suppressLiveGpsState.value) {
                     currentLocation?.let { location ->
-                        locationManager.updateLocationFromGPS(
+                        locationManager.updateLocationFromLiveFix(
                             location,
                             orientationFlow.value
                         )
@@ -198,13 +204,18 @@ object MapComposeEffects {
     ) {
         val density = LocalDensity.current
 
-        LocationAndPermissionEffects(
+        RuntimeStartupEffects(
             locationManager = locationManager,
             locationPermissionRequester = locationPermissionRequester,
+            allowSensorStart = allowSensorStart,
+            renderLocalOwnship = renderLocalOwnship
+        )
+
+        LiveOwnshipEffects(
+            locationManager = locationManager,
             currentLocationFlow = currentLocationFlow,
             orientationFlow = orientationFlow,
             suppressLiveGps = suppressLiveGps,
-            allowSensorStart = allowSensorStart,
             renderLocalOwnship = renderLocalOwnship
         )
 

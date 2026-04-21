@@ -59,6 +59,7 @@ class MapScreenViewModel @Inject constructor(
     private val mapAirspaceUseCase: AirspaceUseCase,
     private val mapWaypointFilesUseCase: WaypointFilesUseCase,
     private val sensorsUseCase: MapSensorsUseCase,
+    private val mapPhoneHealthUseCase: MapPhoneHealthUseCase,
     private val flightDataRepository: FlightDataRepository,
     private val mapUiControllersUseCase: MapUiControllersUseCase,
     private val windSensorFusionRepository: WindSensorFusionRepository,
@@ -98,6 +99,7 @@ class MapScreenViewModel @Inject constructor(
     private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
     internal val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
         flightDataManager = uiControllers.flightDataManager, orientationManager = uiControllers.orientationManager, sensorsUseCase = sensorsUseCase,
+        phoneHealthUseCase = mapPhoneHealthUseCase,
         tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase, waypointFilesUseCase = mapWaypointFilesUseCase, featureFlags = featureFlags
     )
     private val ballastController = uiControllers.ballastController
@@ -281,8 +283,7 @@ class MapScreenViewModel @Inject constructor(
     fun onToggleOgnTraffic() = trafficCoordinator.onToggleOgnTraffic()
     fun onToggleOgnScia() = trafficCoordinator.onToggleOgnScia()
     fun onToggleOgnThermals() = trafficCoordinator.onToggleOgnThermals()
-    fun onSetOgnTarget(aircraftKey: String, enabled: Boolean) =
-        trafficCoordinator.onSetOgnTarget(aircraftKey = aircraftKey, enabled = enabled)
+    fun onSetOgnTarget(aircraftKey: String, enabled: Boolean) = trafficCoordinator.onSetOgnTarget(aircraftKey = aircraftKey, enabled = enabled)
     fun onToggleAdsbTraffic() = trafficCoordinator.onToggleAdsbTraffic()
     fun onOgnTargetSelected(id: String) = trafficCoordinator.onOgnTargetSelected(id)
     fun onOgnThermalSelected(id: String) = trafficCoordinator.onOgnThermalSelected(id)
@@ -304,8 +305,7 @@ class MapScreenViewModel @Inject constructor(
         }
         profileSessionCoordinator.setActiveProfileId(profileId)
     }
-    fun ensureVariometerLayout(profileId: String, screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) =
-        profileSessionCoordinator.ensureVariometerLayout(profileId, screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
+    fun ensureVariometerLayout(profileId: String, screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) = profileSessionCoordinator.ensureVariometerLayout(profileId, screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
     fun ensureVariometerLayout(screenWidthPx: Float, screenHeightPx: Float, defaultSizePx: Float, minSizePx: Float, maxSizePx: Float) =
         profileSessionCoordinator.ensureVariometerLayout(screenWidthPx, screenHeightPx, defaultSizePx, minSizePx, maxSizePx)
     fun onVariometerOffsetCommitted(offset: OffsetPx, screenWidthPx: Float, screenHeightPx: Float) =

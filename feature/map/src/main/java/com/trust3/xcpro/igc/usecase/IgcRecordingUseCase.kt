@@ -12,6 +12,8 @@ import com.trust3.xcpro.igc.domain.IgcRecordFormatter
 import com.trust3.xcpro.igc.domain.IgcSampleToBRecordMapper
 import com.trust3.xcpro.igc.domain.IgcSamplingState
 import com.trust3.xcpro.igc.domain.IgcSessionStateMachine
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.LiveSourceStatePort
 import com.trust3.xcpro.sensors.CompleteFlightData
 import com.trust3.xcpro.sensors.FlightStateSource
 import java.util.concurrent.atomic.AtomicReference
@@ -34,6 +36,7 @@ import kotlinx.coroutines.launch
 class IgcRecordingUseCase private constructor(
     private val flightStateSource: FlightStateSource,
     private val flightDataRepository: FlightDataRepository,
+    private val liveSourceStatePort: LiveSourceStatePort,
     private val clock: Clock,
     private val snapshotStore: IgcSessionStateSnapshotStore,
     private val scope: CoroutineScope,
@@ -50,6 +53,7 @@ class IgcRecordingUseCase private constructor(
     constructor(
         flightStateSource: FlightStateSource,
         flightDataRepository: FlightDataRepository,
+        liveSourceStatePort: LiveSourceStatePort,
         clock: Clock,
         snapshotStore: IgcSessionStateSnapshotStore,
         recordingActionSink: IgcRecordingActionSink,
@@ -59,6 +63,7 @@ class IgcRecordingUseCase private constructor(
     ) : this(
         flightStateSource = flightStateSource,
         flightDataRepository = flightDataRepository,
+        liveSourceStatePort = liveSourceStatePort,
         clock = clock,
         snapshotStore = snapshotStore,
         scope = scope,
@@ -74,6 +79,7 @@ class IgcRecordingUseCase private constructor(
     internal constructor(
         flightStateSource: FlightStateSource,
         flightDataRepository: FlightDataRepository,
+        liveSourceStatePort: LiveSourceStatePort,
         clock: Clock,
         snapshotStore: IgcSessionStateSnapshotStore,
         scope: CoroutineScope,
@@ -84,6 +90,7 @@ class IgcRecordingUseCase private constructor(
     ) : this(
         flightStateSource = flightStateSource,
         flightDataRepository = flightDataRepository,
+        liveSourceStatePort = liveSourceStatePort,
         clock = clock,
         snapshotStore = snapshotStore,
         scope = scope,
@@ -116,6 +123,7 @@ class IgcRecordingUseCase private constructor(
     init {
         scope.launch {
             flightStateSource.flightState.collect { flightState ->
+                if (!allowsIgcLiveInput()) return@collect
                 val signal = IgcSessionStateMachine.FlightSignal(
                     monoTimeMs = clock.nowMonoMs(),
                     isFlying = flightState.isFlying,
@@ -128,7 +136,7 @@ class IgcRecordingUseCase private constructor(
         scope.launch {
             flightDataRepository.flightData.collect { sample ->
                 if (sample == null) return@collect
-                if (flightDataRepository.activeSource.value != FlightDataRepository.Source.LIVE) return@collect
+                if (!allowsIgcLiveInput()) return@collect
                 if (!isSessionRecording()) return@collect
                 processFlightSample(sample)
             }
@@ -258,6 +266,11 @@ class IgcRecordingUseCase private constructor(
             IgcSessionStateMachine.Phase.Finalizing -> true
             else -> false
         }
+    }
+
+    private fun allowsIgcLiveInput(): Boolean {
+        return flightDataRepository.activeSource.value == FlightDataRepository.Source.LIVE &&
+            liveSourceStatePort.state.value.kind == LiveSourceKind.PHONE
     }
 
     private fun activeFinalizingSessionIdOrNull(): Long? {

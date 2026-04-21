@@ -24,5 +24,8 @@ sealed class GpsStatusUiModel {
     object Disabled : GpsStatusUiModel()
     object Searching : GpsStatusUiModel()
     data class LostFix(val ageMs: Long) : GpsStatusUiModel()
+    object CondorDisconnected : GpsStatusUiModel()
+    object CondorStale : GpsStatusUiModel()
+    object CondorTransportError : GpsStatusUiModel()
     data class Ok(val ageMs: Long, val accuracyMeters: Float?) : GpsStatusUiModel()
 }

@@ -1,5 +1,7 @@
 package com.trust3.xcpro.livefollow.state
 
+import com.trust3.xcpro.livesource.LiveSourceKind
+
 enum class LiveFollowRuntimeMode {
     LIVE,
     REPLAY
@@ -7,7 +9,8 @@ enum class LiveFollowRuntimeMode {
 
 enum class LiveFollowReplayBlockReason {
     NONE,
-    REPLAY_MODE
+    REPLAY_MODE,
+    SIMULATOR_SOURCE
 }
 
 data class LiveFollowReplayDecision(
@@ -17,18 +20,27 @@ data class LiveFollowReplayDecision(
 )
 
 class LiveFollowReplayPolicy {
-    fun evaluate(runtimeMode: LiveFollowRuntimeMode): LiveFollowReplayDecision {
-        return when (runtimeMode) {
-            LiveFollowRuntimeMode.LIVE -> LiveFollowReplayDecision(
-                runtimeMode = runtimeMode,
-                sideEffectsAllowed = true,
-                blockReason = LiveFollowReplayBlockReason.NONE
-            )
-
-            LiveFollowRuntimeMode.REPLAY -> LiveFollowReplayDecision(
+    fun evaluate(
+        runtimeMode: LiveFollowRuntimeMode,
+        liveSourceKind: LiveSourceKind
+    ): LiveFollowReplayDecision {
+        return when {
+            runtimeMode == LiveFollowRuntimeMode.REPLAY -> LiveFollowReplayDecision(
                 runtimeMode = runtimeMode,
                 sideEffectsAllowed = false,
                 blockReason = LiveFollowReplayBlockReason.REPLAY_MODE
+            )
+
+            liveSourceKind == LiveSourceKind.SIMULATOR_CONDOR2 -> LiveFollowReplayDecision(
+                runtimeMode = runtimeMode,
+                sideEffectsAllowed = false,
+                blockReason = LiveFollowReplayBlockReason.SIMULATOR_SOURCE
+            )
+
+            else -> LiveFollowReplayDecision(
+                runtimeMode = runtimeMode,
+                sideEffectsAllowed = true,
+                blockReason = LiveFollowReplayBlockReason.NONE
             )
         }
     }

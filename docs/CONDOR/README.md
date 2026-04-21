@@ -1,61 +1,66 @@
-# Condor Docs Index
+# Condor Documentation Pack
 
-This folder is the active Condor planning and architecture pack for XCPro.
+This pack describes the architecture and implementation plan for Condor as a live-source path.
 
-Current focus:
+## What changed in this update
 
-- Condor 2 first
-- full live-source integration, not replay emulation
-- ownship must come from fused live `flightData.gps`
-- replay binder must remain replay-only
+This pack was refined by a second-pass seam review.
 
-## Start here
+The earlier phased IP was close, but it still left key ownership and dependency contracts under-specified. This update locks those missing decisions so implementation does not pass functionally while weakening architecture integrity.
 
-1. `01_CONDOR2_FULL_INTEGRATION_PHASED_IP_2026-04-18.md`
-2. `02_CONDOR2_BOUNDARIES_AND_SOURCE_ROUTING_2026-04-18.md`
-3. `00_CONDOR2_RESEARCH_REFERENCE_2026-04-18.md`
-4. `03_CONDOR2_PC_BRIDGE_AND_CAPTURE_PLAN_2026-04-18.md`
-5. `04_CONDOR2_VERIFICATION_AND_QA_2026-04-18.md`
-6. `05_CONDOR2_ARCHITECTURE_DECISION_DRAFT_2026-04-18.md`
+## Key decisions now made explicit
 
-## Current status
+- `DesiredLiveMode` is persisted in `feature:profile` and consumed in runtime only through a port declared in `feature:flight-runtime`
+- `PhoneLiveCapabilityPort` is declared in `feature:flight-runtime`, implemented at the platform edge, and kept narrower than map-local phone-health diagnostics
+- `CondorLiveStatePort` is a read-only runtime-declared port implemented by `feature:simulator`
+- `LiveSourceResolver` in `feature:flight-runtime` is the sole selector / policy owner
+- `VarioRuntimeControlPort` remains the only public map/replay runtime-control seam
+- `VarioRuntimeControlPort` stays caller-agnostic; runtime policy types do not leak into the map-facing API
+- `ensureRunningIfPermitted()` is treated as a compatibility name whose semantic contract is "ensure the resolver-selected live runtime is active"
+- `app` is a lifecycle, permission, and platform-edge capability adapter only; it does not decide active source policy
+- `FlightDataRepository.Source` remains a `LIVE` vs `REPLAY` authority axis; Condor stays inside the selected live branch rather than adding a third repository source
+- phone-device health remains a separate map-local diagnostic seam; it is not live-source truth
+- user-facing live-source degraded states use typed reasons, not free-form strings
+- Condor stream freshness uses injected Android monotonic receive time; payload UTC is not the freshness authority
+- Condor bridge connection UX is part of v1 scope: first-run transport setup,
+  persisted Bluetooth bridge selection, persisted TCP listen port, reconnect
+  states, and minimum diagnostics must be specified
+- bridge select / clear / connect / disconnect stays on a simulator-owned
+  settings seam rather than `VarioRuntimeControlPort`, with `Connect` acting as
+  the manual retry affordance
+- Bluetooth and Wi-Fi/TCP share one Condor settings screen, but transport-
+  specific operator docs remain separate
+- `CONDOR2_FULL` ownship heading / track / marker truth comes from fused live `FlightDataRepository.flightData.gps`
+- phone orientation may affect camera/display behavior only
+- phone compass is never a Condor ownship fallback
+- Condor disconnect must not silently revert to phone GPS
+- replay remains authoritative while active and keeps replay-only binder ownership
 
-- Condor is not implemented in XCPro today.
-- The current live GPS owner is phone GPS via `UnifiedSensorManager`.
-- The map already renders live ownship from fused `flightData.gps`, not from a
-  map-only GPS source.
-- Foreground service startup and map GPS status are still phone-permission and
-  phone-sensor oriented.
+## Document guide
 
-## Key decisions in this pack
-
-- `CONDOR2_FULL` is a live runtime mode, not a replay mode.
-- Condor ownship must enter the existing fused live pipeline.
-- `feature:simulator` is the target owner for Condor transport and parser
-  runtime.
-- The persisted desired live mode must live outside runtime orchestration.
-- `feature:flight-runtime` should expose narrow live-source seams, not a
-  dependency-bag style runtime bundle.
-- IGC and WeGlide policy stays in their own modules; runtime exposes source
-  classification, not upload policy.
-
-## File guide
-
-- `00_CONDOR2_RESEARCH_REFERENCE_2026-04-18.md`
-  - research summary and local code seams
 - `01_CONDOR2_FULL_INTEGRATION_PHASED_IP_2026-04-18.md`
-  - implementation-ready phased plan
+  - normative phased implementation plan
+  - state contract, boundary contract, bypass replacements, heading authority, no-fallback, proof requirements
+
 - `02_CONDOR2_BOUNDARIES_AND_SOURCE_ROUTING_2026-04-18.md`
-  - authoritative seam, ownership, and routing rules
-- `03_CONDOR2_PC_BRIDGE_AND_CAPTURE_PLAN_2026-04-18.md`
-  - Windows Condor-to-Android bridge and fixture capture strategy
-- `04_CONDOR2_VERIFICATION_AND_QA_2026-04-18.md`
-  - unit, integration, replay, and manual QA expectations
+  - seam rules and source-routing constraints
+  - ownership matrix and bypass-removal matrix
+
 - `05_CONDOR2_ARCHITECTURE_DECISION_DRAFT_2026-04-18.md`
-  - ADR-ready draft for the durable boundary decisions
+  - durable architecture decisions to promote into an ADR
 
-## Practical takeaway
+## Implementation guardrails
 
-If XCPro is running on Android while Condor 2 is flying at Lake Keepit, NSW,
-the user should see Lake Keepit on the map only when Condor is the selected
-live source feeding fused live `flightData.gps`.
+Any implementation claiming to satisfy this pack must prove:
+
+- no `feature:flight-runtime -> feature:profile` back-edge
+- no duplicate desired-mode owner
+- no separate selection logic outside `LiveSourceResolver`
+- no competing public runtime-control seam beside `VarioRuntimeControlPort`
+- no third `FlightDataRepository.Source` value for Condor
+- no mixed owner for user-facing live-source status and phone-device diagnostics
+- no free-form degraded reason strings on the runtime status seam
+- Condor ownship uses fused live `flightData.gps`
+- phone orientation never becomes Condor ownship fallback
+- replay remains authoritative while active
+- Condor disconnect does not silently revert to phone GPS

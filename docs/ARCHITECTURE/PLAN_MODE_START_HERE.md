@@ -73,6 +73,20 @@ Use `PIPELINE_INDEX.md` to find the right section in `PIPELINE.md` quickly.
 
 ---
 
+## Verified Facts Before Planning
+
+Before writing a plan or asking the user to resolve a repo-local unknown:
+
+- inspect the repo, docs, configs, tests, and likely owner files first
+- verify any discoverable fact instead of treating it as an assumption
+- if something cannot be verified locally, record it as an unresolved decision
+  or a real assumption, not as a guessed fact
+
+Do not leave a repo/system fact in the plan as an assumption if it can be
+checked locally.
+
+---
+
 ## Minimum Plan Output
 
 Before coding a non-trivial change, write down:
@@ -80,6 +94,9 @@ Before coding a non-trivial change, write down:
 - requested outcome
 - in scope
 - out of scope
+- confirmed boundaries / verified facts
+- actual assumptions / defaults chosen (non-discoverable only)
+- unresolved decisions / questions
 - authoritative owner for each changed state item
 - likely files to create or modify and what each file owns
 - time base and replay/determinism expectations
@@ -115,6 +132,9 @@ I want to add/fix <feature>.
 Do not code yet.
 Give me the smallest safe plan with:
 - scope
+- verified facts / confirmed boundaries
+- actual assumptions / defaults chosen
+- unresolved decisions / blockers
 - SSOT owner
 - likely files and file ownership
 - timebase/replay risks
@@ -130,6 +150,7 @@ Give me the smallest safe plan with:
 You are ready to implement when:
 
 - each changed state item has one authoritative owner
+- no discoverable repo/system fact is left in the plan as an assumption
 - dependency direction still fits `UI -> domain -> data`
 - time base and replay rules are explicit
 - required verification commands are named

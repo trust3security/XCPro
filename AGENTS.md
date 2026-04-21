@@ -106,6 +106,24 @@ For autonomous feature/refactor work, start from:
 
 This ensures phased execution, acceptance criteria, required checks, and a mandatory quality rescore.
 
+## Planning Discipline
+
+- Before writing a non-trivial plan, verify discoverable facts from repo docs,
+  code, configs, and local system state first; do not carry discoverable facts
+  as assumptions.
+- Non-trivial plans must separate:
+  - `Confirmed Boundaries / Verified Facts`
+  - `Actual Assumptions / Defaults Chosen`
+  - `Unresolved Decisions`
+- `Actual Assumptions / Defaults Chosen` may contain only non-discoverable
+  defaults, tradeoffs, or unanswered product decisions. If a fact can be
+  checked locally, check it first.
+- For non-trivial refactors, runtime wiring changes, DI changes,
+  ownership/boundary moves, and architecture-sensitive PRs, perform a
+  second-pass architecture integrity review against the repo architecture docs,
+  relevant ADR/change-plan material, actual diff, changed files, and touched
+  tests before considering the work complete.
+
 ## Documentation Sync Rules
 
 - If pipeline wiring changes, update `docs/ARCHITECTURE/PIPELINE.md`.

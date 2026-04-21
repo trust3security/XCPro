@@ -505,6 +505,22 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "Vario runtime boundary bypass via direct foreground-service control outside app" -RgArgs $varioServiceBoundaryBypassArgs
 
+    # 6E) Runtime-control boundary: the public map-facing control seam must not split into source-specific public ports.
+    $sourceSpecificRuntimeControlPortArgs = @(
+        "-n",
+        '\b(interface|class)\s+(PhoneLiveRuntimeControlPort|CondorLiveRuntimeControlPort)\b',
+        "--glob", "**/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Source-specific public runtime control ports are forbidden" -RgArgs $sourceSpecificRuntimeControlPortArgs
+
+    # 6F) Runtime-control boundary: map/replay must not import simulator-owned Condor control seams.
+    $mapSimulatorControlSeamImportArgs = @(
+        "-n",
+        '^\s*import\s+com\.trust3\.xcpro\.simulator\.condor\.(CondorBridgeControlPort|CondorRuntimeSessionPort)\b',
+        "--glob", "feature/map/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Map runtime boundary bypass via simulator-owned Condor control seams" -RgArgs $mapSimulatorControlSeamImportArgs
+
     # 7) Task manager boundary: no MapLibre imports in AAT/Racing task managers.
     $taskManagerMapLibreImportsArgs = @(
         "-n",

@@ -1,10 +1,10 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
 import com.trust3.xcpro.core.time.FakeClock
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothTransport
-import com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothTransport
+import com.trust3.xcpro.bluetooth.BondedBluetoothDevice
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -94,7 +94,7 @@ class LxSanitizedCaptureReplayTest {
 
         override suspend fun listBondedDevices(): List<BondedBluetoothDevice> = listOf(TEST_DEVICE)
 
-        override fun open(device: BondedBluetoothDevice): Flow<com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk> = flow {
+        override fun open(device: BondedBluetoothDevice): Flow<com.trust3.xcpro.bluetooth.BluetoothReadChunk> = flow {
             val session = sessions.removeFirst()
             val closeSignal = CompletableDeferred<Unit>()
             activeCloseSignal = closeSignal
@@ -128,3 +128,4 @@ class LxSanitizedCaptureReplayTest {
         )
     }
 }
+

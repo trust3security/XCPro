@@ -14,10 +14,4 @@ internal abstract class LxBluetoothControlBindingsModule {
     abstract fun bindLxBluetoothControlPort(
         impl: LxBluetoothControlUseCase
     ): LxBluetoothControlPort
-
-    @Binds
-    @Singleton
-    abstract fun bindBluetoothConnectPermissionPort(
-        impl: AndroidBluetoothConnectPermissionPort
-    ): BluetoothConnectPermissionPort
 }

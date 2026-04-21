@@ -1,7 +1,7 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.control
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
 
 data class BluetoothBondedDeviceItem(
     val address: String,
@@ -28,3 +28,4 @@ data class LxBluetoothControlState(
     val canConnect: Boolean = false,
     val canDisconnect: Boolean = false
 )
+

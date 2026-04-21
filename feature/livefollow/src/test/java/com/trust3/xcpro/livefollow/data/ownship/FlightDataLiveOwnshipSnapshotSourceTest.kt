@@ -7,6 +7,9 @@ import com.trust3.xcpro.common.units.PressureHpa
 import com.trust3.xcpro.common.units.SpeedMs
 import com.trust3.xcpro.common.units.VerticalSpeedMs
 import com.trust3.xcpro.flightdata.FlightDataRepository
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.LiveSourceStatePort
+import com.trust3.xcpro.livesource.ResolvedLiveSourceState
 import com.trust3.xcpro.livefollow.model.LiveFollowAircraftIdentityType
 import com.trust3.xcpro.livefollow.model.LiveFollowConfidence
 import com.trust3.xcpro.livefollow.model.LiveFollowValueState
@@ -19,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.TestScope
@@ -36,9 +40,11 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         val scope = repoScope()
         try {
         val repository = FlightDataRepository()
+        val liveSourceState = MutableStateFlow(ResolvedLiveSourceState(kind = LiveSourceKind.PHONE))
         val source = FlightDataLiveOwnshipSnapshotSource(
             scope = scope,
             flightDataRepository = repository,
+            liveSourceStatePort = liveSourceStatePort(liveSourceState),
             ownFlarmHexFlow = MutableStateFlow("AB12CD"),
             ownIcaoHexFlow = MutableStateFlow("EF34AB")
         )
@@ -54,6 +60,7 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
 
         val snapshot = source.snapshot.value
         assertNotNull(snapshot)
+        assertEquals(LiveSourceKind.PHONE, source.liveSourceKind.value)
         assertEquals(LiveFollowRuntimeMode.LIVE, source.runtimeMode.value)
         assertEquals(LiveOwnshipSourceLabel.LIVE_FLIGHT_RUNTIME, snapshot?.sourceLabel)
         assertEquals(12_345L, snapshot?.fixMonoMs)
@@ -78,9 +85,11 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         val scope = repoScope()
         try {
         val repository = FlightDataRepository()
+        val liveSourceState = MutableStateFlow(ResolvedLiveSourceState(kind = LiveSourceKind.PHONE))
         val source = FlightDataLiveOwnshipSnapshotSource(
             scope = scope,
             flightDataRepository = repository,
+            liveSourceStatePort = liveSourceStatePort(liveSourceState),
             ownFlarmHexFlow = MutableStateFlow("AB12CD"),
             ownIcaoHexFlow = MutableStateFlow("EF34AB")
         )
@@ -93,6 +102,7 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         advanceUntilIdle()
 
         assertEquals(LiveFollowRuntimeMode.REPLAY, source.runtimeMode.value)
+        assertEquals(LiveSourceKind.PHONE, source.liveSourceKind.value)
         assertEquals(LiveOwnshipSourceLabel.REPLAY_RUNTIME, source.snapshot.value?.sourceLabel)
         } finally {
             scope.cancel()
@@ -104,9 +114,11 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         val scope = repoScope()
         try {
         val repository = FlightDataRepository()
+        val liveSourceState = MutableStateFlow(ResolvedLiveSourceState(kind = LiveSourceKind.PHONE))
         val source = FlightDataLiveOwnshipSnapshotSource(
             scope = scope,
             flightDataRepository = repository,
+            liveSourceStatePort = liveSourceStatePort(liveSourceState),
             ownFlarmHexFlow = MutableStateFlow("AB12CD"),
             ownIcaoHexFlow = MutableStateFlow("EF34AB")
         )
@@ -128,9 +140,11 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         val scope = repoScope()
         try {
         val repository = FlightDataRepository()
+        val liveSourceState = MutableStateFlow(ResolvedLiveSourceState(kind = LiveSourceKind.PHONE))
         val source = FlightDataLiveOwnshipSnapshotSource(
             scope = scope,
             flightDataRepository = repository,
+            liveSourceStatePort = liveSourceStatePort(liveSourceState),
             ownFlarmHexFlow = MutableStateFlow("AB12CD"),
             ownIcaoHexFlow = MutableStateFlow("EF34AB")
         )
@@ -149,8 +163,47 @@ class FlightDataLiveOwnshipSnapshotSourceTest {
         }
     }
 
+    @Test
+    fun liveSourceKind_tracksSimulatorWhileReplayLabelStaysReplayAuthoritative() = runTest {
+        val scope = repoScope()
+        try {
+            val repository = FlightDataRepository()
+            val liveSourceState = MutableStateFlow(
+                ResolvedLiveSourceState(kind = LiveSourceKind.SIMULATOR_CONDOR2)
+            )
+            val source = FlightDataLiveOwnshipSnapshotSource(
+                scope = scope,
+                flightDataRepository = repository,
+                liveSourceStatePort = liveSourceStatePort(liveSourceState),
+                ownFlarmHexFlow = MutableStateFlow("AB12CD"),
+                ownIcaoHexFlow = MutableStateFlow("EF34AB")
+            )
+
+            repository.setActiveSource(FlightDataRepository.Source.REPLAY)
+            repository.update(
+                data = sampleFlightData(fixMonoMs = 6_543L),
+                source = FlightDataRepository.Source.REPLAY
+            )
+            advanceUntilIdle()
+
+            assertEquals(LiveFollowRuntimeMode.REPLAY, source.runtimeMode.value)
+            assertEquals(LiveSourceKind.SIMULATOR_CONDOR2, source.liveSourceKind.value)
+            assertEquals(LiveOwnshipSourceLabel.REPLAY_RUNTIME, source.snapshot.value?.sourceLabel)
+        } finally {
+            scope.cancel()
+        }
+    }
+
     private fun TestScope.repoScope(): CoroutineScope =
         CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+
+    private fun liveSourceStatePort(
+        stateFlow: MutableStateFlow<ResolvedLiveSourceState>
+    ): LiveSourceStatePort = object : LiveSourceStatePort {
+        override val state: StateFlow<ResolvedLiveSourceState> = stateFlow
+
+        override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
+    }
 
     private fun sampleFlightData(
         fixMonoMs: Long,

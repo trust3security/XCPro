@@ -8,6 +8,8 @@ import com.trust3.xcpro.sensors.FlightStateRepository
 import com.trust3.xcpro.sensors.FlightStateSource
 import com.trust3.xcpro.sensors.SensorDataSource
 import com.trust3.xcpro.sensors.UnifiedSensorManager
+import com.trust3.xcpro.livesource.ResolverSelectedAirspeedDataSource
+import com.trust3.xcpro.livesource.ResolverSelectedSensorDataSource
 import com.trust3.xcpro.weather.wind.data.AirspeedDataSource
 import com.trust3.xcpro.weather.wind.data.ExternalAirspeedRepository
 import com.trust3.xcpro.weather.wind.data.ReplayAirspeedRepository
@@ -51,8 +53,8 @@ object WindSensorModule {
 
     @Provides
     @Singleton
-    @LiveSource
-    fun provideLiveSensorDataSource(
+    @PhoneLiveSensorSource
+    fun providePhoneLiveSensorDataSource(
         unifiedSensorManager: UnifiedSensorManager
     ): SensorDataSource = unifiedSensorManager
 
@@ -65,10 +67,24 @@ object WindSensorModule {
 
     @Provides
     @Singleton
-    @LiveSource
-    fun provideLiveAirspeedSource(
+    @PhoneLiveAirspeedSource
+    fun providePhoneLiveAirspeedSource(
         externalAirspeedRepository: ExternalAirspeedRepository
     ): AirspeedDataSource = externalAirspeedRepository
+
+    @Provides
+    @Singleton
+    @LiveSource
+    fun provideSelectedLiveSensorDataSource(
+        source: ResolverSelectedSensorDataSource
+    ): SensorDataSource = source
+
+    @Provides
+    @Singleton
+    @LiveSource
+    fun provideSelectedLiveAirspeedSource(
+        source: ResolverSelectedAirspeedDataSource
+    ): AirspeedDataSource = source
 
     @Provides
     @Singleton

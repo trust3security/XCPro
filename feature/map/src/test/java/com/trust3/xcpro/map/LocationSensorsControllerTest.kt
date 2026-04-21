@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -17,7 +18,9 @@ class LocationSensorsControllerTest {
     @Test
     fun `accepted start request does not require immediate gps readiness`() = runTest {
         val sensorsUseCase = mock<MapSensorsUseCase>()
-        whenever(sensorsUseCase.sensorStatus()).thenReturn(
+        val phoneHealthUseCase = mock<MapPhoneHealthUseCase>()
+        whenever(phoneHealthUseCase.isPhoneLiveSelected()).thenReturn(true)
+        whenever(phoneHealthUseCase.sensorStatus()).thenReturn(
             sensorStatus(hasLocationPermissions = true)
         )
         whenever(sensorsUseCase.startSensors()).thenReturn(true)
@@ -25,7 +28,8 @@ class LocationSensorsControllerTest {
         val controller = LocationSensorsController(
             context = mock(),
             scope = backgroundScope,
-            sensorsUseCase = sensorsUseCase
+            sensorsUseCase = sensorsUseCase,
+            phoneHealthUseCase = phoneHealthUseCase
         )
 
         controller.onLocationPermissionsResult(fineLocationGranted = true)
@@ -37,9 +41,33 @@ class LocationSensorsControllerTest {
     }
 
     @Test
+    fun `ensureSelectedRuntimeReady bypasses permission UI for non phone live`() = runTest {
+        val sensorsUseCase = mock<MapSensorsUseCase>()
+        val phoneHealthUseCase = mock<MapPhoneHealthUseCase>()
+        val permissionRequester = mock<MapLocationPermissionRequester>()
+        whenever(phoneHealthUseCase.isPhoneLiveSelected()).thenReturn(false)
+        whenever(sensorsUseCase.startSensors()).thenReturn(true)
+
+        val controller = LocationSensorsController(
+            context = mock(),
+            scope = backgroundScope,
+            sensorsUseCase = sensorsUseCase,
+            phoneHealthUseCase = phoneHealthUseCase
+        )
+
+        controller.ensureSelectedRuntimeReady(permissionRequester)
+        runCurrent()
+
+        verify(sensorsUseCase).startSensors()
+        verify(permissionRequester, never()).requestLocationPermissions()
+    }
+
+    @Test
     fun `restartSensorsIfNeeded reissues request when sensors still report stopped`() = runTest {
         val sensorsUseCase = mock<MapSensorsUseCase>()
-        whenever(sensorsUseCase.sensorStatus()).thenReturn(
+        val phoneHealthUseCase = mock<MapPhoneHealthUseCase>()
+        whenever(phoneHealthUseCase.isPhoneLiveSelected()).thenReturn(true)
+        whenever(phoneHealthUseCase.sensorStatus()).thenReturn(
             sensorStatus(hasLocationPermissions = true)
         )
         whenever(sensorsUseCase.startSensors()).thenReturn(true)
@@ -47,7 +75,8 @@ class LocationSensorsControllerTest {
         val controller = LocationSensorsController(
             context = mock(),
             scope = backgroundScope,
-            sensorsUseCase = sensorsUseCase
+            sensorsUseCase = sensorsUseCase,
+            phoneHealthUseCase = phoneHealthUseCase
         )
 
         controller.restartSensorsIfNeeded()
@@ -64,14 +93,16 @@ class LocationSensorsControllerTest {
     @Test
     fun `force stop requests stop when non-gps runtime sensors are still active`() = runTest {
         val sensorsUseCase = mock<MapSensorsUseCase>()
-        whenever(sensorsUseCase.sensorStatus()).thenReturn(
+        val phoneHealthUseCase = mock<MapPhoneHealthUseCase>()
+        whenever(phoneHealthUseCase.sensorStatus()).thenReturn(
             sensorStatus(hasLocationPermissions = true, baroStarted = true)
         )
 
         val controller = LocationSensorsController(
             context = mock(),
             scope = backgroundScope,
-            sensorsUseCase = sensorsUseCase
+            sensorsUseCase = sensorsUseCase,
+            phoneHealthUseCase = phoneHealthUseCase
         )
 
         controller.stopLocationTracking(force = true)

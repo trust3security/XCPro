@@ -28,6 +28,9 @@ import com.trust3.xcpro.glider.GliderRepository
 import com.trust3.xcpro.glide.GlideComputationRepository
 import com.trust3.xcpro.glide.GlideTargetProjector
 import com.trust3.xcpro.glide.FinalGlideUseCase
+import com.trust3.xcpro.livesource.LiveSourceStatePort
+import com.trust3.xcpro.livesource.LiveSourceStatus
+import com.trust3.xcpro.livesource.ResolvedLiveSourceState
 import com.trust3.xcpro.navigation.WaypointNavigationRepository
 import com.trust3.xcpro.taskperformance.TaskPerformanceRepository
 import com.trust3.xcpro.tasks.navigation.NavigationRouteRepository
@@ -303,11 +306,22 @@ abstract class MapScreenViewModelTestBase {
             NavigationRouteRepository(taskManager = localTaskManager, taskNavigationController = localTaskNavigationController)
         val mapAirspaceUseCase = Mockito.mock(AirspaceUseCase::class.java)
         val mapWaypointFilesUseCase = Mockito.mock(WaypointFilesUseCase::class.java)
+        val liveSourceStatePort = object : LiveSourceStatePort {
+            override val state = MutableStateFlow(
+                ResolvedLiveSourceState(status = LiveSourceStatus.PhoneReady)
+            )
+
+            override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
+        }
         val mapSensorsUseCase = MapSensorsUseCase(
             varioRuntimeControlPort = object : VarioRuntimeControlPort { override fun ensureRunningIfPermitted(): Boolean = true; override fun requestStop() = Unit },
-            unifiedSensorManager = unifiedSensorManager,
+            liveSourceStatePort = liveSourceStatePort,
             flightStateSource = flightStateSource,
             sensorFusionRepository = sensorFusionRepository
+        )
+        val mapPhoneHealthUseCase = MapPhoneHealthUseCase(
+            unifiedSensorManager = unifiedSensorManager,
+            liveSourceStatePort = liveSourceStatePort
         )
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
@@ -461,6 +475,7 @@ abstract class MapScreenViewModelTestBase {
             mapAirspaceUseCase = mapAirspaceUseCase,
             mapWaypointFilesUseCase = mapWaypointFilesUseCase,
             sensorsUseCase = mapSensorsUseCase,
+            mapPhoneHealthUseCase = mapPhoneHealthUseCase,
             flightDataRepository = flightDataRepository,
             mapUiControllersUseCase = mapUiControllersUseCase,
             windSensorFusionRepository = windRepository,

@@ -1,322 +1,794 @@
-# Condor 2 Full Integration Phased IP
+# CONDOR2_FULL Integration Phased IP (v2)
 
-## 0) Metadata
+## Summary
 
-- Title: Condor 2 full live-source integration for XCPro
-- Owner: Codex planning pass
-- Date: 2026-04-18
-- Status: Draft
+This document replaces the earlier high-level Condor phased plan with an explicit state and boundary contract.
 
-## 1) Problem statement
+The implementation target is unchanged:
 
-XCPro currently assumes phone GPS is the live ownship source. Condor 2 support
-must let XCPro run on Android while Condor runs on Windows and treat the
-simulator aircraft as the selected live aircraft.
+- `CONDOR2_FULL` is the only simulator-backed live mode in v1.
+- map ownship must continue to come from fused live `FlightDataRepository.flightData.gps`.
+- replay binders remain replay-only and are not reused as a live-source shortcut.
+- `feature:profile` persists the user-selected desired live mode.
+- `feature:flight-runtime` owns the canonical policy that resolves which live source is effective.
+- `app` applies already-resolved policy only; it does not decide source policy.
+- `feature:simulator` owns Condor transport, parsing, runtime session state, and stream health.
+- the user must be able to actually connect a Condor 2 bridge from Android, so
+  bridge connection UX is part of the v1 implementation slice.
 
-The implementation must preserve:
+This v2 plan exists because the first pass still left architecture-critical ownership and dependency rules under-specified.
 
-- one fused live pipeline
-- one flight-data SSOT
-- replay determinism
-- inward dependency direction
+## Architecture Goal
 
-## 2) Scope
+Add Condor 2 as a supported live-source path without introducing:
 
-In scope:
+- a `feature:flight-runtime -> feature:profile` back-edge
+- a `feature:flight-runtime -> feature:map` dependency
+- a second live-mode state owner
+- a policy bag / service-locator seam in runtime
+- silent fallback from Condor to phone GPS in `CONDOR2_FULL`
+- simulator-specific downstream policy living inside runtime
 
-- Condor 2 first
-- ownship from `GGA` / `RMC`
-- instrument inputs from `$LXWP0`
-- selected live-source routing
-- source-aware startup, status, and permission policy
-- replay coexistence rules
-- simulator-side-effect policy for IGC and WeGlide consumers
+## Non-Goals
 
-Out of scope:
+- Condor 3 support
+- multiple simulator live modes in v1
+- replay ownership changes
+- map-specific source-selection logic
+- app/service-owned active source policy
+- full XCSoar-style multi-device manager parity
 
-- Condor 3 implementation
-- auto-detection of arbitrary simulator versions
-- multi-simulator support
-- desktop XCPro
-- production USB and BLE permutations in v1
+## State and Ownership Contract
 
-## 3) Architecture contract
+The following contract is normative.
 
-### 3.1 SSOT ownership
+### DesiredLiveMode
 
-| Data / state | Authoritative owner | Notes |
+```kotlin
+enum class DesiredLiveMode {
+    PHONE_ONLY,
+    CONDOR2_FULL,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `feature:profile`
+- persistence owner: `feature:profile`
+- mutation authority: settings/profile UI only
+- runtime access path: `DesiredLiveModePort` declared in `feature:flight-runtime`
+- forbidden: direct dependency from `feature:flight-runtime` to `feature:profile`
+- forbidden: mirroring this state in app, map, simulator, or service code
+
+### PhoneLiveCapability
+
+```kotlin
+sealed interface PhoneLiveCapability {
+    data object Ready : PhoneLiveCapability
+    data class Unavailable(val reason: PhoneLiveCapabilityReason) : PhoneLiveCapability
+}
+
+enum class PhoneLiveCapabilityReason {
+    LOCATION_PERMISSION_MISSING,
+    LOCATION_PROVIDER_DISABLED,
+    PLATFORM_RUNTIME_UNAVAILABLE,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: platform-edge implementation of `PhoneLiveCapabilityPort`
+- port declaration owner: `feature:flight-runtime`
+- mutators: Android permission/provider/runtime observers only
+- runtime access path: `PhoneLiveCapabilityPort` consumed by `LiveSourceResolver`
+- intentionally narrow: this seam exposes only resolver-relevant phone capability inputs
+- map-local restart heuristics, local GPS diagnostics, and sleep/doze recovery stay in the dedicated map-local phone-health seam
+- forbidden: app/service/map code re-deriving live-source policy from richer phone-health state outside `LiveSourceResolver`
+
+### EffectiveLiveSource
+
+```kotlin
+enum class EffectiveLiveSource {
+    PHONE,
+    CONDOR2,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `LiveSourceResolver` in `feature:flight-runtime`
+- persisted: no
+- derived from: `DesiredLiveModePort`, `PhoneLiveCapabilityPort`, `CondorLiveStatePort`
+- forbidden: duplicate computation in UI, app/service, simulator, fusion, wind, or map
+
+### SelectedLiveSensorDataSource
+
+```kotlin
+enum class SelectedLiveSensorDataSource {
+    PHONE_SENSORS,
+    CONDOR_SIMULATOR,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `LiveSourceResolver` in `feature:flight-runtime`
+- derived only from: `EffectiveLiveSource`
+- forbidden: separate sensor-selection logic in DI modules or UI
+
+### SelectedLiveAirspeedSource
+
+```kotlin
+enum class SelectedLiveAirspeedSource {
+    PHONE_OR_NONE,
+    CONDOR_SIMULATOR,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `LiveSourceResolver` in `feature:flight-runtime`
+- derived only from: `EffectiveLiveSource`
+- forbidden: independent airspeed-selection logic outside runtime
+
+### CondorSessionState
+
+```kotlin
+data class CondorSessionState(
+    val connection: ConnectionState,
+    val framing: FramingState,
+    val freshness: StreamFreshness,
+    val hasFixPayload: Boolean,
+    val lastReceiveElapsedRealtimeMs: Long?,
+    val lastPayloadUtc: Instant?,
+)
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `feature:simulator`
+- mutators: Condor transport / parser / runtime only
+- freshness authority: injected Android monotonic receive time (`elapsedRealtime`-style clock) at the bridge boundary
+- parsed NMEA UTC: payload wall-time only, never runtime freshness authority
+- forbidden: app/map/runtime computing Condor freshness independently
+
+### CondorLiveState / `CondorLiveStatePort`
+
+```kotlin
+data class CondorBridgeRef(
+    val stableId: String,
+    val displayName: String?,
+)
+
+enum class CondorReconnectState {
+    IDLE,
+    WAITING,
+    ATTEMPTING,
+    BLOCKED,
+    EXHAUSTED,
+}
+
+data class CondorLiveState(
+    val selectedBridge: CondorBridgeRef?,
+    val activeBridge: CondorBridgeRef?,
+    val session: CondorSessionState,
+    val reconnect: CondorReconnectState,
+    val lastFailure: CondorLiveDegradedReason?,
+)
+
+interface CondorLiveStatePort {
+    val state: StateFlow<CondorLiveState>
+}
+```
+
+Owner and mutation rules:
+
+- port declaration owner: `feature:flight-runtime`
+- authoritative implementation owner: `feature:simulator`
+- runtime access path: `LiveSourceResolver` reads Condor state through
+  `CondorLiveStatePort`
+- this is a read-only contract; the port must not expose bridge mutation,
+  connect, disconnect, or reconnect methods
+- selected bridge identity remains simulator-owned persisted state even though
+  runtime consumes it through the read model
+- active bridge identity, reconnect state, and last failure remain
+  simulator-owned runtime state
+- read model must not expose Android Bluetooth framework types, sockets, or
+  other platform handles on this cross-feature seam
+- forbidden: app/map/UI writing bridge state through `CondorLiveStatePort`
+
+### `CondorBridgeControlPort`
+
+```kotlin
+interface CondorBridgeControlPort {
+    suspend fun selectBridge(bridge: CondorBridgeRef)
+    suspend fun clearSelectedBridge()
+    suspend fun connect()
+    suspend fun disconnect()
+}
+```
+
+Owner and mutation rules:
+
+- declaration owner: `feature:simulator`
+- implementation owner: `feature:simulator`
+- consumers: Condor settings / bridge connection UI only
+- this seam owns settings-triggered bridge actions only; it is not a substitute
+  for `VarioRuntimeControlPort`
+- map/replay callsites must not use this seam for general live runtime
+  lifecycle control
+- `connect()` is the only manual start / retry action on this seam; queued or
+  exhausted reconnect state remains simulator-owned diagnostics rather than a
+  separate public retry command
+- retry/backoff, invalid-selection handling, and bridge persistence mutation
+  stay inside simulator ownership behind this seam
+
+### LiveStartupRequirement
+
+```kotlin
+enum class LiveStartupRequirement {
+    NONE,
+    ANDROID_FINE_LOCATION_PERMISSION,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `LiveSourceResolver` in `feature:flight-runtime`
+- app consumes this requirement and applies platform behavior
+- forbidden: app/service layer inventing separate permission rules for active source policy
+
+### LiveSourceStatus
+
+```kotlin
+enum class PhoneLiveDegradedReason {
+    LOCATION_PERMISSION_MISSING,
+    LOCATION_PROVIDER_DISABLED,
+    PLATFORM_RUNTIME_UNAVAILABLE,
+}
+
+enum class CondorLiveDegradedReason {
+    DISCONNECTED,
+    STALE_STREAM,
+    FRAMING_ERROR,
+    NO_FIX_PAYLOAD,
+    TRANSPORT_ERROR,
+}
+
+sealed interface LiveSourceStatus {
+    data object PhoneReady : LiveSourceStatus
+    data class PhoneDegraded(val reason: PhoneLiveDegradedReason) : LiveSourceStatus
+    data object CondorReady : LiveSourceStatus
+    data class CondorDegraded(val reason: CondorLiveDegradedReason) : LiveSourceStatus
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `LiveSourceResolver` in `feature:flight-runtime`
+- derived from the same inputs as `EffectiveLiveSource`
+- consumed by UI and status callsites
+- UI maps typed reasons to user-facing text; runtime does not expose free-form degraded reason strings on this seam
+- forbidden: phone-only or Condor-only status logic bypassing runtime selection
+
+### LiveSourceKind
+
+```kotlin
+enum class LiveSourceKind {
+    PHONE,
+    SIMULATOR_CONDOR2,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `LiveSourceResolver` in `feature:flight-runtime`
+- use: downstream feature policy classification
+- forbidden: runtime owning downstream `feature:igc` / `feature:weglide` policy itself
+
+### FlightDataRepository live/replay source axis
+
+`FlightDataRepository.Source` remains:
+
+```kotlin
+enum class Source {
+    LIVE,
+    REPLAY,
+}
+```
+
+Owner and mutation rules:
+
+- authoritative owner: `FlightDataRepository`
+- this axis distinguishes live authority from replay authority only
+- both phone-backed live and Condor-backed live publish under `Source.LIVE`
+- replay remains the only producer using `Source.REPLAY`
+- simulator-aware downstream behavior consumes `LiveSourceKind`, not a widened repository source enum
+- forbidden: adding `CONDOR`, `SIMULATOR`, or any other third repository source value for this work
+
+## Canonical Policy Owner
+
+`LiveSourceResolver` in `feature:flight-runtime` is the only selector and policy owner for live-source selection.
+
+The following must derive from `LiveSourceResolver` and nowhere else:
+
+- `EffectiveLiveSource`
+- `SelectedLiveSensorDataSource`
+- `SelectedLiveAirspeedSource`
+- `LiveStartupRequirement`
+- `LiveSourceStatus`
+- `LiveSourceKind`
+
+Forbidden patterns:
+
+- sensor-specific selector outside runtime
+- airspeed-specific selector outside runtime
+- app/service deciding which source should be active
+- UI deriving source policy from raw simulator or phone state
+- map-specific source policy
+
+## Boundary Rules
+
+### `feature:profile`
+
+Owns:
+
+- persisted `DesiredLiveMode`
+- settings/profile UI mutation path
+
+Must not own:
+
+- effective live-source selection
+- runtime status derivation
+- runtime startup rules
+
+### `feature:flight-runtime`
+
+Owns:
+
+- `DesiredLiveModePort` declaration
+- `PhoneLiveCapabilityPort` declaration
+- `CondorLiveStatePort` declaration
+- `LiveSourceResolver`
+- `EffectiveLiveSource`
+- `SelectedLiveSensorDataSource`
+- `SelectedLiveAirspeedSource`
+- `LiveStartupRequirement`
+- `LiveSourceStatus`
+- `LiveSourceKind`
+
+Must not own:
+
+- Condor transport/parsing/session runtime
+- settings persistence implementation
+- map-specific orientation display behavior
+- `feature:igc` / `feature:weglide` downstream policy
+
+### `feature:simulator`
+
+Owns:
+
+- Condor bridge transport
+- parser/runtime
+- reconnect and framing state
+- `CondorSessionState`
+- `CondorLiveStatePort` implementation
+- `CondorBridgeControlPort`
+- simulator-specific session lifecycle helpers
+- simulator-specific NMEA / LXWP0 mapping
+- persisted bridge selection and bridge-session diagnostics exposed through
+  narrow simulator-owned seams
+
+Must not own:
+
+- desired mode persistence
+- app/service permission policy
+- global live-source selection policy
+- map UI logic
+
+### Condor bridge connection UX slice
+
+This slice is required for the first implementation because "Condor 2 support"
+is not complete unless a user can actually connect the Windows-hosted bridge to
+XCPro on Android.
+
+The v1 UX scope is:
+
+- first-run bridge setup
+- persisted bridge selection owner
+- reconnect states
+- minimum diagnostics surface for `CONDOR2_FULL`
+
+Default product shape:
+
+- reuse the existing bonded-Bluetooth selection / connect / disconnect pattern,
+  plus reconnect-state diagnostics, already used for external Bluetooth device
+  flows
+- use a dedicated Condor screen only if boundary review shows that reuse would
+  leak LX-specific ownership, strings, or state contracts into the simulator
+  path
+
+Ownership rules for this slice:
+
+- settings UI may trigger bridge selection and connection actions
+- persisted selected bridge identity belongs to a simulator-owned repository or
+  equivalent simulator-owned state owner, not to `feature:profile`, `app`, or
+  `feature:map`
+- reconnect state, active bridge identity, and bridge diagnostics are
+  simulator-owned runtime state
+- `DesiredLiveMode` remains separate state owned by `feature:profile`; do not
+  merge mode selection and bridge selection into one owner
+
+Minimum v1 user-visible surface:
+
+- selected bridge
+- active bridge
+- explicit connect / disconnect action
+- reconnect state: waiting / attempting / blocked / exhausted
+- minimum diagnostics: connection status, stream healthy vs stale, and last
+  failure reason
+
+First-run assumptions for v1:
+
+- the user pairs the PC-hosted Bluetooth bridge in Android OS settings first
+- XCPro then lets the user choose from bonded bridge devices
+- XCPro remembers the chosen bridge and uses that persisted selection for later
+  reconnect attempts
+
+Bridge-selection lifecycle rules for v1:
+
+- transient disconnect, stale stream, or reconnect exhaustion must not
+  auto-clear the persisted selected bridge
+- if the persisted bridge is no longer bonded, no longer available, or
+  otherwise invalid, simulator state transitions to `BLOCKED` and surfaces the
+  failure; XCPro must not silently swap to another bridge or silently clear the
+  selection
+- clearing the persisted bridge requires an explicit settings recovery action
+  such as clear or re-pick
+- retry/backoff ownership belongs to simulator runtime, not to UI, profile,
+  app, or map code
+- v1 may use a fixed or capped retry policy, but `WAITING`, `ATTEMPTING`,
+  `BLOCKED`, and `EXHAUSTED` must be simulator-owned states rather than UI-only
+  wording
+
+### `app`
+
+Owns:
+
+- lifecycle/service/permission actuation
+- application of already-resolved runtime policy
+- app implementation of `VarioRuntimeControlPort`
+- platform-edge implementation of `PhoneLiveCapabilityPort`
+- internal fan-out from the public runtime-control seam into phone or Condor helpers
+
+Must not own:
+
+- active live-source decision
+- duplicate status policy
+- duplicate startup policy
+- map-local phone restart heuristics or user-facing live-source wording
+
+### `feature:map`
+
+Consumes:
+
+- fused `FlightDataRepository` outputs
+- `LiveSourceStatus`
+- map-local phone device health / restart diagnostics only through a dedicated local seam
+
+Owns:
+
+- `VarioRuntimeControlPort` as the canonical public map/replay runtime-control seam
+- camera/display behavior
+- map-specific orientation controller/display logic
+- map-local phone device health / restart diagnostics seam for controller logic only
+
+Must not own:
+
+- source selection
+- Condor runtime freshness logic
+- direct Condor ownship truth
+- user-facing live-source status derived from `UnifiedSensorManager`
+- runtime policy types on the public `VarioRuntimeControlPort` API
+
+## Explicit Bypass-Replacement Mapping
+
+| Current bypass | Required replacement seam | Owner after change |
 |---|---|---|
-| latest fused flight sample | `FlightDataRepository` | unchanged SSOT |
-| desired live mode | persisted settings owner in `feature:profile` | user preference |
-| effective live source | resolver in `feature:flight-runtime` | derives from desired mode and runtime availability |
-| selected live sensor source | dedicated selector in `feature:flight-runtime` | narrow port, not dependency bag |
-| selected live airspeed source | dedicated selector in `feature:flight-runtime` | separate seam from sensor source |
-| Condor session / stream health | `feature:simulator` | raw runtime state |
-| source-aware UI status | derived use case in `feature:flight-runtime` | map consumes, does not invent |
+| `VarioForegroundService.startIfPermitted()` | app-side actuation driven by `LiveStartupRequirement` and resolver outputs | `app` |
+| `ForegroundServiceVarioRuntimeController.ensureRunningIfPermitted()` | source-aware `VarioRuntimeControlPort` implementation driven by resolver outputs | `app` |
+| `MapSensorsUseCase.gpsStatusFlow` direct phone status | `LiveSourceStatus` | `feature:flight-runtime` |
+| `MapSensorsUseCase.sensorStatus()` / `isGpsEnabled()` used for mixed live status and phone diagnostics | dedicated map-local phone device health seam used only by controller diagnostics / restart logic | `feature:map` local diagnostics owner |
+| `SensorFusionModule` direct `UnifiedSensorManager` live binding | `SelectedLiveSensorDataSource` | `feature:flight-runtime` |
+| `WindSensorModule` direct live sensor binding | `SelectedLiveSensorDataSource` | `feature:flight-runtime` |
 
-### 3.2 Module ownership
+Notes:
 
-- `feature:simulator`
-  - Condor transport
-  - line framing and parser use
-  - Condor 2 runtime repository
-  - sentence mapping
-  - stream freshness and reconnect state
-- `feature:flight-runtime`
-  - live-source ports
-  - source selection and effective-source resolution
-  - source-aware status model
-  - selected live sensor and airspeed seams
-- `feature:map`
-  - map rendering
-  - replay binders
-  - map-specific UI status rendering
-  - no Condor socket/parser ownership
-- `app`
-  - Android foreground-service entrypoint
-  - mode-aware permission gate
-- `feature:profile`
-  - persisted desired live mode setting
-- `feature:igc` and `feature:weglide`
-  - their own simulator-session policy decisions based on source kind
+- phone-specific and simulator-specific helpers may still exist behind `VarioRuntimeControlPort` and runtime-owned internal seams
+- `LocationSensorsController` may consume phone-device health only for local restart and diagnostics; it must never derive effective source, ownship truth, or user-facing Condor status from that seam
+- replay binders remain replay-only; do not reuse `MapLocationFlightDataRuntimeBinder` as a live routing shortcut
+- Condor-selected live samples still publish into `FlightDataRepository` as `Source.LIVE`; downstream simulator-aware behavior keys off `LiveSourceKind`
 
-### 3.3 Explicit non-goals
+## Heading Authority Rule
 
-Do not:
+This rule is mandatory for `CONDOR2_FULL`.
 
-- reuse `MapLocationFlightDataRuntimeBinder` for Condor
-- introduce a broad `selected live runtime bundle`
-- leave ownship heading authority ambiguous in Condor mode
-- make `feature:variometer` the long-term owner of full simulator runtime
-- let runtime own WeGlide or IGC upload policy
+When `EffectiveLiveSource == CONDOR2`:
 
-## 4) Canonical after-state flows
+- aircraft marker truth comes from fused simulator-fed `FlightDataRepository.flightData.gps` only
+- ownship pose / bearing / track truth must come from fused flight data only
+- phone orientation may drive camera or display behavior only
+- phone compass must never become Condor ownship fallback
 
-Phone mode:
+This means a stationary phone paired with a flying Condor session must still render simulator ownship truth for the aircraft marker.
 
-```text
-UnifiedSensorManager
--> selected live SensorDataSource
--> SensorFusionRepository
--> FlightDataRepository(Source.LIVE)
--> Map/ViewModels/UI
-```
+## No-Fallback Rule
 
-Condor 2 mode:
+This rule is mandatory for `CONDOR2_FULL`.
 
-```text
-Condor bridge transport
--> Condor line framer/parser
--> Condor runtime repository
--> selected live SensorDataSource + selected live AirspeedDataSource
--> SensorFusionRepository
--> FlightDataRepository(Source.LIVE)
--> Map/ViewModels/UI
-```
+If the Condor stream disconnects, stalls, or degrades while `DesiredLiveMode == CONDOR2_FULL`:
 
-Replay mode:
+- `EffectiveLiveSource` remains Condor
+- `LiveSourceStatus` becomes Condor-degraded
+- the app may surface degraded state and runtime controls
+- the system must not silently switch back to phone GPS
 
-```text
-Igc replay runtime
--> Replay source owners
--> FlightDataRepository(Source.REPLAY)
--> replay binder path only when suppressed live GPS is active
-```
+Any future fallback behavior would require a separate ADR and explicit UX/state model.
 
-## 5) Implementation phases
+## Timebase Policy
 
-### Phase 0 - Lock boundaries in docs
+Time ownership is fixed as follows:
 
-Goal:
+- Condor stream freshness/staleness uses injected monotonic receive time captured on Android at the bridge boundary
+- parsed NMEA UTC is payload data only
+- runtime freshness must not be computed from payload UTC
+- replay remains replay-time driven and isolated from live-source freshness
 
-- finish the plan and architecture decision before code
+This prevents payload wall-time drift from becoming a hidden runtime health authority.
 
-Deliverables:
+## App / Platform Boundary
 
-- this phased IP
-- boundaries/source-routing note
-- PC bridge plan
-- verification plan
-- ADR draft
+`app` is an actuator and platform-edge capability adapter only.
 
-Exit criteria:
+`app` may:
 
-- no unresolved ownership questions remain
+- request Android permission when `LiveStartupRequirement` demands it
+- implement `PhoneLiveCapabilityPort` as a narrow platform-edge capability adapter
+- implement `VarioRuntimeControlPort` for map/replay callers
+- apply resolver outputs to internal phone or Condor runtime helpers
 
-### Phase 1 - Shared seam extraction
+`app` may not:
 
-Goal:
+- decide which live source should be active
+- derive its own startup policy
+- override `LiveSourceResolver` with service-level heuristics
 
-- prepare a stable base without Condor behavior yet
+## Public Runtime-Control Contract
 
-Implementation:
+`VarioRuntimeControlPort` remains the stable caller seam for map and replay.
 
-- extract reusable NMEA line/checksum utilities to a neutral shared owner
-- add narrow live-source ports in `feature:flight-runtime`
-- add persisted desired-live-mode setting in `feature:profile`
+Contract:
 
-Tests:
+- keep the public API semantic contract as "ensure the resolver-selected live runtime is active"
+- treat `ensureRunningIfPermitted()` as a compatibility name, not as phone-GPS-specific policy authority
+- keep the public API caller-agnostic
+- do not pass `DesiredLiveMode`, `EffectiveLiveSource`,
+  `LiveStartupRequirement`, or simulator-specific runtime types through the
+  map-facing API
+- app implementation may read runtime-derived startup and source state through
+  inward-facing runtime seams
+- any fan-out to phone or Condor-specific helpers stays internal to app or
+  simulator ownership
+- callsites must not interpret a false return as phone-permission-only semantics once resolver-driven Condor support exists
 
-- unit tests for line framing/checksum
-- unit tests for desired-mode persistence
+This keeps `feature:map` from becoming a transit path for runtime policy types.
 
-Exit criteria:
+## Map Phone-Health Boundary
 
-- no `feature:simulator -> feature:variometer` dependency is needed
+Phone-device health is not the same thing as live-source truth.
 
-### Phase 2 - Live-source selection and status
+Rules:
 
-Goal:
+- user-facing live status and active-source truth come from `LiveSourceStatus`
+  and fused live flight data
+- phone-device diagnostics such as local GPS enabled state, local permission
+  state, and restart heuristics stay in a dedicated map-local phone-health seam
+- `LocationSensorsController` may use that phone-health seam for sleep/doze
+  restart logic and diagnostics only
+- phone-health diagnostics must never decide `EffectiveLiveSource`, Condor
+  degraded-state policy, or ownship truth
 
-- remove phone-only assumptions from live selection
+## Downstream Feature Policy Rule
 
-Implementation:
+`feature:flight-runtime` may expose `LiveSourceKind`.
 
-- add effective live-source resolver
-- add selected live sensor source seam
-- add selected live airspeed source seam
-- add source-aware status model for UI
-- refactor map use case to consume source-aware status instead of direct phone
-  status
+Downstream features such as `feature:igc` and `feature:weglide` may consume `LiveSourceKind.SIMULATOR_CONDOR2` to suppress simulator-inappropriate behavior.
 
-Tests:
+`feature:flight-runtime` must not own those downstream policies directly.
 
-- source-selection unit tests
-- no-fallback and stale/disconnected status tests
+## Implementation Phases
 
-Exit criteria:
+### Phase 0 - Contract lock and ADR update
 
-- `SensorFusionModule` and `WindSensorModule` no longer bind live source
-  directly to `UnifiedSensorManager`
+- replace the old phased IP with this v2 contract
+- update the Condor boundaries note with explicit seam rules
+- promote the ADR draft with the durable decisions in this document
+- identify the exact `PIPELINE.md` sections that must be updated in the same implementation change that rewires live runtime ownership or routing
+- add boundary-lock tests to the implementation acceptance criteria before code movement starts
 
-### Phase 3 - Condor 2 runtime
+### Phase 1 - Ports and persisted mode
 
-Goal:
+- add `DesiredLiveModePort` in `feature:flight-runtime`
+- implement `DesiredLiveModePort` in `feature:profile`
+- keep `feature:flight-runtime` free of any direct `feature:profile` dependency
+- add `PhoneLiveCapabilityPort` in `feature:flight-runtime` with a narrow typed capability contract
+- implement `PhoneLiveCapabilityPort` at the platform edge only; do not reuse the map-local phone-health seam as the runtime port
+- add `CondorLiveStatePort` as a read-only runtime input contract with an
+  explicit `CondorLiveState` read model
+- add contracts for selected live sensor and airspeed sources
+- preserve `VarioRuntimeControlPort` as the only public runtime-control seam
+- lock the rule that any richer actuation inputs are read inside the app
+  implementation, not pushed through the map-facing API
 
-- add Condor runtime in the correct module
+### Phase 2 - `LiveSourceResolver`
 
-Implementation:
+- implement `LiveSourceResolver` as the only live selector/policy owner
+- derive effective source, sensor source, airspeed source, startup requirement, source status, and source kind from the same resolver
+- derive source status from typed degraded reasons, not free-form strings
+- remove duplicate source selection logic from existing callsites and DI modules
+
+### Phase 3 - `feature:simulator`
 
 - create `feature:simulator`
-- add Condor bridge transport abstraction
-- parse `GGA`, `RMC`, and `$LXWP0`
-- implement Condor 2 wind-direction correction
-- publish raw Condor stream status and parsed live samples
+- move Condor transport, parser/runtime, stream freshness, reconnect state, and simulator-specific session lifecycle helpers there
+- keep stream health and payload mapping simulator-owned
+- split first concrete simulator owners explicitly:
+  - `CondorBridgeTransport` (Bluetooth/socket/line-framing owner)
+  - `CondorSentenceMapper` (GGA / RMC / LXWP0 mapping owner)
+  - `CondorSessionRepository` (selected bridge persistence, `CondorSessionState`,
+    reconnect state, last failure, and `CondorLiveStatePort` implementation)
+  - `CondorBridgeController` (`CondorBridgeControlPort` implementation for
+    settings-triggered select / clear / connect / disconnect)
 
-Tests:
+### Phase 3A - Bridge connection UX slice
 
-- parser fixtures
-- malformed-line tolerance
-- stale stream detection
-- wind-direction conversion tests
+- add a Condor bridge connection UX slice covering first-run bridge setup,
+  persisted bridge selection owner, reconnect states, and minimum diagnostics
+  surface for `CONDOR2_FULL`
+- reuse the existing Bluetooth settings interaction pattern unless boundary
+  review requires a dedicated Condor screen
+- keep persisted bridge identity in a simulator-owned state owner exposed
+  through a narrow seam to settings UI
+- keep reconnect status and bridge diagnostics simulator-owned; do not mirror
+  them into profile, app, or map state owners
+- keep bridge actions on a simulator-owned `CondorBridgeControlPort` (or
+  equivalently narrow simulator-owned settings seam), separate from
+  `CondorLiveStatePort` and separate from `VarioRuntimeControlPort`
+- treat `selectBridge()` and `clearSelectedBridge()` as lifecycle mutations, not
+  just persistence writes: changing or clearing selection must cancel any queued
+  reconnect and remove the previous bridge as reconnect target immediately
+- the persisted selected bridge is the only allowed reconnect target; simulator
+  must never reconnect to a bridge that is no longer selected
+- define the invalid-selection recovery path: blocked state when the persisted
+  bridge is missing/unbonded, plus explicit clear / re-pick
+- define retry/backoff ownership in simulator runtime; UI surfaces the state
+  but does not own timers, counters, or retry policy
+- keep `connect()` as the only manual start / retry action; when reconnect is
+  `WAITING` or `EXHAUSTED`, pressing Connect cancels queued backoff and starts a
+  fresh immediate attempt for the currently selected bridge
+- keep `CondorLiveStatePort` contract-parity with the slice: expose only
+  session/degraded fields that are actually produced by simulator owners in this
+  phase; defer parser-level UTC or richer failure states until a concrete owner
+  exists in the parser/fusion slice
+- define the minimum settings/runtime text and control set needed for the user
+  to connect, disconnect, recover, and understand bridge health
 
-Exit criteria:
+### Phase 3B - Bridge lifecycle hardening before Phase 4
 
-- Condor runtime produces clean sensor and airspeed outputs behind ports
+- do not start DI / lifecycle rewiring until the bridge-ownership slice is
+  closed under selection-change and clear-selection behavior
+- keep code ownership narrow:
+  - `CondorBridgeController` owns user intent for select / clear / connect /
+    disconnect
+  - `CondorBridgeTransport` owns active target, reconnect timer, and session
+    execution
+  - `CondorSessionRepository` remains a read-only projection / runtime read seam
+- add an explicit transport-level action to cancel and forget the current target
+  when selection changes or clears; do not infer this from `activeBridge`
+- prove that reconnect `WAITING` / `ATTEMPTING` cannot outlive a clear or
+  replace-selection action
+- trim `CondorLiveStatePort` to implemented semantics, or fully implement the
+  advertised fields before runtime consumers rely on them
+- Phase 4 is blocked until this correction slice passes
 
-### Phase 4 - Runtime wiring and permission policy
+### Phase 4 - DI / lifecycle rewiring
 
-Goal:
+- rewire fusion and wind DI to consume `SelectedLiveSensorDataSource` and `SelectedLiveAirspeedSource`
+- update the existing `VarioRuntimeControlPort` implementation so app-side lifecycle actuation consumes resolver outputs only
+- ensure permission prompting is driven by `LiveStartupRequirement`, not by direct service heuristics
+- keep phone or Condor-specific actuation fan-out internal to app/simulator
+  helpers
+- keep Condor and phone inside the same `FlightDataRepository.Source.LIVE` branch; do not widen repository source authority for simulator classification
 
-- make Condor selectable as the authoritative live source
+### Phase 5 - UI and heading authority
 
-Implementation:
+- replace direct phone-only live status with `LiveSourceStatus`
+- split `MapSensorsUseCase` so phone-device diagnostics / restart checks move to
+  a dedicated map-local phone-health seam
+- keep `LocationSensorsController` on phone-health diagnostics only; never let
+  it own active-source truth or Condor degraded-state policy
+- enforce fused Condor ownship truth for aircraft marker pose / bearing
+- keep phone orientation strictly display/camera-scoped in Condor mode
 
-- refactor foreground-service start control to be mode-aware
-- allow Condor mode to start without Android location permission
-- keep phone mode permission-gated
-- wire Condor outputs into selected live sensor and airspeed seams
-- ensure fused live `flightData.gps` comes from Condor in `CONDOR2_FULL`
+### Phase 6 - Replay and side effects
 
-Tests:
+- keep replay authoritative while active
+- replay start suspends live authority through the existing replay path only
+- replay stop re-applies resolver-selected live mode
+- downstream features consume `LiveSourceKind` for simulator-specific suppression
+- shipped scope: IGC recording input, WeGlide post-flight prompt publication,
+  and LiveFollow side effects suppress when
+  `LiveSourceKind.SIMULATOR_CONDOR2` is active
 
-- startup-requirement tests
-- map ownship location integration tests
-- flight-data source routing tests
+## Required Proof / Boundary-Lock Tests
 
-Exit criteria:
+Implementation is not complete until these proofs exist:
 
-- Android map shows the Condor location, not the phone location
+- boundary-lock tests proving no `feature:flight-runtime -> feature:profile` dependency
+- boundary-lock tests proving no `feature:flight-runtime -> feature:map` dependency
+- boundary-lock tests proving no direct dependence on simulator implementations from map or domain consumers
+- boundary-lock tests proving map and replay start/stop requests still go through `VarioRuntimeControlPort` only
+- boundary-lock tests proving `VarioRuntimeControlPort` does not grow runtime
+  policy or simulator-specific parameters on the public API
+- tests proving runtime reads Condor bridge/session state through
+  `CondorLiveStatePort` only
+- tests proving `CondorLiveStatePort` remains read-only and exposes no bridge
+  mutation methods
+- tests proving no duplicate `DesiredLiveMode` owner exists
+- tests proving no duplicate persisted bridge-selection owner exists across
+  simulator, profile, app, or map
+- tests proving bridge mutation actions go through simulator-owned
+  `CondorBridgeControlPort` (or equivalent simulator-owned settings seam), not
+  `VarioRuntimeControlPort`
+- tests proving selection logic does not exist outside `LiveSourceResolver`
+- tests proving no third `FlightDataRepository.Source` value is introduced for Condor
+- tests proving Condor-selected live samples still publish through `FlightDataRepository.Source.LIVE`
+- tests proving user-facing live status no longer depends on
+  `UnifiedSensorManager.gpsStatusFlow`
+- tests proving runtime status uses typed source-specific degraded reasons rather than free-form strings
+- UI or integration tests proving the selected bridge persists, reconnect state
+  is surfaced, and the minimum diagnostics surface is present for
+  `CONDOR2_FULL`
+- UI or integration tests proving `Connect` is the only manual retry affordance
+  and works during reconnect `WAITING` and after `EXHAUSTED`
+- UI or integration tests proving transient failures do not clear the persisted
+  bridge and missing/unbonded persisted bridges surface `BLOCKED` plus explicit
+  clear / re-pick recovery
+- unit or integration tests proving clear-selection during reconnect `WAITING`
+  cancels the queued reconnect and prevents the old bridge from reconnecting
+- unit or integration tests proving replace-selection during reconnect
+  `WAITING` / `ATTEMPTING` forgets the previous target before any reconnect
+  executes
+- tests proving the reconnect target always matches the persisted selected
+  bridge or null
+- tests proving `CondorLiveStatePort` in the bridge-ownership slice does not
+  advertise parser/degraded fields that simulator runtime does not yet produce
+- tests proving phone-device diagnostics used by `LocationSensorsController` do
+  not drive effective-source or ownship fallback behavior
+- integration tests proving Condor ownship uses fused live `flightData.gps`
+- orientation tests proving phone orientation never becomes Condor ownship fallback
+- replay tests proving replay remains authoritative while active
+- degraded-state tests proving Condor disconnect does not silently revert to phone GPS
 
-### Phase 5 - UI and status surfaces
+## Rollout / Rollback Notes
 
-Goal:
+Rollout should happen phase-by-phase, with boundary-lock tests added before the code movement that relies on them.
 
-- expose selection and status cleanly without UI owning runtime logic
+Rollback, if needed, must remove resolver-driven Condor selection as a whole. It must not reintroduce partial direct callsite bypasses or phone-fallback shortcuts.
 
-Implementation:
+## Assumptions and Defaults
 
-- add desired live mode setting UI
-- replace phone-only GPS banners with source-aware wording
-- expose Condor connection / waiting / stale status
-- add diagnostics surface for last sentence family and source mode
-
-Tests:
-
-- ViewModel mapping tests
-- source-aware banner text tests
-
-Exit criteria:
-
-- no UI layer reads `UnifiedSensorManager` directly for Condor status
-
-### Phase 6 - Replay and side-effect hardening
-
-Goal:
-
-- keep replay deterministic and simulator sessions non-uploadable by default
-
-Implementation:
-
-- replay suspends live authority cleanly and restores desired live mode after
-  replay ends
-- IGC and WeGlide consume source kind and suppress auto side effects for
-  simulator sessions
-- no silent fallback from Condor to phone GPS on disconnect
-
-Tests:
-
-- replay restore tests
-- no-record/no-upload simulator tests
-- disconnect-state tests
-
-Exit criteria:
-
-- replay and simulator paths remain structurally separate
-
-## 6) Verification plan
-
-Required checks before merge:
-
-```bash
-./gradlew enforceRules
-./gradlew testDebugUnitTest
-./gradlew assembleDebug
-```
-
-Targeted proof:
-
-- `feature:simulator` parser and runtime tests
-- `feature:flight-runtime` source-selection tests
-- map integration tests for ownship routing
-- replay restore regression tests
-
-## 7) Acceptance gates
-
-- no new SSOT is introduced
-- Condor ownship enters live fused flight data, not replay binders
-- desired live mode persistence has one owner
-- live source selection uses narrow seams, not a dependency bag
-- heading authority in Condor mode is explicit
-- simulator sessions do not auto-upload or auto-prompt
-- replay stays deterministic
-
-## 8) Practical acceptance scenario
-
-The minimum product-level proof is:
-
-1. user selects `CONDOR2_FULL`
-2. Android phone grants no location permission
-3. Condor 2 runs on the PC and streams NMEA through the supported bridge
-4. XCPro map shows the Condor aircraft at the simulator location
-5. disconnecting Condor does not silently snap XCPro back to phone GPS
+- `CONDOR2_FULL` is the only simulator live mode in v1
+- Condor 3 remains out of scope
+- replay binder ownership remains replay-only
+- repo files are not mutated during Plan Mode; this document is the proposed on-disk replacement text

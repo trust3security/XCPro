@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxParseOutcome
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxRejectedReason
 
@@ -104,3 +104,5 @@ internal class LxSentenceDiagnosticsAccumulator(
         internal const val DEFAULT_SENTENCE_RATE_WINDOW_MS: Long = 1_000L
     }
 }
+
+

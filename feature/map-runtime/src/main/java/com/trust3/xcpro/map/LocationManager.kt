@@ -31,8 +31,8 @@ class LocationManager(
     companion object {
         private const val TAG = "LocationManager"
         private const val INITIAL_ZOOM_LEVEL = 10.0
-        private const val CAMERA_MIN_UPDATE_INTERVAL_MS = 80L
-        private const val CAMERA_BEARING_EPS_DEG = 2.0
+        private const val CAMERA_MIN_UPDATE_INTERVAL_MS = 25L
+        private const val CAMERA_BEARING_EPS_DEG = 0.5
         private const val FRAME_LOG_INTERVAL_MS = 100L
     }
 
@@ -146,8 +146,8 @@ class LocationManager(
         sensorsPort.onLocationPermissionsResult(fineLocationGranted)
     }
 
-    override fun requestLocationPermissions(permissionRequester: MapLocationPermissionRequester) {
-        sensorsPort.requestLocationPermissions(permissionRequester)
+    override fun ensureSelectedRuntimeReady(permissionRequester: MapLocationPermissionRequester) {
+        sensorsPort.ensureSelectedRuntimeReady(permissionRequester)
     }
 
     override fun stopLocationTracking(force: Boolean) {
@@ -167,7 +167,7 @@ class LocationManager(
     override fun setActiveProfileId(profileId: String) {
         locationPreferences.setActiveProfileId(profileId)
     }
-    override fun updateLocationFromGPS(
+    override fun updateLocationFromLiveFix(
         location: MapLocationUiModel,
         orientation: OrientationData
     ) {

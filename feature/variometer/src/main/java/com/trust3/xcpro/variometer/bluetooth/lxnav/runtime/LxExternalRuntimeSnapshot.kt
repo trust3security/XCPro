@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxDeviceInfo
 
 internal data class LxTimedValue<T>(
@@ -20,3 +20,5 @@ internal data class LxExternalRuntimeSnapshot(
     val lastAcceptedMonoMs: Long? = null,
     val diagnostics: LxBluetoothRuntimeDiagnostics = LxBluetoothRuntimeDiagnostics()
 )
+
+

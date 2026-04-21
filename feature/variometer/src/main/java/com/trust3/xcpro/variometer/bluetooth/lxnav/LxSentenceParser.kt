@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav
 
-import com.trust3.xcpro.variometer.bluetooth.NmeaLine
+import com.trust3.xcpro.bluetooth.NmeaLine
 
 class LxSentenceParser {
 
@@ -203,3 +203,4 @@ class LxSentenceParser {
         private const val CHECKSUM_HEX_LENGTH: Int = 2
     }
 }
+

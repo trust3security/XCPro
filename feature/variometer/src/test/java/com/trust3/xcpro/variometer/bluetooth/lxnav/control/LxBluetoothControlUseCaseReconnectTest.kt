@@ -1,8 +1,8 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.control
 
 import com.trust3.xcpro.core.time.FakeClock
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -353,3 +353,4 @@ class LxBluetoothControlUseCaseReconnectTest {
         )
     }
 }
+
