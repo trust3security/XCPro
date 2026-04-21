@@ -11,7 +11,8 @@ import org.maplibre.android.maps.MapLibreMap
  */
 class MapRuntimeController(
     private val overlayManager: MapOverlayManager,
-    private val fitCurrentTask: () -> Unit = {}
+    private val fitCurrentTask: () -> Unit = {},
+    private val exportDiagnostics: (String) -> Unit = {}
 ) {
     companion object {
         private const val TAG = "MapRuntimeController"
@@ -49,6 +50,7 @@ class MapRuntimeController(
     fun apply(command: MapCommand) {
         when (command) {
             is MapCommand.SetStyle -> applyStyle(command.styleName)
+            is MapCommand.ExportDiagnostics -> exportDiagnostics(command.reason)
             MapCommand.FitCurrentTask -> applyFitCurrentTask()
         }
     }

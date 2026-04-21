@@ -64,9 +64,26 @@ internal class DisplayPoseRenderCoordinator(
         val nowMs = poseCoordinator.nowMs()
         val mode = mapStateReader.displayPoseMode.value
         val smoothingProfile = mapStateReader.displaySmoothingProfile.value
-        val pose = poseCoordinator.selectPose(nowMs, mode, smoothingProfile) ?: return
-        if (!surfacePort.isMapReady()) return
-        val poseTimeBase = poseCoordinator.timeBase ?: return
+        val pose = poseCoordinator.selectPose(nowMs, mode, smoothingProfile)
+            ?: run {
+                diagnostics.recordDisplayFrameRenderSkipped(
+                    MapRenderSurfaceDiagnostics.DisplayFrameRenderSkipReason.NO_POSE
+                )
+                return
+            }
+        if (!surfacePort.isMapReady()) {
+            diagnostics.recordDisplayFrameRenderSkipped(
+                MapRenderSurfaceDiagnostics.DisplayFrameRenderSkipReason.MAP_NOT_READY
+            )
+            return
+        }
+        val poseTimeBase = poseCoordinator.timeBase
+            ?: run {
+                diagnostics.recordDisplayFrameRenderSkipped(
+                    MapRenderSurfaceDiagnostics.DisplayFrameRenderSkipReason.MISSING_TIME_BASE
+                )
+                return
+            }
         val orientation = latestOrientation
         val forceTrackHeading = featureFlags.forceReplayTrackHeading &&
             poseTimeBase == DisplayClock.TimeBase.REPLAY
@@ -172,6 +189,7 @@ internal class DisplayPoseRenderCoordinator(
             nowMs = nowMs,
             frameId = lastDisplayPoseFrameId
         )
+        diagnostics.recordDisplayPoseRenderApplied()
         lastRenderedFrameSnapshot = currentFrameSnapshot.copy(mapBearingDeg = overlayBearing)
         emitDisplayPoseFrameSnapshot(
             location = poseLocation,

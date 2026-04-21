@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trust3.xcpro.core.common.geometry.DensityScale
 import com.trust3.xcpro.core.common.geometry.OffsetPx
 import com.trust3.xcpro.map.MapLocationRuntimePort
+import com.trust3.xcpro.map.MapLifecycleRuntimePort
 import com.trust3.xcpro.map.MapOverlayManager
 import com.trust3.xcpro.map.TaskRenderSnapshot
 import com.trust3.xcpro.map.MapScreenViewModel
@@ -230,17 +231,20 @@ internal fun trackSafeContainerSize(
 internal fun rememberMapRuntimeController(
     overlayManager: MapOverlayManager,
     mapViewModel: MapScreenViewModel,
+    lifecycleManager: MapLifecycleRuntimePort,
     cameraManager: MapCameraRuntimePort,
     taskRenderSnapshotProvider: () -> TaskRenderSnapshot
 ): MapRuntimeController {
     val mapRuntimeController = remember(
         overlayManager,
         mapViewModel,
+        lifecycleManager,
         cameraManager,
         taskRenderSnapshotProvider
     ) {
         MapRuntimeController(
             overlayManager = overlayManager,
+            exportDiagnostics = lifecycleManager::emitDiagnostics,
             fitCurrentTask = {
                 cameraManager.fitTaskViewport(taskRenderSnapshotProvider())
             }

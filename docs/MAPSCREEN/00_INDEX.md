@@ -2,7 +2,7 @@
 
 Date: 2026-03-05  
 Owner: XCPro Team  
-Status: Active (phase-2 lanes green; phase-3 blocked on `MS-UX-01`, tracked by `RULES-20260305-12` expiring 2026-04-15)
+Status: Active (phase-2 lanes green; phase-3 blocked on `MS-UX-01`; `RULES-20260305-12` has expiry 2026-04-15 and must be resolved in `KNOWN_DEVIATIONS.md`)
 
 ## Purpose
 
@@ -25,6 +25,7 @@ This package now includes:
 
 Recent slice-specific change plans:
 
+- `docs/MAPSCREEN/CHANGE_PLAN_LIVE_OWNSHIP_SMOOTHNESS_PHASED_IP_2026-04-21.md`
 - `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_OVERLAY_VIEWPORT_SCALING_PHASED_IP_2026-03-29.md`
 - `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_RESUME_REANCHOR_PHASED_IP_2026-03-31.md`
 - `docs/MAPSCREEN/CHANGE_PLAN_MAP_STYLE_RUNTIME_OWNERSHIP_CLEANUP_PHASED_IP_2026-04-05.md`

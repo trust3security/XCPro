@@ -40,8 +40,11 @@ internal class MapScreenReplayCoordinator(
     private val mapStateActions: MapStateActions,
     private val syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
+    private val emitMapCommand: (MapCommand) -> Unit,
     private val replaySessionState: StateFlow<SessionState>,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val syntheticThermalAutoStopMillis: Long =
+        SyntheticThermalDiagnosticsAutoStopper.DEFAULT_AUTO_STOP_MS
 ) {
 
     private val racingEventDebouncer = RacingNavigationEventDebouncer()
@@ -79,6 +82,14 @@ internal class MapScreenReplayCoordinator(
     private var racingReplayActive = false
     @Volatile
     private var suppressRacingFixes = false
+    private val syntheticThermalDiagnosticsAutoStopper = SyntheticThermalDiagnosticsAutoStopper(
+        scope = scope,
+        igcReplayController = igcReplayController,
+        syntheticReplayMode = syntheticReplayMode,
+        emitMapCommand = emitMapCommand,
+        uiEffects = uiEffects,
+        autoStopMillis = syntheticThermalAutoStopMillis
+    )
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
     private val racingFixFlow = combine(flightDataFlow, replaySessionState) { data, session ->
@@ -146,6 +157,7 @@ internal class MapScreenReplayCoordinator(
                 successMessage = "Synthetic thermal replay started",
                 failureMessage = "Synthetic thermal replay failed"
             )
+            syntheticThermalDiagnosticsAutoStopper.schedule(SyntheticThermalReplayMode.CLEAN)
         }
     }
 
@@ -159,6 +171,7 @@ internal class MapScreenReplayCoordinator(
                 successMessage = "Synthetic thermal wind-noisy replay started",
                 failureMessage = "Synthetic thermal wind-noisy replay failed"
             )
+            syntheticThermalDiagnosticsAutoStopper.schedule(SyntheticThermalReplayMode.WIND_NOISY)
         }
     }
 
@@ -220,12 +233,14 @@ internal class MapScreenReplayCoordinator(
                             igcReplayController.seekTo(1f)
                         }
                         is ReplayEvent.Failed -> {
+                            syntheticThermalDiagnosticsAutoStopper.cancel()
                             syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
                             igcReplayController.setAutoStopAfterFinish(false)
                             igcReplayController.stopAndWait(emitCancelledEvent = false)
                             demoReplaySnapshots.restoreIfCaptured()
                         }
                         ReplayEvent.Cancelled -> {
+                            syntheticThermalDiagnosticsAutoStopper.cancel()
                             syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
                             igcReplayController.setAutoStopAfterFinish(false)
                             demoReplaySnapshots.restoreIfCaptured()
@@ -270,6 +285,7 @@ internal class MapScreenReplayCoordinator(
         if (!syntheticReplayMode.value.isActive) {
             return
         }
+        syntheticThermalDiagnosticsAutoStopper.cancel()
         syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
         igcReplayController.stopAndWait(emitCancelledEvent = false)
         demoReplaySnapshots.restoreIfCaptured()

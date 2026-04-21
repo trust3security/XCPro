@@ -53,6 +53,7 @@ internal fun createReplayCoordinatorForViewModel(
     mapStateActions: MapStateActions,
     syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
+    emitMapCommand: (MapCommand) -> Unit,
     replaySessionState: StateFlow<SessionState>,
     scope: CoroutineScope
 ): MapScreenReplayCoordinator = mapReplayUseCase.createReplayCoordinator(
@@ -62,6 +63,7 @@ internal fun createReplayCoordinatorForViewModel(
     mapStateActions = mapStateActions,
     syntheticReplayMode = syntheticReplayMode,
     uiEffects = uiEffects,
+    emitMapCommand = emitMapCommand,
     replaySessionState = replaySessionState,
     scope = scope
 )

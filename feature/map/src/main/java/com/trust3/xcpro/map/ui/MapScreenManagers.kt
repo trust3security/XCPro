@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.trust3.xcpro.MapOrientationPreferences
 import com.trust3.xcpro.map.LocationManager
+import com.trust3.xcpro.map.MapDiagnosticsStatusSink
 import com.trust3.xcpro.map.MapCameraRuntimePort
 import com.trust3.xcpro.map.MapCameraManager
 import com.trust3.xcpro.map.MapCameraUpdateGateAdapter
@@ -44,6 +45,7 @@ import com.trust3.xcpro.replay.SessionState
 import com.trust3.xcpro.airspace.AirspaceUseCase
 import com.trust3.xcpro.flightdata.WaypointFilesUseCase
 import com.trust3.xcpro.map.config.MapFeatureFlags
+import com.trust3.xcpro.map.diagnostics.DebugDiagnosticsFileExporter
 import com.trust3.xcpro.tasks.TaskMapRenderRouter
 import com.trust3.xcpro.tasks.core.Task
 import kotlinx.coroutines.CoroutineScope
@@ -107,6 +109,14 @@ internal fun rememberMapScreenManagers(
     }
 
     val renderSurfaceDiagnostics = remember { MapRenderSurfaceDiagnostics() }
+    val diagnosticsFileExporter = remember(context) {
+        DebugDiagnosticsFileExporter(context)
+    }
+    val diagnosticsStatusSink = remember(diagnosticsFileExporter) {
+        MapDiagnosticsStatusSink { status ->
+            diagnosticsFileExporter.appendLine(status)
+        }
+    }
 
     val overlayManager = remember(
         mapState,
@@ -248,6 +258,7 @@ internal fun rememberMapScreenManagers(
         orientationRuntimePort,
         locationManager,
         locationRenderFrameBinder,
+        diagnosticsStatusSink,
         replaySessionState
     ) {
         MapLifecycleManager(
@@ -259,6 +270,7 @@ internal fun rememberMapScreenManagers(
             locationManager = locationManager,
             locationRenderFrameCleanup = locationRenderFrameBinder,
             renderSurfaceDiagnostics = renderSurfaceDiagnostics,
+            diagnosticsStatusSink = diagnosticsStatusSink,
             replaySessionState = replaySessionState
         )
     }

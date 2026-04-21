@@ -7,5 +7,7 @@ interface MapLifecycleRuntimePort {
 
     fun syncCurrentOwnerState(state: Lifecycle.State)
 
+    fun emitDiagnostics(reason: String)
+
     fun cleanup()
 }

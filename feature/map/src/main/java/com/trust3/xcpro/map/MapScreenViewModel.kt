@@ -184,7 +184,7 @@ class MapScreenViewModel @Inject constructor(
     )
     private val replayCoordinator = createReplayCoordinatorForViewModel(
         mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightData, featureFlags = runtimeDependencies.featureFlags, mapStateStore = mapStateStore,
-        mapStateActions = mapStateActions, syntheticReplayMode = syntheticReplayMode, uiEffects = _uiEffects, replaySessionState = replaySessionState, scope = viewModelScope
+        mapStateActions = mapStateActions, syntheticReplayMode = syntheticReplayMode, uiEffects = _uiEffects, emitMapCommand = ::emitMapCommand, replaySessionState = replaySessionState, scope = viewModelScope
     )
     private val uiEventHandler = MapScreenUiEventHandler(
         uiState = _uiState,

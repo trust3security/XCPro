@@ -145,6 +145,7 @@ internal fun MapScreenRoot(
     val mapRuntimeController = rememberMapRuntimeController(
         overlayManager = managers.overlayManager,
         mapViewModel = mapViewModel,
+        lifecycleManager = managers.lifecycleManager,
         cameraManager = managers.cameraManager,
         taskRenderSnapshotProvider = taskRenderSnapshotProvider
     )

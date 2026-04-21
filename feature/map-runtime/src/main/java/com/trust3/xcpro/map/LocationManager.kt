@@ -2,7 +2,6 @@ package com.trust3.xcpro.map
 
 import android.util.Log
 import com.trust3.xcpro.common.orientation.OrientationData
-import com.trust3.xcpro.common.units.UnitsConverter
 import com.trust3.xcpro.map.config.MapFeatureFlags
 import com.trust3.xcpro.map.domain.MapShiftBiasCalculator
 import com.trust3.xcpro.map.model.MapLocationUiModel
@@ -175,7 +174,7 @@ class LocationManager(
             return
         }
         displayPoseRenderer.updateOrientation(orientation)
-        if (!isValidCoordinate(location.latitude, location.longitude)) {
+        if (!isValidDisplayCoordinate(location.latitude, location.longitude)) {
             logLocationDebug {
                 "Live GPS: invalid coordinates (lat=${location.latitude}, lon=${location.longitude})"
             }
@@ -221,19 +220,17 @@ class LocationManager(
 
     override fun shouldDispatchLiveDisplayFrame(): Boolean {
         if (!localOwnshipRenderEnabled) {
-            renderSurfaceDiagnostics.recordDisplayFramePreDispatchSuppressed()
+            renderSurfaceDiagnostics.recordLocalOwnshipDispatchSuppressed()
             return false
         }
-        val shouldDispatch = displayPoseFrameActivityGate.shouldDispatch(
+        val decision = displayPoseFrameActivityGate.evaluateDispatch(
             hasRenderableInput = hasRenderableDisplayInput(),
             timeBase = poseCoordinator.timeBase,
             mode = mapStateReader.displayPoseMode.value,
             smoothingProfile = mapStateReader.displaySmoothingProfile.value
         )
-        if (!shouldDispatch) {
-            renderSurfaceDiagnostics.recordDisplayFramePreDispatchSuppressed()
-        }
-        return shouldDispatch
+        renderSurfaceDiagnostics.recordDisplayFrameDispatchDecision(decision)
+        return decision.shouldDispatch
     }
 
     override fun onDisplayFrame() {
@@ -268,6 +265,7 @@ class LocationManager(
 
     private fun renderDisplayFrame() {
         if (!localOwnshipRenderEnabled) {
+            renderSurfaceDiagnostics.recordLocalOwnshipRenderSkipped()
             return
         }
         displayPoseRenderer.renderDisplayFrame { poseLocation, zoom ->
@@ -286,26 +284,10 @@ class LocationManager(
         if (!localOwnshipRenderEnabled) {
             return
         }
-        logLocationDebug {
-            val groundSpeedKnots = String.format(
-                "%.1f",
-                UnitsConverter.msToKnots(replayFrame.groundSpeedMs)
-            )
-            "Replay frame: lat=${replayFrame.latitude}, lon=${replayFrame.longitude}, " +
-                "accuracy=${replayFrame.accuracyMeters}, gpsAlt=${replayFrame.gpsAltitudeMeters}m, " +
-                "gs=${groundSpeedKnots}kt, track=${replayFrame.trackDeg}"
-        }
+        logLocationDebug { replayFrame.buildReplayFrameDebugMessage() }
 
-        if (replayFrame.latitude == 0.0 || replayFrame.longitude == 0.0) {
-            logLocationDebug {
-                "Replay feed: invalid coordinates (lat=${replayFrame.latitude}, lon=${replayFrame.longitude})"
-            }
-            return
-        }
-        if (!isValidCoordinate(replayFrame.latitude, replayFrame.longitude)) {
-            logLocationDebug {
-                "Replay feed: invalid coordinates (lat=${replayFrame.latitude}, lon=${replayFrame.longitude})"
-            }
+        if (!replayFrame.hasValidDisplayCoordinate()) {
+            logLocationDebug { replayFrame.buildInvalidReplayFrameDebugMessage() }
             return
         }
 
@@ -315,6 +297,7 @@ class LocationManager(
     }
 
     private fun pushRawFix(envelope: LocationFeedAdapter.RawFixEnvelope) {
+        renderSurfaceDiagnostics.recordRawFixInput(envelope.timeBase, envelope.fix.timestampMs)
         val updateResult = poseCoordinator.updateFromFix(envelope)
         val fixLocation = LatLng(envelope.fix.latitude, envelope.fix.longitude)
         if (updateResult.timeBaseChanged) {
@@ -327,13 +310,6 @@ class LocationManager(
 
     private fun hasRenderableDisplayInput(): Boolean =
         localOwnshipRenderEnabled && poseCoordinator.timeBase != null
-
-    private fun isValidCoordinate(lat: Double, lon: Double): Boolean {
-        if (!lat.isFinite() || !lon.isFinite()) return false
-        if (lat < -90.0 || lat > 90.0) return false
-        if (lon < -180.0 || lon > 180.0) return false
-        return true
-    }
 
     fun saveLocation(location: LatLng, zoom: Double, bearing: Double) {
         userInteractionController.saveLocation(location, zoom, bearing)
@@ -348,15 +324,11 @@ class LocationManager(
         }
     }
 
-    override fun showReturnButton() {
-        userInteractionController.showReturnButton()
-    }
+    override fun showReturnButton() = userInteractionController.showReturnButton()
 
     override fun returnToSavedLocation(): Boolean = userInteractionController.returnToSavedLocation()
 
-    override fun recenterOnCurrentLocation() {
-        userInteractionController.recenterOnCurrentLocation()
-    }
+    override fun recenterOnCurrentLocation() = userInteractionController.recenterOnCurrentLocation()
 
     override fun handleUserInteraction(
         currentLocation: MapLocationUiModel?,
@@ -381,4 +353,5 @@ class LocationManager(
             forceImmediate = forceImmediate
         )
     }
+
 }

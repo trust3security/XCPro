@@ -35,7 +35,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -226,7 +228,38 @@ class MapScreenReplayCoordinatorTest {
         }
     }
 
-    private fun createFixture(dispatcher: TestDispatcher): Fixture {
+    @Test
+    fun syntheticThermalReplay_autoStop_exportsDiagnosticsAfterConfiguredDuration() = runTest {
+        val fixture = createFixture(
+            dispatcher = StandardTestDispatcher(testScheduler),
+            syntheticThermalAutoStopMillis = 60_000L
+        )
+        try {
+            fixture.coordinator.onSyntheticThermalReplay()
+            runCurrent()
+            advanceTimeBy(59_999L)
+            runCurrent()
+
+            assertTrue(fixture.commands.isEmpty())
+            assertEquals(SyntheticThermalReplayMode.CLEAN, fixture.syntheticReplayMode.value)
+
+            advanceTimeBy(1L)
+            runCurrent()
+
+            Mockito.verify(fixture.replayController).stopAndWait(emitCancelledEvent = true)
+            assertEquals(
+                listOf(MapCommand.ExportDiagnostics("synthetic_thermal_auto_stop")),
+                fixture.commands
+            )
+        } finally {
+            fixture.close()
+        }
+    }
+
+    private fun createFixture(
+        dispatcher: TestDispatcher,
+        syntheticThermalAutoStopMillis: Long = 0L
+    ): Fixture {
         val taskScope = CoroutineScope(SupervisorJob() + dispatcher)
         val taskManager = TaskManagerCoordinator(
             taskEnginePersistenceService = null,
@@ -269,6 +302,7 @@ class MapScreenReplayCoordinatorTest {
         val mapStateStore = MapStateStore(initialStyleName = "Topo")
         val mapStateActions = MapStateActionsDelegate(mapStateStore)
         val uiEffects = MutableSharedFlow<MapUiEffect>(extraBufferCapacity = 8)
+        val commands = mutableListOf<MapCommand>()
         val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
         val coordinator = MapScreenReplayCoordinator(
@@ -283,8 +317,10 @@ class MapScreenReplayCoordinatorTest {
             mapStateActions = mapStateActions,
             syntheticReplayMode = syntheticReplayMode,
             uiEffects = uiEffects,
+            emitMapCommand = commands::add,
             replaySessionState = replaySession,
-            scope = scope
+            scope = scope,
+            syntheticThermalAutoStopMillis = syntheticThermalAutoStopMillis
         )
         coordinator.start()
         return Fixture(
@@ -297,6 +333,7 @@ class MapScreenReplayCoordinatorTest {
             mapStateStore = mapStateStore,
             syntheticReplayMode = syntheticReplayMode,
             coordinator = coordinator,
+            commands = commands,
             scope = scope
         )
     }
@@ -327,6 +364,7 @@ class MapScreenReplayCoordinatorTest {
         val mapStateStore: MapStateStore,
         val syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
         val coordinator: MapScreenReplayCoordinator,
+        val commands: MutableList<MapCommand>,
         val scope: CoroutineScope
     ) {
         fun close() {

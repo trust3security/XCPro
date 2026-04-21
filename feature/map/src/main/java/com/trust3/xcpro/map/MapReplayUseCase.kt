@@ -86,6 +86,7 @@ class MapReplayUseCase @Inject constructor(
         mapStateActions: MapStateActions,
         syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
         uiEffects: MutableSharedFlow<MapUiEffect>,
+        emitMapCommand: (MapCommand) -> Unit,
         replaySessionState: StateFlow<SessionState>,
         scope: CoroutineScope
     ): MapScreenReplayCoordinator = MapScreenReplayCoordinator(
@@ -100,6 +101,7 @@ class MapReplayUseCase @Inject constructor(
         mapStateActions = mapStateActions,
         syntheticReplayMode = syntheticReplayMode,
         uiEffects = uiEffects,
+        emitMapCommand = emitMapCommand,
         replaySessionState = replaySessionState,
         scope = scope
     )
