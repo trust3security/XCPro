@@ -115,7 +115,7 @@ internal object CardFormatSpecs {
             )
 
             KnownCardId.REAL_IGC_VARIO -> {
-                val sample = liveData.condorVario ?: liveData.realIgcVario
+                val sample = liveData.realIgcVario
                 if (sample != null) {
                     Pair(
                         UnitsFormatter.verticalSpeed(VerticalSpeedMs(sample), units).text,

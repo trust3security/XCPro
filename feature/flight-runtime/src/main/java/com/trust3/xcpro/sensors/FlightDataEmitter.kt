@@ -8,7 +8,6 @@ import com.trust3.xcpro.flightdata.FlightDisplayMapper
 import com.trust3.xcpro.flightdata.FlightDisplaySnapshot
 import com.trust3.xcpro.sensors.domain.CalculateFlightMetricsUseCase
 import com.trust3.xcpro.sensors.domain.FlightMetricsRequest
-import com.trust3.xcpro.sensors.domain.resolveExternalInstrumentInputs
 import com.trust3.xcpro.weather.wind.model.AirspeedSample
 import com.trust3.xcpro.weather.wind.model.WindState
 import com.trust3.xcpro.common.flight.FlightMode
@@ -61,12 +60,6 @@ internal class FlightDataEmitter(
         } else {
             null
         }
-        val resolvedExternalInputs = resolveExternalInstrumentInputs(
-            snapshot = externalInstrumentSnapshot,
-            currentMonoMs = currentTime,
-            isReplayMode = isReplayMode
-        )
-        val condorVario = resolvedExternalInputs.totalEnergyVarioMps?.value
 
         val gpsVarioValue = varioSuite.gpsVerticalSpeed().takeIf { it.isFinite() } ?: 0.0
         val varioResultForMetrics = if (isReplayMode && replayIgcVario != null) {
@@ -128,7 +121,6 @@ internal class FlightDataEmitter(
             aglUpdatedAtMonoMs = flightHelpers.lastSuccessfulAglUpdateMonoMs,
             varioResults = varioResults,
             replayIgcVario = replayIgcVario,
-            condorVario = condorVario,
             audioVario = state.latestAudioVario,
             dataQuality = dataQuality,
             // Wall time for live UI, IGC time for replay UI.

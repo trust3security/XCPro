@@ -56,7 +56,6 @@ class FlightDisplayMapperTest {
                 "complementary" to 1.0
             ),
             replayIgcVario = 2.25,
-            condorVario = 3.45,
             audioVario = 1.75,
             dataQuality = "TEST",
             timestamp = 12_345L,
@@ -85,7 +84,6 @@ class FlightDisplayMapperTest {
         assertEquals(metrics.nettoAverage30sValid, mapped.nettoAverage30sValid)
         assertEquals(1.75, mapped.audioVario.value, 1e-6)
         assertEquals(2.25, mapped.realIgcVario!!.value, 1e-6)
-        assertEquals(3.45, mapped.condorVario!!.value, 1e-6)
         assertEquals(1.1, mapped.varioOptimized.value, 1e-6)
         assertEquals(0.9, mapped.varioLegacy.value, 1e-6)
         assertEquals(1.4, mapped.varioRaw.value, 1e-6)

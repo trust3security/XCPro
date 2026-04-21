@@ -67,7 +67,6 @@ class ConvertToRealTimeFlightDataTest {
             baselineDisplayVario = VerticalSpeedMs(0.7),
             baselineVarioValid = true,
             bruttoVario = VerticalSpeedMs(1.2),
-            condorVario = VerticalSpeedMs(1.6),
             bruttoAverage30s = VerticalSpeedMs(1.0),
             bruttoAverage30sValid = true,
             nettoAverage30s = VerticalSpeedMs(0.9),
@@ -161,7 +160,6 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(12_345L, result.timestamp)
         assertEquals(9_999L, result.lastUpdateTime)
         assertEquals("TE", result.varioSource)
-        assertEquals(1.6, requireNotNull(result.condorVario), 1e-6)
     }
 
     @Test
