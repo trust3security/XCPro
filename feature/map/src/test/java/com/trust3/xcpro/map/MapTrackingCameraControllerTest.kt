@@ -101,7 +101,7 @@ class MapTrackingCameraControllerTest {
                     trackDeg = 90.0,
                     cameraTargetBearing = 15.0,
                     speedMs = 25.0,
-                    orientationMode = MapOrientationMode.NORTH_UP,
+                    orientationMode = MapOrientationMode.TRACK_UP,
                     timeBase = DisplayClock.TimeBase.MONOTONIC,
                     nowMs = 1_100L
                 )
@@ -109,7 +109,7 @@ class MapTrackingCameraControllerTest {
 
             assertEquals(1, cameraController.moveCount)
             assertEquals(0, cameraController.animateCount)
-            assertEquals(15.0, cameraController.cameraPosition.bearing, 0.0)
+            assertEquals(5.0, cameraController.cameraPosition.bearing, 0.0)
         } finally {
             restoreFlags(featureFlags, snapshot)
         }

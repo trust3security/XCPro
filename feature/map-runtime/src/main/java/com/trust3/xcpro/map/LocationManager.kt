@@ -103,7 +103,8 @@ class LocationManager(
         featureFlags = featureFlags,
         initialZoomLevel = INITIAL_ZOOM_LEVEL,
         minUpdateIntervalMs = CAMERA_MIN_UPDATE_INTERVAL_MS,
-        bearingEpsDeg = CAMERA_BEARING_EPS_DEG
+        bearingEpsDeg = CAMERA_BEARING_EPS_DEG,
+        maxCameraBearingStepDeg = featureFlags.maxTrackBearingStepDeg
     )
     private val frameLogger = DisplayPoseFrameLogger(
         tag = TAG,
