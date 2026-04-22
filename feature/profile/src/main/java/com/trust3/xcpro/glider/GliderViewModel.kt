@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.trust3.xcpro.common.glider.GliderConfig
 import com.trust3.xcpro.common.glider.GliderModel
 import com.trust3.xcpro.common.glider.ThreePointPolar
-import com.trust3.xcpro.common.units.UnitsConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +21,23 @@ data class GliderUiState(
     val effectiveModel: GliderModel? = null,
     val isFallbackPolarActive: Boolean = false,
     val activePolar: ActivePolarSnapshot? = null,
-    val models: List<GliderModel> = emptyList()
+    val models: List<GliderModel> = emptyList(),
+    val displayThreePointPolar: ThreePointPolar = ThreePointPolar()
+)
+
+private data class GliderDomainState(
+    val config: GliderConfig,
+    val selectedModel: GliderModel?,
+    val effectiveModel: GliderModel,
+    val isFallbackPolarActive: Boolean,
+    val activePolar: ActivePolarSnapshot
+)
+
+private data class GliderBaseDomainState(
+    val config: GliderConfig,
+    val selectedModel: GliderModel?,
+    val effectiveModel: GliderModel,
+    val isFallbackPolarActive: Boolean
 )
 
 @HiltViewModel
@@ -31,26 +46,47 @@ class GliderViewModel @Inject constructor(
     private val polarPreviewUseCase: PolarPreviewUseCase
 ) : ViewModel() {
 
-    private val models = useCase.listModels()
-
-    private val _uiState = MutableStateFlow(GliderUiState(models = models))
+    private val _uiState = MutableStateFlow(GliderUiState(models = useCase.listModels()))
     val uiState: StateFlow<GliderUiState> = _uiState.asStateFlow()
 
     init {
-        combine(
+        val baseDomainState = combine(
             useCase.config,
             useCase.selectedModel,
             useCase.effectiveModel,
-            useCase.isFallbackPolarActive,
-            useCase.activePolar
-        ) { config, selectedModel, effectiveModel, fallbackActive, activePolar ->
-            GliderUiState(
+            useCase.isFallbackPolarActive
+        ) { config, selectedModel, effectiveModel, fallbackActive ->
+            GliderBaseDomainState(
                 config = config,
                 selectedModel = selectedModel,
                 effectiveModel = effectiveModel,
-                isFallbackPolarActive = fallbackActive,
-                activePolar = activePolar,
-                models = models
+                isFallbackPolarActive = fallbackActive
+            )
+        }
+
+        val domainState = combine(baseDomainState, useCase.activePolar) { base, activePolar ->
+            GliderDomainState(
+                config = base.config,
+                selectedModel = base.selectedModel,
+                effectiveModel = base.effectiveModel,
+                isFallbackPolarActive = base.isFallbackPolarActive,
+                activePolar = activePolar
+            )
+        }
+
+        combine(domainState, useCase.activeProfile) { domain, activeProfile ->
+            val models = useCase.listModelsFor(activeProfile?.aircraftType)
+            val visibleSelectedModel = domain.selectedModel?.takeIf { selected ->
+                models.any { model -> model.id == selected.id }
+            }
+            GliderUiState(
+                config = domain.config,
+                selectedModel = visibleSelectedModel,
+                effectiveModel = domain.effectiveModel,
+                isFallbackPolarActive = domain.isFallbackPolarActive,
+                activePolar = domain.activePolar,
+                models = models,
+                displayThreePointPolar = useCase.displayThreePointPolar(domain.config, domain.effectiveModel)
             )
         }.onEach { state ->
             _uiState.value = state
@@ -80,22 +116,6 @@ class GliderViewModel @Inject constructor(
 
     fun setReferenceWeightKg(weight: Double?) {
         useCase.setReferenceWeightKg(weight)
-    }
-
-    fun setIasMinMs(value: Double?) {
-        useCase.setIasMinMs(value?.coerceAtLeast(0.0))
-    }
-
-    fun setIasMaxMs(value: Double?) {
-        useCase.setIasMaxMs(value?.coerceAtLeast(0.0))
-    }
-
-    fun setIasMinKmh(value: Double?) {
-        setIasMinMs(value?.coerceAtLeast(0.0)?.let(UnitsConverter::kmhToMs))
-    }
-
-    fun setIasMaxKmh(value: Double?) {
-        setIasMaxMs(value?.coerceAtLeast(0.0)?.let(UnitsConverter::kmhToMs))
     }
 
     fun setHideBallastPill(enabled: Boolean) {

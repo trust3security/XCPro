@@ -32,7 +32,7 @@ class GliderRepositoryFallbackTest {
 
     @Test
     fun defaultState_usesFallbackPolar() {
-        val repository = GliderRepository(appContext)
+        val repository = repository()
 
         assertNull(repository.selectedModel.value)
         assertTrue(repository.isFallbackPolarActive.value)
@@ -42,7 +42,7 @@ class GliderRepositoryFallbackTest {
 
     @Test
     fun selectingModelWithoutPolar_keepsFallbackPolarActive() {
-        val repository = GliderRepository(appContext)
+        val repository = repository()
 
         repository.selectModelById("ASG-29-18")
 
@@ -54,7 +54,7 @@ class GliderRepositoryFallbackTest {
 
     @Test
     fun selectingModelWithoutPolar_withThreePointDisablesFallback() {
-        val repository = GliderRepository(appContext)
+        val repository = repository()
         repository.selectModelById("ASG-29-18")
         repository.setThreePointPolar(
             ThreePointPolar.fromKmh(
@@ -74,18 +74,18 @@ class GliderRepositoryFallbackTest {
 
     @Test
     fun selectingUsableModel_disablesFallbackPolar() {
-        val repository = GliderRepository(appContext)
+        val repository = repository()
 
-        repository.selectModelById("js1c-18")
+        repository.selectModelById("js1-18")
 
         assertFalse(repository.isFallbackPolarActive.value)
-        assertEquals("js1c-18", repository.effectiveModel.value.id)
+        assertEquals("js1-18", repository.effectiveModel.value.id)
         assertEquals(ActivePolarSource.SELECTED_MODEL, repository.activePolar.value.source)
     }
 
     @Test
     fun manualThreePointWithoutSelectedModel_usesManualSourceWithoutFallback() {
-        val repository = GliderRepository(appContext)
+        val repository = repository()
 
         repository.setThreePointPolar(
             ThreePointPolar.fromKmh(
@@ -114,4 +114,7 @@ class GliderRepositoryFallbackTest {
         const val PREFS_NAME = "glider_prefs"
         const val FALLBACK_ID = "club-default-fallback"
     }
+
+    private fun repository(): GliderRepository =
+        GliderRepository(appContext, PolarCatalogAssetDataSource(appContext))
 }

@@ -48,12 +48,6 @@ fun ConfigCard() {
             if (cfg.ballastDrainMinutes == 0.0) "" else cfg.ballastDrainMinutes.toString().trimEnd('0').trimEnd('.')
         )
     }
-    var iasMinInput by remember(cfg.iasMinKmh) {
-        mutableStateOf(cfg.iasMinKmh?.toInt()?.toString() ?: "")
-    }
-    var iasMaxInput by remember(cfg.iasMaxKmh) {
-        mutableStateOf(cfg.iasMaxKmh?.toInt()?.toString() ?: "")
-    }
     val ballastActive = cfg.waterBallastKg > 0.0
 
     Card(
@@ -145,44 +139,6 @@ fun ConfigCard() {
                     keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal)
                 )
             }
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = iasMinInput,
-                    onValueChange = { text ->
-                        val sanitized = text.filter { it.isDigit() }
-                        iasMinInput = sanitized
-                        when {
-                            sanitized.isBlank() -> viewModel.setIasMinKmh(null)
-                            else -> sanitized.toIntOrNull()?.let { value ->
-                                viewModel.setIasMinKmh(value.toDouble())
-                            }
-                        }
-                    },
-                    label = { Text("IAS Min (km/h)") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedTextField(
-                    value = iasMaxInput,
-                    onValueChange = { text ->
-                        val sanitized = text.filter { it.isDigit() }
-                        iasMaxInput = sanitized
-                        when {
-                            sanitized.isBlank() -> viewModel.setIasMaxKmh(null)
-                            else -> sanitized.toIntOrNull()?.let { value ->
-                                viewModel.setIasMaxKmh(value.toDouble())
-                            }
-                        }
-                    },
-                    label = { Text("IAS Max (km/h)") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
-                )
-            }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

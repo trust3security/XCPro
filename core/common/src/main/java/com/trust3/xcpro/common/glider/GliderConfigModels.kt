@@ -48,17 +48,10 @@ data class GliderConfig(
     val bugsPercent: Int = 0,
     // Stored for future work; not part of the Phase 4 authoritative runtime polar path.
     val referenceWeightKg: Double? = null,
-    val iasMinMs: Double? = null,
-    val iasMaxMs: Double? = null,
     // Phase 4 release contract: this remains the authoritative manual polar input.
     val threePointPolar: ThreePointPolar? = null,
     // Stored for future work; not part of the Phase 4 authoritative runtime polar path.
     val userCoefficients: UserPolarCoefficients? = null,
     val ballastDrainMinutes: Double = 5.0,
     val hideBallastPill: Boolean = false
-) {
-    val iasMinKmh: Double?
-        get() = iasMinMs?.let(UnitsConverter::msToKmh)
-    val iasMaxKmh: Double?
-        get() = iasMaxMs?.let(UnitsConverter::msToKmh)
-}
+)

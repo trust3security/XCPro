@@ -15,7 +15,5 @@ data class ActivePolarSnapshot(
     val isFallbackPolarActive: Boolean,
     val hasThreePointPolar: Boolean,
     val referenceWeightConfigured: Boolean,
-    val userCoefficientsConfigured: Boolean,
-    val iasMinMs: Double?,
-    val iasMaxMs: Double?
+    val userCoefficientsConfigured: Boolean
 )

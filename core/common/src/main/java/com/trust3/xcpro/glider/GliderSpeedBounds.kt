@@ -17,10 +17,8 @@ object GliderSpeedBoundsResolver {
 
     fun resolveIasBoundsMs(model: GliderModel?, config: GliderConfig): SpeedBoundsMs? {
         val polarRange = resolvePolarRangeMs(model, config) ?: return null
-        val minCandidate = config.iasMinMs ?: polarRange.minMs
-        val maxCandidate = config.iasMaxMs ?: polarRange.maxMs
-        val clampedMax = clampMaxToSpeedLimitsMs(maxCandidate, model?.speedLimits)
-        val minMs = minCandidate.coerceAtLeast(0.0)
+        val clampedMax = clampMaxToSpeedLimitsMs(polarRange.maxMs, model?.speedLimits)
+        val minMs = polarRange.minMs.coerceAtLeast(0.0)
         val maxMs = clampedMax.coerceAtLeast(0.0)
         if (maxMs <= 0.0 || minMs <= 0.0 || minMs >= maxMs) return null
         return SpeedBoundsMs(minMs = minMs, maxMs = maxMs)
@@ -75,9 +73,7 @@ object GliderSpeedBoundsResolver {
             listOfNotNull(
                 it.vneKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
                 it.vraKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
-                it.vaKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
-                it.vwKmh?.toDouble()?.let(UnitsConverter::kmhToMs),
-                it.vtKmh?.toDouble()?.let(UnitsConverter::kmhToMs)
+                it.vaKmh?.toDouble()?.let(UnitsConverter::kmhToMs)
             ).minOrNull()
         }
         return if (limit != null && limit > 0.0) {

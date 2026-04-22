@@ -32,8 +32,8 @@ class PolarStillAirSinkProviderTest {
 
     @Test
     fun manualThreePointPolar_changes_authoritative_sink_and_bestLd() {
-        val repository = GliderRepository(appContext)
-        repository.selectModelById("js1c-18")
+        val repository = repository()
+        repository.selectModelById("js1-18")
         val provider = PolarStillAirSinkProvider(repository)
         val speedMs = UnitsConverter.kmhToMs(100.0)
 
@@ -60,8 +60,8 @@ class PolarStillAirSinkProviderTest {
 
     @Test
     fun bugsAndBallast_change_authoritative_sink_path() {
-        val repository = GliderRepository(appContext)
-        repository.selectModelById("js1c-18")
+        val repository = repository()
+        repository.selectModelById("js1-18")
         val provider = PolarStillAirSinkProvider(repository)
         val speedMs = UnitsConverter.kmhToMs(100.0)
 
@@ -81,8 +81,8 @@ class PolarStillAirSinkProviderTest {
 
     @Test
     fun referenceWeightAndUserCoefficients_areStoredButDeferredFromCurrentSinkPath() {
-        val repository = GliderRepository(appContext)
-        repository.selectModelById("js1c-18")
+        val repository = repository()
+        repository.selectModelById("js1-18")
         val provider = PolarStillAirSinkProvider(repository)
         val speedMs = UnitsConverter.kmhToMs(100.0)
 
@@ -107,6 +107,9 @@ class PolarStillAirSinkProviderTest {
         assertTrue(repository.activePolar.value.referenceWeightConfigured)
         assertTrue(repository.activePolar.value.userCoefficientsConfigured)
     }
+
+    private fun repository(): GliderRepository =
+        GliderRepository(appContext, PolarCatalogAssetDataSource(appContext))
 
     private companion object {
         const val PREFS_NAME = "glider_prefs"
