@@ -17,7 +17,7 @@ Folder files (read in this order):
 
 2) SPEED_TO_FLY_SPEC.md
    - Defines speed-to-fly inputs, MC_eff rules, numeric search, smoothing, and safety bounds.
-   - Must use active glider profile IAS_min/IAS_max and polar in IAS.
+   - Must use derived active IAS bounds and the active polar in IAS.
 
 3) XC_PRO_EXECUTION_ORDER.md
    - Mandatory dependency order: Wind -> TAS/IAS -> Glide-netto -> Auto-MC -> STF.

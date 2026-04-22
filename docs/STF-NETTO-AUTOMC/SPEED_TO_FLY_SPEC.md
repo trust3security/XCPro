@@ -44,10 +44,10 @@ Speed-to-fly must be computed using the **currently selected glider profile**.
 Required behaviour:
 - The active glider profile owns:
   - the polar used by `polar_sink(IAS, ballast, bugs)`
-  - `IAS_min` and `IAS_max` bounds
+  - enough polar points and model speed limits to derive active IAS bounds
   - ballast/bugs configuration and limits
 - The numerical search in Section 4 must clamp candidate speeds to:
-  - `[IAS_min, IAS_max]` for the active glider profile
+  - the derived active IAS bounds for the active glider profile
 - UI units (kt) must be converted at the edges only; internal math stays in SI.
 
 
@@ -116,8 +116,8 @@ When `alpha=0`, speed-to-fly uses MC_base only.
 
 ### 4.1 Speed bounds
 Define bounds in IAS:
-- `IAS_min` = stall margin (e.g., 1.3*stall, flap-dependent) + safety margin
-- `IAS_max` = Vne/Vno limit (profile-dependent) and turbulence limits
+- lower bound = lowest usable active polar speed
+- upper bound = highest usable active polar speed capped by applicable model speed limits
 
 Also clamp to a practical app range (e.g., 60-160 kt equivalent).
 

@@ -15,7 +15,7 @@ Related specs:
 
 ## 0) Scope (Minimal v1)
 Keep only five core pieces:
-1) Active glider profile (polar + IAS_min/IAS_max + ballast/bugs).
+1) Active glider profile (polar + derived IAS scan bounds + ballast/bugs).
 2) Wind estimate + single confidence number.
    - Updated in circles only.
    - Time-only decay after last circling solve (half-life 7 minutes).
@@ -64,7 +64,7 @@ CalculateFlightMetricsUseCase -> FlightMetricsResult -> FlightDisplayMapper
 ## 3.1) Implementation Status (as of 2026-02-01)
 - [x] Wind confidence: circling-only solves, time-only decay, confidence recomputed each GPS tick.
 - [x] IAS/TAS: ISA density conversion in WindEstimator; polar sink uses IAS throughout.
-- [x] IAS bounds: GliderConfig iasMin/iasMax optional; defaults from polar range; clamp max to speed limits (VNE/VA/VRA/VW/VT).
+- [x] IAS bounds: derived from the active polar range; clamp max to applicable speed limits.
 - [x] Levo Netto: straight-flight gated, 0.6 km distance window, wind confidence >= 0.1 required.
 - [x] Auto-MC: updates on thermal exit, median of last 6 thermals, rate limit.
 - [x] Speed-to-fly: numeric polar search, MC_eff uses glide-netto with wind confidence weighting, smoothing + rate limit.
@@ -83,8 +83,8 @@ Add new fields (ASCII only; actual names below):
 Add wind confidence in WindState:
 - WindState: confidence [0.0..1.0], lastCirclingClockMillis.
 
-Add optional IAS bounds in glider config:
-- GliderConfig: iasMinKmh, iasMaxKmh.
+IAS bounds are not user-editable glider config fields; runtime scan bounds are
+derived from active polar data.
 
 ## 5) Implementation Phases
 
@@ -116,7 +116,7 @@ Phase 4 - Auto-MC [DONE]
 
 Phase 5 - Speed-to-fly [DONE]
 - Numeric search over polar using MC_eff = MC_base - glideNetto.
-- Clamp to IAS_min/IAS_max from glider profile.
+- Clamp to the derived active IAS bounds.
 - Smoothing and rate limiting.
 - Manual mode only (CRUISE / FINAL_GLIDE toggle).
 
@@ -148,7 +148,7 @@ Replay tests:
 ## 8) Acceptance Criteria
 - Levo Netto appears as a separate card and in Levo Vario UI.
 - Glide-netto is distance-windowed, straight-flight gated, wind-confidence aware.
-- Speed-to-fly is stable, respects IAS_min/IAS_max, and uses MC_base.
+- Speed-to-fly is stable, respects derived active IAS bounds, and uses MC_base.
 - All tests in Section 6 pass.
 
 ## 9) Follow-up Plan: XCSoar-style always-visible Levo Netto + wind footer (Planned)

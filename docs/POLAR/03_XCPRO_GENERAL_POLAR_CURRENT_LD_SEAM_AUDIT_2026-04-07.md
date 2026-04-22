@@ -51,8 +51,6 @@ These fields affect authoritative runtime polar math today:
 - `threePointPolar`
 - `bugsPercent`
 - `waterBallastKg`
-- `iasMinMs`
-- `iasMaxMs`
 
 What each one does:
 
@@ -62,14 +60,17 @@ What each one does:
   - increases sink through the active sink-adjustment path
 - `waterBallastKg`
   - contributes to wing loading and also adds the current ballast penalty in the sink-adjustment path
-- `iasMinMs` / `iasMaxMs`
-  - bound the active IAS scan/range used by the polar metrics and glide solvers
+
+IAS scan bounds are no longer editable or persisted General Polar fields.
+The active IAS scan/range used by polar metrics and glide solvers is derived
+from the selected/manual polar data, then capped by applicable model speed
+limits.
 
 Current code evidence:
 
 - `PolarCalculator.sinkMs(...)` uses `threePointPolar` first, then model polar
 - `PolarCalculator.applyAdjustments(...)` applies `bugsPercent` and `waterBallastKg`
-- `GliderSpeedBoundsResolver.resolveIasBoundsMs(...)` applies `iasMinMs` and `iasMaxMs`
+- `GliderSpeedBoundsResolver.resolveIasBoundsMs(...)` derives active bounds from polar data
 
 ## What General Polar fields are not operative today
 

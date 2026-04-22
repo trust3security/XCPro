@@ -29,14 +29,14 @@ class GliderUseCase @Inject constructor(
     fun listModels(): List<GliderModel> = repository.listModels()
 
     fun listModelsFor(aircraftType: AircraftType?): List<GliderModel> {
-        val typeKey = aircraftType?.toGliderAircraftTypeKey() ?: return repository.listModels()
-        return repository.listModels().filter { model -> model.aircraftType == typeKey }
+        return filterGliderModelsForAircraftType(repository.listModels(), aircraftType)
     }
 
     fun selectModelById(id: String) {
-        val allowedIds = listModelsFor(profileUseCase.activeProfile.value?.aircraftType)
+        val activeAircraftType = profileUseCase.activeProfile.value?.aircraftType
+        val allowedIds = listModelsFor(activeAircraftType)
             .mapTo(mutableSetOf()) { it.id }
-        if (allowedIds.isNotEmpty() && id !in allowedIds) return
+        if (activeAircraftType != null && id !in allowedIds) return
         repository.selectModelById(id)
     }
 
@@ -59,10 +59,19 @@ class GliderUseCase @Inject constructor(
     fun displayThreePointPolar(config: GliderConfig, effectiveModel: GliderModel?): ThreePointPolar =
         config.threePointPolar ?: ThreePointPolarDeriver.fromModel(effectiveModel) ?: ThreePointPolar()
 
-    private fun AircraftType.toGliderAircraftTypeKey(): String = when (canonicalForPersistence()) {
-        AircraftType.PARAGLIDER -> GliderAircraftTypes.PARAGLIDER
-        AircraftType.HANG_GLIDER -> GliderAircraftTypes.HANG_GLIDER
-        AircraftType.SAILPLANE,
-        AircraftType.GLIDER -> GliderAircraftTypes.SAILPLANE
-    }
+}
+
+internal fun filterGliderModelsForAircraftType(
+    models: List<GliderModel>,
+    aircraftType: AircraftType?
+): List<GliderModel> {
+    val typeKey = aircraftType?.toGliderAircraftTypeKey() ?: return models
+    return models.filter { model -> model.aircraftType == typeKey }
+}
+
+private fun AircraftType.toGliderAircraftTypeKey(): String = when (canonicalForPersistence()) {
+    AircraftType.PARAGLIDER -> GliderAircraftTypes.PARAGLIDER
+    AircraftType.HANG_GLIDER -> GliderAircraftTypes.HANG_GLIDER
+    AircraftType.SAILPLANE,
+    AircraftType.GLIDER -> GliderAircraftTypes.SAILPLANE
 }

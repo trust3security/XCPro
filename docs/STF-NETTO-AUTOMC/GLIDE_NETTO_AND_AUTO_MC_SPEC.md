@@ -95,8 +95,7 @@ XCPro must support **different polars for different gliders** via a single, expl
 Each glider profile must provide:
 - `glider_id`, `name`
 - `polar` (points or coefficients) defining `polar_sink(IAS, ballast, bugs)` where sink is negative (m/s)
-- `IAS_min` (m/s): safe minimum (stall margin) for current configuration
-- `IAS_max` (m/s): Vno/Vne or turbulence-limited maximum
+- enough polar points and model speed limits to derive the active IAS scan bounds
 - Optional: ballast model:
   - `ballast_max_kg` (or fraction)
   - mapping that adjusts polar for ballast
@@ -105,7 +104,7 @@ Each glider profile must provide:
 ### 4A.2 Single source of truth
 All consumers must read from the active glider profile:
 - Glide-netto uses the active profile's `polar_sink()` and configuration (ballast/bugs).
-- Speed-to-fly uses the active profile's `IAS_min/IAS_max` bounds and `polar_sink()`.
+- Speed-to-fly uses the derived active IAS bounds and `polar_sink()`.
 
 No duplicated polar logic in multiple modules.
 
