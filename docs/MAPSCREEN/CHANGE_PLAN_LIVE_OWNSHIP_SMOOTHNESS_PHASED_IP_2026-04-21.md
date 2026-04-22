@@ -6,8 +6,9 @@
 - Owner: XCPro Team
 - Date: 2026-04-21
 - Issue/PR: TBD
-- Status: Phase 0 diagnostics implemented; Phase 1+ waits for evidence and
-  explicit product/provider decisions.
+- Status: Phase 0 diagnostics implemented; Phase 1A debug cadence bridge
+  selected for shared live/Condor display proof before production/provider
+  decisions.
 
 ## 1) Scope
 
@@ -72,6 +73,15 @@
 | Should XCPro use current `LocationManager`, API 31+ `LocationRequest`, Play services fused location, or external GNSS for the high-rate path? | It changes dependencies, permissions, testing, and provider semantics. | XCPro Team | Blocks provider migration only. | Compare actual cadence/quality in Phase 1; ADR if dependency/wiring changes. |
 | Which physical Tier A and Tier B devices close the live-ownship SLO gate? | Emulator-only evidence is not enough for pilot UX. | XCPro Team | Blocks Phase 4 closure. | Name device set before implementation promotion. |
 | What ownship-specific SLI thresholds are acceptable beyond `MS-UX-01`? | General frame-time SLOs do not fully capture live fix gaps/freezes. | XCPro Team | Blocks Phase 4 closure. | Use proposed SLIs in this plan, adjust after baseline. |
+
+## 1D) Phase 1A Debug Cadence Bridge
+
+- Apply a debug-only `CADENCE_BRIDGE` display smoothing profile before changing
+  live provider cadence or renderer behavior.
+- Keep authoritative GPS speed/position unchanged; the bridge extends only the
+  map-runtime live display active window and bounded visual prediction horizon.
+- Release keeps the existing `SMOOTH` profile until Condor and phone-live
+  evidence proves the debug profile is safe to promote.
 
 ## 2) Architecture Contract
 

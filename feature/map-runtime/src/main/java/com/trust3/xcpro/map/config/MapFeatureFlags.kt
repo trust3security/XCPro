@@ -75,7 +75,7 @@ class MapFeatureFlags @Inject constructor() {
     @Volatile
     var defaultDisplaySmoothingProfile: com.trust3.xcpro.map.DisplaySmoothingProfile =
         if (BuildConfig.DEBUG) {
-            com.trust3.xcpro.map.DisplaySmoothingProfile.RESPONSIVE
+            com.trust3.xcpro.map.DisplaySmoothingProfile.CADENCE_BRIDGE
         } else {
             com.trust3.xcpro.map.DisplaySmoothingProfile.SMOOTH
         }

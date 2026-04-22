@@ -116,6 +116,7 @@ internal class DisplayPoseFrameActivityGate(
 
     private fun settleWindowMs(profile: DisplaySmoothingProfile): Long {
         val config = profile.config
+        config.frameActiveWindowMs?.let { return it }
         return maxOf(
             ceil(config.posSmoothMs).toLong(),
             ceil(config.headingSmoothMs).toLong(),

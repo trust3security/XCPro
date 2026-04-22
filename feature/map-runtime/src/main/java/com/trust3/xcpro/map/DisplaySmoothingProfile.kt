@@ -12,5 +12,14 @@ enum class DisplaySmoothingProfile(val config: DisplayPoseSmoothingConfig) {
             deadReckonLimitMs = 250L,
             staleFixTimeoutMs = DisplayPoseSmoothingConfig.DEFAULT_STALE_FIX_TIMEOUT_MS
         )
+    ),
+    CADENCE_BRIDGE(
+        DisplayPoseSmoothingConfig(
+            posSmoothMs = 260.0,
+            headingSmoothMs = 220.0,
+            deadReckonLimitMs = 1_200L,
+            staleFixTimeoutMs = DisplayPoseSmoothingConfig.DEFAULT_STALE_FIX_TIMEOUT_MS,
+            frameActiveWindowMs = 1_300L
+        )
     )
 }

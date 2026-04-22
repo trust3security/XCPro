@@ -60,6 +60,41 @@ class DisplayPoseFrameActivityGateTest {
     }
 
     @Test
+    fun fixReceived_usesExplicitFrameActiveWindowWhenConfigured() {
+        val fixture = GateFixture()
+
+        fixture.gate.markFixReceived(DisplaySmoothingProfile.CADENCE_BRIDGE)
+        assertTrue(
+            fixture.gate.shouldDispatch(
+                hasRenderableInput = true,
+                timeBase = DisplayClock.TimeBase.MONOTONIC,
+                mode = DisplayPoseMode.SMOOTHED,
+                smoothingProfile = DisplaySmoothingProfile.CADENCE_BRIDGE
+            )
+        )
+
+        fixture.nowMonoMs = 1_299L
+        assertTrue(
+            fixture.gate.shouldDispatch(
+                hasRenderableInput = true,
+                timeBase = DisplayClock.TimeBase.MONOTONIC,
+                mode = DisplayPoseMode.SMOOTHED,
+                smoothingProfile = DisplaySmoothingProfile.CADENCE_BRIDGE
+            )
+        )
+
+        fixture.nowMonoMs = 1_301L
+        assertFalse(
+            fixture.gate.shouldDispatch(
+                hasRenderableInput = true,
+                timeBase = DisplayClock.TimeBase.MONOTONIC,
+                mode = DisplayPoseMode.SMOOTHED,
+                smoothingProfile = DisplaySmoothingProfile.CADENCE_BRIDGE
+            )
+        )
+    }
+
+    @Test
     fun updateOrientation_ignoresTinyChanges() {
         val fixture = GateFixture()
         fixture.gate.markFixReceived(DisplaySmoothingProfile.RESPONSIVE)

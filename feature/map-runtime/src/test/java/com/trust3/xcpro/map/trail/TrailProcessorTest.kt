@@ -122,6 +122,48 @@ class TrailProcessorTest {
     }
 
     @Test
+    fun live_circling_interpolates_betweenAcceptedSamplesForSmootherTail() {
+        val processor = TrailProcessor()
+
+        val first = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(monotonicTimestampMillis = 10_000L, timestampMillis = 1_000L),
+                    isCircling = true,
+                    timestampMillis = 1_000L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+        val second = processor.update(
+            TrailUpdateInput(
+                data = buildCompleteFlightData(
+                    gps = defaultGps(
+                        latitude = 46.0002,
+                        longitude = 7.0002,
+                        monotonicTimestampMillis = 11_000L,
+                        timestampMillis = 2_000L
+                    ),
+                    isCircling = true,
+                    timestampMillis = 2_000L
+                ),
+                windState = null,
+                isFlying = true,
+                isReplay = false
+            )
+        )
+
+        assertNotNull(first)
+        assertNotNull(second)
+        assertEquals(true, first!!.sampleAdded)
+        assertEquals(true, second!!.sampleAdded)
+        assertEquals(5, second.renderState.points.size)
+        assertEquals(11_000L, second.renderState.points.last().timestampMillis)
+    }
+
+    @Test
     fun live_falls_back_to_wall_time_when_monotonic_missing() {
         val gps = defaultGps(monotonicTimestampMillis = 0L, timestampMillis = 2_000L)
         val data = buildCompleteFlightData(gps = gps, timestampMillis = 8_888L)
