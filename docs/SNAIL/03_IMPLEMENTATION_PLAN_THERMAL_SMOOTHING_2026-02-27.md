@@ -4,7 +4,8 @@ Date
 - 2026-02-27
 
 Status
-- Proposed
+- Updated 2026-04-22: live/Condor display-pose trail-body phase selected
+  before any further raw sampling or provider changes.
 
 Owner
 - XCPro Team
@@ -50,21 +51,35 @@ Rollback safety
 
 Change
 - Allow live mode to refresh tail segment per display frame (or at small bounded cadence), similar to replay tail updates.
+- 2026-04-22 correction: tail-only refresh is not enough for the current
+  Condor/live problem. Add a recent display-only trail-body layer fed by the
+  same display-pose stream as the blue triangle.
 
 Implementation sketch
 - Extend `SnailTrailManager.updateDisplayPose()` to optionally support live display pose.
-- Keep full-geometry re-render gated by sample updates; only tail is frame-synced.
+- Keep raw `TrailStore` and full historical trail rendering authoritative.
+- Add a separate recent visual layer capped to 60 seconds / 600 points so
+  zoomed-in live/Condor turns follow the smooth display pose without rewriting
+  stored trail truth.
+- Apply this only to non-replay live mode; THN/replay behavior remains unchanged.
+- Do not apply wind drift to display-pose geometry. This layer should paint the
+  path the pilot sees under the blue triangle.
 
 Likely files
-- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
-- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailDisplayStore.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailDisplayTrailRenderer.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailOverlay.kt`
 
 Acceptance criteria
 - Tail endpoint tracks icon smoothly between stored samples.
+- Recent live/Condor trail body visually follows display-pose motion instead of
+  waiting for accepted raw trail samples.
+- Raw trail history, replay, IGC, and navigation data remain unchanged.
 - CPU/memory overhead remains within acceptable map budget.
 
 Rollback safety
-- Guard with feature flag if needed.
+- Guard with `MapFeatureFlags.useDisplayPoseSnailTrail`.
 
 ## Phase 3: Live Wind Smoothing For Drift
 
@@ -148,4 +163,3 @@ Risk: Drift change alters pilot interpretation.
 
 Risk: Replay determinism regression.
 - Mitigation: no replay path modification unless explicit and tested.
-

@@ -116,7 +116,103 @@ class SnailTrailManagerTest {
         )
     }
 
-    private fun createManager(overlay: SnailTrailOverlay): SnailTrailManager {
+    @Test
+    fun updateDisplayPose_liveRendersDisplayTrailWhenFlagEnabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { useDisplayPoseSnailTrail = true }
+        )
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f
+        )
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            frameId = 10L
+        )
+
+        verify(overlay).renderDisplayTrail(
+            any(),
+            eq(TrailSettings())
+        )
+    }
+
+    @Test
+    fun updateDisplayPose_replaySkipsDisplayTrailWhenFlagEnabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { useDisplayPoseSnailTrail = true }
+        )
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true,
+                isReplay = true,
+                timeBase = TrailTimeBase.REPLAY_IGC
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f
+        )
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.REPLAY_IGC,
+            frameId = 10L
+        )
+
+        verify(overlay, never()).renderDisplayTrail(
+            any(),
+            any()
+        )
+    }
+
+    @Test
+    fun updateDisplayPose_liveClearsDisplayTrailWhenFlagDisabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { useDisplayPoseSnailTrail = false }
+        )
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f
+        )
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            frameId = 10L
+        )
+
+        verify(overlay).clearDisplayTrail()
+        verify(overlay, never()).renderDisplayTrail(
+            any(),
+            any()
+        )
+    }
+
+    private fun createManager(
+        overlay: SnailTrailOverlay,
+        featureFlags: MapFeatureFlags = MapFeatureFlags()
+    ): SnailTrailManager {
         val runtimeState = object : SnailTrailRuntimeState {
             override var mapView: MapView? = null
             override var blueLocationOverlay: com.trust3.xcpro.map.BlueLocationOverlay? = null
@@ -125,14 +221,16 @@ class SnailTrailManagerTest {
         return SnailTrailManager(
             context = mock<Context>(),
             runtimeState = runtimeState,
-            featureFlags = MapFeatureFlags()
+            featureFlags = featureFlags
         )
     }
 
     private fun updateResult(
         sampleAdded: Boolean,
         requiresFullRender: Boolean,
-        invalidationReason: TrailRenderInvalidationReason? = TrailRenderInvalidationReason.SAMPLE_ADDED
+        invalidationReason: TrailRenderInvalidationReason? = TrailRenderInvalidationReason.SAMPLE_ADDED,
+        isReplay: Boolean = false,
+        timeBase: TrailTimeBase = TrailTimeBase.LIVE_MONOTONIC
     ): TrailUpdateResult = TrailUpdateResult(
         renderState = TrailRenderState(
             points = listOf(
@@ -153,8 +251,8 @@ class SnailTrailManagerTest {
             windDirectionFromDeg = 0.0,
             isCircling = false,
             isTurnSmoothing = false,
-            isReplay = false,
-            timeBase = TrailTimeBase.LIVE_MONOTONIC
+            isReplay = isReplay,
+            timeBase = timeBase
         ),
         sampleAdded = sampleAdded,
         storeReset = false,

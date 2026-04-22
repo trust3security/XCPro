@@ -107,6 +107,13 @@ class MapFeatureFlags @Inject constructor() {
     var useRenderFrameSync: Boolean = false
 
     /**
+     * Paint recent live/Condor snail trail body from display-pose frames.
+     * UI-only; raw TrailStore remains authoritative.
+     */
+    @Volatile
+    var useDisplayPoseSnailTrail: Boolean = BuildConfig.DEBUG
+
+    /**
      * Debug log interval for SIM2 frame pose logs (ms). Set to 0 to log every frame.
      */
     @Volatile
