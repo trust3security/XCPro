@@ -108,16 +108,19 @@ This ensures phased execution, acceptance criteria, required checks, and a manda
 
 ## Planning Discipline
 
-- Before writing a non-trivial plan, verify discoverable facts from repo docs,
-  code, configs, and local system state first; do not carry discoverable facts
-  as assumptions.
+- Never make assumptions. Before writing a non-trivial plan or implementing,
+  verify discoverable facts from repo docs, code, configs, tests, and local
+  system state first.
+- If a fact, owner, behavior, product intent, file path, API contract, or
+  default cannot be verified locally, get an explicit user decision or record it
+  as an unresolved decision/blocker. Do not proceed on a guessed answer.
 - Non-trivial plans must separate:
   - `Confirmed Boundaries / Verified Facts`
-  - `Actual Assumptions / Defaults Chosen`
+  - `Explicit Decisions / Defaults Chosen`
   - `Unresolved Decisions`
-- `Actual Assumptions / Defaults Chosen` may contain only non-discoverable
-  defaults, tradeoffs, or unanswered product decisions. If a fact can be
-  checked locally, check it first.
+- `Explicit Decisions / Defaults Chosen` may contain only decisions backed by
+  the user, repo docs, code contracts, or verified local evidence. Anything else
+  belongs in `Unresolved Decisions` and must not drive implementation.
 - For non-trivial refactors, runtime wiring changes, DI changes,
   ownership/boundary moves, and architecture-sensitive PRs, perform a
   second-pass architecture integrity review against the repo architecture docs,
@@ -134,7 +137,8 @@ This ensures phased execution, acceptance criteria, required checks, and a manda
 - For non-trivial feature/refactor work, start from
   `docs/ARCHITECTURE/PLAN_MODE_START_HERE.md`, then
   `docs/ARCHITECTURE/CHANGE_PLAN_TEMPLATE.md` before implementation.
-- Do not rely on unstated assumptions; document intent in-repo.
+- Do not rely on assumptions; verify facts, get explicit decisions, or document
+  unresolved blockers in-repo.
 
 ## Required Verification
 
