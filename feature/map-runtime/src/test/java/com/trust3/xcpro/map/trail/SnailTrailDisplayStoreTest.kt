@@ -16,6 +16,7 @@ class SnailTrailDisplayStoreTest {
             location = TrailGeoPoint(46.0, 7.0),
             timestampMillis = 2_000L,
             poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            trailLength = TrailLength.LONG,
             frameId = 1L,
             minStepMillis = 100L,
             minDistanceMeters = 0.5
@@ -27,37 +28,29 @@ class SnailTrailDisplayStoreTest {
 
     @Test
     fun appendDisplayPose_keepsDisplayPointsWhenRawAnchorChanges() {
-        val store = SnailTrailDisplayStore()
-        store.updateRawState(
-            rawPoints = listOf(rawPoint(timestampMillis = 2_000L, altitudeMeters = 1_000.0, varioMs = 0.5)),
-            rawTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-            isReplay = false
-        )
+        val store = anchoredStore(timestampMillis = 2_000L, altitudeMeters = 1_000.0, varioMs = 0.5)
 
         assertTrue(
-            store.appendDisplayPose(
-                location = TrailGeoPoint(46.0, 7.0),
+            append(
+                store = store,
                 timestampMillis = 2_000L,
-                poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                frameId = 1L,
-                minStepMillis = 100L,
-                minDistanceMeters = 0.5
+                latitude = 46.0,
+                frameId = 1L
             )
         )
 
         store.updateRawState(
             rawPoints = listOf(rawPoint(timestampMillis = 2_500L, altitudeMeters = 1_100.0, varioMs = 1.2)),
             rawTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-            isReplay = false
+            isReplay = false,
+            trailLength = TrailLength.LONG
         )
         assertTrue(
-            store.appendDisplayPose(
-                location = TrailGeoPoint(46.0001, 7.0001),
+            append(
+                store = store,
                 timestampMillis = 2_500L,
-                poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                frameId = 2L,
-                minStepMillis = 100L,
-                minDistanceMeters = 0.5
+                latitude = 46.0001,
+                frameId = 2L
             )
         )
 
@@ -73,26 +66,8 @@ class SnailTrailDisplayStoreTest {
     fun appendDisplayPose_rejectsDuplicateFrame() {
         val store = anchoredStore()
 
-        assertTrue(
-            store.appendDisplayPose(
-                location = TrailGeoPoint(46.0, 7.0),
-                timestampMillis = 2_000L,
-                poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                frameId = 7L,
-                minStepMillis = 100L,
-                minDistanceMeters = 0.5
-            )
-        )
-        assertFalse(
-            store.appendDisplayPose(
-                location = TrailGeoPoint(46.0002, 7.0002),
-                timestampMillis = 2_200L,
-                poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                frameId = 7L,
-                minStepMillis = 100L,
-                minDistanceMeters = 0.5
-            )
-        )
+        assertTrue(append(store = store, timestampMillis = 2_000L, frameId = 7L))
+        assertFalse(append(store = store, timestampMillis = 2_200L, latitude = 46.0002, frameId = 7L))
 
         assertEquals(1, store.snapshot().size)
     }
@@ -100,60 +75,189 @@ class SnailTrailDisplayStoreTest {
     @Test
     fun updateRawState_replayClearsDisplayTrail() {
         val store = anchoredStore()
-        assertTrue(
-            store.appendDisplayPose(
-                location = TrailGeoPoint(46.0, 7.0),
-                timestampMillis = 2_000L,
-                poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                frameId = 1L,
-                minStepMillis = 100L,
-                minDistanceMeters = 0.5
-            )
-        )
+        assertTrue(append(store = store, timestampMillis = 2_000L, frameId = 1L))
 
         store.updateRawState(
             rawPoints = listOf(rawPoint(timestampMillis = 3_000L)),
             rawTimeBase = TrailTimeBase.REPLAY_IGC,
-            isReplay = true
+            isReplay = true,
+            trailLength = TrailLength.LONG
         )
 
         assertEquals(0, store.snapshot().size)
     }
 
     @Test
-    fun appendDisplayPose_capsByAgeAndPointCount() {
-        val store = SnailTrailDisplayStore(maxAgeMillis = 1_000L, maxPoints = 2)
-        store.updateRawState(
-            rawPoints = listOf(rawPoint(timestampMillis = 1_000L)),
-            rawTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-            isReplay = false
+    fun fullKeepsRecentDisplayWindow() {
+        val store = anchoredStore(timestampMillis = 1_000L)
+
+        for (index in 0 until 65) {
+            assertTrue(
+                append(
+                    store = store,
+                    timestampMillis = 1_000L + index * 1_000L,
+                    latitude = 46.0 + index * 0.00001,
+                    trailLength = TrailLength.FULL,
+                    frameId = index.toLong()
+                )
+            )
+        }
+
+        val points = store.snapshot()
+        assertEquals(61, points.size)
+        assertEquals(5_000L, points.first().timestampMillis)
+        assertEquals(65_000L, points.last().timestampMillis)
+    }
+
+    @Test
+    fun fullCapsDisplayPointCount() {
+        val store = anchoredStore(
+            store = SnailTrailDisplayStore(maxAgeMillis = 0L, maxPoints = 2),
+            timestampMillis = 1_000L
         )
 
         for (index in 0 until 4) {
             assertTrue(
-                store.appendDisplayPose(
-                    location = TrailGeoPoint(46.0 + index * 0.001, 7.0),
-                    timestampMillis = 1_000L + index * 700L,
-                    poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                    frameId = index.toLong(),
-                    minStepMillis = 0L,
-                    minDistanceMeters = 0.0
+                append(
+                    store = store,
+                    timestampMillis = 1_000L + index * 1_000L,
+                    latitude = 46.0 + index * 0.00001,
+                    trailLength = TrailLength.FULL,
+                    frameId = index.toLong()
                 )
             )
         }
 
         val points = store.snapshot()
         assertEquals(2, points.size)
-        assertEquals(2_400L, points.first().timestampMillis)
-        assertEquals(3_100L, points.last().timestampMillis)
+        assertEquals(3_000L, points.first().timestampMillis)
+        assertEquals(4_000L, points.last().timestampMillis)
     }
 
-    private fun anchoredStore(): SnailTrailDisplayStore {
-        return SnailTrailDisplayStore().apply {
+    @Test
+    fun longKeepsSixtyMinutes() {
+        val store = anchoredStore(
+            store = SnailTrailDisplayStore(maxAgeMillis = 0L, maxGapMillis = Long.MAX_VALUE),
+            timestampMillis = 1_000L
+        )
+
+        appendWindowPoints(store = store, trailLength = TrailLength.LONG)
+
+        val points = store.snapshot()
+        assertEquals(4, points.size)
+        assertEquals(40 * 60_000L, points.first().timestampMillis)
+        assertEquals(90 * 60_000L, points.last().timestampMillis)
+    }
+
+    @Test
+    fun mediumKeepsThirtyMinutes() {
+        val store = anchoredStore(
+            store = SnailTrailDisplayStore(maxAgeMillis = 0L, maxGapMillis = Long.MAX_VALUE),
+            timestampMillis = 1_000L
+        )
+
+        appendWindowPoints(store = store, trailLength = TrailLength.MEDIUM)
+
+        val points = store.snapshot()
+        assertEquals(3, points.size)
+        assertEquals(60 * 60_000L, points.first().timestampMillis)
+        assertEquals(90 * 60_000L, points.last().timestampMillis)
+    }
+
+    @Test
+    fun shortKeepsTenMinutes() {
+        val store = anchoredStore(
+            store = SnailTrailDisplayStore(maxAgeMillis = 0L, maxGapMillis = Long.MAX_VALUE),
+            timestampMillis = 1_000L
+        )
+
+        appendWindowPoints(store = store, trailLength = TrailLength.SHORT)
+
+        val points = store.snapshot()
+        assertEquals(2, points.size)
+        assertEquals(80 * 60_000L, points.first().timestampMillis)
+        assertEquals(90 * 60_000L, points.last().timestampMillis)
+    }
+
+    @Test
+    fun appendDisplayPose_clearsPriorTrailAcrossDisplayFrameGap() {
+        val store = anchoredStore()
+
+        assertTrue(append(store = store, timestampMillis = 2_000L, frameId = 1L))
+        assertTrue(append(store = store, timestampMillis = 5_001L, latitude = 46.0001, frameId = 2L))
+
+        val points = store.snapshot()
+        assertEquals(1, points.size)
+        assertEquals(5_001L, points.last().timestampMillis)
+    }
+
+    @Test
+    fun appendDisplayPose_clearsOnLargeJump() {
+        val store = anchoredStore()
+
+        assertTrue(append(store = store, timestampMillis = 2_000L, frameId = 1L))
+        assertTrue(append(store = store, timestampMillis = 2_500L, latitude = 47.0, frameId = 2L))
+
+        val points = store.snapshot()
+        assertEquals(1, points.size)
+        assertEquals(47.0, points.first().latitude, 0.0)
+    }
+
+    private fun appendWindowPoints(
+        store: SnailTrailDisplayStore,
+        trailLength: TrailLength
+    ) {
+        val minutes = listOf(1, 20, 40, 60, 80, 90)
+        for ((index, minute) in minutes.withIndex()) {
+            val timestampMillis = minute * 60_000L
+            assertTrue(
+                append(
+                    store = store,
+                    timestampMillis = timestampMillis,
+                    latitude = 46.0 + index * 0.00001,
+                    trailLength = trailLength,
+                    frameId = index.toLong()
+                )
+            )
+        }
+    }
+
+    private fun append(
+        store: SnailTrailDisplayStore,
+        timestampMillis: Long,
+        latitude: Double = 46.0,
+        trailLength: TrailLength = TrailLength.LONG,
+        frameId: Long
+    ): Boolean {
+        return store.appendDisplayPose(
+            location = TrailGeoPoint(latitude, 7.0),
+            timestampMillis = timestampMillis,
+            poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            trailLength = trailLength,
+            frameId = frameId,
+            minStepMillis = 0L,
+            minDistanceMeters = 0.0
+        )
+    }
+
+    private fun anchoredStore(
+        store: SnailTrailDisplayStore = SnailTrailDisplayStore(),
+        timestampMillis: Long = 2_000L,
+        altitudeMeters: Double = 1_000.0,
+        varioMs: Double = 0.5
+    ): SnailTrailDisplayStore {
+        return store.apply {
             updateRawState(
-                rawPoints = listOf(rawPoint(timestampMillis = 2_000L)),
+                rawPoints = listOf(
+                    rawPoint(
+                        timestampMillis = timestampMillis,
+                        altitudeMeters = altitudeMeters,
+                        varioMs = varioMs
+                    )
+                ),
                 rawTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                isReplay = false
+                isReplay = false,
+                trailLength = TrailLength.LONG
             )
         }
     }

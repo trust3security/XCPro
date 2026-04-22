@@ -151,6 +151,36 @@ class SnailTrailRenderPlannerTest {
     }
 
     @Test
+    fun plan_fullRemainsVisibleAtCoarseZoomWithDistanceThinning() {
+        val planner = SnailTrailRenderPlanner(FakeMetersPerPixelProvider(10000.0))
+        val points = listOf(
+            point(0.0, 0.0, 100L),
+            point(0.0001, 0.0001, 200L),
+            point(0.0002, 0.0002, 300L)
+        )
+
+        val plan = planner.plan(
+            SnailTrailRenderPlanner.Input(
+                points = points,
+                settings = TrailSettings(length = TrailLength.FULL),
+                currentLocation = TrailGeoPoint(0.0, 0.0),
+                currentTimeMillis = 300L,
+                isCircling = false,
+                isTurnSmoothing = false,
+                currentZoom = 2f,
+                isReplay = false,
+                useRenderFrameSync = false,
+                density = 2f
+            )
+        )
+
+        assertNotNull(plan)
+        assertEquals(2, plan?.renderPoints?.size ?: 0)
+        assertEquals(100L, plan?.renderPoints?.firstOrNull()?.timestampMillis ?: -1L)
+        assertEquals(300L, plan?.renderPoints?.lastOrNull()?.timestampMillis ?: -1L)
+    }
+
+    @Test
     fun plan_useScaledLines_onlyWhenEnabledAndZoomedIn() {
         val baseInput = SnailTrailRenderPlanner.Input(
             points = listOf(point(0.0, 0.0, 100L), point(0.2, 0.2, 200L)),

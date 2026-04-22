@@ -115,6 +115,7 @@ class MapFeatureFlags @Inject constructor() {
 
     /**
      * Show legacy raw TrailStore-based snail trail geometry.
+     * Currently ignored by SnailTrailManager so only display-pose geometry paints.
      * UI-only visual layer; the display trail can remain enabled even when false.
      */
     @Volatile

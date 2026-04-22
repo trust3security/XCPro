@@ -38,6 +38,10 @@ class SnailTrailManagerTest {
         )
 
         verify(overlay).clearRawTrail()
+        verify(overlay).renderDisplayTrail(
+            any(),
+            eq(TrailSettings())
+        )
         verify(overlay, never()).render(
             any(),
             eq(TrailSettings()),
@@ -88,9 +92,12 @@ class SnailTrailManagerTest {
     }
 
     @Test
-    fun updateDisplayPose_liveRendersTailWhenTimeBaseMatches() {
+    fun updateDisplayPose_liveClearsTailWhenRawFlagEnabled() {
         val overlay = mock<SnailTrailOverlay>()
-        val manager = createManager(overlay)
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { showRawSnailTrail = true }
+        )
         manager.updateFromTrailUpdate(
             update = updateResult(
                 sampleAdded = true,
@@ -107,22 +114,61 @@ class SnailTrailManagerTest {
             displayTimeBase = TrailTimeBase.LIVE_MONOTONIC
         )
 
-        verify(overlay).renderTail(
+        verify(overlay).clearTail()
+        verify(overlay, never()).renderTail(
             anyOrNull(),
-            eq(TrailSettings()),
             any(),
-            eq(2_100L),
-            eq(0.0),
-            eq(0.0),
-            eq(false),
-            eq(10f),
-            eq(false),
-            eq(null)
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
         )
     }
 
     @Test
-    fun updateFromTrailUpdate_rendersRawTrailWhenShowRawFlagEnabled() {
+    fun updateDisplayPose_liveClearsTailWhenRawTrailHidden() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { showRawSnailTrail = false }
+        )
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f
+        )
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC
+        )
+
+        verify(overlay).clearTail()
+        verify(overlay, never()).renderTail(
+            anyOrNull(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
+        )
+    }
+
+    @Test
+    fun updateFromTrailUpdate_hidesRawTrailWhenShowRawFlagEnabled() {
         val overlay = mock<SnailTrailOverlay>()
         val manager = createManager(
             overlay = overlay,
@@ -139,18 +185,128 @@ class SnailTrailManagerTest {
             currentZoom = 10f
         )
 
-        verify(overlay).render(
+        verify(overlay).clearRawTrail()
+        verify(overlay, never()).render(
             any(),
-            eq(TrailSettings()),
             any(),
-            eq(2_000L),
-            eq(0.0),
-            eq(0.0),
-            eq(false),
-            eq(false),
-            eq(10f),
-            eq(false),
-            eq(null)
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
+        )
+    }
+
+    @Test
+    fun updateFromTrailUpdate_hidesRawTrailWhenFullEvenWhenShowRawFlagDisabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { showRawSnailTrail = false }
+        )
+        val settings = TrailSettings(length = TrailLength.FULL)
+
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = false,
+                requiresFullRender = true,
+                invalidationReason = TrailRenderInvalidationReason.CIRCLING_CHANGED
+            ),
+            settings = settings,
+            currentZoom = 10f
+        )
+
+        verify(overlay).clearRawTrail()
+        verify(overlay, never()).render(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
+        )
+    }
+
+    @Test
+    fun onZoomChanged_keepsRawTrailHiddenWhenFullEvenWhenShowRawFlagDisabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { showRawSnailTrail = false }
+        )
+        val settings = TrailSettings(length = TrailLength.FULL)
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = false,
+                requiresFullRender = true
+            ),
+            settings = settings,
+            currentZoom = 10f
+        )
+        clearInvocations(overlay)
+
+        manager.onZoomChanged(6f)
+
+        verify(overlay, never()).render(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
+        )
+    }
+
+    @Test
+    fun updateDisplayPose_clearsTailWhenFullEvenWhenShowRawFlagDisabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { showRawSnailTrail = false }
+        )
+        val settings = TrailSettings(length = TrailLength.FULL)
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true
+            ),
+            settings = settings,
+            currentZoom = 10f
+        )
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC
+        )
+
+        verify(overlay).clearTail()
+        verify(overlay, never()).renderTail(
+            anyOrNull(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
         )
     }
 

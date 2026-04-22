@@ -87,9 +87,10 @@ class SnailTrailManager(
         displayTrailStore.updateRawState(
             rawPoints = renderState.points,
             rawTimeBase = renderState.timeBase,
-            isReplay = isReplay
+            isReplay = isReplay,
+            trailLength = settings.length
         )
-        if (overlay != null && !featureFlags.showRawSnailTrail) {
+        if (overlay != null && !shouldRenderRawTrail()) {
             overlay.clearRawTrail()
         }
         if (overlay != null && (!featureFlags.useDisplayPoseSnailTrail || isReplay)) {
@@ -106,9 +107,10 @@ class SnailTrailManager(
             currentZoom = currentZoom,
             timeBase = renderState.timeBase
         )
+        refreshTailAnchor(lastContext)
 
         if (overlay != null && (update.requiresFullRender || settingsChanged || zoomChanged)) {
-            if (featureFlags.showRawSnailTrail) {
+            if (shouldRenderRawTrail()) {
                 render(overlay)
             }
             renderDisplayTrail(overlay)
@@ -172,6 +174,7 @@ class SnailTrailManager(
                 location = TrailGeoPoint(location.latitude, location.longitude),
                 timestampMillis = time,
                 poseTimeBase = context.timeBase,
+                trailLength = lastSettings.length,
                 frameId = frameId,
                 minStepMillis = minStepMs,
                 minDistanceMeters = minDistanceM
@@ -184,18 +187,22 @@ class SnailTrailManager(
             overlay.clearDisplayTrail()
         }
 
-        overlay.renderTail(
-            lastPoint = lastRawTailPoint,
-            settings = lastSettings,
-            currentLocation = location,
-            currentTimeMillis = time,
-            windSpeedMs = context.windSpeedMs,
-            windDirectionFromDeg = context.windDirectionFromDeg,
-            isCircling = context.isCircling,
-            currentZoom = context.currentZoom,
-            isReplay = lastIsReplay ?: false,
-            frameId = frameId
-        )
+        if (shouldRenderRawTrail()) {
+            overlay.renderTail(
+                lastPoint = lastRawTailPoint,
+                settings = lastSettings,
+                currentLocation = location,
+                currentTimeMillis = time,
+                windSpeedMs = context.windSpeedMs,
+                windDirectionFromDeg = context.windDirectionFromDeg,
+                isCircling = context.isCircling,
+                currentZoom = context.currentZoom,
+                isReplay = lastIsReplay ?: false,
+                frameId = frameId
+            )
+        } else {
+            overlay.clearTail()
+        }
     }
 
     fun onSettingsChanged(settings: TrailSettings) {
@@ -223,10 +230,14 @@ class SnailTrailManager(
 
     private fun renderLast() {
         val overlay = runtimeState.snailTrailOverlay ?: return
-        if (featureFlags.showRawSnailTrail) {
+        if (shouldRenderRawTrail()) {
             render(overlay)
         }
         renderDisplayTrail(overlay)
+    }
+
+    private fun shouldRenderRawTrail(): Boolean {
+        return false
     }
 
     private fun render(overlay: SnailTrailOverlay, frameId: Long? = null) {
@@ -260,6 +271,28 @@ class SnailTrailManager(
         )
     }
 
+    private fun refreshTailAnchor(context: RenderContext?) {
+        if (context == null) {
+            return
+        }
+        if (lastPoints.isEmpty()) {
+            return
+        }
+
+        val renderPoints = if (context.currentTimeMillis > 0L) {
+            val firstTimestamp = lastPoints.firstOrNull()?.timestampMillis
+            if (firstTimestamp != null && context.currentTimeMillis >= firstTimestamp) {
+                val filtered = lastPoints.filter { it.timestampMillis <= context.currentTimeMillis }
+                filtered.ifEmpty { lastPoints }
+            } else {
+                lastPoints
+            }
+        } else {
+            lastPoints
+        }
+        lastRawTailPoint = renderPoints.lastOrNull() ?: lastPoints.lastOrNull()
+    }
+
     private fun renderDisplayTrail(overlay: SnailTrailOverlay) {
         val context = lastContext ?: return
         if (!featureFlags.useDisplayPoseSnailTrail || lastIsReplay == true) {
@@ -282,6 +315,7 @@ class SnailTrailManager(
             overlay.clearDisplayTrail()
             return
         }
+        displayTrailStore.applyRetention(lastSettings.length, context.currentTimeMillis)
         overlay.renderDisplayTrail(
             points = displayTrailStore.snapshot(),
             settings = lastSettings
