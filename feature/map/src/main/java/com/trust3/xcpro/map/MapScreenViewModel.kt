@@ -250,7 +250,6 @@ class MapScreenViewModel @Inject constructor(
         )
     }
     fun emitMapCommand(command: MapCommand) = _mapCommands.tryEmit(command)
-    fun onVarioDemoReplay() = replayCoordinator.onVarioDemoReplay()
     fun onRacingTaskReplay() = replayCoordinator.onRacingTaskReplay()
     fun onVarioDemoReplaySim() = replayCoordinator.onVarioDemoReplaySim()
     fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()

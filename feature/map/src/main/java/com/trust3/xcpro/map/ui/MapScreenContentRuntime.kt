@@ -147,7 +147,6 @@ internal fun MapScreenContent(
     val showVarioDemoFab = replayInputs.showVarioDemoFab
     val onSyntheticThermalReplayClick = replayInputs.onSyntheticThermalReplayClick
     val onSyntheticThermalReplayWindNoisyClick = replayInputs.onSyntheticThermalReplayWindNoisyClick
-    val onVarioDemoReferenceClick = replayInputs.onVarioDemoReferenceClick
     val onVarioDemoSimClick = replayInputs.onVarioDemoSimClick
     val onVarioDemoSim2Click = replayInputs.onVarioDemoSim2Click
     val onVarioDemoSim3Click = replayInputs.onVarioDemoSim3Click
@@ -351,7 +350,6 @@ internal fun MapScreenContent(
             onReturn = { locationManager.returnToSavedLocation() },
             onSyntheticThermalReplayClick = onSyntheticThermalReplayClick,
             onSyntheticThermalReplayWindNoisyClick = onSyntheticThermalReplayWindNoisyClick,
-            onVarioDemoReferenceClick = onVarioDemoReferenceClick,
             onVarioDemoSimClick = onVarioDemoSimClick,
             onVarioDemoSim2Click = onVarioDemoSim2Click,
             onVarioDemoSim3Click = onVarioDemoSim3Click,

@@ -250,7 +250,6 @@ internal fun buildMapScreenReplayContentInputs(
         showVarioDemoFab = mapViewModel.showVarioDemoFab,
         onSyntheticThermalReplayClick = mapViewModel::onSyntheticThermalReplay,
         onSyntheticThermalReplayWindNoisyClick = mapViewModel::onSyntheticThermalReplayWindNoisy,
-        onVarioDemoReferenceClick = mapViewModel::onVarioDemoReplay,
         onVarioDemoSimClick = mapViewModel::onVarioDemoReplaySim,
         onVarioDemoSim2Click = mapViewModel::onVarioDemoReplaySimLive,
         onVarioDemoSim3Click = mapViewModel::onVarioDemoReplaySim3,

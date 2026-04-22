@@ -21,7 +21,6 @@ fun MapActionButtons(
     showAatEditFab: Boolean,
     onSyntheticThermalReplayClick: () -> Unit,
     onSyntheticThermalReplayWindNoisyClick: () -> Unit,
-    onVarioDemoReferenceClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
     onVarioDemoSim3Click: () -> Unit,
@@ -39,8 +38,7 @@ fun MapActionButtons(
     val demoSim3BottomPadding = 16.dp
     val demoSimBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
     val demoSim2BottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
-    val demoRefBottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
-    val demoThermalCleanBottomPadding = demoRefBottomPadding + demoFabSize + demoSpacing
+    val demoThermalCleanBottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
     val demoThermalWindNoisyBottomPadding = demoThermalCleanBottomPadding + demoFabSize + demoSpacing
     val demoTaskBottomPadding = if (showVarioDemoFab) {
         demoThermalWindNoisyBottomPadding + demoFabSize + demoSpacing
@@ -108,15 +106,6 @@ fun MapActionButtons(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = demoLaneEndPadding, bottom = demoThermalCleanBottomPadding)
-            )
-            VarioDemoButton(
-                onClick = onVarioDemoReferenceClick,
-                badgeText = "REF",
-                badgeColor = MaterialTheme.colorScheme.primary,
-                contentDescription = "Run vario demo replay (reference)",
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = demoLaneEndPadding, bottom = demoRefBottomPadding)
             )
             VarioDemoButton(
                 onClick = onVarioDemoSim2Click,

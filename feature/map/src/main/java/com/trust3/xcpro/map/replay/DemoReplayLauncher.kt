@@ -21,23 +21,6 @@ internal class DemoReplayLauncher(
     private val uiEffects: MutableSharedFlow<MapUiEffect>
 ) {
 
-    suspend fun startReference() {
-        try {
-            demoReplaySnapshots.captureUiIfNeeded()
-            igcReplayController.setAutoStopAfterFinish(true)
-            igcReplayController.stopAndWait(emitCancelledEvent = false)
-            igcReplayController.setReplayMode(ReplayMode.REFERENCE, resetAfterSession = true)
-            igcReplayController.loadAsset(VARIO_DEMO_ASSET_PATH, "Vario demo")
-            prepareReplayTrackingState()
-            igcReplayController.play()
-            uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay started"))
-        } catch (t: Throwable) {
-            demoReplaySnapshots.restoreIfCaptured()
-            AppLogger.e(TAG, "Failed to start vario demo replay", t)
-            uiEffects.emit(MapUiEffect.ShowToast("Vario demo replay failed"))
-        }
-    }
-
     suspend fun startRealtimeSim() {
         try {
             demoReplaySnapshots.captureUiIfNeeded()

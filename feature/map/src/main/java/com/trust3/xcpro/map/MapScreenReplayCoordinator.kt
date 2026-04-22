@@ -119,13 +119,6 @@ internal class MapScreenReplayCoordinator(
         liveGpsProfileFlow.launchIn(scope)
     }
 
-    fun onVarioDemoReplay() {
-        scope.launch {
-            clearSyntheticReplayInspectionIfNeeded()
-            demoReplayLauncher.startReference()
-        }
-    }
-
     fun onVarioDemoReplaySim() {
         scope.launch {
             clearSyntheticReplayInspectionIfNeeded()
