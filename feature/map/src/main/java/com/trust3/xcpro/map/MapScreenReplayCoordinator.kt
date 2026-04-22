@@ -4,10 +4,6 @@ import com.trust3.xcpro.core.common.logging.AppLogger
 import com.trust3.xcpro.map.config.MapFeatureFlags
 import com.trust3.xcpro.map.replay.DemoReplayLauncher
 import com.trust3.xcpro.map.replay.RacingReplayLogBuilder
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayLogBuilder
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayLauncher
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayMode
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayVariant
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.replay.ReplayCadenceProfile
 import com.trust3.xcpro.replay.ReplayMode
@@ -20,7 +16,6 @@ import com.trust3.xcpro.tasks.TaskNavigationController
 import com.trust3.xcpro.tasks.racing.navigation.RacingAdvanceState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
@@ -34,17 +29,12 @@ internal class MapScreenReplayCoordinator(
     private val flightDataFlow: StateFlow<CompleteFlightData?>,
     private val igcReplayController: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder,
-    private val syntheticThermalReplayLogBuilder: SyntheticThermalReplayLogBuilder,
     private val featureFlags: MapFeatureFlags,
     private val mapStateStore: MapStateStore,
     private val mapStateActions: MapStateActions,
-    private val syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
-    private val emitMapCommand: (MapCommand) -> Unit,
     private val replaySessionState: StateFlow<SessionState>,
-    private val scope: CoroutineScope,
-    private val syntheticThermalAutoStopMillis: Long =
-        SyntheticThermalDiagnosticsAutoStopper.DEFAULT_AUTO_STOP_MS
+    private val scope: CoroutineScope
 ) {
 
     private val racingEventDebouncer = RacingNavigationEventDebouncer()
@@ -71,25 +61,9 @@ internal class MapScreenReplayCoordinator(
         mapStateActions = mapStateActions,
         uiEffects = uiEffects
     )
-    private val syntheticThermalReplayLauncher = SyntheticThermalReplayLauncher(
-        demoReplaySnapshots = demoReplaySnapshots,
-        igcReplayController = igcReplayController,
-        syntheticThermalReplayLogBuilder = syntheticThermalReplayLogBuilder,
-        syntheticReplayMode = syntheticReplayMode,
-        mapStateActions = mapStateActions,
-        uiEffects = uiEffects
-    )
     private var racingReplayActive = false
     @Volatile
     private var suppressRacingFixes = false
-    private val syntheticThermalDiagnosticsAutoStopper = SyntheticThermalDiagnosticsAutoStopper(
-        scope = scope,
-        igcReplayController = igcReplayController,
-        syntheticReplayMode = syntheticReplayMode,
-        emitMapCommand = emitMapCommand,
-        uiEffects = uiEffects,
-        autoStopMillis = syntheticThermalAutoStopMillis
-    )
     private val liveGpsProfileTracker = LiveGpsProfileTracker()
 
     private val racingFixFlow = combine(flightDataFlow, replaySessionState) { data, session ->
@@ -121,56 +95,24 @@ internal class MapScreenReplayCoordinator(
 
     fun onVarioDemoReplaySim() {
         scope.launch {
-            clearSyntheticReplayInspectionIfNeeded()
             demoReplayLauncher.startRealtimeSim()
         }
     }
 
     fun onVarioDemoReplaySimLive() {
         scope.launch {
-            clearSyntheticReplayInspectionIfNeeded()
             demoReplayLauncher.startSmoothedRealtimeSim()
         }
     }
 
     fun onVarioDemoReplaySim3() {
         scope.launch {
-            clearSyntheticReplayInspectionIfNeeded()
             demoReplayLauncher.startLinearRealtimeSim()
-        }
-    }
-
-    fun onSyntheticThermalReplay() {
-        scope.launch {
-            clearSyntheticReplayInspectionIfNeeded()
-            syntheticThermalReplayLauncher.start(
-                variant = SyntheticThermalReplayVariant.CLEAN,
-                replayMode = SyntheticThermalReplayMode.CLEAN,
-                displayName = "Synthetic thermal (clean)",
-                successMessage = "Synthetic thermal replay started",
-                failureMessage = "Synthetic thermal replay failed"
-            )
-            syntheticThermalDiagnosticsAutoStopper.schedule(SyntheticThermalReplayMode.CLEAN)
-        }
-    }
-
-    fun onSyntheticThermalReplayWindNoisy() {
-        scope.launch {
-            clearSyntheticReplayInspectionIfNeeded()
-            syntheticThermalReplayLauncher.start(
-                variant = SyntheticThermalReplayVariant.WIND_NOISY,
-                replayMode = SyntheticThermalReplayMode.WIND_NOISY,
-                displayName = "Synthetic thermal (wind-noisy)",
-                successMessage = "Synthetic thermal wind-noisy replay started",
-                failureMessage = "Synthetic thermal wind-noisy replay failed"
-            )
-            syntheticThermalDiagnosticsAutoStopper.schedule(SyntheticThermalReplayMode.WIND_NOISY)
         }
     }
 
     fun onRacingTaskReplay() {
         scope.launch {
-            clearSyntheticReplayInspectionIfNeeded()
             racingReplayActive = true
             suppressRacingFixes = true
             racingReplayLogger.reset()
@@ -220,27 +162,6 @@ internal class MapScreenReplayCoordinator(
     private fun observeReplayEvents() {
         igcReplayController.events
             .onEach { event ->
-                if (syntheticReplayMode.value.isActive) {
-                    when (event) {
-                        is ReplayEvent.Completed -> {
-                            igcReplayController.seekTo(1f)
-                        }
-                        is ReplayEvent.Failed -> {
-                            syntheticThermalDiagnosticsAutoStopper.cancel()
-                            syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
-                            igcReplayController.setAutoStopAfterFinish(false)
-                            igcReplayController.stopAndWait(emitCancelledEvent = false)
-                            demoReplaySnapshots.restoreIfCaptured()
-                        }
-                        ReplayEvent.Cancelled -> {
-                            syntheticThermalDiagnosticsAutoStopper.cancel()
-                            syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
-                            igcReplayController.setAutoStopAfterFinish(false)
-                            demoReplaySnapshots.restoreIfCaptured()
-                        }
-                    }
-                    return@onEach
-                }
                 if (demoReplaySnapshots.hasSnapshot) {
                     demoReplaySnapshots.restoreIfCaptured()
                     when (event) {
@@ -272,16 +193,6 @@ internal class MapScreenReplayCoordinator(
                 }
             }
             .launchIn(scope)
-    }
-
-    private suspend fun clearSyntheticReplayInspectionIfNeeded() {
-        if (!syntheticReplayMode.value.isActive) {
-            return
-        }
-        syntheticThermalDiagnosticsAutoStopper.cancel()
-        syntheticReplayMode.value = SyntheticThermalReplayMode.NONE
-        igcReplayController.stopAndWait(emitCancelledEvent = false)
-        demoReplaySnapshots.restoreIfCaptured()
     }
 
     private fun observeReplayDisplayPoseMode() {

@@ -5,7 +5,6 @@ import com.trust3.xcpro.currentld.PilotCurrentLdSnapshot
 import com.trust3.xcpro.map.trail.domain.TrailProcessor
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import com.trust3.xcpro.map.trail.TrailSettings
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayMode
 import com.trust3.xcpro.navigation.WaypointNavigationSnapshot
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.sensors.CompleteFlightData
@@ -32,7 +31,6 @@ internal class FlightDataUiAdapter(
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateReader,
     trailSettingsFlow: StateFlow<TrailSettings>,
-    syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
     liveDataReady: MutableStateFlow<Boolean>,
     containerReady: MutableStateFlow<Boolean>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -52,7 +50,6 @@ internal class FlightDataUiAdapter(
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         trailSettingsFlow = trailSettingsFlow,
-        syntheticReplayMode = syntheticReplayMode,
         liveDataReady = liveDataReady,
         containerReady = containerReady,
         uiEffects = uiEffects,

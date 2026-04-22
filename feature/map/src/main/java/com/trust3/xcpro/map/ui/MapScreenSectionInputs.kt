@@ -135,8 +135,6 @@ internal data class MapScreenWidgetContentInputs(
 internal data class MapScreenReplayContentInputs(
     val replayState: StateFlow<SessionState>,
     val showVarioDemoFab: Boolean,
-    val onSyntheticThermalReplayClick: () -> Unit,
-    val onSyntheticThermalReplayWindNoisyClick: () -> Unit,
     val onVarioDemoSimClick: () -> Unit,
     val onVarioDemoSim2Click: () -> Unit,
     val onVarioDemoSim3Click: () -> Unit,

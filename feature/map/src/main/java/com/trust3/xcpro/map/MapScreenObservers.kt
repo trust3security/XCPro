@@ -8,11 +8,9 @@ import com.trust3.xcpro.glide.GlideSolution
 import com.trust3.xcpro.hawk.HawkVarioUiState
 import com.trust3.xcpro.map.trail.TrailLength
 import com.trust3.xcpro.map.trail.domain.TrailProcessor
-import com.trust3.xcpro.map.trail.domain.TrailReplayRetentionMode
 import com.trust3.xcpro.map.trail.domain.TrailUpdateInput
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import com.trust3.xcpro.map.trail.TrailSettings
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayMode
 import com.trust3.xcpro.navigation.WaypointNavigationSnapshot
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.replay.ReplayEvent
@@ -44,7 +42,6 @@ internal class MapScreenObservers(
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
     private val trailSettingsFlow: StateFlow<TrailSettings>,
-    private val syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
     private val liveDataReady: MutableStateFlow<Boolean>,
     private val containerReady: MutableStateFlow<Boolean>,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -133,22 +130,8 @@ internal class MapScreenObservers(
                 tuple.ninth,
                 trailSettings
             )
-        }.combine(syntheticReplayMode) { tuple, replayMode ->
-            Undecuple(
-                tuple.first,
-                tuple.second,
-                tuple.third,
-                tuple.fourth,
-                tuple.fifth,
-                tuple.sixth,
-                tuple.seventh,
-                tuple.eighth,
-                tuple.ninth,
-                tuple.tenth,
-                replayMode
-            )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, pilotCurrentLd, taskPerformance, trailSettings, replayMode) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, pilotCurrentLd, taskPerformance, trailSettings) ->
                 if (data != null) {
                     val trailEnabled = trailSettings.length != TrailLength.OFF
                     if (!liveDataReady.value) {
@@ -196,12 +179,7 @@ internal class MapScreenObservers(
                                 windState = wind,
                                 isFlying = flightState.isFlying,
                                 isReplay = isReplay,
-                                windDriftEnabled = trailSettings.windDriftEnabled,
-                                replayRetentionMode = if (isReplay && replayMode.isActive) {
-                                    TrailReplayRetentionMode.SYNTHETIC_VALIDATION
-                                } else {
-                                    TrailReplayRetentionMode.DEFAULT
-                                }
+                                windDriftEnabled = trailSettings.windDriftEnabled
                             )
                         )
                         if (trailResult != null) {
@@ -360,18 +338,4 @@ private data class Decuple<A, B, C, D, E, F, G, H, I, J>(
     val eighth: H,
     val ninth: I,
     val tenth: J
-)
-
-private data class Undecuple<A, B, C, D, E, F, G, H, I, J, K>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D,
-    val fifth: E,
-    val sixth: F,
-    val seventh: G,
-    val eighth: H,
-    val ninth: I,
-    val tenth: J,
-    val eleventh: K
 )

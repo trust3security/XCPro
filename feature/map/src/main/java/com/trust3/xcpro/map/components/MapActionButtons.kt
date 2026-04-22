@@ -19,8 +19,6 @@ fun MapActionButtons(
     onReturn: () -> Unit,
     showVarioDemoFab: Boolean,
     showAatEditFab: Boolean,
-    onSyntheticThermalReplayClick: () -> Unit,
-    onSyntheticThermalReplayWindNoisyClick: () -> Unit,
     onVarioDemoSimClick: () -> Unit,
     onVarioDemoSim2Click: () -> Unit,
     onVarioDemoSim3Click: () -> Unit,
@@ -38,10 +36,8 @@ fun MapActionButtons(
     val demoSim3BottomPadding = 16.dp
     val demoSimBottomPadding = demoSim3BottomPadding + demoFabSize + demoSpacing
     val demoSim2BottomPadding = demoSimBottomPadding + demoFabSize + demoSpacing
-    val demoThermalCleanBottomPadding = demoSim2BottomPadding + demoFabSize + demoSpacing
-    val demoThermalWindNoisyBottomPadding = demoThermalCleanBottomPadding + demoFabSize + demoSpacing
     val demoTaskBottomPadding = if (showVarioDemoFab) {
-        demoThermalWindNoisyBottomPadding + demoFabSize + demoSpacing
+        demoSim2BottomPadding + demoFabSize + demoSpacing
     } else {
         demoSim3BottomPadding
     }
@@ -89,24 +85,6 @@ fun MapActionButtons(
         }
 
         if (showVarioDemoFab) {
-            VarioDemoButton(
-                onClick = onSyntheticThermalReplayWindNoisyClick,
-                badgeText = "THN",
-                badgeColor = MaterialTheme.colorScheme.primary,
-                contentDescription = "Run synthetic thermal replay (wind-noisy)",
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = demoLaneEndPadding, bottom = demoThermalWindNoisyBottomPadding)
-            )
-            VarioDemoButton(
-                onClick = onSyntheticThermalReplayClick,
-                badgeText = "THR",
-                badgeColor = MaterialTheme.colorScheme.primaryContainer,
-                contentDescription = "Run synthetic thermal replay (clean)",
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = demoLaneEndPadding, bottom = demoThermalCleanBottomPadding)
-            )
             VarioDemoButton(
                 onClick = onVarioDemoSim2Click,
                 badgeText = "SIM2",

@@ -2,7 +2,6 @@ package com.trust3.xcpro.map
 
 import com.trust3.xcpro.hawk.HawkVarioUiState
 import com.trust3.xcpro.map.model.MapLocationUiModel
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayMode
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import com.trust3.xcpro.replay.SessionState
@@ -24,7 +23,6 @@ internal fun createFlightDataUiAdapterForViewModel(
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateStore,
     trailSettingsFlow: StateFlow<TrailSettings>,
-    syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
     liveDataReady: MutableStateFlow<Boolean>,
     containerReady: MutableStateFlow<Boolean>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -38,7 +36,6 @@ internal fun createFlightDataUiAdapterForViewModel(
     flightDataManager = flightDataManager,
     mapStateStore = mapStateStore,
     trailSettingsFlow = trailSettingsFlow,
-    syntheticReplayMode = syntheticReplayMode,
     liveDataReady = liveDataReady,
     containerReady = containerReady,
     uiEffects = uiEffects,
@@ -51,9 +48,7 @@ internal fun createReplayCoordinatorForViewModel(
     featureFlags: com.trust3.xcpro.map.config.MapFeatureFlags,
     mapStateStore: MapStateStore,
     mapStateActions: MapStateActions,
-    syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
-    emitMapCommand: (MapCommand) -> Unit,
     replaySessionState: StateFlow<SessionState>,
     scope: CoroutineScope
 ): MapScreenReplayCoordinator = mapReplayUseCase.createReplayCoordinator(
@@ -61,9 +56,7 @@ internal fun createReplayCoordinatorForViewModel(
     featureFlags = featureFlags,
     mapStateStore = mapStateStore,
     mapStateActions = mapStateActions,
-    syntheticReplayMode = syntheticReplayMode,
     uiEffects = uiEffects,
-    emitMapCommand = emitMapCommand,
     replaySessionState = replaySessionState,
     scope = scope
 )

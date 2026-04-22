@@ -129,8 +129,8 @@ class MapRuntimeControllerWeatherStyleTest {
             exportDiagnostics = reasons::add
         )
 
-        controller.apply(MapCommand.ExportDiagnostics("synthetic_thermal_auto_stop"))
+        controller.apply(MapCommand.ExportDiagnostics("debug_export_test"))
 
-        assertEquals(listOf("synthetic_thermal_auto_stop"), reasons)
+        assertEquals(listOf("debug_export_test"), reasons)
     }
 }

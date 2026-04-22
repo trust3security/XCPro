@@ -1,7 +1,6 @@
 package com.trust3.xcpro.map.trail
 
 import com.trust3.xcpro.map.trail.domain.TrailProcessor
-import com.trust3.xcpro.map.trail.domain.TrailReplayRetentionMode
 import com.trust3.xcpro.map.trail.domain.TrailRenderInvalidationReason
 import com.trust3.xcpro.map.trail.domain.TrailTimeBase
 import com.trust3.xcpro.map.trail.domain.TrailUpdateInput
@@ -489,40 +488,5 @@ class TrailProcessorTest {
         assertTrue(second.renderState.windSpeedMs < 10.0)
     }
 
-    @Test
-    fun syntheticReplayValidation_retainsFullThermalHistory() {
-        val defaultReplayCount = replayPointCountForRetentionMode(TrailReplayRetentionMode.DEFAULT)
-        val syntheticReplayCount = replayPointCountForRetentionMode(TrailReplayRetentionMode.SYNTHETIC_VALIDATION)
-
-        assertTrue(defaultReplayCount < syntheticReplayCount)
-        assertEquals(1_201, syntheticReplayCount)
-    }
-
-    private fun replayPointCountForRetentionMode(mode: TrailReplayRetentionMode): Int {
-        val processor = TrailProcessor()
-        var lastCount = 0
-        repeat(301) { index ->
-            val timestampMillis = 1_000L + (index * 1_000L)
-            val result = processor.update(
-                TrailUpdateInput(
-                    data = buildCompleteFlightData(
-                        gps = defaultGps(
-                            latitude = 46.0,
-                            longitude = 7.0 + (index * 0.00001),
-                            monotonicTimestampMillis = 0L,
-                            timestampMillis = timestampMillis
-                        ),
-                        timestampMillis = timestampMillis
-                    ),
-                    windState = null,
-                    isFlying = true,
-                    isReplay = true,
-                    replayRetentionMode = mode
-                )
-            )
-            lastCount = result!!.renderState.points.size
-        }
-        return lastCount
-    }
 }
 

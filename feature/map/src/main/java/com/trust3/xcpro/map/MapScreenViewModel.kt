@@ -26,7 +26,6 @@ import com.trust3.xcpro.map.ballast.BallastUiState
 import com.trust3.xcpro.map.config.MapFeatureFlags
 import com.trust3.xcpro.map.model.GpsStatusUiModel
 import com.trust3.xcpro.map.model.MapLocationUiModel
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayMode
 import com.trust3.xcpro.map.trail.MapTrailSettingsUseCase
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
@@ -175,16 +174,15 @@ class MapScreenViewModel @Inject constructor(
     private val _isMapVisible = MutableStateFlow(false)
     private val adsbFilterStates: AdsbFilterStateFlows = createAdsbFilterStateFlows(viewModelScope, adsbTrafficFacade)
     val cardHydrationReady: StateFlow<Boolean> = createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
-    private val syntheticReplayMode = MutableStateFlow(SyntheticThermalReplayMode.NONE)
     private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
         mapReplayUseCase = mapReplayUseCase, scope = viewModelScope, flightDataFlow = flightData, windStateFlow = windStateFlow,
         flightStateFlow = sensorsUseCase.flightStateFlow, hawkVarioUiStateFlow = hawkVarioUiState, flightDataManager = flightDataManager, mapStateStore = mapStateStore,
-        trailSettingsFlow = mapStateStore.trailSettings, syntheticReplayMode = syntheticReplayMode, liveDataReady = _liveDataReady, containerReady = _containerReady,
+        trailSettingsFlow = mapStateStore.trailSettings, liveDataReady = _liveDataReady, containerReady = _containerReady,
         uiEffects = _uiEffects, trailUpdates = _trailUpdates
     )
     private val replayCoordinator = createReplayCoordinatorForViewModel(
         mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightData, featureFlags = runtimeDependencies.featureFlags, mapStateStore = mapStateStore,
-        mapStateActions = mapStateActions, syntheticReplayMode = syntheticReplayMode, uiEffects = _uiEffects, emitMapCommand = ::emitMapCommand, replaySessionState = replaySessionState, scope = viewModelScope
+        mapStateActions = mapStateActions, uiEffects = _uiEffects, replaySessionState = replaySessionState, scope = viewModelScope
     )
     private val uiEventHandler = MapScreenUiEventHandler(
         uiState = _uiState,
@@ -254,8 +252,6 @@ class MapScreenViewModel @Inject constructor(
     fun onVarioDemoReplaySim() = replayCoordinator.onVarioDemoReplaySim()
     fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
     fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
-    fun onSyntheticThermalReplay() = replayCoordinator.onSyntheticThermalReplay()
-    fun onSyntheticThermalReplayWindNoisy() = replayCoordinator.onSyntheticThermalReplayWindNoisy()
     fun updateSafeContainerSize(size: MapSize) = mapStateStore.updateSafeContainerSize(size)
     fun setMapStyle(styleName: String) = emitEffectiveStyleCommandIfChanged(mapStateStore.setBaseMapStyle(styleName).effectiveStyleChanged)
     fun persistMapStyle(styleName: String) = profileSessionCoordinator.persistMapStyle(styleName)

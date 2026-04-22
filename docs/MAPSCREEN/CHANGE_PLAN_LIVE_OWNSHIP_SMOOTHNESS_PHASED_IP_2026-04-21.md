@@ -2,24 +2,26 @@
 
 ## 0) Metadata
 
-- Title: Live ownship smoothness closest-to-THN phased implementation plan
+- Title: Live ownship smoothness phased implementation plan
 - Owner: XCPro Team
 - Date: 2026-04-21
 - Issue/PR: TBD
 - Status: Phase 0 diagnostics implemented; Phase 1A debug cadence bridge
   selected for shared live/Condor display proof before production/provider
-  decisions.
+  decisions. The synthetic thermal map FAB reference path has since been
+  removed, so future evidence uses controlled replay captures and live device
+  captures instead.
 
 ## 1) Scope
 
-- Problem statement: Live flying ownship motion can look less smooth than the
-  THN synthetic turn. The suspected cause is upstream live cadence/quality plus
-  live display gating/smoothing behavior, not the icon renderer itself.
-- Why now: THN provides a known-good visual reference for a smooth turning UX.
-  Live should get as close as possible without corrupting flight-data truth,
-  replay determinism, or battery/performance budgets.
+- Problem statement: Live flying ownship motion can look stepped when upstream
+  live cadence/quality plus live display gating/smoothing are not aligned with
+  the icon renderer's visual needs.
+- Why now: live turns should be visually continuous without corrupting
+  flight-data truth, replay determinism, or battery/performance budgets.
 - In scope:
-  - Measure THN vs live cadence, frame dispatch, pose updates, and gating.
+  - Measure live cadence, controlled replay cadence, frame dispatch, pose
+    updates, and gating.
   - Improve live GPS request cadence only inside the existing live sensor owners.
   - Add or tune live display-only resampling/prediction inside `feature:map-runtime`.
   - Tune live display frame gating/cadence with MapScreen SLO evidence.
@@ -27,12 +29,12 @@
 - Out of scope:
   - Writing smoothed/predicted display positions back to `FlightDataRepository`.
   - Adding task, glide, or navigation-derived fields to `CompleteFlightData`.
-  - Changing replay/THN behavior unless a regression test proves no determinism
-    loss.
+  - Changing generic replay behavior unless a regression test proves no
+    determinism loss.
   - Broad map overlay refactors unrelated to ownship motion.
   - Making a new external GNSS/fused-provider dependency in Phase 0.
-- User-visible impact: live ownship turns should look visually continuous,
-  closer to THN, while stale/poor live GPS remains honest and safely degraded.
+- User-visible impact: live ownship turns should look visually continuous while
+  stale/poor live GPS remains honest and safely degraded.
 - Rule class touched: Invariant for SSOT/timebase/replay boundaries; Default
   for cadence and display smoothing policy.
 
@@ -42,15 +44,15 @@
 |---|---|---|
 | `FlightDataRepository` is the fused-flight-data SSOT and source-gates active samples. | `feature/flight-runtime/src/main/java/com/trust3/xcpro/flightdata/FlightDataRepository.kt`; `docs/ARCHITECTURE/ARCHITECTURE.md` | Live smoothness must not create a second flight-data authority. |
 | Map position comes from `FlightDataRepository`; display smoothing is UI-only. | `docs/ARCHITECTURE/CONTRIBUTING.md`; `docs/ARCHITECTURE/PIPELINE.md` | Any interpolation belongs after the repository read path, not in the repository. |
-| THN launches replay in `REFERENCE` mode with `ReplayCadenceProfile.LIVE_100MS`. | `feature/map/src/main/java/com/trust3/xcpro/map/replay/SyntheticThermalReplayLauncher.kt`; `feature/igc/src/main/java/com/trust3/xcpro/replay/IgcReplayModels.kt` | THN gets deterministic 100 ms replay samples, which live GPS often does not. |
-| THN path is smooth geometry: circular thermal, deterministic wind/noise, and replay densification. | `feature/map/src/main/java/com/trust3/xcpro/map/replay/SyntheticThermalReplayLogBuilder.kt`; `feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySessionPrep.kt` | THN removes provider jitter and gives display code high-quality turn input. |
+| The former synthetic thermal map FAB reference path has been removed. | `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenReplayCoordinator.kt`; `feature/map/src/main/java/com/trust3/xcpro/map/components/MapActionButtons.kt` | Future live smoothness proof must not depend on deleted map actions or deleted synthetic replay builders. |
+| Controlled replay still uses replay cadence, replay timestamps, and replay densification. | `feature/igc/src/main/java/com/trust3/xcpro/replay/IgcReplayModels.kt`; `feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySessionPrep.kt` | Replay can still provide deterministic comparison evidence without a dedicated thermal FAB. |
 | Replay emission is cadence-driven by replay timestamps and `gpsStepMs`. | `feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySampleEmitter.kt`; `feature/map/src/main/java/com/trust3/xcpro/replay/IgcReplayControllerRuntimePlayback.kt` | Replay can sustain a clean 100 ms input cadence independent of Android GNSS delivery. |
-| Live GPS requests currently use slow 1000 ms and fast 200 ms intervals. | `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt` | Live cannot visually match THN unless actual provider delivery and display resampling are measured. |
+| Live GPS requests currently use slow 1000 ms and fast 200 ms intervals. | `feature/map/src/main/java/com/trust3/xcpro/vario/VarioServiceManager.kt` | Live smoothness cannot be judged unless actual provider delivery and display resampling are measured. |
 | Live fast GPS is selected only while `FlyingState.isFlying`; replay remains slow. | `feature/map/src/main/java/com/trust3/xcpro/vario/GpsCadencePolicy.kt` | Takeoff/flying-state latency can delay the live fast-cadence path. |
 | Android GPS interval is clamped to a 200 ms minimum in the current adapter. | `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt` | A 100 ms experiment must deliberately change the owner and prove platform support. |
 | Live `GPSData` carries monotonic provider time plus accuracy/bearing/speed quality. | `feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt`; `feature/flight-runtime/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngineLoops.kt` | Display smoothing must use monotonic time and quality gates, not wall time. |
 | MapScreen observes repository GPS and maps it to `MapLocationUiModel`. | `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelStateBuilders.kt`; `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModelMappers.kt` | ViewModel remains a mapper/orchestrator, not a smoothing owner. |
-| Replay display frames target about 60 Hz; live display frames target about 40 Hz. | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseRenderCadence.kt` | THN and live do not currently use identical render cadence. |
+| Replay display frames target about 60 Hz; live display frames target about 40 Hz. | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseRenderCadence.kt` | Controlled replay and live do not currently use identical render cadence. |
 | Replay display dispatch is always active; live display dispatch is activity-gated by a settle window. | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseFrameActivityGate.kt` | Live may stop rendering before sparse GPS updates become visually continuous. |
 | `DisplayPoseSmoother` is already the visual-only smoothing/dead-reckoning seam. | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | Future visual improvements should reuse or split this map-runtime owner. |
 | Map camera/overlay updates can be skipped by no-op and pixel/angle diff gates. | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseFrameDiffPolicy.kt`; `feature/map/src/main/java/com/trust3/xcpro/map/MapLocationFilter.kt` | Smooth input can still look stepped if downstream gates suppress too much. |
@@ -172,7 +174,7 @@ Dependency flow remains:
 
 | Contract / API | Owner | Consumers | Visibility | Why Needed | Compatibility / Removal Plan |
 |---|---|---|---|---|---|
-| Live ownship diagnostics snapshot | Diagnostics owner near map-runtime/sensor boundary | QA evidence scripts / debug tooling | Internal/debug where possible | Compare THN and live actual cadence/render behavior. | Remove or keep debug-only after SLO closure. |
+| Live ownship diagnostics snapshot | Diagnostics owner near map-runtime/sensor boundary | QA evidence scripts / debug tooling | Internal/debug where possible | Compare controlled replay and live actual cadence/render behavior. | Remove or keep debug-only after SLO closure. |
 | Live display pose resampler input/output | `feature:map-runtime` | `DisplayPosePipeline` / render coordinator | Internal module API preferred | Isolate visual-only live prediction from repository truth. | Feature flag rollback; no public API unless unavoidable. |
 | Provider high-rate request API, if added | Sensor adapter owner | `VarioServiceManager`/sensor registry | Existing sensor boundary | Only if current Android GPS request cannot meet evidence target. | ADR required if dependency or public boundary changes. |
 
@@ -217,7 +219,7 @@ no hidden mutable state and cannot become a service locator or silent fallback.
 | Live GPS callback intervals | Monotonic provider/capture time | Avoid wall-clock jumps in cadence metrics. |
 | Live display frame deltas | Monotonic frame time | Matches Compose frame loop and display clock. |
 | Live resampler prediction horizon | Monotonic live display clock | Prediction is display-only and must not compare wall time. |
-| Replay/THN sample intervals | Replay/IGC sample time | Replay determinism depends on replay time. |
+| Replay sample intervals | Replay/IGC sample time | Replay determinism depends on replay time. |
 | Artifact run timestamp | Wall | Metadata only, not used for runtime math. |
 
 Explicitly forbidden comparisons:
@@ -254,8 +256,8 @@ Explicitly forbidden comparisons:
 ### 2.5 Replay Determinism
 
 - Deterministic for same input: Yes, required.
-- Randomness used: No new runtime randomness allowed. Existing THN synthetic log
-  behavior remains unchanged unless separately tested.
+- Randomness used: No new runtime randomness allowed. The retired synthetic
+  thermal replay path is not an active runtime reference.
 - Replay/live divergence rules:
   - Replay keeps replay time, replay cadence, and existing replay display mode.
   - Live resampling, if added, applies only to live display pose.
@@ -266,7 +268,7 @@ Explicitly forbidden comparisons:
 
 | Condition | Category | Owner | User-Visible Behavior | Retry / Fallback Policy | Test Coverage |
 |---|---|---|---|---|---|
-| Live provider cannot deliver requested 100/200 ms cadence | Degraded | Sensor/cadence diagnostics owner | Motion may remain less THN-like, but no false confidence | Record actual cadence; keep current stable behavior | Device evidence plus unit tests for metrics buckets. |
+| Live provider cannot deliver requested 100/200 ms cadence | Degraded | Sensor/cadence diagnostics owner | Motion may remain stepped, but no false confidence | Record actual cadence; keep current stable behavior | Device evidence plus unit tests for metrics buckets. |
 | Poor speed/bearing/accuracy quality | Degraded | Display pose smoother/resampler | More damping or raw-fix anchoring; no aggressive prediction | Disable/shorten prediction until quality recovers | Fake-clock quality-gate tests. |
 | Long GPS gap while moving | Degraded | Display pose smoother/resampler | Reanchor or hold honestly; avoid wild extrapolation | Stop prediction past configured limit | Stale-gap tests. |
 | Source changes live/replay | Recoverable | Display pose pipeline/gate | Reset pose history, no jump from stale mode | Clear resampler and gate state | Source-switch tests. |
@@ -296,7 +298,7 @@ covered by tests.
 |---|---|---|---|
 | Smoothed display pose becomes flight-data truth | SSOT and UI/domain separation | Unit tests + review + `enforceRules` | Resampler/display-pose tests; architecture review. |
 | Wall/monotonic/replay time mixed | Timebase rules | Fake-clock tests + review | Display pose/resampler/gate tests. |
-| Replay behavior changes | Replay determinism | Repeat-run replay tests | THN/replay wiring tests and evidence. |
+| Replay behavior changes | Replay determinism | Repeat-run replay tests | Replay wiring tests and evidence. |
 | UI controls sensor cadence directly | Dependency direction | `enforceRules` + review | Cadence policy tests; code review. |
 | Hot-path logging or coordinate telemetry | Logging rules / privacy | `enforceRules` + review | Diagnostics tests and logging scan. |
 | Frame dispatch duplicates owners | MapScreen `MS-ENG-10` | SLO artifact | MapScreen package evidence. |
@@ -331,16 +333,13 @@ Android GPS provider
   -> camera and BlueLocationOverlay
 ```
 
-Before, THN:
+Historical synthetic thermal reference, now removed:
 
 ```text
-SyntheticThermalReplayLogBuilder
-  -> replay prep REFERENCE densification at LIVE_100MS
-  -> ReplaySampleEmitter
-  -> FlightDataRepository (REPLAY SSOT)
-  -> MapLocationFlightDataRuntimeBinder / LocationManager replay path
+map FAB action
+  -> retired synthetic replay builder/launcher
+  -> replay prep REFERENCE densification
   -> replay display pose and frame dispatch
-  -> camera and BlueLocationOverlay
 ```
 
 After, intended:
@@ -357,12 +356,11 @@ Live GPS provider
 No after-state writes display pose back into the repository, domain, or replay
 source.
 
-## 4) Why THN Looks Beautiful Today
+## 4) Why Controlled Replay Looks Smooth
 
-1. THN uses deterministic, smooth source geometry. The simulated turn is a
-   coherent circular path, so adjacent positions and headings agree.
-2. THN uses `ReplayCadenceProfile.LIVE_100MS`, so the replay path can feed
-   frequent GPS samples into the map.
+1. Controlled replay can use deterministic, smooth source geometry, so adjacent
+   positions and headings agree.
+2. Replay cadence can feed frequent GPS samples into the map.
 3. Replay reference mode densifies source points instead of waiting for a real
    Android GNSS provider.
 4. Replay display frames are not live-gated in the same way. The replay gate
@@ -377,7 +375,7 @@ source.
 
 ### Phase 0 - Evidence-Only Baseline
 
-- Goal: Prove the live/THN gap before changing runtime behavior.
+- Goal: Prove the live smoothness gap before changing runtime behavior.
 - Implemented diagnostic owners:
   - `feature/map/src/main/java/com/trust3/xcpro/sensors/LiveGpsCadenceDiagnostics.kt`
     owns aggregate phone-GPS cadence/quality evidence.
@@ -402,8 +400,8 @@ source.
   - Metric bucketing/redaction unit tests.
   - Artifact validation script coverage if new artifact fields are added.
 - Evidence to capture:
-  - THN run: replay sample interval, display frame interval, gate decisions,
-    diff-policy skips, overlay updates.
+  - Controlled replay run: replay sample interval, display frame interval, gate
+    decisions, diff-policy skips, overlay updates.
   - Live run: requested GPS cadence, actual callback interval, repository GPS
     update interval, display frame interval, gate decisions, diff-policy skips,
     overlay updates, accuracy/speed/bearing quality buckets.
@@ -415,8 +413,8 @@ source.
 
 ### Phase 1 - Live GPS Cadence Request Experiment
 
-- Goal: Determine whether live can get closer to THN through better actual GPS
-  cadence before visual prediction is tuned.
+- Goal: Determine whether live can become visually smoother through better
+  actual GPS cadence before visual prediction is tuned.
 - Files to change:
   - `VarioServiceManager.kt` and `GpsCadencePolicy.kt` only if policy changes.
   - `SensorRegistry.kt` or a focused provider adapter only if request API changes.
@@ -437,7 +435,7 @@ source.
 
 ### Phase 2 - Live Display-Only Resampler
 
-- Goal: Make sparse but good live fixes render closer to THN by using
+- Goal: Make sparse but good live fixes render more continuously by using
   visual-only interpolation/prediction after the repository read path.
 - Files to change:
   - New `LiveDisplayPoseResampler.kt` in `feature:map-runtime`, or a focused
@@ -456,7 +454,7 @@ source.
 - Exit criteria:
   - Unit tests show smoother turning between 200/500/1000 ms live fixes.
   - Tests show stale/poor-quality inputs degrade safely.
-  - Replay/THN repeat-run behavior is unchanged.
+  - Replay repeat-run behavior is unchanged.
 
 ### Phase 3 - Moving-Live Frame Gate and Diff Policy Tuning
 
@@ -481,13 +479,14 @@ source.
 
 ### Phase 4 - Device SLO Proof and Tuning
 
-- Goal: Prove the improvement on real devices, not only in unit tests or THN.
+- Goal: Prove the improvement on real devices, not only in unit tests or
+  controlled replay.
 - Files to change:
   - Tuning constants only in canonical owners.
   - QA scripts/artifact readers only if the evidence contract changed.
 - Evidence to run:
   - Live baseline vs post-change on agreed Tier A and Tier B physical devices.
-  - THN reference capture for comparison.
+  - Controlled replay capture for comparison.
   - MapScreen package evidence for impacted `MS-UX-*` and `MS-ENG-*` IDs.
   - Connected tests if lifecycle/provider behavior changed.
 - Exit criteria:
@@ -521,8 +520,8 @@ source.
     states.
   - Diff-policy thresholds if tuned.
 - Replay/regression tests:
-  - THN still launches with `ReplayCadenceProfile.LIVE_100MS`.
-  - THN/replay repeat runs are deterministic for the same input.
+  - Removed synthetic thermal map FAB actions stay absent.
+  - Replay repeat runs are deterministic for the same input.
   - Replay path does not use live resampler unless explicitly approved/tested.
 - UI/instrumentation tests:
   - Connected or device smoke test for live provider lifecycle if provider API
@@ -541,7 +540,7 @@ source.
 | Change Type | Required Proof | Planned Evidence |
 |---|---|---|
 | Business rule / math / policy | Unit tests + regression cases | Cadence policy and resampler tests. |
-| Time-base / replay / cadence | Fake clock + deterministic repeat-run tests | Display pose tests and THN repeat evidence. |
+| Time-base / replay / cadence | Fake clock + deterministic repeat-run tests | Display pose tests and replay repeat evidence. |
 | Persistence / settings / restore | Round-trip / restore / migration tests | Not planned unless a persisted setting is approved. |
 | Ownership move / bypass removal / API boundary | Boundary lock tests | Architecture review and targeted tests. |
 | UI interaction / lifecycle | UI or instrumentation coverage | Live provider lifecycle and MapScreen evidence if changed. |

@@ -61,7 +61,7 @@ Implementation sketch
 - Add a separate recent visual layer capped to 60 seconds / 600 points so
   zoomed-in live/Condor turns follow the smooth display pose without rewriting
   stored trail truth.
-- Apply this only to non-replay live mode; THN/replay behavior remains unchanged.
+- Apply this only to non-replay live mode; replay behavior remains unchanged.
 - Do not apply wind drift to display-pose geometry. This layer should paint the
   path the pilot sees under the blue triangle.
 

@@ -27,15 +27,9 @@ class TrailProcessor {
     )
     private val liveStore = TrailStore(minDeltaMillis = LIVE_MIN_DELTA_MS)
     private val replayStore = TrailStore(minDeltaMillis = 0L)
-    private val syntheticReplayStore = TrailStore(
-        maxSize = SYNTHETIC_REPLAY_MAX_SIZE,
-        minDeltaMillis = 0L,
-        noThinMillis = SYNTHETIC_REPLAY_NO_THIN_MS
-    )
 
     private var lastIsReplay: Boolean? = null
     private var lastLiveTimeBase: TrailTimeBase? = null
-    private var lastReplayRetentionMode: TrailReplayRetentionMode? = null
     private var lastRenderCircling: Boolean? = null
     private var lastRenderTurnSmoothing: Boolean? = null
     private var lastLiveBearingEstimateDeg: Double? = null
@@ -45,7 +39,6 @@ class TrailProcessor {
     fun resetAll() {
         liveStore.clear()
         replayStore.clear()
-        syntheticReplayStore.clear()
         replayInterpolator.reset()
         liveTurnInterpolator.reset()
         replayWindSmoother.reset()
@@ -53,7 +46,6 @@ class TrailProcessor {
         circlingResolver.reset()
         lastIsReplay = null
         lastLiveTimeBase = null
-        lastReplayRetentionMode = null
         lastRenderCircling = null
         lastRenderTurnSmoothing = null
         lastLiveBearingEstimateDeg = null
@@ -118,20 +110,10 @@ class TrailProcessor {
                 storeReset = true
             }
             lastLiveTimeBase = sampleTime.timeBase
-            lastReplayRetentionMode = null
         } else {
             lastLiveTimeBase = null
-            val replayRetentionChanged = lastReplayRetentionMode != null &&
-                lastReplayRetentionMode != input.replayRetentionMode
-            if (replayRetentionChanged) {
-                clearReplayState()
-                storeReset = true
-            }
-            lastReplayRetentionMode = input.replayRetentionMode
         }
         val store = when {
-            input.isReplay && input.replayRetentionMode == TrailReplayRetentionMode.SYNTHETIC_VALIDATION ->
-                syntheticReplayStore
             input.isReplay -> replayStore
             else -> liveStore
         }
@@ -266,7 +248,6 @@ class TrailProcessor {
         lastLiveBearingEstimateDeg = null
         circlingResolver.reset()
         lastLiveTimeBase = null
-        lastReplayRetentionMode = null
         lastRenderCircling = null
         lastRenderTurnSmoothing = null
         lastRenderableWind = null
@@ -274,7 +255,6 @@ class TrailProcessor {
 
     private fun clearReplayState() {
         replayStore.clear()
-        syntheticReplayStore.clear()
         replayInterpolator.reset()
         replayWindSmoother.reset()
     }
@@ -450,8 +430,6 @@ class TrailProcessor {
         private const val LIVE_CIRCLING_MIN_DELTA_MS = 500L
         private const val LIVE_WIND_SMOOTH_MS = 1_000L
         private const val REPLAY_WIND_SMOOTH_MS = 4_000L
-        private const val SYNTHETIC_REPLAY_MAX_SIZE = 8_192
-        private const val SYNTHETIC_REPLAY_NO_THIN_MS = 12 * 60_000L
         private const val LIVE_WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
         private const val REPLAY_WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
         private const val WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
