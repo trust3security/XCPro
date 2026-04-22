@@ -11,6 +11,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
 import org.mockito.Mockito.clearInvocations
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -19,9 +20,12 @@ import org.mockito.kotlin.verify
 class SnailTrailManagerTest {
 
     @Test
-    fun updateFromTrailUpdate_rendersWhenFullRenderIsRequiredWithoutNewSample() {
+    fun updateFromTrailUpdate_hidesRawTrailByDefaultWhenShowRawFlagDisabled() {
         val overlay = mock<SnailTrailOverlay>()
-        val manager = createManager(overlay)
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { showRawSnailTrail = false }
+        )
 
         manager.updateFromTrailUpdate(
             update = updateResult(
@@ -33,7 +37,8 @@ class SnailTrailManagerTest {
             currentZoom = 10f
         )
 
-        verify(overlay).render(
+        verify(overlay).clearRawTrail()
+        verify(overlay, never()).render(
             any(),
             eq(TrailSettings()),
             any(),
@@ -103,12 +108,45 @@ class SnailTrailManagerTest {
         )
 
         verify(overlay).renderTail(
-            any(),
+            anyOrNull(),
             eq(TrailSettings()),
             any(),
             eq(2_100L),
             eq(0.0),
             eq(0.0),
+            eq(false),
+            eq(10f),
+            eq(false),
+            eq(null)
+        )
+    }
+
+    @Test
+    fun updateFromTrailUpdate_rendersRawTrailWhenShowRawFlagEnabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            featureFlags = MapFeatureFlags().apply { showRawSnailTrail = true }
+        )
+
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = false,
+                requiresFullRender = true,
+                invalidationReason = TrailRenderInvalidationReason.CIRCLING_CHANGED
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f
+        )
+
+        verify(overlay).render(
+            any(),
+            eq(TrailSettings()),
+            any(),
+            eq(2_000L),
+            eq(0.0),
+            eq(0.0),
+            eq(false),
             eq(false),
             eq(10f),
             eq(false),

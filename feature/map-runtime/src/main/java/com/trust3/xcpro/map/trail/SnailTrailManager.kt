@@ -89,6 +89,9 @@ class SnailTrailManager(
             rawTimeBase = renderState.timeBase,
             isReplay = isReplay
         )
+        if (overlay != null && !featureFlags.showRawSnailTrail) {
+            overlay.clearRawTrail()
+        }
         if (overlay != null && (!featureFlags.useDisplayPoseSnailTrail || isReplay)) {
             displayTrailStore.clear()
             overlay.clearDisplayTrail()
@@ -105,7 +108,9 @@ class SnailTrailManager(
         )
 
         if (overlay != null && (update.requiresFullRender || settingsChanged || zoomChanged)) {
-            render(overlay)
+            if (featureFlags.showRawSnailTrail) {
+                render(overlay)
+            }
             renderDisplayTrail(overlay)
         }
     }
@@ -218,7 +223,9 @@ class SnailTrailManager(
 
     private fun renderLast() {
         val overlay = runtimeState.snailTrailOverlay ?: return
-        render(overlay)
+        if (featureFlags.showRawSnailTrail) {
+            render(overlay)
+        }
         renderDisplayTrail(overlay)
     }
 

@@ -114,6 +114,13 @@ class MapFeatureFlags @Inject constructor() {
     var useDisplayPoseSnailTrail: Boolean = BuildConfig.DEBUG
 
     /**
+     * Show legacy raw TrailStore-based snail trail geometry.
+     * UI-only visual layer; the display trail can remain enabled even when false.
+     */
+    @Volatile
+    var showRawSnailTrail: Boolean = false
+
+    /**
      * Debug log interval for SIM2 frame pose logs (ms). Set to 0 to log every frame.
      */
     @Volatile

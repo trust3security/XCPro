@@ -121,6 +121,16 @@ class SnailTrailOverlay(
         displayTrailRenderer.clear()
     }
 
+    fun clearRawTrail() {
+        val style = map.style ?: return
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.LINE_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.DOT_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+    }
+
     fun cleanup() {
         val style = map.style ?: return
         if (!isInitialized) return
