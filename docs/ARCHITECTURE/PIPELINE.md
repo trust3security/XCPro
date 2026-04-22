@@ -10,6 +10,12 @@
 - `MapScreenRootEffects` may launch that binder seam, but `MapComposeEffects` must not directly collect flight data or call `MapLocationRuntimePort.updateLocationFromReplayFrame(...)` for that path.
 - Trigger cadence is preserved: only flight-data emissions drive suppressed-GPS replay-location forwarding; gate and orientation changes are read lazily on each emission and must not independently trigger location updates.
 
+### Thermalling Automation Rule
+
+- `CirclingDetector.isCircling` remains the conservative shared circling signal for flight metrics, wind, trail, traffic, and other flight-data consumers.
+- Thermalling automation entry/exit timers are user-facing mode/zoom policy and are driven by `CompleteFlightData.isTurning` through `ThermallingModeRuntimeWiring`.
+- `Enter delay` and `Exit delay` are measured from continuous turning start/stop; they must not stack on top of `CirclingDetector`'s separate circling hysteresis.
+
 ### Live Source Selection Rule
 
 - Simulator owns Condor bridge/session state and Condor transport read models only.

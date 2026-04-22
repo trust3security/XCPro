@@ -13,11 +13,11 @@ class ThermallingModeCoordinatorTest {
     fun enterDelay_respected_and_actions_fire_once() {
         val clock = FakeClock(monoMs = 0L, wallMs = 0L)
         val coordinator = ThermallingModeCoordinator(clock)
-        val settings = enabledSettings(enterDelaySeconds = 2, exitDelaySeconds = 8)
+        val settings = enabledSettings(enterDelaySeconds = 5, exitDelaySeconds = 8)
 
         val first = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -27,10 +27,10 @@ class ThermallingModeCoordinatorTest {
         assertTrue(first.isEmpty())
         assertEquals(ThermallingModePhase.ENTER_PENDING, coordinator.state().phase)
 
-        clock.advanceMonoMs(1_500L)
+        clock.advanceMonoMs(4_500L)
         val second = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -43,7 +43,7 @@ class ThermallingModeCoordinatorTest {
         clock.advanceMonoMs(500L)
         val third = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -61,7 +61,7 @@ class ThermallingModeCoordinatorTest {
 
         val idempotent = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13.0f,
@@ -80,7 +80,7 @@ class ThermallingModeCoordinatorTest {
 
         coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -91,7 +91,7 @@ class ThermallingModeCoordinatorTest {
 
         val actions = coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -111,7 +111,7 @@ class ThermallingModeCoordinatorTest {
 
         val enter = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 11f,
@@ -129,7 +129,7 @@ class ThermallingModeCoordinatorTest {
 
         val startExit = coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13f,
@@ -142,7 +142,7 @@ class ThermallingModeCoordinatorTest {
         clock.advanceMonoMs(3_900L)
         val tooSoon = coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13f,
@@ -155,7 +155,7 @@ class ThermallingModeCoordinatorTest {
         clock.advanceMonoMs(100L)
         val restore = coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13f,
@@ -174,7 +174,7 @@ class ThermallingModeCoordinatorTest {
 
         val idempotent = coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 11f,
@@ -185,14 +185,14 @@ class ThermallingModeCoordinatorTest {
     }
 
     @Test
-    fun exitPending_resumeCircling_returnsToActive_withoutRestore() {
+    fun exitPending_resumeTurning_returnsToActive_withoutRestore() {
         val clock = FakeClock(monoMs = 0L, wallMs = 0L)
         val coordinator = ThermallingModeCoordinator(clock)
         val settings = enabledSettings(enterDelaySeconds = 0, exitDelaySeconds = 8)
 
         coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -201,7 +201,7 @@ class ThermallingModeCoordinatorTest {
         )
         coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13f,
@@ -212,7 +212,7 @@ class ThermallingModeCoordinatorTest {
 
         val resume = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13f,
@@ -237,7 +237,7 @@ class ThermallingModeCoordinatorTest {
 
         val actions = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 9f,
@@ -256,7 +256,7 @@ class ThermallingModeCoordinatorTest {
 
         coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = activeSettings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 12f,
@@ -268,7 +268,7 @@ class ThermallingModeCoordinatorTest {
         val disabled = activeSettings.copy(enabled = false)
         val resetActions = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = disabled,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13f,
@@ -297,7 +297,7 @@ class ThermallingModeCoordinatorTest {
 
         coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -309,7 +309,7 @@ class ThermallingModeCoordinatorTest {
 
         coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 14.7f,
@@ -318,7 +318,7 @@ class ThermallingModeCoordinatorTest {
         )
         val resume = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 14.7f,
@@ -341,7 +341,7 @@ class ThermallingModeCoordinatorTest {
 
         val enter = coordinator.update(
             input(
-                isCircling = true,
+                isTurning = true,
                 settings = settings,
                 currentMode = FlightMode.CRUISE,
                 currentZoom = 10f,
@@ -359,7 +359,7 @@ class ThermallingModeCoordinatorTest {
 
         val exit = coordinator.update(
             input(
-                isCircling = false,
+                isTurning = false,
                 settings = settings,
                 currentMode = FlightMode.THERMAL,
                 currentZoom = 13f,
@@ -377,13 +377,13 @@ class ThermallingModeCoordinatorTest {
     }
 
     private fun input(
-        isCircling: Boolean,
+        isTurning: Boolean,
         settings: ThermallingModeSettings,
         currentMode: FlightMode,
         currentZoom: Float,
         thermalModeVisible: Boolean
     ): ThermallingModeInput = ThermallingModeInput(
-        isCircling = isCircling,
+        isTurning = isTurning,
         settings = settings,
         thermalModeVisible = thermalModeVisible,
         currentMode = currentMode,

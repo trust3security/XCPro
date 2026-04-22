@@ -22,7 +22,7 @@ data class ThermallingModeState(
 )
 
 data class ThermallingModeInput(
-    val isCircling: Boolean,
+    val isTurning: Boolean,
     val settings: ThermallingModeSettings,
     val thermalModeVisible: Boolean,
     val currentMode: com.trust3.xcpro.common.flight.FlightMode,
