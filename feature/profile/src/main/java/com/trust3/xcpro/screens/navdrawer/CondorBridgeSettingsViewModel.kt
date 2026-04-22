@@ -45,6 +45,12 @@ class CondorBridgeSettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateTcpIpAddress(address: String?) {
+        viewModelScope.launch {
+            useCase.updateTcpIpAddress(address)
+        }
+    }
+
     fun selectBridge(address: String) {
         viewModelScope.launch {
             useCase.selectBridge(address)

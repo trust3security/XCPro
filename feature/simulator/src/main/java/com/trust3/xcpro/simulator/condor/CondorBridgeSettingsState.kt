@@ -15,6 +15,7 @@ data class CondorBridgeSettingsState(
     val bondedBridges: List<CondorBondedBridgeItem> = emptyList(),
     val selectedBridgeAvailable: Boolean = true,
     val tcpListenPort: Int = CondorTcpPortSpec.DEFAULT_PORT,
+    val tcpIpAddress: String? = null,
     val tcpLocalIpAddress: String? = null,
     val tcpFailureDetail: String? = null,
     val liveState: CondorLiveState = CondorLiveState(),

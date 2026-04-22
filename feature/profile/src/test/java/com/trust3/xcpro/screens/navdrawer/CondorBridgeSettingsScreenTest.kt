@@ -5,6 +5,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import com.trust3.xcpro.livesource.DesiredLiveMode
 import com.trust3.xcpro.simulator.CondorTransportKind
 import org.junit.Assert.assertEquals
@@ -60,11 +62,34 @@ class CondorBridgeSettingsScreenTest {
         assertEquals(DesiredLiveMode.CONDOR2_FULL, selectedMode)
     }
 
+    @Test
+    fun tcp_ip_field_accepts_short_octet_ipv4_address() {
+        var updatedIpAddress: String? = null
+        setContent(
+            CondorBridgeSettingsUiState(selectedTransport = CondorTransportKind.TCP_LISTENER),
+            onUpdateTcpIpAddress = { updatedIpAddress = it }
+        )
+
+        composeRule
+            .onNodeWithTag(CONDOR_BRIDGE_TAG_TCP_IP_ADDRESS)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performTextInput("192.168.1.2")
+
+        assertEquals("192.168.1.2", updatedIpAddress)
+    }
+
+    @Test
+    fun tcp_ip_validation_accepts_variable_length_octets() {
+        assertEquals(null, tcpIpAddressValidationError("192.168.1.2"))
+    }
+
     private fun setContent(
         uiState: CondorBridgeSettingsUiState,
         onRequestPermission: () -> Unit = {},
         onSelectTransport: (CondorTransportKind) -> Unit = {},
         onUpdateTcpListenPort: (Int) -> Unit = {},
+        onUpdateTcpIpAddress: (String?) -> Unit = {},
         onSelectBridge: (String) -> Unit = {},
         onSelectLiveMode: (DesiredLiveMode) -> Unit = {},
         onConnect: () -> Unit = {},
@@ -78,6 +103,7 @@ class CondorBridgeSettingsScreenTest {
                     onRequestPermission = onRequestPermission,
                     onSelectTransport = onSelectTransport,
                     onUpdateTcpListenPort = onUpdateTcpListenPort,
+                    onUpdateTcpIpAddress = onUpdateTcpIpAddress,
                     onSelectBridge = onSelectBridge,
                     onSelectLiveMode = onSelectLiveMode,
                     onConnect = onConnect,

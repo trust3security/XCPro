@@ -18,6 +18,10 @@ internal interface CondorTransportPreferencesStorage {
     fun readTcpListenPort(): Int
 
     fun writeTcpListenPort(value: Int)
+
+    fun readTcpIpAddress(): String?
+
+    fun writeTcpIpAddress(value: String?)
 }
 
 @Singleton
@@ -40,11 +44,15 @@ internal class CondorTransportPreferencesRepository private constructor(
         MutableStateFlow(storage.readSelectedTransport())
     private val mutableTcpListenPort =
         MutableStateFlow(storage.readTcpListenPort())
+    private val mutableTcpIpAddress =
+        MutableStateFlow(storage.readTcpIpAddress())
 
     val selectedTransport: StateFlow<CondorTransportKind> =
         mutableSelectedTransport.asStateFlow()
 
     val tcpListenPort: StateFlow<Int> = mutableTcpListenPort.asStateFlow()
+
+    val tcpIpAddress: StateFlow<String?> = mutableTcpIpAddress.asStateFlow()
 
     suspend fun setSelectedTransport(value: CondorTransportKind) {
         storage.writeSelectedTransport(value)
@@ -55,6 +63,12 @@ internal class CondorTransportPreferencesRepository private constructor(
         require(CondorTcpPortSpec.isValid(value)) { "TCP listen port out of range: $value" }
         storage.writeTcpListenPort(value)
         mutableTcpListenPort.value = value
+    }
+
+    suspend fun setTcpIpAddress(value: String?) {
+        val normalized = normalizeTcpIpAddress(value)
+        storage.writeTcpIpAddress(normalized)
+        mutableTcpIpAddress.value = normalized
     }
 
     private class SharedPreferencesCondorTransportPreferencesStorage(
@@ -84,11 +98,45 @@ internal class CondorTransportPreferencesRepository private constructor(
                 .putInt(KEY_TCP_LISTEN_PORT, value)
                 .apply()
         }
+
+        override fun readTcpIpAddress(): String? =
+            sharedPreferences.getString(KEY_TCP_IP_ADDRESS, null)
+                ?.trim()
+                ?.takeIf(::isValidTcpIpAddress)
+
+        override fun writeTcpIpAddress(value: String?) {
+            sharedPreferences.edit().apply {
+                if (value == null) {
+                    remove(KEY_TCP_IP_ADDRESS)
+                } else {
+                    putString(KEY_TCP_IP_ADDRESS, value)
+                }
+            }.apply()
+        }
     }
 
     private companion object {
         private const val PREFERENCES_NAME = "condor_bridge_settings"
         private const val KEY_SELECTED_TRANSPORT = "selected_transport"
         private const val KEY_TCP_LISTEN_PORT = "tcp_listen_port"
+        private const val KEY_TCP_IP_ADDRESS = "tcp_ip_address"
+    }
+}
+
+private fun normalizeTcpIpAddress(value: String?): String? {
+    val trimmed = value?.trim().orEmpty()
+    if (trimmed.isEmpty()) return null
+    require(isValidTcpIpAddress(trimmed)) { "TCP IP address must be a valid IPv4 address: $value" }
+    return trimmed
+}
+
+private fun isValidTcpIpAddress(value: String): Boolean {
+    val parts = value.split('.')
+    if (parts.size != 4) return false
+    return parts.all { part ->
+        part.isNotEmpty() &&
+            part.length <= 3 &&
+            part.all(Char::isDigit) &&
+            part.toIntOrNull()?.let { it in 0..255 } == true
     }
 }

@@ -11,6 +11,7 @@ internal const val CONDOR_BRIDGE_TAG_LIVE_MODE_PHONE = "condor_bridge_live_mode_
 internal const val CONDOR_BRIDGE_TAG_LIVE_MODE_CONDOR2 = "condor_bridge_live_mode_condor2"
 internal const val CONDOR_BRIDGE_TAG_TRANSPORT_BLUETOOTH = "condor_bridge_transport_bluetooth"
 internal const val CONDOR_BRIDGE_TAG_TRANSPORT_TCP = "condor_bridge_transport_tcp"
+internal const val CONDOR_BRIDGE_TAG_TCP_IP_ADDRESS = "condor_bridge_tcp_ip_address"
 internal const val CONDOR_BRIDGE_TAG_TCP_PORT = "condor_bridge_tcp_port"
 
 internal fun condorBridgeDeviceRowTag(address: String): String =
@@ -48,6 +49,7 @@ data class CondorBridgeSettingsUiState(
     val reconnectText: String? = null,
     val failureText: String? = null,
     val tcpListenPort: Int = 4_353,
+    val tcpIpAddress: String? = null,
     val tcpLocalIpAddress: String? = null,
     val connectEnabled: Boolean = false,
     val disconnectEnabled: Boolean = false,

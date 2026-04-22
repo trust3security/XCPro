@@ -30,7 +30,8 @@ private data class CondorBridgeUiBaseInputs(
 
 private data class CondorBridgeUiTransportInputs(
     val selectedTransport: CondorTransportKind,
-    val tcpListenPort: Int
+    val tcpListenPort: Int,
+    val tcpIpAddress: String?
 )
 
 private data class CondorBridgeUiLiveInputs(
@@ -73,11 +74,13 @@ internal class CondorBridgeController @Inject constructor(
     private val transportInputs =
         combine(
             transportPreferencesRepository.selectedTransport,
-            transportPreferencesRepository.tcpListenPort
-        ) { selectedTransport, tcpListenPort ->
+            transportPreferencesRepository.tcpListenPort,
+            transportPreferencesRepository.tcpIpAddress
+        ) { selectedTransport, tcpListenPort, tcpIpAddress ->
             CondorBridgeUiTransportInputs(
                 selectedTransport = selectedTransport,
-                tcpListenPort = tcpListenPort
+                tcpListenPort = tcpListenPort,
+                tcpIpAddress = tcpIpAddress
             )
         }
 
@@ -137,6 +140,13 @@ internal class CondorBridgeController @Inject constructor(
                 return
             }
             transportPreferencesRepository.setTcpListenPort(port)
+            refreshInputsLocked()
+        }
+    }
+
+    override suspend fun updateTcpIpAddress(address: String?) {
+        commandMutex.withLock {
+            transportPreferencesRepository.setTcpIpAddress(address)
             refreshInputsLocked()
         }
     }
@@ -303,6 +313,7 @@ internal class CondorBridgeController @Inject constructor(
             },
             selectedBridgeAvailable = selectedAvailable,
             tcpListenPort = transport.tcpListenPort,
+            tcpIpAddress = transport.tcpIpAddress,
             tcpLocalIpAddress = base.localIpAddress,
             tcpFailureDetail = live.tcpState.lastFailureDetail,
             liveState = live.liveState,

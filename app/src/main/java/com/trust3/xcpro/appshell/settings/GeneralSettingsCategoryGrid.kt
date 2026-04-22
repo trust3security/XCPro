@@ -149,7 +149,7 @@ internal fun GeneralSettingsCategoryGrid(
                             modifier = Modifier.weight(1f)
                         )
                         CategoryItem(
-                            title = "Condor Bridge",
+                            title = "Bridge",
                             icon = Icons.Default.Speed,
                             onClick = { onSubSheetSelected(GeneralSubSheet.CONDOR_BRIDGE) },
                             modifier = Modifier.weight(1f)

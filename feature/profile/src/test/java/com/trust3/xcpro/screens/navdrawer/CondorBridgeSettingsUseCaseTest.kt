@@ -132,6 +132,7 @@ class CondorBridgeSettingsUseCaseTest {
                 CondorBridgeSettingsState(
                     selectedTransport = CondorTransportKind.TCP_LISTENER,
                     tcpListenPort = 4_353,
+                    tcpIpAddress = "192.168.1.2",
                     tcpLocalIpAddress = "192.168.1.20",
                     liveState = CondorLiveState(
                         selectedTransport = CondorTransportKind.TCP_LISTENER,
@@ -154,10 +155,11 @@ class CondorBridgeSettingsUseCaseTest {
         val uiState = useCase.uiState.first()
 
         assertEquals(CondorTransportKind.TCP_LISTENER, uiState.selectedTransport)
-        assertEquals("192.168.1.20:4353", uiState.selectedEndpointLabel)
-        assertEquals("192.168.1.20:4353", uiState.activeEndpointLabel)
+        assertEquals("192.168.1.2:4353", uiState.selectedEndpointLabel)
+        assertEquals("192.168.1.2:4353", uiState.activeEndpointLabel)
         assertEquals("Listening for connection", uiState.statusText)
         assertEquals(4_353, uiState.tcpListenPort)
+        assertEquals("192.168.1.2", uiState.tcpIpAddress)
         assertEquals("192.168.1.20", uiState.tcpLocalIpAddress)
     }
 
@@ -189,6 +191,7 @@ class CondorBridgeSettingsUseCaseTest {
         useCase.refresh()
         useCase.selectTransport(CondorTransportKind.TCP_LISTENER)
         useCase.updateTcpListenPort(5_000)
+        useCase.updateTcpIpAddress("192.168.1.2")
         useCase.selectBridge(TEST_CONDOR_BRIDGE.stableId)
         useCase.setDesiredLiveMode(DesiredLiveMode.CONDOR2_FULL)
         useCase.connect()
@@ -198,6 +201,7 @@ class CondorBridgeSettingsUseCaseTest {
         verify(controlPort).refresh()
         verify(controlPort).selectTransport(CondorTransportKind.TCP_LISTENER)
         verify(controlPort).updateTcpListenPort(5_000)
+        verify(controlPort).updateTcpIpAddress("192.168.1.2")
         verify(controlPort).selectBridge(TEST_CONDOR_BRIDGE)
         verify(desiredLiveModeRepository).setDesiredLiveMode(DesiredLiveMode.CONDOR2_FULL)
         verify(controlPort).connect()

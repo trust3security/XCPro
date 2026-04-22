@@ -57,6 +57,7 @@ internal class FakeBluetoothTransport(
 internal class FakeCondorTransportPreferencesStorage : CondorTransportPreferencesStorage {
     var selectedTransport: CondorTransportKind = CondorTransportKind.BLUETOOTH
     var tcpListenPort: Int = CondorTcpPortSpec.DEFAULT_PORT
+    var tcpIpAddress: String? = null
 
     override fun readSelectedTransport(): CondorTransportKind = selectedTransport
 
@@ -68,6 +69,12 @@ internal class FakeCondorTransportPreferencesStorage : CondorTransportPreference
 
     override fun writeTcpListenPort(value: Int) {
         tcpListenPort = value
+    }
+
+    override fun readTcpIpAddress(): String? = tcpIpAddress
+
+    override fun writeTcpIpAddress(value: String?) {
+        tcpIpAddress = value
     }
 }
 

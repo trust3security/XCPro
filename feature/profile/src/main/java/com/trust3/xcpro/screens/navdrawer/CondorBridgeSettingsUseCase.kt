@@ -42,6 +42,10 @@ class CondorBridgeSettingsUseCase @Inject constructor(
         controlPort.updateTcpListenPort(port)
     }
 
+    suspend fun updateTcpIpAddress(address: String?) {
+        controlPort.updateTcpIpAddress(address)
+    }
+
     suspend fun selectBridge(address: String) {
         val bridge = controlPort.settingsState.value.bondedBridges.firstOrNull {
             it.bridge.stableId == address
@@ -70,6 +74,7 @@ class CondorBridgeSettingsUseCase @Inject constructor(
         desiredLiveMode: DesiredLiveMode
     ): CondorBridgeSettingsUiState {
         val selectedTransport = state.selectedTransport
+        val tcpEndpointIpAddress = state.tcpIpAddress ?: state.tcpLocalIpAddress
         return CondorBridgeSettingsUiState(
             desiredLiveMode = desiredLiveMode,
             selectedTransport = selectedTransport,
@@ -82,7 +87,7 @@ class CondorBridgeSettingsUseCase @Inject constructor(
                 )
 
                 CondorTransportKind.TCP_LISTENER -> formatTcpEndpointLabel(
-                    localIpAddress = state.tcpLocalIpAddress,
+                    ipAddress = tcpEndpointIpAddress,
                     listenPort = state.tcpListenPort
                 )
             },
@@ -105,7 +110,7 @@ class CondorBridgeSettingsUseCase @Inject constructor(
                         state.liveState.reconnect == CondorReconnectState.WAITING ||
                         state.liveState.reconnect == CondorReconnectState.ATTEMPTING ->
                         formatTcpEndpointLabel(
-                            localIpAddress = state.tcpLocalIpAddress,
+                            ipAddress = tcpEndpointIpAddress,
                             listenPort = state.tcpListenPort
                         )
 
@@ -117,6 +122,7 @@ class CondorBridgeSettingsUseCase @Inject constructor(
             reconnectText = state.toReconnectText(),
             failureText = state.toFailureText(),
             tcpListenPort = state.tcpListenPort,
+            tcpIpAddress = state.tcpIpAddress,
             tcpLocalIpAddress = state.tcpLocalIpAddress,
             connectEnabled = state.connectEnabled,
             disconnectEnabled = state.disconnectEnabled,
@@ -261,13 +267,13 @@ class CondorBridgeSettingsUseCase @Inject constructor(
     }
 
     private fun formatTcpEndpointLabel(
-        localIpAddress: String?,
+        ipAddress: String?,
         listenPort: Int
     ): String =
-        if (localIpAddress.isNullOrBlank()) {
+        if (ipAddress.isNullOrBlank()) {
             "Port $listenPort"
         } else {
-            "$localIpAddress:$listenPort"
+            "$ipAddress:$listenPort"
         }
 
     private fun formatAge(lastReceiveElapsedRealtimeMs: Long): String {

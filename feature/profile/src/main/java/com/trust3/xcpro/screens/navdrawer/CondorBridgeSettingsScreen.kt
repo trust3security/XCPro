@@ -4,17 +4,13 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,7 +19,6 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,10 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,7 +76,7 @@ fun CondorBridgeSettingsScreen(
     Scaffold(
         topBar = {
             SettingsTopAppBar(
-                title = "Condor Bridge",
+                title = "Bridge",
                 onNavigateUp = navigateUpAction,
                 onSecondaryNavigate = secondaryNavigateAction,
                 onNavigateToMap = navigateToMapAction
@@ -101,6 +94,7 @@ fun CondorBridgeSettingsScreen(
             },
             onSelectTransport = viewModel::selectTransport,
             onUpdateTcpListenPort = viewModel::updateTcpListenPort,
+            onUpdateTcpIpAddress = viewModel::updateTcpIpAddress,
             onSelectBridge = viewModel::selectBridge,
             onSelectLiveMode = viewModel::setDesiredLiveMode,
             onConnect = viewModel::connect,
@@ -119,6 +113,7 @@ internal fun CondorBridgeSettingsContent(
     onRequestPermission: () -> Unit,
     onSelectTransport: (CondorTransportKind) -> Unit,
     onUpdateTcpListenPort: (Int) -> Unit,
+    onUpdateTcpIpAddress: (String?) -> Unit,
     onSelectBridge: (String) -> Unit,
     onSelectLiveMode: (DesiredLiveMode) -> Unit,
     onConnect: () -> Unit,
@@ -129,15 +124,25 @@ internal fun CondorBridgeSettingsContent(
     var tcpPortText by rememberSaveable(uiState.selectedTransport, uiState.tcpListenPort) {
         mutableStateOf(uiState.tcpListenPort.toString())
     }
+    var tcpIpAddressText by rememberSaveable(uiState.selectedTransport, uiState.tcpIpAddress) {
+        mutableStateOf(uiState.tcpIpAddress.orEmpty())
+    }
     val tcpPortError =
         if (uiState.selectedTransport == CondorTransportKind.TCP_LISTENER) {
             tcpPortValidationError(tcpPortText)
         } else {
             null
         }
+    val tcpIpAddressError =
+        if (uiState.selectedTransport == CondorTransportKind.TCP_LISTENER) {
+            tcpIpAddressValidationError(tcpIpAddressText)
+        } else {
+            null
+        }
+    val tcpInputsValid = tcpPortError == null && tcpIpAddressError == null
     val connectEnabled =
         uiState.connectEnabled &&
-            (uiState.selectedTransport != CondorTransportKind.TCP_LISTENER || tcpPortError == null)
+            (uiState.selectedTransport != CondorTransportKind.TCP_LISTENER || tcpInputsValid)
 
     Column(
         modifier = modifier
@@ -329,57 +334,26 @@ internal fun CondorBridgeSettingsContent(
             }
 
             CondorTransportKind.TCP_LISTENER -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Wi-Fi / TCP listener",
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Text(
-                            text = "Configure the PC bridge to connect to this IP and port.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "Local IP: ${uiState.tcpLocalIpAddress ?: "Unavailable"}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        OutlinedTextField(
-                            value = tcpPortText,
-                            onValueChange = { input ->
-                                val filtered = input.filter(Char::isDigit).take(5)
-                                tcpPortText = filtered
-                                filtered.toIntOrNull()
-                                    ?.takeIf(::isValidTcpPort)
-                                    ?.let(onUpdateTcpListenPort)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag(CONDOR_BRIDGE_TAG_TCP_PORT),
-                            enabled = uiState.disconnectEnabled.not(),
-                            singleLine = true,
-                            label = {
-                                Text("Listen port")
-                            },
-                            isError = tcpPortError != null,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            supportingText = {
-                                if (tcpPortError != null) {
-                                    Text(tcpPortError)
-                                } else {
-                                    Text("Default XCSoar-compatible port: 4353")
-                                }
-                            }
-                        )
-                    }
-                }
+                CondorTcpListenerSettingsCard(
+                    localIpAddress = uiState.tcpLocalIpAddress,
+                    tcpIpAddressText = tcpIpAddressText,
+                    tcpIpAddressError = tcpIpAddressError,
+                    onTcpIpAddressTextChange = { filtered ->
+                        tcpIpAddressText = filtered
+                        if (tcpIpAddressValidationError(filtered) == null) {
+                            onUpdateTcpIpAddress(filtered.ifBlank { null })
+                        }
+                    },
+                    tcpPortText = tcpPortText,
+                    tcpPortError = tcpPortError,
+                    onTcpPortTextChange = { filtered ->
+                        tcpPortText = filtered
+                        filtered.toIntOrNull()
+                            ?.takeIf(::isValidTcpPort)
+                            ?.let(onUpdateTcpListenPort)
+                    },
+                    fieldsEnabled = uiState.disconnectEnabled.not()
+                )
             }
         }
 
@@ -400,6 +374,9 @@ internal fun CondorBridgeSettingsContent(
                     Button(
                         onClick = {
                             if (uiState.selectedTransport == CondorTransportKind.TCP_LISTENER) {
+                                if (tcpIpAddressValidationError(tcpIpAddressText) == null) {
+                                    onUpdateTcpIpAddress(tcpIpAddressText.ifBlank { null })
+                                }
                                 tcpPortText.toIntOrNull()
                                     ?.takeIf(::isValidTcpPort)
                                     ?.let(onUpdateTcpListenPort)

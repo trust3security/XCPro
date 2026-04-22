@@ -13,6 +13,8 @@ interface CondorBridgeControlPort {
 
     suspend fun updateTcpListenPort(port: Int)
 
+    suspend fun updateTcpIpAddress(address: String?)
+
     suspend fun selectBridge(bridge: CondorBridgeRef)
 
     suspend fun clearSelectedBridge()

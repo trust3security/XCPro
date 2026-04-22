@@ -98,6 +98,28 @@ class CondorBridgeControllerTest {
     }
 
     @Test
+    fun updating_tcp_ip_address_updates_settings_state() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val fixture = createFixture(dispatcher)
+        try {
+            fixture.controller.selectTransport(CondorTransportKind.TCP_LISTENER)
+            fixture.controller.updateTcpIpAddress("192.168.1.2")
+            runCurrent()
+
+            assertEquals("192.168.1.2", fixture.transportPreferencesRepository.tcpIpAddress.value)
+            assertEquals("192.168.1.2", fixture.controller.settingsState.value.tcpIpAddress)
+
+            fixture.controller.updateTcpIpAddress(null)
+            runCurrent()
+
+            assertEquals(null, fixture.transportPreferencesRepository.tcpIpAddress.value)
+            assertEquals(null, fixture.controller.settingsState.value.tcpIpAddress)
+        } finally {
+            fixture.shutdown()
+        }
+    }
+
+    @Test
     fun missing_saved_bridge_surfaces_blocked_state() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val fixture = createFixture(dispatcher)

@@ -97,6 +97,28 @@ class GeneralSettingsScreenPolicyTest {
     }
 
     @Test
+    fun settingsScreen_usesBridgeLabelForCondorSettingsTile() {
+        val navController: NavHostController = mock()
+        val drawerState: DrawerState = mock()
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SettingsScreen(
+                    navController = navController,
+                    drawerState = drawerState,
+                    onShowAirspaceOverlay = {}
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(GENERAL_SETTINGS_GRID_TAG)
+            .performScrollToNode(hasText("Bridge"))
+        composeTestRule.onNodeWithText("Bridge").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Condor Bridge").assertCountEquals(0)
+    }
+
+    @Test
     fun settingsScreen_orientationTile_opensLocalOrientationSubSheet() {
         val navController: NavHostController = mock()
         val drawerState: DrawerState = mock()
