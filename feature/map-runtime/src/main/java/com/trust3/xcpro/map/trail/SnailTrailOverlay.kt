@@ -42,10 +42,17 @@ class SnailTrailOverlay(
         renderSequenceProvider = { renderSequence }
     )
     private val displayTrailRenderer = SnailTrailDisplayTrailRenderer(map, mapView)
+    private val displayConnectorRenderer = SnailTrailDisplayConnectorRenderer(
+        map = map,
+        tailBuilder = tailBuilder,
+        metersPerPixelProvider = metersPerPixelProvider,
+        iconSizePx = com.trust3.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX.toFloat()
+    )
     private val paletteApplier = SnailTrailPaletteApplier(map)
     private val styleCacheResolver = SnailTrailStyleCacheResolver(context)
     private val layerLifecycle = SnailTrailLayerLifecycle(map)
     private var tailCache: SnailTrailStyleCache? = null
+    private var displayTrailCache: SnailTrailStyleCache? = null
 
     fun initialize() {
         if (isInitialized) return
@@ -67,12 +74,14 @@ class SnailTrailOverlay(
         val dotLayer = style.getLayerAs<CircleLayer>(SnailTrailStyle.DOT_LAYER_ID) ?: return
         val tailLayer = style.getLayerAs<LineLayer>(SnailTrailStyle.TAIL_LAYER_ID)
         val displayLineLayer = style.getLayerAs<LineLayer>(SnailTrailStyle.DISPLAY_LINE_LAYER_ID)
+        val displayConnectorLayer = style.getLayerAs<LineLayer>(SnailTrailStyle.DISPLAY_CONNECTOR_LAYER_ID)
         val displayDotLayer = style.getLayerAs<CircleLayer>(SnailTrailStyle.DISPLAY_DOT_LAYER_ID)
         val state = if (visible) "visible" else "none"
         lineLayer.setProperties(visibility(state))
         dotLayer.setProperties(visibility(state))
         tailLayer?.setProperties(visibility(state))
         displayLineLayer?.setProperties(visibility(state))
+        displayConnectorLayer?.setProperties(visibility(state))
         displayDotLayer?.setProperties(visibility(state))
     }
 
@@ -85,6 +94,8 @@ class SnailTrailOverlay(
         style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID)
             ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
         displayTrailRenderer.clear()
+        displayConnectorRenderer.clear()
+        displayTrailCache = null
     }
 
     fun clearRawTrail() {
@@ -113,6 +124,7 @@ class SnailTrailOverlay(
             isInitialized = false
             paletteApplier.reset()
             tailCache = null
+            displayTrailCache = null
         }
     }
 
@@ -279,16 +291,48 @@ class SnailTrailOverlay(
             setVisible(true)
         }
         paletteApplier.updateIfNeeded(settings.type)
+        displayTrailCache = tailCache ?: styleCacheResolver.resolve(settings, points)
         displayTrailRenderer.render(
             points = points,
             settings = settings,
-            styleCache = tailCache ?: styleCacheResolver.resolve(settings, points)
+            styleCache = displayTrailCache
         )
     }
 
     internal fun clearDisplayTrail() {
         if (!isInitialized) return
         displayTrailRenderer.clear()
+        displayConnectorRenderer.clear()
+        displayTrailCache = null
+    }
+
+    internal fun renderDisplayConnector(
+        lastPoint: RenderPoint?,
+        settings: TrailSettings,
+        currentLocation: LatLng?,
+        currentTimeMillis: Long,
+        currentZoom: Float
+    ) {
+        if (!isInitialized) return
+        if (settings.length != TrailLength.OFF) {
+            setVisible(true)
+        }
+        paletteApplier.updateIfNeeded(settings.type)
+        displayConnectorRenderer.render(
+            lastPoint = lastPoint,
+            settings = settings,
+            currentLocation = currentLocation,
+            currentTimeMillis = currentTimeMillis,
+            currentZoom = currentZoom,
+            styleCache = displayTrailCache ?: lastPoint?.let {
+                styleCacheResolver.resolve(settings, listOf(it))
+            }
+        )
+    }
+
+    internal fun clearDisplayConnector() {
+        if (!isInitialized) return
+        displayConnectorRenderer.clear()
     }
 
     fun renderTail(

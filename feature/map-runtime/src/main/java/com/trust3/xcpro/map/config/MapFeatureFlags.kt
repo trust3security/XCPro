@@ -107,8 +107,8 @@ class MapFeatureFlags @Inject constructor() {
     var useRenderFrameSync: Boolean = false
 
     /**
-     * Paint recent live/Condor snail trail body from display-pose frames.
-     * UI-only; raw TrailStore remains authoritative.
+     * Paint live/Condor/replay snail trail body from display-pose frames.
+     * UI-only; raw TrailStore remains authoritative but is not rendered by SnailTrailManager.
      */
     @Volatile
     var useDisplayPoseSnailTrail: Boolean = BuildConfig.DEBUG

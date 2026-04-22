@@ -18,8 +18,6 @@ class SnailTrailManager(
     private var lastContext: RenderContext? = null
     private var lastIsReplay: Boolean? = null
     private var lastPoints: List<TrailPoint> = emptyList()
-    private var lastRenderPoseTimeMs: Long? = null
-    private var lastRenderPoseLocation: LatLng? = null
     private var lastRawTailPoint: TrailPoint? = null
     private var lastRenderPoseFrameId: Long? = null
     private val displayTrailStore = SnailTrailDisplayStore()
@@ -93,7 +91,7 @@ class SnailTrailManager(
         if (overlay != null && !shouldRenderRawTrail()) {
             overlay.clearRawTrail()
         }
-        if (overlay != null && (!featureFlags.useDisplayPoseSnailTrail || isReplay)) {
+        if (overlay != null && !featureFlags.useDisplayPoseSnailTrail) {
             displayTrailStore.clear()
             overlay.clearDisplayTrail()
         }
@@ -114,6 +112,7 @@ class SnailTrailManager(
                 render(overlay)
             }
             renderDisplayTrail(overlay)
+            renderDisplayConnector(overlay)
         }
     }
 
@@ -134,33 +133,18 @@ class SnailTrailManager(
         if (time < context.currentTimeMillis) return
         if (frameId != null && lastRenderPoseFrameId == frameId) return
 
-        val prevLocation = lastRenderPoseLocation
-        val minStepMs = if (featureFlags.useRenderFrameSync) {
-            0L
-        } else {
-            DISPLAY_RENDER_MIN_STEP_MS
+        val isReplay = lastIsReplay == true || context.timeBase == TrailTimeBase.REPLAY_IGC
+        val minStepMs = when {
+            isReplay -> REPLAY_DISPLAY_MIN_STEP_MS
+            featureFlags.useRenderFrameSync -> 0L
+            else -> DISPLAY_RENDER_MIN_STEP_MS
         }
-        val minDistanceM = if (featureFlags.useRenderFrameSync) {
+        val minDistanceM = if (isReplay || featureFlags.useRenderFrameSync) {
             0.0
         } else {
             DISPLAY_RENDER_MIN_DISTANCE_M
         }
-        val movedEnough = if (prevLocation == null) {
-            true
-        } else {
-            TrailGeo.distanceMeters(
-                prevLocation.latitude,
-                prevLocation.longitude,
-                location.latitude,
-                location.longitude
-            ) >= minDistanceM
-        }
-        val prevTime = lastRenderPoseTimeMs ?: 0L
-        val dt = time - prevTime
-        if (dt < minStepMs && !movedEnough) return
 
-        lastRenderPoseTimeMs = time
-        lastRenderPoseLocation = location
         if (frameId != null) {
             lastRenderPoseFrameId = frameId
         }
@@ -169,7 +153,7 @@ class SnailTrailManager(
             currentTimeMillis = time
         )
 
-        if (featureFlags.useDisplayPoseSnailTrail && lastIsReplay != true) {
+        if (featureFlags.useDisplayPoseSnailTrail) {
             val accepted = displayTrailStore.appendDisplayPose(
                 location = TrailGeoPoint(location.latitude, location.longitude),
                 timestampMillis = time,
@@ -182,6 +166,7 @@ class SnailTrailManager(
             if (accepted) {
                 renderDisplayTrail(overlay)
             }
+            renderDisplayConnector(overlay)
         } else {
             displayTrailStore.clear()
             overlay.clearDisplayTrail()
@@ -221,8 +206,6 @@ class SnailTrailManager(
         lastIsReplay = null
         lastPoints = emptyList()
         lastContext = null
-        lastRenderPoseTimeMs = null
-        lastRenderPoseLocation = null
         lastRawTailPoint = null
         lastRenderPoseFrameId = null
         displayTrailStore.clear()
@@ -234,6 +217,7 @@ class SnailTrailManager(
             render(overlay)
         }
         renderDisplayTrail(overlay)
+        renderDisplayConnector(overlay)
     }
 
     private fun shouldRenderRawTrail(): Boolean {
@@ -295,17 +279,12 @@ class SnailTrailManager(
 
     private fun renderDisplayTrail(overlay: SnailTrailOverlay) {
         val context = lastContext ?: return
-        if (!featureFlags.useDisplayPoseSnailTrail || lastIsReplay == true) {
+        if (!featureFlags.useDisplayPoseSnailTrail) {
             displayTrailStore.clear()
             overlay.clearDisplayTrail()
             return
         }
         if (lastSettings.length == TrailLength.OFF) {
-            displayTrailStore.clear()
-            overlay.clearDisplayTrail()
-            return
-        }
-        if (context.timeBase == TrailTimeBase.REPLAY_IGC) {
             displayTrailStore.clear()
             overlay.clearDisplayTrail()
             return
@@ -319,6 +298,21 @@ class SnailTrailManager(
         overlay.renderDisplayTrail(
             points = displayTrailStore.snapshot(),
             settings = lastSettings
+        )
+    }
+
+    private fun renderDisplayConnector(overlay: SnailTrailOverlay) {
+        val context = lastContext ?: return
+        if (!featureFlags.useDisplayPoseSnailTrail || lastSettings.length == TrailLength.OFF) {
+            overlay.clearDisplayConnector()
+            return
+        }
+        overlay.renderDisplayConnector(
+            lastPoint = displayTrailStore.latestPoint(),
+            settings = lastSettings,
+            currentLocation = context.currentLocation,
+            currentTimeMillis = context.currentTimeMillis,
+            currentZoom = context.currentZoom
         )
     }
 
@@ -336,5 +330,6 @@ class SnailTrailManager(
     private companion object {
         private const val DISPLAY_RENDER_MIN_STEP_MS = 100L
         private const val DISPLAY_RENDER_MIN_DISTANCE_M = 0.5
+        private const val REPLAY_DISPLAY_MIN_STEP_MS = 180L
     }
 }

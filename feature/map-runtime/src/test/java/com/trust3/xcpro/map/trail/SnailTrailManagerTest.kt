@@ -341,7 +341,7 @@ class SnailTrailManagerTest {
     }
 
     @Test
-    fun updateDisplayPose_replaySkipsDisplayTrailWhenFlagEnabled() {
+    fun updateDisplayPose_replayRendersDisplayTrailWhenFlagEnabled() {
         val overlay = mock<SnailTrailOverlay>()
         val manager = createManager(
             overlay = overlay,
@@ -366,9 +366,9 @@ class SnailTrailManagerTest {
             frameId = 10L
         )
 
-        verify(overlay, never()).renderDisplayTrail(
+        verify(overlay).renderDisplayTrail(
             any(),
-            any()
+            eq(TrailSettings())
         )
     }
 

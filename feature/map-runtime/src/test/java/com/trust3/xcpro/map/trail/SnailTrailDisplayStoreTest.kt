@@ -73,18 +73,19 @@ class SnailTrailDisplayStoreTest {
     }
 
     @Test
-    fun updateRawState_replayClearsDisplayTrail() {
-        val store = anchoredStore()
-        assertTrue(append(store = store, timestampMillis = 2_000L, frameId = 1L))
+    fun updateRawState_replaySuppliesDisplayAnchor() {
+        val store = anchoredStore(rawTimeBase = TrailTimeBase.REPLAY_IGC, isReplay = true)
 
-        store.updateRawState(
-            rawPoints = listOf(rawPoint(timestampMillis = 3_000L)),
-            rawTimeBase = TrailTimeBase.REPLAY_IGC,
-            isReplay = true,
-            trailLength = TrailLength.LONG
+        assertTrue(
+            append(
+                store = store,
+                timestampMillis = 2_000L,
+                poseTimeBase = TrailTimeBase.REPLAY_IGC,
+                frameId = 1L
+            )
         )
 
-        assertEquals(0, store.snapshot().size)
+        assertEquals(1, store.snapshot().size)
     }
 
     @Test
@@ -104,8 +105,8 @@ class SnailTrailDisplayStoreTest {
         }
 
         val points = store.snapshot()
-        assertEquals(61, points.size)
-        assertEquals(5_000L, points.first().timestampMillis)
+        assertEquals(65, points.size)
+        assertEquals(1_000L, points.first().timestampMillis)
         assertEquals(65_000L, points.last().timestampMillis)
     }
 
@@ -130,8 +131,72 @@ class SnailTrailDisplayStoreTest {
 
         val points = store.snapshot()
         assertEquals(2, points.size)
-        assertEquals(3_000L, points.first().timestampMillis)
+        assertEquals(1_000L, points.first().timestampMillis)
         assertEquals(4_000L, points.last().timestampMillis)
+    }
+
+    @Test
+    fun appendDisplayPose_replayCadenceRejectsFramesUnderMinStep() {
+        val store = anchoredStore(rawTimeBase = TrailTimeBase.REPLAY_IGC, isReplay = true)
+
+        assertTrue(
+            append(
+                store = store,
+                timestampMillis = 1_000L,
+                poseTimeBase = TrailTimeBase.REPLAY_IGC,
+                frameId = 1L,
+                minStepMillis = 180L
+            )
+        )
+        assertFalse(
+            append(
+                store = store,
+                timestampMillis = 1_179L,
+                latitude = 46.0001,
+                poseTimeBase = TrailTimeBase.REPLAY_IGC,
+                frameId = 2L,
+                minStepMillis = 180L
+            )
+        )
+        assertTrue(
+            append(
+                store = store,
+                timestampMillis = 1_180L,
+                latitude = 46.0002,
+                poseTimeBase = TrailTimeBase.REPLAY_IGC,
+                frameId = 3L,
+                minStepMillis = 180L
+            )
+        )
+
+        assertEquals(2, store.snapshot().size)
+    }
+
+    @Test
+    fun fullThinningKeepsNewestProtectedPoints() {
+        val store = anchoredStore(
+            store = SnailTrailDisplayStore(maxAgeMillis = 0L, maxPoints = 6, optPoints = 5, noThinMillis = 3_000L),
+            timestampMillis = 1_000L
+        )
+
+        for (index in 0 until 10) {
+            assertTrue(
+                append(
+                    store = store,
+                    timestampMillis = 1_000L + index * 1_000L,
+                    latitude = 46.0 + index * 0.00001,
+                    trailLength = TrailLength.FULL,
+                    frameId = index.toLong()
+                )
+            )
+        }
+
+        val points = store.snapshot()
+        assertTrue(points.size <= 6)
+        assertEquals(10_000L, points.last().timestampMillis)
+        assertTrue(points.any { it.timestampMillis == 7_000L })
+        assertTrue(points.any { it.timestampMillis == 8_000L })
+        assertTrue(points.any { it.timestampMillis == 9_000L })
     }
 
     @Test
@@ -227,15 +292,17 @@ class SnailTrailDisplayStoreTest {
         timestampMillis: Long,
         latitude: Double = 46.0,
         trailLength: TrailLength = TrailLength.LONG,
-        frameId: Long
+        poseTimeBase: TrailTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+        frameId: Long,
+        minStepMillis: Long = 0L
     ): Boolean {
         return store.appendDisplayPose(
             location = TrailGeoPoint(latitude, 7.0),
             timestampMillis = timestampMillis,
-            poseTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            poseTimeBase = poseTimeBase,
             trailLength = trailLength,
             frameId = frameId,
-            minStepMillis = 0L,
+            minStepMillis = minStepMillis,
             minDistanceMeters = 0.0
         )
     }
@@ -244,7 +311,9 @@ class SnailTrailDisplayStoreTest {
         store: SnailTrailDisplayStore = SnailTrailDisplayStore(),
         timestampMillis: Long = 2_000L,
         altitudeMeters: Double = 1_000.0,
-        varioMs: Double = 0.5
+        varioMs: Double = 0.5,
+        rawTimeBase: TrailTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+        isReplay: Boolean = false
     ): SnailTrailDisplayStore {
         return store.apply {
             updateRawState(
@@ -255,8 +324,8 @@ class SnailTrailDisplayStoreTest {
                         varioMs = varioMs
                     )
                 ),
-                rawTimeBase = TrailTimeBase.LIVE_MONOTONIC,
-                isReplay = false,
+                rawTimeBase = rawTimeBase,
+                isReplay = isReplay,
                 trailLength = TrailLength.LONG
             )
         }

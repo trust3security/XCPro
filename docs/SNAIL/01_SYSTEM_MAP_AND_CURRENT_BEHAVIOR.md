@@ -78,6 +78,14 @@ Store behavior:
 - Capacity 1024 points, with thinning when full.
 - New point `driftFactor` is altitude-derived sigmoid.
 
+Visible display-pose trail note (2026-04-22):
+- The visible ownship trail is display-pose geometry when
+  `MapFeatureFlags.useDisplayPoseSnailTrail` is enabled.
+- Raw `TrailStore` remains source/raw state, but raw line/dot/tail drawing is
+  hidden by `SnailTrailManager`.
+- A transient display connector may render from the latest accepted display
+  point to the current aircraft pose; that connector point is not stored.
+
 Key files:
 - `feature/map/src/main/java/com/trust3/xcpro/map/trail/domain/TrailProcessor.kt`
 - `feature/map/src/main/java/com/trust3/xcpro/map/trail/TrailStore.kt`
@@ -125,4 +133,3 @@ Live trail rendering currently updates primarily on new stored samples.
 
 This is the baseline condition addressed by the implementation plan in:
 - `03_IMPLEMENTATION_PLAN_THERMAL_SMOOTHING_2026-02-27.md`
-
