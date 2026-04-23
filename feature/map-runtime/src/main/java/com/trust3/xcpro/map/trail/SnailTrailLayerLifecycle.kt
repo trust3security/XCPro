@@ -24,51 +24,30 @@ internal class SnailTrailLayerLifecycle(
         style.addSource(GeoJsonSource(SnailTrailStyle.LINE_SOURCE_ID))
         style.addSource(GeoJsonSource(SnailTrailStyle.DOT_SOURCE_ID))
         style.addSource(GeoJsonSource(SnailTrailStyle.TAIL_SOURCE_ID))
-        style.addSource(GeoJsonSource(SnailTrailStyle.DISPLAY_LINE_SOURCE_ID))
-        style.addSource(GeoJsonSource(SnailTrailStyle.DISPLAY_DOT_SOURCE_ID))
-        style.addSource(GeoJsonSource(SnailTrailStyle.DISPLAY_CONNECTOR_SOURCE_ID))
 
         val lineLayer = buildLineLayer(SnailTrailStyle.LINE_LAYER_ID, SnailTrailStyle.LINE_SOURCE_ID)
-        val displayLineLayer =
-            buildLineLayer(SnailTrailStyle.DISPLAY_LINE_LAYER_ID, SnailTrailStyle.DISPLAY_LINE_SOURCE_ID)
-        val displayConnectorLayer =
-            buildLineLayer(SnailTrailStyle.DISPLAY_CONNECTOR_LAYER_ID, SnailTrailStyle.DISPLAY_CONNECTOR_SOURCE_ID)
         val tailLayer = buildLineLayer(SnailTrailStyle.TAIL_LAYER_ID, SnailTrailStyle.TAIL_SOURCE_ID)
         val dotLayer = buildDotLayer(SnailTrailStyle.DOT_LAYER_ID, SnailTrailStyle.DOT_SOURCE_ID)
-        val displayDotLayer =
-            buildDotLayer(SnailTrailStyle.DISPLAY_DOT_LAYER_ID, SnailTrailStyle.DISPLAY_DOT_SOURCE_ID)
 
         if (style.getLayer(BlueLocationOverlay.LAYER_ID) != null) {
             style.addLayerBelow(lineLayer, BlueLocationOverlay.LAYER_ID)
-            style.addLayerAbove(displayLineLayer, SnailTrailStyle.LINE_LAYER_ID)
-            style.addLayerAbove(displayConnectorLayer, SnailTrailStyle.DISPLAY_LINE_LAYER_ID)
-            style.addLayerAbove(tailLayer, SnailTrailStyle.DISPLAY_CONNECTOR_LAYER_ID)
+            style.addLayerAbove(tailLayer, SnailTrailStyle.LINE_LAYER_ID)
             style.addLayerAbove(dotLayer, SnailTrailStyle.TAIL_LAYER_ID)
-            style.addLayerAbove(displayDotLayer, SnailTrailStyle.DOT_LAYER_ID)
         } else {
             style.addLayer(lineLayer)
-            style.addLayerAbove(displayLineLayer, SnailTrailStyle.LINE_LAYER_ID)
-            style.addLayerAbove(displayConnectorLayer, SnailTrailStyle.DISPLAY_LINE_LAYER_ID)
-            style.addLayerAbove(tailLayer, SnailTrailStyle.DISPLAY_CONNECTOR_LAYER_ID)
+            style.addLayerAbove(tailLayer, SnailTrailStyle.LINE_LAYER_ID)
             style.addLayerAbove(dotLayer, SnailTrailStyle.TAIL_LAYER_ID)
-            style.addLayerAbove(displayDotLayer, SnailTrailStyle.DOT_LAYER_ID)
         }
         return true
     }
 
     fun remove(): Boolean {
         val style = map.style ?: return false
-        style.removeLayer(SnailTrailStyle.DISPLAY_DOT_LAYER_ID)
         style.removeLayer(SnailTrailStyle.DOT_LAYER_ID)
         style.removeLayer(SnailTrailStyle.TAIL_LAYER_ID)
-        style.removeLayer(SnailTrailStyle.DISPLAY_CONNECTOR_LAYER_ID)
-        style.removeLayer(SnailTrailStyle.DISPLAY_LINE_LAYER_ID)
         style.removeLayer(SnailTrailStyle.LINE_LAYER_ID)
-        style.removeSource(SnailTrailStyle.DISPLAY_DOT_SOURCE_ID)
         style.removeSource(SnailTrailStyle.DOT_SOURCE_ID)
         style.removeSource(SnailTrailStyle.TAIL_SOURCE_ID)
-        style.removeSource(SnailTrailStyle.DISPLAY_CONNECTOR_SOURCE_ID)
-        style.removeSource(SnailTrailStyle.DISPLAY_LINE_SOURCE_ID)
         style.removeSource(SnailTrailStyle.LINE_SOURCE_ID)
         return true
     }

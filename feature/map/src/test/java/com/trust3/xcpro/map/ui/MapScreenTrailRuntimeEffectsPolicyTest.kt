@@ -14,23 +14,25 @@ import org.mockito.kotlin.verify
 class MapScreenTrailRuntimeEffectsPolicyTest {
 
     @Test
-    fun resolveTrailDisplayPoseSeed_liveModeClearsDisplayPoseSeed() {
+    fun resolveTrailDisplayPoseSeed_liveModeKeepsLiveDisplayPoseSeed() {
+        val location = LatLng(-35.3, 149.1)
         val seed = resolveTrailDisplayPoseSeed(
             isReplay = false,
             snapshot = DisplayPoseSnapshot(
-                location = LatLng(-35.3, 149.1),
+                location = location,
                 timestampMs = 1234L,
                 frameId = 1L,
                 timeBase = DisplayClock.TimeBase.MONOTONIC
             )
         )
 
-        assertNull(seed.displayLocation)
-        assertNull(seed.displayTimeMillis)
+        assertEquals(location, seed.displayLocation)
+        assertEquals(1234L, seed.displayTimeMillis)
+        assertEquals(TrailTimeBase.LIVE_MONOTONIC, seed.displayTimeBase)
     }
 
     @Test
-    fun resolveTrailDisplayPoseSeed_suppressedModeKeepsDisplayPoseSeed() {
+    fun resolveTrailDisplayPoseSeed_replayModeKeepsReplayDisplayPoseSeed() {
         val location = LatLng(-35.3, 149.1)
         val seed = resolveTrailDisplayPoseSeed(
             isReplay = true,
@@ -44,6 +46,41 @@ class MapScreenTrailRuntimeEffectsPolicyTest {
 
         assertEquals(location, seed.displayLocation)
         assertEquals(1234L, seed.displayTimeMillis)
+        assertEquals(TrailTimeBase.REPLAY_IGC, seed.displayTimeBase)
+    }
+
+    @Test
+    fun resolveTrailDisplayPoseSeed_liveModeRejectsReplaySeed() {
+        val seed = resolveTrailDisplayPoseSeed(
+            isReplay = false,
+            snapshot = DisplayPoseSnapshot(
+                location = LatLng(-35.3, 149.1),
+                timestampMs = 1234L,
+                frameId = 3L,
+                timeBase = DisplayClock.TimeBase.REPLAY
+            )
+        )
+
+        assertNull(seed.displayLocation)
+        assertNull(seed.displayTimeMillis)
+        assertNull(seed.displayTimeBase)
+    }
+
+    @Test
+    fun resolveTrailDisplayPoseSeed_replayModeRejectsLiveSeed() {
+        val seed = resolveTrailDisplayPoseSeed(
+            isReplay = true,
+            snapshot = DisplayPoseSnapshot(
+                location = LatLng(-35.3, 149.1),
+                timestampMs = 1234L,
+                frameId = 4L,
+                timeBase = DisplayClock.TimeBase.MONOTONIC
+            )
+        )
+
+        assertNull(seed.displayLocation)
+        assertNull(seed.displayTimeMillis)
+        assertNull(seed.displayTimeBase)
     }
 
     @Test

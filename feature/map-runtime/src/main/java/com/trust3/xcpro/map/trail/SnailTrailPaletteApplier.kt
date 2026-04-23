@@ -22,10 +22,7 @@ internal class SnailTrailPaletteApplier(
 
         lineLayer.setProperties(lineColor(palette))
         style.getLayerAs<LineLayer>(SnailTrailStyle.TAIL_LAYER_ID)?.setProperties(lineColor(palette))
-        style.getLayerAs<LineLayer>(SnailTrailStyle.DISPLAY_LINE_LAYER_ID)?.setProperties(lineColor(palette))
-        style.getLayerAs<LineLayer>(SnailTrailStyle.DISPLAY_CONNECTOR_LAYER_ID)?.setProperties(lineColor(palette))
         dotLayer.setProperties(circleColor(palette))
-        style.getLayerAs<CircleLayer>(SnailTrailStyle.DISPLAY_DOT_LAYER_ID)?.setProperties(circleColor(palette))
         currentType = type
     }
 

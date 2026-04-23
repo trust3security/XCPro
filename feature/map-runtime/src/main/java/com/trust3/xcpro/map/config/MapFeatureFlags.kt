@@ -107,21 +107,6 @@ class MapFeatureFlags @Inject constructor() {
     var useRenderFrameSync: Boolean = false
 
     /**
-     * Paint live/Condor/replay snail trail body from display-pose frames.
-     * UI-only; raw TrailStore remains authoritative but is not rendered by SnailTrailManager.
-     */
-    @Volatile
-    var useDisplayPoseSnailTrail: Boolean = BuildConfig.DEBUG
-
-    /**
-     * Show legacy raw TrailStore-based snail trail geometry.
-     * Currently ignored by SnailTrailManager so only display-pose geometry paints.
-     * UI-only visual layer; the display trail can remain enabled even when false.
-     */
-    @Volatile
-    var showRawSnailTrail: Boolean = false
-
-    /**
      * Debug log interval for SIM2 frame pose logs (ms). Set to 0 to log every frame.
      */
     @Volatile

@@ -7,6 +7,9 @@
 - Date: 2026-04-23
 - Issue/PR: TBD
 - Status: Complete
+- Later 2026-04-23 note: this test split was superseded by the
+  raw-body/display-tail ownership correction. `SnailTrailDisplayStoreTest.kt`
+  was removed with the duplicate display-pose trail-body store.
 
 ## 1) Scope
 
@@ -81,7 +84,7 @@ Dependency flow is unchanged.
 | Reference File | Why It Is Similar | Pattern To Reuse | Planned Deviation |
 |---|---|---|---|
 | `SnailTrailManagerDisplayPoseTest.kt` | Existing focused manager tests for display-pose trail/connector behavior | Keep display-pose policy tests together | None |
-| `SnailTrailDisplayStoreTest.kt` | Focused trail display-store tests are already separate from manager tests | Keep tests grouped by owner/behavior | None |
+| `SnailTrailDisplayStoreTest.kt` | Removed by the later raw-body/display-tail ownership correction | No current display-store test owner remains | Supersedes this row |
 
 ### 2.2B Boundary Moves
 

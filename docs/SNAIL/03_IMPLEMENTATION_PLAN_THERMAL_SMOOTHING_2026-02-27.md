@@ -6,8 +6,11 @@ Date
 Status
 - Updated 2026-04-22: live/Condor display-pose trail-body phase selected
   before any further raw sampling or provider changes.
-- Updated 2026-04-22: replay/SIM2 display-pose trail and transient display
-  connector slice added; raw TrailStore drawing remains hidden.
+- Updated 2026-04-22, superseded 2026-04-23: replay/SIM2 display-pose trail
+  and transient display connector slice added.
+- Updated 2026-04-23: display-pose trail-body ownership was rejected after
+  XCSoar comparison. Raw `TrailStore` drawing is restored as the visible trail
+  body; display pose only refreshes the transient tail connector.
 
 Owner
 - XCPro Team
@@ -53,63 +56,51 @@ Rollback safety
 
 Change
 - Allow live mode to refresh tail segment per display frame (or at small bounded cadence), similar to replay tail updates.
-- 2026-04-22 correction: tail-only refresh is not enough for the current
-  Condor/live problem. Add a recent display-only trail-body layer fed by the
-  same display-pose stream as the blue triangle.
+- 2026-04-23 correction: keep this phase tail-only. Do not add a recent
+  display-only trail body because that creates a second visual trail-history
+  owner.
 
 Implementation sketch
 - Extend `SnailTrailManager.updateDisplayPose()` to optionally support live display pose.
 - Keep raw `TrailStore` and full historical trail rendering authoritative.
-- Add a bounded visual layer so zoomed-in live/Condor/replay turns follow the
-  smooth display pose without rewriting stored trail truth.
-- Apply this display-pose trail to live, Condor, replay, and SIM2. Replay uses
-  replay timestamps only.
-- Do not apply wind drift to display-pose geometry. This layer should paint the
-  path the pilot sees under the blue triangle.
+- Refresh only the existing raw tail connector from the latest raw trail point
+  to the display pose.
+- Do not append display-pose frames into trail history.
 
 Likely files
-- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailDisplayStore.kt`
-- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailDisplayTrailRenderer.kt`
 - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
 - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailOverlay.kt`
 
 Acceptance criteria
 - Tail endpoint tracks icon smoothly between stored samples.
-- Recent live/Condor trail body visually follows display-pose motion instead of
-  waiting for accepted raw trail samples.
 - Raw trail history, replay, IGC, and navigation data remain unchanged.
 - CPU/memory overhead remains within acceptable map budget.
 
 Rollback safety
-- Guard with `MapFeatureFlags.useDisplayPoseSnailTrail`.
+- Revert `SnailTrailManager.updateDisplayPose()` tail refresh behavior.
 
 ## Phase 2A: Replay/SIM2 Display-Pose Trail And Connector
 
+Status
+- Superseded 2026-04-23. Do not implement as written.
+
 Change
-- Hide raw TrailStore drawing even in debug and use display-pose geometry as the
-  visible ownship trail for live, Condor, replay, and SIM2.
-- Keep the display trail bounded and thinned. For `FULL`, retain a simplified
-  whole-flight display trail instead of unlimited frame history.
-- Render a transient connector from the last accepted display trail point to the
-  current display pose every valid display frame. Clip it with the existing tail
-  clipping geometry so the trail appears to emerge from behind the aircraft icon.
+- Superseded. Do not hide raw `TrailStore` drawing.
+- Superseded. Do not store display-pose trail history.
+- Current replacement: render the raw trail body and refresh only the raw tail
+  connector from the latest raw trail point to display pose.
 
 Implementation sketch
-- `SnailTrailDisplayStore` owns display-pose history and retention only.
+- `SnailTrailDisplayStore` ownership was removed because display-pose history is
+  a duplicate trail body owner.
 - `SnailTrailManager` owns display-pose gating and orchestration only.
-- `SnailTrailOverlay` and focused renderers own MapLibre source/layer writes.
-- Use a separate display connector source/layer; do not reuse the raw tail
-  source.
-- Replay/SIM2 accepted-point cadence is `180 ms` replay time.
-- Display FULL cap is 1024 points, thinning toward 768, protecting the newest
-  120 seconds where possible.
+- `SnailTrailOverlay` writes only raw line/dot/tail MapLibre sources for ownship
+  trail rendering.
 
 Acceptance criteria
-- SIM2/replay display-pose trail paints.
-- 20 second replay circles get at least 100 stored display points; 30 second
-  circles get at least 160 while recent.
-- Six-hour `FULL` replay does not grow unbounded.
-- Connector is not stored permanently and raw line/dot/tail sources stay empty.
+- Raw trail body paints for live, replay, SIM2, and `FULL` length.
+- Display pose does not create stored trail points.
+- Connector updates remain transient through the raw tail source.
 
 ## Phase 3: Live Wind Smoothing For Drift
 
