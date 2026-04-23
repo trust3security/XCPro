@@ -19,6 +19,69 @@ import org.mockito.kotlin.verify
 class SnailTrailManagerDisplayPoseTest {
 
     @Test
+    fun updateDisplayPose_liveRendersDisplayTrailWhenFlagEnabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(overlay, TrailTimeBase.LIVE_MONOTONIC, isReplay = false)
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            frameId = 10L
+        )
+
+        verify(overlay).renderDisplayTrail(
+            any(),
+            eq(TrailSettings())
+        )
+    }
+
+    @Test
+    fun updateDisplayPose_replayRendersDisplayTrailWhenFlagEnabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(overlay, TrailTimeBase.REPLAY_IGC, isReplay = true)
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.REPLAY_IGC,
+            frameId = 10L
+        )
+
+        verify(overlay).renderDisplayTrail(
+            any(),
+            eq(TrailSettings())
+        )
+    }
+
+    @Test
+    fun updateDisplayPose_liveClearsDisplayTrailWhenFlagDisabled() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(
+            overlay = overlay,
+            timeBase = TrailTimeBase.LIVE_MONOTONIC,
+            isReplay = false,
+            useDisplayPoseSnailTrail = false
+        )
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = LatLng(46.0001, 7.0001),
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            frameId = 10L
+        )
+
+        verify(overlay).clearDisplayTrail()
+        verify(overlay, never()).renderDisplayTrail(
+            any(),
+            any()
+        )
+    }
+
+    @Test
     fun updateDisplayPose_liveRendersConnectorWhenPointIsNotAccepted() {
         val overlay = mock<SnailTrailOverlay>()
         val manager = createManager(overlay, TrailTimeBase.LIVE_MONOTONIC, isReplay = false)
@@ -78,7 +141,8 @@ class SnailTrailManagerDisplayPoseTest {
     private fun createManager(
         overlay: SnailTrailOverlay,
         timeBase: TrailTimeBase,
-        isReplay: Boolean
+        isReplay: Boolean,
+        useDisplayPoseSnailTrail: Boolean = true
     ): SnailTrailManager {
         val runtimeState = object : SnailTrailRuntimeState {
             override var mapView: MapView? = null
@@ -88,7 +152,9 @@ class SnailTrailManagerDisplayPoseTest {
         return SnailTrailManager(
             context = mock<Context>(),
             runtimeState = runtimeState,
-            featureFlags = MapFeatureFlags().apply { useDisplayPoseSnailTrail = true }
+            featureFlags = MapFeatureFlags().apply {
+                this.useDisplayPoseSnailTrail = useDisplayPoseSnailTrail
+            }
         ).also {
             it.updateFromTrailUpdate(updateResult(isReplay = isReplay, timeBase = timeBase), TrailSettings(), 10f)
         }
