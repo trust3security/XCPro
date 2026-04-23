@@ -18,10 +18,13 @@ class PolarCatalogAssetDataSourceTest {
         val models = PolarCatalogAssetDataSource(context).loadModels()
 
         assertEquals(
-            setOf("js1-18", "js1-21", "js3-15", "js3-18"),
+            setOf("blanik", "js1-18", "js1-21", "js3-15", "js3-18"),
             models.map { it.id }.toSet()
         )
         assertTrue(models.all { it.aircraftType == GliderAircraftTypes.SAILPLANE })
+        val blanik = models.first { it.id == "blanik" }
+        assertNotNull(blanik.points)
+        assertTrue(blanik.points!!.size >= 3)
         val js118 = models.first { it.id == "js1-18" }
         assertNotNull(js118.points)
         assertTrue(js118.points!!.size >= 3)

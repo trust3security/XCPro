@@ -2,6 +2,12 @@
   "schemaVersion": 1,
   "aircraft": [
     {
+      "id": "blanik",
+      "type": "SAILPLANE",
+      "name": "L-13 Blanik",
+      "path": "polars/sailplanes/blanik.json"
+    },
+    {
       "id": "js1-18",
       "type": "SAILPLANE",
       "name": "JS1-C 18m",
