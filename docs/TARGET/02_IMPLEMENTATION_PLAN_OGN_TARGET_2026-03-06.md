@@ -69,7 +69,7 @@ Must remain:
 
 Rules:
 - Compose emits intent only.
-- ViewModel uses use-cases only.
+- ViewModel uses stable domain-facing seams only (use cases or focused owner/port seams).
 - Repository remains owner of persisted target state.
 - Map runtime classes own MapLibre layers/sources only.
 

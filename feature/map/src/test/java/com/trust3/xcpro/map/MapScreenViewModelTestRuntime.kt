@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ApplicationProvider
 import com.example.dfcards.CardPreferences
+import com.example.dfcards.dfcards.FlightCardSessionBinder
 import com.example.dfcards.FlightModeSelection
 import com.trust3.xcpro.core.flight.calculations.ConfidenceLevel
 import com.trust3.xcpro.MapOrientationManagerFactory
@@ -153,6 +154,7 @@ abstract class MapScreenViewModelTestBase {
         override fun nowWallMs(): Long = testClock.nowWallMs()
     }
     protected val cardPreferences = CardPreferences(context, testClock)
+    protected val flightCardSessionBinder = FlightCardSessionBinder(cardPreferences)
     protected val flightDataManagerFactory = FlightDataManagerFactory()
     protected val configurationRepository = ConfigurationRepository(context)
     protected val mapStyleRepository = MapStyleRepository(configurationRepository)
@@ -359,7 +361,8 @@ abstract class MapScreenViewModelTestBase {
                 distanceProjector = TaskPerformanceDistanceProjector()
             ),
             controller = replayController,
-            racingReplayLogBuilder = RacingReplayLogBuilder()
+            racingReplayLogBuilder = RacingReplayLogBuilder(),
+            replayFeatureFlags = mapFeatureFlags
         )
         val mapTasksUseCase = MapTasksUseCase(localTaskManager)
         mapFeatureFlags.loadSavedTasksOnInit = false
@@ -480,8 +483,8 @@ abstract class MapScreenViewModelTestBase {
             mapReplayUseCase = mapReplayUseCase,
             mapTasksUseCase = mapTasksUseCase,
             taskFlightSurfaceUseCase = taskFlightSurfaceUseCase,
-            featureFlags = mapFeatureFlags,
-            cardPreferences = cardPreferences,
+            screenFeatureFlags = mapFeatureFlags,
+            flightCardSessionBinder = flightCardSessionBinder,
             calibrateQnhUseCase = calibrateQnhUseCase,
             levoVarioPreferencesRepository = levoVarioPreferencesRepository,
             hawkVarioUseCase = hawkVarioUseCase,

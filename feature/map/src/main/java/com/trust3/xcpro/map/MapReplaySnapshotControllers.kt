@@ -1,6 +1,6 @@
 package com.trust3.xcpro.map
 
-import com.trust3.xcpro.map.config.MapFeatureFlags
+import com.trust3.xcpro.map.config.MapReplayFeatureFlagPort
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.replay.ReplayCadenceProfile
 import com.trust3.xcpro.replay.ReplayInterpolation
@@ -88,7 +88,7 @@ internal class DemoReplaySnapshotController(
     private val mapStateStore: MapStateStore,
     private val mapStateActions: MapStateActions,
     private val igcReplayController: IgcReplayController,
-    private val featureFlags: MapFeatureFlags,
+    private val featureFlags: MapReplayFeatureFlagPort,
     private val replaySessionState: StateFlow<SessionState>
 ) {
     private var replayUiSnapshot: ReplayUiSnapshot? = null

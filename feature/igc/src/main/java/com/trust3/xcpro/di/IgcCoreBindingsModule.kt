@@ -16,8 +16,6 @@ import com.trust3.xcpro.igc.domain.IgcLintValidator
 import com.trust3.xcpro.igc.domain.StrictIgcLintValidator
 import com.trust3.xcpro.igc.data.SharedPrefsIgcRecoveryMetadataStore
 import com.trust3.xcpro.igc.data.SharedPrefsIgcSessionStateSnapshotStore
-import com.trust3.xcpro.igc.usecase.IgcReplayLauncher
-import com.trust3.xcpro.igc.usecase.IgcReplayUseCaseLauncher
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -74,10 +72,4 @@ abstract class IgcCoreBindingsModule {
     abstract fun bindIgcFlightLogRepository(
         impl: MediaStoreIgcFlightLogRepository
     ): IgcFlightLogRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindIgcReplayLauncher(
-        impl: IgcReplayUseCaseLauncher
-    ): IgcReplayLauncher
 }

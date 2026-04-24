@@ -9,9 +9,9 @@ import com.trust3.xcpro.igc.data.IgcExportDiagnosticSource
 import com.trust3.xcpro.igc.data.IgcLogEntry
 import com.trust3.xcpro.igc.usecase.IgcFilesSort
 import com.trust3.xcpro.igc.usecase.IgcFilesUseCase
-import com.trust3.xcpro.igc.usecase.IgcReplayLauncher
 import com.trust3.xcpro.igc.usecase.IgcShareMode
 import com.trust3.xcpro.igc.usecase.IgcShareRequest
+import com.trust3.xcpro.replay.IgcReplayUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,7 +45,7 @@ sealed interface IgcFilesEvent {
 @HiltViewModel
 class IgcFilesViewModel @Inject constructor(
     private val useCase: IgcFilesUseCase,
-    private val replayLauncher: IgcReplayLauncher
+    private val replayUseCase: IgcReplayUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(IgcFilesUiState())
@@ -143,8 +143,8 @@ class IgcFilesViewModel @Inject constructor(
         useCase.clearLatestDiagnostic()
         viewModelScope.launch {
             runCatching {
-                replayLauncher.loadDocument(entry.document)
-                replayLauncher.play()
+                replayUseCase.loadDocument(entry.document)
+                replayUseCase.play()
             }.onSuccess {
                 useCase.clearLatestDiagnostic()
                 _events.emit(IgcFilesEvent.NavigateBackToMap)

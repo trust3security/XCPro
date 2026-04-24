@@ -84,6 +84,7 @@ Use this checklist for any task/map refactor before opening a PR.
 
 - [ ] UI emits intents to ViewModel only; no direct `TaskManagerCoordinator` mutations from Composables.
 - [ ] UI reads ViewModel state only; no direct manager internals in Composables (`currentTask`, `currentLeg`, `currentAATTask`).
+- [ ] ViewModels depend only on stable domain-facing seams: use cases or focused owner/port seams. No low-level infra/data types, broad bags, or wrapper-only forwarding seams.
 - [ ] ViewModels contain no business geospatial policy (distance/radius/zone-entry/auto-advance math).
 - [ ] Non-UI managers/domain classes do not use Compose runtime state (`mutableStateOf`, `derivedStateOf`, `remember`).
 - [ ] Core collaborators are injected; no manager/persistence construction inside coordinators.

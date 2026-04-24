@@ -17,8 +17,7 @@ class CardIngestionCoordinator(
     private val cardFlightDataFlow: StateFlow<RealTimeFlightData?>,
     private val consumeBufferedCardSample: () -> RealTimeFlightData?,
     private val unitsPreferencesFlow: StateFlow<UnitsPreferences>,
-    private val initializeCardPreferences: (FlightDataViewModel) -> Unit,
-    private val startIndependentClock: (FlightDataViewModel) -> Unit,
+    private val bindFlightCardSession: (FlightDataViewModel) -> Unit,
     private val onProfileModeVisibilitiesChanged:
         (String?, Map<String, Map<FlightModeSelection, Boolean>>) -> Unit = { _, _ -> }
 ) {
@@ -36,8 +35,7 @@ class CardIngestionCoordinator(
         boundViewModel = flightViewModel
         cancelJobs()
 
-        initializeCardPreferences(flightViewModel)
-        startIndependentClock(flightViewModel)
+        bindFlightCardSession(flightViewModel)
 
         cardsReady = cardHydrationReady.value
 

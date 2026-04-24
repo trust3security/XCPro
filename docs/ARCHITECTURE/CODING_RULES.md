@@ -42,9 +42,11 @@ The following checks must fail the build when violated:
   - `*Services`
   - `*ManagerBag`
   - `*Deps`
+  - `MapFeatureFlags`
+  - `CardPreferences`
   - `TaskManagerCoordinator`
   - This is class-based, not file-name-based; it still covers `TaskManagerCoordinatorHostViewModel` even though it lives in `TaskManagerCompat.kt`.
-  - This guardrail does not encode a use-cases-only rule and does not ban types by `Repository` or `UseCase` naming alone.
+  - This guardrail does not encode a use-cases-only rule and does not ban types by `Repository`, `UseCase`, `Owner`, `Port`, or `Controller` naming alone.
 - Compose lifecycle: use collectAsStateWithLifecycle for UI state collection.
 - Task UDF boundaries: no direct TaskManagerCoordinator mutation/query calls from Composables.
 - Task sync-read seam: cross-feature production task reads must use `TaskManagerCoordinator.taskSnapshotFlow` or `TaskManagerCoordinator.currentSnapshot()`; direct `currentTask`/`currentLeg`/`currentRacingTask`/`currentAATTask` reads outside `feature:tasks` are forbidden.
@@ -401,6 +403,9 @@ Allowed:
 - Intent handling
 - Combining flows
 - Mapping domain -> UI models
+- Depending on stable domain-facing seams: use cases plus focused owner/port
+  seams for authoritative reads, narrow flows, and simple authoritative
+  commands
 
 Forbidden:
 - File I/O
@@ -408,6 +413,8 @@ Forbidden:
 - Long-running loops
 - Platform APIs
 - Business math
+- Low-level infra/data-source dependencies
+- Thin rename-only forwarding wrappers added only to satisfy naming guidance
 - Exposing raw managers/controllers as public ViewModel handles
 - Exposing broad dependency bundles that let UI/routes recover raw managers/controllers or bypass narrow screen seams
 - Constructing domain/service collaborators directly when DI/factory is available

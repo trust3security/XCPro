@@ -144,7 +144,7 @@ Proposed packages (aligned to the current module split):
   - `IgcRecordingRuntimeActionSink`
 - `feature/igc/src/main/java/com/trust3/xcpro/igc/usecase/`
   - `IgcFilesUseCase`
-  - `IgcReplayLauncher`
+  - `IgcReplayUseCase`
 - `feature/igc/src/main/java/com/trust3/xcpro/igc/ui/`
   - `IgcFilesViewModel`
   - `IgcFilesUiContract`

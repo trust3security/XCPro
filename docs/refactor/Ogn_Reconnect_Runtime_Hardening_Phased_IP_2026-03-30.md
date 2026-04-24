@@ -263,7 +263,7 @@ Required checks:
 - [x] MVVM + UDF + SSOT respected (no state duplication)
 - [x] UI does not import `data` layer
 - [x] Domain/use-cases do not import Android/UI types
-- [x] ViewModels depend on use-cases only (no platform APIs, no persistence)
+- [x] ViewModels depend only on stable domain-facing seams (no platform APIs, no low-level persistence or infra types)
 - [x] No raw manager/controller escape hatches exposed through use-cases or ViewModels
 - [x] No Compose runtime state primitives used in non-UI managers/domain
 - [x] No MapLibre types in domain/task managers

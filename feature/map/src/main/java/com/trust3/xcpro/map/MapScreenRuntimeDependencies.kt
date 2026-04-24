@@ -3,7 +3,6 @@ package com.trust3.xcpro.map
 import com.trust3.xcpro.MapOrientationManager
 import com.trust3.xcpro.airspace.AirspaceUseCase
 import com.trust3.xcpro.flightdata.WaypointFilesUseCase
-import com.trust3.xcpro.map.config.MapFeatureFlags
 
 /**
  * Runtime-only collaborators needed by map UI orchestration.
@@ -16,6 +15,5 @@ internal data class MapScreenRuntimeDependencies(
     val phoneHealthUseCase: MapPhoneHealthUseCase,
     val tasksUseCase: MapTasksUseCase,
     val airspaceUseCase: AirspaceUseCase,
-    val waypointFilesUseCase: WaypointFilesUseCase,
-    val featureFlags: MapFeatureFlags
+    val waypointFilesUseCase: WaypointFilesUseCase
 )

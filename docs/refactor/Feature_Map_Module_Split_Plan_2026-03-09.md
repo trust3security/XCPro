@@ -199,7 +199,7 @@ These seams must be explicit before package moves. Existing contracts are reused
 
 | Contract | Current Concrete Types | Target Owner | Phase | Reason |
 |---|---|---|---|---|
-| `IgcReplayLauncher` | `IgcReplayUseCaseLauncher` | `feature:igc` | Phase 1 | already exists; map shell should launch replay without replay-controller knowledge |
+| `IgcReplayUseCase` | `IgcReplayUseCase` | `feature:igc` | Phase 1 | map shell should launch replay through the use-case seam without replay-controller knowledge |
 | `IgcDownloadsRepository` | `MediaStoreIgcDownloadsRepository` | `feature:igc` | Phase 1 | keeps IGC file list ownership in the extracted module |
 | `IgcTaskDeclarationSource` | `TaskRepositoryIgcTaskDeclarationSource` | interface stays with `feature:igc`; implementation moves to `feature:tasks` later | Phase 1 then Phase 4 | removes direct `TaskRepository` reach-across |
 | `ReplayAirspeedPort` | currently `ReplayAirspeedRepository` | `core:wind-contract` if needed | Phase 1 | removes direct replay dependency on `weather.wind.data` if replay runtime moves later |

@@ -5,7 +5,7 @@ import com.trust3.xcpro.map.DemoReplaySnapshotController
 import com.trust3.xcpro.map.DisplayPoseMode
 import com.trust3.xcpro.map.MapStateActions
 import com.trust3.xcpro.map.MapUiEffect
-import com.trust3.xcpro.map.config.MapFeatureFlags
+import com.trust3.xcpro.map.config.MapReplayFeatureFlagPort
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.replay.ReplayCadenceProfile
 import com.trust3.xcpro.replay.ReplayInterpolation
@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 internal class DemoReplayLauncher(
     private val demoReplaySnapshots: DemoReplaySnapshotController,
     private val igcReplayController: IgcReplayController,
-    private val featureFlags: MapFeatureFlags,
+    private val featureFlags: MapReplayFeatureFlagPort,
     private val mapStateActions: MapStateActions,
     private val uiEffects: MutableSharedFlow<MapUiEffect>
 ) {

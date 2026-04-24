@@ -1,7 +1,7 @@
 package com.trust3.xcpro.map
 
 import com.trust3.xcpro.core.common.logging.AppLogger
-import com.trust3.xcpro.map.config.MapFeatureFlags
+import com.trust3.xcpro.map.config.MapReplayFeatureFlagPort
 import com.trust3.xcpro.map.replay.DemoReplayLauncher
 import com.trust3.xcpro.map.replay.RacingReplayLogBuilder
 import com.trust3.xcpro.replay.IgcReplayController
@@ -29,7 +29,7 @@ internal class MapScreenReplayCoordinator(
     private val flightDataFlow: StateFlow<CompleteFlightData?>,
     private val igcReplayController: IgcReplayController,
     private val racingReplayLogBuilder: RacingReplayLogBuilder,
-    private val featureFlags: MapFeatureFlags,
+    private val featureFlags: MapReplayFeatureFlagPort,
     private val mapStateStore: MapStateStore,
     private val mapStateActions: MapStateActions,
     private val uiEffects: MutableSharedFlow<MapUiEffect>,

@@ -45,7 +45,6 @@ internal fun createFlightDataUiAdapterForViewModel(
 internal fun createReplayCoordinatorForViewModel(
     mapReplayUseCase: MapReplayUseCase,
     flightDataFlow: StateFlow<CompleteFlightData?>,
-    featureFlags: com.trust3.xcpro.map.config.MapFeatureFlags,
     mapStateStore: MapStateStore,
     mapStateActions: MapStateActions,
     uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -53,7 +52,6 @@ internal fun createReplayCoordinatorForViewModel(
     scope: CoroutineScope
 ): MapScreenReplayCoordinator = mapReplayUseCase.createReplayCoordinator(
     flightDataFlow = flightDataFlow,
-    featureFlags = featureFlags,
     mapStateStore = mapStateStore,
     mapStateActions = mapStateActions,
     uiEffects = uiEffects,

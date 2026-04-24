@@ -9,9 +9,13 @@ import com.trust3.xcpro.igc.ui.IgcFilesEvent
 import com.trust3.xcpro.igc.ui.IgcFilesViewModel
 import com.trust3.xcpro.igc.data.NoOpIgcExportDiagnosticsRepository
 import com.trust3.xcpro.igc.usecase.IgcFilesUseCase
-import com.trust3.xcpro.igc.usecase.IgcReplayLauncher
+import com.trust3.xcpro.replay.IgcReplayControllerPort
+import com.trust3.xcpro.replay.IgcReplayUseCase
+import com.trust3.xcpro.replay.ReplayEvent
+import com.trust3.xcpro.replay.SessionState
 import java.time.LocalDate
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,10 +31,10 @@ class IgcFilesReplayOpenInstrumentedTest {
 
     @Test
     fun replayOpen_success_emitsNavigateBackEvent() = runBlocking {
-        val replayLauncher = FakeReplayLauncher(failOnLoad = false)
+        val replayController = FakeReplayController(failOnLoad = false)
         val viewModel = IgcFilesViewModel(
             useCase = IgcFilesUseCase(FakeDownloadsRepository(), NoOpIgcExportDiagnosticsRepository),
-            replayLauncher = replayLauncher
+            replayUseCase = IgcReplayUseCase(replayController)
         )
         val entry = entry("content://downloads/public_downloads/77")
         val eventAwaiter = async { withTimeout(2_000L) { viewModel.events.first() } }
@@ -39,16 +43,16 @@ class IgcFilesReplayOpenInstrumentedTest {
         val event = eventAwaiter.await()
 
         assertTrue(event is IgcFilesEvent.NavigateBackToMap)
-        assertEquals(entry.document.uri, replayLauncher.lastLoadedUri)
-        assertEquals(1, replayLauncher.playCalls)
+        assertEquals(entry.document.uri, replayController.lastLoadedUri)
+        assertEquals(1, replayController.playCalls)
     }
 
     @Test
     fun replayOpen_failure_emitsActionableMessage() = runBlocking {
-        val replayLauncher = FakeReplayLauncher(failOnLoad = true)
+        val replayController = FakeReplayController(failOnLoad = true)
         val viewModel = IgcFilesViewModel(
             useCase = IgcFilesUseCase(FakeDownloadsRepository(), NoOpIgcExportDiagnosticsRepository),
-            replayLauncher = replayLauncher
+            replayUseCase = IgcReplayUseCase(replayController)
         )
         val entry = entry("content://downloads/public_downloads/78")
         val eventAwaiter = async { withTimeout(2_000L) { viewModel.events.first() } }
@@ -72,11 +76,13 @@ class IgcFilesReplayOpenInstrumentedTest {
         )
     }
 
-    private class FakeReplayLauncher(
+    private class FakeReplayController(
         private val failOnLoad: Boolean
-    ) : IgcReplayLauncher {
+    ) : IgcReplayControllerPort {
         var lastLoadedUri: String? = null
         var playCalls: Int = 0
+        override val session: StateFlow<SessionState> = MutableStateFlow(SessionState())
+        override val events = MutableSharedFlow<ReplayEvent>()
 
         override suspend fun loadDocument(document: DocumentRef) {
             if (failOnLoad) {
@@ -88,6 +94,12 @@ class IgcFilesReplayOpenInstrumentedTest {
         override fun play() {
             playCalls += 1
         }
+
+        override fun setSpeed(multiplier: Double) = Unit
+
+        override fun stop(emitCancelledEvent: Boolean) = Unit
+
+        override fun seekTo(fraction: Float) = Unit
     }
 
     private class FakeDownloadsRepository : IgcDownloadsRepository {

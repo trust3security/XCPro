@@ -226,6 +226,9 @@ function Get-BannedViewModelDependencyTypeName {
         return $null
     }
     $simpleTypeName = $TypeName.Split('.')[-1]
+    if ($simpleTypeName -in @("MapFeatureFlags", "CardPreferences")) {
+        return $simpleTypeName
+    }
     if ($simpleTypeName -eq "TaskManagerCoordinator") {
         return $simpleTypeName
     }
@@ -425,7 +428,8 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "ViewModel purity violations" -RgArgs $vmArgs
 
-    # 2A) ViewModel constructor boundary: no broad dependency bags or TaskManagerCoordinator in ViewModel constructors.
+    # 2A) ViewModel constructor boundary: no broad dependency bags or concrete offender types in ViewModel constructors.
+    # Naming alone is not policy; this audit bans exact known types plus broad bag suffixes.
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
     Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
 

@@ -2,8 +2,8 @@ package com.trust3.xcpro.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.dfcards.CardPreferences
 import com.example.dfcards.FlightModeSelection
+import com.example.dfcards.dfcards.FlightCardSessionBinder
 import com.trust3.xcpro.MapOrientationManager
 import com.trust3.xcpro.MapOrientationSettingsRepository
 import com.trust3.xcpro.common.flight.FlightMode
@@ -23,7 +23,7 @@ import com.trust3.xcpro.hawk.HawkVarioUiState
 import com.trust3.xcpro.hawk.HawkVarioUseCase
 import com.trust3.xcpro.map.ballast.BallastCommand
 import com.trust3.xcpro.map.ballast.BallastUiState
-import com.trust3.xcpro.map.config.MapFeatureFlags
+import com.trust3.xcpro.map.config.MapScreenFeatureFlagPort
 import com.trust3.xcpro.map.model.GpsStatusUiModel
 import com.trust3.xcpro.map.model.MapLocationUiModel
 import com.trust3.xcpro.map.trail.MapTrailSettingsUseCase
@@ -65,8 +65,8 @@ class MapScreenViewModel @Inject constructor(
     private val mapReplayUseCase: MapReplayUseCase,
     private val mapTasksUseCase: MapTasksUseCase,
     private val taskFlightSurfaceUseCase: TaskFlightSurfaceUseCase,
-    private val featureFlags: MapFeatureFlags,
-    private val cardPreferences: CardPreferences,
+    private val screenFeatureFlags: MapScreenFeatureFlagPort,
+    private val flightCardSessionBinder: FlightCardSessionBinder,
     private val calibrateQnhUseCase: CalibrateQnhUseCase,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
     private val hawkVarioUseCase: HawkVarioUseCase,
@@ -99,7 +99,7 @@ class MapScreenViewModel @Inject constructor(
     internal val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
         flightDataManager = uiControllers.flightDataManager, orientationManager = uiControllers.orientationManager, sensorsUseCase = sensorsUseCase,
         phoneHealthUseCase = mapPhoneHealthUseCase,
-        tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase, waypointFilesUseCase = mapWaypointFilesUseCase, featureFlags = featureFlags
+        tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase, waypointFilesUseCase = mapWaypointFilesUseCase
     )
     private val ballastController = uiControllers.ballastController
     private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
@@ -111,8 +111,8 @@ class MapScreenViewModel @Inject constructor(
     val hawkVarioUiState: StateFlow<HawkVarioUiState> = hawkVarioUseCase.hawkVarioUiState.eagerState(scope = viewModelScope, initial = HawkVarioUiState())
     val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
     val taskFlightSurfaceUiState: StateFlow<TaskFlightSurfaceUiState> = taskFlightSurfaceUseCase.uiState.eagerState(scope = viewModelScope, initial = TaskFlightSurfaceUiState())
-    val showVarioDemoFab: Boolean = featureFlags.showVarioDemoFab
-    val showRacingReplayFab: Boolean = featureFlags.showRacingReplayFab
+    val showVarioDemoFab: Boolean = screenFeatureFlags.showVarioDemoFab
+    val showRacingReplayFab: Boolean = screenFeatureFlags.showRacingReplayFab
     val gpsStatusFlow: StateFlow<GpsStatusUiModel> = createGpsStatusUiState(viewModelScope, sensorsUseCase)
     private val replaySensorGates: MapReplaySensorGateStates = createReplaySensorGateStates(viewModelScope, replaySessionState)
     val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
@@ -181,7 +181,7 @@ class MapScreenViewModel @Inject constructor(
         uiEffects = _uiEffects, trailUpdates = _trailUpdates
     )
     private val replayCoordinator = createReplayCoordinatorForViewModel(
-        mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightData, featureFlags = runtimeDependencies.featureFlags, mapStateStore = mapStateStore,
+        mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightData, mapStateStore = mapStateStore,
         mapStateActions = mapStateActions, uiEffects = _uiEffects, replaySessionState = replaySessionState, scope = viewModelScope
     )
     private val uiEventHandler = MapScreenUiEventHandler(
@@ -229,12 +229,12 @@ class MapScreenViewModel @Inject constructor(
     val unitsPreferencesFlow: StateFlow<UnitsPreferences> = unitsState
     val trailSettings: StateFlow<TrailSettings> = mapStateStore.trailSettings
     val ognAltitudeUnit: StateFlow<AltitudeUnit> = unitsState.map { it.altitude }.eagerState(scope = viewModelScope, initial = unitsState.value.altitude)
-    val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, cardPreferences = cardPreferences, onProfileModeVisibilitiesChanged = ::onProfileModeVisibilitiesChanged) }
+    val cardIngestionCoordinator: CardIngestionCoordinator by lazy { createCardIngestionCoordinator(scope = viewModelScope, cardHydrationReady = cardHydrationReady, flightDataManager = flightDataManager, unitsPreferencesFlow = unitsPreferencesFlow, flightCardSessionBinder = flightCardSessionBinder, onProfileModeVisibilitiesChanged = ::onProfileModeVisibilitiesChanged) }
     val flightDataMgmtPort: FlightDataMgmtPort by lazy { createFlightDataMgmtPort(flightDataManager) { cardIngestionCoordinator.bindCards(it) } }
     internal val orientationFlightDataRuntimePort: MapOrientationFlightDataRuntimePort by lazy { createMapOrientationFlightDataRuntimePort(orientationManager) }
     init {
         mapStateStore.setTrailSettings(trailSettingsUseCase.getSettings())
-        mapStateStore.setDisplaySmoothingProfile(featureFlags.defaultDisplaySmoothingProfile)
+        mapStateStore.setDisplaySmoothingProfile(screenFeatureFlags.defaultDisplaySmoothingProfile)
         startMapScreenViewModelLifecycle(
             scope = viewModelScope, unitsState = unitsState, uiState = _uiState, flightDataManager = flightDataManager,
             gliderConfigFlow = gliderConfigRepository.config, qnhCalibrationState = qnhRepository.calibrationState,
@@ -244,7 +244,7 @@ class MapScreenViewModel @Inject constructor(
             clearRuntimeFlightModeOverride = ::clearRuntimeFlightModeOverride, applyContrastMap = ::setThermallingContrastOverrideEnabled,
             flightDataUiAdapter = flightDataUiAdapter, replayCoordinator = replayCoordinator, weGlidePromptBridge = weGlidePromptBridge,
             onPromptChanged = { promptUiState -> _weGlideUploadPrompt.value = promptUiState },
-            adsbTrafficFacade = adsbTrafficFacade, featureFlags = featureFlags, mapTasksUseCase = mapTasksUseCase, refreshWaypoints = ::loadWaypoints
+            adsbTrafficFacade = adsbTrafficFacade, loadSavedTasksOnInit = screenFeatureFlags.loadSavedTasksOnInit, mapTasksUseCase = mapTasksUseCase, refreshWaypoints = ::loadWaypoints
         )
     }
     fun emitMapCommand(command: MapCommand) = _mapCommands.tryEmit(command)

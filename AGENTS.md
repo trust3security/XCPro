@@ -64,6 +64,11 @@ Ownership defaults:
 Implementation expectations:
 - Do not put business logic in Composables, Activities, Fragments, adapters, or
   other UI classes.
+- ViewModels may depend only on stable domain-facing seams: use cases or
+  focused owner/port seams for authoritative reads, narrow flows, and simple
+  authoritative commands. Naming alone is not policy.
+- Do not inject low-level infra/data-source types, broad dependency bags, or
+  thin rename-only forwarding wrappers into ViewModels.
 - Do not bypass layers for convenience.
 - Before touching runtime-heavy code, inspect existing use of `CoroutineScope(`,
   direct `Log.*`, `UUID.randomUUID()`, `TimeBridge.nowWallMs()`, `NoOp`, and

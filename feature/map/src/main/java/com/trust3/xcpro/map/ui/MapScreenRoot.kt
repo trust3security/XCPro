@@ -24,7 +24,6 @@ import com.trust3.xcpro.map.MapScreenState
 import com.trust3.xcpro.map.MapScreenViewModel
 import com.trust3.xcpro.map.MapTaskScreenManager
 import com.trust3.xcpro.map.MapUiEvent
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -40,19 +39,19 @@ internal fun MapScreenRoot(
     onOpenGeneralSettings: () -> Unit,
     mapViewModel: MapScreenViewModel
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current; val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
     val liveFollowWatchViewModel: LiveFollowWatchViewModel = hiltViewModel()
     val liveFollowWatchUiState by liveFollowWatchViewModel.uiState.collectAsStateWithLifecycle()
     val renderLocalOwnship =
         shouldRenderLocalOwnship(allowFlightSensorStart = allowFlightSensorStart, watchMapRenderState = liveFollowWatchUiState.mapRenderState)
     val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
+    val mapFeatureFlags = rememberMapScreenFeatureFlags()
     val runtimeDependencies = mapViewModel.runtimeDependencies
     val flightDataManager = runtimeDependencies.flightDataManager
     val orientationManager = runtimeDependencies.orientationManager
     val orientationFlightDataRuntimePort = mapViewModel.orientationFlightDataRuntimePort
-    val useRenderFrameSyncProvider = remember(runtimeDependencies.featureFlags) { { runtimeDependencies.featureFlags.useRenderFrameSync } }
+    val useRenderFrameSyncProvider = remember(mapFeatureFlags) { { mapFeatureFlags.useRenderFrameSync } }
     val orientationFlow = orientationManager.orientationFlow
     val rootUiBinding = rememberMapScreenRootUiBinding(mapViewModel = mapViewModel)
     MapScreenSideEffects(
@@ -98,7 +97,7 @@ internal fun MapScreenRoot(
         replaySessionState = mapViewModel.replaySessionState,
         replayHeadingProvider = mapViewModel::getInterpolatedReplayHeadingDeg,
         replayFixProvider = mapViewModel::getInterpolatedReplayPose,
-        featureFlags = runtimeDependencies.featureFlags,
+        featureFlags = mapFeatureFlags,
         useRenderFrameSyncProvider = useRenderFrameSyncProvider,
         coroutineScope = coroutineScope,
         taskInputs = taskManagerInputs,
