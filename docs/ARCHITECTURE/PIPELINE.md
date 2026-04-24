@@ -29,3 +29,22 @@
 - Direct Condor wind enters the wind pipeline only through `ExternalWindWritePort`; wind selection policy remains owned by the wind domain/runtime path.
 - `FlightDataRepository.Source` remains `LIVE` or `REPLAY`; phone vs Condor selection is internal to the live-runtime seam.
 - Downstream simulator-aware side effects stay keyed off `LiveSourceKind`: IGC recording, WeGlide post-flight prompting, and LiveFollow sharing suppress external side effects when the live source kind is `SIMULATOR_CONDOR2`, while replay remains authoritative through `FlightDataRepository.Source.REPLAY`.
+
+### External Instrument And Airspeed Rule
+
+- `ExternalInstrumentReadPort` stays narrow. It carries only pressure altitude,
+  confirmed TE vario, and generic external vario. It must not become a general
+  device-telemetry bus for airspeed, wind, MC, ballast, QNH, metadata, or
+  settings.
+- Live external airspeed stays on
+  `ExternalAirspeedWritePort -> ExternalAirspeedRepository`. That seam may carry
+  IAS-only, TAS-only, or paired samples. Deriving missing TAS from IAS plus
+  pressure altitude/QNH is owned by `feature:flight-runtime`, not by Bluetooth
+  or simulator adapters.
+- LX S100 live policy uses the same owners:
+  - `LXWP0` publishes confirmed TE plus pressure altitude and companion
+    airspeed into the existing seams.
+  - `PLXVF` may publish provisional generic external vario plus IAS and
+    pressure altitude into those same seams.
+- Widget, card, and audio consumers must read fused runtime outputs only. They
+  must not read raw Bluetooth runtime state or raw LX sentence state directly.

@@ -23,6 +23,14 @@ class LxDeviceSnapshotReducer {
                 lastAcceptedSentenceId = sentence.sentenceId,
                 lastAcceptedMonoMs = sentence.receivedMonoMs
             )
+
+            is PlxVfSentence -> previous.copy(
+                airspeedKph = sentence.indicatedAirspeedKph ?: previous.airspeedKph,
+                pressureAltitudeM = sentence.pressureAltitudeM ?: previous.pressureAltitudeM,
+                externalVarioMps = sentence.provisionalVarioMps ?: previous.externalVarioMps,
+                lastAcceptedSentenceId = sentence.sentenceId,
+                lastAcceptedMonoMs = sentence.receivedMonoMs
+            )
         }
     }
 

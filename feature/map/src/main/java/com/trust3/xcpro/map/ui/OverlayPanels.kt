@@ -162,6 +162,18 @@ internal fun VariometerPanel(
     val levoNettoLabel by remember(liveFlightData, unitsPreferences) {
         derivedStateOf {
             val sample = liveFlightData
+            val s100WidgetMode = sample?.airspeedSource == "SENSOR" &&
+                (sample.varioSource == "TE" || sample.varioSource == "EXTERNAL")
+            if (s100WidgetMode) {
+                if (sample?.nettoValid == true) {
+                    val formatted = UnitsFormatter.verticalSpeed(
+                        VerticalSpeedMs(sample.displayNetto),
+                        unitsPreferences
+                    )
+                    return@derivedStateOf stripUnit(formatted)
+                }
+                return@derivedStateOf "---"
+            }
             val hasWind = sample?.levoNettoHasWind == true
             val hasPolar = sample?.levoNettoHasPolar == true
             when {
@@ -181,12 +193,18 @@ internal fun VariometerPanel(
     val levoNettoLabelColor by remember(liveFlightData, errorColor) {
         derivedStateOf {
             val sample = liveFlightData
+            val s100WidgetMode = sample?.airspeedSource == "SENSOR" &&
+                (sample.varioSource == "TE" || sample.varioSource == "EXTERNAL")
+            if (s100WidgetMode) {
+                if (sample?.nettoValid == true) null else errorColor
+            } else {
             val hasWind = sample?.levoNettoHasWind == true
             val hasPolar = sample?.levoNettoHasPolar == true
-            if (!hasWind || !hasPolar) {
-                errorColor
-            } else {
-                null
+                if (!hasWind || !hasPolar) {
+                    errorColor
+                } else {
+                    null
+                }
             }
         }
     }

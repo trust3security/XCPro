@@ -24,10 +24,26 @@ data class AirspeedSample(
     val clockMillis: Long,
     val valid: Boolean
 ) {
+    val hasTrueAirspeed: Boolean
+        get() = trueMs.isFinite() && trueMs > 0.0
+
     val hasIndicatedAirspeed: Boolean
         get() = indicatedMs.isFinite() && indicatedMs > 0.0
 
     companion object {
+        fun iasOnly(
+            indicatedMs: Double,
+            clockMillis: Long,
+            timestampMillis: Long = 0L,
+            valid: Boolean = true
+        ): AirspeedSample = AirspeedSample(
+            trueMs = Double.NaN,
+            indicatedMs = indicatedMs,
+            timestampMillis = timestampMillis,
+            clockMillis = clockMillis,
+            valid = valid
+        )
+
         fun tasOnly(
             trueMs: Double,
             clockMillis: Long,

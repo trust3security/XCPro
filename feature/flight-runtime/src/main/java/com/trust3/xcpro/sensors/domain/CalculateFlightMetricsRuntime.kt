@@ -7,6 +7,7 @@ import com.trust3.xcpro.weather.wind.model.AirspeedSample
 import com.trust3.xcpro.sensors.domain.FlightMetricsConstants.DEFAULT_QNH_HPA
 import com.trust3.xcpro.sensors.domain.FlightMetricsConstants.GPS_AIRSPEED_FALLBACK_MIN_SPEED_MS
 import com.trust3.xcpro.sensors.domain.SensorFrontEnd.SensorSnapshot
+import kotlin.math.sqrt
 
 internal class CalculateFlightMetricsRuntime(
     private val flightHelpers: FlightCalculationHelpers,
@@ -74,7 +75,9 @@ internal class CalculateFlightMetricsRuntime(
 
         val externalAirspeed = resolveExternalAirspeed(
             sample = request.externalAirspeedSample,
-            currentTimeMillis = currentTime
+            currentTimeMillis = currentTime,
+            pressureAltitudeMeters = pressureAltitude,
+            qnhHpa = qnh
         )
         val windAirspeedCandidate = windEstimator.fromWind(
             gpsSpeed = gps.speed.value,
@@ -130,6 +133,7 @@ internal class CalculateFlightMetricsRuntime(
             baroResult = baroResult,
             isQnhCalibrated = isQnhCalibrated,
             teVario = teVario,
+            externalVarioSample = externalInputs.externalVarioMps,
             airspeedEstimate = chosenAirspeed,
             currentTime = currentTime,
             externalPressureAltitudeSample = externalInputs.pressureAltitudeM,
@@ -179,17 +183,21 @@ internal class CalculateFlightMetricsRuntime(
         val polarBestLdValid = polarBestLdRaw?.let { it.isFinite() && it > 0f } == true
         val polarBestLd = polarBestLdRaw?.takeIf { polarBestLdValid } ?: 0f
 
+        val externalNettoMode = snapshot.airspeedSource == AirspeedSource.EXTERNAL &&
+            (snapshot.varioSource == "TE" || snapshot.varioSource == "EXTERNAL")
         val nettoResult = flightHelpers.calculateNetto(
             currentVerticalSpeed = bruttoVario,
             indicatedAirspeed = indicatedAirspeedMs,
             fallbackGroundSpeed = gps.speed.value,
-            timestampMillis = sampleTimeMillis
+            timestampMillis = sampleTimeMillis,
+            allowGroundSpeedFallback = !externalNettoMode
         )
         val nettoSampleValue = fusionBlackboard.resolveNettoSampleValue(nettoResult.value, nettoResult.valid)
 
         // feed 30s windows with QNH-agnostic sample; reset on circling or calibration change
         val avgVarioSample = when {
             teVario != null && teVario.isFinite() -> teVario
+            snapshot.externalVario.isFinite() -> snapshot.externalVario
             snapshot.pressureVario.isFinite() -> snapshot.pressureVario
             snapshot.pressureAltitudeVario.isFinite() -> snapshot.pressureAltitudeVario
             snapshot.gpsVario.isFinite() -> snapshot.gpsVario
@@ -415,19 +423,40 @@ internal class CalculateFlightMetricsRuntime(
 
     private fun resolveExternalAirspeed(
         sample: AirspeedSample?,
-        currentTimeMillis: Long
+        currentTimeMillis: Long,
+        pressureAltitudeMeters: Double,
+        qnhHpa: Double
     ): AirspeedEstimate? {
         if (sample == null || !sample.valid) return null
         if (!isFreshExternalSample(sample, currentTimeMillis)) return null
-        val trueMs = sample.trueMs.takeIf { it.isFinite() && it > MIN_VALID_AIRSPEED_MS } ?: return null
         val indicatedMs = sample.indicatedMs
             .takeIf { sample.hasIndicatedAirspeed && it > MIN_VALID_AIRSPEED_MS }
             ?: Double.NaN
+        val trueMs = sample.trueMs
+            .takeIf { sample.hasTrueAirspeed && it > MIN_VALID_AIRSPEED_MS }
+            ?: deriveTrueAirspeedFromIndicated(
+                indicatedMs = indicatedMs,
+                pressureAltitudeMeters = pressureAltitudeMeters,
+                qnhHpa = qnhHpa
+            )
+            ?: return null
         return AirspeedEstimate(
             indicatedMs = indicatedMs,
             trueMs = trueMs,
             source = AirspeedSource.EXTERNAL
         )
+    }
+
+    private fun deriveTrueAirspeedFromIndicated(
+        indicatedMs: Double,
+        pressureAltitudeMeters: Double,
+        qnhHpa: Double
+    ): Double? {
+        if (!indicatedMs.isFinite() || indicatedMs <= MIN_VALID_AIRSPEED_MS) return null
+        val densityRatio = computeDensityRatio(pressureAltitudeMeters, qnhHpa)
+        if (!densityRatio.isFinite() || densityRatio <= 0.0) return null
+        val trueMs = indicatedMs / sqrt(densityRatio)
+        return trueMs.takeIf { it.isFinite() && it > MIN_VALID_AIRSPEED_MS }
     }
 
     private fun isFreshExternalSample(sample: AirspeedSample, currentTimeMillis: Long): Boolean {

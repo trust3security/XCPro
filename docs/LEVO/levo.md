@@ -289,11 +289,15 @@ CalculateFlightMetricsUseCase is the core domain computation.
 File: feature/map/src/main/java/com/trust3/xcpro/sensors/domain/CalculateFlightMetricsUseCase.kt
 
 Key steps:
-- Build SensorFrontEnd snapshot (nav altitude, vario derivatives, TE vario).
+- Build SensorFrontEnd snapshot (nav altitude, vario derivatives, TE vario,
+  and generic external vario).
 - Select brutto vario priority:
-  TE -> PRESSURE -> BARO -> GPS (first valid wins).
+  TE -> EXTERNAL -> PRESSURE -> BARO -> GPS (first valid wins).
 - Compute TE vario only when airspeed is real and above thresholds.
-- Compute netto (sink compensation) using polar and airspeed.
+- Compute netto (sink compensation) using polar and airspeed. When live
+  external airspeed/vario are active, XCPro blocks GPS speed fallback so S100
+  widget/card surfaces do not silently mix phone speed into external-netto
+  outputs.
 - Smooth display vario and display netto with DisplayVarioSmoother.
 - Compute a pneumatic-style needle value (displayNeedleVario) with a
   deterministic response (95% in 0.6s, no overshoot). This value uses
@@ -385,10 +389,13 @@ Wind state is consumed by:
 Airspeed:
 - Live airspeed comes from ExternalAirspeedRepository (if present).
 - Replay airspeed comes from ReplayAirspeedRepository.
+- External live samples may be IAS-only, TAS-only, or paired values.
 - CalculateFlightMetricsUseCase now selects airspeed with priority:
   1) fresh valid external/replay sample (source label SENSOR),
   2) wind-derived airspeed when wind is available and confidence-gated,
   3) GPS ground-speed fallback.
+- Flight-runtime derives missing TAS from IAS using current pressure
+  altitude/QNH when the external sample is IAS-only.
 - WindEstimator uses QNH-aware density ratio when converting TAS/IAS.
 
 ------------------------------------------------------------------------------
@@ -406,7 +413,8 @@ File references:
 - feature/flight-runtime/src/main/java/com/trust3/xcpro/audio/VarioAudioThresholdSemantics.kt
 
 Behavior:
-- TE vario is preferred when valid; otherwise raw vario.
+- Confirmed TE vario is preferred when valid; otherwise fresh generic external
+  vario is used before phone raw/brutto vario.
 - If no valid vario, engine is forced to silence.
 - FrequencyMapper applies effective lift/sink start thresholds and maps vertical speed to tone params.
 - BeepController smooths transitions and handles duty cycle.
@@ -452,14 +460,20 @@ Display rules:
 - Numeric values are bucketed to 0.1 m/s and throttled to ~12 Hz; the
   needle uses a higher cadence (~30 Hz) without bucketing.
 - VariometerPanel converts values to user units and renders the needle.
-- Secondary label shows XCSoar-style display vario for comparison.
+- Secondary label normally shows fused netto. In S100 mode
+  (`airspeedSource = SENSOR` and `varioSource = TE/EXTERNAL`) it shows
+  S100-backed netto only; if that netto cannot be computed without mixing
+  fallback inputs, the label renders `---`.
 
 Purple needle note (audio input):
-- The purple needle shows the audio *input* vario (TE when valid, else raw),
-  not the audio output tone. This is why it can move even when audio is silent.
+- The purple needle shows the audio *input* vario (TE when valid, else fresh
+  external raw vario, else phone raw), not the audio output tone. This is why
+  it can move even when audio is silent.
 - On phone-only sensors, airspeed usually falls back to GPS ground speed, which
   disables TE vario. In that case audio input falls back to raw/brutto vario,
   so the purple needle tracks the blue/red needles closely.
+- The TE outer arc still requires real TE. Generic external vario does not
+  synthesize the outer arc.
 - Red vs blue divergence is subtle because their time constants are close
   (0.6s vs 0.4s), and both are throttled to ~30 Hz in FlightDataManager.
 - Full details: docs/LEVO/PurpleNeedle.md

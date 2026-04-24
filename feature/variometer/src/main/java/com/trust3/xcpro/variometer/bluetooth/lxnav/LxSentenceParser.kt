@@ -46,9 +46,9 @@ class LxSentenceParser {
         return when (sentenceId) {
             LxSentenceId.LXWP0 -> parseLxWp0(fields, checksumStatus, line.receivedMonoMs)
             LxSentenceId.LXWP1 -> parseLxWp1(fields, checksumStatus, line.receivedMonoMs)
+            LxSentenceId.PLXVF -> parsePlxVf(fields, checksumStatus, line.receivedMonoMs)
             LxSentenceId.LXWP2,
             LxSentenceId.LXWP3,
-            LxSentenceId.PLXVF,
             LxSentenceId.PLXVS -> LxParseOutcome.KnownUnsupported(
                 sentenceId = sentenceId,
                 receivedMonoMs = line.receivedMonoMs,
@@ -109,6 +109,39 @@ class LxSentenceParser {
                     softwareVersion = fields.getOrNull(2)?.nullIfEmpty(),
                     hardwareVersion = fields.getOrNull(3)?.nullIfEmpty()
                 ),
+                checksumStatus = checksumStatus,
+                receivedMonoMs = receivedMonoMs
+            )
+        )
+    }
+
+    private fun parsePlxVf(
+        fields: List<String>,
+        checksumStatus: ChecksumStatus,
+        receivedMonoMs: Long
+    ): LxParseOutcome {
+        val provisionalVario = parseOptionalDouble(fields.getOrNull(4))
+        val indicatedAirspeed = parseOptionalDouble(fields.getOrNull(5))
+        val pressureAltitude = parseOptionalDouble(fields.getOrNull(6))
+
+        if (
+            provisionalVario is NumericField.Malformed ||
+            indicatedAirspeed is NumericField.Malformed ||
+            pressureAltitude is NumericField.Malformed
+        ) {
+            return LxParseOutcome.Rejected(
+                reason = LxRejectedReason.MALFORMED_FIELDS,
+                sentenceId = LxSentenceId.PLXVF,
+                receivedMonoMs = receivedMonoMs,
+                checksumStatus = checksumStatus
+            )
+        }
+
+        return LxParseOutcome.Accepted(
+            PlxVfSentence(
+                provisionalVarioMps = (provisionalVario as? NumericField.Value)?.value,
+                indicatedAirspeedKph = (indicatedAirspeed as? NumericField.Value)?.value,
+                pressureAltitudeM = (pressureAltitude as? NumericField.Value)?.value,
                 checksumStatus = checksumStatus,
                 receivedMonoMs = receivedMonoMs
             )

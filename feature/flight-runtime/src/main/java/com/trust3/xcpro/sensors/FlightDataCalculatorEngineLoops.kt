@@ -1,6 +1,7 @@
 package com.trust3.xcpro.sensors
 
 import com.trust3.xcpro.core.common.logging.AppLogger
+import com.trust3.xcpro.sensors.domain.resolveExternalInstrumentInputs
 import java.util.Locale
 import kotlin.math.abs
 
@@ -139,6 +140,11 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
     }
     val validityWindowMs = maxOf(FlightDataCalculatorEngine.VARIO_VALIDITY_MS, replayWindowMs, FlightDataCalculatorEngine.VARIO_VALIDITY_FLOOR_MS)
     emissionState.varioValidUntil = currentTime + validityWindowMs
+    val externalAudioInputs = resolveExternalInstrumentInputs(
+        snapshot = latestExternalInstrumentSnapshot,
+        currentMonoMs = currentTime,
+        isReplayMode = isReplayMode
+    )
     val audioSelected = if (hawkAudioEnabled) {
         val hawkSample = hawkAudioVarioMps?.takeIf { it.isFinite() }
         if (hawkSample != null) {
@@ -156,6 +162,13 @@ internal fun FlightDataCalculatorEngine.updateVarioFilter(baro: BaroData?, accel
                 validUntil = 0L
             )
         }
+    } else if (externalAudioInputs.resolvedAudioRawVarioMps() != null) {
+        audioController.update(
+            teSample = externalAudioInputs.totalEnergyVarioMps?.value,
+            rawVario = externalAudioInputs.resolvedAudioRawVarioMps() ?: 0.0,
+            currentTime = currentTime,
+            validUntil = Long.MAX_VALUE
+        )
     } else {
         audioController.update(
             emissionState.latestTeVario,

@@ -10,35 +10,37 @@ records, not the current repo state.
 
 ## Short answer
 
-LXNAV S100 Bluetooth support is partially implemented in production code.
+LXNAV S100 Bluetooth support is implemented for the current live flight-data
+slice and still incomplete for broader device/settings/status coverage.
 
 Implemented now:
 
 - bonded-device Bluetooth Classic SPP transport
 - manifest permission and Bluetooth feature wiring
 - newline-delimited line framing
-- LX parser support for `LXWP0` and `LXWP1`
+- LX parser support for `LXWP0`, `LXWP1`, and `PLXVF`
 - runtime ingestion, diagnostics, and reconnect state
 - profile-owned Bluetooth settings UI for permission, bonded-device selection,
   connect, disconnect, and connection-health text
-- fused runtime ingress for external pressure altitude and total-energy vario
+- fused runtime ingress for external pressure altitude, confirmed total-energy
+  vario, and provisional generic external vario
 - live LX `LXWP0` airspeed published into the canonical live external airspeed
   SSOT through the narrow `ExternalAirspeedWritePort` seam
-- TAS-only LX live input now feeds the production `tas` card/runtime path
-- TAS-only LX input no longer fabricates `IAS`; downstream display paths blank
-  IAS when the value is non-finite
-- MapScreen variometer now consumes LX `LXWP0` TE through the fused main-vario
-  path and the TE outer-arc path
-- the MapScreen Levo secondary label is still `levoNetto`, which is a separate
-  fused output and not a direct raw-TE label
+- live LX airspeed is now treated as IAS-first partial input; flight-runtime
+  derives TAS centrally when enough altitude/QNH context exists
+- `PLXVF`-only streams can drive the production widget/audio vario path through
+  the fused `EXTERNAL` owner
+- MapScreen variometer consumes:
+  - `LXWP0` TE for main vario, audio, and TE outer arc when fresh
+  - `PLXVF` provisional vario for main vario and audio when TE is absent
+- the MapScreen secondary label switches to S100-backed `NETTO` or `---` while
+  S100 vario is the active widget source
 
 Not implemented yet:
 
 - parsed LX device metadata shown in the Bluetooth settings UI
-- distinct UI/card provenance for external Bluetooth airspeed vs
-  wind-estimated airspeed
-- targeted TAS-only card/unit-format proof for non-default user unit settings
-- broader LX sentence-family support beyond `LXWP0` / `LXWP1`
+- LX-specific widget/card source badges beyond the normal fused source labels
+- broader LX sentence-family support beyond `LXWP0` / `LXWP1` / `PLXVF`
 - hardware validation signoff from sanitized real-device capture
 - Garmin GLO 2 support
 
@@ -53,18 +55,21 @@ Not implemented yet:
 - Phase 2:
   - implemented
 - Phase 3:
-  - implemented for `LXWP0` and `LXWP1`; unsupported LX sentences are ignored safely
+  - implemented for `LXWP0`, `LXWP1`, and `PLXVF`; unsupported LX sentences are
+    still ignored safely
 - Phase 4:
   - implemented for the current LX S100 live-input slice
-  - pressure altitude and TE vario are wired into fused runtime
-  - LX `LXWP0` airspeed is wired into the canonical live airspeed path as
-    TAS-only input
+  - pressure altitude, confirmed TE vario, and provisional generic external
+    vario are wired into fused runtime
+  - LX live airspeed is wired into the canonical live airspeed path as
+    IAS-first partial input
 - Phase 5:
   - partially implemented
   - settings UI is operational
+  - S100-backed widget/audio/card behavior is operational on the existing XCPro
+    surfaces
   - parsed device metadata is not rendered yet
-  - external-airspeed provenance is not distinguished from wind-estimated
-    airspeed in cards/UI yet
+  - no LX-specific source badge is rendered in the widget/cards yet
 - Phase 6:
   - still open
 
@@ -105,55 +110,62 @@ Not implemented yet:
 
 ### Broader S100 sentence coverage
 
-- XCPro still supports only `LXWP0` and `LXWP1` in production.
-- `LXWP2`, `LXWP3`, `PLXVF`, and `PLXVS` are still known-but-unsupported.
-- So XCPro does not yet "use all S100 information"; it uses the current
+- XCPro now supports `LXWP0`, `LXWP1`, and `PLXVF` in production.
+- `LXWP2`, `LXWP3`, and `PLXVS` remain unsupported.
+- So XCPro still does not "use all S100 information"; it uses the current
   higher-value live-input subset only.
 
 Result:
 
-- the current production slice is good for live TAS / pressure altitude / TE
-  vario, but broader S100 capabilities remain unconsumed
+- the current production slice is good for live IAS/TAS, pressure altitude, TE,
+  and provisional external vario, but broader S100 capabilities remain
+  unconsumed
 
 ### MapScreen variometer ownership
 
-- `LxExternalRuntimeRepository` publishes `totalEnergyVarioMps` into
-  `ExternalInstrumentReadPort`
-- `CalculateFlightMetricsRuntime` consumes that as `teVario`
-- `SensorFrontEnd.buildSnapshot(...)` promotes fresh `teVario` to the main
-  `bruttoVario` / `varioSource = "TE"` path
-- `MapScreenUtils.convertToRealTimeFlightData(...)` carries both `teVario` and
-  `levoNetto` into `RealTimeFlightData`
-- `FlightDataManager.displayVarioFlow` and `needleVarioFlow` therefore reflect
-  S100 TE when it is the active fused source
-- `FlightDataManager.teArcVarioFlow` feeds the outer TE arc directly
+- `LxExternalRuntimeRepository` publishes:
+  - confirmed `totalEnergyVarioMps`
+  - provisional `externalVarioMps`
+  - live external airspeed through `ExternalAirspeedWritePort`
+- `CalculateFlightMetricsRuntime` consumes those through the normal fused
+  runtime seams
+- `SensorFrontEnd.buildSnapshot(...)` promotes fresh vario with priority:
+  `TE -> EXTERNAL -> PRESSURE -> BARO -> GPS`
+- `MapScreenUtils.convertToRealTimeFlightData(...)` carries the fused outputs
+  into `RealTimeFlightData`
+- `FlightDataManager.displayVarioFlow`, `needleVarioFlow`, and the purple audio
+  needle therefore reflect S100 vario when it is the active fused source
+- `FlightDataManager.teArcVarioFlow` still feeds the outer TE arc from confirmed
+  TE only
 - `OverlayPanels` renders:
   - main numeric/needle vario from fused display vario
   - outer arc from raw `teVario`
-  - secondary label from `levoNetto`
+  - secondary label from S100-backed `NETTO` or `---` while S100 vario is the
+    active widget source
 
 Result:
 
-- S100 TE does drive the main variometer widget
-- S100 TE does not directly replace the Levo secondary label
+- S100 does drive the main variometer widget and audio through the fused main
+  vario path
+- the outer TE arc remains TE-only
+- the secondary label is source-consistent in S100 mode instead of mixing back
+  to phone-derived Levo-netto
 
 ### Card/source provenance and unit-proof
 
-- `IAS` and `TAS` cards already respect user-selected units through the normal
+- `VARIO`, `IAS`, `TAS`, and `NETTO` cards now populate from the S100-backed
+  fused outputs when the S100 owns those values.
+- `IAS` and `TAS` cards still respect user-selected units through the normal
   `UnitsFormatter` path.
-- TAS-only LX input now renders through that path and IAS stays blank when
-  non-finite.
-- But UI/card subtitles still do not distinguish external Bluetooth airspeed
-  from wind-estimated airspeed.
-- There is still no targeted TAS-only card/unit test that proves:
-  - `IAS = blank`
-  - `TAS = formatted`
-  - conversion follows non-default General units
+- `NETTO` now renders `NO DATA` in S100 mode instead of falling back to the old
+  mixed-source `NO POLAR` behavior.
+- There is still no LX-specific source badge in cards/widget beyond the normal
+  fused source labels.
 
 Result:
 
-- the runtime seam is correct, but operator-facing provenance and explicit
-  TAS-only UI proof are still open
+- the runtime seam is correct and the S100 card/widget slice is source-consistent,
+  but dedicated LX branding/provenance UI is still open
 
 ### Bluetooth settings metadata
 
@@ -177,14 +189,12 @@ Result:
 
 1. Finish the remaining follow-up in
    `01_LX_S100_DF_CARD_WIRING_PLAN_2026-04-10.md`.
-2. Distinguish external Bluetooth airspeed from wind-estimated airspeed in
-   cards/UI.
-3. Add targeted TAS-only card/unit tests for non-default user speed units.
-4. Decide explicitly whether broader S100 sentence families are in scope before
-   adding `LXWP2` / `LXWP3` / `PLXV*` parsing.
-5. Run the real-device validation flow from
+2. Surface parsed LX device metadata in the Bluetooth settings UI.
+3. Decide explicitly whether broader S100 sentence families are in scope before
+   adding `LXWP2` / `LXWP3` / `PLXVS`.
+4. Run the real-device validation flow from
    `RAW_CAPTURE_AND_HARDWARE_VALIDATION_BLUETOOTH.md`.
-6. Keep Garmin GLO 2 work separate from the LX S100 slice.
+5. Keep Garmin GLO 2 work separate from the LX S100 slice.
 
 ## Historical docs in this folder
 

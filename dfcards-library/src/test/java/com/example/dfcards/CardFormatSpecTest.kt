@@ -69,6 +69,24 @@ class CardFormatSpecTest {
     }
 
     @Test
+    fun netto_uses_no_data_secondary_in_s100_mode_when_value_is_invalid() {
+        val liveData = RealTimeFlightData(
+            nettoValid = false,
+            airspeedSource = "SENSOR",
+            varioSource = "EXTERNAL"
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.NETTO]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("+0.0 m/s", primary)
+        assertEquals(strings.noData, secondary)
+    }
+
+    @Test
     fun localTime_uses_lastUpdateTime_when_present() {
         val liveData = RealTimeFlightData(
             timestamp = 1_111L,

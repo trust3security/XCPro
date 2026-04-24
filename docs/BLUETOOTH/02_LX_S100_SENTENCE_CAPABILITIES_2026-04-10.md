@@ -53,7 +53,7 @@ Field-level reference:
 | Field index | Meaning | XCPro today |
 |---|---|---|
 | `0` | logger stored flag (`Y/N`) | ignored |
-| `1` | airspeed in kph | parsed as `airspeedKph`; published as TAS-only into the live external airspeed path |
+| `1` | airspeed in kph | parsed as `airspeedKph`; published into the live external airspeed path as an IAS-first partial sample |
 | `2` | pressure altitude in m | parsed as `pressureAltitudeM`; published into the external instrument pressure seam |
 | `3` | vario sample in m/s | parsed as `totalEnergyVarioMps`; published into the external instrument TE seam, promoted into fused main vario when fresh, and also exposed to the MapScreen TE outer arc |
 | `4..8` | additional recent vario samples | ignored |
@@ -65,7 +65,10 @@ Important ambiguity:
 
 - XCSoar's comment labels field `1` as IAS
 - XCSoar then feeds it into true-airspeed handling
-- for the current XCPro plan slice, this field should be treated as `TAS only`
+- for the current XCPro live slice, this field is treated as `IAS-first`
+  external input and any missing TAS is derived centrally in flight-runtime
+- when a fresh `PLXVF` IAS sample exists, XCPro prefers that value over
+  `LXWP0[1]` for the active external airspeed sample
 
 Important TE ownership note:
 
@@ -131,7 +134,23 @@ Potential values:
 - IAS
 - pressure altitude
 
-XCPro today: unsupported
+Current field handling:
+
+| Field index | Meaning | XCPro today |
+|---|---|---|
+| `0` | time | ignored |
+| `1` | `AccX` | ignored |
+| `2` | `AccY` | ignored |
+| `3` | `AccZ` | ignored |
+| `4` | `Vario` | parsed as provisional `externalVarioMps`; promoted to the fused main vario/audio path when fresh and confirmed TE is absent |
+| `5` | `IAS` | parsed as `indicatedAirspeedKph`; published into the live external airspeed path as IAS-only input |
+| `6` | `PressAlt` | parsed as `pressureAltitudeM`; published into the external instrument pressure seam |
+
+Important ownership note:
+
+- XCPro treats `PLXVF[4]` as provisional generic external vario, not as
+  confirmed TE.
+- Confirmed TE ownership remains on `LXWP0[3]`.
 
 ### `PLXVS` - Extended status
 
@@ -159,7 +178,7 @@ Current parser status in `LxSentenceParser.kt`:
 | `LXWP1` | supported |
 | `LXWP2` | known but unsupported |
 | `LXWP3` | known but unsupported |
-| `PLXVF` | known but unsupported |
+| `PLXVF` | supported for vario / IAS / pressure altitude |
 | `PLXVS` | known but unsupported |
 
 Current production-use status:
@@ -167,11 +186,15 @@ Current production-use status:
 - `LXWP0`
   - pressure altitude: used
   - TE vario: used
-  - airspeed: used as TAS-only live input
+  - airspeed: used as IAS-first live input
 - `LXWP1`
   - parsed and retained in Bluetooth runtime state
   - not yet surfaced in Bluetooth settings UI
-- `LXWP2`, `LXWP3`, `PLXVF`, `PLXVS`
+- `PLXVF`
+  - pressure altitude: used
+  - provisional external vario/audio source: used
+  - IAS: used
+- `LXWP2`, `LXWP3`, `PLXVS`
   - not used
 
 ## What The S100 / S10 Family Can Provide
@@ -207,12 +230,13 @@ Potentially available in wider LX variants:
 - Add support by sentence:
   - `LXWP2` for MC/ballast/bugs/settings
   - `LXWP3` for QNH/altitude-offset handling
-  - `PLXVF` / `PLXVS` only if XCPro broadens support to those LX variants
+  - `PLXVS` for OAT/mode/voltage if XCPro broadens support further
 
 Do not:
 
 - create `S100Parser` and `S10Parser` by default
 - assume all LX airspeed fields have the same IAS/TAS meaning without validation
+- treat `PLXVF` vario as confirmed TE without real-device validation
 
 ## Answer To The Device Question
 

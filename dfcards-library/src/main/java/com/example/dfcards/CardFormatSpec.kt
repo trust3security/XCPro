@@ -347,7 +347,8 @@ internal object CardFormatSpecs {
                     VerticalSpeedMs(liveData.displayNetto),
                     units
                 )
-                val label = if (liveData.nettoValid) strings.netto else strings.noPolar
+                val s100NettoMode = liveData.airspeedSource == "SENSOR" && (liveData.varioSource == "TE" || liveData.varioSource == "EXTERNAL")
+                val label = if (liveData.nettoValid) strings.netto else if (s100NettoMode) strings.noData else strings.noPolar
                 Pair(formatted.text, label)
             }
 

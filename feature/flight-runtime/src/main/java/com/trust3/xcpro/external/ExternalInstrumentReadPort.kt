@@ -9,7 +9,8 @@ data class TimedExternalValue<T>(
 
 data class ExternalInstrumentFlightSnapshot(
     val pressureAltitudeM: TimedExternalValue<Double>? = null,
-    val totalEnergyVarioMps: TimedExternalValue<Double>? = null
+    val totalEnergyVarioMps: TimedExternalValue<Double>? = null,
+    val externalVarioMps: TimedExternalValue<Double>? = null
 )
 
 interface ExternalInstrumentReadPort {

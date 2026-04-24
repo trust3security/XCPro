@@ -61,6 +61,16 @@ data class LxWp1Sentence(
     override val sentenceId: LxSentenceId = LxSentenceId.LXWP1
 }
 
+data class PlxVfSentence(
+    val provisionalVarioMps: Double?,
+    val indicatedAirspeedKph: Double?,
+    val pressureAltitudeM: Double?,
+    override val checksumStatus: ChecksumStatus,
+    override val receivedMonoMs: Long
+) : ParsedLxSentence {
+    override val sentenceId: LxSentenceId = LxSentenceId.PLXVF
+}
+
 sealed interface LxParseOutcome {
     val sentenceId: LxSentenceId
     val receivedMonoMs: Long

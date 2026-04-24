@@ -66,7 +66,7 @@ class CalculateFlightMetricsRuntimeExternalInstrumentTest {
     }
 
     @Test
-    fun fresh_external_pressure_altitude_overrides_only_pressure_altitude_branch() {
+    fun fresh_external_pressure_altitude_overrides_phone_branch_and_reports_external_vario_source() {
         val useCase = newUseCase()
         val baro = calibratedBaroResult(
             altitudeMeters = 900.0,
@@ -110,7 +110,7 @@ class CalculateFlightMetricsRuntimeExternalInstrumentTest {
         assertEquals(900.0, result.navAltitude, 1e-6)
         assertEquals(1009.0, result.qnh, 1e-6)
         assertEquals(ConfidenceLevel.HIGH, result.baroConfidence)
-        assertEquals("PRESSURE", result.varioSource)
+        assertEquals("EXTERNAL", result.varioSource)
         assertEquals(10.0, result.verticalSpeed, 1e-6)
     }
 

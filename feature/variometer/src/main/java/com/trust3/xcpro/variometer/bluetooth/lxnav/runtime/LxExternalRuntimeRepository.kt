@@ -17,6 +17,7 @@ import com.trust3.xcpro.variometer.bluetooth.lxnav.LxParseOutcome
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxSentenceSession
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxWp0Sentence
 import com.trust3.xcpro.variometer.bluetooth.lxnav.LxWp1Sentence
+import com.trust3.xcpro.variometer.bluetooth.lxnav.PlxVfSentence
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -40,6 +41,10 @@ class LxExternalRuntimeRepository @Inject constructor(
     private val externalAirspeedWritePort: ExternalAirspeedWritePort,
     @DefaultDispatcher dispatcher: CoroutineDispatcher
 ) : ExternalInstrumentReadPort {
+
+    companion object {
+        private const val PLXVF_AIRSPEED_PREFERENCE_WINDOW_MS = 3_000L
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val stateMutex = Mutex()
@@ -187,14 +192,32 @@ class LxExternalRuntimeRepository @Inject constructor(
                     totalEnergyVarioMps = sentence.totalEnergyVarioMps?.let {
                         LxTimedValue(it, outcome.receivedMonoMs)
                     } ?: current.totalEnergyVarioMps,
-                    airspeedKph = sentence.airspeedKph?.let {
-                        LxTimedValue(it, outcome.receivedMonoMs)
-                    } ?: current.airspeedKph,
+                    airspeedKph = resolvePreferredAirspeedAfterLxWp0(
+                        current = current,
+                        lxwp0AirspeedKph = sentence.airspeedKph,
+                        receivedMonoMs = outcome.receivedMonoMs
+                    ),
                     lastAcceptedMonoMs = outcome.receivedMonoMs
                 )
 
                 is LxWp1Sentence -> current.copy(
                     deviceInfo = mergeDeviceInfo(current.deviceInfo, sentence.deviceInfo),
+                    lastAcceptedMonoMs = outcome.receivedMonoMs
+                )
+
+                is PlxVfSentence -> current.copy(
+                    pressureAltitudeM = sentence.pressureAltitudeM?.let {
+                        LxTimedValue(it, outcome.receivedMonoMs)
+                    } ?: current.pressureAltitudeM,
+                    externalVarioMps = sentence.provisionalVarioMps?.let {
+                        LxTimedValue(it, outcome.receivedMonoMs)
+                    } ?: current.externalVarioMps,
+                    airspeedKph = sentence.indicatedAirspeedKph?.let {
+                        LxTimedValue(it, outcome.receivedMonoMs)
+                    } ?: current.airspeedKph,
+                    plxvfIasKph = sentence.indicatedAirspeedKph?.let {
+                        LxTimedValue(it, outcome.receivedMonoMs)
+                    } ?: current.plxvfIasKph,
                     lastAcceptedMonoMs = outcome.receivedMonoMs
                 )
             }
@@ -203,6 +226,17 @@ class LxExternalRuntimeRepository @Inject constructor(
             is LxParseOutcome.Rejected,
             is LxParseOutcome.UnknownSentence -> current
         }
+
+    private fun resolvePreferredAirspeedAfterLxWp0(
+        current: LxExternalRuntimeSnapshot,
+        lxwp0AirspeedKph: Double?,
+        receivedMonoMs: Long
+    ): LxTimedValue<Double>? {
+        val preferredPlxvf = current.plxvfIasKph
+            ?.takeIf { receivedMonoMs - it.receivedMonoMs in 0L..PLXVF_AIRSPEED_PREFERENCE_WINDOW_MS }
+        if (preferredPlxvf != null) return preferredPlxvf
+        return lxwp0AirspeedKph?.let { LxTimedValue(it, receivedMonoMs) } ?: current.airspeedKph
+    }
 
     private fun mergeDeviceInfo(
         current: LxDeviceInfo?,
@@ -237,7 +271,9 @@ class LxExternalRuntimeRepository @Inject constructor(
                 connectionState = connectionState,
                 pressureAltitudeM = null,
                 totalEnergyVarioMps = null,
+                externalVarioMps = null,
                 airspeedKph = null,
+                plxvfIasKph = null,
                 deviceInfo = null,
                 lastAcceptedMonoMs = null,
                 diagnostics = diagnosticsAccumulator.clearSession(preservedTransportError)
@@ -253,6 +289,9 @@ class LxExternalRuntimeRepository @Inject constructor(
             },
             totalEnergyVarioMps = snapshot.totalEnergyVarioMps?.let {
                 TimedExternalValue(value = it.value, receivedMonoMs = it.receivedMonoMs)
+            },
+            externalVarioMps = snapshot.externalVarioMps?.let {
+                TimedExternalValue(value = it.value, receivedMonoMs = it.receivedMonoMs)
             }
         )
         snapshot.toExternalAirspeedSample()
@@ -262,10 +301,10 @@ class LxExternalRuntimeRepository @Inject constructor(
 
     private fun LxExternalRuntimeSnapshot.toExternalAirspeedSample(): AirspeedSample? {
         val airspeed = airspeedKph ?: return null
-        val tasMs = UnitsConverter.kmhToMs(airspeed.value)
-        if (!tasMs.isFinite() || tasMs <= 0.0) return null
-        return AirspeedSample.tasOnly(
-            trueMs = tasMs,
+        val iasMs = UnitsConverter.kmhToMs(airspeed.value)
+        if (!iasMs.isFinite() || iasMs <= 0.0) return null
+        return AirspeedSample.iasOnly(
+            indicatedMs = iasMs,
             clockMillis = airspeed.receivedMonoMs
         )
     }

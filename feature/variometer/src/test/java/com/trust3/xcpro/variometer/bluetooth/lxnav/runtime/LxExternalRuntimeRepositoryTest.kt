@@ -54,8 +54,8 @@ class LxExternalRuntimeRepositoryTest {
         val diagnostics = repository.runtimeSnapshot.value.diagnostics
         assertEquals(10L, diagnostics.sessionStartMonoMs)
         assertEquals(400L, diagnostics.lastReceivedMonoMs)
-        assertEquals(1, diagnostics.acceptedSentenceCount)
-        assertEquals(3, diagnostics.rejectedSentenceCount)
+        assertEquals(2, diagnostics.acceptedSentenceCount)
+        assertEquals(2, diagnostics.rejectedSentenceCount)
         assertEquals(1, diagnostics.checksumFailureCount)
         assertEquals(1, diagnostics.parseFailureCount)
         assertEquals(4.0, diagnostics.rollingSentenceRatePerSecond, 1e-6)
@@ -137,7 +137,7 @@ class LxExternalRuntimeRepositoryTest {
     }
 
     @Test
-    fun unsupported_unknown_and_rejected_outcomes_do_not_mutate_runtime_state() = runTest {
+    fun blank_plxvf_only_updates_acceptance_heartbeat_not_measurements() = runTest {
         val transport = FakeBluetoothTransport()
         val repository = repository(
             transport = transport,
@@ -160,9 +160,10 @@ class LxExternalRuntimeRepositoryTest {
         assertEquals(1L, repository.runtimeSnapshot.value.sessionOrdinal)
         assertNull(repository.runtimeSnapshot.value.pressureAltitudeM)
         assertNull(repository.runtimeSnapshot.value.totalEnergyVarioMps)
+        assertNull(repository.runtimeSnapshot.value.externalVarioMps)
         assertNull(repository.runtimeSnapshot.value.airspeedKph)
         assertNull(repository.runtimeSnapshot.value.deviceInfo)
-        assertNull(repository.runtimeSnapshot.value.lastAcceptedMonoMs)
+        assertEquals(100L, repository.runtimeSnapshot.value.lastAcceptedMonoMs ?: -1L)
         assertEquals(ExternalInstrumentFlightSnapshot(), repository.externalFlightSnapshot.value)
 
         repository.disconnect()
@@ -170,7 +171,7 @@ class LxExternalRuntimeRepositoryTest {
     }
 
     @Test
-    fun external_flight_snapshot_exposes_only_pressure_altitude_and_total_energy_vario() = runTest {
+    fun external_flight_snapshot_publishes_narrow_s100_vario_and_ias_only_seams() = runTest {
         val transport = FakeBluetoothTransport()
         val externalAirspeedWritePort = TestExternalAirspeedWritePort()
         val repository = repository(
@@ -183,6 +184,7 @@ class LxExternalRuntimeRepositoryTest {
             SessionScript.AwaitClose(
                 chunks = listOf(
                     chunk("\$LXWP0,LOGGER,118.0,1300.0,3.0", 500L),
+                    chunk("\$PLXVF,,1.00,0.87,-0.12,-0.40,121.0,1250.0", 550L),
                     chunk("\$LXWP1,S100,SN123,1.2.3,2.0", 600L)
                 )
             )
@@ -193,15 +195,17 @@ class LxExternalRuntimeRepositoryTest {
 
         val runtimeSnapshot = repository.runtimeSnapshot.value
         val externalSnapshot = repository.externalFlightSnapshot.value
-        assertEquals(118.0, runtimeSnapshot.airspeedKph?.value ?: Double.NaN, 1e-6)
+        assertEquals(121.0, runtimeSnapshot.airspeedKph?.value ?: Double.NaN, 1e-6)
         assertNotNull(runtimeSnapshot.deviceInfo)
-        assertEquals(1300.0, externalSnapshot.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
-        assertEquals(500L, externalSnapshot.pressureAltitudeM?.receivedMonoMs ?: -1L)
+        assertEquals(1250.0, externalSnapshot.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
+        assertEquals(550L, externalSnapshot.pressureAltitudeM?.receivedMonoMs ?: -1L)
         assertEquals(3.0, externalSnapshot.totalEnergyVarioMps?.value ?: Double.NaN, 1e-6)
         assertEquals(500L, externalSnapshot.totalEnergyVarioMps?.receivedMonoMs ?: -1L)
-        assertEquals(118.0 / 3.6, externalAirspeedWritePort.latestSample?.trueMs ?: Double.NaN, 1e-6)
-        assertTrue(externalAirspeedWritePort.latestSample?.indicatedMs?.isNaN() == true)
-        assertEquals(500L, externalAirspeedWritePort.latestSample?.clockMillis ?: -1L)
+        assertEquals(-0.4, externalSnapshot.externalVarioMps?.value ?: Double.NaN, 1e-6)
+        assertEquals(550L, externalSnapshot.externalVarioMps?.receivedMonoMs ?: -1L)
+        assertEquals(121.0 / 3.6, externalAirspeedWritePort.latestSample?.indicatedMs ?: Double.NaN, 1e-6)
+        assertTrue(externalAirspeedWritePort.latestSample?.trueMs?.isNaN() == true)
+        assertEquals(550L, externalAirspeedWritePort.latestSample?.clockMillis ?: -1L)
 
         repository.disconnect()
         advanceUntilIdle()

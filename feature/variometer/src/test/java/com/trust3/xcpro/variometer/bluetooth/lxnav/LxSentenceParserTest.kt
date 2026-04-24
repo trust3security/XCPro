@@ -20,16 +20,18 @@ class LxSentenceParserTest {
             LxSentenceId.LXWP1,
             (parseAccepted("LXWP1,S100,123,1.0,2.0").sentence as LxWp1Sentence).sentenceId
         )
+        assertEquals(
+            LxSentenceId.PLXVF,
+            (parseAccepted("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3").sentence as PlxVfSentence).sentenceId
+        )
 
         val lxwp2 = parseOutcome("LXWP2,1,1,1") as LxParseOutcome.KnownUnsupported
         val lxwp3 = parseOutcome("LXWP3,1") as LxParseOutcome.KnownUnsupported
-        val plxvf = parseOutcome("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3") as LxParseOutcome.KnownUnsupported
         val plxvs = parseOutcome("PLXVS,23.1,0,12.3") as LxParseOutcome.KnownUnsupported
         val unknown = parseOutcome("PTEST,1,2,3") as LxParseOutcome.UnknownSentence
 
         assertEquals(LxSentenceId.LXWP2, lxwp2.sentenceId)
         assertEquals(LxSentenceId.LXWP3, lxwp3.sentenceId)
-        assertEquals(LxSentenceId.PLXVF, plxvf.sentenceId)
         assertEquals(LxSentenceId.PLXVS, plxvs.sentenceId)
         assertEquals(LxSentenceId.UNKNOWN, unknown.sentenceId)
         assertEquals("PTEST", unknown.rawSentenceId)
@@ -109,6 +111,17 @@ class LxSentenceParserTest {
     }
 
     @Test
+    fun valid_plxvf_parse_reads_supported_fields_only() {
+        val outcome = parser.parse(line(withChecksum("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3")))
+        val sentence = (outcome as LxParseOutcome.Accepted).sentence as PlxVfSentence
+
+        assertEquals(-0.25, sentence.provisionalVarioMps ?: Double.NaN, 0.0)
+        assertEquals(90.2, sentence.indicatedAirspeedKph ?: Double.NaN, 0.0)
+        assertEquals(244.3, sentence.pressureAltitudeM ?: Double.NaN, 0.0)
+        assertEquals(ChecksumStatus.VALID, sentence.checksumStatus)
+    }
+
+    @Test
     fun malformed_non_blank_numeric_field_rejects_whole_lxwp0() {
         val outcome = parser.parse(line("\$LXWP0,Y,not-a-number,654.1,1.12"))
 
@@ -125,11 +138,11 @@ class LxSentenceParserTest {
 
     @Test
     fun known_unsupported_sentences_are_classified_and_ignored_safely() {
-        val outcome = parser.parse(line(withChecksum("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3")))
+        val outcome = parser.parse(line(withChecksum("PLXVS,23.1,0,12.3")))
 
         assertEquals(
             LxParseOutcome.KnownUnsupported(
-                sentenceId = LxSentenceId.PLXVF,
+                sentenceId = LxSentenceId.PLXVS,
                 receivedMonoMs = TEST_RECEIVED_MONO_MS,
                 checksumStatus = ChecksumStatus.VALID
             ),

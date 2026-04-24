@@ -366,6 +366,20 @@ class FlightCalculationHelpers internal constructor(
         indicatedAirspeed: Double?,
         fallbackGroundSpeed: Double,
         timestampMillis: Long
+    ): NettoComputation = calculateNetto(
+        currentVerticalSpeed = currentVerticalSpeed,
+        indicatedAirspeed = indicatedAirspeed,
+        fallbackGroundSpeed = fallbackGroundSpeed,
+        timestampMillis = timestampMillis,
+        allowGroundSpeedFallback = true
+    )
+
+    fun calculateNetto(
+        currentVerticalSpeed: Double,
+        indicatedAirspeed: Double?,
+        fallbackGroundSpeed: Double,
+        timestampMillis: Long,
+        allowGroundSpeedFallback: Boolean
     ): NettoComputation {
         val now = timestampMillis
         val iasCandidate = indicatedAirspeed?.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
@@ -374,7 +388,9 @@ class FlightCalculationHelpers internal constructor(
             lastSpeedTimestamp = now
         }
 
-        val gndCandidate = fallbackGroundSpeed.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
+        val gndCandidate = fallbackGroundSpeed
+            .takeIf { allowGroundSpeedFallback }
+            ?.takeIf { it.isFinite() && it > MIN_MOVING_SPEED_MS }
         if (gndCandidate != null) {
             lastValidGnd = gndCandidate
             lastSpeedTimestamp = now
@@ -386,9 +402,9 @@ class FlightCalculationHelpers internal constructor(
 
         val speed = iasCandidate
             ?: recentTas
-            ?: gndCandidate
-            ?: recentGnd
-            ?: if (hasRecentMotion) DEFAULT_FALLBACK_SPEED_MS else null
+            ?: if (allowGroundSpeedFallback) gndCandidate else null
+            ?: if (allowGroundSpeedFallback) recentGnd else null
+            ?: if (allowGroundSpeedFallback && hasRecentMotion) DEFAULT_FALLBACK_SPEED_MS else null
 
         if (speed == null) {
             // No evidence of movement; don't invent sink from polar. Publish brutto and flag invalid.

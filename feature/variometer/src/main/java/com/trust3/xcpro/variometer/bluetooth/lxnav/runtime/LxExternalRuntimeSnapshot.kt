@@ -15,7 +15,9 @@ internal data class LxExternalRuntimeSnapshot(
     val connectionState: BluetoothConnectionState = BluetoothConnectionState.Disconnected,
     val pressureAltitudeM: LxTimedValue<Double>? = null,
     val totalEnergyVarioMps: LxTimedValue<Double>? = null,
+    val externalVarioMps: LxTimedValue<Double>? = null,
     val airspeedKph: LxTimedValue<Double>? = null,
+    val plxvfIasKph: LxTimedValue<Double>? = null,
     val deviceInfo: LxDeviceInfo? = null,
     val lastAcceptedMonoMs: Long? = null,
     val diagnostics: LxBluetoothRuntimeDiagnostics = LxBluetoothRuntimeDiagnostics()
