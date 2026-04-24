@@ -327,7 +327,8 @@ abstract class MapScreenViewModelTestBase {
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
             orientationManagerFactory = orientationManagerFactory,
-            ballastControllerFactory = ballastControllerFactory
+            ballastControllerFactory = ballastControllerFactory,
+            featureFlags = mapFeatureFlags
         )
         val waypointNavigationRepository = WaypointNavigationRepository(
             flightDataRepository = flightDataRepository, navigationRouteRepository = localNavigationRouteRepository

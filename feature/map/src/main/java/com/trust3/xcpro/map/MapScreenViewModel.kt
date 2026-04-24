@@ -99,7 +99,8 @@ class MapScreenViewModel @Inject constructor(
     internal val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
         flightDataManager = uiControllers.flightDataManager, orientationManager = uiControllers.orientationManager, sensorsUseCase = sensorsUseCase,
         phoneHealthUseCase = mapPhoneHealthUseCase,
-        tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase, waypointFilesUseCase = mapWaypointFilesUseCase
+        tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase, waypointFilesUseCase = mapWaypointFilesUseCase,
+        featureFlags = uiControllers.featureFlags
     )
     private val ballastController = uiControllers.ballastController
     private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager

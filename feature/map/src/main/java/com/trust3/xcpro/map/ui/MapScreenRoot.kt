@@ -46,8 +46,8 @@ internal fun MapScreenRoot(
     val renderLocalOwnship =
         shouldRenderLocalOwnship(allowFlightSensorStart = allowFlightSensorStart, watchMapRenderState = liveFollowWatchUiState.mapRenderState)
     val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
-    val mapFeatureFlags = rememberMapScreenFeatureFlags()
     val runtimeDependencies = mapViewModel.runtimeDependencies
+    val mapFeatureFlags = runtimeDependencies.featureFlags
     val flightDataManager = runtimeDependencies.flightDataManager
     val orientationManager = runtimeDependencies.orientationManager
     val orientationFlightDataRuntimePort = mapViewModel.orientationFlightDataRuntimePort
