@@ -66,7 +66,6 @@ class CondorLiveSampleRepository @Inject constructor(
 
             is CondorSentence.Rmc -> {
                 lastRmc = sentence
-                publishGps()
             }
 
             is CondorSentence.LxWp0 -> {
