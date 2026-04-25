@@ -348,9 +348,19 @@ function Get-RememberTaskManagerCoordinatorAuditHits {
 }
 
 function Get-MapScreenRuntimeBundleAuditHits {
+    param(
+        [string[]]$ApprovedPaths
+    )
+    $approvedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($approvedPath in $ApprovedPaths) {
+        if (-not $approvedPath) {
+            continue
+        }
+        [void]$approvedSet.Add($approvedPath.Replace('\', '/'))
+    }
     $rgArgs = @(
         "-n",
-        "runtimeDependencies|MapScreenRuntimeDependencies",
+        "runtimeInputs|MapScreenRuntimeInputs|runtimeDependencies|MapScreenRuntimeDependencies",
         "--glob", "**/src/main/java/**/*.kt",
         "--glob", "**/src/main/kotlin/**/*.kt"
     )
@@ -368,8 +378,12 @@ function Get-MapScreenRuntimeBundleAuditHits {
         if ($line -notmatch '^(?<FilePath>[^:]+):(?<LineNumber>\d+):(?<LineText>.*)$') {
             continue
         }
+        $normalizedPath = $Matches["FilePath"].Replace('\', '/')
+        if ($approvedSet.Contains($normalizedPath)) {
+            continue
+        }
         $hits.Add([pscustomobject]@{
-                FilePath   = $Matches["FilePath"].Replace('\', '/')
+                FilePath   = $normalizedPath
                 LineNumber = [int]$Matches["LineNumber"]
                 LineText   = $Matches["LineText"].Trim()
             })
@@ -403,6 +417,11 @@ Set-Location $repoRoot
 $approvedRememberTaskManagerCoordinatorPaths = @(
     "feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCompat.kt"
 )
+$approvedMapScreenRuntimeBundlePaths = @(
+    "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt",
+    "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenRuntimeSession.kt",
+    "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt"
+)
 $productionKotlinFiles = @()
 $viewModelConstructorBoundaryHits = @()
 $rememberTaskManagerCoordinatorAuditHits = @()
@@ -412,7 +431,7 @@ if ($AuditViewModelBoundariesOnly -or $RuleSet -in @("Full", "RepositoryFull", "
     $productionKotlinFiles = Get-ProductionKotlinSourceFiles
     $viewModelConstructorBoundaryHits = Get-ViewModelConstructorBoundaryHits -FilePaths $productionKotlinFiles
     $rememberTaskManagerCoordinatorAuditHits = Get-RememberTaskManagerCoordinatorAuditHits -ApprovedPaths $approvedRememberTaskManagerCoordinatorPaths
-    $mapScreenRuntimeBundleAuditHits = Get-MapScreenRuntimeBundleAuditHits
+    $mapScreenRuntimeBundleAuditHits = Get-MapScreenRuntimeBundleAuditHits -ApprovedPaths $approvedMapScreenRuntimeBundlePaths
     Write-AuditHits -Title "ViewModel constructor boundary candidates" -Hits $viewModelConstructorBoundaryHits
     Write-AuditHits -Title "rememberTaskManagerCoordinator usage outside approved compat path" -Hits $rememberTaskManagerCoordinatorAuditHits
     Write-AuditHits -Title "MapScreen runtime bundle exposure" -Hits $mapScreenRuntimeBundleAuditHits
@@ -422,6 +441,12 @@ if ($AuditViewModelBoundariesOnly) {
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
     Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
     Assert-NoAuditHits -Name "MapScreen runtime bundle exposure violations" -Hits $mapScreenRuntimeBundleAuditHits
+    $runtimeInputsVisibilityArgs = @(
+        "-n",
+        "\bval\s+runtimeInputs\b",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt"
+    )
+    Assert-NoMatches -Name "MapScreen runtime bundle must stay internal to map shell" -RgArgs $runtimeInputsVisibilityArgs -Filter { $_ -notmatch '\binternal\s+val\s+runtimeInputs\b' }
     Write-Host ""
     if ($script:HadFailures) {
         Write-Host "ViewModel boundary audit failed."
@@ -467,6 +492,12 @@ if ($runArchitectureRules) {
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
     Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
     Assert-NoAuditHits -Name "MapScreen runtime bundle exposure violations" -Hits $mapScreenRuntimeBundleAuditHits
+    $runtimeInputsVisibilityArgs = @(
+        "-n",
+        "\bval\s+runtimeInputs\b",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt"
+    )
+    Assert-NoMatches -Name "MapScreen runtime bundle must stay internal to map shell" -RgArgs $runtimeInputsVisibilityArgs -Filter { $_ -notmatch '\binternal\s+val\s+runtimeInputs\b' }
 
     # 3) Compose lifecycle: ban collectAsState without lifecycle awareness.
     $collectArgs = @(
