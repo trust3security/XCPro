@@ -347,6 +347,36 @@ function Get-RememberTaskManagerCoordinatorAuditHits {
     return $hits
 }
 
+function Get-MapScreenRuntimeBundleAuditHits {
+    $rgArgs = @(
+        "-n",
+        "runtimeDependencies|MapScreenRuntimeDependencies",
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "**/src/main/kotlin/**/*.kt"
+    )
+    $result = Invoke-Rg -RgArgs $rgArgs
+    if ($result.Code -gt 1) {
+        $details = ($result.ErrorOutput -join "; ")
+        throw "rg failed while auditing MapScreen runtime bundle usage (exit $($result.Code)). $details"
+    }
+    if ($result.Code -eq 1) {
+        return @()
+    }
+
+    $hits = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $result.Output) {
+        if ($line -notmatch '^(?<FilePath>[^:]+):(?<LineNumber>\d+):(?<LineText>.*)$') {
+            continue
+        }
+        $hits.Add([pscustomobject]@{
+                FilePath   = $Matches["FilePath"].Replace('\', '/')
+                LineNumber = [int]$Matches["LineNumber"]
+                LineText   = $Matches["LineText"].Trim()
+            })
+    }
+    return $hits
+}
+
 function Write-AuditHits {
     param(
         [string]$Title,
@@ -376,18 +406,22 @@ $approvedRememberTaskManagerCoordinatorPaths = @(
 $productionKotlinFiles = @()
 $viewModelConstructorBoundaryHits = @()
 $rememberTaskManagerCoordinatorAuditHits = @()
+$mapScreenRuntimeBundleAuditHits = @()
 
 if ($AuditViewModelBoundariesOnly -or $RuleSet -in @("Full", "RepositoryFull", "ArchitectureFast")) {
     $productionKotlinFiles = Get-ProductionKotlinSourceFiles
     $viewModelConstructorBoundaryHits = Get-ViewModelConstructorBoundaryHits -FilePaths $productionKotlinFiles
     $rememberTaskManagerCoordinatorAuditHits = Get-RememberTaskManagerCoordinatorAuditHits -ApprovedPaths $approvedRememberTaskManagerCoordinatorPaths
+    $mapScreenRuntimeBundleAuditHits = Get-MapScreenRuntimeBundleAuditHits
     Write-AuditHits -Title "ViewModel constructor boundary candidates" -Hits $viewModelConstructorBoundaryHits
     Write-AuditHits -Title "rememberTaskManagerCoordinator usage outside approved compat path" -Hits $rememberTaskManagerCoordinatorAuditHits
+    Write-AuditHits -Title "MapScreen runtime bundle exposure" -Hits $mapScreenRuntimeBundleAuditHits
 }
 
 if ($AuditViewModelBoundariesOnly) {
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
     Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
+    Assert-NoAuditHits -Name "MapScreen runtime bundle exposure violations" -Hits $mapScreenRuntimeBundleAuditHits
     Write-Host ""
     if ($script:HadFailures) {
         Write-Host "ViewModel boundary audit failed."
@@ -432,6 +466,7 @@ if ($runArchitectureRules) {
     # Naming alone is not policy; this audit bans exact known types plus broad bag suffixes.
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
     Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
+    Assert-NoAuditHits -Name "MapScreen runtime bundle exposure violations" -Hits $mapScreenRuntimeBundleAuditHits
 
     # 3) Compose lifecycle: ban collectAsState without lifecycle awareness.
     $collectArgs = @(

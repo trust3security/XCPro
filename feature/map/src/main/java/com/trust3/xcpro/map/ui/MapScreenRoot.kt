@@ -46,10 +46,10 @@ internal fun MapScreenRoot(
     val renderLocalOwnship =
         shouldRenderLocalOwnship(allowFlightSensorStart = allowFlightSensorStart, watchMapRenderState = liveFollowWatchUiState.mapRenderState)
     val renderLocalOwnshipState = rememberUpdatedState(renderLocalOwnship)
-    val runtimeDependencies = mapViewModel.runtimeDependencies
-    val mapFeatureFlags = runtimeDependencies.featureFlags
-    val flightDataManager = runtimeDependencies.flightDataManager
-    val orientationManager = runtimeDependencies.orientationManager
+    val runtimeInputs = mapViewModel.runtimeInputs
+    val mapFeatureFlags = runtimeInputs.featureFlags
+    val flightDataManager = runtimeInputs.flightDataManager
+    val orientationManager = runtimeInputs.orientationManager
     val orientationFlightDataRuntimePort = mapViewModel.orientationFlightDataRuntimePort
     val useRenderFrameSyncProvider = remember(mapFeatureFlags) { { mapFeatureFlags.useRenderFrameSync } }
     val orientationFlow = orientationManager.orientationFlow
@@ -92,8 +92,8 @@ internal fun MapScreenRoot(
         mapStateActions = mapViewModel.mapStateActions,
         orientationRuntimePort = orientationManager,
         onOrientationUserInteraction = orientationManager::onUserInteraction,
-        sensorsUseCase = runtimeDependencies.sensorsUseCase,
-        phoneHealthUseCase = runtimeDependencies.phoneHealthUseCase,
+        sensorsUseCase = runtimeInputs.sensorsUseCase,
+        phoneHealthUseCase = runtimeInputs.phoneHealthUseCase,
         replaySessionState = mapViewModel.replaySessionState,
         replayHeadingProvider = mapViewModel::getInterpolatedReplayHeadingDeg,
         replayFixProvider = mapViewModel::getInterpolatedReplayPose,
@@ -101,8 +101,8 @@ internal fun MapScreenRoot(
         useRenderFrameSyncProvider = useRenderFrameSyncProvider,
         coroutineScope = coroutineScope,
         taskInputs = taskManagerInputs,
-        airspaceUseCase = runtimeDependencies.airspaceUseCase,
-        waypointFilesUseCase = runtimeDependencies.waypointFilesUseCase,
+        airspaceUseCase = runtimeInputs.airspaceUseCase,
+        waypointFilesUseCase = runtimeInputs.waypointFilesUseCase,
         localOwnshipRenderEnabled = { renderLocalOwnshipState.value }
     )
     MapScreenLocationProfileBinding(

@@ -327,7 +327,10 @@ abstract class MapScreenViewModelTestBase {
         val mapUiControllersUseCase = MapUiControllersUseCase(
             flightDataManagerFactory = flightDataManagerFactory,
             orientationManagerFactory = orientationManagerFactory,
-            ballastControllerFactory = ballastControllerFactory,
+            ballastControllerFactory = ballastControllerFactory
+        )
+        val runtimeSessionFactory = MapScreenRuntimeSessionFactory(
+            mapUiControllersUseCase = mapUiControllersUseCase,
             featureFlags = mapFeatureFlags
         )
         val waypointNavigationRepository = WaypointNavigationRepository(
@@ -479,7 +482,7 @@ abstract class MapScreenViewModelTestBase {
             sensorsUseCase = mapSensorsUseCase,
             mapPhoneHealthUseCase = mapPhoneHealthUseCase,
             flightDataRepository = flightDataRepository,
-            mapUiControllersUseCase = mapUiControllersUseCase,
+            runtimeSessionFactory = runtimeSessionFactory,
             windSensorFusionRepository = windRepository,
             mapReplayUseCase = mapReplayUseCase,
             mapTasksUseCase = mapTasksUseCase,

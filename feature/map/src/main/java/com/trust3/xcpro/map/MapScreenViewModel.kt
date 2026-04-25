@@ -60,7 +60,7 @@ class MapScreenViewModel @Inject constructor(
     private val sensorsUseCase: MapSensorsUseCase,
     private val mapPhoneHealthUseCase: MapPhoneHealthUseCase,
     private val flightDataRepository: FlightDataRepository,
-    private val mapUiControllersUseCase: MapUiControllersUseCase,
+    private val runtimeSessionFactory: MapScreenRuntimeSessionFactory,
     private val windSensorFusionRepository: WindSensorFusionRepository,
     private val mapReplayUseCase: MapReplayUseCase,
     private val mapTasksUseCase: MapTasksUseCase,
@@ -95,15 +95,16 @@ class MapScreenViewModel @Inject constructor(
     private val windStateFlow = windSensorFusionRepository.windState
     private val thermallingSettingsFlow = thermallingModeUseCase.settingsFlow
     private val varioPreferencesConfig = levoVarioPreferencesRepository.config
-    private val uiControllers = mapUiControllersUseCase.create(viewModelScope)
-    internal val runtimeDependencies: MapScreenRuntimeDependencies = MapScreenRuntimeDependencies(
-        flightDataManager = uiControllers.flightDataManager, orientationManager = uiControllers.orientationManager, sensorsUseCase = sensorsUseCase,
+    private val runtimeSession = runtimeSessionFactory.create(
+        scope = viewModelScope,
+        sensorsUseCase = sensorsUseCase,
         phoneHealthUseCase = mapPhoneHealthUseCase,
-        tasksUseCase = mapTasksUseCase, airspaceUseCase = mapAirspaceUseCase, waypointFilesUseCase = mapWaypointFilesUseCase,
-        featureFlags = uiControllers.featureFlags
+        airspaceUseCase = mapAirspaceUseCase,
+        waypointFilesUseCase = mapWaypointFilesUseCase
     )
-    private val ballastController = uiControllers.ballastController
-    private val flightDataManager: FlightDataManager = runtimeDependencies.flightDataManager; private val orientationManager: MapOrientationManager = runtimeDependencies.orientationManager
+    internal val runtimeInputs: MapScreenRuntimeInputs = runtimeSession.runtimeInputs
+    private val ballastController = runtimeSession.ballastController
+    private val flightDataManager: FlightDataManager = runtimeSession.flightDataManager; private val orientationManager: MapOrientationManager = runtimeSession.orientationManager
     val windArrowState: StateFlow<WindArrowUiState> = createWindArrowState(scope = viewModelScope, flightDataManager = flightDataManager, orientationManager = orientationManager)
     val ballastUiState: StateFlow<BallastUiState> = ballastController.state
     val windState: StateFlow<WindState> = windStateFlow
