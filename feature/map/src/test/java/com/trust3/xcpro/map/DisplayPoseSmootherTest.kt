@@ -172,6 +172,98 @@ class DisplayPoseSmootherTest {
     }
 
     @Test
+    fun stale_render_gap_reanchors_to_latest_fix_even_when_raw_fix_gap_is_small() {
+        val smoother = DisplayPoseSmoother(minSpeedForPredictionMs = 0.0)
+        smoother.pushRawFix(
+            DisplayPoseSmoother.RawFix(
+                latitude = 0.0,
+                longitude = 0.0,
+                speedMs = 0.0,
+                trackDeg = 0.0,
+                headingDeg = 0.0,
+                accuracyM = 5.0,
+                bearingAccuracyDeg = 5.0,
+                speedAccuracyMs = 5.0,
+                timestampMs = 0L,
+                orientationMode = MapOrientationMode.NORTH_UP
+            )
+        )
+        val initial = smoother.tick(100L)!!
+
+        smoother.pushRawFix(
+            DisplayPoseSmoother.RawFix(
+                latitude = 0.0045, // ~500 m north
+                longitude = 0.0,
+                speedMs = 0.0,
+                trackDeg = 0.0,
+                headingDeg = 0.0,
+                accuracyM = 5.0,
+                bearingAccuracyDeg = 5.0,
+                speedAccuracyMs = 5.0,
+                timestampMs = 3_500L,
+                orientationMode = MapOrientationMode.NORTH_UP
+            )
+        )
+        val pose = smoother.tick(3_500L)!!
+
+        val moved = distanceMeters(
+            initial.location.latitude,
+            initial.location.longitude,
+            pose.location.latitude,
+            pose.location.longitude
+        )
+
+        assertEquals(0.0045, pose.location.latitude, 1e-6)
+        assertEquals(0.0, pose.location.longitude, 1e-6)
+        assertTrue(moved > 400.0)
+    }
+
+    @Test
+    fun short_render_gap_keeps_outlier_clamp_behavior() {
+        val smoother = DisplayPoseSmoother(minSpeedForPredictionMs = 0.0)
+        smoother.pushRawFix(
+            DisplayPoseSmoother.RawFix(
+                latitude = 0.0,
+                longitude = 0.0,
+                speedMs = 0.0,
+                trackDeg = 0.0,
+                headingDeg = 0.0,
+                accuracyM = 5.0,
+                bearingAccuracyDeg = null,
+                speedAccuracyMs = 5.0,
+                timestampMs = 0L,
+                orientationMode = MapOrientationMode.NORTH_UP
+            )
+        )
+        val initial = smoother.tick(100L)!!
+
+        smoother.pushRawFix(
+            DisplayPoseSmoother.RawFix(
+                latitude = 0.1, // ~11 km jump
+                longitude = 0.1,
+                speedMs = 0.0,
+                trackDeg = 0.0,
+                headingDeg = 0.0,
+                accuracyM = 5.0,
+                bearingAccuracyDeg = null,
+                speedAccuracyMs = 5.0,
+                timestampMs = 1_500L,
+                orientationMode = MapOrientationMode.NORTH_UP
+            )
+        )
+        val pose = smoother.tick(1_500L)!!
+
+        val moved = distanceMeters(
+            initial.location.latitude,
+            initial.location.longitude,
+            pose.location.latitude,
+            pose.location.longitude
+        )
+        val allowed = 15.0
+        assertTrue(moved <= allowed + 1.0)
+    }
+
+    @Test
     fun prediction_disabled_when_speed_accuracy_is_poor() {
         val smoother = DisplayPoseSmoother(minSpeedForPredictionMs = 0.0)
         smoother.pushRawFix(

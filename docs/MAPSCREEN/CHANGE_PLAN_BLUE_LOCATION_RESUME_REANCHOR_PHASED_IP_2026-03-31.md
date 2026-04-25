@@ -30,12 +30,14 @@ Required pre-read order:
   - The symptom reduces trust in current-position rendering at exactly the moment the user expects an immediate current-location answer.
 - In scope:
   - Lock the failing resume-gap behavior with regression tests.
-  - Add a visual-only re-anchor policy for large fix timestamp gaps in the display-pose owner.
+  - Add a visual-only re-anchor policy for stale render continuity in the display-pose owner.
+  - Preserve the existing large raw-fix-gap re-anchor behavior.
   - Preserve existing outlier clamping for normal in-session GNSS noise.
   - Document the updated display-smoothing behavior.
 - Out of scope:
   - No changes to `FlightDataRepository` SSOT ownership.
   - No changes to sensor cadence policy or GPS provider selection.
+  - No hidden off-screen map rendering or background frame loop.
   - No changes to `BlueLocationOverlay` rendering contracts or map camera-follow ownership.
   - No replay/business-logic changes outside the visual pose owner.
 - User-visible impact:
@@ -58,8 +60,8 @@ Required pre-read order:
 | State Item | Authoritative Owner | Allowed Mutators | Read Path | Derived From | Persistence Owner | Reset/Clear Conditions | Time Base | Required Tests |
 |---|---|---|---|---|---|---|---|---|
 | latest raw visual fix | `DisplayPoseSmoother` | `pushRawFix(...)` | `tick(...)` | `MapLocationUiModel` / replay pose feed | none | smoother reset/clear | live monotonic or replay timestamp passed through existing feed | unit tests |
-| last rendered visual pose | `DisplayPoseSmoother` | `tick(...)` | `tick(...)` result consumed by `DisplayPoseRenderCoordinator` | previous rendered pose + latest raw fix | none | smoother reset/clear or large-gap re-anchor | same as active display feed time base | unit tests |
-| large-gap re-anchor decision | `DisplayPoseSmoother` | `pushRawFix(...)` | internal only | delta between successive raw-fix timestamps in the active time base | none | each new raw fix, smoother reset/clear | same as active feed time base | unit tests |
+| last rendered visual pose | `DisplayPoseSmoother` | `tick(...)` | `tick(...)` result consumed by `DisplayPoseRenderCoordinator` | previous rendered pose + latest raw fix | none | smoother reset/clear or re-anchor | same as active display feed time base | unit tests |
+| resume/render-gap re-anchor decision | `DisplayPoseSmoother` | `pushRawFix(...)` | internal only | delta between the latest rendered tick and the next fresh raw fix in the active time base | none | each new raw fix, smoother reset/clear | same as active feed time base | unit tests |
 
 ### 2.2 Dependency Direction
 
@@ -103,9 +105,9 @@ No bypass removal is planned. Existing flow remains:
 
 | File | New / Existing | Owner / Responsibility | Why Here | Why Not Another Layer/File | Split Needed? |
 |---|---|---|---|---|---|
-| `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_RESUME_REANCHOR_PHASED_IP_2026-03-31.md` | New | task-level plan and architecture contract for this slice | required for non-trivial map-runtime change | not an ADR because no durable boundary move is planned | No |
+| `docs/MAPSCREEN/CHANGE_PLAN_BLUE_LOCATION_RESUME_REANCHOR_PHASED_IP_2026-03-31.md` | Existing | task-level plan and architecture contract for this slice | required for non-trivial map-runtime change | not an ADR because no durable boundary move is planned | No |
 | `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseSmootherTest.kt` | Existing | regression tests for visual smoothing/re-anchor policy | existing focused home for display smoothing policy | not a broad map integration test first; phase 0 should lock the exact policy seam | No |
-| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | Existing | visual-only smoothing, outlier clamp, and large-gap re-anchor owner | this file already owns visual pose policy | not lifecycle manager, not overlay renderer, not repository | No |
+| `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | Existing | visual-only smoothing, outlier clamp, and render-gap re-anchor owner | this file already owns visual pose policy | not lifecycle manager, not overlay renderer, not repository | No |
 | `mapposition.md` | Existing | user-facing/maintainer-facing map visual behavior contract | display smoothing semantics change here | not `PIPELINE.md` unless runtime wiring changes | No |
 
 ### 2.2E Module and API Surface
@@ -124,7 +126,7 @@ No compatibility shim is planned.
 
 | Formula / Constant / Policy | Canonical Owner File | Reused By | Why This Owner Is Canonical | Temporary Duplicates Allowed? |
 |---|---|---|---|---|
-| large-gap display-pose re-anchor threshold and policy | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | `DisplayPoseSmootherTest.kt`, `mapposition.md` | this file already owns the related visual-only clamp/smoothing policy | No |
+| display-pose re-anchor thresholds and policy | `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt` | `DisplayPoseSmootherTest.kt`, `mapposition.md` | this file already owns the related visual-only clamp/smoothing policy | No |
 
 ### 2.2I Stateless Object / Singleton Boundary
 
@@ -169,7 +171,7 @@ No new production logging is planned.
 
 | Condition | Category | Owner | User-Visible Behavior | Retry / Fallback Policy | Test Coverage |
 |---|---|---|---|---|---|
-| large timestamp gap between successive fixes | Degraded visual continuity | `DisplayPoseSmoother` | re-anchor to the latest fix instead of crawling from the stale pose | first fresh fix resets visual pose continuity | smoother tests |
+| stale render continuity before a fresh fix | Degraded visual continuity | `DisplayPoseSmoother` | re-anchor to the latest fix instead of crawling from the stale pose | first fresh fix resets visual pose continuity | smoother tests |
 | normal same-session noisy GNSS jump | Recoverable | `DisplayPoseSmoother` | keep existing outlier clamp behavior | unchanged clamp path | smoother tests |
 | stale latest fix with no fresh update yet | Unavailable / stale visual input | existing display pose stale-fix rule | keep existing last pose behavior | unchanged stale-fix timeout path | existing behavior + regression review |
 
@@ -206,7 +208,7 @@ FlightDataRepository
   -> MapComposeEffects.updateLocationFromGPS(...)
   -> LocationManager.pushRawFix(...)
   -> DisplayPoseSmoother.tick(...)
-  -> normal outlier clamp still applies after a large background gap
+  -> normal outlier clamp still applies after a long render gap
   -> blue ownship walks from stale pose toward latest fix
 ```
 
@@ -217,7 +219,7 @@ FlightDataRepository
   -> MapScreenViewModel.mapLocation
   -> MapComposeEffects.updateLocationFromGPS(...)
   -> LocationManager.pushRawFix(...)
-  -> DisplayPoseSmoother.pushRawFix(...) detects a large same-timebase gap
+  -> DisplayPoseSmoother.pushRawFix(...) detects stale same-timebase render continuity
   -> smoother re-anchors visual continuity before the next tick
   -> first fresh fix renders at the latest position
 ```
@@ -234,7 +236,7 @@ FlightDataRepository
 - Ownership/file split changes in this phase:
   - none
 - Tests to add/update:
-  - large-gap re-anchor test
+  - render-gap re-anchor test
   - normal same-session outlier clamp preservation test confirmation
 - Exit criteria:
   - the stale-crawl symptom is captured at the smoothing seam
@@ -244,12 +246,12 @@ Phase 0 seam/code pass outcome:
 - `FlightDataRepository` is not the bug owner; it already remains the SSOT.
 - `BlueLocationOverlay` is not the bug owner; it only renders the pose it is given.
 - `MapLifecycleManager` exposes the symptom window on resume, but it is not the correct state owner for the fix.
-- `DisplayPoseSmoother` is the correct fix owner because the bad behavior comes from visual clamp continuity being reused across a long timestamp gap.
+- `DisplayPoseSmoother` is the correct fix owner because the bad behavior comes from visual clamp continuity being reused across a long render gap.
 
 ### Phase 1 - Visual policy implementation
 
 - Goal:
-  - Add explicit large-gap re-anchor behavior in the display-pose owner.
+  - Add explicit render-gap re-anchor behavior in the display-pose owner.
 - Files to change:
   - `feature/map-runtime/src/main/java/com/trust3/xcpro/map/DisplayPoseSmoother.kt`
   - `feature/map/src/test/java/com/trust3/xcpro/map/DisplayPoseSmootherTest.kt`
@@ -258,7 +260,7 @@ Phase 0 seam/code pass outcome:
   - keep the policy in `DisplayPoseSmoother`
   - do not widen lifecycle or overlay APIs
 - Tests to add/update:
-  - first fresh fix after a large gap snaps to the latest location
+  - first fresh fix after a stale render gap snaps to the latest location
   - normal in-session outlier clamp still limits unrealistic jumps
 - Exit criteria:
   - stale resume-gap crawl is removed
