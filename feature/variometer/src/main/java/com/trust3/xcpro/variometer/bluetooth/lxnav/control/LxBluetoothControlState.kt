@@ -8,6 +8,16 @@ data class BluetoothBondedDeviceItem(
     val displayName: String?
 )
 
+data class LxBluetoothDetailRow(
+    val label: String,
+    val value: String
+)
+
+data class LxBluetoothDetailSection(
+    val title: String,
+    val rows: List<LxBluetoothDetailRow>
+)
+
 data class LxBluetoothControlState(
     val permissionRequired: Boolean = false,
     val bondedDevices: List<BluetoothBondedDeviceItem> = emptyList(),
@@ -25,6 +35,7 @@ data class LxBluetoothControlState(
     val lastReceivedMonoMs: Long? = null,
     val lastReceivedAgeMs: Long? = null,
     val rollingSentenceRatePerSecond: Double = 0.0,
+    val detailSections: List<LxBluetoothDetailSection> = emptyList(),
     val canConnect: Boolean = false,
     val canDisconnect: Boolean = false
 )

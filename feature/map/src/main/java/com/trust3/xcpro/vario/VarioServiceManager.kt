@@ -3,6 +3,7 @@ package com.trust3.xcpro.vario
 import com.trust3.xcpro.audio.AudioFocusManager
 import com.trust3.xcpro.common.di.DefaultDispatcher
 import com.trust3.xcpro.core.common.logging.AppLogger
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
 import com.trust3.xcpro.igc.IgcRecordingActionSink
 import com.trust3.xcpro.igc.data.IgcFinalizeResult
 import com.trust3.xcpro.igc.domain.IgcSessionStateMachine
@@ -45,6 +46,7 @@ open class VarioServiceManager @Inject constructor(
     val sensorFusionRepository: SensorFusionRepository,
     private val flightDataRepository: FlightDataRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
+    private val externalFlightSettingsReadPort: ExternalFlightSettingsReadPort,
     private val hawkConfigRepository: HawkConfigRepository,
     private val hawkVarioRepository: HawkVarioRepository,
     val flightStateSource: FlightStateSource,
@@ -141,10 +143,19 @@ open class VarioServiceManager @Inject constructor(
     private fun observeLevoPreferences(ownerScope: CoroutineScope) {
         if (configJob != null) return
         configJob = ownerScope.launch(defaultDispatcher) {
-            levoVarioPreferencesRepository.config.collectLatest { config ->
-                sensorFusionRepository.setMacCreadySetting(config.macCready)
+            combine(
+                levoVarioPreferencesRepository.config,
+                externalFlightSettingsReadPort.externalFlightSettingsSnapshot
+            ) { config, externalSettings ->
+                config to externalSettings
+            }.collectLatest { (config, externalSettings) ->
+                sensorFusionRepository.setMacCreadySetting(
+                    externalSettings.macCreadyMps ?: config.macCready
+                )
                 sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
-                sensorFusionRepository.setAutoMcEnabled(config.autoMcEnabled)
+                sensorFusionRepository.setAutoMcEnabled(
+                    externalSettings.macCreadyMps == null && config.autoMcEnabled
+                )
                 sensorFusionRepository.setTotalEnergyCompensationEnabled(config.teCompensationEnabled)
                 sensorFusionRepository.updateAudioSettings(config.audioSettings)
                 sensorFusionRepository.setHawkAudioEnabled(config.enableHawkUi)

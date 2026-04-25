@@ -6,6 +6,8 @@ import com.trust3.xcpro.audio.AudioFocusManager
 import com.trust3.xcpro.audio.VarioAudioSettings
 import com.trust3.xcpro.common.documents.DocumentRef
 import com.trust3.xcpro.common.flight.FlightMode
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.flightdata.FlightDataRepository
 import com.trust3.xcpro.hawk.HawkConfigRepository
 import com.trust3.xcpro.hawk.HawkVarioRepository
@@ -168,6 +170,7 @@ class VarioServiceManagerIgcActionOrderingTest {
             sensorFusionRepository = FakeSensorFusionRepository(),
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -281,4 +284,10 @@ class VarioServiceManagerIgcActionOrderingTest {
             override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
         }
     }
+
+    private fun noOpExternalFlightSettingsReadPort(): ExternalFlightSettingsReadPort =
+        object : ExternalFlightSettingsReadPort {
+            override val externalFlightSettingsSnapshot =
+                MutableStateFlow(ExternalFlightSettingsSnapshot())
+        }
 }

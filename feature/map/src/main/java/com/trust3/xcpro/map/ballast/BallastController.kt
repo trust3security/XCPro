@@ -3,11 +3,13 @@ package com.trust3.xcpro.map.ballast
 import androidx.compose.animation.core.CubicBezierEasing
 import com.trust3.xcpro.common.glider.GliderConfig
 import com.trust3.xcpro.core.time.TimeBridge
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
 import com.trust3.xcpro.glider.GliderRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +28,7 @@ private val DRAIN_EASING = CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f)
 
 class BallastController(
     private val repository: GliderRepository,
+    private val externalFlightSettingsReadPort: ExternalFlightSettingsReadPort,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher,
     private val adapter: BallastRepositoryAdapter = BallastRepositoryAdapter(repository),
@@ -42,10 +45,22 @@ class BallastController(
 
     init {
         snapshotJob = scope.launch(dispatcher) {
-            adapter.snapshots.collect { snapshot ->
+            combine(
+                adapter.snapshots,
+                externalFlightSettingsReadPort.externalFlightSettingsSnapshot
+            ) { internalSnapshot, externalSettings ->
+                externalSettings.ballastOverloadFactor
+                    ?.takeIf { it.isFinite() && it >= 1.0 }
+                    ?.let(BallastSnapshot::external)
+                    ?: internalSnapshot
+            }.collect { snapshot ->
                 var cancelAnimation = false
                 _state.update { current ->
                     val next = current.withSnapshot(snapshot)
+                    if (snapshot.isExternalOverride) {
+                        cancelAnimation = current.isAnimating
+                        return@update next.resetAnimation()
+                    }
                     if (current.isAnimating) {
                         val target = current.targetKg
                         // If we've effectively hit the target (empty or full), end animation immediately.
@@ -82,6 +97,10 @@ class BallastController(
 
     fun submit(command: BallastCommand) {
         scope.launch(dispatcher) {
+            if (state.value.isReadOnlyExternal) {
+                stopAnimation()
+                return@launch
+            }
             when (command) {
                 BallastCommand.StartFill -> {
                     if (state.value.mode == BallastMode.Filling) {

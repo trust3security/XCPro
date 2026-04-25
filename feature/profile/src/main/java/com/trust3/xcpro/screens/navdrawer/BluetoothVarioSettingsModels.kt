@@ -14,6 +14,16 @@ data class BluetoothBondedDeviceRowUiState(
     val isSelected: Boolean
 )
 
+data class BluetoothVarioDetailRowUiState(
+    val label: String,
+    val value: String
+)
+
+data class BluetoothVarioDetailSectionUiState(
+    val title: String,
+    val rows: List<BluetoothVarioDetailRowUiState>
+)
+
 data class BluetoothVarioSettingsUiState(
     val permissionRequired: Boolean = false,
     val bondedDevices: List<BluetoothBondedDeviceRowUiState> = emptyList(),
@@ -24,6 +34,7 @@ data class BluetoothVarioSettingsUiState(
     val healthText: String? = null,
     val reconnectText: String? = null,
     val failureText: String? = null,
+    val detailSections: List<BluetoothVarioDetailSectionUiState> = emptyList(),
     val connectEnabled: Boolean = false,
     val disconnectEnabled: Boolean = false
 )

@@ -7,6 +7,8 @@ import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDisconnect
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothReconnectState
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothControlPort
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothControlState
+import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDetailRow
+import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDetailSection
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -137,6 +139,42 @@ class BluetoothVarioSettingsUseCaseTest {
             uiState.reconnectText
         )
         assertEquals("Reconnect attempts exhausted.", uiState.failureText)
+    }
+
+    @Test
+    fun detail_sections_map_to_ui_state() = runTest {
+        val controlPort = mock<LxBluetoothControlPort>()
+        whenever(controlPort.state).thenReturn(
+            MutableStateFlow(
+                LxBluetoothControlState(
+                    detailSections = listOf(
+                        LxBluetoothDetailSection(
+                            title = "Active overrides",
+                            rows = listOf(
+                                LxBluetoothDetailRow("MacCready", "1.5 m/s"),
+                                LxBluetoothDetailRow("QNH", "1008.4 hPa")
+                            )
+                        ),
+                        LxBluetoothDetailSection(
+                            title = "Device / environment",
+                            rows = listOf(
+                                LxBluetoothDetailRow("OAT", "+23.1 C")
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val useCase = BluetoothVarioSettingsUseCase(controlPort)
+        val uiState = useCase.uiState.first()
+
+        assertEquals(2, uiState.detailSections.size)
+        assertEquals("Active overrides", uiState.detailSections[0].title)
+        assertEquals("MacCready", uiState.detailSections[0].rows[0].label)
+        assertEquals("1.5 m/s", uiState.detailSections[0].rows[0].value)
+        assertEquals("Device / environment", uiState.detailSections[1].title)
+        assertEquals("+23.1 C", uiState.detailSections[1].rows[0].value)
     }
 
     @Test

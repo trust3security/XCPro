@@ -1,8 +1,11 @@
 package com.trust3.xcpro.livesource
 
 import com.trust3.xcpro.di.CondorLiveAirspeedSource
+import com.trust3.xcpro.di.CondorLiveExternalFlightSettingsSource
 import com.trust3.xcpro.di.CondorLiveExternalInstrumentSource
 import com.trust3.xcpro.di.CondorLiveSensorSource
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentReadPort
 import com.trust3.xcpro.sensors.SensorDataSource
 import com.trust3.xcpro.simulator.condor.CondorLiveAirspeedDataSource
@@ -14,6 +17,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -39,4 +43,13 @@ object CondorSelectedLiveBindingsModule {
     fun provideCondorLiveExternalInstrumentSource(
         source: CondorLiveSampleRepository
     ): ExternalInstrumentReadPort = source
+
+    @Provides
+    @Singleton
+    @CondorLiveExternalFlightSettingsSource
+    fun provideCondorLiveExternalFlightSettingsSource(): ExternalFlightSettingsReadPort =
+        object : ExternalFlightSettingsReadPort {
+            override val externalFlightSettingsSnapshot =
+                MutableStateFlow(ExternalFlightSettingsSnapshot())
+        }
 }

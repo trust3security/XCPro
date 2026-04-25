@@ -1,6 +1,7 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
 import com.trust3.xcpro.core.time.FakeClock
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.trust3.xcpro.bluetooth.BluetoothConnectionError
 import com.trust3.xcpro.bluetooth.BluetoothConnectionState
@@ -247,6 +248,47 @@ class LxExternalRuntimeRepositoryTest {
         assertNull(repository.runtimeSnapshot.value.lastAcceptedMonoMs)
         assertEquals(ExternalInstrumentFlightSnapshot(), repository.externalFlightSnapshot.value)
         assertNull(externalAirspeedWritePort.latestSample)
+    }
+
+    @Test
+    fun lxwp2_lxwp3_and_plxvs_publish_session_sticky_settings_snapshot_and_clear_on_disconnect() = runTest {
+        val transport = FakeBluetoothTransport()
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+        transport.enqueue(
+            SessionScript.AwaitClose(
+                chunks = listOf(
+                    chunk("\$LXWP2,1.5,1.20,12,0.123,0.456,0.789,7", 100L),
+                    chunk("\$LXWP3,100,1,2,3,4,5,6,7,8,9,10,TEST GLIDER,-60", 120L),
+                    chunk("\$PLXVS,23.1,1,12.3", 140L)
+                )
+            )
+        )
+
+        repository.connect(TEST_DEVICE_A)
+        advanceUntilIdle()
+
+        assertEquals(
+            ExternalFlightSettingsSnapshot(
+                macCreadyMps = 1.5,
+                bugsPercent = 12,
+                ballastOverloadFactor = 1.20,
+                qnhHpa = repository.externalFlightSettingsSnapshot.value.qnhHpa,
+                outsideAirTemperatureC = 23.1
+            ),
+            repository.externalFlightSettingsSnapshot.value
+        )
+        assertEquals(1.20, repository.runtimeSnapshot.value.liveSettingsOverrides.ballastOverloadFactor?.value ?: Double.NaN, 1e-6)
+        assertEquals(7, repository.runtimeSnapshot.value.deviceConfiguration.audioVolume?.value)
+        assertEquals(12.3, repository.runtimeSnapshot.value.environmentStatus.voltageV?.value ?: Double.NaN, 1e-6)
+
+        repository.disconnect()
+        advanceUntilIdle()
+
+        assertEquals(ExternalFlightSettingsSnapshot(), repository.externalFlightSettingsSnapshot.value)
     }
 
     @Test

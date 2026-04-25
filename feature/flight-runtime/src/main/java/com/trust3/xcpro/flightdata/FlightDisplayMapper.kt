@@ -82,6 +82,14 @@ class FlightDisplayMapper {
             teAltitude = AltitudeM(metrics.teAltitude),
             macCready = snapshot.macCready,
             macCreadyRisk = snapshot.macCreadyRisk,
+            externalMacCreadyActive = snapshot.externalMacCreadyActive,
+            externalQnhActive = snapshot.externalQnhActive,
+            bugsPercent = snapshot.bugsPercent ?: 0,
+            bugsValid = snapshot.bugsPercent != null,
+            ballastOverloadFactor = snapshot.ballastOverloadFactor ?: Double.NaN,
+            ballastFactorValid = snapshot.ballastOverloadFactor != null,
+            outsideAirTemperatureC = snapshot.outsideAirTemperatureC ?: Double.NaN,
+            outsideAirTemperatureValid = snapshot.outsideAirTemperatureC != null,
             isCircling = metrics.isCircling,
             isTurning = metrics.isTurning,
             thermalAverageValid = metrics.thermalAverage30sValid,
@@ -116,5 +124,10 @@ data class FlightDisplaySnapshot(
     val dataQuality: String,
     val timestamp: Long,
     val macCready: Double,
-    val macCreadyRisk: Double
+    val macCreadyRisk: Double,
+    val externalMacCreadyActive: Boolean = false,
+    val externalQnhActive: Boolean = false,
+    val bugsPercent: Int? = null,
+    val ballastOverloadFactor: Double? = null,
+    val outsideAirTemperatureC: Double? = null
 )

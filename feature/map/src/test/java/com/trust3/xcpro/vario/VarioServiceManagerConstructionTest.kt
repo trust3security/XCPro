@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.trust3.xcpro.audio.AudioFocusManager
 import com.trust3.xcpro.audio.VarioAudioSettings
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.igc.IgcRecordingActionSink
 import com.trust3.xcpro.igc.data.IgcFinalizeResult
 import com.trust3.xcpro.igc.data.IgcLogEntry
@@ -85,6 +87,7 @@ class VarioServiceManagerConstructionTest {
             sensorFusionRepository = fakeRepository,
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -133,6 +136,7 @@ class VarioServiceManagerConstructionTest {
             sensorFusionRepository = fakeRepository,
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -180,6 +184,7 @@ class VarioServiceManagerConstructionTest {
             sensorFusionRepository = FakeSensorFusionRepository(),
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -262,6 +267,7 @@ class VarioServiceManagerConstructionTest {
             sensorFusionRepository = FakeSensorFusionRepository(),
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -323,6 +329,7 @@ class VarioServiceManagerConstructionTest {
             sensorFusionRepository = FakeSensorFusionRepository(),
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -418,4 +425,10 @@ class VarioServiceManagerConstructionTest {
             override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
         }
     }
+
+    private fun noOpExternalFlightSettingsReadPort(): ExternalFlightSettingsReadPort =
+        object : ExternalFlightSettingsReadPort {
+            override val externalFlightSettingsSnapshot =
+                MutableStateFlow(ExternalFlightSettingsSnapshot())
+        }
 }

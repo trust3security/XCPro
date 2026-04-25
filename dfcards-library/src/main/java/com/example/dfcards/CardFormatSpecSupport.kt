@@ -2,7 +2,10 @@ package com.example.dfcards
 
 import com.trust3.xcpro.common.units.AltitudeM
 import com.trust3.xcpro.common.units.DistanceM
+import com.trust3.xcpro.common.units.PressureHpa
 import com.trust3.xcpro.common.units.SpeedMs
+import com.trust3.xcpro.common.units.TemperatureC
+import com.trust3.xcpro.common.units.UnitsConverter
 import com.trust3.xcpro.common.units.UnitsFormatter
 import com.trust3.xcpro.common.units.UnitsPreferences
 import com.trust3.xcpro.common.units.VerticalSpeedMs
@@ -50,7 +53,8 @@ internal fun placeholderFor(
         KnownCardId.THERMAL_T_AVG,
         KnownCardId.NETTO_AVG30,
         KnownCardId.NETTO,
-        KnownCardId.LEVO_NETTO ->
+        KnownCardId.LEVO_NETTO,
+        KnownCardId.MC ->
             "-- ${UnitsFormatter.verticalSpeed(VerticalSpeedMs(0.0), units).unitLabel}"
         KnownCardId.THERMAL_TC_GAIN ->
             "-- ${UnitsFormatter.altitude(AltitudeM(0.0), units).unitLabel}"
@@ -61,6 +65,10 @@ internal fun placeholderFor(
         KnownCardId.IAS,
         KnownCardId.TAS ->
             "-- ${UnitsFormatter.speed(SpeedMs(0.0), units).unitLabel}"
+        KnownCardId.OAT ->
+            "-- ${UnitsFormatter.temperature(TemperatureC(0.0), units).unitLabel}"
+        KnownCardId.BUGS -> "-- %"
+        KnownCardId.BALLAST_FACTOR -> "--.--x"
         KnownCardId.WIND_DIR -> "-- ${strings.degUnit}"
         KnownCardId.WPT_DIST,
         KnownCardId.TASK_DIST,
@@ -222,6 +230,177 @@ internal fun formatCurrentLdCard(
         inThermalContext -> Pair("--:1", strings.thermal)
 
         else -> Pair("--:1", strings.noData)
+    }
+}
+
+internal fun airspeedSubtitle(sourceLabel: String, strings: CardStrings): String {
+    return when (sourceLabel) {
+        "SENSOR", "WIND" -> strings.est
+        else -> strings.gps
+    }
+}
+
+internal fun waypointEtaSubtitle(sourceLabel: String, strings: CardStrings): String {
+    return when (sourceLabel) {
+        "GROUND_SPEED" -> strings.gps
+        else -> strings.noWpt
+    }
+}
+
+internal fun formatMcCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    val formatted = UnitsFormatter.verticalSpeed(
+        VerticalSpeedMs(liveData.macCready),
+        units
+    )
+    val label = when {
+        liveData.externalMacCreadyActive -> strings.live
+        liveData.speedToFlyMcSourceAuto -> "AUTO"
+        else -> "MAN"
+    }
+    return Pair(formatted.text, label)
+}
+
+internal fun formatNettoCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    val formatted = UnitsFormatter.verticalSpeed(
+        VerticalSpeedMs(liveData.displayNetto),
+        units
+    )
+    val s100NettoMode =
+        liveData.airspeedSource == "SENSOR" &&
+            (liveData.varioSource == "TE" || liveData.varioSource == "EXTERNAL")
+    val label =
+        if (liveData.nettoValid) {
+            strings.netto
+        } else if (s100NettoMode) {
+            strings.noData
+        } else {
+            strings.noPolar
+        }
+    return Pair(formatted.text, label)
+}
+
+internal fun formatLevoNettoCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    val hasWind = liveData.levoNettoHasWind
+    val hasPolar = liveData.levoNettoHasPolar
+    return when {
+        !hasWind -> Pair(placeholderFor(KnownCardId.LEVO_NETTO, units, strings), strings.noWind)
+        !hasPolar -> Pair(placeholderFor(KnownCardId.LEVO_NETTO, units, strings), strings.noPolar)
+        else -> {
+            val formatted = UnitsFormatter.verticalSpeed(
+                VerticalSpeedMs(liveData.levoNetto),
+                units
+            )
+            Pair(formatted.text, strings.netto)
+        }
+    }
+}
+
+internal fun formatNettoAvg30Card(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    return if (liveData.nettoAverage30sValid) {
+        val formatted = UnitsFormatter.verticalSpeed(
+            VerticalSpeedMs(liveData.nettoAverage30s),
+            units
+        )
+        Pair(formatted.text, strings.netto)
+    } else {
+        Pair(placeholderFor(KnownCardId.NETTO_AVG30, units, strings), strings.noData)
+    }
+}
+
+internal fun formatMcSpeedCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    if (!liveData.speedToFlyHasPolar) {
+        return Pair(placeholderFor(KnownCardId.MC_SPEED, units, strings), strings.noPolar)
+    }
+    if (!liveData.speedToFlyValid) {
+        return Pair(placeholderFor(KnownCardId.MC_SPEED, units, strings), strings.noMc)
+    }
+    val formatted = UnitsFormatter.speed(SpeedMs(liveData.speedToFlyIas), units)
+    val deltaKt = UnitsConverter.msToKnots(liveData.speedToFlyDelta)
+    val deltaRounded = deltaKt.roundToInt()
+    val deltaLabel = if (abs(deltaKt) < 0.5) {
+        "0 kt"
+    } else {
+        val sign = if (deltaRounded > 0) "+" else ""
+        "$sign$deltaRounded kt"
+    }
+    val modeLabel = if (liveData.speedToFlyMcSourceAuto) "AUTO" else "MAN"
+    return Pair(formatted.text, "$modeLabel $deltaLabel")
+}
+
+internal fun formatBugsCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    return if (liveData.bugsValid) {
+        Pair("${liveData.bugsPercent.coerceIn(0, 50)}%", strings.live)
+    } else {
+        Pair(placeholderFor(KnownCardId.BUGS, units, strings), strings.noData)
+    }
+}
+
+internal fun formatBallastFactorCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    return if (liveData.ballastFactorValid) {
+        Pair(String.format(Locale.US, "%.2fx", liveData.ballastOverloadFactor), strings.live)
+    } else {
+        Pair(placeholderFor(KnownCardId.BALLAST_FACTOR, units, strings), strings.noData)
+    }
+}
+
+internal fun formatOatCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    return if (liveData.outsideAirTemperatureValid) {
+        val formatted = UnitsFormatter.temperature(
+            TemperatureC(liveData.outsideAirTemperatureC),
+            units
+        )
+        Pair(formatted.text, strings.live)
+    } else {
+        Pair(placeholderFor(KnownCardId.OAT, units, strings), strings.noData)
+    }
+}
+
+internal fun formatQnhCard(
+    liveData: RealTimeFlightData,
+    units: UnitsPreferences,
+    strings: CardStrings
+): Pair<String, String> {
+    return if (liveData.currentPressureHPa > 0) {
+        val formatted = UnitsFormatter.pressure(
+            PressureHpa(liveData.qnh.toDouble()),
+            units
+        )
+        Pair(formatted.text, if (liveData.externalQnhActive) strings.live else strings.calc)
+    } else {
+        val placeholder = UnitsFormatter.pressure(PressureHpa(0.0), units)
+        Pair("-- ${placeholder.unitLabel}", strings.noBaro)
     }
 }
 

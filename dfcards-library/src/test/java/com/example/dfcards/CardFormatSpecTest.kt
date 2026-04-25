@@ -141,6 +141,74 @@ class CardFormatSpecTest {
     }
 
     @Test
+    fun mc_formats_live_label_when_external_override_is_active() {
+        val liveData = RealTimeFlightData(
+            macCready = 1.5,
+            externalMacCreadyActive = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.MC]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("+1.5 m/s", primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun bugs_formats_live_percent_when_valid() {
+        val liveData = RealTimeFlightData(
+            bugsPercent = 12,
+            bugsValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.BUGS]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("12%", primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun ballastFactor_formats_live_value_when_valid() {
+        val liveData = RealTimeFlightData(
+            ballastOverloadFactor = 1.2,
+            ballastFactorValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.BALLAST_FACTOR]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("1.20x", primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
+    fun oat_formats_live_temperature_when_valid() {
+        val liveData = RealTimeFlightData(
+            outsideAirTemperatureC = 23.1,
+            outsideAirTemperatureValid = true
+        )
+        val formatter = StubTimeFormatter()
+
+        val spec = CardFormatSpecs.specs[KnownCardId.OAT]
+        assertNotNull(spec)
+
+        val (primary, secondary) = spec!!.format(liveData, units, strings, formatter)
+
+        assertEquals("+23 C", primary)
+        assertEquals(strings.live, secondary)
+    }
+
+    @Test
     fun ldCurr_requires_explicit_valid_flag() {
         val liveData = RealTimeFlightData(
             pilotCurrentLD = 35f,

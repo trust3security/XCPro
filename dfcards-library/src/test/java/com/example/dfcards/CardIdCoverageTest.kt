@@ -82,12 +82,15 @@ class CardIdCoverageTest {
                 "ld_vario",
                 "polar_ld",
                 "best_ld",
-                "mc_speed"
+                "mc",
+                "mc_speed",
+                "bugs",
+                "ballast_factor"
             ),
             cardsByCategory.getValue(CardCategory.PERFORMANCE).map { it.id }
         )
         assertEquals(
-            listOf("wind_spd", "wind_dir", "wind_arrow", "local_time", "flight_time"),
+            listOf("oat", "wind_spd", "wind_dir", "wind_arrow", "local_time", "flight_time"),
             cardsByCategory.getValue(CardCategory.TIME_WEATHER).map { it.id }
         )
         assertEquals(

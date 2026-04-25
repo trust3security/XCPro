@@ -3,6 +3,7 @@ package com.trust3.xcpro.sensors
 import com.trust3.xcpro.core.flight.calculations.BarometricAltitudeData
 import com.trust3.xcpro.core.flight.filters.ModernVarioResult
 import com.trust3.xcpro.core.common.logging.AppLogger
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.trust3.xcpro.flightdata.FlightDisplayMapper
 import com.trust3.xcpro.flightdata.FlightDisplaySnapshot
@@ -45,6 +46,7 @@ internal class FlightDataEmitter(
         windState: WindState?,
         externalAirspeedSample: AirspeedSample?,
         externalInstrumentSnapshot: ExternalInstrumentFlightSnapshot,
+        externalFlightSettingsSnapshot: ExternalFlightSettingsSnapshot,
         isFlying: Boolean,
         replayRealVarioMs: Double?,
         replayRealVarioTimestamp: Long,
@@ -126,7 +128,12 @@ internal class FlightDataEmitter(
             // Wall time for live UI, IGC time for replay UI.
             timestamp = outputTimestampMillis,
             macCready = macCreadySetting,
-            macCreadyRisk = macCreadyRisk
+            macCreadyRisk = macCreadyRisk,
+            externalMacCreadyActive = externalFlightSettingsSnapshot.macCreadyMps != null,
+            externalQnhActive = externalFlightSettingsSnapshot.qnhHpa != null,
+            bugsPercent = externalFlightSettingsSnapshot.bugsPercent,
+            ballastOverloadFactor = externalFlightSettingsSnapshot.ballastOverloadFactor,
+            outsideAirTemperatureC = externalFlightSettingsSnapshot.outsideAirTemperatureC
         )
         val flightData = flightDisplayMapper.map(snapshot)
 

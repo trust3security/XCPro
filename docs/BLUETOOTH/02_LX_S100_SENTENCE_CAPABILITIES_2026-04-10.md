@@ -18,7 +18,8 @@ This document records:
 - `S100` and `S10` are in the same LXNAV `S8x/S10x` family
 - they should use the same base `LXWP*` parser in XCPro
 - XCPro should identify the connected model using `LXWP1.product`
-- extra support should be added sentence-by-sentence, not by creating `S100Parser`, `S10Parser`, etc.
+- extra support should be added sentence-by-sentence, not by creating
+  `S100Parser`, `S10Parser`, etc.
 
 ## Sentence Family
 
@@ -74,17 +75,16 @@ Important TE ownership note:
 
 - `LXWP0[3]` does drive XCPro's main variometer path when it is the freshest
   valid TE source
-- the MapScreen Levo secondary label still comes from `levoNetto`, not directly
-  from raw `LXWP0[3]`
+- the MapScreen TE outer arc remains TE-only and reads this confirmed TE source
 
 ### `LXWP1` - Device info
 
 | Field index | Meaning | XCPro today |
 |---|---|---|
-| `0` | product / instrument ID | parsed; stored in Bluetooth runtime state |
-| `1` | serial number | parsed; stored in Bluetooth runtime state |
-| `2` | software version | parsed; stored in Bluetooth runtime state |
-| `3` | hardware version | parsed; stored in Bluetooth runtime state |
+| `0` | product / instrument ID | parsed; surfaced in Bluetooth settings detail sections |
+| `1` | serial number | parsed; surfaced in Bluetooth settings detail sections |
+| `2` | software version | parsed; surfaced in Bluetooth settings detail sections |
+| `3` | hardware version | parsed; surfaced in Bluetooth settings detail sections |
 | `4` | license string | not parsed |
 
 `LXWP1.product` is the right place to distinguish `S100` vs `S10` in UI and logging.
@@ -93,31 +93,31 @@ Important TE ownership note:
 
 | Field index | Meaning | XCPro today |
 |---|---|---|
-| `0` | MacCready | unsupported |
-| `1` | ballast | unsupported |
-| `2` | bugs | unsupported |
-| `3` | polar A | unsupported |
-| `4` | polar B | unsupported |
-| `5` | polar C | unsupported |
-| `6` | audio volume | unsupported |
+| `0` | MacCready | parsed; published as a live external MC override and used by MC/STF surfaces |
+| `1` | ballast | parsed as ballast overload factor; used by `BALLAST_FACTOR` and the read-only external ballast widget |
+| `2` | bugs | parsed; published as a live external bugs override and used by bugs/polar runtime consumers |
+| `3` | polar A | parsed; surfaced in Bluetooth settings detail sections only |
+| `4` | polar B | parsed; surfaced in Bluetooth settings detail sections only |
+| `5` | polar C | parsed; surfaced in Bluetooth settings detail sections only |
+| `6` | audio volume | parsed; surfaced in Bluetooth settings detail sections only |
 
 ### `LXWP3` - QNH / altitude-offset and SC config
 
 | Field index | Meaning | XCPro today |
 |---|---|---|
-| `0` | altitude offset | unsupported |
-| `1` | SC mode | unsupported |
-| `2` | vario filter | unsupported |
-| `3` | TE filter | unsupported |
-| `4` | TE level | unsupported |
-| `5` | vario average | unsupported |
-| `6` | vario range | unsupported |
-| `7` | SC tab | unsupported |
-| `8` | SC low | unsupported |
-| `9` | SC speed | unsupported |
-| `10` | SmartDiff | unsupported |
-| `11` | glider name | unsupported |
-| `12` | time offset | unsupported |
+| `0` | altitude offset | parsed; converted to a derived live external QNH override |
+| `1` | SC mode | parsed; surfaced in Bluetooth settings detail sections only |
+| `2` | vario filter | parsed; surfaced in Bluetooth settings detail sections only |
+| `3` | TE filter | parsed; surfaced in Bluetooth settings detail sections only |
+| `4` | TE level | parsed; surfaced in Bluetooth settings detail sections only |
+| `5` | vario average | parsed; surfaced in Bluetooth settings detail sections only |
+| `6` | vario range | parsed; surfaced in Bluetooth settings detail sections only |
+| `7` | SC tab | parsed; surfaced in Bluetooth settings detail sections only |
+| `8` | SC low | parsed; surfaced in Bluetooth settings detail sections only |
+| `9` | SC speed | parsed; surfaced in Bluetooth settings detail sections only |
+| `10` | SmartDiff | parsed; surfaced in Bluetooth settings detail sections only |
+| `11` | glider name | parsed; surfaced in Bluetooth settings detail sections only |
+| `12` | time offset | parsed; surfaced in Bluetooth settings detail sections only |
 
 ### `PLXVF` - Extended sVario/V7 flight data
 
@@ -166,7 +166,13 @@ Potential values:
 - flight mode
 - voltage
 
-XCPro today: unsupported
+XCPro today:
+
+| Field index | Meaning | XCPro today |
+|---|---|---|
+| `0` | OAT | parsed; published to the `OAT` card through the live external-settings seam |
+| `1` | mode | parsed; surfaced in Bluetooth settings detail sections only |
+| `2` | voltage | parsed; surfaced in Bluetooth settings detail sections only |
 
 ## XCPro Current Coverage
 
@@ -176,10 +182,10 @@ Current parser status in `LxSentenceParser.kt`:
 |---|---|
 | `LXWP0` | supported |
 | `LXWP1` | supported |
-| `LXWP2` | known but unsupported |
-| `LXWP3` | known but unsupported |
+| `LXWP2` | supported |
+| `LXWP3` | supported |
 | `PLXVF` | supported for vario / IAS / pressure altitude |
-| `PLXVS` | known but unsupported |
+| `PLXVS` | supported |
 
 Current production-use status:
 
@@ -188,14 +194,22 @@ Current production-use status:
   - TE vario: used
   - airspeed: used as IAS-first live input
 - `LXWP1`
-  - parsed and retained in Bluetooth runtime state
-  - not yet surfaced in Bluetooth settings UI
+  - parsed and surfaced in Bluetooth settings UI
 - `PLXVF`
   - pressure altitude: used
   - provisional external vario/audio source: used
   - IAS: used
-- `LXWP2`, `LXWP3`, `PLXVS`
-  - not used
+- `LXWP2`
+  - MC: used
+  - ballast overload factor: used for display/widget surfaces
+  - bugs: used
+  - polar/audio-volume details: diagnostics/settings only
+- `LXWP3`
+  - altitude offset: used to derive live external QNH
+  - SC/filter/config details: diagnostics/settings only
+- `PLXVS`
+  - OAT: used
+  - mode/voltage: diagnostics/settings only
 
 ## What The S100 / S10 Family Can Provide
 
@@ -230,7 +244,7 @@ Potentially available in wider LX variants:
 - Add support by sentence:
   - `LXWP2` for MC/ballast/bugs/settings
   - `LXWP3` for QNH/altitude-offset handling
-  - `PLXVS` for OAT/mode/voltage if XCPro broadens support further
+  - `PLXVS` for OAT/mode/voltage
 
 Do not:
 

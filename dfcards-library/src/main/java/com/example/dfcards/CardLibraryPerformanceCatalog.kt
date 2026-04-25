@@ -119,12 +119,42 @@ internal val performanceCards = listOf(
         unitFontSize = 8
     ),
     CardDefinition(
+        id = "mc",
+        title = "MC",
+        description = "MacCready setting",
+        category = CardCategory.PERFORMANCE,
+        icon = Icons.Filled.Speed,
+        unit = "m/s",
+        primaryFontSize = 14,
+        unitFontSize = 9
+    ),
+    CardDefinition(
         id = "mc_speed",
         title = "MC SPEED",
         description = "MacCready speed to fly",
         category = CardCategory.PERFORMANCE,
         icon = Icons.Filled.Speed,
         unit = "kt",
+        primaryFontSize = 14,
+        unitFontSize = 9
+    ),
+    CardDefinition(
+        id = "bugs",
+        title = "BUGS",
+        description = "Live bug degradation",
+        category = CardCategory.PERFORMANCE,
+        icon = Icons.Filled.Timeline,
+        unit = "%",
+        primaryFontSize = 14,
+        unitFontSize = 9
+    ),
+    CardDefinition(
+        id = "ballast_factor",
+        title = "BALLAST",
+        description = "Live ballast overload factor",
+        category = CardCategory.PERFORMANCE,
+        icon = Icons.Filled.Star,
+        unit = "x",
         primaryFontSize = 14,
         unitFontSize = 9
     )

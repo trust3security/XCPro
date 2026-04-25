@@ -5,7 +5,6 @@ package com.example.dfcards
 
 import com.trust3.xcpro.common.units.AltitudeM
 import com.trust3.xcpro.common.units.DistanceM
-import com.trust3.xcpro.common.units.PressureHpa
 import com.trust3.xcpro.common.units.SpeedMs
 import com.trust3.xcpro.common.units.UnitsConverter
 import com.trust3.xcpro.common.units.UnitsFormatter
@@ -275,6 +274,8 @@ internal object CardFormatSpecs {
                 }
             }
 
+            KnownCardId.MC -> formatMcCard(liveData, units, strings)
+
             KnownCardId.THERMAL_AVG -> {
                 // Match 30 s TC: primary shows the 30 s average, secondary shows current vario
                 val avgValue: Double = liveData.thermalAverage.toDouble()
@@ -342,69 +343,25 @@ internal object CardFormatSpecs {
                 Pair(formatted, null)
             }
 
-            KnownCardId.NETTO -> {
-                val formatted = UnitsFormatter.verticalSpeed(
-                    VerticalSpeedMs(liveData.displayNetto),
-                    units
-                )
-                val s100NettoMode = liveData.airspeedSource == "SENSOR" && (liveData.varioSource == "TE" || liveData.varioSource == "EXTERNAL")
-                val label = if (liveData.nettoValid) strings.netto else if (s100NettoMode) strings.noData else strings.noPolar
-                Pair(formatted.text, label)
-            }
+            KnownCardId.NETTO -> formatNettoCard(liveData, units, strings)
 
-            KnownCardId.LEVO_NETTO -> {
-                val hasWind = liveData.levoNettoHasWind
-                val hasPolar = liveData.levoNettoHasPolar
-                when {
-                    !hasWind -> Pair(placeholderFor(cardId, units, strings), strings.noWind)
-                    !hasPolar -> Pair(placeholderFor(cardId, units, strings), strings.noPolar)
-                    else -> {
-                        val formatted = UnitsFormatter.verticalSpeed(
-                            VerticalSpeedMs(liveData.levoNetto),
-                            units
-                        )
-                        Pair(formatted.text, strings.netto)
-                    }
-                }
-            }
+            KnownCardId.LEVO_NETTO -> formatLevoNettoCard(liveData, units, strings)
 
-            KnownCardId.NETTO_AVG30 -> {
-                if (liveData.nettoAverage30sValid) {
-                    val formatted = UnitsFormatter.verticalSpeed(
-                        VerticalSpeedMs(liveData.nettoAverage30s),
-                        units
-                    )
-                    Pair(formatted.text, strings.netto)
-                } else {
-                    Pair(placeholderFor(cardId, units, strings), strings.noData)
-                }
-            }
+            KnownCardId.NETTO_AVG30 -> formatNettoAvg30Card(liveData, units, strings)
 
-            KnownCardId.MC_SPEED -> {
-                if (!liveData.speedToFlyHasPolar) {
-                    Pair(placeholderFor(cardId, units, strings), strings.noPolar)
-                } else if (liveData.speedToFlyValid) {
-                    val formatted = UnitsFormatter.speed(SpeedMs(liveData.speedToFlyIas), units)
-                    val deltaKt = UnitsConverter.msToKnots(liveData.speedToFlyDelta)
-                    val deltaRounded = deltaKt.roundToInt()
-                    val deltaLabel = if (abs(deltaKt) < 0.5) {
-                        "0 kt"
-                    } else {
-                        val sign = if (deltaRounded > 0) "+" else ""
-                        "$sign$deltaRounded kt"
-                    }
-                    val modeLabel = if (liveData.speedToFlyMcSourceAuto) "AUTO" else "MAN"
-                    Pair(formatted.text, "$modeLabel $deltaLabel")
-                } else {
-                    Pair(placeholderFor(cardId, units, strings), strings.noMc)
-                }
-            }
+            KnownCardId.MC_SPEED -> formatMcSpeedCard(liveData, units, strings)
+
+            KnownCardId.BUGS -> formatBugsCard(liveData, units, strings)
+
+            KnownCardId.BALLAST_FACTOR -> formatBallastFactorCard(liveData, units, strings)
 
             KnownCardId.FLIGHT_TIME -> Pair(liveData.flightTime, strings.flight)
 
             KnownCardId.WIND_SPD -> formatWindSpeed(liveData, units, strings, placeholderFor(cardId, units, strings))
             KnownCardId.WIND_DIR -> formatWindDirection(liveData, units, strings, placeholderFor(cardId, units, strings))
             KnownCardId.WIND_ARROW -> formatWindArrow(liveData, units, strings, placeholderFor(cardId, units, strings))
+
+            KnownCardId.OAT -> formatOatCard(liveData, units, strings)
 
             KnownCardId.LOCAL_TIME -> {
                 val timeMillis = liveData.lastUpdateTime.takeIf { it > 0L } ?: liveData.timestamp
@@ -481,18 +438,7 @@ internal object CardFormatSpecs {
             KnownCardId.G_FORCE -> Pair("-- G", strings.noAccel)
             KnownCardId.FLARM -> Pair(strings.noFlarm, "---")
 
-            KnownCardId.QNH -> {
-                if (liveData.currentPressureHPa > 0) {
-                    val formatted = UnitsFormatter.pressure(
-                        PressureHpa(liveData.qnh.toDouble()),
-                        units
-                    )
-                    Pair(formatted.text, strings.calc)
-                } else {
-                    val placeholder = UnitsFormatter.pressure(PressureHpa(0.0), units)
-                    Pair("-- ${placeholder.unitLabel}", strings.noBaro)
-                }
-            }
+            KnownCardId.QNH -> formatQnhCard(liveData, units, strings)
 
             KnownCardId.SATELITES -> {
                 if (liveData.satelliteCount > 0) {
@@ -522,18 +468,5 @@ internal object CardFormatSpecs {
         }
     }
 
-    private fun airspeedSubtitle(sourceLabel: String, strings: CardStrings): String {
-        return when (sourceLabel) {
-            "SENSOR", "WIND" -> strings.est
-            else -> strings.gps
-        }
-    }
-
-    private fun waypointEtaSubtitle(sourceLabel: String, strings: CardStrings): String {
-        return when (sourceLabel) {
-            "GROUND_SPEED" -> strings.gps
-            else -> strings.noWpt
-        }
-    }
 }
 

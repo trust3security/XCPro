@@ -31,6 +31,13 @@ class LxDeviceSnapshotReducer {
                 lastAcceptedSentenceId = sentence.sentenceId,
                 lastAcceptedMonoMs = sentence.receivedMonoMs
             )
+
+            is LxWp2Sentence,
+            is LxWp3Sentence,
+            is PlxVsSentence -> previous.copy(
+                lastAcceptedSentenceId = sentence.sentenceId,
+                lastAcceptedMonoMs = sentence.receivedMonoMs
+            )
         }
     }
 

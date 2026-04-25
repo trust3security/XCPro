@@ -11,6 +11,7 @@ data class QnhValue(
 )
 
 enum class QnhSource {
+    EXTERNAL,
     MANUAL,
     AUTO_TERRAIN,
     AUTO_GPS,
@@ -51,4 +52,3 @@ data class QnhCalibrationConfig(
     val estimatedAglMeters: Double = 2.0,
     val trimFraction: Double = 0.2
 )
-

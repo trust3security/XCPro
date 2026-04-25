@@ -55,8 +55,12 @@ internal value class CardId(val raw: String) {
         const val LD_VARIO = "ld_vario"
         const val POLAR_LD = "polar_ld"
         const val BEST_LD = "best_ld"
+        const val MC = "mc"
         const val MC_SPEED = "mc_speed"
+        const val BUGS = "bugs"
+        const val BALLAST_FACTOR = "ballast_factor"
 
+        const val OAT = "oat"
         const val WIND_SPD = "wind_spd"
         const val WIND_DIR = "wind_dir"
         const val WIND_ARROW = "wind_arrow"
@@ -110,7 +114,11 @@ internal value class CardId(val raw: String) {
             LD_VARIO,
             POLAR_LD,
             BEST_LD,
+            MC,
             MC_SPEED,
+            BUGS,
+            BALLAST_FACTOR,
+            OAT,
             WIND_SPD,
             WIND_DIR,
             WIND_ARROW,

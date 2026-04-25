@@ -33,3 +33,11 @@ annotation class DefaultLiveExternalInstrumentSource
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class CondorLiveExternalInstrumentSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DefaultLiveExternalFlightSettingsSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CondorLiveExternalFlightSettingsSource

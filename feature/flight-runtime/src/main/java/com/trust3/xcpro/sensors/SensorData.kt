@@ -187,6 +187,14 @@ data class CompleteFlightData(
     val teAltitude: AltitudeM = AltitudeM(0.0),
     val macCready: Double = 0.0,
     val macCreadyRisk: Double = 0.0,
+    val externalMacCreadyActive: Boolean = false,
+    val externalQnhActive: Boolean = false,
+    val bugsPercent: Int = 0,
+    val bugsValid: Boolean = false,
+    val ballastOverloadFactor: Double = Double.NaN,
+    val ballastFactorValid: Boolean = false,
+    val outsideAirTemperatureC: Double = Double.NaN,
+    val outsideAirTemperatureValid: Boolean = false,
 
     // Flight mode flags
     val isCircling: Boolean = false,

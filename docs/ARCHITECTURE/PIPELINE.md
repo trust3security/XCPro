@@ -48,3 +48,26 @@
     pressure altitude into those same seams.
 - Widget, card, and audio consumers must read fused runtime outputs only. They
   must not read raw Bluetooth runtime state or raw LX sentence state directly.
+
+### External Flight Settings Override Rule
+
+- `ExternalFlightSettingsReadPort` carries session-scoped live overrides and
+  display-only environment values from external device settings/status
+  sentences. It is separate from `ExternalInstrumentReadPort` because these
+  values are not freshness-gated flight telemetry samples.
+- This seam may carry live `MacCready`, `bugs`, ballast overload factor, QNH,
+  and OAT. It must not become a persistence bus for profile, glider, or QNH
+  storage, and it must not become a raw Bluetooth diagnostics dump.
+- Runtime owners consume the effective live override and keep persistence
+  ownership unchanged:
+  - QNH runtime may apply an external override without writing it back to
+    `QnhPreferencesRepository`.
+  - MacCready runtime may prefer an external override without mutating Levo
+    preferences.
+  - Bugs runtime may prefer an external override without mutating glider
+    configuration storage.
+  - Ballast overload factor may drive display-only surfaces such as the ballast
+    widget without becoming an implicit glide/performance write path.
+- Bluetooth settings/diagnostics may read raw LX runtime status directly for
+  metadata, mode, voltage, polar coefficients, and SC/filter/config values.
+  Flight widgets/cards must still consume only their fused/runtime owners.
