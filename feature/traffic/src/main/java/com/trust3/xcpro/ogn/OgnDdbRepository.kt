@@ -74,11 +74,13 @@ class OgnDdbRepository @Inject constructor(
                     addressHex = normalized,
                     fallbackId = normalized
                 )
-                identitiesByTypedKey[typedKey] ?: fallbackIdentityByHex[normalized]
+                identitiesByTypedKey[typedKey]
+                    ?: fallbackIdentityByHex[normalized]
+                    ?: singleTypedIdentityByHexOrNull(normalized)
             }
             OgnAddressType.UNKNOWN -> {
                 fallbackIdentityByHex[normalized]
-                    ?: if (ambiguousTypedHexes.contains(normalized)) null else typedSingleIdentityByHex[normalized]
+                    ?: singleTypedIdentityByHexOrNull(normalized)
             }
         }
     }
@@ -88,6 +90,14 @@ class OgnDdbRepository @Inject constructor(
     }
 
     fun lastUpdateWallMs(): Long = lastUpdateWallMs
+
+    private fun singleTypedIdentityByHexOrNull(normalizedHex: String): OgnTrafficIdentity? {
+        return if (ambiguousTypedHexes.contains(normalizedHex)) {
+            null
+        } else {
+            typedSingleIdentityByHex[normalizedHex]
+        }
+    }
 
     private fun loadFromDiskIfNeeded() {
         if (identitiesByTypedKey.isNotEmpty() || fallbackIdentityByHex.isNotEmpty()) return

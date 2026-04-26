@@ -268,7 +268,8 @@ Close-zoom marker label semantics:
   - failed refresh (HTTP/transport/parser/empty-payload failure) retries on a
     bounded short window (`2..5 minutes`) instead of waiting for hourly cadence
 - If DDB marks target as `tracked == false`, target is removed from displayed list.
-- DDB lookup is type-aware (`device_type + device_id`) when type is known, with unknown-safe fallback.
+- DDB lookup is type-aware (`device_type + device_id`) when type is known, then falls back to
+  unknown-type DDB entries and finally to an unambiguous same-hex typed identity.
 - If DDB identity is missing or not identified, labels fall back to non-identifying id/callsign fields.
 - If DDB `aircraft_type` is missing, icon type falls back to APRS typed `idXXYYYYYY` decode when present.
 

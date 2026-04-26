@@ -129,6 +129,7 @@ Drop conditions:
 - DDB lookup precedence:
   - typed lookup (`device_type + device_id`) when parsed target type is known
   - unknown-safe fallback for untyped targets
+  - unambiguous same-hex typed fallback when the packet type disagrees with DDB type
 - Label resolution:
   - DDB competition number -> DDB registration -> fallback id/callsign
 - If DDB reports `tracked == false`, target is removed from output list.
