@@ -137,7 +137,7 @@ class IgcReplayLevoNettoValidationTest {
     }
 
     companion object {
-        private const val REPLAY_RESOURCE = "replay/vario-demo-0-10-0-120s.igc"
+        private const val REPLAY_RESOURCE = "replay/levo-netto-validation-0-10-0-120s.igc"
         private const val MAX_ABS_LEVO_MS = 3.0
     }
 }

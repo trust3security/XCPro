@@ -6,7 +6,7 @@ Date
 Status
 - Updated 2026-04-22: live/Condor display-pose trail-body phase selected
   before any further raw sampling or provider changes.
-- Updated 2026-04-22, superseded 2026-04-23: replay/SIM2 display-pose trail
+- Updated 2026-04-22, superseded 2026-04-23: replay display-pose trail
   and transient display connector slice added.
 - Updated 2026-04-23: display-pose trail-body ownership was rejected after
   XCSoar comparison. Raw `TrailStore` drawing is restored as the visible trail
@@ -79,7 +79,7 @@ Acceptance criteria
 Rollback safety
 - Revert `SnailTrailManager.updateDisplayPose()` tail refresh behavior.
 
-## Phase 2A: Replay/SIM2 Display-Pose Trail And Connector
+## Phase 2A: Replay Display-Pose Trail And Connector
 
 Status
 - Superseded 2026-04-23. Do not implement as written.
@@ -98,7 +98,7 @@ Implementation sketch
   trail rendering.
 
 Acceptance criteria
-- Raw trail body paints for live, replay, SIM2, and `FULL` length.
+- Raw trail body paints for live, replay, and `FULL` length.
 - Display pose does not create stored trail points.
 - Connector updates remain transient through the raw tail source.
 

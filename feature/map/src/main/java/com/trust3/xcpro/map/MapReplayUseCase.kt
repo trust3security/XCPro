@@ -5,7 +5,6 @@ import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.glide.GlideComputationRepository
 import com.trust3.xcpro.hawk.HawkVarioUiState
 import com.trust3.xcpro.map.config.MapReplayFeatureFlagPort
-import com.trust3.xcpro.map.replay.RacingReplayLogBuilder
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import com.trust3.xcpro.navigation.WaypointNavigationRepository
@@ -33,7 +32,6 @@ class MapReplayUseCase @Inject constructor(
     private val pilotCurrentLdRepository: PilotCurrentLdRepository,
     private val taskPerformanceRepository: TaskPerformanceRepository,
     private val controller: IgcReplayController,
-    private val racingReplayLogBuilder: RacingReplayLogBuilder,
     private val replayFeatureFlags: MapReplayFeatureFlagPort
 ) {
     val replaySession: StateFlow<SessionState> = controller.session
@@ -83,7 +81,6 @@ class MapReplayUseCase @Inject constructor(
 
     internal fun createReplayCoordinator(
         flightDataFlow: StateFlow<CompleteFlightData?>,
-        mapStateStore: MapStateStore,
         mapStateActions: MapStateActions,
         uiEffects: MutableSharedFlow<MapUiEffect>,
         replaySessionState: StateFlow<SessionState>,
@@ -92,10 +89,7 @@ class MapReplayUseCase @Inject constructor(
         taskManager = taskManager,
         taskNavigationController = taskNavigationController,
         flightDataFlow = flightDataFlow,
-        igcReplayController = controller,
-        racingReplayLogBuilder = racingReplayLogBuilder,
         featureFlags = replayFeatureFlags,
-        mapStateStore = mapStateStore,
         mapStateActions = mapStateActions,
         uiEffects = uiEffects,
         replaySessionState = replaySessionState,

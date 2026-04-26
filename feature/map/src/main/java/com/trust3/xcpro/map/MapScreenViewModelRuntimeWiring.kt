@@ -51,14 +51,12 @@ internal fun createFlightDataUiAdapterForViewModel(
 internal fun createReplayCoordinatorForViewModel(
     mapReplayUseCase: MapReplayUseCase,
     flightDataFlow: StateFlow<CompleteFlightData?>,
-    mapStateStore: MapStateStore,
     mapStateActions: MapStateActions,
     uiEffects: MutableSharedFlow<MapUiEffect>,
     replaySessionState: StateFlow<SessionState>,
     scope: CoroutineScope
 ): MapScreenReplayCoordinator = mapReplayUseCase.createReplayCoordinator(
     flightDataFlow = flightDataFlow,
-    mapStateStore = mapStateStore,
     mapStateActions = mapStateActions,
     uiEffects = uiEffects,
     replaySessionState = replaySessionState,

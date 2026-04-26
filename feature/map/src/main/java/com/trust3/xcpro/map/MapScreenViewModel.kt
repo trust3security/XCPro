@@ -114,8 +114,6 @@ class MapScreenViewModel @Inject constructor(
     val hawkVarioUiState: StateFlow<HawkVarioUiState> = hawkVarioUseCase.hawkVarioUiState.eagerState(scope = viewModelScope, initial = HawkVarioUiState())
     val replaySessionState: StateFlow<SessionState> = mapReplayUseCase.replaySession
     val taskFlightSurfaceUiState: StateFlow<TaskFlightSurfaceUiState> = taskFlightSurfaceUseCase.uiState.eagerState(scope = viewModelScope, initial = TaskFlightSurfaceUiState())
-    val showVarioDemoFab: Boolean = screenFeatureFlags.showVarioDemoFab
-    val showRacingReplayFab: Boolean = screenFeatureFlags.showRacingReplayFab
     val gpsStatusFlow: StateFlow<GpsStatusUiModel> = createGpsStatusUiState(viewModelScope, sensorsUseCase)
     private val replaySensorGates: MapReplaySensorGateStates = createReplaySensorGateStates(viewModelScope, replaySessionState)
     val suppressLiveGps: StateFlow<Boolean> = replaySensorGates.suppressLiveGps
@@ -184,7 +182,7 @@ class MapScreenViewModel @Inject constructor(
         uiEffects = _uiEffects, trailUpdates = _trailUpdates
     )
     private val replayCoordinator = createReplayCoordinatorForViewModel(
-        mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightData, mapStateStore = mapStateStore,
+        mapReplayUseCase = mapReplayUseCase, flightDataFlow = flightData,
         mapStateActions = mapStateActions, uiEffects = _uiEffects, replaySessionState = replaySessionState, scope = viewModelScope
     )
     private val uiEventHandler = MapScreenUiEventHandler(
@@ -251,10 +249,6 @@ class MapScreenViewModel @Inject constructor(
         )
     }
     fun emitMapCommand(command: MapCommand) = _mapCommands.tryEmit(command)
-    fun onRacingTaskReplay() = replayCoordinator.onRacingTaskReplay()
-    fun onVarioDemoReplaySim() = replayCoordinator.onVarioDemoReplaySim()
-    fun onVarioDemoReplaySimLive() = replayCoordinator.onVarioDemoReplaySimLive()
-    fun onVarioDemoReplaySim3() = replayCoordinator.onVarioDemoReplaySim3()
     fun updateSafeContainerSize(size: MapSize) = mapStateStore.updateSafeContainerSize(size)
     fun setMapStyle(styleName: String) = emitEffectiveStyleCommandIfChanged(mapStateStore.setBaseMapStyle(styleName).effectiveStyleChanged)
     fun persistMapStyle(styleName: String) = profileSessionCoordinator.persistMapStyle(styleName)

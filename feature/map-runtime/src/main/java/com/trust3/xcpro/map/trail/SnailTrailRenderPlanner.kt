@@ -60,10 +60,10 @@ internal class SnailTrailRenderPlanner(
         } else {
             rawMinDistance
         }
-        val sim2FullTrail = input.isReplay && input.useRenderFrameSync
+        val renderFrameSyncedReplayTrail = input.isReplay && input.useRenderFrameSync
         val filtered = SnailTrailMath.applyDistanceFilter(
             renderPoints,
-            if (sim2FullTrail) 0.0 else minDistanceMeters
+            if (renderFrameSyncedReplayTrail) 0.0 else minDistanceMeters
         )
         val latestPoint = renderPoints.lastOrNull()
         val filteredWithTail = if (
@@ -104,7 +104,7 @@ internal class SnailTrailRenderPlanner(
             renderPoints = filteredWithTail,
             metersPerPixel = metersPerPixel,
             minDistanceMeters = minDistanceMeters,
-            skipBoundsCheck = sim2FullTrail,
+            skipBoundsCheck = renderFrameSyncedReplayTrail,
             styleCache = styleCache
         )
     }

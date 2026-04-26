@@ -11,7 +11,7 @@ class DisplayPoseFrameLogger(
     private val timeBaseProvider: () -> DisplayClock.TimeBase?,
     private val featureFlags: MapFeatureFlags,
     private val nowElapsedMs: () -> Long = { TimeBridge.nowMonoMs() },
-    private val intervalProvider: () -> Long = { featureFlags.sim2FrameLogIntervalMs }
+    private val intervalProvider: () -> Long = { featureFlags.replayFrameLogIntervalMs }
 ) {
     private var lastFrameLogMs: Long = 0L
 

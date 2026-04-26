@@ -49,7 +49,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import com.trust3.xcpro.map.config.MapFeatureFlags
-import com.trust3.xcpro.map.replay.RacingReplayLogBuilder
 import com.trust3.xcpro.airspace.AirspaceUseCase
 import com.trust3.xcpro.flightdata.WaypointFilesUseCase
 import com.trust3.xcpro.orientation.HeadingResolver
@@ -327,7 +326,6 @@ abstract class MapScreenViewModelTestBase {
                 distanceProjector = TaskPerformanceDistanceProjector()
             ),
             controller = replayController,
-            racingReplayLogBuilder = RacingReplayLogBuilder(),
             replayFeatureFlags = mapFeatureFlags
         )
         val mapTasksUseCase = MapTasksUseCase(localTaskManager)

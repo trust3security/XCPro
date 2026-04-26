@@ -113,7 +113,7 @@ Execution update (2026-02-14):
     - `DisplayPoseRenderCoordinator.kt`
     - `SailplaneIconBitmapFactory.kt`
     - `MapReplaySnapshotControllers.kt`
-    - `RacingReplayTaskHelpers.kt`
+    - `legacy map replay task helper.kt`
     - `RacingNavigationEngineSupport.kt`
 - Phase 2 guardrail add-on completed (initial):
   - `scripts/ci/enforce_rules.ps1` now enforces line budgets for:
@@ -147,7 +147,7 @@ Execution update (2026-02-14):
 - Phase 3 decomposition pass completed (map/task UI and runtime tranche 2):
   - `AATEditModeOverlay.kt` reduced from 415 -> 101 LOC.
   - `SectorAreaCalculator.kt` reduced from 408 -> 160 LOC.
-  - `RacingReplayLogBuilder.kt` reduced from 406 -> 157 LOC.
+  - `legacy map replay route helper.kt` reduced from 406 -> 157 LOC.
   - `RacingTask.kt` reduced from 400 -> 299 LOC.
   - `SnailTrailOverlay.kt` reduced from 396 -> 310 LOC.
   - `AATManageList.kt` reduced from 395 -> 97 LOC.
@@ -157,7 +157,7 @@ Execution update (2026-02-14):
     - `AATEditModeInfoCard.kt`
     - `AATEditModeActions.kt`
     - `SectorAreaGeometrySupport.kt`
-    - `RacingReplayAnchorBuilder.kt`
+    - `legacy map replay anchor helper.kt`
     - `SnailTrailTailRenderer.kt`
     - `AATManageListItems.kt`
     - `RacingWaypointListItems.kt`
@@ -182,8 +182,8 @@ Execution update (2026-02-14):
     - `AATEditModeActions.kt` (`<= 350`)
     - `SectorAreaCalculator.kt` (`<= 350`)
     - `SectorAreaGeometrySupport.kt` (`<= 350`)
-    - `RacingReplayLogBuilder.kt` (`<= 350`)
-    - `RacingReplayAnchorBuilder.kt` (`<= 350`)
+    - `legacy map replay route helper.kt` (`<= 350`)
+    - `legacy map replay anchor helper.kt` (`<= 350`)
     - `RacingTask.kt` (`<= 350`)
     - `RacingTaskValidationModels.kt` (`<= 350`)
     - `RacingTaskResultModels.kt` (`<= 350`)

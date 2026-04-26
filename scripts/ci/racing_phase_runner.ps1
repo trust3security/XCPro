@@ -58,9 +58,7 @@ function Get-PhaseConfig {
                 ":feature:map:testDebugUnitTest",
                 "--tests", "com.trust3.xcpro.tasks.TaskNavigationControllerTest",
                 "--tests", "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest",
-                "--tests", "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest",
-                "--tests", "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest",
-                "--tests", "com.trust3.xcpro.map.RacingReplayTaskHelpersTest"
+                "--tests", "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest"
             )
         }
         2 = [ordered]@{
@@ -72,9 +70,7 @@ function Get-PhaseConfig {
                 "--tests", "com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest",
                 "--tests", "com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest",
                 "--tests", "com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest",
-                "--tests", "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest",
-                "--tests", "com.trust3.xcpro.map.RacingReplayTaskHelpersTest",
-                "--tests", "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"
+                "--tests", "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest"
             )
         }
         3 = [ordered]@{
@@ -148,10 +144,9 @@ function Get-PhaseConfig {
             PendingPack = "P9-A/P9-B/P9-C/P9-D"
             TestArgs = @(
                 ":feature:map:testDebugUnitTest",
-                "--tests", "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest",
                 "--tests", "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest",
                 "--tests", "com.trust3.xcpro.tasks.TaskNavigationControllerTest",
-                "--tests", "com.trust3.xcpro.map.RacingReplayTaskHelpersTest"
+                "--tests", "com.trust3.xcpro.map.RacingNavigationEventMessagesTest"
             )
         }
         10 = [ordered]@{

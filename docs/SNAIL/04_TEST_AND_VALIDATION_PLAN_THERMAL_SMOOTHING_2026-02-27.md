@@ -18,7 +18,7 @@ Trail domain tests:
   - circling-aware distance filtering rules
 - `SnailTrailManager` tests (new if missing)
   - tail refresh cadence and gating behavior
-  - replay/SIM2 display-pose trail rendering
+  - replay display-pose trail rendering
   - transient display connector renders without storing connector points
 - `ResolveCirclingUseCaseTest`
   - preserve replay fallback behavior

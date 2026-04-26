@@ -7,8 +7,6 @@ import javax.inject.Singleton
 
 interface MapScreenFeatureFlagPort {
     val loadSavedTasksOnInit: Boolean
-    val showVarioDemoFab: Boolean
-    val showRacingReplayFab: Boolean
     val defaultDisplaySmoothingProfile: DisplaySmoothingProfile
 }
 
@@ -19,7 +17,7 @@ interface MapReplayFeatureFlagPort {
     var useIconHeadingSmoothing: Boolean
     var useRuntimeReplayHeading: Boolean
     var useRenderFrameSync: Boolean
-    var sim2FrameLogIntervalMs: Long
+    var replayFrameLogIntervalMs: Long
 }
 
 /**
@@ -36,18 +34,6 @@ class MapFeatureFlags @Inject constructor() : MapScreenFeatureFlagPort, MapRepla
      */
     @Volatile
     override var loadSavedTasksOnInit: Boolean = true
-
-    /**
-     * Shows the developer-only vario demo FAB on the map screen when true.
-     */
-    @Volatile
-    override var showVarioDemoFab: Boolean = BuildConfig.DEBUG
-
-    /**
-     * Shows the developer-only racing replay FAB on the map screen when true.
-     */
-    @Volatile
-    override var showRacingReplayFab: Boolean = BuildConfig.DEBUG
 
     /**
      * Pixel threshold for map location jitter suppression.
@@ -118,17 +104,17 @@ class MapFeatureFlags @Inject constructor() : MapScreenFeatureFlagPort, MapRepla
     override var useRuntimeReplayHeading: Boolean = false
 
     /**
-     * Drive SIM2 display updates off the MapView render frame callbacks.
+     * Drive display-pose updates off the MapView render frame callbacks.
      * Keeps camera + aircraft updates in the same render pass.
      */
     @Volatile
     override var useRenderFrameSync: Boolean = false
 
     /**
-     * Debug log interval for SIM2 frame pose logs (ms). Set to 0 to log every frame.
+     * Debug log interval for replay frame pose logs (ms). Set to 0 to log every frame.
      */
     @Volatile
-    override var sim2FrameLogIntervalMs: Long = 100L
+    override var replayFrameLogIntervalMs: Long = 100L
 
     /**
      * Minimum speed to enable directional bias (m/s).

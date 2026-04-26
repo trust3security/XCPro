@@ -321,6 +321,6 @@ class RacingReplayValidationTest {
     }
 
     companion object {
-        private const val REPLAY_RESOURCE = "replay/racing-task-basic.igc"
+        private const val REPLAY_RESOURCE = "replay/racing-navigation-basic.igc"
     }
 }

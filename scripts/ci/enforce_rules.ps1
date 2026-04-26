@@ -1038,13 +1038,6 @@ $waypointOnlyHydrateArgs = @(
 Assert-NoMatches -Name "Phase-1 guard: waypoint-only coordinator hydrate path reintroduced" -RgArgs $waypointOnlyHydrateArgs
 
 # 32J) Phase-1 guard: replay helper must use canonical task path (no simple-task mapper bypass).
-$racingReplayHelperSimpleBypassArgs = @(
-    "-n",
-    "toSimpleRacingTask\(",
-    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt"
-)
-Assert-NoMatches -Name "Phase-1 guard: replay helper simple-task bypass reintroduced" -RgArgs $racingReplayHelperSimpleBypassArgs
-
 # 32K) Phase-1 guard: coordinator runtime path must avoid manager simple-task state authority.
 $coordinatorSimpleStateArgs = @(
     "-n",
@@ -1058,9 +1051,7 @@ $racingValidatorBypassArgs = @(
     "-n",
     "hasMinimumWaypoints\(",
     "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt",
-    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt",
-    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt",
-    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt"
 )
 Assert-NoMatches -Name "Phase-2 guard: racing validity shortcut bypass reintroduced" -RgArgs $racingValidatorBypassArgs
 
@@ -1319,14 +1310,6 @@ Assert-MaxLines `
 Assert-MaxLines `
     -Name "SectorAreaGeometrySupport line budget" `
     -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "RacingReplayLogBuilder line budget" `
-    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "RacingReplayAnchorBuilder line budget" `
-    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingTask model line budget" `

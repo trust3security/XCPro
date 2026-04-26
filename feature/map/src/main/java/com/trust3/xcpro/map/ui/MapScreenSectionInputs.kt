@@ -133,11 +133,5 @@ internal data class MapScreenWidgetContentInputs(
 )
 
 internal data class MapScreenReplayContentInputs(
-    val replayState: StateFlow<SessionState>,
-    val showVarioDemoFab: Boolean,
-    val onVarioDemoSimClick: () -> Unit,
-    val onVarioDemoSim2Click: () -> Unit,
-    val onVarioDemoSim3Click: () -> Unit,
-    val showRacingReplayFab: Boolean,
-    val onRacingReplayClick: () -> Unit
+    val replayState: StateFlow<SessionState>
 )

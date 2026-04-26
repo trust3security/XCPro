@@ -244,7 +244,7 @@ Notes:
 | `screens/navdrawer/Task.kt` | `1` file | `feature:tasks` | Phase 4 | task screen shell |
 | `screens/navdrawer/TaskScreenUseCasesViewModel.kt` | `1` file | `feature:tasks` | Phase 4 | task screen VM |
 | `screens/navdrawer/tasks/*` | `6` files | `feature:tasks` | Phase 4 | task file bottom sheet UI |
-| `com.trust3.xcpro.map.replay.**` | keep in `feature:map` initially | `feature:map` until Phase 4 / 5 | Phase 4 / 5 | `RacingReplayLogBuilder` is map/task support, not core replay runtime |
+| `deleted map replay helper package` | keep in `feature:map` initially | `feature:map` until Phase 4 / 5 | Phase 4 / 5 | `legacy map replay route helper` is map/task support, not core replay runtime |
 | `com.trust3.xcpro.sensors.**` | keep in `feature:map` | no move in this plan | N/A | avoid expanding this refactor beyond build-speed target |
 
 Hold-back files that must not be blindly moved with `tasks`:
@@ -438,7 +438,7 @@ Rule:
   - keep `app` as the place that wires any task-backed `IgcTaskDeclarationSource`
 - Android surface checklist:
   - move replay/file screen routes away from `feature:map`
-  - keep `map.replay.RacingReplayLogBuilder` in `feature:map` for now
+  - keep `deleted map replay route helper` in `feature:map` for now
   - verify no `feature:igc` source imports `com.trust3.xcpro.weather.wind.*`
 - Primary verification:
   - `:feature:igc:assembleDebug`

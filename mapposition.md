@@ -49,7 +49,7 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
 - This is visual-only; raw fixes and navigation remain untouched.
 
 ### Replay raw pose mode (visual parity)
-- During TAS replay, we optionally render the marker using the raw replay fix
+- During replay, we optionally render the marker using the raw replay fix
   (no smoothing/prediction) to align UI with navigation events.
 - This is UI-only and controlled via `MapStateStore` display pose mode.
 - Default remains smoothed; raw replay is gated by a feature flag and replay session.

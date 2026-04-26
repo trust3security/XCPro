@@ -2,5 +2,5 @@
 
 This folder contains simulation/replay notes.
 
-Current file:
-- `sim3.md`
+Current MapScreen simulation FAB notes:
+- None. Legacy MapScreen simulation FAB entrypoints were removed.
