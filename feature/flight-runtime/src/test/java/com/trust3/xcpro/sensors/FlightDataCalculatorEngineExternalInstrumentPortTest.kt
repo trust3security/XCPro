@@ -7,8 +7,6 @@ import com.trust3.xcpro.common.units.AltitudeM
 import com.trust3.xcpro.common.units.SpeedMs
 import com.trust3.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.trust3.xcpro.core.time.FakeClock
-import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
-import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentReadPort
 import com.trust3.xcpro.external.TimedExternalValue
@@ -135,7 +133,6 @@ class FlightDataCalculatorEngineExternalInstrumentPortTest {
             clock = FakeClock(monoMs = 0L, wallMs = 0L),
             hawkAudioVarioReadPort = NoOpHawkAudioVarioReadPort,
             externalInstrumentReadPort = externalPort,
-            externalFlightSettingsReadPort = NoOpExternalFlightSettingsReadPort,
             terrainElevationReadPort = NoOpTerrainElevationReadPort,
             isReplayMode = false
         )
@@ -184,11 +181,6 @@ class FlightDataCalculatorEngineExternalInstrumentPortTest {
     private class FakeExternalInstrumentReadPort : ExternalInstrumentReadPort {
         val snapshot = MutableStateFlow(ExternalInstrumentFlightSnapshot())
         override val externalFlightSnapshot: StateFlow<ExternalInstrumentFlightSnapshot> = snapshot
-    }
-
-    private object NoOpExternalFlightSettingsReadPort : ExternalFlightSettingsReadPort {
-        override val externalFlightSettingsSnapshot: StateFlow<ExternalFlightSettingsSnapshot> =
-            MutableStateFlow(ExternalFlightSettingsSnapshot())
     }
 
     private object NoOpStillAirSinkProvider : StillAirSinkProvider {

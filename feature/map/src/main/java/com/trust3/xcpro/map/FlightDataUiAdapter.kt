@@ -2,10 +2,12 @@ package com.trust3.xcpro.map
 
 import com.trust3.xcpro.glide.GlideSolution
 import com.trust3.xcpro.currentld.PilotCurrentLdSnapshot
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.map.trail.domain.TrailProcessor
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.navigation.WaypointNavigationSnapshot
+import com.trust3.xcpro.qnh.QnhValue
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.sensors.CompleteFlightData
 import com.trust3.xcpro.sensors.domain.FlyingState
@@ -28,6 +30,8 @@ internal class FlightDataUiAdapter(
     windStateFlow: StateFlow<WindState>,
     flightStateFlow: StateFlow<FlyingState>,
     hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
+    externalFlightSettingsFlow: StateFlow<ExternalFlightSettingsSnapshot>,
+    qnhStateFlow: StateFlow<QnhValue>,
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateReader,
     trailSettingsFlow: StateFlow<TrailSettings>,
@@ -47,6 +51,8 @@ internal class FlightDataUiAdapter(
         windStateFlow = windStateFlow,
         flightStateFlow = flightStateFlow,
         hawkVarioUiStateFlow = hawkVarioUiStateFlow,
+        externalFlightSettingsFlow = externalFlightSettingsFlow,
+        qnhStateFlow = qnhStateFlow,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         trailSettingsFlow = trailSettingsFlow,

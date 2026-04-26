@@ -1,9 +1,11 @@
 package com.trust3.xcpro.map
 
 import com.trust3.xcpro.hawk.HawkVarioUiState
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.map.model.MapLocationUiModel
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
+import com.trust3.xcpro.qnh.QnhValue
 import com.trust3.xcpro.replay.SessionState
 import com.trust3.xcpro.sensors.CompleteFlightData
 import com.trust3.xcpro.sensors.domain.FlyingState
@@ -20,6 +22,8 @@ internal fun createFlightDataUiAdapterForViewModel(
     windStateFlow: StateFlow<WindState>,
     flightStateFlow: StateFlow<FlyingState>,
     hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
+    externalFlightSettingsFlow: StateFlow<ExternalFlightSettingsSnapshot>,
+    qnhStateFlow: StateFlow<QnhValue>,
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateStore,
     trailSettingsFlow: StateFlow<TrailSettings>,
@@ -33,6 +37,8 @@ internal fun createFlightDataUiAdapterForViewModel(
     windStateFlow = windStateFlow,
     flightStateFlow = flightStateFlow,
     hawkVarioUiStateFlow = hawkVarioUiStateFlow,
+    externalFlightSettingsFlow = externalFlightSettingsFlow,
+    qnhStateFlow = qnhStateFlow,
     flightDataManager = flightDataManager,
     mapStateStore = mapStateStore,
     trailSettingsFlow = trailSettingsFlow,

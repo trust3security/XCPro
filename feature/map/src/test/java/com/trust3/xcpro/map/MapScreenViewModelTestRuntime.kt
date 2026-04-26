@@ -162,13 +162,14 @@ abstract class MapScreenViewModelTestBase {
         rotationStarted = false,
         hasLocationPermissions = false
     )
+    protected val externalFlightSettingsReadPort = object : ExternalFlightSettingsReadPort {
+        override val externalFlightSettingsSnapshot =
+            MutableStateFlow(ExternalFlightSettingsSnapshot())
+    }
     protected val ballastControllerFactory =
         BallastControllerFactory(
             gliderRepository,
-            object : ExternalFlightSettingsReadPort {
-                override val externalFlightSettingsSnapshot =
-                    MutableStateFlow(ExternalFlightSettingsSnapshot())
-            },
+            externalFlightSettingsReadPort,
             mainDispatcherRule.dispatcher
         )
     protected val levoVarioPreferencesRepository = LevoVarioPreferencesRepository(context)
@@ -437,6 +438,7 @@ abstract class MapScreenViewModelTestBase {
             variometerLayoutUseCase = variometerLayoutUseCase,
             trailSettingsUseCase = trailSettingsUseCase,
             qnhRepository = qnhRepository,
+            externalFlightSettingsReadPort = externalFlightSettingsReadPort,
             waypointLoader = waypointLoader,
             mapAirspaceUseCase = mapAirspaceUseCase,
             mapWaypointFilesUseCase = mapWaypointFilesUseCase,

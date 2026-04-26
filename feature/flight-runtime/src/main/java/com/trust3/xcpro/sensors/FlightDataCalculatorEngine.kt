@@ -7,8 +7,6 @@ import com.trust3.xcpro.audio.VarioAudioSettings
 import com.trust3.xcpro.common.flight.FlightMode
 import com.trust3.xcpro.core.common.logging.AppLogger
 import com.trust3.xcpro.core.time.Clock
-import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
-import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentFlightSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentReadPort
 import com.trust3.xcpro.flightdata.FlightDisplayMapper
@@ -45,7 +43,6 @@ internal class FlightDataCalculatorEngine(
     internal val clock: Clock,
     private val hawkAudioVarioReadPort: HawkAudioVarioReadPort,
     private val externalInstrumentReadPort: ExternalInstrumentReadPort,
-    private val externalFlightSettingsReadPort: ExternalFlightSettingsReadPort,
     private val terrainElevationReadPort: TerrainElevationReadPort,
     internal val isReplayMode: Boolean = false
 ): SensorFusionRepository {
@@ -87,8 +84,6 @@ internal class FlightDataCalculatorEngine(
     @Volatile internal var latestAirspeedSample: AirspeedSample? = null
     @Volatile internal var latestExternalInstrumentSnapshot: ExternalInstrumentFlightSnapshot =
         ExternalInstrumentFlightSnapshot()
-    @Volatile internal var latestExternalFlightSettingsSnapshot: ExternalFlightSettingsSnapshot =
-        ExternalFlightSettingsSnapshot()
     @Volatile internal var lastGpsFixTimestampForGpsVario: Long = 0L
     internal val varioSuite = VarioSuite()
     internal val flightDisplayMapper = FlightDisplayMapper()
@@ -149,11 +144,6 @@ internal class FlightDataCalculatorEngine(
         scope.launch {
             externalInstrumentReadPort.externalFlightSnapshot.collect { snapshot ->
                 latestExternalInstrumentSnapshot = snapshot
-            }
-        }
-        scope.launch {
-            externalFlightSettingsReadPort.externalFlightSettingsSnapshot.collect { snapshot ->
-                latestExternalFlightSettingsSnapshot = snapshot
             }
         }
         scope.launch {
@@ -240,7 +230,6 @@ internal class FlightDataCalculatorEngine(
         latestFlightState = null
         latestAirspeedSample = null
         latestExternalInstrumentSnapshot = ExternalInstrumentFlightSnapshot()
-        latestExternalFlightSettingsSnapshot = ExternalFlightSettingsSnapshot()
         lastGpsFixTimestampForGpsVario = 0L
         smoothedVerticalAccel = null
         lastAccelTimestamp = 0L

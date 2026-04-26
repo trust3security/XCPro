@@ -15,6 +15,7 @@ import com.trust3.xcpro.common.units.AltitudeUnit
 import com.trust3.xcpro.common.units.UnitsPreferences
 import com.trust3.xcpro.common.units.UnitsRepository
 import com.trust3.xcpro.airspace.AirspaceUseCase
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
 import com.trust3.xcpro.flightdata.FlightDataRepository
 import com.trust3.xcpro.flightdata.WaypointFilesUseCase
 import com.trust3.xcpro.gestures.TaskGestureCallbacks
@@ -53,7 +54,7 @@ class MapScreenViewModel @Inject constructor(
     private val mapStyleRepository: MapStyleRepository, private val unitsRepository: UnitsRepository,
     private val orientationSettingsRepository: MapOrientationSettingsRepository, private val gliderConfigRepository: GliderConfigRepository,
     private val variometerLayoutUseCase: VariometerLayoutUseCase, private val trailSettingsUseCase: MapTrailSettingsUseCase,
-    private val qnhRepository: QnhRepository,
+    private val qnhRepository: QnhRepository, private val externalFlightSettingsReadPort: ExternalFlightSettingsReadPort,
     private val waypointLoader: WaypointLoader,
     private val mapAirspaceUseCase: AirspaceUseCase,
     private val mapWaypointFilesUseCase: WaypointFilesUseCase,
@@ -178,7 +179,7 @@ class MapScreenViewModel @Inject constructor(
     val cardHydrationReady: StateFlow<Boolean> = createCardHydrationReadyState(viewModelScope, _containerReady, _liveDataReady)
     private val flightDataUiAdapter = createFlightDataUiAdapterForViewModel(
         mapReplayUseCase = mapReplayUseCase, scope = viewModelScope, flightDataFlow = flightData, windStateFlow = windStateFlow,
-        flightStateFlow = sensorsUseCase.flightStateFlow, hawkVarioUiStateFlow = hawkVarioUiState, flightDataManager = flightDataManager, mapStateStore = mapStateStore,
+        flightStateFlow = sensorsUseCase.flightStateFlow, hawkVarioUiStateFlow = hawkVarioUiState, externalFlightSettingsFlow = externalFlightSettingsReadPort.externalFlightSettingsSnapshot, qnhStateFlow = qnhRepository.qnhState, flightDataManager = flightDataManager, mapStateStore = mapStateStore,
         trailSettingsFlow = mapStateStore.trailSettings, liveDataReady = _liveDataReady, containerReady = _containerReady,
         uiEffects = _uiEffects, trailUpdates = _trailUpdates
     )

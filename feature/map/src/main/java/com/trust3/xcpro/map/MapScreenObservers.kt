@@ -4,6 +4,7 @@ import android.util.Log
 import com.trust3.xcpro.convertToRealTimeFlightData
 import com.trust3.xcpro.core.flight.RealTimeFlightData
 import com.trust3.xcpro.currentld.PilotCurrentLdSnapshot
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.glide.GlideSolution
 import com.trust3.xcpro.hawk.HawkVarioUiState
 import com.trust3.xcpro.map.trail.TrailLength
@@ -12,6 +13,7 @@ import com.trust3.xcpro.map.trail.domain.TrailUpdateInput
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.navigation.WaypointNavigationSnapshot
+import com.trust3.xcpro.qnh.QnhValue
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.replay.ReplayEvent
 import com.trust3.xcpro.sensors.CompleteFlightData
@@ -39,6 +41,8 @@ internal class MapScreenObservers(
     private val windStateFlow: StateFlow<WindState>,
     private val flightStateFlow: StateFlow<FlyingState>,
     private val hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
+    private val externalFlightSettingsFlow: StateFlow<ExternalFlightSettingsSnapshot>,
+    private val qnhStateFlow: StateFlow<QnhValue>,
     private val flightDataManager: FlightDataManager,
     private val mapStateStore: MapStateReader,
     private val trailSettingsFlow: StateFlow<TrailSettings>,
@@ -67,6 +71,17 @@ internal class MapScreenObservers(
     }
 
     private fun observeFlightDataRepository() {
+        val externalSettingsCardProjectionFlow = combine(
+            externalFlightSettingsFlow,
+            qnhStateFlow,
+            ::createExternalFlightSettingsCardProjection
+        )
+        val cardProjectionInputsFlow = combine(
+            externalSettingsCardProjectionFlow,
+            trailSettingsFlow,
+            ::CardProjectionInputs
+        )
+
         combine(
             flightDataFlow,
             windStateFlow,
@@ -117,7 +132,7 @@ internal class MapScreenObservers(
                 tuple.eighth,
                 taskPerformance
             )
-        }.combine(trailSettingsFlow) { tuple, trailSettings ->
+        }.combine(cardProjectionInputsFlow) { tuple, cardProjectionInputs ->
             Decuple(
                 tuple.first,
                 tuple.second,
@@ -128,11 +143,12 @@ internal class MapScreenObservers(
                 tuple.seventh,
                 tuple.eighth,
                 tuple.ninth,
-                trailSettings
+                cardProjectionInputs
             )
         }
-            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, pilotCurrentLd, taskPerformance, trailSettings) ->
+            .onEach { (data, wind, flightState, hawkState, isReplay, glideSolution, waypointNavigation, pilotCurrentLd, taskPerformance, cardProjectionInputs) ->
                 if (data != null) {
+                    val trailSettings = cardProjectionInputs.trailSettings
                     val trailEnabled = trailSettings.length != TrailLength.OFF
                     if (!liveDataReady.value) {
                         liveDataReady.value = true
@@ -158,6 +174,7 @@ internal class MapScreenObservers(
                         pilotCurrentLd = pilotCurrentLd,
                         taskPerformance = taskPerformance,
                         hawkVarioUiState = hawkUiState,
+                        externalFlightSettingsCardProjection = cardProjectionInputs.externalSettings,
                         flightTime = formattedFlightTime,
                         lastUpdateTimeMillis = sampleClockMillis
                     ).applyWindState(wind)
@@ -325,6 +342,11 @@ private data class Nonuple<A, B, C, D, E, F, G, H, I>(
     val seventh: G,
     val eighth: H,
     val ninth: I
+)
+
+private data class CardProjectionInputs(
+    val externalSettings: ExternalFlightSettingsCardProjection,
+    val trailSettings: TrailSettings
 )
 
 private data class Decuple<A, B, C, D, E, F, G, H, I, J>(

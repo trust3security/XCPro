@@ -4,7 +4,6 @@ import com.trust3.xcpro.core.flight.calculations.TerrainElevationReadPort
 import com.trust3.xcpro.audio.VarioAudioControllerFactory
 import com.trust3.xcpro.audio.VarioAudioSettings
 import com.trust3.xcpro.core.time.Clock
-import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
 import com.trust3.xcpro.external.ExternalInstrumentReadPort
 import com.trust3.xcpro.glider.StillAirSinkProvider
 import com.trust3.xcpro.hawk.HawkAudioVarioReadPort
@@ -27,7 +26,6 @@ class FlightDataCalculator(
     clock: Clock,
     hawkAudioVarioReadPort: HawkAudioVarioReadPort,
     externalInstrumentReadPort: ExternalInstrumentReadPort,
-    externalFlightSettingsReadPort: ExternalFlightSettingsReadPort,
     terrainElevationReadPort: TerrainElevationReadPort,
     enableAudio: Boolean = true,
     isReplayMode: Boolean = false
@@ -44,7 +42,6 @@ class FlightDataCalculator(
         clock = clock,
         hawkAudioVarioReadPort = hawkAudioVarioReadPort,
         externalInstrumentReadPort = externalInstrumentReadPort,
-        externalFlightSettingsReadPort = externalFlightSettingsReadPort,
         terrainElevationReadPort = terrainElevationReadPort,
         isReplayMode = isReplayMode
     )
