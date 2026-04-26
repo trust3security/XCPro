@@ -84,7 +84,7 @@ class SnailTrailManagerTest {
     }
 
     @Test
-    fun updateFromTrailUpdate_ignoresStaleDisplayPoseSeed() {
+    fun updateFromTrailUpdate_usesRawSampleForStaleDisplayPoseDuringBootstrap() {
         val overlay = mock<SnailTrailOverlay>()
         val manager = createManager(overlay)
         val staleDisplayLocation = LatLng(46.0005, 7.0005)
@@ -113,6 +113,161 @@ class SnailTrailManagerTest {
             eq(10f),
             eq(false),
             eq(null)
+        )
+    }
+
+    @Test
+    fun updateFromTrailUpdate_withoutDisplaySeedContinuesUsingRawSamples() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(overlay)
+        val nextPoint = rawTailPoint(
+            latitude = 46.001,
+            longitude = 7.001,
+            timestampMillis = 4_000L
+        )
+
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f
+        )
+        clearInvocations(overlay)
+
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true,
+                points = listOf(rawTailPoint(), nextPoint),
+                currentLocation = TrailGeoPoint(46.001, 7.001),
+                currentTimeMillis = 4_000L
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f
+        )
+
+        verify(overlay).render(
+            eq(listOf(rawTailPoint(), nextPoint)),
+            eq(TrailSettings()),
+            any(),
+            eq(4_000L),
+            eq(0.0),
+            eq(0.0),
+            eq(false),
+            eq(false),
+            eq(10f),
+            eq(false),
+            eq(null)
+        )
+    }
+
+    @Test
+    fun updateFromTrailUpdate_usesPreviousDisplayContextWhenDisplaySeedIsStale() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(overlay)
+        val displayLocation = LatLng(46.0005, 7.0005)
+        val futurePoint = rawTailPoint(
+            latitude = 46.001,
+            longitude = 7.001,
+            timestampMillis = 4_000L
+        )
+
+        seedDisplayContext(manager, displayLocation)
+        clearInvocations(overlay)
+
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true,
+                points = listOf(rawTailPoint(), futurePoint),
+                currentLocation = TrailGeoPoint(46.001, 7.001),
+                currentTimeMillis = 4_000L
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f,
+            displayLocation = displayLocation,
+            displayTimeMillis = 3_000L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC
+        )
+
+        verify(overlay).render(
+            eq(listOf(rawTailPoint())),
+            eq(TrailSettings()),
+            eq(displayLocation),
+            eq(3_000L),
+            eq(0.0),
+            eq(0.0),
+            eq(false),
+            eq(false),
+            eq(10f),
+            eq(false),
+            eq(null)
+        )
+    }
+
+    @Test
+    fun updateDisplayPose_fullRendersWhenDisplayPoseCatchesHeldBackPoint() {
+        val overlay = mock<SnailTrailOverlay>()
+        val manager = createManager(overlay)
+        val displayLocation = LatLng(46.0005, 7.0005)
+        val catchUpLocation = LatLng(46.001, 7.001)
+        val futurePoint = rawTailPoint(
+            latitude = 46.001,
+            longitude = 7.001,
+            timestampMillis = 4_000L
+        )
+        val points = listOf(rawTailPoint(), futurePoint)
+
+        seedDisplayContext(manager, displayLocation)
+        manager.updateFromTrailUpdate(
+            update = updateResult(
+                sampleAdded = true,
+                requiresFullRender = true,
+                points = points,
+                currentLocation = TrailGeoPoint(46.001, 7.001),
+                currentTimeMillis = 4_000L
+            ),
+            settings = TrailSettings(),
+            currentZoom = 10f,
+            displayLocation = displayLocation,
+            displayTimeMillis = 3_000L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC
+        )
+        clearInvocations(overlay)
+
+        manager.updateDisplayPose(
+            displayLocation = catchUpLocation,
+            displayTimeMillis = 4_000L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            frameId = 11L
+        )
+
+        verify(overlay).render(
+            eq(points),
+            eq(TrailSettings()),
+            eq(catchUpLocation),
+            eq(4_000L),
+            eq(0.0),
+            eq(0.0),
+            eq(false),
+            eq(false),
+            eq(10f),
+            eq(false),
+            eq(11L)
+        )
+        verify(overlay, never()).renderTail(
+            anyOrNull(),
+            any(),
+            anyOrNull(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()
         )
     }
 
@@ -230,17 +385,40 @@ class SnailTrailManagerTest {
         )
     }
 
+    private fun seedDisplayContext(
+        manager: SnailTrailManager,
+        displayLocation: LatLng
+    ) {
+        manager.updateFromTrailUpdate(
+            update = updateResult(sampleAdded = true, requiresFullRender = true),
+            settings = TrailSettings(),
+            currentZoom = 10f,
+            displayLocation = displayLocation,
+            displayTimeMillis = 2_100L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC
+        )
+        manager.updateDisplayPose(
+            displayLocation = displayLocation,
+            displayTimeMillis = 3_000L,
+            displayTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+            frameId = 10L
+        )
+    }
+
     private fun updateResult(
         sampleAdded: Boolean,
         requiresFullRender: Boolean,
         invalidationReason: TrailRenderInvalidationReason? = TrailRenderInvalidationReason.SAMPLE_ADDED,
         isReplay: Boolean = false,
-        timeBase: TrailTimeBase = TrailTimeBase.LIVE_MONOTONIC
+        timeBase: TrailTimeBase = TrailTimeBase.LIVE_MONOTONIC,
+        points: List<TrailPoint> = listOf(rawTailPoint()),
+        currentLocation: TrailGeoPoint = TrailGeoPoint(46.0, 7.0),
+        currentTimeMillis: Long = 2_000L
     ): TrailUpdateResult = TrailUpdateResult(
         renderState = TrailRenderState(
-            points = listOf(rawTailPoint()),
-            currentLocation = TrailGeoPoint(46.0, 7.0),
-            currentTimeMillis = 2_000L,
+            points = points,
+            currentLocation = currentLocation,
+            currentTimeMillis = currentTimeMillis,
             windSpeedMs = 0.0,
             windDirectionFromDeg = 0.0,
             isCircling = false,
@@ -255,10 +433,14 @@ class SnailTrailManagerTest {
         invalidationReason = invalidationReason
     )
 
-    private fun rawTailPoint(): TrailPoint = TrailPoint(
-        latitude = 46.0,
-        longitude = 7.0,
-        timestampMillis = 2_000L,
+    private fun rawTailPoint(
+        latitude: Double = 46.0,
+        longitude: Double = 7.0,
+        timestampMillis: Long = 2_000L
+    ): TrailPoint = TrailPoint(
+        latitude = latitude,
+        longitude = longitude,
+        timestampMillis = timestampMillis,
         altitudeMeters = 1_000.0,
         varioMs = 0.5,
         driftFactor = 0.0,

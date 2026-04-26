@@ -65,21 +65,33 @@ class SnailTrailManager(
             renderState.currentLocation.latitude,
             renderState.currentLocation.longitude
         )
-        val canUseDisplayPose = displayTimeBase == renderState.timeBase &&
-            displayTimeMillis != null &&
-            displayTimeMillis >= renderState.currentTimeMillis
-        val overrideLocation = if (canUseDisplayPose) {
-            displayLocation?.takeIf {
-                TrailGeo.isValidCoordinate(it.latitude, it.longitude)
-            }
+        val displayTime = displayTimeMillis?.takeIf { it > 0L }
+        val validDisplayLocation = displayLocation?.takeIf {
+            TrailGeo.isValidCoordinate(it.latitude, it.longitude)
+        }
+        val sameTimeBaseDisplayTime = displayTime?.takeIf {
+            displayTimeBase == renderState.timeBase
+        }
+        val freshDisplayLocation = if (
+            sameTimeBaseDisplayTime != null &&
+            sameTimeBaseDisplayTime >= renderState.currentTimeMillis
+        ) {
+            validDisplayLocation
         } else {
             null
         }
-        val renderLocation = overrideLocation ?: baseLocation
-        val renderTime = if (canUseDisplayPose) {
-            displayTimeMillis?.takeIf { it > 0L } ?: renderState.currentTimeMillis
-        } else {
-            renderState.currentTimeMillis
+        val previousSameTimeBaseContext = lastContext?.takeIf {
+            sameTimeBaseDisplayTime != null && it.timeBase == renderState.timeBase
+        }
+        val renderLocation = when {
+            freshDisplayLocation != null -> freshDisplayLocation
+            previousSameTimeBaseContext != null -> previousSameTimeBaseContext.currentLocation
+            else -> baseLocation
+        }
+        val renderTime = when {
+            freshDisplayLocation != null -> sameTimeBaseDisplayTime ?: renderState.currentTimeMillis
+            previousSameTimeBaseContext != null -> previousSameTimeBaseContext.currentTimeMillis
+            else -> renderState.currentTimeMillis
         }
 
         val zoomChanged = lastContext?.currentZoom?.let { it != currentZoom } ?: false
@@ -124,24 +136,31 @@ class SnailTrailManager(
         if (frameId != null) {
             lastRenderPoseFrameId = frameId
         }
-        lastContext = context.copy(
+        val updatedContext = context.copy(
             currentLocation = location,
             currentTimeMillis = time
         )
+        val previousTailPoint = lastRawTailPoint
+        lastContext = updatedContext
+        refreshTailAnchor(updatedContext)
 
         if (shouldRenderRawTrail()) {
-            overlay.renderTail(
-                lastPoint = lastRawTailPoint,
-                settings = lastSettings,
-                currentLocation = location,
-                currentTimeMillis = time,
-                windSpeedMs = context.windSpeedMs,
-                windDirectionFromDeg = context.windDirectionFromDeg,
-                isCircling = context.isCircling,
-                currentZoom = context.currentZoom,
-                isReplay = lastIsReplay ?: false,
-                frameId = frameId
-            )
+            if (lastRawTailPoint != previousTailPoint) {
+                render(overlay, frameId)
+            } else {
+                overlay.renderTail(
+                    lastPoint = lastRawTailPoint,
+                    settings = lastSettings,
+                    currentLocation = location,
+                    currentTimeMillis = time,
+                    windSpeedMs = context.windSpeedMs,
+                    windDirectionFromDeg = context.windDirectionFromDeg,
+                    isCircling = context.isCircling,
+                    currentZoom = context.currentZoom,
+                    isReplay = lastIsReplay ?: false,
+                    frameId = frameId
+                )
+            }
         } else {
             overlay.clearTail()
         }
