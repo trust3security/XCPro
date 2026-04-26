@@ -17,6 +17,7 @@
   - select a home waypoint / direct-to-home only
   - select flight mode screens
   - use Essentials cards only
+  - see free/public SkySight overlays exposed in XCPro
 - Free users cannot:
   - add / create / edit tasks
   - use Distance Circles
@@ -28,6 +29,8 @@
   - use IGC replay
   - use LiveFollow view/watch
   - use premium exports / advanced sharing
+  - use PureTrack Traffic API fetch when XCPro app-key/config and PureTrack Pro user access are valid
+  - use PureTrack Insert API live point publishing when PureTrack Insert API configuration is valid
   - use LiveFollow broadcast/share
   - use Scia
   - use Hotspots
@@ -37,17 +40,20 @@
   - ADS-B
   - RainViewer
   - WeGlide
-  - SkySight basic/free surfaces
+  - SkySight free/public overlays only
   - and nothing above Soaring / XC / Pro-only capabilities
+- Basic users cannot enter or link SkySight credentials.
 - Soaring unlocks:
   - add / create / edit Task
   - OGN
   - SkySight credential entry / account linking
-  - SkySight premium surfaces only when a valid linked paid SkySight account exists
+  - SkySight premium/full features only when a valid linked paid SkySight account exists
 - XC unlocks all lower-tier capabilities plus:
   - IGC replay
   - LiveFollow view/watch
   - premium exports / advanced sharing
+  - PureTrack Traffic API fetch when XCPro app-key/config and PureTrack Pro user access are valid
+  - PureTrack Insert API live point publishing when PureTrack Insert API configuration is valid
 - Pro unlocks all subscription-gated XCPro capabilities, including:
   - LiveFollow broadcast/share
   - Scia
@@ -71,6 +77,7 @@
 ### Unit tests
 - tier -> features mapping
 - combined tier + SkySight account-state access policy
+- combined tier + PureTrack provider access/config policy
 - free-signed-in entitlement mapping
 - entitlement merge / refresh logic
 - stale cache behavior

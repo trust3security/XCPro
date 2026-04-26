@@ -70,6 +70,7 @@ Response:
 ### `POST /api/v1/integrations/skysight/link`
 Request:
 - authenticated XCPro user ID
+- current XCPro entitlement must allow SkySight credential entry/account linking: Soaring, XC, or Pro
 - SkySight credentials or delegated auth payload, depending on the final integration design
 
 Response:

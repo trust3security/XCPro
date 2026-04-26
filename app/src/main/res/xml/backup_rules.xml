@@ -4,5 +4,6 @@
          to sensitive/shared credentials, so reinstall/device transfer can restore profiles. -->
     <exclude domain="sharedpref" path="adsb_opensky_credentials.xml" />
     <exclude domain="sharedpref" path="forecast_provider_credentials.xml" />
+    <exclude domain="sharedpref" path="puretrack_token_store.xml" />
     <exclude domain="sharedpref" path="xcpro_private_follow_account.xml" />
 </full-backup-content>

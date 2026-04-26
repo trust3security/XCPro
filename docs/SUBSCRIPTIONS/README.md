@@ -69,8 +69,9 @@ The app should use **runtime entitlements**, not separate APK flavors for each p
 - Billing logic belongs in a dedicated layer.
 - Feature access is controlled by capability checks, not scattered tier-name checks.
 - SkySight premium is a second access lane, not an XCPro tier:
-  - XCPro tier decides whether SkySight integration surfaces are allowed.
-  - Linked SkySight account state decides whether premium SkySight-backed features actually unlock.
+  - Free and Basic may see free/public SkySight overlays only.
+  - SkySight credential entry/account linking is available only to Soaring, XC, and Pro.
+  - Premium/full SkySight-backed features require both Soaring-or-higher XCPro entitlement and linked paid SkySight account state.
 - The smallest safe slice wins over a huge first patch.
 
 ## Non-negotiables

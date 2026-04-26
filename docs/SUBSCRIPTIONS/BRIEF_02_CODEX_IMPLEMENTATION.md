@@ -51,22 +51,25 @@ LOCKED ACCESS RULES:
   - ADS-B
   - RainViewer
   - WeGlide
-  - SkySight basic/free surfaces
+  - SkySight free/public overlays only
 - Soaring:
   - Add / create / edit Task
   - OGN
   - SkySight credential entry / account linking
-  - SkySight premium surfaces only when linked paid SkySight state is validated
+  - SkySight premium/full features only when linked paid SkySight state is validated
 - XC:
   - IGC replay
   - LiveFollow view / watch
   - premium exports / advanced sharing
+  - PureTrack Traffic API fetch when XCPro app-key/config and PureTrack Pro user access are valid
+  - PureTrack Insert API live point publishing when PureTrack Insert API configuration is valid
 - Pro:
   - LiveFollow broadcast / share
   - Scia
   - Hotspots
   - advanced vario tuning / premium audio profiles
 - If Hotspots is SkySight-backed, require both Pro tier and linked paid SkySight state
+- Free and Basic must not expose SkySight credential entry / account linking.
 
 LOCKED IDENTITY RULES:
 - every XCPro user must have an XCPro account

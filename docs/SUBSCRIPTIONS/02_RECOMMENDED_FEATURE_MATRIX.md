@@ -28,9 +28,9 @@ Every tier in this matrix assumes the user is signed in with an XCPro account.
 | Essentials card pack | Yes | Yes | Yes | Yes | Yes | Baseline cards only |
 | Distance Circles | No | Yes | Yes | Yes | Yes | Basic and above |
 | ADS-B traffic overlay | No | Yes | Yes | Yes | Yes | Basic and above |
-| SkySight basic/free products | Yes | Yes | Yes | Yes | Yes | Free/public SkySight level only |
+| SkySight free/public overlays | Yes | Yes | Yes | Yes | Yes | No credential entry required |
 | SkySight credential entry / account linking | No | No | Yes | Yes | Yes | Soaring and above |
-| SkySight premium products in XCPro | No | No | Yes* | Yes* | Yes* | `*` requires valid linked **paid** SkySight account |
+| SkySight premium/full features in XCPro | No | No | Yes* | Yes* | Yes* | `*` requires valid linked **paid** SkySight account |
 | RainViewer | No | Yes | Yes | Yes | Yes | Basic and above |
 | WeGlide sync | No | Yes | Yes | Yes | Yes | Basic and above |
 | Task add / create / edit | No | No | Yes | Yes | Yes | Soaring and above |
@@ -38,6 +38,8 @@ Every tier in this matrix assumes the user is signed in with an XCPro account.
 | IGC replay | No | No | No | Yes | Yes | XC differentiator |
 | LiveFollow view / watch | No | No | No | Yes | Yes | XC differentiator |
 | Premium exports / advanced sharing | No | No | No | Yes | Yes | XC differentiator |
+| PureTrack Traffic API fetch | No | No | No | Yes* | Yes* | `*` requires XCPro app-key/config plus PureTrack Pro user access |
+| PureTrack Insert API live point publish | No | No | No | Yes* | Yes* | `*` requires PureTrack Insert API configuration; sends live tracking points, not route/turnpoint data |
 | LiveFollow broadcast / share | No | No | No | No | Yes | Pro-only premium/networked surface |
 | Scia | No | No | No | No | Yes | Pro only |
 | Hotspots | No | No | No | No | Yes* | Pro only; if SkySight-backed, also require linked paid SkySight account |
@@ -49,13 +51,13 @@ Every tier in this matrix assumes the user is signed in with an XCPro account.
 Core XCPro flying baseline for signed-in users.
 
 ### Basic
-Starter visibility and integration tools.
+Starter visibility tools, including free/public SkySight overlays only.
 
 ### Soaring
-Tasking, OGN, and premium SkySight access with your linked paid SkySight account.
+Tasking, OGN, SkySight credential entry, and premium SkySight access with your linked paid SkySight account.
 
 ### XC
-Serious cross-country tools with replay, LiveFollow view/watch, and premium exports/sharing.
+Serious cross-country tools with replay, LiveFollow view/watch, premium exports/sharing, and PureTrack API integrations.
 
 ### Pro
 Everything unlocked, including Scia, Hotspots, LiveFollow broadcast/share, and top-end premium tools.
@@ -66,10 +68,21 @@ Do **not** market SkySight premium as "included" in Soaring, XC, or Pro unless a
 
 The rule for now is:
 
-- XCPro plan decides whether SkySight premium surfaces are allowed in XCPro.
-- Linked SkySight account state decides whether those premium surfaces can actually unlock.
-- Soaring / XC / Pro enable the integration surface.
-- Only a valid linked **paid** SkySight account enables premium SkySight-backed output.
+- Free and Basic may see free/public SkySight overlays exposed in XCPro.
+- Free and Basic must not show SkySight credential entry or account-linking actions.
+- Soaring / XC / Pro enable SkySight credential entry and account linking.
+- Premium/full SkySight features require both Soaring-or-higher XCPro entitlement and a valid linked **paid** SkySight account.
+
+## Important PureTrack rule
+
+Do **not** market PureTrack API access as bundled unless the external PureTrack requirements are met.
+
+The rule for now is:
+
+- XCPro plan decides whether PureTrack integration surfaces are allowed in XCPro.
+- PureTrack Traffic API fetch also requires XCPro app-key/config and PureTrack Pro user access.
+- PureTrack Insert API live point publishing also requires PureTrack Insert API configuration.
+- PureTrack Insert API live point publishing sends live tracking points into PureTrack, not route or turnpoint data.
 
 ## Decision checklist before coding
 

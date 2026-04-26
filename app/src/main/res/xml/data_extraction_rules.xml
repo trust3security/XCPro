@@ -5,11 +5,13 @@
              Only sensitive/shared credentials are excluded here. -->
         <exclude domain="sharedpref" path="adsb_opensky_credentials.xml" />
         <exclude domain="sharedpref" path="forecast_provider_credentials.xml" />
+        <exclude domain="sharedpref" path="puretrack_token_store.xml" />
         <exclude domain="sharedpref" path="xcpro_private_follow_account.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="adsb_opensky_credentials.xml" />
         <exclude domain="sharedpref" path="forecast_provider_credentials.xml" />
+        <exclude domain="sharedpref" path="puretrack_token_store.xml" />
         <exclude domain="sharedpref" path="xcpro_private_follow_account.xml" />
     </device-transfer>
 </data-extraction-rules>
