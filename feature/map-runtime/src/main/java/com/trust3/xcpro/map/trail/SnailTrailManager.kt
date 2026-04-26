@@ -8,6 +8,9 @@ import com.trust3.xcpro.map.trail.domain.TrailTimeBase
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sqrt
 
 class SnailTrailManager(
     private val context: Context,
@@ -200,18 +203,7 @@ class SnailTrailManager(
     private fun render(overlay: SnailTrailOverlay, frameId: Long? = null) {
         val context = lastContext ?: return
         val isReplay = lastIsReplay ?: false
-        val allPoints = lastPoints
-        val renderPoints = if (context.currentTimeMillis > 0L) {
-            val firstTimestamp = allPoints.firstOrNull()?.timestampMillis
-            if (firstTimestamp != null && context.currentTimeMillis >= firstTimestamp) {
-                val filtered = allPoints.filter { it.timestampMillis <= context.currentTimeMillis }
-                if (filtered.isNotEmpty()) filtered else allPoints
-            } else {
-                allPoints
-            }
-        } else {
-            allPoints
-        }
+        val renderPoints = resolveRenderPoints(context, isReplay)
         lastRawTailPoint = renderPoints.lastOrNull()
         overlay.render(
             points = renderPoints,
@@ -236,19 +228,128 @@ class SnailTrailManager(
             return
         }
 
-        val renderPoints = if (context.currentTimeMillis > 0L) {
-            val firstTimestamp = lastPoints.firstOrNull()?.timestampMillis
-            if (firstTimestamp != null && context.currentTimeMillis >= firstTimestamp) {
-                val filtered = lastPoints.filter { it.timestampMillis <= context.currentTimeMillis }
-                filtered.ifEmpty { lastPoints }
-            } else {
-                lastPoints
-            }
-        } else {
-            lastPoints
-        }
+        val renderPoints = resolveRenderPoints(context, lastIsReplay ?: false)
         lastRawTailPoint = renderPoints.lastOrNull() ?: lastPoints.lastOrNull()
     }
+
+    private fun resolveRenderPoints(
+        context: RenderContext,
+        isReplay: Boolean
+    ): List<TrailPoint> {
+        val timeFiltered = filterPointsAtDisplayTime(lastPoints, context.currentTimeMillis)
+        if (isReplay) {
+            return timeFiltered
+        }
+        return clampLivePointsToDisplayPose(timeFiltered, context.currentLocation)
+    }
+
+    private fun filterPointsAtDisplayTime(
+        points: List<TrailPoint>,
+        currentTimeMillis: Long
+    ): List<TrailPoint> {
+        if (currentTimeMillis <= 0L) {
+            return points
+        }
+        val firstTimestamp = points.firstOrNull()?.timestampMillis
+        if (firstTimestamp == null || currentTimeMillis < firstTimestamp) {
+            return points
+        }
+        val filtered = points.filter { it.timestampMillis <= currentTimeMillis }
+        return filtered.ifEmpty { points }
+    }
+
+    private fun clampLivePointsToDisplayPose(
+        points: List<TrailPoint>,
+        displayLocation: LatLng
+    ): List<TrailPoint> {
+        if (points.size < 2) {
+            return points
+        }
+        if (!TrailGeo.isValidCoordinate(displayLocation.latitude, displayLocation.longitude)) {
+            return points
+        }
+
+        val projection = nearestSegmentProjection(points, displayLocation) ?: return points
+        val anchorIndex = if (
+            projection.t >= SEGMENT_END_SNAP_T ||
+            projection.distanceToEndMeters <= DISPLAY_POSE_POINT_SNAP_METERS
+        ) {
+            projection.segmentStartIndex + 1
+        } else {
+            projection.segmentStartIndex
+        }
+        return points.take((anchorIndex + 1).coerceIn(1, points.size))
+    }
+
+    private fun nearestSegmentProjection(
+        points: List<TrailPoint>,
+        location: LatLng
+    ): SegmentProjection? {
+        var best: SegmentProjection? = null
+        for (index in 0 until points.lastIndex) {
+            val projection = projectOnSegment(
+                start = points[index],
+                end = points[index + 1],
+                location = location,
+                segmentStartIndex = index
+            ) ?: continue
+            val currentBest = best
+            if (
+                currentBest == null ||
+                projection.distanceMeters < currentBest.distanceMeters - PROJECTION_EPSILON_METERS ||
+                (
+                    abs(projection.distanceMeters - currentBest.distanceMeters) <= PROJECTION_EPSILON_METERS &&
+                        projection.segmentStartIndex > currentBest.segmentStartIndex
+                    )
+            ) {
+                best = projection
+            }
+        }
+        return best
+    }
+
+    private fun projectOnSegment(
+        start: TrailPoint,
+        end: TrailPoint,
+        location: LatLng,
+        segmentStartIndex: Int
+    ): SegmentProjection? {
+        val originLatitude = start.latitude
+        val endX = longitudeDeltaMeters(end.longitude - start.longitude, originLatitude)
+        val endY = latitudeDeltaMeters(end.latitude - start.latitude)
+        val locX = longitudeDeltaMeters(location.longitude - start.longitude, originLatitude)
+        val locY = latitudeDeltaMeters(location.latitude - start.latitude)
+        val lenSq = endX * endX + endY * endY
+        if (!lenSq.isFinite() || lenSq <= 0.0) {
+            return null
+        }
+
+        val unclampedT = ((locX * endX) + (locY * endY)) / lenSq
+        val t = unclampedT.coerceIn(0.0, 1.0)
+        val projectedX = endX * t
+        val projectedY = endY * t
+        val dx = locX - projectedX
+        val dy = locY - projectedY
+        val distance = sqrt(dx * dx + dy * dy)
+        val endDx = locX - endX
+        val endDy = locY - endY
+        val distanceToEnd = sqrt(endDx * endDx + endDy * endDy)
+        if (!distance.isFinite() || !distanceToEnd.isFinite()) {
+            return null
+        }
+        return SegmentProjection(
+            segmentStartIndex = segmentStartIndex,
+            t = t,
+            distanceMeters = distance,
+            distanceToEndMeters = distanceToEnd
+        )
+    }
+
+    private fun latitudeDeltaMeters(deltaLatitudeDeg: Double): Double =
+        Math.toRadians(deltaLatitudeDeg) * EARTH_RADIUS_METERS
+
+    private fun longitudeDeltaMeters(deltaLongitudeDeg: Double, originLatitudeDeg: Double): Double =
+        Math.toRadians(deltaLongitudeDeg) * EARTH_RADIUS_METERS * cos(Math.toRadians(originLatitudeDeg))
 
     private data class RenderContext(
         val currentLocation: LatLng,
@@ -260,5 +361,19 @@ class SnailTrailManager(
         val currentZoom: Float,
         val timeBase: TrailTimeBase
     )
+
+    private data class SegmentProjection(
+        val segmentStartIndex: Int,
+        val t: Double,
+        val distanceMeters: Double,
+        val distanceToEndMeters: Double
+    )
+
+    private companion object {
+        private const val EARTH_RADIUS_METERS = 6_371_000.0
+        private const val DISPLAY_POSE_POINT_SNAP_METERS = 0.75
+        private const val SEGMENT_END_SNAP_T = 0.995
+        private const val PROJECTION_EPSILON_METERS = 0.01
+    }
 
 }
