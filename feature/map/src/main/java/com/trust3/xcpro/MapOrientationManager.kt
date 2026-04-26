@@ -1,12 +1,12 @@
 package com.trust3.xcpro
 
-import android.util.Log
 import com.example.dfcards.FlightModeSelection
 import com.trust3.xcpro.common.orientation.OrientationFlightDataSnapshot
 import com.trust3.xcpro.common.orientation.MapOrientationMode
 import com.trust3.xcpro.common.orientation.OrientationController
 import com.trust3.xcpro.common.orientation.OrientationData
 import com.trust3.xcpro.common.orientation.OrientationSensorData
+import com.trust3.xcpro.core.common.logging.AppLogger
 import com.trust3.xcpro.map.BuildConfig
 import com.trust3.xcpro.map.MapOrientationRuntimePort
 import com.trust3.xcpro.orientation.HeadingJitterLogger
@@ -72,9 +72,7 @@ class MapOrientationManager(
     }
 
     private inline fun debugLog(message: () -> String) {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, message())
-        }
+        AppLogger.d(TAG, message())
     }
 
     init {
@@ -172,26 +170,21 @@ class MapOrientationManager(
 
         if (!output.bearingResult.isValid &&
             sensorData.isGPSValid &&
-            sensorData.groundSpeed < minSpeedForTrackMs &&
-            BuildConfig.DEBUG &&
-            nowMono % 2000L < 25
+            sensorData.groundSpeed < minSpeedForTrackMs
         ) {
-            Log.v(
-                TAG,
+            AppLogger.dRateLimited(TAG, "track_up_speed_gate", 5_000L) {
                 String.format(
                     Locale.US,
                     "TRACK_UP gate: speed=%.2f m/s < threshold=%.2f m/s",
                     sensorData.groundSpeed,
                     minSpeedForTrackMs
                 )
-            )
+            }
         }
 
-        if (nowMono % 30 == 0L) {
-            debugLog {
-                "Orientation: mode=${orientationData.mode}, bearing=${orientationData.bearing.toInt()}, " +
-                    "source=${orientationData.bearingSource}, valid=${orientationData.isValid}"
-            }
+        AppLogger.dRateLimited(TAG, "orientation_state", 5_000L) {
+            "Orientation: mode=${orientationData.mode}, bearing=${orientationData.bearing.toInt()}, " +
+                "source=${orientationData.bearingSource}, valid=${orientationData.isValid}"
         }
 
         _orientationFlow.value = orientationData

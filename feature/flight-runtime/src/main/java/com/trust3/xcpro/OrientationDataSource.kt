@@ -263,15 +263,12 @@ class OrientationDataSource(
             timestamp = nowWall
         )
 
-        if (nowWall % 3000 < 100) {
-            AppLogger.d(
-                TAG,
-                "Orientation update: track=${orientationData.track}, " +
-                    "magHeading=${orientationData.magneticHeading.toInt()}, " +
-                    "speed=${orientationData.groundSpeed}kt, " +
-                    "gpsValid=${orientationData.isGPSValid}, " +
-                    "headingValid=${orientationData.hasValidHeading}"
-            )
+        AppLogger.dRateLimited(TAG, "orientation_update", 5_000L) {
+            "Orientation update: track=${orientationData.track}, " +
+                "magHeading=${orientationData.magneticHeading.toInt()}, " +
+                "speed=${orientationData.groundSpeed}kt, " +
+                "gpsValid=${orientationData.isGPSValid}, " +
+                "headingValid=${orientationData.hasValidHeading}"
         }
 
         _orientationFlow.value = orientationData

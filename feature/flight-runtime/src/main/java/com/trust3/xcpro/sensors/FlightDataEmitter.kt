@@ -155,25 +155,22 @@ internal class FlightDataEmitter(
         flightDataFlow.value = flightData
         state.lastUpdateTime = currentTime
 
-        if (currentTime % 1000 < 100) {
+        AppLogger.dRateLimited(tag, "flight_data_emission_diag", 10_000L) {
             val gpsVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "GPS" }
             val pressureVarioMs = metrics.verticalSpeed.takeIf { metrics.varioSource == "PRESSURE" }
             val aglLabel = flightHelpers.currentAGL.takeIf { it.isFinite() }?.toInt()?.toString() ?: "NA"
-            AppLogger.d(
-                tag,
-                "[SLOW] " +
-                    (if (cachedVarioResult != null) "PRIORITY2-50Hz(IMU+BARO)" else "PRIORITY2-50Hz(BARO)") + " " +
-                    "GPSalt=${gps.altitude.value.toInt()}m BaroAlt=${metrics.baroAltitude.toInt()}m " +
-                    "RawBaro=${String.format(Locale.US, "%.2f", varioResultInput.verticalSpeed)} " +
-                    "Levo=${String.format(Locale.US, "%.2f", metrics.verticalSpeed)}(src=${metrics.varioSource},val=${metrics.varioValid}) " +
-                    "BASE=${String.format(Locale.US, "%.2f", metrics.baselineVario)}(val=${metrics.baselineVarioValid}) " +
-                    "GPSv=${gpsVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
-                    "PressV=${pressureVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
-                    "Spd=${String.format(Locale.US, "%.1f", gps.speed.value)} " +
-                    "AGL=$aglLabel " +
-                    "QNH=${String.format(Locale.US, "%.1f", baroResult?.qnh ?: Double.NaN)} " +
-                    "cal=${baroResult?.isCalibrated == true}"
-            )
+            "FLIGHT_DIAG " +
+                (if (cachedVarioResult != null) "PRIORITY2-50Hz(IMU+BARO)" else "PRIORITY2-50Hz(BARO)") + " " +
+                "GPSalt=${gps.altitude.value.toInt()}m BaroAlt=${metrics.baroAltitude.toInt()}m " +
+                "RawBaro=${String.format(Locale.US, "%.2f", varioResultInput.verticalSpeed)} " +
+                "Levo=${String.format(Locale.US, "%.2f", metrics.verticalSpeed)}(src=${metrics.varioSource},val=${metrics.varioValid}) " +
+                "BASE=${String.format(Locale.US, "%.2f", metrics.baselineVario)}(val=${metrics.baselineVarioValid}) " +
+                "GPSv=${gpsVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
+                "PressV=${pressureVarioMs?.let { String.format(Locale.US, "%.2f", it) } ?: "--"} " +
+                "Spd=${String.format(Locale.US, "%.1f", gps.speed.value)} " +
+                "AGL=$aglLabel " +
+                "QNH=${String.format(Locale.US, "%.1f", baroResult?.qnh ?: Double.NaN)} " +
+                "cal=${baroResult?.isCalibrated == true}"
         }
     }
 }

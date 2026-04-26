@@ -51,11 +51,9 @@ feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt|3
 feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenScaffoldInputs.kt|2
 feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenSections.kt|2
 feature/map/src/main/java/com/trust3/xcpro/map/ui/OverlayPanels.kt|1
-feature/map/src/main/java/com/trust3/xcpro/MapOrientationManager.kt|2
 feature/map/src/main/java/com/trust3/xcpro/navdrawer/DrawerMenuSections.kt|2
 feature/map/src/main/java/com/trust3/xcpro/navdrawer/NavigationDrawer.kt|4
 feature/map/src/main/java/com/trust3/xcpro/orientation/HeadingJitterLogger.kt|1
-feature/map/src/main/java/com/trust3/xcpro/OrientationDataSource.kt|8
 feature/map/src/main/java/com/trust3/xcpro/replay/ReplaySampleEmitter.kt|1
 feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataScreensTab.kt|2
 feature/map/src/main/java/com/trust3/xcpro/screens/flightdata/FlightDataWaypointsTab.kt|7
@@ -66,7 +64,6 @@ feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ColorsScreenCompone
 feature/map/src/main/java/com/trust3/xcpro/screens/navdrawer/ColorsScreenPickers.kt|6
 feature/map/src/main/java/com/trust3/xcpro/screens/overlays/MapControlsUI.kt|1
 feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataCalculatorEngine.kt|6
-feature/map/src/main/java/com/trust3/xcpro/sensors/FlightDataEmitter.kt|3
 feature/map/src/main/java/com/trust3/xcpro/sensors/SensorRegistry.kt|4
 feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATMapRenderer.kt|1
 feature/map/src/main/java/com/trust3/xcpro/tasks/aat/rendering/AATTaskRenderer.kt|1
