@@ -17,6 +17,7 @@ internal enum class GeneralSubSheet {
     OGN,
     WEGLIDE,
     ADSB,
+    PURETRACK,
     HOTSPOTS,
     NAVBOXES,
     IGC_REPLAY,

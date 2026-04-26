@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -250,17 +251,33 @@ internal fun GeneralSettingsCategoryGrid(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         CategoryItem(
+                            title = "PureTrack",
+                            icon = Icons.Default.AirplanemodeActive,
+                            onClick = { onSubSheetSelected(GeneralSubSheet.PURETRACK) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        CategoryItem(
                             title = "Navboxes",
                             icon = Icons.Default.Dashboard,
                             onClick = { onSubSheetSelected(GeneralSubSheet.NAVBOXES) },
                             modifier = Modifier.weight(1f)
                         )
+                    }
+                }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         CategoryItem(
                             title = IGC_FILES_LABEL,
                             icon = Icons.Default.PlayArrow,
                             onClick = { onSubSheetSelected(GeneralSubSheet.IGC_REPLAY) },
                             modifier = Modifier.weight(1f)
                         )
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
