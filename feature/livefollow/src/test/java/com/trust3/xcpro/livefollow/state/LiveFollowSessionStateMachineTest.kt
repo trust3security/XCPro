@@ -1,6 +1,7 @@
 package com.trust3.xcpro.livefollow.state
 
 import com.trust3.xcpro.core.time.FakeClock
+import com.trust3.xcpro.livesource.LiveSourceKind
 import com.trust3.xcpro.livefollow.model.LiveFollowConfidence
 import com.trust3.xcpro.livefollow.model.LiveFollowIdentityAmbiguityReason
 import com.trust3.xcpro.livefollow.model.LiveFollowIdentityProfile
@@ -114,13 +115,19 @@ class LiveFollowSessionStateMachineTest {
     fun replayPolicy_blocksSideEffectsDuringReplay() {
         val policy = LiveFollowReplayPolicy()
 
-        val liveDecision = policy.evaluate(LiveFollowRuntimeMode.LIVE)
-        val replayDecision = policy.evaluate(LiveFollowRuntimeMode.REPLAY)
+        val liveDecision = policy.evaluate(LiveFollowRuntimeMode.LIVE, LiveSourceKind.PHONE)
+        val replayDecision = policy.evaluate(LiveFollowRuntimeMode.REPLAY, LiveSourceKind.PHONE)
+        val simulatorDecision = policy.evaluate(
+            LiveFollowRuntimeMode.LIVE,
+            LiveSourceKind.SIMULATOR_CONDOR2
+        )
 
         assertTrue(liveDecision.sideEffectsAllowed)
         assertEquals(LiveFollowReplayBlockReason.NONE, liveDecision.blockReason)
         assertFalse(replayDecision.sideEffectsAllowed)
         assertEquals(LiveFollowReplayBlockReason.REPLAY_MODE, replayDecision.blockReason)
+        assertFalse(simulatorDecision.sideEffectsAllowed)
+        assertEquals(LiveFollowReplayBlockReason.SIMULATOR_SOURCE, simulatorDecision.blockReason)
     }
 
     @Test

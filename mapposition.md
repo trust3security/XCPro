@@ -5,6 +5,7 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
 
 ## Design goals
 - Smooth visual motion between GPS/replay fixes.
+- Resume at the current position without a hidden background render loop.
 - Respect SSOT and UDF (no sensor access in ViewModels, no duplicated state).
 - Correct time base handling for live vs replay.
 - Avoid location logging in release builds.
@@ -30,8 +31,9 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
   - low-pass smoothing for position and track,
   - accuracy-aware damping (including bearing accuracy when available),
   - display-only outlier clamping (limits sudden GNSS jumps without freezing),
-  - long-gap re-anchoring so foreground resume/doze recovery snaps to the latest
-    fresh fix instead of walking from a stale pre-background pose.
+  - long-gap re-anchoring for large accepted-fix gaps and stale render
+    continuity so foreground resume/doze recovery snaps to the latest fresh fix
+    instead of walking from a stale pre-background pose.
 - Smoothing is applied only to the UI marker/camera. Sensor fusion remains unchanged.
 
 ### Live smoothing profiles
@@ -47,7 +49,7 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
 - This is visual-only; raw fixes and navigation remain untouched.
 
 ### Replay raw pose mode (visual parity)
-- During TAS replay, we optionally render the marker using the raw replay fix
+- During replay, we optionally render the marker using the raw replay fix
   (no smoothing/prediction) to align UI with navigation events.
 - This is UI-only and controlled via `MapStateStore` display pose mode.
 - Default remains smoothed; raw replay is gated by a feature flag and replay session.
@@ -89,7 +91,8 @@ It is focused on display behavior (UI only), not the sensor fusion pipeline.
 - Outlier clamp: if a fix jumps unrealistically far in a short time, the target is
   clamped along its direction using accuracy/speed-derived limits.
 - Long-gap re-anchor: if the next accepted fix arrives after a large timestamp gap,
-  the smoother resets visual continuity and treats that fix as the new anchor.
+  or after display continuity has gone stale across a render gap, the smoother
+  resets visual continuity and treats that fix as the new anchor.
 - Prediction is gated by speed + speed accuracy; poor speed accuracy disables
   dead reckoning to avoid wobble while stationary or walking.
 - Bearing accuracy scales prediction horizon to reduce over-shoot on noisy headings.

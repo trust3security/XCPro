@@ -246,16 +246,7 @@ internal fun buildMapScreenReplayContentInputs(
     mapViewModel: MapScreenViewModel
 ): MapScreenReplayContentInputs {
     return MapScreenReplayContentInputs(
-        replayState = mapViewModel.replaySessionState,
-        showVarioDemoFab = mapViewModel.showVarioDemoFab,
-        onSyntheticThermalReplayClick = mapViewModel::onSyntheticThermalReplay,
-        onSyntheticThermalReplayWindNoisyClick = mapViewModel::onSyntheticThermalReplayWindNoisy,
-        onVarioDemoReferenceClick = mapViewModel::onVarioDemoReplay,
-        onVarioDemoSimClick = mapViewModel::onVarioDemoReplaySim,
-        onVarioDemoSim2Click = mapViewModel::onVarioDemoReplaySimLive,
-        onVarioDemoSim3Click = mapViewModel::onVarioDemoReplaySim3,
-        showRacingReplayFab = mapViewModel.showRacingReplayFab,
-        onRacingReplayClick = mapViewModel::onRacingTaskReplay
+        replayState = mapViewModel.replaySessionState
     )
 }
 

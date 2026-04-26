@@ -149,7 +149,12 @@ internal fun GeneralSettingsCategoryGrid(
                             onClick = { onSubSheetSelected(GeneralSubSheet.ORIENTATION) },
                             modifier = Modifier.weight(1f)
                         )
-                        Spacer(modifier = Modifier.weight(1f))
+                        CategoryItem(
+                            title = "Bridge",
+                            icon = Icons.Default.Speed,
+                            onClick = { onSubSheetSelected(GeneralSubSheet.CONDOR_BRIDGE) },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
                 item {
@@ -246,17 +251,33 @@ internal fun GeneralSettingsCategoryGrid(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         CategoryItem(
+                            title = "PureTrack",
+                            icon = Icons.Default.AirplanemodeActive,
+                            onClick = { onSubSheetSelected(GeneralSubSheet.PURETRACK) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        CategoryItem(
                             title = "Navboxes",
                             icon = Icons.Default.Dashboard,
                             onClick = { onSubSheetSelected(GeneralSubSheet.NAVBOXES) },
                             modifier = Modifier.weight(1f)
                         )
+                    }
+                }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         CategoryItem(
                             title = IGC_FILES_LABEL,
                             icon = Icons.Default.PlayArrow,
                             onClick = { onSubSheetSelected(GeneralSubSheet.IGC_REPLAY) },
                             modifier = Modifier.weight(1f)
                         )
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }

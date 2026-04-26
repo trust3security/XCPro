@@ -63,8 +63,6 @@ class PolarPreviewUseCaseTest {
         isFallbackPolarActive = source == ActivePolarSource.FALLBACK_MODEL,
         hasThreePointPolar = source == ActivePolarSource.MANUAL_THREE_POINT,
         referenceWeightConfigured = false,
-        userCoefficientsConfigured = false,
-        iasMinMs = null,
-        iasMaxMs = null
+        userCoefficientsConfigured = false
     )
 }

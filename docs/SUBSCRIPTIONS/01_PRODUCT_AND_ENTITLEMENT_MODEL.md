@@ -95,6 +95,8 @@ enum class AppFeature {
     WEGLIDE_SYNC,
     TASKS_CREATE,
     TRAFFIC_OGN,
+    PURETRACK_TRAFFIC_FETCH,
+    PURETRACK_LIVE_PUBLISH,
     IGC_REPLAY,
     LIVEFOLLOW_VIEW,
     PREMIUM_EXPORTS,
@@ -130,7 +132,7 @@ data class EntitlementSnapshot(
 - Backend verification result for XCPro subscriptions is authoritative.
 - Client-side cache is a convenience and degraded-mode aid only.
 - UI reads a single entitlement snapshot for XCPro plan access.
-- Third-party provider state, such as SkySight account status, is a **separate** authoritative state and must not be collapsed into `PlanTier`.
+- Third-party provider state, such as SkySight account status or PureTrack access/config state, is a **separate** authoritative state and must not be collapsed into `PlanTier`.
 - Feature access checks map from XCPro plan entitlements **and**, when relevant, linked provider state to capabilities.
 - Prices, copy, and offer display are separate from entitlement enforcement.
 
@@ -146,16 +148,18 @@ data class EntitlementSnapshot(
   - ADS-B
   - RainViewer
   - WeGlide
-  - SkySight basic/free surfaces
+  - SkySight free/public overlays only
 - Soaring adds:
   - Add / create / edit Task
   - OGN
   - SkySight credential entry / account linking
-  - SkySight premium surfaces, but only when the linked SkySight account validates as paid
+  - SkySight premium/full features, but only when the linked SkySight account validates as paid
 - XC adds:
   - IGC replay
   - LiveFollow view/watch
   - premium exports / advanced sharing
+  - PureTrack Traffic API fetch, when XCPro app-key/config and PureTrack Pro user access are valid
+  - PureTrack Insert API live point publishing, when PureTrack Insert API configuration is valid
 - Pro adds:
   - LiveFollow broadcast / share
   - Scia
@@ -164,6 +168,19 @@ data class EntitlementSnapshot(
 - If Hotspots is ultimately sourced from premium SkySight data, the effective rule is:
   - `plan >= PRO`
   - and `SkySightAccountState == LINKED_PAID`
+- SkySight access rules are:
+  - Free and Basic may see SkySight free/public overlays exposed in XCPro.
+  - Free and Basic must not show SkySight credential entry or account-linking actions.
+  - Soaring, XC, and Pro may enter/link SkySight credentials.
+  - Premium SkySight-backed features require both `plan >= SOARING` and `SkySightAccountState == LINKED_PAID`.
+- PureTrack Traffic API access is dual-gated:
+  - `plan >= XC`
+  - XCPro app-key/config is present
+  - PureTrack user access is Pro
+- PureTrack Insert API live publishing is dual-gated:
+  - `plan >= XC`
+  - PureTrack Insert API configuration is present
+  - the capability sends live tracking points into PureTrack and is not route or turnpoint publishing
 
 ## Plan change policy for v1
 

@@ -72,6 +72,7 @@ data class StallSpeedsAtWeight(
 
 data class GliderModel(
     val id: String,
+    val aircraftType: String = GliderAircraftTypes.SAILPLANE,
     val name: String,
     val classLabel: String,
     val wingSpanM: Double? = null,

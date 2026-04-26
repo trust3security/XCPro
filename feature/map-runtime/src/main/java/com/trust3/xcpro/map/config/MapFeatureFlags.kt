@@ -1,8 +1,24 @@
 package com.trust3.xcpro.map.config
 
+import com.trust3.xcpro.map.DisplaySmoothingProfile
 import com.trust3.xcpro.map.runtime.BuildConfig
 import javax.inject.Inject
 import javax.inject.Singleton
+
+interface MapScreenFeatureFlagPort {
+    val loadSavedTasksOnInit: Boolean
+    val defaultDisplaySmoothingProfile: DisplaySmoothingProfile
+}
+
+interface MapReplayFeatureFlagPort {
+    val useRawReplayPose: Boolean
+    var forceReplayTrackHeading: Boolean
+    var maxTrackBearingStepDeg: Double
+    var useIconHeadingSmoothing: Boolean
+    var useRuntimeReplayHeading: Boolean
+    var useRenderFrameSync: Boolean
+    var replayFrameLogIntervalMs: Long
+}
 
 /**
  * Centralized switches for map feature behavior that needs to differ between
@@ -10,26 +26,14 @@ import javax.inject.Singleton
  * behavior without relying on hidden global singletons.
  */
 @Singleton
-class MapFeatureFlags @Inject constructor() {
+class MapFeatureFlags @Inject constructor() : MapScreenFeatureFlagPort, MapReplayFeatureFlagPort {
     /**
      * Controls whether [MapScreenViewModel] should call
      * [com.trust3.xcpro.tasks.TaskManagerCoordinator.loadSavedTasks] during init.
      * Unit tests can disable this to avoid heavy persistence lookups.
      */
     @Volatile
-    var loadSavedTasksOnInit: Boolean = true
-
-    /**
-     * Shows the developer-only vario demo FAB on the map screen when true.
-     */
-    @Volatile
-    var showVarioDemoFab: Boolean = BuildConfig.DEBUG
-
-    /**
-     * Shows the developer-only racing replay FAB on the map screen when true.
-     */
-    @Volatile
-    var showRacingReplayFab: Boolean = BuildConfig.DEBUG
+    override var loadSavedTasksOnInit: Boolean = true
 
     /**
      * Pixel threshold for map location jitter suppression.
@@ -54,30 +58,30 @@ class MapFeatureFlags @Inject constructor() {
      * This aligns UI with navigation events during replay/testing.
      */
     @Volatile
-    var useRawReplayPose: Boolean = BuildConfig.DEBUG
+    override var useRawReplayPose: Boolean = BuildConfig.DEBUG
 
     /**
      * Force the replay glider icon heading to follow track (ignores device sensors).
      * Useful when replaying on the ground to mimic in-flight heading behavior.
      */
     @Volatile
-    var forceReplayTrackHeading: Boolean = false
+    override var forceReplayTrackHeading: Boolean = false
 
     /**
      * Max per-frame track bearing change (degrees). Set >= 180 to disable clamping.
      */
     @Volatile
-    var maxTrackBearingStepDeg: Double = 5.0
+    override var maxTrackBearingStepDeg: Double = 5.0
 
     /**
      * Default live display smoothing profile.
      */
     @Volatile
-    var defaultDisplaySmoothingProfile: com.trust3.xcpro.map.DisplaySmoothingProfile =
+    override var defaultDisplaySmoothingProfile: DisplaySmoothingProfile =
         if (BuildConfig.DEBUG) {
-            com.trust3.xcpro.map.DisplaySmoothingProfile.RESPONSIVE
+            DisplaySmoothingProfile.CADENCE_BRIDGE
         } else {
-            com.trust3.xcpro.map.DisplaySmoothingProfile.SMOOTH
+            DisplaySmoothingProfile.SMOOTH
         }
 
     /**
@@ -91,26 +95,26 @@ class MapFeatureFlags @Inject constructor() {
      * Enable icon heading smoothing (angular velocity clamp + deadband).
      */
     @Volatile
-    var useIconHeadingSmoothing: Boolean = true
+    override var useIconHeadingSmoothing: Boolean = true
 
     /**
      * Use runtime replay interpolation to derive heading per display frame.
      */
     @Volatile
-    var useRuntimeReplayHeading: Boolean = false
+    override var useRuntimeReplayHeading: Boolean = false
 
     /**
-     * Drive SIM2 display updates off the MapView render frame callbacks.
+     * Drive display-pose updates off the MapView render frame callbacks.
      * Keeps camera + aircraft updates in the same render pass.
      */
     @Volatile
-    var useRenderFrameSync: Boolean = false
+    override var useRenderFrameSync: Boolean = false
 
     /**
-     * Debug log interval for SIM2 frame pose logs (ms). Set to 0 to log every frame.
+     * Debug log interval for replay frame pose logs (ms). Set to 0 to log every frame.
      */
     @Volatile
-    var sim2FrameLogIntervalMs: Long = 100L
+    override var replayFrameLogIntervalMs: Long = 100L
 
     /**
      * Minimum speed to enable directional bias (m/s).

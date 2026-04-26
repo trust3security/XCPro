@@ -54,7 +54,7 @@ class ThermallingModeCoordinator @Inject constructor(
         policy: ThermallingModePolicyDecision,
         nowMonoMs: Long
     ): List<ThermallingModeAction> {
-        if (!input.isCircling) return emptyList()
+        if (!input.isTurning) return emptyList()
 
         val enterDelayMs = input.settings.enterDelaySeconds * 1_000L
         if (enterDelayMs <= 0L) {
@@ -76,7 +76,7 @@ class ThermallingModeCoordinator @Inject constructor(
         nowMonoMs: Long
     ): List<ThermallingModeAction> {
         val startedAt = state.enterPendingStartMonoMs ?: nowMonoMs
-        if (!input.isCircling) {
+        if (!input.isTurning) {
             state = ThermallingModeState()
             return emptyList()
         }
@@ -88,7 +88,7 @@ class ThermallingModeCoordinator @Inject constructor(
     }
 
     private fun onActive(input: ThermallingModeInput): List<ThermallingModeAction> {
-        if (input.isCircling) return emptyList()
+        if (input.isTurning) return emptyList()
 
         val exitDelayMs = input.settings.exitDelaySeconds * 1_000L
         if (exitDelayMs <= 0L) {
@@ -107,7 +107,7 @@ class ThermallingModeCoordinator @Inject constructor(
         input: ThermallingModeInput,
         nowMonoMs: Long
     ): List<ThermallingModeAction> {
-        if (input.isCircling) {
+        if (input.isTurning) {
             state = state.copy(
                 phase = ThermallingModePhase.ACTIVE,
                 enterPendingStartMonoMs = null,

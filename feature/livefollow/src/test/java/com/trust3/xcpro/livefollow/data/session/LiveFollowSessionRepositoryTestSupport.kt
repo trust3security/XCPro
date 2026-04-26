@@ -1,5 +1,6 @@
 package com.trust3.xcpro.livefollow.data.session
 
+import com.trust3.xcpro.livesource.LiveSourceKind
 import com.trust3.xcpro.livefollow.data.ownship.LiveOwnshipSnapshotSource
 import com.trust3.xcpro.livefollow.data.task.LiveFollowTaskSnapshotSource
 import com.trust3.xcpro.livefollow.model.LiveFollowAircraftIdentity
@@ -35,6 +36,8 @@ internal fun identityProfile(hex: String): LiveFollowIdentityProfile = LiveFollo
 
 internal class FakeOwnshipSnapshotSource(
     override val snapshot: StateFlow<LiveOwnshipSnapshot?> = MutableStateFlow(null),
+    override val liveSourceKind: MutableStateFlow<LiveSourceKind> =
+        MutableStateFlow(LiveSourceKind.PHONE),
     override val runtimeMode: MutableStateFlow<LiveFollowRuntimeMode> =
         MutableStateFlow(LiveFollowRuntimeMode.LIVE)
 ) : LiveOwnshipSnapshotSource

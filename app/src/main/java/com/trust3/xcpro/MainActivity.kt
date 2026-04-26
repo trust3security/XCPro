@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.trust3.xcpro.screens.navdrawer.lookandfeel.StatusBarStyle
 import com.trust3.xcpro.screens.navdrawer.lookandfeel.StatusBarStyleApplier
 import com.trust3.xcpro.screens.navdrawer.lookandfeel.LookAndFeelPreferences
+import com.trust3.xcpro.livesource.LiveSourceStatePort
 import com.trust3.xcpro.profiles.ProfileIdResolver
 import com.trust3.xcpro.ui.theme.Baseui1Theme
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,6 +38,9 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
 
     @Inject
     lateinit var firstTimeSetupManager: FirstTimeSetupManager
+
+    @Inject
+    lateinit var liveSourceStatePort: LiveSourceStatePort
 
     private var currentProfileId: String? = null
     private var keepSplashVisible = true
@@ -72,6 +76,11 @@ class MainActivity : ComponentActivity(), StatusBarStyleApplier {
         super.onResume()
         Log.d(TAG, "onResume: reapplying status bar style for profile $currentProfileId")
         applyUserStatusBarStyle(currentProfileId)
+
+        runCatching { liveSourceStatePort.refreshAndGetState() }
+            .onFailure { error ->
+                Log.e(TAG, "onResume: failed to refresh live source state", error)
+            }
 
         Log.d(TAG, "onResume: notifying sensor pipeline about potential resume")
     }

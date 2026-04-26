@@ -1,7 +1,7 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothReadChunk
 import java.nio.charset.StandardCharsets
 
 internal data class LxSanitizedCaptureFixture(
@@ -93,3 +93,4 @@ internal object LxSanitizedCaptureFixtureLoader {
         )
     }
 }
+

@@ -26,7 +26,7 @@
   - `monthly`
   - `annual`
 - Basic is intended to be the low-friction entry tier, with a store-side target of about **USD 5.99**. That is a Play Console pricing decision, not app logic.
-- SkySight premium access is **not** an XCPro tier by itself. XCPro tier decides whether SkySight integration surfaces are available; linked SkySight account state decides whether premium SkySight-backed features are actually unlocked.
+- SkySight premium access is **not** an XCPro tier by itself. Free and Basic may see free/public SkySight overlays only. SkySight credential entry/account linking is available only to Soaring, XC, and Pro. Premium SkySight-backed features require both Soaring-or-higher XCPro entitlement and a linked paid SkySight account.
 - **Every XCPro user must have an XCPro account, including Free users.**
 - Free is **not** guest or anonymous use.
 - The Google Play account is **not** the XCPro account.
@@ -75,7 +75,7 @@
 6. Gate a small representative set of features only:
    - Distance Circles (`Basic`)
    - Add Task (`Soaring`)
-   - SkySight credential entry (`Soaring+`)
+   - SkySight credential entry (`Soaring+`, never Free or Basic)
    - one premium SkySight-backed surface using the dual gate
 7. Test sign-in, upgrade, restore, expiry, downgrade, provider link, and provider account-state transitions.
 8. Expand gating only after the first slice is stable.

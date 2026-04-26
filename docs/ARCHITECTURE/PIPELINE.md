@@ -9,3 +9,65 @@
 - The suppressed-GPS replay-location path is owned by `MapLocationFlightDataRuntimeBinder`.
 - `MapScreenRootEffects` may launch that binder seam, but `MapComposeEffects` must not directly collect flight data or call `MapLocationRuntimePort.updateLocationFromReplayFrame(...)` for that path.
 - Trigger cadence is preserved: only flight-data emissions drive suppressed-GPS replay-location forwarding; gate and orientation changes are read lazily on each emission and must not independently trigger location updates.
+
+### Thermalling Automation Rule
+
+- `CirclingDetector.isCircling` remains the conservative shared circling signal for flight metrics, wind, trail, traffic, and other flight-data consumers.
+- Thermalling automation entry/exit timers are user-facing mode/zoom policy and are driven by `CompleteFlightData.isTurning` through `ThermallingModeRuntimeWiring`.
+- `Enter delay` and `Exit delay` are measured from continuous turning start/stop; they must not stack on top of `CirclingDetector`'s separate circling hysteresis.
+
+### Live Source Selection Rule
+
+- Simulator owns Condor bridge/session state and Condor transport read models only.
+- `feature:profile` owns persisted desired live mode.
+- `feature:flight-runtime` reads desired live mode through its declared port and owns selected live source, effective live status, startup requirements, selected live sensor source, selected live airspeed source, and selected live external instrument source.
+- `feature:flight-runtime` may expose refresh or invalidation seams for platform capability inputs, but it remains the only owner of selection and startup policy.
+- `app` owns live actuation adapters only; it must start or stop the resolver-selected backend without adding policy.
+- `app` may trigger runtime live-source refresh or read-model invalidation on resume or before actuation, but it must not interpret or replace runtime selection policy.
+- `feature:map` may consume resolver-selected live status and local phone diagnostics, but it must not select phone vs Condor or implement Condor fallback policy.
+- `feature:simulator` owns Condor sentence parsing and simulator runtime publication. GPS and TAS stay on the selected live sensor / airspeed seams, while Condor pressure altitude and TE vario cross the runtime boundary through the selected external instrument seam.
+- Direct Condor wind enters the wind pipeline only through `ExternalWindWritePort`; wind selection policy remains owned by the wind domain/runtime path.
+- `FlightDataRepository.Source` remains `LIVE` or `REPLAY`; phone vs Condor selection is internal to the live-runtime seam.
+- Downstream simulator-aware side effects stay keyed off `LiveSourceKind`: IGC recording, WeGlide post-flight prompting, and LiveFollow sharing suppress external side effects when the live source kind is `SIMULATOR_CONDOR2`, while replay remains authoritative through `FlightDataRepository.Source.REPLAY`.
+
+### External Instrument And Airspeed Rule
+
+- `ExternalInstrumentReadPort` stays narrow. It carries only pressure altitude,
+  confirmed TE vario, and generic external vario. It must not become a general
+  device-telemetry bus for airspeed, wind, MC, ballast, QNH, metadata, or
+  settings.
+- Live external airspeed stays on
+  `ExternalAirspeedWritePort -> ExternalAirspeedRepository`. That seam may carry
+  IAS-only, TAS-only, or paired samples. Deriving missing TAS from IAS plus
+  pressure altitude/QNH is owned by `feature:flight-runtime`, not by Bluetooth
+  or simulator adapters.
+- LX S100 live policy uses the same owners:
+  - `LXWP0` publishes confirmed TE plus pressure altitude and companion
+    airspeed into the existing seams.
+  - `PLXVF` may publish provisional generic external vario plus IAS and
+    pressure altitude into those same seams.
+- Widget, card, and audio consumers must read fused runtime outputs only. They
+  must not read raw Bluetooth runtime state or raw LX sentence state directly.
+
+### External Flight Settings Override Rule
+
+- `ExternalFlightSettingsReadPort` carries session-scoped live overrides and
+  display-only environment values from external device settings/status
+  sentences. It is separate from `ExternalInstrumentReadPort` because these
+  values are not freshness-gated flight telemetry samples.
+- This seam may carry live `MacCready`, `bugs`, ballast overload factor, QNH,
+  and OAT. It must not become a persistence bus for profile, glider, or QNH
+  storage, and it must not become a raw Bluetooth diagnostics dump.
+- Runtime owners consume the effective live override and keep persistence
+  ownership unchanged:
+  - QNH runtime may apply an external override without writing it back to
+    `QnhPreferencesRepository`.
+  - MacCready runtime may prefer an external override without mutating Levo
+    preferences.
+  - Bugs runtime may prefer an external override without mutating glider
+    configuration storage.
+  - Ballast overload factor may drive display-only surfaces such as the ballast
+    widget without becoming an implicit glide/performance write path.
+- Bluetooth settings/diagnostics may read raw LX runtime status directly for
+  metadata, mode, voltage, polar coefficients, and SC/filter/config values.
+  Flight widgets/cards must still consume only their fused/runtime owners.

@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.trust3.xcpro.common.glider.ThreePointPolar
 import com.trust3.xcpro.common.glider.UserPolarCoefficients
 import com.trust3.xcpro.common.units.UnitsConverter
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -13,6 +15,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @RunWith(RobolectricTestRunner::class)
 class PolarStillAirSinkProviderTest {
@@ -32,9 +35,9 @@ class PolarStillAirSinkProviderTest {
 
     @Test
     fun manualThreePointPolar_changes_authoritative_sink_and_bestLd() {
-        val repository = GliderRepository(appContext)
-        repository.selectModelById("js1c-18")
-        val provider = PolarStillAirSinkProvider(repository)
+        val repository = repository()
+        repository.selectModelById("js1-18")
+        val provider = PolarStillAirSinkProvider(repository, externalSettings())
         val speedMs = UnitsConverter.kmhToMs(100.0)
 
         val sinkBefore = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
@@ -60,9 +63,9 @@ class PolarStillAirSinkProviderTest {
 
     @Test
     fun bugsAndBallast_change_authoritative_sink_path() {
-        val repository = GliderRepository(appContext)
-        repository.selectModelById("js1c-18")
-        val provider = PolarStillAirSinkProvider(repository)
+        val repository = repository()
+        repository.selectModelById("js1-18")
+        val provider = PolarStillAirSinkProvider(repository, externalSettings())
         val speedMs = UnitsConverter.kmhToMs(100.0)
 
         val sinkBefore = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
@@ -81,9 +84,9 @@ class PolarStillAirSinkProviderTest {
 
     @Test
     fun referenceWeightAndUserCoefficients_areStoredButDeferredFromCurrentSinkPath() {
-        val repository = GliderRepository(appContext)
-        repository.selectModelById("js1c-18")
-        val provider = PolarStillAirSinkProvider(repository)
+        val repository = repository()
+        repository.selectModelById("js1-18")
+        val provider = PolarStillAirSinkProvider(repository, externalSettings())
         val speedMs = UnitsConverter.kmhToMs(100.0)
 
         val sinkBefore = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
@@ -106,6 +109,40 @@ class PolarStillAirSinkProviderTest {
         assertEquals(boundsBefore.maxMs, boundsAfter.maxMs, 1e-9)
         assertTrue(repository.activePolar.value.referenceWeightConfigured)
         assertTrue(repository.activePolar.value.userCoefficientsConfigured)
+    }
+
+    @Test
+    fun externalBugs_override_persisted_bugs_without_mutating_repository_config() {
+        val repository = repository()
+        repository.selectModelById("js1-18")
+        val externalSettings = externalSettings(bugsPercent = 15)
+        val provider = PolarStillAirSinkProvider(repository, externalSettings)
+        val speedMs = UnitsConverter.kmhToMs(100.0)
+
+        val sinkWithExternal = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
+
+        externalSettings.externalFlightSettingsSnapshot.value =
+            ExternalFlightSettingsSnapshot(bugsPercent = 0)
+        val sinkWithoutExternal = provider.sinkAtSpeed(speedMs) ?: error("expected sink")
+
+        assertTrue(sinkWithExternal > sinkWithoutExternal)
+        assertEquals(0, repository.config.value.bugsPercent)
+    }
+
+    private fun repository(): GliderRepository =
+        GliderRepository(appContext, PolarCatalogAssetDataSource(appContext))
+
+    private fun externalSettings(
+        bugsPercent: Int? = null
+    ): FakeExternalFlightSettingsReadPort =
+        FakeExternalFlightSettingsReadPort(
+            ExternalFlightSettingsSnapshot(bugsPercent = bugsPercent)
+        )
+
+    private class FakeExternalFlightSettingsReadPort(
+        initialSnapshot: ExternalFlightSettingsSnapshot
+    ) : ExternalFlightSettingsReadPort {
+        override val externalFlightSettingsSnapshot = MutableStateFlow(initialSnapshot)
     }
 
     private companion object {

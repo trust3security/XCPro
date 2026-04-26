@@ -144,15 +144,6 @@ internal fun MapScreenContent(
     val hiddenCardIds = widgetInputs.hiddenCardIds
 
     val replayState = replayInputs.replayState
-    val showVarioDemoFab = replayInputs.showVarioDemoFab
-    val onSyntheticThermalReplayClick = replayInputs.onSyntheticThermalReplayClick
-    val onSyntheticThermalReplayWindNoisyClick = replayInputs.onSyntheticThermalReplayWindNoisyClick
-    val onVarioDemoReferenceClick = replayInputs.onVarioDemoReferenceClick
-    val onVarioDemoSimClick = replayInputs.onVarioDemoSimClick
-    val onVarioDemoSim2Click = replayInputs.onVarioDemoSim2Click
-    val onVarioDemoSim3Click = replayInputs.onVarioDemoSim3Click
-    val showRacingReplayFab = replayInputs.showRacingReplayFab
-    val onRacingReplayClick = replayInputs.onRacingReplayClick
 
     val ognOverlayEnabled = trafficBinding.ognOverlayEnabled
     val showOgnSciaEnabled = trafficBinding.showOgnSciaEnabled
@@ -344,18 +335,8 @@ internal fun MapScreenContent(
             renderLocalOwnship = renderLocalOwnship,
             showRecenterButton = showRecenterButton,
             showReturnButton = showReturnButton,
-            showVarioDemoFab = showVarioDemoFab,
-            showAatEditFab = isAATEditMode && taskType == TaskType.AAT,
-            showRacingReplayFab = showRacingReplayFab,
             onRecenter = locationManager::recenterOnCurrentLocation,
-            onReturn = { locationManager.returnToSavedLocation() },
-            onSyntheticThermalReplayClick = onSyntheticThermalReplayClick,
-            onSyntheticThermalReplayWindNoisyClick = onSyntheticThermalReplayWindNoisyClick,
-            onVarioDemoReferenceClick = onVarioDemoReferenceClick,
-            onVarioDemoSimClick = onVarioDemoSimClick,
-            onVarioDemoSim2Click = onVarioDemoSim2Click,
-            onVarioDemoSim3Click = onVarioDemoSim3Click,
-            onRacingReplayClick = onRacingReplayClick
+            onReturn = { locationManager.returnToSavedLocation() }
         )
 
         MapBottomTabsSection(

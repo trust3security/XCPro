@@ -7,8 +7,11 @@ internal const val EXTERNAL_INSTRUMENT_FRESHNESS_MS: Long = 2_000L
 
 internal data class ResolvedExternalInstrumentInputs(
     val pressureAltitudeM: TimedExternalValue<Double>? = null,
-    val totalEnergyVarioMps: TimedExternalValue<Double>? = null
-)
+    val totalEnergyVarioMps: TimedExternalValue<Double>? = null,
+    val externalVarioMps: TimedExternalValue<Double>? = null
+) {
+    fun resolvedAudioRawVarioMps(): Double? = totalEnergyVarioMps?.value ?: externalVarioMps?.value
+}
 
 internal fun resolveExternalInstrumentInputs(
     snapshot: ExternalInstrumentFlightSnapshot,
@@ -21,7 +24,8 @@ internal fun resolveExternalInstrumentInputs(
 
     return ResolvedExternalInstrumentInputs(
         pressureAltitudeM = snapshot.pressureAltitudeM?.takeIf { it.isFreshAt(currentMonoMs) },
-        totalEnergyVarioMps = snapshot.totalEnergyVarioMps?.takeIf { it.isFreshAt(currentMonoMs) }
+        totalEnergyVarioMps = snapshot.totalEnergyVarioMps?.takeIf { it.isFreshAt(currentMonoMs) },
+        externalVarioMps = snapshot.externalVarioMps?.takeIf { it.isFreshAt(currentMonoMs) }
     )
 }
 

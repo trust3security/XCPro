@@ -3,7 +3,10 @@ package com.trust3.xcpro.sensors
 import android.content.Context
 import android.hardware.SensorManager
 import android.location.LocationManager
+import com.trust3.xcpro.core.common.logging.AppLogger
 import com.trust3.xcpro.core.time.Clock
+import com.trust3.xcpro.map.BuildConfig
+import com.trust3.xcpro.map.diagnostics.DebugDiagnosticsFileExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +23,9 @@ class UnifiedSensorManager(
     private val clock: Clock,
     private val scope: CoroutineScope
 ) : SensorDataSource {
+    private companion object {
+        private const val TAG = "UnifiedSensorManager"
+    }
 
     private val _gpsFlow = MutableStateFlow<GPSData?>(null)
     override val gpsFlow: StateFlow<GPSData?> = _gpsFlow.asStateFlow()
@@ -47,6 +53,8 @@ class UnifiedSensorManager(
     override val attitudeFlow: StateFlow<AttitudeData?> = _attitudeFlow.asStateFlow()
 
     private val orientationProcessor = OrientationProcessor(clock)
+    private val liveGpsCadenceDiagnostics = LiveGpsCadenceDiagnostics()
+    private val diagnosticsFileExporter = DebugDiagnosticsFileExporter(context)
 
     private val registry = SensorRegistry(
         context = context,
@@ -54,6 +62,7 @@ class UnifiedSensorManager(
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager,
         orientationProcessor = orientationProcessor,
         clock = clock,
+        gpsCadenceDiagnostics = liveGpsCadenceDiagnostics,
         updateGps = { gps ->
             _gpsFlow.value = gps
             lastFixMonotonicMs = gps.monotonicTimestampMillis.takeIf { it > 0L }
@@ -92,11 +101,20 @@ class UnifiedSensorManager(
         registry.stopAll()
         statusTickerJob?.cancel()
         statusTickerJob = null
+        if (BuildConfig.DEBUG) {
+            val status = liveGpsCadenceDiagnostics.buildCompactStatus(reason = "stop")
+            AppLogger.i(TAG, status)
+            diagnosticsFileExporter.appendLine(status)
+            liveGpsCadenceDiagnostics.reset()
+        }
     }
 
     fun setGpsUpdateIntervalMs(intervalMs: Long) {
         registry.setGpsUpdateIntervalMs(intervalMs)
     }
+
+    internal fun liveGpsCadenceDiagnosticsSnapshot(): LiveGpsCadenceDiagnostics.Snapshot =
+        liveGpsCadenceDiagnostics.snapshot()
 
     fun isGpsEnabled(): Boolean = registry.isGpsEnabled()
 

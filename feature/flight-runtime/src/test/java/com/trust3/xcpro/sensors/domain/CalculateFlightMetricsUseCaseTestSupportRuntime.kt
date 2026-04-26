@@ -62,7 +62,7 @@ internal fun newUseCaseWithHelpers(
         on { bestLd() }.thenReturn(null)
     }
     val helpers = mock<FlightCalculationHelpers>()
-    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
+    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any(), any())).thenReturn(
         FlightCalculationHelpers.NettoComputation(0.0, true)
     )
     whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer(teAnswer)
@@ -140,7 +140,7 @@ internal fun newUseCaseWithDynamicThermal(
     thermalValidProvider: () -> Boolean
 ): CalculateFlightMetricsUseCase {
     val helpers = mock<FlightCalculationHelpers>()
-    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
+    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any(), any())).thenReturn(
         FlightCalculationHelpers.NettoComputation(0.0, true)
     )
     whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer { invocation ->
@@ -175,7 +175,7 @@ internal fun newUseCaseWithDynamicNetto(
         on { bestLd() }.thenReturn(null)
     }
     val helpers = mock<FlightCalculationHelpers>()
-    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenAnswer {
+    whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any(), any())).thenAnswer {
         FlightCalculationHelpers.NettoComputation(nettoProvider(), nettoValidProvider())
     }
     whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer { invocation ->

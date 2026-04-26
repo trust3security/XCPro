@@ -302,7 +302,7 @@ Distance APIs now expose meter-first contracts (`*Meters`) with explicit km wrap
 - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingGeometryCoordinator.kt`
 - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskStorage.kt`
 - `feature/map/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt`
-- `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt`
+- `deleted map replay route helper`
 
 Core change: internal racing distance calculations now use `haversineDistanceMeters` end-to-end; the legacy `haversineDistance` km helper is retained as deprecated compatibility only.
 
@@ -348,9 +348,9 @@ Even with several meter wrappers added elsewhere, these core APIs still define d
 - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskObservationZoneResolver.kt:136`
 
 ### 5) Residual ad-hoc racing km->m conversions remain
-- `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt:177`
-- `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt:251`
-- `feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt:268`
+- `deleted map replay anchor helper:177`
+- `deleted map replay anchor helper:251`
+- `deleted map replay anchor helper:268`
 - `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCoordinator.kt:258`
 
 ### 6) OGN policy/helper layer remains km-first
@@ -871,11 +871,11 @@ Implementation + verification closure for backlog `#13` boundary adapter convers
    - IAS/TAS `km/h -> m/s` conversion + null/non-finite ingress reset:
      - `feature/map/src/test/java/com/trust3/xcpro/replay/ReplaySampleEmitterTest.kt`
    - synthetic replay speed conversion + step quantization:
-     - `feature/map/src/test/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilderTest.kt`
+     - `deleted map replay route helper test`
 
 ### Verification Snapshot (Run 24)
 1. PASS:
-   - `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.OpenSkyProviderClientTest" --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryPolicyTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"`
+   - `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.OpenSkyProviderClientTest" --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryPolicyTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest"`
    - `./gradlew --no-daemon --no-configuration-cache enforceRules testDebugUnitTest assembleDebug`
 2. NOT RUN:
    - `./gradlew --no-daemon --no-configuration-cache :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"`

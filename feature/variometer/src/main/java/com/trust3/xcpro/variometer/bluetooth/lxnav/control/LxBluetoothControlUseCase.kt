@@ -1,12 +1,12 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.control
 
 import com.trust3.xcpro.common.di.DefaultDispatcher
+import com.trust3.xcpro.bluetooth.BluetoothConnectPermissionPort
 import com.trust3.xcpro.core.time.Clock
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
-import com.trust3.xcpro.variometer.bluetooth.BluetoothTransport
-import com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothTransport
+import com.trust3.xcpro.bluetooth.BondedBluetoothDevice
 import com.trust3.xcpro.variometer.bluetooth.lxnav.runtime.LxExternalRuntimeRepository
-import com.trust3.xcpro.variometer.bluetooth.lxnav.runtime.LxExternalRuntimeSnapshot
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -469,3 +469,5 @@ internal class LxBluetoothControlUseCase @Inject constructor(
         const val MAX_RECONNECT_ATTEMPTS: Int = 3
     }
 }
+
+

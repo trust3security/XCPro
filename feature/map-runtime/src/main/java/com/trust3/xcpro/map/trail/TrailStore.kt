@@ -13,6 +13,7 @@ data class TrailSample(
     val timestampMillis: Long,
     val altitudeMeters: Double,
     val varioMs: Double,
+    val trackDegrees: Double = Double.NaN,
     val windSpeedMs: Double,
     val windDirectionFromDeg: Double
 )
@@ -46,6 +47,28 @@ class TrailStore(
     fun snapshot(): List<TrailPoint> = points.toList()
 
     fun latestTimestampMillis(): Long? = points.lastOrNull()?.timestampMillis
+
+    fun canAddSample(
+        sample: TrailSample,
+        minDeltaMillisOverride: Long? = null
+    ): Boolean {
+        if (!TrailGeo.isValidCoordinate(sample.latitude, sample.longitude)) {
+            return false
+        }
+        if (!sample.timestampMillis.isFiniteTimestamp()) {
+            return false
+        }
+
+        val last = points.lastOrNull() ?: return true
+        val dt = sample.timestampMillis - last.timestampMillis
+        val effectiveMinDeltaMillis = minDeltaMillisOverride ?: minDeltaMillis
+
+        return if (dt < 0L) {
+            sample.timestampMillis + clearThresholdMillis >= last.timestampMillis
+        } else {
+            dt >= effectiveMinDeltaMillis
+        }
+    }
 
     fun addSample(
         sample: TrailSample,

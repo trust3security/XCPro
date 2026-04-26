@@ -4,7 +4,6 @@ import com.trust3.xcpro.common.flight.FlightMode
 import com.trust3.xcpro.common.glider.GliderConfig
 import com.trust3.xcpro.common.units.UnitsPreferences
 import com.trust3.xcpro.map.ballast.BallastController
-import com.trust3.xcpro.map.config.MapFeatureFlags
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.map.trail.MapTrailSettingsUseCase
 import com.trust3.xcpro.qnh.QnhCalibrationState
@@ -47,7 +46,7 @@ internal fun startMapScreenViewModelLifecycle(
     weGlidePromptBridge: MapScreenWeGlidePromptBridge,
     onPromptChanged: (WeGlideUploadPromptUiState?) -> Unit,
     adsbTrafficFacade: AdsbTrafficFacade,
-    featureFlags: MapFeatureFlags,
+    loadSavedTasksOnInit: Boolean,
     mapTasksUseCase: MapTasksUseCase,
     refreshWaypoints: () -> Unit
 ) {
@@ -79,7 +78,7 @@ internal fun startMapScreenViewModelLifecycle(
     replayCoordinator.start()
     weGlidePromptBridge.bind(scope, onPromptChanged)
     scope.launch { adsbTrafficFacade.bootstrapMetadataSync() }
-    if (featureFlags.loadSavedTasksOnInit) {
+    if (loadSavedTasksOnInit) {
         scope.launch { mapTasksUseCase.loadSavedTasks() }
     }
     refreshWaypoints()

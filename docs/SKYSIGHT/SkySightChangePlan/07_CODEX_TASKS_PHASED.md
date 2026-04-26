@@ -56,7 +56,8 @@ Goal: make it work in the app.
 
 Tasks:
 - Add WeatherOverlayViewModel:
-  - consumes use-cases only
+  - consumes stable domain-facing seams only
+  - use cases or focused owner/port seams are valid
   - exposes WeatherOverlayUiState (enabled, parameter list, selected time, opacity, legend, point value, error states)
 - Update MapScreenRoot / MapOverlayStack to include the forecast overlay runtime controller.
 - Implement ForecastRasterOverlayController (UI/runtime):

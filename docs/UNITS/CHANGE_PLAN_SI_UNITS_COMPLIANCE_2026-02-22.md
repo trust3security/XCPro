@@ -46,7 +46,7 @@ Completed:
    - Added `RacingGeometryUtilsTest` (meter-vs-km wrapper parity and start-line width meter contract).
    - Updated `TaskManagerCoordinatorTest` and `RacingBoundaryCrossingPlannerTest` to meter-native assertions.
 4. Extended meter-first contract use into supporting racing components:
-   - `DefaultRacingTaskEngine` and `RacingReplayLogBuilder` now consume meter-returning geometry helpers directly.
+   - `DefaultRacingTaskEngine` and `legacy map replay route helper` now consume meter-returning geometry helpers directly.
 
 Partial:
 1. Compatibility km wrappers still remain intentionally for migration safety (`RacingGeometryUtils.haversineDistance`, manager/coordinator `*Km` APIs).
@@ -63,7 +63,7 @@ Findings added to plan:
 2. AAT core geodesic math API remains km-first (`AATMathUtils`, `AATGeometryGenerator`), preventing full SI-internal compliance.
 3. Additional AAT interaction/editing paths remain km-native (`AatGestureHandler`, `AATEditModeState`, `AATAreaTapDetector`, `AATMovablePointStrategySupport`, `AATEditGeometry`).
 4. Observation-zone resolver fallback logic still depends on km task fields (`TaskObservationZoneResolver`).
-5. Remaining ad-hoc km->m conversions exist in racing replay/coordinator support (`RacingReplayAnchorBuilder`, `TaskManagerCoordinator`).
+5. Remaining ad-hoc km->m conversions exist in racing replay/coordinator support (`legacy map replay anchor helper`, `TaskManagerCoordinator`).
 6. OGN distance policy remains km-first internally (`OgnSubscriptionPolicy.haversineKm` and call sites).
 
 Immediate next implementation focus:
@@ -77,7 +77,7 @@ Completed:
    - Meter-first geometry wiring across `AATGeometryGenerator` plus renderer/display callers.
    - Meter-first edit/hit-test/drag/strategy internals (`AATEditModeState`, `AATAreaTapDetector`, `AATMovablePoint*`, `AATEditGeometry`, `AATEditOverlayRenderer`, `AATEditModeManager`).
 2. Executed replay/coordinator cleanup:
-   - Removed ad-hoc km->m conversions from `RacingReplayAnchorBuilder` and `TaskManagerCoordinator` via `gateWidthMeters` and meter-native helpers.
+   - Removed ad-hoc km->m conversions from `legacy map replay anchor helper` and `TaskManagerCoordinator` via `gateWidthMeters` and meter-native helpers.
 3. Executed OGN policy/API migration:
    - Added `OgnSubscriptionPolicy.haversineMeters` + meter reconnect helper and moved repository/trail internals to meter-first distance checks.
 4. Verification completed:
@@ -357,7 +357,7 @@ Findings added to plan (`#13` boundary adapter tranche re-check):
    - missing receive-radius edge assertions around exact `radiusMeters` inclusion/exclusion.
 3. Replay boundary adapter tests are still incomplete:
    - missing explicit IAS/TAS `km/h -> m/s` conversion contract tests in `ReplaySampleEmitterTest` for both-present, IAS-only, TAS-only branches.
-   - missing explicit `targetSpeedKmh -> speedMs` boundary contract coverage in racing synthetic replay generation (`RacingReplayLogBuilder`).
+   - missing explicit `targetSpeedKmh -> speedMs` boundary contract coverage in racing synthetic replay generation (`legacy map replay route helper`).
 
 Execution implication:
 1. Keep `#13` open.
@@ -376,7 +376,7 @@ Findings added to plan (`#13` boundary adapter tranche re-check, expanded):
    - missing exact receive-radius equality/epsilon edge assertions.
 3. Replay boundary adapter tests are still incomplete (expanded):
    - missing emitter ingress-boundary reset assertions for null and non-finite IAS/TAS values.
-   - no dedicated `RacingReplayLogBuilder` unit test class currently locks speed conversion + step-quantized timing contract.
+   - no dedicated `legacy map replay route helper` unit test class currently locks speed conversion + step-quantized timing contract.
 
 Execution implication:
 1. Keep `#13` open.
@@ -393,7 +393,7 @@ Completed (`#13` implementation tranche):
    - exact receive-radius boundary include/exclude tests in `OgnTrafficRepositoryPolicyTest`.
 3. Replay boundary adapter tests implemented:
    - IAS/TAS conversion and null/non-finite ingress reset coverage in `ReplaySampleEmitterTest`.
-   - `targetSpeedKmh -> speedMs` timing/quantization coverage in `RacingReplayLogBuilderTest`.
+   - `targetSpeedKmh -> speedMs` timing/quantization coverage in `removed map replay route helper test`.
 4. Verification completed:
    - PASS: targeted `:feature:map:testDebugUnitTest` suites for ADS-B/OGN/replay/racing replay builder.
    - PASS: `enforceRules testDebugUnitTest assembleDebug`.

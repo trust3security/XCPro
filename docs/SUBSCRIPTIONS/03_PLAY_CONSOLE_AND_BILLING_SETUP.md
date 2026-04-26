@@ -44,8 +44,10 @@
 
 - Do not claim SkySight premium is included in Soaring / XC / Pro unless that is commercially true.
 - Safe wording is:
+  - Free and Basic can see free/public SkySight overlays exposed in XCPro.
   - Soaring enables SkySight account linking in XCPro.
-  - premium SkySight-backed features require a linked paid SkySight account.
+  - XC and Pro also include SkySight account linking in XCPro.
+  - premium SkySight-backed features require Soaring/XC/Pro plus a linked paid SkySight account.
 - Keep plan descriptions aligned with the real access model.
 
 ## Recommended plan-change setup rules

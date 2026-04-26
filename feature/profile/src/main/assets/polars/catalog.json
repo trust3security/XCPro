@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "aircraft": [
+    {
+      "id": "blanik",
+      "type": "SAILPLANE",
+      "name": "L-13 Blanik",
+      "path": "polars/sailplanes/blanik.json"
+    },
+    {
+      "id": "js1-18",
+      "type": "SAILPLANE",
+      "name": "JS1-C 18m",
+      "path": "polars/sailplanes/js1-18.json"
+    },
+    {
+      "id": "js1-21",
+      "type": "SAILPLANE",
+      "name": "JS1-C 21m",
+      "path": "polars/sailplanes/js1-21.json"
+    },
+    {
+      "id": "js3-15",
+      "type": "SAILPLANE",
+      "name": "JS3 15m",
+      "path": "polars/sailplanes/js3-15.json"
+    },
+    {
+      "id": "js3-18",
+      "type": "SAILPLANE",
+      "name": "JS3 18m",
+      "path": "polars/sailplanes/js3-18.json"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ Status: In progress (Run 46 closed `enforce_rules` caveat with 5 recursive passe
 - `./gradlew connectedDebugAndroidTest --no-parallel`
 
 ## Latest Execution Evidence (Run 24)
-- `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.OpenSkyProviderClientTest" --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryPolicyTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"` -> PASS
+- `./gradlew --no-daemon --no-configuration-cache :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.adsb.OpenSkyProviderClientTest" --tests "com.trust3.xcpro.adsb.AdsbTrafficRepositoryTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryPolicyTest" --tests "com.trust3.xcpro.ogn.OgnTrafficRepositoryConnectionTest" --tests "com.trust3.xcpro.replay.ReplaySampleEmitterTest"` -> PASS
 - `./gradlew --no-daemon --no-configuration-cache enforceRules testDebugUnitTest assembleDebug` -> PASS
 - Instrumentation evidence (unchanged from Run 10):
   - `./gradlew --no-daemon --no-configuration-cache :app:connectedDebugAndroidTest --no-parallel "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"` -> PASS (9 tests)

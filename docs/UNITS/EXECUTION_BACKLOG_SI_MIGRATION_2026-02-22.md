@@ -20,7 +20,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
 ## Run 3 Result (2026-02-22)
 - Completed: P1 #9 full racing helper/turnpoint/navigation/boundary SI normalization to meter-first internals (`RacingGeometryUtils.haversineDistanceMeters` adoption + meter helper migration across racing math call sites).
 - Completed: P1 #12 racing distance invariants expanded with dedicated geometry meter-contract coverage (`RacingGeometryUtilsTest`) and updated meter-native assertions in boundary/coordinator tests.
-- Completed: Meter-first racing path propagation into `DefaultRacingTaskEngine` and replay route generation (`RacingReplayLogBuilder`).
+- Completed: Meter-first racing path propagation into `DefaultRacingTaskEngine` and replay route generation (`legacy map replay route helper`).
 - Remaining: P1 #13 boundary adapter tests for ADS-B/OGN/replay explicit SI conversion contracts.
 
 ## Run 4 Result (2026-02-22)
@@ -28,7 +28,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
 - New P0 identified: AAT core math/geodesic APIs are still km-native (`AATMathUtils`, `AATGeometryGenerator`), so SI cannot be guaranteed end-to-end.
 - New P1 identified: additional AAT interaction/editing paths still use km internals (`AatGestureHandler`, `AATEditModeState`, `AATAreaTapDetector`, `AATMovablePointStrategySupport`).
 - New P1 identified: observation-zone fallback and resolver logic still starts from km task fields (`TaskObservationZoneResolver`).
-- New P1 identified: racing replay anchor and one coordinator path still use ad-hoc km->m multiplication (`RacingReplayAnchorBuilder`, `TaskManagerCoordinator`).
+- New P1 identified: racing replay anchor and one coordinator path still use ad-hoc km->m multiplication (`legacy map replay anchor helper`, `TaskManagerCoordinator`).
 - New P1 identified: OGN distance policy/API remains km-first (`OgnSubscriptionPolicy.haversineKm` and call sites).
 - New P2 identified: AAT edit-mode movement tolerance comment is wrong by 100x (`0.00001 km` is ~1 cm, not ~1 m).
 - New P3 identified: dead km-based helper remains (`AirspaceGestureMath.haversineDistance`).
@@ -42,7 +42,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
 ## Run 6 Result (2026-02-22)
 - Completed: P0 #22 AAT core geodesic contracts now expose/consume meter-first APIs across `AATGeometryGenerator` call paths; compatibility km wrappers retained where needed.
 - Completed: P1 #23 remaining AAT edit/interaction internals migrated to meter contracts (`AATEditModeState`, `AATAreaTapDetector`, `AATMovablePointStrategySupport`, `AATEditGeometry`, and related edit/drag/render callers).
-- Completed: P1 #25 replay/coordinator ad-hoc km->m hotspots removed (`RacingReplayAnchorBuilder`, `TaskManagerCoordinator`) using centralized meter fields/helpers.
+- Completed: P1 #25 replay/coordinator ad-hoc km->m hotspots removed (`legacy map replay anchor helper`, `TaskManagerCoordinator`) using centralized meter fields/helpers.
 - Completed: P1 #26 OGN movement/radius policy now meter-first internally (`OgnSubscriptionPolicy.haversineMeters` + repository callers), with km retained only at protocol/display boundaries.
 - Verification: `enforceRules`, `testDebugUnitTest`, and `assembleDebug` pass (run with `--no-configuration-cache` due pre-existing Gradle configuration-cache issue in build scripts).
 
@@ -290,7 +290,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
      - existing OGN policy tests cover center preference and haversine math, but do not lock exact boundary-threshold behavior at `radiusMeters` cut lines.
   3. Replay boundary conversion coverage is incomplete:
      - `ReplaySampleEmitterTest` does not assert absolute `km/h -> m/s` conversion contracts for IAS/TAS ingestion paths (both-present, IAS-only, TAS-only).
-     - no replay test currently locks racing synthetic replay speed boundary conversion (`targetSpeedKmh -> speedMs`) in `RacingReplayLogBuilder`.
+     - no replay test currently locks racing synthetic replay speed boundary conversion (`targetSpeedKmh -> speedMs`) in `legacy map replay route helper`.
 - Action: Keep `#13` open; expand Run D plan and test backlog with explicit adapter-level cases before compliance closeout.
 
 ## Run 23 Result (2026-02-23)
@@ -306,7 +306,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
      - no exact edge test asserts receive-radius equality/epsilon behavior (`distanceMeters == radiusMeters` include, slight over-radius exclude).
   3. Replay boundary adapter coverage is still incomplete:
      - `ReplaySampleEmitterTest` still lacks boundary reset assertions for null/non-finite IAS/TAS ingress values at the km/h boundary.
-     - no dedicated `RacingReplayLogBuilder` unit test class exists to lock `targetSpeedKmh -> speedMs` conversion and step-quantized timing behavior.
+     - no dedicated `legacy map replay route helper` unit test class exists to lock `targetSpeedKmh -> speedMs` conversion and step-quantized timing behavior.
 - Action: Keep `#13` open; expand Run D with the above concrete boundary assertions before SI compliance closeout.
 
 ## Run 24 Result (2026-02-23)
@@ -319,7 +319,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
      - added exact receive-radius boundary include/exclude edge tests in `OgnTrafficRepositoryPolicyTest`.
   3. Replay:
      - expanded `ReplaySampleEmitterTest` for IAS/TAS `km/h -> m/s` conversion contracts (both-present, IAS-only, TAS-only) plus null/non-finite ingress reset behavior.
-     - added dedicated `RacingReplayLogBuilderTest` covering `targetSpeedKmh -> speedMs` timing conversion and step quantization.
+     - added dedicated `removed map replay route helper test` covering `targetSpeedKmh -> speedMs` timing conversion and step quantization.
 - Verification:
   1. PASS: `:feature:map:testDebugUnitTest` targeted `#13` suites (ADS-B/OGN/replay/racing replay builder).
   2. PASS: `enforceRules testDebugUnitTest assembleDebug`.
@@ -646,7 +646,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
       - exact receive-radius edge coverage in `OgnTrafficRepositoryPolicyTest`.
     - Replay:
       - IAS/TAS `km/h -> m/s` conversion + null/non-finite reset coverage in `ReplaySampleEmitterTest`.
-      - `targetSpeedKmh -> speedMs` and timing quantization coverage in `RacingReplayLogBuilderTest`.
+      - `targetSpeedKmh -> speedMs` and timing quantization coverage in `removed map replay route helper test`.
 14. Done (Re-pass #9) - Fixed replay movement snapshot contract: `MovementSnapshot.distanceMeters` stores distance in meters (not speed in m/s) in `ReplayRuntimeInterpolator`, with heading-gating regression tests for `ReplayHeadingResolver`.
 15. Done (Re-pass #9) - Fixed distance-circles output boundary to use `UnitsPreferences`/`UnitsFormatter` (removed hard-coded `km`/`m` labels in `DistanceCirclesCanvas`).
 16. Done (Re-pass #9) - Fixed task UI distance outputs (`TaskStatsSection`, minimized indicator, racing selector distance text) to use selected distance units instead of hard-coded `km`.
@@ -666,7 +666,7 @@ Status: Updated after non-`#12` caveat closure (Run 46; `enforce_rules` caveat c
 22. Done (Re-pass #15) - Added meter-first AAT core geometry/maths call paths and migrated active callers (`AATMathUtils`/`AATGeometryGenerator` + renderer/display/task call sites).
 23. Done (Re-pass #15) - Migrated remaining AAT interaction/editing internals to meter contracts (`AatGestureHandler`, `AATEditModeState`, `AATAreaTapDetector`, `AATMovablePointStrategySupport`, `AATEditGeometry` + dependent helpers).
 24. Done (Re-pass #14) - Migrated `TaskObservationZoneResolver` fallback contracts to meter-first waypoint fields with explicit boundary conversion.
-25. Done (Re-pass #15) - Replaced remaining ad-hoc racing replay/coordinator km->m conversions with centralized meter helpers (`RacingReplayAnchorBuilder`, `TaskManagerCoordinator`).
+25. Done (Re-pass #15) - Replaced remaining ad-hoc racing replay/coordinator km->m conversions with centralized meter helpers (`legacy map replay anchor helper`, `TaskManagerCoordinator`).
 26. Done (Re-pass #15) - Introduced meter-first OGN distance helper/policy API and retained km filter string generation as explicit protocol boundary.
 27. Done (Re-pass #16) - AAT edit movement tolerance contract aligned to ~1 m (`TARGET_MOVE_TOLERANCE_METERS = 1.0`) and re-confirmed in latest sweep.
 28. Done (Run 38) - Removed dead `AirspaceGestureMath` helper file.

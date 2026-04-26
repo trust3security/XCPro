@@ -54,7 +54,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import com.trust3.xcpro.map.domain.MapWaypointError
 import com.trust3.xcpro.map.config.MapFeatureFlags
-import com.trust3.xcpro.map.replay.RacingReplayLogBuilder
 import com.trust3.xcpro.airspace.AirspaceUseCase
 import com.trust3.xcpro.flightdata.WaypointFilesUseCase
 import com.trust3.xcpro.orientation.HeadingResolver

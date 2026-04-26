@@ -60,6 +60,7 @@ class MapLifecycleManagerOgnTargetCleanupTest {
             locationManager = mock<MapLocationRuntimePort>(),
             locationRenderFrameCleanup = mock<MapRenderFrameCleanupPort>(),
             renderSurfaceDiagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 123L }),
+            diagnosticsStatusSink = MapDiagnosticsStatusSink { },
             replaySessionState = MutableStateFlow(SessionState())
         )
     }

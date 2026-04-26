@@ -44,7 +44,7 @@ internal class ThermallingModeRuntimeWiring(
             currentMode
         ) { sample, modeSettings, modeVisible, replayRunning, mode ->
             RuntimeFrameSeed(
-                isCircling = sample?.isCircling == true,
+                isTurning = sample?.isTurning == true,
                 settings = modeSettings,
                 thermalModeVisible = modeVisible,
                 replayActive = replayRunning,
@@ -52,7 +52,7 @@ internal class ThermallingModeRuntimeWiring(
             )
         }.combine(currentZoom) { seed, zoom ->
             RuntimeFrame(
-                isCircling = seed.isCircling,
+                isTurning = seed.isTurning,
                 settings = seed.settings,
                 thermalModeVisible = seed.thermalModeVisible,
                 replayActive = seed.replayActive,
@@ -81,7 +81,7 @@ internal class ThermallingModeRuntimeWiring(
             maybeRememberManualZoom(frame.currentZoom, frame.settings)
             val actions = controller.update(
                 input = ThermallingModeInput(
-                    isCircling = frame.isCircling,
+                    isTurning = frame.isTurning,
                     settings = frame.settings,
                     thermalModeVisible = frame.thermalModeVisible,
                     currentMode = frame.currentMode,
@@ -125,7 +125,7 @@ internal class ThermallingModeRuntimeWiring(
     }
 
     private data class RuntimeFrame(
-        val isCircling: Boolean,
+        val isTurning: Boolean,
         val settings: ThermallingModeSettings,
         val thermalModeVisible: Boolean,
         val replayActive: Boolean,
@@ -135,7 +135,7 @@ internal class ThermallingModeRuntimeWiring(
     )
 
     private data class RuntimeFrameSeed(
-        val isCircling: Boolean,
+        val isTurning: Boolean,
         val settings: ThermallingModeSettings,
         val thermalModeVisible: Boolean,
         val replayActive: Boolean,

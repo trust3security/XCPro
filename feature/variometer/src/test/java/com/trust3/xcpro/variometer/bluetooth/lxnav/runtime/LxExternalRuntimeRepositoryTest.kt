@@ -1,12 +1,13 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
 import com.trust3.xcpro.core.time.FakeClock
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.external.ExternalInstrumentFlightSnapshot
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
-import com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk
-import com.trust3.xcpro.variometer.bluetooth.BluetoothTransport
-import com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothReadChunk
+import com.trust3.xcpro.bluetooth.BluetoothTransport
+import com.trust3.xcpro.bluetooth.BondedBluetoothDevice
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -54,8 +55,8 @@ class LxExternalRuntimeRepositoryTest {
         val diagnostics = repository.runtimeSnapshot.value.diagnostics
         assertEquals(10L, diagnostics.sessionStartMonoMs)
         assertEquals(400L, diagnostics.lastReceivedMonoMs)
-        assertEquals(1, diagnostics.acceptedSentenceCount)
-        assertEquals(3, diagnostics.rejectedSentenceCount)
+        assertEquals(2, diagnostics.acceptedSentenceCount)
+        assertEquals(2, diagnostics.rejectedSentenceCount)
         assertEquals(1, diagnostics.checksumFailureCount)
         assertEquals(1, diagnostics.parseFailureCount)
         assertEquals(4.0, diagnostics.rollingSentenceRatePerSecond, 1e-6)
@@ -137,7 +138,7 @@ class LxExternalRuntimeRepositoryTest {
     }
 
     @Test
-    fun unsupported_unknown_and_rejected_outcomes_do_not_mutate_runtime_state() = runTest {
+    fun blank_plxvf_only_updates_acceptance_heartbeat_not_measurements() = runTest {
         val transport = FakeBluetoothTransport()
         val repository = repository(
             transport = transport,
@@ -160,9 +161,10 @@ class LxExternalRuntimeRepositoryTest {
         assertEquals(1L, repository.runtimeSnapshot.value.sessionOrdinal)
         assertNull(repository.runtimeSnapshot.value.pressureAltitudeM)
         assertNull(repository.runtimeSnapshot.value.totalEnergyVarioMps)
+        assertNull(repository.runtimeSnapshot.value.externalVarioMps)
         assertNull(repository.runtimeSnapshot.value.airspeedKph)
         assertNull(repository.runtimeSnapshot.value.deviceInfo)
-        assertNull(repository.runtimeSnapshot.value.lastAcceptedMonoMs)
+        assertEquals(100L, repository.runtimeSnapshot.value.lastAcceptedMonoMs ?: -1L)
         assertEquals(ExternalInstrumentFlightSnapshot(), repository.externalFlightSnapshot.value)
 
         repository.disconnect()
@@ -170,7 +172,7 @@ class LxExternalRuntimeRepositoryTest {
     }
 
     @Test
-    fun external_flight_snapshot_exposes_only_pressure_altitude_and_total_energy_vario() = runTest {
+    fun external_flight_snapshot_publishes_narrow_s100_vario_and_ias_only_seams() = runTest {
         val transport = FakeBluetoothTransport()
         val externalAirspeedWritePort = TestExternalAirspeedWritePort()
         val repository = repository(
@@ -183,6 +185,7 @@ class LxExternalRuntimeRepositoryTest {
             SessionScript.AwaitClose(
                 chunks = listOf(
                     chunk("\$LXWP0,LOGGER,118.0,1300.0,3.0", 500L),
+                    chunk("\$PLXVF,,1.00,0.87,-0.12,-0.40,121.0,1250.0", 550L),
                     chunk("\$LXWP1,S100,SN123,1.2.3,2.0", 600L)
                 )
             )
@@ -193,15 +196,17 @@ class LxExternalRuntimeRepositoryTest {
 
         val runtimeSnapshot = repository.runtimeSnapshot.value
         val externalSnapshot = repository.externalFlightSnapshot.value
-        assertEquals(118.0, runtimeSnapshot.airspeedKph?.value ?: Double.NaN, 1e-6)
+        assertEquals(121.0, runtimeSnapshot.airspeedKph?.value ?: Double.NaN, 1e-6)
         assertNotNull(runtimeSnapshot.deviceInfo)
-        assertEquals(1300.0, externalSnapshot.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
-        assertEquals(500L, externalSnapshot.pressureAltitudeM?.receivedMonoMs ?: -1L)
+        assertEquals(1250.0, externalSnapshot.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
+        assertEquals(550L, externalSnapshot.pressureAltitudeM?.receivedMonoMs ?: -1L)
         assertEquals(3.0, externalSnapshot.totalEnergyVarioMps?.value ?: Double.NaN, 1e-6)
         assertEquals(500L, externalSnapshot.totalEnergyVarioMps?.receivedMonoMs ?: -1L)
-        assertEquals(118.0 / 3.6, externalAirspeedWritePort.latestSample?.trueMs ?: Double.NaN, 1e-6)
-        assertTrue(externalAirspeedWritePort.latestSample?.indicatedMs?.isNaN() == true)
-        assertEquals(500L, externalAirspeedWritePort.latestSample?.clockMillis ?: -1L)
+        assertEquals(-0.4, externalSnapshot.externalVarioMps?.value ?: Double.NaN, 1e-6)
+        assertEquals(550L, externalSnapshot.externalVarioMps?.receivedMonoMs ?: -1L)
+        assertEquals(121.0 / 3.6, externalAirspeedWritePort.latestSample?.indicatedMs ?: Double.NaN, 1e-6)
+        assertTrue(externalAirspeedWritePort.latestSample?.trueMs?.isNaN() == true)
+        assertEquals(550L, externalAirspeedWritePort.latestSample?.clockMillis ?: -1L)
 
         repository.disconnect()
         advanceUntilIdle()
@@ -243,6 +248,47 @@ class LxExternalRuntimeRepositoryTest {
         assertNull(repository.runtimeSnapshot.value.lastAcceptedMonoMs)
         assertEquals(ExternalInstrumentFlightSnapshot(), repository.externalFlightSnapshot.value)
         assertNull(externalAirspeedWritePort.latestSample)
+    }
+
+    @Test
+    fun lxwp2_lxwp3_and_plxvs_publish_session_sticky_settings_snapshot_and_clear_on_disconnect() = runTest {
+        val transport = FakeBluetoothTransport()
+        val repository = repository(
+            transport = transport,
+            clock = FakeClock(),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+        transport.enqueue(
+            SessionScript.AwaitClose(
+                chunks = listOf(
+                    chunk("\$LXWP2,1.5,1.20,12,0.123,0.456,0.789,7", 100L),
+                    chunk("\$LXWP3,100,1,2,3,4,5,6,7,8,9,10,TEST GLIDER,-60", 120L),
+                    chunk("\$PLXVS,23.1,1,12.3", 140L)
+                )
+            )
+        )
+
+        repository.connect(TEST_DEVICE_A)
+        advanceUntilIdle()
+
+        assertEquals(
+            ExternalFlightSettingsSnapshot(
+                macCreadyMps = 1.5,
+                bugsPercent = 12,
+                ballastOverloadFactor = 1.20,
+                qnhHpa = repository.externalFlightSettingsSnapshot.value.qnhHpa,
+                outsideAirTemperatureC = 23.1
+            ),
+            repository.externalFlightSettingsSnapshot.value
+        )
+        assertEquals(1.20, repository.runtimeSnapshot.value.liveSettingsOverrides.ballastOverloadFactor?.value ?: Double.NaN, 1e-6)
+        assertEquals(7, repository.runtimeSnapshot.value.deviceConfiguration.audioVolume?.value)
+        assertEquals(12.3, repository.runtimeSnapshot.value.environmentStatus.voltageV?.value ?: Double.NaN, 1e-6)
+
+        repository.disconnect()
+        advanceUntilIdle()
+
+        assertEquals(ExternalFlightSettingsSnapshot(), repository.externalFlightSettingsSnapshot.value)
     }
 
     @Test
@@ -510,3 +556,4 @@ class LxExternalRuntimeRepositoryTest {
         val TEST_DEVICE_B = BondedBluetoothDevice("AA:BB:CC:DD:EE:02", "LXNAV S100 B")
     }
 }
+

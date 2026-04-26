@@ -34,14 +34,14 @@ class LocationManagerRenderSyncTest {
     }
 
     @Test
-    fun updateLocationFromGps_requestsRepaint_whenRenderFrameSyncIsEnabled() {
+    fun updateLocationFromLiveFix_requestsRepaint_whenRenderFrameSyncIsEnabled() {
         val cameraController = FakeCameraController()
         val manager = createManager(
             featureFlags = MapFeatureFlags().apply { useRenderFrameSync = true },
             cameraController = cameraController
         )
 
-        manager.updateLocationFromGPS(
+        manager.updateLocationFromLiveFix(
             location = MapLocationUiModel(
                 latitude = -35.0,
                 longitude = 149.0,
@@ -94,7 +94,7 @@ class LocationManagerRenderSyncTest {
             cameraController = FakeCameraController()
         )
 
-        manager.updateLocationFromGPS(
+        manager.updateLocationFromLiveFix(
             location = MapLocationUiModel(
                 latitude = -35.0,
                 longitude = 149.0,
@@ -118,7 +118,7 @@ class LocationManagerRenderSyncTest {
             mapStateReader = stateReader
         )
 
-        manager.updateLocationFromGPS(
+        manager.updateLocationFromLiveFix(
             location = MapLocationUiModel(
                 latitude = -35.0,
                 longitude = 149.0,
@@ -142,7 +142,7 @@ class LocationManagerRenderSyncTest {
             cameraController = FakeCameraController()
         )
 
-        manager.updateLocationFromGPS(
+        manager.updateLocationFromLiveFix(
             location = MapLocationUiModel(
                 latitude = -35.0,
                 longitude = 149.0,
@@ -178,7 +178,7 @@ class LocationManagerRenderSyncTest {
         )
 
         manager.setLocalOwnshipRenderEnabled(false)
-        manager.updateLocationFromGPS(
+        manager.updateLocationFromLiveFix(
             location = MapLocationUiModel(
                 latitude = -35.0,
                 longitude = 149.0,
@@ -222,7 +222,7 @@ class LocationManagerRenderSyncTest {
             paddingProvider = { intArrayOf(0, 0, 0, 0) },
             sensorsPort = object : MapLocationSensorsPort {
                 override fun onLocationPermissionsResult(fineLocationGranted: Boolean) = Unit
-                override fun requestLocationPermissions(permissionRequester: MapLocationPermissionRequester) = Unit
+                override fun ensureSelectedRuntimeReady(permissionRequester: MapLocationPermissionRequester) = Unit
                 override fun stopLocationTracking(force: Boolean) = Unit
                 override fun restartSensorsIfNeeded() = Unit
                 override fun isGpsEnabled(): Boolean = true

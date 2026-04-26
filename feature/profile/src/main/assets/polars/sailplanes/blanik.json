@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "id": "blanik",
+  "type": "SAILPLANE",
+  "name": "L-13 Blanik",
+  "classLabel": "16.2m",
+  "wingSpanM": 16.2,
+  "wingAreaM2": 19.2,
+  "emptyWeightKg": 292,
+  "maxWeightKg": 500,
+  "bestLD": 28.0,
+  "bestLDSpeedMs": 24.444444,
+  "minSinkMs": 0.82,
+  "minSinkSpeedMs": 21.454247,
+  "minWingLoadingKgM2": 19.8,
+  "maxWingLoadingKgM2": 26.0,
+  "water": {
+    "totalLiters": 0
+  },
+  "speedLimits": {
+    "vneKmh": 253,
+    "vtKmh": 55
+  },
+  "referenceCurveId": "curve-3",
+  "polarPoints": [
+    {
+      "speedMs": 15.294117,
+      "sinkMs": 0.911648
+    },
+    {
+      "speedMs": 21.454247,
+      "sinkMs": 0.817802
+    },
+    {
+      "speedMs": 27.260348,
+      "sinkMs": 0.992088
+    },
+    {
+      "speedMs": 35.969497,
+      "sinkMs": 1.917143
+    },
+    {
+      "speedMs": 43.262528,
+      "sinkMs": 3.284615
+    },
+    {
+      "speedMs": 57.636163,
+      "sinkMs": 7.547912
+    },
+    {
+      "speedMs": 70.593681,
+      "sinkMs": 13.96967
+    }
+  ],
+  "polarCurves": [
+    {
+      "id": "curve-1",
+      "points": [
+        {
+          "speedMs": 15.294117,
+          "sinkMs": 1.22
+        },
+        {
+          "speedMs": 20.038126,
+          "sinkMs": 0.817802
+        },
+        {
+          "speedMs": 24.640522,
+          "sinkMs": 0.884835
+        },
+        {
+          "speedMs": 32.783224,
+          "sinkMs": 1.528352
+        },
+        {
+          "speedMs": 40.430285,
+          "sinkMs": 2.748352
+        },
+        {
+          "speedMs": 50.555556,
+          "sinkMs": 5.349231
+        },
+        {
+          "speedMs": 70.310457,
+          "sinkMs": 13.808791
+        }
+      ]
+    },
+    {
+      "id": "curve-2",
+      "points": [
+        {
+          "speedMs": 15.294117,
+          "sinkMs": 1.394286
+        },
+        {
+          "speedMs": 15.78976,
+          "sinkMs": 0.817802
+        },
+        {
+          "speedMs": 23.436805,
+          "sinkMs": 0.835556
+        },
+        {
+          "speedMs": 29.59695,
+          "sinkMs": 1.13956
+        },
+        {
+          "speedMs": 36.748365,
+          "sinkMs": 2.051208
+        },
+        {
+          "speedMs": 46.944648,
+          "sinkMs": 4.227966
+        },
+        {
+          "speedMs": 64.083485,
+          "sinkMs": 10.2717
+        }
+      ]
+    },
+    {
+      "id": "curve-3",
+      "points": [
+        {
+          "speedMs": 15.294117,
+          "sinkMs": 0.911648
+        },
+        {
+          "speedMs": 21.454247,
+          "sinkMs": 0.817802
+        },
+        {
+          "speedMs": 27.260348,
+          "sinkMs": 0.992088
+        },
+        {
+          "speedMs": 35.969497,
+          "sinkMs": 1.917143
+        },
+        {
+          "speedMs": 43.262528,
+          "sinkMs": 3.284615
+        },
+        {
+          "speedMs": 57.636163,
+          "sinkMs": 7.547912
+        },
+        {
+          "speedMs": 70.593681,
+          "sinkMs": 13.96967
+        }
+      ]
+    }
+  ]
+}

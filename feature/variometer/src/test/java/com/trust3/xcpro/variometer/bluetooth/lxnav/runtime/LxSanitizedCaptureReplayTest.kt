@@ -1,10 +1,10 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.runtime
 
 import com.trust3.xcpro.core.time.FakeClock
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothTransport
-import com.trust3.xcpro.variometer.bluetooth.BondedBluetoothDevice
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothTransport
+import com.trust3.xcpro.bluetooth.BondedBluetoothDevice
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -35,15 +35,18 @@ class LxSanitizedCaptureReplayTest {
         advanceUntilIdle()
 
         assertEquals(setOf("LXWP1", "LXWP0", "PLXVF", "PGRMZ"), fixture.sentenceInventory)
-        assertEquals(654.1, repository.runtimeSnapshot.value.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
+        assertEquals(244.3, repository.runtimeSnapshot.value.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
         assertEquals(1.12, repository.runtimeSnapshot.value.totalEnergyVarioMps?.value ?: Double.NaN, 1e-6)
-        assertEquals(2, repository.runtimeSnapshot.value.diagnostics.acceptedSentenceCount)
-        assertEquals(3, repository.runtimeSnapshot.value.diagnostics.rejectedSentenceCount)
+        assertEquals(-0.25, repository.runtimeSnapshot.value.externalVarioMps?.value ?: Double.NaN, 1e-6)
+        assertEquals(90.2, repository.runtimeSnapshot.value.airspeedKph?.value ?: Double.NaN, 1e-6)
+        assertEquals(3, repository.runtimeSnapshot.value.diagnostics.acceptedSentenceCount)
+        assertEquals(2, repository.runtimeSnapshot.value.diagnostics.rejectedSentenceCount)
         assertEquals(1, repository.runtimeSnapshot.value.diagnostics.checksumFailureCount)
         assertEquals(1, repository.runtimeSnapshot.value.diagnostics.parseFailureCount)
         assertEquals(5.0, repository.runtimeSnapshot.value.diagnostics.rollingSentenceRatePerSecond, 1e-6)
-        assertEquals(654.1, repository.externalFlightSnapshot.value.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
+        assertEquals(244.3, repository.externalFlightSnapshot.value.pressureAltitudeM?.value ?: Double.NaN, 1e-6)
         assertEquals(1.12, repository.externalFlightSnapshot.value.totalEnergyVarioMps?.value ?: Double.NaN, 1e-6)
+        assertEquals(-0.25, repository.externalFlightSnapshot.value.externalVarioMps?.value ?: Double.NaN, 1e-6)
 
         repository.disconnect()
         advanceUntilIdle()
@@ -94,7 +97,7 @@ class LxSanitizedCaptureReplayTest {
 
         override suspend fun listBondedDevices(): List<BondedBluetoothDevice> = listOf(TEST_DEVICE)
 
-        override fun open(device: BondedBluetoothDevice): Flow<com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk> = flow {
+        override fun open(device: BondedBluetoothDevice): Flow<com.trust3.xcpro.bluetooth.BluetoothReadChunk> = flow {
             val session = sessions.removeFirst()
             val closeSignal = CompletableDeferred<Unit>()
             activeCloseSignal = closeSignal
@@ -128,3 +131,4 @@ class LxSanitizedCaptureReplayTest {
         )
     }
 }
+

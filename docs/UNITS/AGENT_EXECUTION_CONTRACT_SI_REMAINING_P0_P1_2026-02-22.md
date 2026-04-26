@@ -128,7 +128,7 @@ Complete the remaining SI migration so internal task/OGN/replay logic is meter-f
 ## 1.9 Work Item Mapping (1-5)
 1. `P0`: `AATMathUtils` and `AATGeometryGenerator` meter-first APIs and caller migration.
 2. `P1`: AAT edit/map internals (`AATEditModeState`, `AATAreaTapDetector`, `AATMovablePointStrategySupport`, `AATEditGeometry`).
-3. `P1`: racing replay/coordinator conversion hotspots (`RacingReplayAnchorBuilder`, `TaskManagerCoordinator`).
+3. `P1`: racing replay/coordinator conversion hotspots (`legacy map replay anchor helper`, `TaskManagerCoordinator`).
 4. `P1`: OGN movement policy meter-first API (`OgnSubscriptionPolicy`).
 5. `P1/P2`: verification expansion + cleanup items from SI backlog.
 

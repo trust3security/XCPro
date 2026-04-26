@@ -61,14 +61,14 @@ Execution update (2026-03-07):
     - Determinism/timebase and architecture compliance: 19/20
     - Operational hardening and docs sync: 9/10
   - Evidence:
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest" --tests "com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest" --tests "com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.trust3.xcpro.map.RacingReplayTaskHelpersTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest" --tests "com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest" --tests "com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest"`: PASS
   - Residual gap (tracked under pending packs P9-A/P9-D):
     - replay precondition currently validates via strict default helper path rather than active profile propagation path.
 - Verification:
   - `python scripts/arch_gate.py`: PASS
   - `powershell -ExecutionPolicy Bypass -File scripts/ci/enforce_rules.ps1`: PASS
   - `./gradlew :feature:map:compileDebugKotlin`: PASS
-  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.trust3.xcpro.map.RacingReplayTaskHelpersTest"`: PASS
+  - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest" --tests "com.trust3.xcpro.tasks.TaskManagerCoordinatorTest" --tests "com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest"`: PASS
   - `./gradlew enforceRules`: PASS
   - `./gradlew assembleDebug`: PASS
   - `./gradlew testDebugUnitTest`: PASS
@@ -254,13 +254,13 @@ Execution update (2026-03-07):
   - Verification:
     - `./gradlew :feature:tasks:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineStartPolicyTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEnginePhase4Test" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingNavigationEngineFinishRulesTest" --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest" --tests "com.trust3.xcpro.tasks.navigation.NavigationRouteRepositoryTest"`: PASS
     - `./gradlew :feature:map-runtime:testDebugUnitTest --tests "com.trust3.xcpro.taskperformance.TaskPerformanceRepositoryTest"`: PASS
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest"`: PASS
     - `./gradlew enforceRules`: PASS
     - `scripts\qa\run_root_unit_tests_reliable.bat`: PASS
     - `./gradlew assembleDebug`: PASS
 - Phase 8-10 code-pass advisory update (2026-03-08):
   - Evidence run:
-    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest" --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest" --tests "com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest"`: PASS
+    - `./gradlew :feature:map:testDebugUnitTest --tests "com.trust3.xcpro.tasks.TaskPersistSerializerFidelityTest" --tests "com.trust3.xcpro.tasks.TaskSheetViewModelImportTest" --tests "com.trust3.xcpro.tasks.data.persistence.TaskPersistenceAdaptersDeterministicIdTest" --tests "com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest" --tests "com.trust3.xcpro.tasks.TaskNavigationControllerTest"`: PASS
   - Current blockers found in production code:
     - Phase 8 (persistence fidelity):
       - `TaskPersistSerializer` has no explicit schema/version envelope and no v1->v2 migration path.
@@ -270,8 +270,8 @@ Execution update (2026-03-07):
     - Phase 9 (replay parity + lifecycle):
       - replay precondition helper validates RT with default strict profile path, not persisted profile-aware validator decision.
       - `TaskNavigationController.bind(...)` has no explicit unbind/dispose lifecycle API and no single-active-bind contract.
-      - `RacingReplayAnchorBuilder` still uses replay-local heuristics (`lineCrossOffsetMeters`, ad-hoc outside margins) instead of planner/event evidence parity.
-      - `RacingReplayLogBuilder` still exposes legacy `SimpleRacingTask` replay build path.
+      - `legacy map replay anchor helper` still uses replay-local heuristics (`lineCrossOffsetMeters`, ad-hoc outside margins) instead of planner/event evidence parity.
+      - `legacy map replay route helper` still exposes legacy `SimpleRacingTask` replay build path.
     - Phase 10 (release hardening):
       - Missing guardrails/tests for v2 schema contract, profile-aware replay preconditions, and bind-idempotency lifecycle.
   - Uplift implementation packs added for pending phases:
@@ -729,7 +729,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.TaskNavigationControllerTest --tests com.trust3.xcpro.tasks.TaskManagerCoordinatorTest --tests com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest --tests com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest --tests com.trust3.xcpro.map.RacingReplayTaskHelpersTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.TaskNavigationControllerTest --tests com.trust3.xcpro.tasks.TaskManagerCoordinatorTest --tests com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -748,7 +748,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest --tests com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest --tests com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest --tests com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest --tests com.trust3.xcpro.map.RacingReplayTaskHelpersTest --tests com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.RacingTaskStructureRulesTest --tests com.trust3.xcpro.tasks.domain.engine.DefaultRacingTaskEngineTest --tests com.trust3.xcpro.tasks.racing.RacingTaskManagerRulePersistenceTest --tests com.trust3.xcpro.tasks.TaskManagerCanonicalHydrateTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):
@@ -881,7 +881,7 @@ All ten must be `>= 95` to close this plan.
   - Workspace pre-check: PASS (dirty workspace allowed).
   - Commands:
     - `python scripts/arch_gate.py`: PASS (exit 0).
-    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.map.replay.RacingReplayLogBuilderTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest --tests com.trust3.xcpro.tasks.TaskNavigationControllerTest --tests com.trust3.xcpro.map.RacingReplayTaskHelpersTest`: PASS (exit 0).
+    - `.\gradlew.bat :feature:map:testDebugUnitTest --tests com.trust3.xcpro.tasks.racing.navigation.RacingReplayValidationTest --tests com.trust3.xcpro.tasks.TaskNavigationControllerTest`: PASS (exit 0).
     - `.\gradlew.bat :feature:map:assembleDebug`: PASS (exit 0).
   - Basic build gate (`:feature:map:assembleDebug`): PASS.
   - Changed files summary (workspace snapshot, not phase-scoped):

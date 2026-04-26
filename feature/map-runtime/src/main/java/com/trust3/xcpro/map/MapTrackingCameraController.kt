@@ -19,7 +19,10 @@ class MapTrackingCameraController(
     private val featureFlags: MapFeatureFlags,
     private val initialZoomLevel: Double,
     private val minUpdateIntervalMs: Long,
-    private val bearingEpsDeg: Double
+    private val bearingEpsDeg: Double,
+    private val maxCameraBearingStepDeg: Double = 5.0,
+    private val minCameraBearingChangeDeg: Double = 2.0,
+    private val enableCameraBearingSmoothing: Boolean = true
 ) {
     data class FrameInput(
         val location: LatLng,
@@ -53,6 +56,18 @@ class MapTrackingCameraController(
     fun updateCamera(input: FrameInput): FrameResult? {
         val cameraController = cameraControllerProvider() ?: return null
         val initialCenteredZoom = ensureInitialCentering(cameraController, input.location)
+        val currentCameraBearing = cameraController.cameraPosition.bearing
+        val smoothedCameraBearing = if (shouldSmoothCameraBearing(input.timeBase)) {
+            resolveCameraBearingUpdate(
+                currentBearing = currentCameraBearing,
+                requestedBearing = input.cameraTargetBearing,
+                orientationMode = input.orientationMode,
+                maxBearingStepDeg = maxCameraBearingStepDeg,
+                minBearingChangeDeg = minCameraBearingChangeDeg
+            ) ?: currentCameraBearing
+        } else {
+            input.cameraTargetBearing
+        }
 
         val shouldTrackCamera = mapStateReader.isTrackingLocation.value && !mapStateReader.showReturnButton.value
         if (shouldTrackCamera) {
@@ -86,7 +101,7 @@ class MapTrackingCameraController(
                 positionController.updateCamera(
                     camera = cameraController,
                     location = input.location,
-                    cameraBearing = input.cameraTargetBearing,
+                    cameraBearing = smoothedCameraBearing.takeIf { it.isFinite() },
                     padding = padding,
                     motion = followCameraMotionPolicy.resolveContinuousFollowMotion(
                         timeBase = input.timeBase
@@ -103,6 +118,13 @@ class MapTrackingCameraController(
             cameraBearing = cameraController.cameraPosition.bearing,
             initialCenteredZoom = initialCenteredZoom
         )
+    }
+
+    private fun shouldSmoothCameraBearing(timeBase: DisplayClock.TimeBase?): Boolean {
+        if (!enableCameraBearingSmoothing) {
+            return false
+        }
+        return timeBase != DisplayClock.TimeBase.REPLAY
     }
 
     private fun ensureInitialCentering(

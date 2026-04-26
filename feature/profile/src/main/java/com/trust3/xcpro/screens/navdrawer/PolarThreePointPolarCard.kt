@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.trust3.xcpro.common.glider.ThreePointPolar
 import com.trust3.xcpro.common.units.UnitsConverter
 import com.trust3.xcpro.glider.GliderViewModel
 
@@ -29,8 +28,7 @@ import com.trust3.xcpro.glider.GliderViewModel
 fun ThreePointPolarCard() {
     val viewModel: GliderViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val cfg = uiState.config
-    val tpp = cfg.threePointPolar ?: ThreePointPolar()
+    val tpp = uiState.displayThreePointPolar
 
     Card(
         modifier = Modifier.fillMaxWidth(),

@@ -16,6 +16,7 @@ class MapLifecycleManager(
     internal val locationManager: MapLocationRuntimePort,
     private val locationRenderFrameCleanup: MapRenderFrameCleanupPort,
     private val renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics,
+    private val diagnosticsStatusSink: MapDiagnosticsStatusSink,
     private val replaySessionState: StateFlow<SessionState>
 ) : MapLifecycleRuntimePort {
     companion object {
@@ -64,7 +65,7 @@ class MapLifecycleManager(
                     mapViewStarted = false
                 }
                 orientationManager.stop()
-                AppLogger.i(LOG_TAG, renderSurfaceDiagnostics.buildCompactStatus(reason = "on_stop"))
+                emitDiagnostics(reason = "on_stop")
             }
             Lifecycle.Event.ON_DESTROY -> {
                 if (mapViewCreated) {
@@ -122,10 +123,17 @@ class MapLifecycleManager(
             resetLifecycleTracking()
             lifecycleSurface.clearRuntimeOverlays()
             lifecycleSurface.clearMapSurfaceReferences()
-            AppLogger.i(LOG_TAG, renderSurfaceDiagnostics.buildCompactStatus(reason = "cleanup"))
+            emitDiagnostics(reason = "cleanup")
         } catch (e: Exception) {
             AppLogger.e(LOG_TAG, "Error during cleanup: ${e.message}", e)
         }
+    }
+
+    override fun emitDiagnostics(reason: String) {
+        val status = renderSurfaceDiagnostics.buildCompactStatus(reason = reason)
+        AppLogger.i(LOG_TAG, status)
+        diagnosticsStatusSink.emit(status)
+        renderSurfaceDiagnostics.reset()
     }
 
     private fun restartSensorsIfAllowed() {

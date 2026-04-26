@@ -4,7 +4,13 @@ Date
 - 2026-02-27
 
 Status
-- Proposed
+- Updated 2026-04-22: live/Condor display-pose trail-body phase selected
+  before any further raw sampling or provider changes.
+- Updated 2026-04-22, superseded 2026-04-23: replay display-pose trail
+  and transient display connector slice added.
+- Updated 2026-04-23: display-pose trail-body ownership was rejected after
+  XCSoar comparison. Raw `TrailStore` drawing is restored as the visible trail
+  body; display pose only refreshes the transient tail connector.
 
 Owner
 - XCPro Team
@@ -50,21 +56,51 @@ Rollback safety
 
 Change
 - Allow live mode to refresh tail segment per display frame (or at small bounded cadence), similar to replay tail updates.
+- 2026-04-23 correction: keep this phase tail-only. Do not add a recent
+  display-only trail body because that creates a second visual trail-history
+  owner.
 
 Implementation sketch
 - Extend `SnailTrailManager.updateDisplayPose()` to optionally support live display pose.
-- Keep full-geometry re-render gated by sample updates; only tail is frame-synced.
+- Keep raw `TrailStore` and full historical trail rendering authoritative.
+- Refresh only the existing raw tail connector from the latest raw trail point
+  to the display pose.
+- Do not append display-pose frames into trail history.
 
 Likely files
-- `feature/map/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
-- `feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRuntimeEffects.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailManager.kt`
+- `feature/map-runtime/src/main/java/com/trust3/xcpro/map/trail/SnailTrailOverlay.kt`
 
 Acceptance criteria
 - Tail endpoint tracks icon smoothly between stored samples.
+- Raw trail history, replay, IGC, and navigation data remain unchanged.
 - CPU/memory overhead remains within acceptable map budget.
 
 Rollback safety
-- Guard with feature flag if needed.
+- Revert `SnailTrailManager.updateDisplayPose()` tail refresh behavior.
+
+## Phase 2A: Replay Display-Pose Trail And Connector
+
+Status
+- Superseded 2026-04-23. Do not implement as written.
+
+Change
+- Superseded. Do not hide raw `TrailStore` drawing.
+- Superseded. Do not store display-pose trail history.
+- Current replacement: render the raw trail body and refresh only the raw tail
+  connector from the latest raw trail point to display pose.
+
+Implementation sketch
+- `SnailTrailDisplayStore` ownership was removed because display-pose history is
+  a duplicate trail body owner.
+- `SnailTrailManager` owns display-pose gating and orchestration only.
+- `SnailTrailOverlay` writes only raw line/dot/tail MapLibre sources for ownship
+  trail rendering.
+
+Acceptance criteria
+- Raw trail body paints for live, replay, and `FULL` length.
+- Display pose does not create stored trail points.
+- Connector updates remain transient through the raw tail source.
 
 ## Phase 3: Live Wind Smoothing For Drift
 
@@ -148,4 +184,3 @@ Risk: Drift change alters pilot interpretation.
 
 Risk: Replay determinism regression.
 - Mitigation: no replay path modification unless explicit and tested.
-

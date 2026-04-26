@@ -1,15 +1,14 @@
 package com.trust3.xcpro.map
 
 import com.trust3.xcpro.currentld.PilotCurrentLdRepository
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.glide.GlideComputationRepository
 import com.trust3.xcpro.hawk.HawkVarioUiState
-import com.trust3.xcpro.map.config.MapFeatureFlags
-import com.trust3.xcpro.map.replay.RacingReplayLogBuilder
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayLogBuilder
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayMode
+import com.trust3.xcpro.map.config.MapReplayFeatureFlagPort
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
 import com.trust3.xcpro.navigation.WaypointNavigationRepository
+import com.trust3.xcpro.qnh.QnhValue
 import com.trust3.xcpro.replay.IgcReplayController
 import com.trust3.xcpro.replay.ReplayDisplayPose
 import com.trust3.xcpro.replay.SessionState
@@ -33,8 +32,7 @@ class MapReplayUseCase @Inject constructor(
     private val pilotCurrentLdRepository: PilotCurrentLdRepository,
     private val taskPerformanceRepository: TaskPerformanceRepository,
     private val controller: IgcReplayController,
-    private val racingReplayLogBuilder: RacingReplayLogBuilder,
-    private val syntheticThermalReplayLogBuilder: SyntheticThermalReplayLogBuilder
+    private val replayFeatureFlags: MapReplayFeatureFlagPort
 ) {
     val replaySession: StateFlow<SessionState> = controller.session
 
@@ -50,10 +48,11 @@ class MapReplayUseCase @Inject constructor(
         windStateFlow: StateFlow<WindState>,
         flightStateFlow: StateFlow<FlyingState>,
         hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
+        externalFlightSettingsFlow: StateFlow<ExternalFlightSettingsSnapshot>,
+        qnhStateFlow: StateFlow<QnhValue>,
         flightDataManager: FlightDataManager,
         mapStateStore: MapStateReader,
         trailSettingsFlow: StateFlow<TrailSettings>,
-        syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
         liveDataReady: MutableStateFlow<Boolean>,
         containerReady: MutableStateFlow<Boolean>,
         uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -64,10 +63,11 @@ class MapReplayUseCase @Inject constructor(
         windStateFlow = windStateFlow,
         flightStateFlow = flightStateFlow,
         hawkVarioUiStateFlow = hawkVarioUiStateFlow,
+        externalFlightSettingsFlow = externalFlightSettingsFlow,
+        qnhStateFlow = qnhStateFlow,
         flightDataManager = flightDataManager,
         mapStateStore = mapStateStore,
         trailSettingsFlow = trailSettingsFlow,
-        syntheticReplayMode = syntheticReplayMode,
         liveDataReady = liveDataReady,
         containerReady = containerReady,
         uiEffects = uiEffects,
@@ -81,10 +81,7 @@ class MapReplayUseCase @Inject constructor(
 
     internal fun createReplayCoordinator(
         flightDataFlow: StateFlow<CompleteFlightData?>,
-        featureFlags: MapFeatureFlags,
-        mapStateStore: MapStateStore,
         mapStateActions: MapStateActions,
-        syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
         uiEffects: MutableSharedFlow<MapUiEffect>,
         replaySessionState: StateFlow<SessionState>,
         scope: CoroutineScope
@@ -92,13 +89,8 @@ class MapReplayUseCase @Inject constructor(
         taskManager = taskManager,
         taskNavigationController = taskNavigationController,
         flightDataFlow = flightDataFlow,
-        igcReplayController = controller,
-        racingReplayLogBuilder = racingReplayLogBuilder,
-        syntheticThermalReplayLogBuilder = syntheticThermalReplayLogBuilder,
-        featureFlags = featureFlags,
-        mapStateStore = mapStateStore,
+        featureFlags = replayFeatureFlags,
         mapStateActions = mapStateActions,
-        syntheticReplayMode = syntheticReplayMode,
         uiEffects = uiEffects,
         replaySessionState = replaySessionState,
         scope = scope

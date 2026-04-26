@@ -1,18 +1,41 @@
 package com.trust3.xcpro.map
 
 import com.trust3.xcpro.core.time.TimeBridge
+import java.util.EnumMap
 
 /**
  * Debug-only render-surface diagnostics for the map host/render handoff.
  *
  * This is an injected runtime owner, not a singleton. It tracks bounded
- * counters and monotonic timestamps only and must not become application state.
+ * counters and monotonic/replay timestamps only and must not become
+ * application state.
  */
 class MapRenderSurfaceDiagnostics(
     private val nowMonoMs: () -> Long = TimeBridge::nowMonoMs
 ) {
     companion object {
         const val LOG_TOKEN: String = "MAP_RENDER_SURFACE_DIAGNOSTICS"
+    }
+
+    enum class DisplayFrameDispatchReason(val key: String) {
+        REPLAY_TIME_BASE("replay_time_base"),
+        CONFIG_CHANGED("config_changed"),
+        ACTIVE_WINDOW("active_window")
+    }
+
+    enum class DisplayFramePreDispatchSuppressionReason(val key: String) {
+        UNSPECIFIED("unspecified"),
+        LOCAL_OWNSHIP_DISABLED("local_ownship_disabled"),
+        NO_RENDERABLE_INPUT("no_renderable_input"),
+        ACTIVITY_EXPIRED("activity_expired")
+    }
+
+    enum class DisplayFrameRenderSkipReason(val key: String) {
+        LOCAL_OWNSHIP_DISABLED("local_ownship_disabled"),
+        NO_POSE("no_pose"),
+        MAP_NOT_READY("map_not_ready"),
+        MISSING_TIME_BASE("missing_time_base"),
+        NOOP_DIFF("noop_diff")
     }
 
     private var repaintRequestCount: Long = 0L
@@ -25,8 +48,14 @@ class MapRenderSurfaceDiagnostics(
     private var pendingDispatchClearedCount: Long = 0L
     private var renderFrameDeliveredCount: Long = 0L
     private var frameRenderedCount: Long = 0L
+    private var displayFrameDispatchAllowedCount: Long = 0L
     private var displayFramePreDispatchSuppressedCount: Long = 0L
+    private var displayFrameRenderSkippedCount: Long = 0L
     private var displayFrameNoOpSkippedCount: Long = 0L
+    private var displayPoseRenderAppliedCount: Long = 0L
+    private var monotonicRawFixInputCount: Long = 0L
+    private var wallRawFixInputCount: Long = 0L
+    private var replayRawFixInputCount: Long = 0L
     private var lifecycleResumeForcedFrameCount: Long = 0L
     private var mapViewAttachCount: Long = 0L
     private var mapViewClearCount: Long = 0L
@@ -37,9 +66,69 @@ class MapRenderSurfaceDiagnostics(
     private var lastRenderFrameCallbackMonoMs: Long? = null
     private var lastRenderFrameDeliveredMonoMs: Long? = null
     private var lastFrameRenderedMonoMs: Long? = null
+    private var lastMonotonicRawFixTimestampMs: Long? = null
+    private var lastWallRawFixTimestampMs: Long? = null
+    private var lastReplayRawFixTimestampMs: Long? = null
     private var lastLifecycleResumeForcedFrameMonoMs: Long? = null
     private var lastMapViewAttachMonoMs: Long? = null
     private var lastMapViewClearMonoMs: Long? = null
+
+    private val dispatchAllowedReasons =
+        EnumCounter(DisplayFrameDispatchReason.values())
+    private val preDispatchSuppressionReasons =
+        EnumCounter(DisplayFramePreDispatchSuppressionReason.values())
+    private val renderSkipReasons =
+        EnumCounter(DisplayFrameRenderSkipReason.values())
+    private val liveRawFixInputIntervalBuckets = IntervalBucketCounts()
+    private val wallRawFixInputIntervalBuckets = IntervalBucketCounts()
+    private val replayRawFixInputIntervalBuckets = IntervalBucketCounts()
+    private val renderFrameDeliveredIntervalBuckets = IntervalBucketCounts()
+    private val frameRenderedIntervalBuckets = IntervalBucketCounts()
+
+    @Synchronized
+    fun reset() {
+        repaintRequestCount = 0L
+        forcedImmediateRepaintRequestCount = 0L
+        repaintDispatchCount = 0L
+        renderFrameCallbackCount = 0L
+        postedDispatchScheduledCount = 0L
+        postedDispatchDroppedCount = 0L
+        immediateDispatchCount = 0L
+        pendingDispatchClearedCount = 0L
+        renderFrameDeliveredCount = 0L
+        frameRenderedCount = 0L
+        displayFrameDispatchAllowedCount = 0L
+        displayFramePreDispatchSuppressedCount = 0L
+        displayFrameRenderSkippedCount = 0L
+        displayFrameNoOpSkippedCount = 0L
+        displayPoseRenderAppliedCount = 0L
+        monotonicRawFixInputCount = 0L
+        wallRawFixInputCount = 0L
+        replayRawFixInputCount = 0L
+        lifecycleResumeForcedFrameCount = 0L
+        mapViewAttachCount = 0L
+        mapViewClearCount = 0L
+        mapViewSwapCount = 0L
+        lastRepaintRequestMonoMs = null
+        lastRepaintDispatchMonoMs = null
+        lastRenderFrameCallbackMonoMs = null
+        lastRenderFrameDeliveredMonoMs = null
+        lastFrameRenderedMonoMs = null
+        lastMonotonicRawFixTimestampMs = null
+        lastWallRawFixTimestampMs = null
+        lastReplayRawFixTimestampMs = null
+        lastLifecycleResumeForcedFrameMonoMs = null
+        lastMapViewAttachMonoMs = null
+        lastMapViewClearMonoMs = null
+        dispatchAllowedReasons.clear()
+        preDispatchSuppressionReasons.clear()
+        renderSkipReasons.clear()
+        liveRawFixInputIntervalBuckets.clear()
+        wallRawFixInputIntervalBuckets.clear()
+        replayRawFixInputIntervalBuckets.clear()
+        renderFrameDeliveredIntervalBuckets.clear()
+        frameRenderedIntervalBuckets.clear()
+    }
 
     @Synchronized
     fun recordRepaintRequest(forceImmediate: Boolean) {
@@ -84,24 +173,78 @@ class MapRenderSurfaceDiagnostics(
 
     @Synchronized
     fun recordRenderFrameDelivered() {
+        val nowMs = nowMonoMs()
         renderFrameDeliveredCount += 1L
-        lastRenderFrameDeliveredMonoMs = nowMonoMs()
+        recordInterval(nowMs, lastRenderFrameDeliveredMonoMs, renderFrameDeliveredIntervalBuckets)
+        lastRenderFrameDeliveredMonoMs = nowMs
     }
 
     @Synchronized
     fun recordFrameRendered() {
+        val nowMs = nowMonoMs()
         frameRenderedCount += 1L
-        lastFrameRenderedMonoMs = nowMonoMs()
+        recordInterval(nowMs, lastFrameRenderedMonoMs, frameRenderedIntervalBuckets)
+        lastFrameRenderedMonoMs = nowMs
     }
 
     @Synchronized
-    fun recordDisplayFramePreDispatchSuppressed() {
+    fun recordDisplayFrameDispatchAllowed(reason: DisplayFrameDispatchReason) {
+        displayFrameDispatchAllowedCount += 1L
+        dispatchAllowedReasons.record(reason)
+    }
+
+    @Synchronized
+    fun recordDisplayFramePreDispatchSuppressed(
+        reason: DisplayFramePreDispatchSuppressionReason =
+            DisplayFramePreDispatchSuppressionReason.UNSPECIFIED
+    ) {
         displayFramePreDispatchSuppressedCount += 1L
+        preDispatchSuppressionReasons.record(reason)
+    }
+
+    @Synchronized
+    fun recordDisplayFrameRenderSkipped(reason: DisplayFrameRenderSkipReason) {
+        displayFrameRenderSkippedCount += 1L
+        renderSkipReasons.record(reason)
     }
 
     @Synchronized
     fun recordDisplayFrameNoOpSkipped() {
         displayFrameNoOpSkippedCount += 1L
+        displayFrameRenderSkippedCount += 1L
+        renderSkipReasons.record(DisplayFrameRenderSkipReason.NOOP_DIFF)
+    }
+
+    @Synchronized
+    fun recordDisplayPoseRenderApplied() {
+        displayPoseRenderAppliedCount += 1L
+    }
+
+    @Synchronized
+    fun recordRawFixInput(timeBase: DisplayClock.TimeBase, timestampMs: Long) {
+        when (timeBase) {
+            DisplayClock.TimeBase.MONOTONIC -> {
+                monotonicRawFixInputCount += 1L
+                recordInterval(timestampMs, lastMonotonicRawFixTimestampMs, liveRawFixInputIntervalBuckets)
+                if (timestampMs > 0L) {
+                    lastMonotonicRawFixTimestampMs = timestampMs
+                }
+            }
+            DisplayClock.TimeBase.WALL -> {
+                wallRawFixInputCount += 1L
+                recordInterval(timestampMs, lastWallRawFixTimestampMs, wallRawFixInputIntervalBuckets)
+                if (timestampMs > 0L) {
+                    lastWallRawFixTimestampMs = timestampMs
+                }
+            }
+            DisplayClock.TimeBase.REPLAY -> {
+                replayRawFixInputCount += 1L
+                recordInterval(timestampMs, lastReplayRawFixTimestampMs, replayRawFixInputIntervalBuckets)
+                if (timestampMs > 0L) {
+                    lastReplayRawFixTimestampMs = timestampMs
+                }
+            }
+        }
     }
 
     @Synchronized
@@ -138,8 +281,14 @@ class MapRenderSurfaceDiagnostics(
             pendingDispatchClearedCount = pendingDispatchClearedCount,
             renderFrameDeliveredCount = renderFrameDeliveredCount,
             frameRenderedCount = frameRenderedCount,
+            displayFrameDispatchAllowedCount = displayFrameDispatchAllowedCount,
             displayFramePreDispatchSuppressedCount = displayFramePreDispatchSuppressedCount,
+            displayFrameRenderSkippedCount = displayFrameRenderSkippedCount,
             displayFrameNoOpSkippedCount = displayFrameNoOpSkippedCount,
+            displayPoseRenderAppliedCount = displayPoseRenderAppliedCount,
+            monotonicRawFixInputCount = monotonicRawFixInputCount,
+            wallRawFixInputCount = wallRawFixInputCount,
+            replayRawFixInputCount = replayRawFixInputCount,
             lifecycleResumeForcedFrameCount = lifecycleResumeForcedFrameCount,
             mapViewAttachCount = mapViewAttachCount,
             mapViewClearCount = mapViewClearCount,
@@ -149,81 +298,37 @@ class MapRenderSurfaceDiagnostics(
             lastRenderFrameCallbackMonoMs = lastRenderFrameCallbackMonoMs,
             lastRenderFrameDeliveredMonoMs = lastRenderFrameDeliveredMonoMs,
             lastFrameRenderedMonoMs = lastFrameRenderedMonoMs,
+            lastMonotonicRawFixTimestampMs = lastMonotonicRawFixTimestampMs,
+            lastWallRawFixTimestampMs = lastWallRawFixTimestampMs,
+            lastReplayRawFixTimestampMs = lastReplayRawFixTimestampMs,
             lastLifecycleResumeForcedFrameMonoMs = lastLifecycleResumeForcedFrameMonoMs,
             lastMapViewAttachMonoMs = lastMapViewAttachMonoMs,
-            lastMapViewClearMonoMs = lastMapViewClearMonoMs
+            lastMapViewClearMonoMs = lastMapViewClearMonoMs,
+            displayFrameDispatchAllowedReasons = dispatchAllowedReasons.snapshot(),
+            displayFramePreDispatchSuppressionReasons = preDispatchSuppressionReasons.snapshot(),
+            displayFrameRenderSkipReasons = renderSkipReasons.snapshot(),
+            liveRawFixInputIntervalBuckets = liveRawFixInputIntervalBuckets.snapshot(),
+            wallRawFixInputIntervalBuckets = wallRawFixInputIntervalBuckets.snapshot(),
+            replayRawFixInputIntervalBuckets = replayRawFixInputIntervalBuckets.snapshot(),
+            renderFrameDeliveredIntervalBuckets = renderFrameDeliveredIntervalBuckets.snapshot(),
+            frameRenderedIntervalBuckets = frameRenderedIntervalBuckets.snapshot()
         )
 
-    fun buildStatus(header: String = "MapRenderSurfaceDiagnostics Status"): String {
-        val snapshot = snapshot()
-        return buildString {
-            append(header)
-            append(":\n")
-            append("- Repaint Requests: ${snapshot.repaintRequestCount}\n")
-            append("- Forced Immediate Repaint Requests: ${snapshot.forcedImmediateRepaintRequestCount}\n")
-            append("- Repaint Dispatches: ${snapshot.repaintDispatchCount}\n")
-            append("- Render Frame Callbacks: ${snapshot.renderFrameCallbackCount}\n")
-            append("- Posted Dispatch Scheduled: ${snapshot.postedDispatchScheduledCount}\n")
-            append("- Posted Dispatch Dropped: ${snapshot.postedDispatchDroppedCount}\n")
-            append("- Immediate Dispatches: ${snapshot.immediateDispatchCount}\n")
-            append("- Pending Dispatch Cleared: ${snapshot.pendingDispatchClearedCount}\n")
-            append("- Render Frames Delivered: ${snapshot.renderFrameDeliveredCount}\n")
-            append("- Frames Rendered: ${snapshot.frameRenderedCount}\n")
-            append("- Display Frame Pre-Dispatch Suppressed: ${snapshot.displayFramePreDispatchSuppressedCount}\n")
-            append("- Display Frame No-Op Skips: ${snapshot.displayFrameNoOpSkippedCount}\n")
-            append("- Lifecycle Resume Forced Frames: ${snapshot.lifecycleResumeForcedFrameCount}\n")
-            append("- MapView Attach Count: ${snapshot.mapViewAttachCount}\n")
-            append("- MapView Clear Count: ${snapshot.mapViewClearCount}\n")
-            append("- MapView Swap Count: ${snapshot.mapViewSwapCount}\n")
-            append("- Last Repaint Request Mono Ms: ${snapshot.lastRepaintRequestMonoMs}\n")
-            append("- Last Repaint Dispatch Mono Ms: ${snapshot.lastRepaintDispatchMonoMs}\n")
-            append("- Last Render Callback Mono Ms: ${snapshot.lastRenderFrameCallbackMonoMs}\n")
-            append("- Last Render Delivered Mono Ms: ${snapshot.lastRenderFrameDeliveredMonoMs}\n")
-            append("- Last Frame Rendered Mono Ms: ${snapshot.lastFrameRenderedMonoMs}\n")
-            append("- Last Lifecycle Resume Forced Frame Mono Ms: ${snapshot.lastLifecycleResumeForcedFrameMonoMs}\n")
-            append("- Last MapView Attach Mono Ms: ${snapshot.lastMapViewAttachMonoMs}\n")
-            append("- Last MapView Clear Mono Ms: ${snapshot.lastMapViewClearMonoMs}\n")
-        }
-    }
+    fun buildStatus(header: String = "MapRenderSurfaceDiagnostics Status"): String =
+        MapRenderSurfaceDiagnosticsStatusFormatter.buildStatus(
+            snapshot = snapshot(),
+            header = header
+        )
 
     fun buildCompactStatus(
         reason: String,
         token: String = LOG_TOKEN
-    ): String {
-        val snapshot = snapshot()
-        return buildString {
-            append(token)
-            append(" reason=").append(reason)
-            append(" repaint_requests=").append(snapshot.repaintRequestCount)
-            append(" forced_immediate_repaint_requests=")
-                .append(snapshot.forcedImmediateRepaintRequestCount)
-            append(" repaint_dispatches=").append(snapshot.repaintDispatchCount)
-            append(" render_frame_callbacks=").append(snapshot.renderFrameCallbackCount)
-            append(" posted_dispatch_scheduled=").append(snapshot.postedDispatchScheduledCount)
-            append(" posted_dispatch_dropped=").append(snapshot.postedDispatchDroppedCount)
-            append(" immediate_dispatches=").append(snapshot.immediateDispatchCount)
-            append(" pending_dispatch_cleared=").append(snapshot.pendingDispatchClearedCount)
-            append(" render_frames_delivered=").append(snapshot.renderFrameDeliveredCount)
-            append(" frames_rendered=").append(snapshot.frameRenderedCount)
-            append(" display_frame_pre_dispatch_suppressed=")
-                .append(snapshot.displayFramePreDispatchSuppressedCount)
-            append(" display_frame_noop_skips=").append(snapshot.displayFrameNoOpSkippedCount)
-            append(" lifecycle_resume_forced_frames=")
-                .append(snapshot.lifecycleResumeForcedFrameCount)
-            append(" mapview_attach_count=").append(snapshot.mapViewAttachCount)
-            append(" mapview_clear_count=").append(snapshot.mapViewClearCount)
-            append(" mapview_swap_count=").append(snapshot.mapViewSwapCount)
-            append(" last_repaint_request_mono_ms=").append(snapshot.lastRepaintRequestMonoMs)
-            append(" last_repaint_dispatch_mono_ms=").append(snapshot.lastRepaintDispatchMonoMs)
-            append(" last_render_callback_mono_ms=").append(snapshot.lastRenderFrameCallbackMonoMs)
-            append(" last_render_delivered_mono_ms=").append(snapshot.lastRenderFrameDeliveredMonoMs)
-            append(" last_frame_rendered_mono_ms=").append(snapshot.lastFrameRenderedMonoMs)
-            append(" last_lifecycle_resume_forced_frame_mono_ms=")
-                .append(snapshot.lastLifecycleResumeForcedFrameMonoMs)
-            append(" last_mapview_attach_mono_ms=").append(snapshot.lastMapViewAttachMonoMs)
-            append(" last_mapview_clear_mono_ms=").append(snapshot.lastMapViewClearMonoMs)
-        }
-    }
+    ): String =
+        MapRenderSurfaceDiagnosticsStatusFormatter.buildCompactStatus(
+            snapshot = snapshot(),
+            reason = reason,
+            token = token
+        )
 
     data class Snapshot(
         val repaintRequestCount: Long,
@@ -236,8 +341,14 @@ class MapRenderSurfaceDiagnostics(
         val pendingDispatchClearedCount: Long,
         val renderFrameDeliveredCount: Long,
         val frameRenderedCount: Long,
+        val displayFrameDispatchAllowedCount: Long,
         val displayFramePreDispatchSuppressedCount: Long,
+        val displayFrameRenderSkippedCount: Long,
         val displayFrameNoOpSkippedCount: Long,
+        val displayPoseRenderAppliedCount: Long,
+        val monotonicRawFixInputCount: Long,
+        val wallRawFixInputCount: Long,
+        val replayRawFixInputCount: Long,
         val lifecycleResumeForcedFrameCount: Long,
         val mapViewAttachCount: Long,
         val mapViewClearCount: Long,
@@ -247,8 +358,104 @@ class MapRenderSurfaceDiagnostics(
         val lastRenderFrameCallbackMonoMs: Long?,
         val lastRenderFrameDeliveredMonoMs: Long?,
         val lastFrameRenderedMonoMs: Long?,
+        val lastMonotonicRawFixTimestampMs: Long?,
+        val lastWallRawFixTimestampMs: Long?,
+        val lastReplayRawFixTimestampMs: Long?,
         val lastLifecycleResumeForcedFrameMonoMs: Long?,
         val lastMapViewAttachMonoMs: Long?,
-        val lastMapViewClearMonoMs: Long?
+        val lastMapViewClearMonoMs: Long?,
+        val displayFrameDispatchAllowedReasons: Map<DisplayFrameDispatchReason, Long>,
+        val displayFramePreDispatchSuppressionReasons: Map<DisplayFramePreDispatchSuppressionReason, Long>,
+        val displayFrameRenderSkipReasons: Map<DisplayFrameRenderSkipReason, Long>,
+        val liveRawFixInputIntervalBuckets: IntervalBucketSnapshot,
+        val wallRawFixInputIntervalBuckets: IntervalBucketSnapshot,
+        val replayRawFixInputIntervalBuckets: IntervalBucketSnapshot,
+        val renderFrameDeliveredIntervalBuckets: IntervalBucketSnapshot,
+        val frameRenderedIntervalBuckets: IntervalBucketSnapshot
     )
+
+    data class IntervalBucketSnapshot(
+        val le16Ms: Long,
+        val le25Ms: Long,
+        val le50Ms: Long,
+        val le100Ms: Long,
+        val le200Ms: Long,
+        val le500Ms: Long,
+        val over500Ms: Long
+    ) {
+        fun toCompactString(): String =
+            "le16=$le16Ms,le25=$le25Ms,le50=$le50Ms,le100=$le100Ms," +
+                "le200=$le200Ms,le500=$le500Ms,over500=$over500Ms"
+    }
+
+    private class IntervalBucketCounts {
+        private var le16Ms: Long = 0L
+        private var le25Ms: Long = 0L
+        private var le50Ms: Long = 0L
+        private var le100Ms: Long = 0L
+        private var le200Ms: Long = 0L
+        private var le500Ms: Long = 0L
+        private var over500Ms: Long = 0L
+
+        fun clear() {
+            le16Ms = 0L
+            le25Ms = 0L
+            le50Ms = 0L
+            le100Ms = 0L
+            le200Ms = 0L
+            le500Ms = 0L
+            over500Ms = 0L
+        }
+
+        fun record(intervalMs: Long) {
+            when {
+                intervalMs <= 16L -> le16Ms += 1L
+                intervalMs <= 25L -> le25Ms += 1L
+                intervalMs <= 50L -> le50Ms += 1L
+                intervalMs <= 100L -> le100Ms += 1L
+                intervalMs <= 200L -> le200Ms += 1L
+                intervalMs <= 500L -> le500Ms += 1L
+                else -> over500Ms += 1L
+            }
+        }
+
+        fun snapshot(): IntervalBucketSnapshot =
+            IntervalBucketSnapshot(
+                le16Ms = le16Ms,
+                le25Ms = le25Ms,
+                le50Ms = le50Ms,
+                le100Ms = le100Ms,
+                le200Ms = le200Ms,
+                le500Ms = le500Ms,
+                over500Ms = over500Ms
+            )
+    }
+
+    private class EnumCounter<E : Enum<E>>(private val values: Array<E>) {
+        private val counts = EnumMap<E, Long>(values.first().javaClass)
+
+        fun clear() {
+            counts.clear()
+        }
+
+        fun record(value: E) {
+            counts[value] = (counts[value] ?: 0L) + 1L
+        }
+
+        fun snapshot(): Map<E, Long> =
+            values.associateWith { value -> counts[value] ?: 0L }
+    }
+
+    private fun recordInterval(
+        timestampMs: Long,
+        previousTimestampMs: Long?,
+        buckets: IntervalBucketCounts
+    ) {
+        if (timestampMs <= 0L) return
+        val previous = previousTimestampMs ?: return
+        val intervalMs = timestampMs - previous
+        if (intervalMs > 0L) {
+            buckets.record(intervalMs)
+        }
+    }
 }

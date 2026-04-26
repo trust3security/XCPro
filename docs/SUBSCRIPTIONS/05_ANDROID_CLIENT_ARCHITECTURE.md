@@ -66,7 +66,7 @@ Owns:
 - `AppFeature.kt` -> stable capability list
 - `EntitlementSnapshot.kt` -> canonical XCPro plan read model for the app
 - `SkySightAccountState.kt` -> narrow provider account-state model
-- `FeatureAccessPolicy.kt` -> pure mapping from `PlanTier` + provider account state to capabilities
+- `FeatureAccessPolicy.kt` -> pure mapping from `PlanTier` + provider account/config state to capabilities
 - `BillingCatalog.kt` -> product IDs / base plans / offers
 - `PlayBillingClientAdapter.kt` -> Play Billing wrapper only
 - `SubscriptionRepository.kt` -> client orchestration, purchase sync, XCPro entitlement cache
@@ -111,7 +111,7 @@ ObserveAccessContextUseCase
 - no duplicated entitlement state in multiple ViewModels
 - no price formatting logic mixed with entitlement enforcement
 - local DataStore can cache, but cannot become the source of truth
-- do not let `:core:billing` absorb unrelated SkySight networking ownership just because both affect gating
+- do not let `:core:billing` absorb unrelated SkySight or PureTrack networking ownership just because they affect gating
 - provider-linked access checks must still go through the same central policy seam
 - do not launch purchase flow without a signed-in XCPro account
 - do not use cleartext email for Play identity fields; use obfuscated account identifiers

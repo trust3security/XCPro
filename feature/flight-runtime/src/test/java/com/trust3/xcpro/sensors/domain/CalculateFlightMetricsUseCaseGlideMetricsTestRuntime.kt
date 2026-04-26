@@ -483,7 +483,7 @@ class CalculateFlightMetricsUseCaseGlideMetricsTest {
             override fun bestLd(): Double? = polarBestLd
         }
         val helpers = mock<FlightCalculationHelpers>()
-        whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
+        whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any(), any())).thenReturn(
             FlightCalculationHelpers.NettoComputation(0.0, true)
         )
         whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer { invocation ->

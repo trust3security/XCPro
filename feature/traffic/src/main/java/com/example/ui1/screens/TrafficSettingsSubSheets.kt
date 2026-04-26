@@ -21,6 +21,7 @@ import com.trust3.xcpro.screens.navdrawer.HotspotsSettingsContent
 import com.trust3.xcpro.screens.navdrawer.HotspotsSettingsViewModel
 import com.trust3.xcpro.screens.navdrawer.OgnSettingsContent
 import com.trust3.xcpro.screens.navdrawer.OgnSettingsViewModel
+import com.trust3.xcpro.screens.navdrawer.PureTrackSettingsContent
 import com.trust3.xcpro.screens.navdrawer.TrafficSettingsTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,6 +124,44 @@ fun OgnSettingsSubSheet(
                     onOwnIcaoDraftChanged = viewModel::onOwnIcaoDraftChanged,
                     onCommitOwnIcaoDraft = viewModel::commitOwnIcaoDraft
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PureTrackSettingsSubSheet(
+    onDismiss: () -> Unit,
+    onNavigateToDrawer: () -> Unit,
+    onNavigateToMap: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+        ) {
+            TrafficSettingsTopAppBar(
+                title = "PureTrack",
+                onNavigateUp = onDismiss,
+                onSecondaryNavigate = onNavigateToDrawer,
+                onNavigateToMap = onNavigateToMap
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                PureTrackSettingsContent()
             }
         }
     }

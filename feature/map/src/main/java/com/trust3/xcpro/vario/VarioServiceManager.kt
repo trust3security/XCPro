@@ -3,6 +3,7 @@ package com.trust3.xcpro.vario
 import com.trust3.xcpro.audio.AudioFocusManager
 import com.trust3.xcpro.common.di.DefaultDispatcher
 import com.trust3.xcpro.core.common.logging.AppLogger
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
 import com.trust3.xcpro.igc.IgcRecordingActionSink
 import com.trust3.xcpro.igc.data.IgcFinalizeResult
 import com.trust3.xcpro.igc.domain.IgcSessionStateMachine
@@ -10,11 +11,13 @@ import com.trust3.xcpro.igc.usecase.IgcRecordingUseCase
 import com.trust3.xcpro.flightdata.FlightDataRepository
 import com.trust3.xcpro.hawk.HawkConfigRepository
 import com.trust3.xcpro.hawk.HawkVarioRepository
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.LiveRuntimeStartResult
+import com.trust3.xcpro.livesource.LiveSourceStatePort
+import com.trust3.xcpro.livesource.SelectedLiveRuntimeBackendPort
 import com.trust3.xcpro.sensors.FlightStateSource
 import com.trust3.xcpro.sensors.SensorFusionRepository
-import com.trust3.xcpro.sensors.SensorStatus
 import com.trust3.xcpro.common.flight.FlightMode
-import com.trust3.xcpro.sensors.UnifiedSensorManager
 import com.trust3.xcpro.weglide.domain.EvaluateWeGlidePostFlightPromptUseCase
 import com.trust3.xcpro.weglide.domain.WeGlideFinalizedFlightUploadRequest
 import com.trust3.xcpro.weglide.domain.WeGlidePostFlightPromptCoordinator
@@ -24,14 +27,12 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Application-wide manager that keeps the sensor/vario pipeline alive even when no UI is visible.
@@ -40,10 +41,12 @@ import kotlinx.coroutines.withContext
 @Singleton
 open class VarioServiceManager @Inject constructor(
     val audioFocusManager: AudioFocusManager,
-    val unifiedSensorManager: UnifiedSensorManager,
+    private val selectedLiveRuntimeBackendPort: SelectedLiveRuntimeBackendPort,
+    private val liveSourceStatePort: LiveSourceStatePort,
     val sensorFusionRepository: SensorFusionRepository,
     private val flightDataRepository: FlightDataRepository,
     private val levoVarioPreferencesRepository: LevoVarioPreferencesRepository,
+    private val externalFlightSettingsReadPort: ExternalFlightSettingsReadPort,
     private val hawkConfigRepository: HawkConfigRepository,
     private val hawkVarioRepository: HawkVarioRepository,
     val flightStateSource: FlightStateSource,
@@ -75,10 +78,6 @@ open class VarioServiceManager @Inject constructor(
         // Always reset the data source to LIVE so live sensor updates are not gated out after a replay.
         flightDataRepository.setActiveSource(FlightDataRepository.Source.LIVE)
 
-        if (running && isPipelineReady(unifiedSensorManager.getSensorStatus())) {
-            return true
-        }
-
         if (!running) {
             running = true
             sensorRetryCoordinator = SensorRetryCoordinator(ownerScope, defaultDispatcher, SENSOR_RETRY_DELAY_MS)
@@ -91,26 +90,32 @@ open class VarioServiceManager @Inject constructor(
 
         cancelSensorRetry()
         applyGpsUpdateInterval(GPS_UPDATE_INTERVAL_SLOW_MS)
-        startSensorsOnMainThread()
-        val startupStatus = unifiedSensorManager.getSensorStatus()
-        val pipelineReady = isPipelineReady(startupStatus)
-        if (!pipelineReady) {
-            AppLogger.w(
-                TAG,
-                "Sensors not fully ready (gpsStarted=${startupStatus.gpsStarted}, " +
-                    "baroAvailable=${startupStatus.baroAvailable}, baroStarted=${startupStatus.baroStarted}); " +
-                    "scheduling retry every ${SENSOR_RETRY_DELAY_MS} ms"
-            )
-            scheduleSensorRetry()
+        return when (val startResult = selectedLiveRuntimeBackendPort.start()) {
+            LiveRuntimeStartResult.READY -> true
+            LiveRuntimeStartResult.STARTING_MANAGER_RETRY -> {
+                AppLogger.w(
+                    TAG,
+                    "Selected live runtime not ready yet; scheduling manager retry every ${SENSOR_RETRY_DELAY_MS} ms"
+                )
+                scheduleSensorRetry()
+                false
+            }
+
+            LiveRuntimeStartResult.STARTING_EXTERNAL_RETRY -> {
+                AppLogger.w(
+                    TAG,
+                    "Selected external runtime is connecting or degraded; waiting on external owner recovery"
+                )
+                false
+            }
         }
-        return pipelineReady
     }
 
     open fun stop() {
         if (!running) return
         running = false
         cancelSensorRetry()
-        unifiedSensorManager.stopAllSensors()
+        selectedLiveRuntimeBackendPort.stop()
         sensorFusionRepository.stop()
         hawkVarioRepository.stop()
         configJob?.cancel()
@@ -138,10 +143,19 @@ open class VarioServiceManager @Inject constructor(
     private fun observeLevoPreferences(ownerScope: CoroutineScope) {
         if (configJob != null) return
         configJob = ownerScope.launch(defaultDispatcher) {
-            levoVarioPreferencesRepository.config.collectLatest { config ->
-                sensorFusionRepository.setMacCreadySetting(config.macCready)
+            combine(
+                levoVarioPreferencesRepository.config,
+                externalFlightSettingsReadPort.externalFlightSettingsSnapshot
+            ) { config, externalSettings ->
+                config to externalSettings
+            }.collectLatest { (config, externalSettings) ->
+                sensorFusionRepository.setMacCreadySetting(
+                    externalSettings.macCreadyMps ?: config.macCready
+                )
                 sensorFusionRepository.setMacCreadyRisk(config.macCreadyRisk)
-                sensorFusionRepository.setAutoMcEnabled(config.autoMcEnabled)
+                sensorFusionRepository.setAutoMcEnabled(
+                    externalSettings.macCreadyMps == null && config.autoMcEnabled
+                )
                 sensorFusionRepository.setTotalEnergyCompensationEnabled(config.teCompensationEnabled)
                 sensorFusionRepository.updateAudioSettings(config.audioSettings)
                 sensorFusionRepository.setHawkAudioEnabled(config.enableHawkUi)
@@ -221,14 +235,12 @@ open class VarioServiceManager @Inject constructor(
 
     private fun scheduleSensorRetry() {
         sensorRetryCoordinator?.schedule {
-            startSensorsOnMainThread()
-            val status = unifiedSensorManager.getSensorStatus()
-            val ready = isPipelineReady(status)
+            val startResult = selectedLiveRuntimeBackendPort.start()
+            val ready = startResult == LiveRuntimeStartResult.READY
             if (!ready && AppLogger.rateLimit(TAG, "sensor_retry_not_ready", SENSOR_RETRY_WARNING_INTERVAL_MS)) {
                 AppLogger.w(
                     TAG,
-                    "Retry sensors not ready yet (gpsStarted=${status.gpsStarted}, " +
-                        "baroAvailable=${status.baroAvailable}, baroStarted=${status.baroStarted})"
+                    "Retry selected live runtime not ready yet (result=$startResult)"
                 )
             }
             ready
@@ -239,26 +251,10 @@ open class VarioServiceManager @Inject constructor(
         sensorRetryCoordinator?.cancel()
     }
 
-    private suspend fun startSensorsOnMainThread(): Boolean {
-        return runCatching {
-            withContext(Dispatchers.Main.immediate) {
-                unifiedSensorManager.startAllSensors()
-            }
-        }.getOrElse { error ->
-            if (error is CancellationException) {
-                throw error
-            }
-            AppLogger.e(TAG, "Failed to start sensors on main thread", error)
-            false
-        }
-    }
-
     private suspend fun applyGpsUpdateInterval(intervalMs: Long) {
         if (lastGpsIntervalMs == intervalMs) return
         val applied = runCatching {
-            withContext(Dispatchers.Main.immediate) {
-                unifiedSensorManager.setGpsUpdateIntervalMs(intervalMs)
-            }
+            selectedLiveRuntimeBackendPort.setGpsUpdateIntervalMs(intervalMs)
         }.onFailure { error ->
             if (error is CancellationException) {
                 throw error
@@ -271,16 +267,14 @@ open class VarioServiceManager @Inject constructor(
         lastGpsIntervalMs = intervalMs
     }
 
-    private fun isPipelineReady(status: SensorStatus): Boolean {
-        val gpsReady = status.gpsStarted
-        val baroReady = !status.baroAvailable || status.baroStarted
-        return gpsReady && baroReady
-    }
-
     private suspend fun publishWeGlideUploadPromptIfEligible(
         sessionId: Long,
         finalizeResult: IgcFinalizeResult
     ) {
+        if (liveSourceStatePort.state.value.kind == LiveSourceKind.SIMULATOR_CONDOR2) {
+            AppLogger.d(TAG, "Skipping WeGlide prompt for simulator-finalized flight")
+            return
+        }
         val entry = when (finalizeResult) {
             is IgcFinalizeResult.Published -> finalizeResult.entry
             is IgcFinalizeResult.AlreadyPublished -> finalizeResult.entry

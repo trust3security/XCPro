@@ -11,6 +11,7 @@ import com.trust3.xcpro.currentld.PilotCurrentLdSnapshot
 import com.trust3.xcpro.currentld.PilotCurrentLdSource
 import com.trust3.xcpro.glide.GlideDegradedReason
 import com.trust3.xcpro.glide.GlideSolution
+import com.trust3.xcpro.map.ExternalFlightSettingsCardProjection
 import com.trust3.xcpro.navigation.WaypointEtaSource
 import com.trust3.xcpro.navigation.WaypointNavigationInvalidReason
 import com.trust3.xcpro.navigation.WaypointNavigationSnapshot
@@ -220,6 +221,34 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(true, result.pilotCurrentLDValid)
         assertEquals("FUSED_WIND", result.pilotCurrentLDSource)
         assertEquals(false, result.isTurning)
+    }
+
+    @Test
+    fun maps_external_settings_fields_from_map_card_projection() {
+        val result = convertToRealTimeFlightData(
+            completeData = minimalCompleteFlightData(),
+            windState = null,
+            isFlying = false,
+            externalFlightSettingsCardProjection = ExternalFlightSettingsCardProjection(
+                externalMacCreadyActive = true,
+                externalQnhActive = true,
+                bugsPercent = 17,
+                bugsValid = true,
+                ballastOverloadFactor = 1.21,
+                ballastFactorValid = true,
+                outsideAirTemperatureC = 23.4,
+                outsideAirTemperatureValid = true
+            )
+        )
+
+        assertEquals(true, result.externalMacCreadyActive)
+        assertEquals(true, result.externalQnhActive)
+        assertEquals(17, result.bugsPercent)
+        assertEquals(true, result.bugsValid)
+        assertEquals(1.21, result.ballastOverloadFactor, 1e-6)
+        assertEquals(true, result.ballastFactorValid)
+        assertEquals(23.4, result.outsideAirTemperatureC, 1e-6)
+        assertEquals(true, result.outsideAirTemperatureValid)
     }
 
     @Test
@@ -455,4 +484,26 @@ class ConvertToRealTimeFlightDataTest {
         assertEquals(true, result.startAltitudeValid)
         assertEquals("NONE", result.startAltitudeInvalidReason)
     }
+
+    private fun minimalCompleteFlightData(): CompleteFlightData =
+        CompleteFlightData(
+            gps = null,
+            baro = null,
+            compass = null,
+            baroAltitude = AltitudeM(0.0),
+            qnh = PressureHpa(1013.25),
+            isQNHCalibrated = false,
+            verticalSpeed = VerticalSpeedMs(0.0),
+            bruttoVario = VerticalSpeedMs(0.0),
+            pressureAltitude = AltitudeM(0.0),
+            baroGpsDelta = null,
+            baroConfidence = ConfidenceLevel.LOW,
+            qnhCalibrationAgeSeconds = -1L,
+            agl = AltitudeM(0.0),
+            thermalAverage = VerticalSpeedMs(0.0),
+            currentLD = 0f,
+            netto = VerticalSpeedMs(0.0),
+            timestamp = 1_000L,
+            dataQuality = "TEST"
+        )
 }

@@ -22,12 +22,16 @@ import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
 class GliderRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val polarCatalogDataSource: PolarCatalogAssetDataSource
 ) : GliderConfigRepository {
     private val prefs: SharedPreferences = context.getSharedPreferences("glider_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
-    private val models: List<GliderModel> = defaultGliderModels()
+    private val models: List<GliderModel> = mergeCatalogAndDefaults(
+        catalogModels = polarCatalogDataSource.loadModels(),
+        defaultModels = defaultGliderModels()
+    )
     private val fallbackModel: GliderModel = defaultClubFallbackGliderModel()
 
     private val _selectedModel = MutableStateFlow<GliderModel?>(null)
@@ -46,9 +50,7 @@ class GliderRepository @Inject constructor(
             isFallbackPolarActive = true,
             hasThreePointPolar = false,
             referenceWeightConfigured = false,
-            userCoefficientsConfigured = false,
-            iasMinMs = null,
-            iasMaxMs = null
+            userCoefficientsConfigured = false
         )
     )
     override val activePolar: StateFlow<ActivePolarSnapshot> = _activePolar.asStateFlow()
@@ -64,7 +66,7 @@ class GliderRepository @Inject constructor(
     override fun listModels(): List<GliderModel> = models
 
     override fun selectModelById(id: String) {
-        val model = models.find { it.id == id }
+        val model = findModelById(id)
         _selectedModel.value = model
         refreshDerivedModelState()
         saveActiveProfile()
@@ -113,25 +115,9 @@ class GliderRepository @Inject constructor(
         updateConfig { it.copy(userCoefficients = coeff) }
     }
 
-    fun setIasMinMs(value: Double?) {
-        updateConfig { it.copy(iasMinMs = value) }
-    }
-
-    fun setIasMaxMs(value: Double?) {
-        updateConfig { it.copy(iasMaxMs = value) }
-    }
-
-    fun setIasMinKmh(value: Double?) {
-        setIasMinMs(value?.let(UnitsConverter::kmhToMs))
-    }
-
-    fun setIasMaxKmh(value: Double?) {
-        setIasMaxMs(value?.let(UnitsConverter::kmhToMs))
-    }
-
     fun loadProfileSnapshot(profileId: String): GliderProfileSnapshot {
         val persisted = readPersistedState(resolveProfileId(profileId))
-        val selected = persisted.selectedId?.let { id -> models.find { it.id == id } }
+        val selected = persisted.selectedId?.let(::findModelById)
         val config = persisted.configJson?.let { json ->
             runCatching { loadPersistedConfig(json) }.getOrNull()
         } ?: GliderConfig()
@@ -154,7 +140,7 @@ class GliderRepository @Inject constructor(
             config = sanitizedConfig
         )
         if (activeProfileId != resolvedProfileId) return
-        _selectedModel.value = selectedModelId?.let { id -> models.find { it.id == id } }
+        _selectedModel.value = selectedModelId?.let(::findModelById)
         _config.value = sanitizedConfig
         refreshDerivedModelState()
     }
@@ -164,7 +150,7 @@ class GliderRepository @Inject constructor(
         val id = persisted.selectedId
         val json = persisted.configJson
         if (id != null) {
-            _selectedModel.value = models.find { it.id == id }
+            _selectedModel.value = findModelById(id)
         } else {
             _selectedModel.value = null
         }
@@ -187,12 +173,10 @@ class GliderRepository @Inject constructor(
     }
 
     private fun sanitizeConfig(config: GliderConfig): GliderConfig {
-        val minMs = config.iasMinMs?.takeIf { it.isFinite() && it > 0.0 }
-        val maxMs = config.iasMaxMs?.takeIf { it.isFinite() && it > 0.0 }
         if (config.waterBallastKg > 0.0 && config.hideBallastPill) {
-            return config.copy(hideBallastPill = false, iasMinMs = minMs, iasMaxMs = maxMs)
+            return config.copy(hideBallastPill = false)
         }
-        return config.copy(iasMinMs = minMs, iasMaxMs = maxMs)
+        return config
     }
 
     private fun refreshDerivedModelState() {
@@ -221,7 +205,6 @@ class GliderRepository @Inject constructor(
             isFallbackPolarActive -> ActivePolarSource.FALLBACK_MODEL
             else -> ActivePolarSource.SELECTED_MODEL
         }
-        val bounds = GliderSpeedBoundsResolver.resolveIasBoundsMs(effectiveModel, config)
         return ActivePolarSnapshot(
             source = source,
             selectedModelId = selectedModel?.id,
@@ -231,9 +214,7 @@ class GliderRepository @Inject constructor(
             isFallbackPolarActive = isFallbackPolarActive,
             hasThreePointPolar = config.threePointPolar != null,
             referenceWeightConfigured = config.referenceWeightKg != null,
-            userCoefficientsConfigured = config.userCoefficients != null,
-            iasMinMs = bounds?.minMs,
-            iasMaxMs = bounds?.maxMs
+            userCoefficientsConfigured = config.userCoefficients != null
         )
     }
 
@@ -265,11 +246,12 @@ class GliderRepository @Inject constructor(
         config: GliderConfig
     ) {
         val configJson = gson.toJson(config)
+        val resolvedSelectedId = selectedModelId?.let(::findModelById)?.id
         val editor = prefs.edit()
-            .putString(scopedSelectedKey(profileId), selectedModelId)
+            .putString(scopedSelectedKey(profileId), resolvedSelectedId)
             .putString(scopedConfigKey(profileId), configJson)
         if (isLegacyFallbackEligible(profileId)) {
-            editor.putString(KEY_SELECTED_ID, selectedModelId)
+            editor.putString(KEY_SELECTED_ID, resolvedSelectedId)
             editor.putString(KEY_CONFIG_JSON, configJson)
         }
         editor.apply()
@@ -336,8 +318,6 @@ class GliderRepository @Inject constructor(
                 waterBallastKg = persisted.waterBallastKg ?: defaults.waterBallastKg,
                 bugsPercent = persisted.bugsPercent ?: defaults.bugsPercent,
                 referenceWeightKg = persisted.referenceWeightKg,
-                iasMinMs = restoreSpeedMs(persisted.iasMinMs, persisted.iasMinKmh),
-                iasMaxMs = restoreSpeedMs(persisted.iasMaxMs, persisted.iasMaxKmh),
                 threePointPolar = threePointPolar,
                 userCoefficients = persisted.userCoefficients,
                 ballastDrainMinutes = persisted.ballastDrainMinutes ?: defaults.ballastDrainMinutes,
@@ -383,6 +363,11 @@ class GliderRepository @Inject constructor(
         private const val DEFAULT_PROFILE_ID = "default-profile"
         private const val KEY_SELECTED_ID = "selected_model_id"
         private const val KEY_CONFIG_JSON = "glider_config_json"
+        // Compatibility shim: prior built-in JS selections used these IDs before the JSON catalog became authoritative.
+        private val LEGACY_MODEL_ID_ALIASES = mapOf(
+            "js1c-18" to "js1-18",
+            "js1c-21" to "js1-21"
+        )
     }
 
     private data class PersistedState(
@@ -395,10 +380,6 @@ class GliderRepository @Inject constructor(
         val waterBallastKg: Double? = null,
         val bugsPercent: Int? = null,
         val referenceWeightKg: Double? = null,
-        val iasMinMs: Double? = null,
-        val iasMaxMs: Double? = null,
-        val iasMinKmh: Double? = null,
-        val iasMaxKmh: Double? = null,
         val threePointPolar: ThreePointPolarPersistence? = null,
         val userCoefficients: UserPolarCoefficients? = null,
         val ballastDrainMinutes: Double? = null,
@@ -416,6 +397,26 @@ class GliderRepository @Inject constructor(
         val midKmh: Double? = null,
         val highKmh: Double? = null
     )
+
+    private fun findModelById(id: String): GliderModel? {
+        val resolvedId = LEGACY_MODEL_ID_ALIASES[id] ?: id
+        return models.find { it.id == resolvedId }
+    }
+
+    private fun mergeCatalogAndDefaults(
+        catalogModels: List<GliderModel>,
+        defaultModels: List<GliderModel>
+    ): List<GliderModel> {
+        if (catalogModels.isEmpty()) return defaultModels
+        val catalogDisplayKeys = catalogModels.map(::displayKey).toSet()
+        return catalogModels + defaultModels.filterNot { defaultModel ->
+            defaultModel.id in LEGACY_MODEL_ID_ALIASES.keys || displayKey(defaultModel) in catalogDisplayKeys
+        }
+    }
+
+    private fun displayKey(model: GliderModel): String =
+        "${model.name.trim().lowercase()}|${model.classLabel.trim().lowercase()}"
+
 }
 
 data class GliderProfileSnapshot(

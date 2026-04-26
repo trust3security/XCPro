@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.trust3.xcpro.audio.AudioFocusManager
 import com.trust3.xcpro.audio.VarioAudioSettings
+import com.trust3.xcpro.external.ExternalFlightSettingsReadPort
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.igc.IgcRecordingActionSink
 import com.trust3.xcpro.igc.data.IgcFinalizeResult
 import com.trust3.xcpro.igc.data.IgcLogEntry
@@ -12,11 +14,14 @@ import com.trust3.xcpro.igc.usecase.IgcRecordingUseCase
 import com.trust3.xcpro.flightdata.FlightDataRepository
 import com.trust3.xcpro.hawk.HawkConfigRepository
 import com.trust3.xcpro.hawk.HawkVarioRepository
+import com.trust3.xcpro.livesource.LiveSourceKind
+import com.trust3.xcpro.livesource.LiveRuntimeStartResult
+import com.trust3.xcpro.livesource.LiveSourceStatePort
+import com.trust3.xcpro.livesource.ResolvedLiveSourceState
+import com.trust3.xcpro.livesource.SelectedLiveRuntimeBackendPort
 import com.trust3.xcpro.sensors.CompleteFlightData
 import com.trust3.xcpro.sensors.FlightStateSource
 import com.trust3.xcpro.sensors.SensorFusionRepository
-import com.trust3.xcpro.sensors.SensorStatus
-import com.trust3.xcpro.sensors.UnifiedSensorManager
 import com.trust3.xcpro.sensors.VarioDiagnosticsSample
 import com.trust3.xcpro.sensors.domain.FlyingState
 import com.trust3.xcpro.common.flight.FlightMode
@@ -30,6 +35,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -60,23 +66,8 @@ class VarioServiceManagerConstructionTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
         val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
-        val unifiedSensorManager = mock<UnifiedSensorManager>()
-        whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
-        whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
-            SensorStatus(
-                gpsAvailable = true,
-                gpsStarted = true,
-                baroAvailable = true,
-                baroStarted = true,
-                compassAvailable = true,
-                compassStarted = true,
-                accelAvailable = true,
-                accelStarted = true,
-                rotationAvailable = true,
-                rotationStarted = true,
-                hasLocationPermissions = true
-            )
-        )
+        val runtimeBackend = mock<SelectedLiveRuntimeBackendPort>()
+        whenever(runtimeBackend.start()).thenReturn(LiveRuntimeStartResult.READY)
 
         val flightDataRepository = FlightDataRepository()
         val levoRepo = mock<LevoVarioPreferencesRepository>()
@@ -91,10 +82,12 @@ class VarioServiceManagerConstructionTest {
         val fakeRepository = FakeSensorFusionRepository()
         val manager = VarioServiceManager(
             audioFocusManager = audioFocusManager,
-            unifiedSensorManager = unifiedSensorManager,
+            selectedLiveRuntimeBackendPort = runtimeBackend,
+            liveSourceStatePort = fixedLiveSourceStatePort(),
             sensorFusionRepository = fakeRepository,
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -111,7 +104,8 @@ class VarioServiceManagerConstructionTest {
 
         manager.stop()
 
-        verify(unifiedSensorManager).startAllSensors()
+        verify(runtimeBackend).start()
+        verify(runtimeBackend).stop()
         verify(hawkVarioRepository).start()
         verify(hawkVarioRepository).stop()
         assertEquals(1, fakeRepository.stopCalls)
@@ -122,23 +116,8 @@ class VarioServiceManagerConstructionTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
         val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
-        val unifiedSensorManager = mock<UnifiedSensorManager>()
-        whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
-        whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
-            SensorStatus(
-                gpsAvailable = true,
-                gpsStarted = true,
-                baroAvailable = true,
-                baroStarted = false,
-                compassAvailable = true,
-                compassStarted = true,
-                accelAvailable = true,
-                accelStarted = true,
-                rotationAvailable = true,
-                rotationStarted = true,
-                hasLocationPermissions = true
-            )
-        )
+        val runtimeBackend = mock<SelectedLiveRuntimeBackendPort>()
+        whenever(runtimeBackend.start()).thenReturn(LiveRuntimeStartResult.STARTING_MANAGER_RETRY)
 
         val flightDataRepository = FlightDataRepository()
         val levoRepo = mock<LevoVarioPreferencesRepository>()
@@ -152,10 +131,12 @@ class VarioServiceManagerConstructionTest {
 
         val manager = VarioServiceManager(
             audioFocusManager = audioFocusManager,
-            unifiedSensorManager = unifiedSensorManager,
+            selectedLiveRuntimeBackendPort = runtimeBackend,
+            liveSourceStatePort = fixedLiveSourceStatePort(),
             sensorFusionRepository = fakeRepository,
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -178,23 +159,8 @@ class VarioServiceManagerConstructionTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
         val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
-        val unifiedSensorManager = mock<UnifiedSensorManager>()
-        whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
-        whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
-            SensorStatus(
-                gpsAvailable = true,
-                gpsStarted = true,
-                baroAvailable = true,
-                baroStarted = true,
-                compassAvailable = true,
-                compassStarted = true,
-                accelAvailable = true,
-                accelStarted = true,
-                rotationAvailable = true,
-                rotationStarted = true,
-                hasLocationPermissions = true
-            )
-        )
+        val runtimeBackend = mock<SelectedLiveRuntimeBackendPort>()
+        whenever(runtimeBackend.start()).thenReturn(LiveRuntimeStartResult.READY)
 
         val flightDataRepository = FlightDataRepository()
         val levoRepo = mock<LevoVarioPreferencesRepository>()
@@ -213,10 +179,12 @@ class VarioServiceManagerConstructionTest {
 
         val manager = VarioServiceManager(
             audioFocusManager = audioFocusManager,
-            unifiedSensorManager = unifiedSensorManager,
+            selectedLiveRuntimeBackendPort = runtimeBackend,
+            liveSourceStatePort = fixedLiveSourceStatePort(),
             sensorFusionRepository = FakeSensorFusionRepository(),
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -269,23 +237,8 @@ class VarioServiceManagerConstructionTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         val audioFocusManager = AudioFocusManager(context)
         val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
-        val unifiedSensorManager = mock<UnifiedSensorManager>()
-        whenever(unifiedSensorManager.startAllSensors()).thenReturn(true)
-        whenever(unifiedSensorManager.getSensorStatus()).thenReturn(
-            SensorStatus(
-                gpsAvailable = true,
-                gpsStarted = true,
-                baroAvailable = true,
-                baroStarted = true,
-                compassAvailable = true,
-                compassStarted = true,
-                accelAvailable = true,
-                accelStarted = true,
-                rotationAvailable = true,
-                rotationStarted = true,
-                hasLocationPermissions = true
-            )
-        )
+        val runtimeBackend = mock<SelectedLiveRuntimeBackendPort>()
+        whenever(runtimeBackend.start()).thenReturn(LiveRuntimeStartResult.READY)
 
         val flightDataRepository = FlightDataRepository()
         val levoRepo = mock<LevoVarioPreferencesRepository>()
@@ -309,10 +262,12 @@ class VarioServiceManagerConstructionTest {
 
         val manager = VarioServiceManager(
             audioFocusManager = audioFocusManager,
-            unifiedSensorManager = unifiedSensorManager,
+            selectedLiveRuntimeBackendPort = runtimeBackend,
+            liveSourceStatePort = fixedLiveSourceStatePort(),
             sensorFusionRepository = FakeSensorFusionRepository(),
             flightDataRepository = flightDataRepository,
             levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
             hawkConfigRepository = hawkConfigRepository,
             hawkVarioRepository = hawkVarioRepository,
             flightStateSource = flightStateSource,
@@ -338,6 +293,71 @@ class VarioServiceManagerConstructionTest {
 
         verify(recordingUseCase, timeout(1_000L)).onFinalizeFailed(org.mockito.kotlin.any())
         verify(recordingUseCase, never()).onFinalizeSucceeded()
+        manager.stop()
+    }
+
+    @Test
+    fun `simulator finalize skips WeGlide prompt and still completes finalize success`() = runTest {
+        val context: Context = ApplicationProvider.getApplicationContext()
+        val audioFocusManager = AudioFocusManager(context)
+        val serviceDispatcher = UnconfinedTestDispatcher(testScheduler)
+        val runtimeBackend = mock<SelectedLiveRuntimeBackendPort>()
+        whenever(runtimeBackend.start()).thenReturn(LiveRuntimeStartResult.READY)
+
+        val flightDataRepository = FlightDataRepository()
+        val levoRepo = mock<LevoVarioPreferencesRepository>()
+        whenever(levoRepo.config).thenReturn(MutableStateFlow(LevoVarioConfig()))
+        val hawkConfigRepository = HawkConfigRepository()
+        val hawkVarioRepository = mock<HawkVarioRepository>()
+        val flightStateSource = object : FlightStateSource {
+            override val flightState = MutableStateFlow(FlyingState())
+        }
+
+        val actionFlow = MutableSharedFlow<IgcSessionStateMachine.Action>(extraBufferCapacity = 16)
+        val recordingUseCase = mock<IgcRecordingUseCase>()
+        whenever(recordingUseCase.actions).thenReturn(actionFlow.asSharedFlow())
+        val actionSink = mock<IgcRecordingActionSink>()
+        whenever(actionSink.onFinalizeRecording(77L, 5_000L)).thenReturn(successfulFinalizeResult())
+        val promptUseCase = mock<EvaluateWeGlidePostFlightPromptUseCase>()
+        val promptCoordinator = WeGlidePostFlightPromptCoordinator()
+        val notificationController = mock<WeGlidePostFlightPromptNotificationController>()
+
+        val manager = VarioServiceManager(
+            audioFocusManager = audioFocusManager,
+            selectedLiveRuntimeBackendPort = runtimeBackend,
+            liveSourceStatePort = fixedLiveSourceStatePort(LiveSourceKind.SIMULATOR_CONDOR2),
+            sensorFusionRepository = FakeSensorFusionRepository(),
+            flightDataRepository = flightDataRepository,
+            levoVarioPreferencesRepository = levoRepo,
+            externalFlightSettingsReadPort = noOpExternalFlightSettingsReadPort(),
+            hawkConfigRepository = hawkConfigRepository,
+            hawkVarioRepository = hawkVarioRepository,
+            flightStateSource = flightStateSource,
+            defaultDispatcher = serviceDispatcher,
+            igcRecordingUseCase = recordingUseCase,
+            igcRecordingActionSink = actionSink,
+            evaluateWeGlidePostFlightPromptUseCase = promptUseCase,
+            weGlidePostFlightPromptCoordinator = promptCoordinator,
+            weGlidePostFlightPromptNotificationController = notificationController
+        )
+
+        assertTrue(manager.start(this))
+        withTimeout(1_000L) {
+            actionFlow.subscriptionCount.filter { it > 0 }.first()
+        }
+        actionFlow.emit(
+            IgcSessionStateMachine.Action.FinalizeRecording(
+                sessionId = 77L,
+                postFlightGroundWindowMs = 5_000L
+            )
+        )
+        advanceUntilIdle()
+
+        verify(recordingUseCase, timeout(1_000L)).onFinalizeSucceeded()
+        verify(recordingUseCase, never()).onFinalizeFailed(org.mockito.kotlin.any())
+        verify(promptUseCase, never()).invoke(org.mockito.kotlin.any())
+        verify(notificationController, never()).onPromptPublished(org.mockito.kotlin.any())
+        assertEquals(null, promptCoordinator.pendingPrompt.value)
         manager.stop()
     }
 
@@ -394,4 +414,21 @@ class VarioServiceManagerConstructionTest {
     private fun disabledPromptUseCase(): EvaluateWeGlidePostFlightPromptUseCase {
         return mock()
     }
+
+    private fun fixedLiveSourceStatePort(
+        kind: LiveSourceKind = LiveSourceKind.PHONE
+    ): LiveSourceStatePort {
+        return object : LiveSourceStatePort {
+            override val state: StateFlow<ResolvedLiveSourceState> =
+                MutableStateFlow(ResolvedLiveSourceState(kind = kind))
+
+            override fun refreshAndGetState(): ResolvedLiveSourceState = state.value
+        }
+    }
+
+    private fun noOpExternalFlightSettingsReadPort(): ExternalFlightSettingsReadPort =
+        object : ExternalFlightSettingsReadPort {
+            override val externalFlightSettingsSnapshot =
+                MutableStateFlow(ExternalFlightSettingsSnapshot())
+        }
 }

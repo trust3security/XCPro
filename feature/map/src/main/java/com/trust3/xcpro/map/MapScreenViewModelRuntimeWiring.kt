@@ -1,10 +1,11 @@
 package com.trust3.xcpro.map
 
 import com.trust3.xcpro.hawk.HawkVarioUiState
+import com.trust3.xcpro.external.ExternalFlightSettingsSnapshot
 import com.trust3.xcpro.map.model.MapLocationUiModel
-import com.trust3.xcpro.map.replay.SyntheticThermalReplayMode
 import com.trust3.xcpro.map.trail.TrailSettings
 import com.trust3.xcpro.map.trail.domain.TrailUpdateResult
+import com.trust3.xcpro.qnh.QnhValue
 import com.trust3.xcpro.replay.SessionState
 import com.trust3.xcpro.sensors.CompleteFlightData
 import com.trust3.xcpro.sensors.domain.FlyingState
@@ -21,10 +22,11 @@ internal fun createFlightDataUiAdapterForViewModel(
     windStateFlow: StateFlow<WindState>,
     flightStateFlow: StateFlow<FlyingState>,
     hawkVarioUiStateFlow: StateFlow<HawkVarioUiState>,
+    externalFlightSettingsFlow: StateFlow<ExternalFlightSettingsSnapshot>,
+    qnhStateFlow: StateFlow<QnhValue>,
     flightDataManager: FlightDataManager,
     mapStateStore: MapStateStore,
     trailSettingsFlow: StateFlow<TrailSettings>,
-    syntheticReplayMode: StateFlow<SyntheticThermalReplayMode>,
     liveDataReady: MutableStateFlow<Boolean>,
     containerReady: MutableStateFlow<Boolean>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
@@ -35,10 +37,11 @@ internal fun createFlightDataUiAdapterForViewModel(
     windStateFlow = windStateFlow,
     flightStateFlow = flightStateFlow,
     hawkVarioUiStateFlow = hawkVarioUiStateFlow,
+    externalFlightSettingsFlow = externalFlightSettingsFlow,
+    qnhStateFlow = qnhStateFlow,
     flightDataManager = flightDataManager,
     mapStateStore = mapStateStore,
     trailSettingsFlow = trailSettingsFlow,
-    syntheticReplayMode = syntheticReplayMode,
     liveDataReady = liveDataReady,
     containerReady = containerReady,
     uiEffects = uiEffects,
@@ -48,19 +51,13 @@ internal fun createFlightDataUiAdapterForViewModel(
 internal fun createReplayCoordinatorForViewModel(
     mapReplayUseCase: MapReplayUseCase,
     flightDataFlow: StateFlow<CompleteFlightData?>,
-    featureFlags: com.trust3.xcpro.map.config.MapFeatureFlags,
-    mapStateStore: MapStateStore,
     mapStateActions: MapStateActions,
-    syntheticReplayMode: MutableStateFlow<SyntheticThermalReplayMode>,
     uiEffects: MutableSharedFlow<MapUiEffect>,
     replaySessionState: StateFlow<SessionState>,
     scope: CoroutineScope
 ): MapScreenReplayCoordinator = mapReplayUseCase.createReplayCoordinator(
     flightDataFlow = flightDataFlow,
-    featureFlags = featureFlags,
-    mapStateStore = mapStateStore,
     mapStateActions = mapStateActions,
-    syntheticReplayMode = syntheticReplayMode,
     uiEffects = uiEffects,
     replaySessionState = replaySessionState,
     scope = scope

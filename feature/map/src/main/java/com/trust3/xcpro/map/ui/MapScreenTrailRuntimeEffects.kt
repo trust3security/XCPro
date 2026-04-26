@@ -15,21 +15,31 @@ import org.maplibre.android.geometry.LatLng
 
 internal data class TrailDisplayPoseSeed(
     val displayLocation: LatLng?,
-    val displayTimeMillis: Long?
+    val displayTimeMillis: Long?,
+    val displayTimeBase: TrailTimeBase?
 )
 
 internal fun resolveTrailDisplayPoseSeed(
     isReplay: Boolean,
     snapshot: DisplayPoseSnapshot?
-): TrailDisplayPoseSeed = if (isReplay && snapshot?.timeBase == DisplayClock.TimeBase.REPLAY) {
-    TrailDisplayPoseSeed(
+): TrailDisplayPoseSeed {
+    val displayTimeBase = resolveDisplayPoseTrailTimeBase(snapshot)
+    val modeMatches = if (isReplay) {
+        displayTimeBase == TrailTimeBase.REPLAY_IGC
+    } else {
+        displayTimeBase == TrailTimeBase.LIVE_MONOTONIC || displayTimeBase == TrailTimeBase.LIVE_WALL
+    }
+    if (snapshot == null || displayTimeBase == null || !modeMatches) {
+        return TrailDisplayPoseSeed(
+            displayLocation = null,
+            displayTimeMillis = null,
+            displayTimeBase = null
+        )
+    }
+    return TrailDisplayPoseSeed(
         displayLocation = snapshot.location,
-        displayTimeMillis = snapshot.timestampMs
-    )
-} else {
-    TrailDisplayPoseSeed(
-        displayLocation = null,
-        displayTimeMillis = null
+        displayTimeMillis = snapshot.timestampMs,
+        displayTimeBase = displayTimeBase
     )
 }
 
@@ -75,14 +85,15 @@ internal fun MapScreenTrailRuntimeEffects(
         val isReplay = trailUpdateResult?.renderState?.isReplay == true
         val displayPoseSeed = resolveTrailDisplayPoseSeed(
             isReplay = isReplay,
-            snapshot = if (isReplay) locationManager.getDisplayPoseSnapshot() else null
+            snapshot = locationManager.getDisplayPoseSnapshot()
         )
         snailTrailManager.updateFromTrailUpdate(
             update = trailUpdateResult,
             settings = trailSettings,
             currentZoom = currentZoom,
             displayLocation = displayPoseSeed.displayLocation,
-            displayTimeMillis = displayPoseSeed.displayTimeMillis
+            displayTimeMillis = displayPoseSeed.displayTimeMillis,
+            displayTimeBase = displayPoseSeed.displayTimeBase
         )
     }
 

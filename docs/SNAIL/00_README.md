@@ -30,8 +30,8 @@ Ground Validation
   repeatable manual ground-test artifact pack under
   `artifacts/snail/ground/<timestamp>/`.
 - Preferred deterministic baseline:
-  - use the debug replay lane synthetic thermal actions (`THR` clean, `THN`
-    wind-noisy) before falling back to a real thermal `.igc`.
+  - use controlled replay captures and known real thermal `.igc` segments; the
+    former THN/THR synthetic thermal map actions have been removed.
 - Attach the paired `pkg-f1` run id when available so lifecycle/cadence proof
   and manual trail validation stay linked.
 

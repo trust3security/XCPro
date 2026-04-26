@@ -11,6 +11,5 @@ data class TrailUpdateInput(
     val windState: WindState?,
     val isFlying: Boolean,
     val isReplay: Boolean,
-    val windDriftEnabled: Boolean = false,
-    val replayRetentionMode: TrailReplayRetentionMode = TrailReplayRetentionMode.DEFAULT
+    val windDriftEnabled: Boolean = false
 )

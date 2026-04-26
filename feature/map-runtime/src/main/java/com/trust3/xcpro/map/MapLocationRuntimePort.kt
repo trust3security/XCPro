@@ -11,9 +11,9 @@ fun interface MapLocationPermissionRequester {
 interface MapLocationRuntimePort {
     fun onLocationPermissionsResult(fineLocationGranted: Boolean)
 
-    fun requestLocationPermissions(permissionRequester: MapLocationPermissionRequester)
+    fun ensureSelectedRuntimeReady(permissionRequester: MapLocationPermissionRequester)
 
-    fun updateLocationFromGPS(
+    fun updateLocationFromLiveFix(
         location: MapLocationUiModel,
         orientation: OrientationData
     )

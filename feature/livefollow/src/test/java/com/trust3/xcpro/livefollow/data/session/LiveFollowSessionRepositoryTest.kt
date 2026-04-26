@@ -1,5 +1,6 @@
 package com.trust3.xcpro.livefollow.data.session
 
+import com.trust3.xcpro.livesource.LiveSourceKind
 import com.trust3.xcpro.livefollow.model.LiveFollowTaskSnapshot
 import com.trust3.xcpro.livefollow.model.liveFollowAvailableTransport
 import com.trust3.xcpro.livefollow.model.liveFollowUnavailableTransport
@@ -210,6 +211,39 @@ class LiveFollowSessionRepositoryTest {
             LiveFollowReplayBlockReason.REPLAY_MODE,
             repository.state.value.replayBlockReason
         )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun simulatorSource_blocksGatewaySideEffects() = runTest {
+        val scope = repoScope()
+        try {
+            val ownshipSource = FakeOwnshipSnapshotSource(
+                liveSourceKind = MutableStateFlow(LiveSourceKind.SIMULATOR_CONDOR2)
+            )
+            val taskSource = FakeTaskSnapshotSource()
+            val gateway = FakeSessionGateway()
+            val repository = LiveFollowSessionRepository(
+                scope = scope,
+                ownshipSnapshotSource = ownshipSource,
+                taskSnapshotSource = taskSource,
+                gateway = gateway
+            )
+            advanceUntilIdle()
+            val result = repository.joinWatchSession("blocked")
+            assertEquals(
+                LiveFollowCommandResult.Rejected(LiveFollowReplayBlockReason.SIMULATOR_SOURCE),
+                result
+            )
+            assertEquals(0, gateway.joinCalls)
+            assertEquals(LiveFollowRuntimeMode.LIVE, repository.state.value.runtimeMode)
+            assertEquals(false, repository.state.value.sideEffectsAllowed)
+            assertEquals(
+                LiveFollowReplayBlockReason.SIMULATOR_SOURCE,
+                repository.state.value.replayBlockReason
+            )
         } finally {
             scope.cancel()
         }

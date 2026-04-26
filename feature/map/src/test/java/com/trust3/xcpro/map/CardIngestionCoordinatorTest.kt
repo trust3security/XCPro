@@ -31,8 +31,7 @@ class CardIngestionCoordinatorTest {
             cardFlightDataFlow = cardFlightDataFlow,
             consumeBufferedCardSample = { null },
             unitsPreferencesFlow = unitsPreferencesFlow,
-            initializeCardPreferences = { },
-            startIndependentClock = { }
+            bindFlightCardSession = { }
         )
 
         try {
@@ -64,8 +63,7 @@ class CardIngestionCoordinatorTest {
             cardFlightDataFlow = cardFlightDataFlow,
             consumeBufferedCardSample = { bufferedSample?.also { bufferedSample = null } },
             unitsPreferencesFlow = unitsPreferencesFlow,
-            initializeCardPreferences = { },
-            startIndependentClock = { }
+            bindFlightCardSession = { }
         )
 
         try {
@@ -92,8 +90,7 @@ class CardIngestionCoordinatorTest {
             cardFlightDataFlow = cardFlightDataFlow,
             consumeBufferedCardSample = { null },
             unitsPreferencesFlow = unitsPreferencesFlow,
-            initializeCardPreferences = { },
-            startIndependentClock = { }
+            bindFlightCardSession = { }
         )
 
         try {
@@ -122,8 +119,7 @@ class CardIngestionCoordinatorTest {
             cardFlightDataFlow = cardFlightDataFlow,
             consumeBufferedCardSample = { null },
             unitsPreferencesFlow = unitsPreferencesFlow,
-            initializeCardPreferences = { },
-            startIndependentClock = { }
+            bindFlightCardSession = { }
         )
 
         try {
@@ -163,8 +159,7 @@ class CardIngestionCoordinatorTest {
             cardFlightDataFlow = cardFlightDataFlow,
             consumeBufferedCardSample = { null },
             unitsPreferencesFlow = unitsPreferencesFlow,
-            initializeCardPreferences = { },
-            startIndependentClock = { },
+            bindFlightCardSession = { },
             onProfileModeVisibilitiesChanged = { profileId, visibilities ->
                 forwarded += profileId to visibilities
             }
@@ -210,8 +205,7 @@ class CardIngestionCoordinatorTest {
             cardFlightDataFlow = cardFlightDataFlow,
             consumeBufferedCardSample = { null },
             unitsPreferencesFlow = unitsPreferencesFlow,
-            initializeCardPreferences = { },
-            startIndependentClock = { },
+            bindFlightCardSession = { },
             onProfileModeVisibilitiesChanged = { profileId, visibilities ->
                 forwarded += profileId to visibilities
             }

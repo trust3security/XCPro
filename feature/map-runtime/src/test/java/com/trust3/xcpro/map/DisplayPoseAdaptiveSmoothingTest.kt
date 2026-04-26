@@ -43,4 +43,16 @@ class DisplayPoseAdaptiveSmoothingTest {
         assertTrue(result.headingSmoothMs > base.headingSmoothMs)
         assertTrue(result.deadReckonLimitMs < base.deadReckonLimitMs)
     }
+
+    @Test
+    fun preservesExplicitFrameActiveWindow() {
+        val base = DisplaySmoothingProfile.CADENCE_BRIDGE.config
+        val result = DisplayPoseAdaptiveSmoothing.effectiveConfig(
+            base = base,
+            speedMs = 60.0,
+            accuracyM = 3.0
+        )
+
+        assertEquals(base.frameActiveWindowMs, result.frameActiveWindowMs)
+    }
 }

@@ -3,7 +3,9 @@ package com.trust3.xcpro.appshell.settings
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -17,6 +19,7 @@ import androidx.navigation.NavHostController
 import com.trust3.xcpro.navigation.MapNavigationSignals
 import com.trust3.xcpro.navigation.SettingsRoutes
 import com.trust3.xcpro.navigation.TrafficSettingsRoutes
+import com.trust3.xcpro.screens.navdrawer.PureTrackSettingsContent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -97,6 +100,28 @@ class GeneralSettingsScreenPolicyTest {
     }
 
     @Test
+    fun settingsScreen_usesBridgeLabelForCondorSettingsTile() {
+        val navController: NavHostController = mock()
+        val drawerState: DrawerState = mock()
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SettingsScreen(
+                    navController = navController,
+                    drawerState = drawerState,
+                    onShowAirspaceOverlay = {}
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(GENERAL_SETTINGS_GRID_TAG)
+            .performScrollToNode(hasText("Bridge"))
+        composeTestRule.onNodeWithText("Bridge").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Condor Bridge").assertCountEquals(0)
+    }
+
+    @Test
     fun settingsScreen_orientationTile_opensLocalOrientationSubSheet() {
         val navController: NavHostController = mock()
         val drawerState: DrawerState = mock()
@@ -163,6 +188,72 @@ class GeneralSettingsScreenPolicyTest {
     @Test
     fun settingsScreen_thermallingTile_opensLocalSubSheet() {
         assertTileDoesNotNavigateToRoute("Thermalling", SettingsRoutes.THERMALLING_SETTINGS)
+    }
+
+    @Test
+    fun generalSettingsCategoryGrid_pureTrackTile_selectsLocalSubSheet() {
+        var selectedSubSheet = GeneralSubSheet.NONE
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                GeneralSettingsCategoryGrid(
+                    onSubSheetSelected = { selectedSubSheet = it }
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(GENERAL_SETTINGS_GRID_TAG)
+            .performScrollToNode(hasText("PureTrack"))
+        composeTestRule.onNode(hasText("PureTrack") and hasClickAction()).performClick()
+
+        assertEquals(GeneralSubSheet.PURETRACK, selectedSubSheet)
+    }
+
+    @Test
+    fun generalSettingsSubSheetContent_pureTrackSubSheet_rendersAccountPlaceholder() {
+        val navController: NavHostController = mock()
+        val drawerState: DrawerState = mock()
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                GeneralSettingsSubSheetContent(
+                    activeSubSheet = GeneralSubSheet.PURETRACK,
+                    navController = navController,
+                    drawerState = drawerState,
+                    onNavigateToMap = {},
+                    onNavigateToDrawer = {},
+                    onSubSheetChange = {}
+                )
+            }
+        }
+
+        verify(navController, never()).navigate("puretrack_settings")
+        composeTestRule.onAllNodesWithText("PureTrack Account").assertCountEquals(1)
+    }
+
+    @Test
+    fun pureTrackSettingsContent_rendersDraftAccountPlaceholderWithDisabledActions() {
+        composeTestRule.setContent {
+            MaterialTheme {
+                PureTrackSettingsContent()
+            }
+        }
+
+        composeTestRule.onNodeWithText("PureTrack Account").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Email").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Password").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("puretrack_sign_in_button").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("puretrack_clear_session_button").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("PureTrack sign-in is not available yet.").assertIsDisplayed()
+        composeTestRule
+            .onAllNodesWithText("XCPro cannot embed the confidential PureTrack app key in Android.")
+            .assertCountEquals(1)
+        composeTestRule
+            .onAllNodesWithText("Secure provider access is required before live traffic can be enabled.")
+            .assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Token storage is prepared but not connected.").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("No production traffic polling is active.").assertCountEquals(1)
     }
 
     @Test

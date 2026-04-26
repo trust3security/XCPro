@@ -159,7 +159,8 @@ Work is complete only when:
 ## Phase 2 -- ViewModel Purity
 - Remove Context from ViewModels; inject repositories/use-cases.
 - Remove MapLibre dependencies from ViewModels; move to UI adapters.
-- Ensure ViewModels depend on use-cases only and expose immutable StateFlow.
+- Ensure ViewModels depend on stable domain-facing seams and expose immutable StateFlow.
+- Use cases and focused owner/port seams are valid; low-level infra/data types and broad bags are not.
 - Remove platform types from ViewModel and use-case APIs. Introduce a pure `DocumentRef`
   (string uri + displayName). Keep `Uri` strictly inside repositories and map at the boundary.
   Update Airspace/Waypoint/Task file flows end-to-end to use `DocumentRef`.
@@ -216,7 +217,7 @@ Work is complete only when:
 
 ## 3.1 Functional Acceptance Criteria
 - [ ] Given any UI screen, when it needs preferences, then it uses ViewModel state (no direct prefs).
-- [ ] Given any ViewModel, when it needs data, then it depends on use-cases only (no Context/MapLibre).
+- [ ] Given any ViewModel, when it needs data, then it depends only on stable domain-facing seams (no Context/MapLibre or low-level infra/data types).
 - [ ] Given time-dependent logic, when it runs, then it uses injected Clock only.
 - [ ] Given duplicated persistence/parsers, when refactor completes, then one SSOT owner remains.
 

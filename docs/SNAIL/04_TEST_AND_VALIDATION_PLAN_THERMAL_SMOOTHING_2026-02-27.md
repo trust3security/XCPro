@@ -18,11 +18,14 @@ Trail domain tests:
   - circling-aware distance filtering rules
 - `SnailTrailManager` tests (new if missing)
   - tail refresh cadence and gating behavior
+  - replay display-pose trail rendering
+  - transient display connector renders without storing connector points
 - `ResolveCirclingUseCaseTest`
   - preserve replay fallback behavior
 
 Properties to verify:
 - replay path unchanged
+- replay data path unchanged while replay display-pose trail rendering is enabled
 - live path denser in circling
 - deterministic outputs for same input sequence
 - no time-base mixing
@@ -59,15 +62,15 @@ mandatory pre-flight confidence pass for this slice.
 
 Professional default:
 - prove repo/runtime invariants first
-- validate replay thermal shape on the ground with the synthetic thermal replay baseline first
+- validate replay thermal shape on the ground with controlled replay or a known
+  real thermal segment first
 - validate live ground movement outdoors with stable GNSS
 - only then move to real flight signoff
 
 Ground scenarios:
 - `scenario-01-replay-thermal`
-  - replay the synthetic thermal baseline first (`THR` clean, `THN` wind-noisy)
-  - let the replay run to completion; `THR` / `THN` now pause on the finished thermal instead of tearing down immediately
-  - use a known real thermal segment only as a secondary comparison/reference
+  - replay a controlled replay or known real thermal segment
+  - let the replay run to completion
   - expected: tail/head coherence, full multi-loop thermal remains visible at finish, no replay drift, no stale tail after scrub
 - `scenario-02-live-circle`
   - repeated tight circles outdoors for 2-3 minutes

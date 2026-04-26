@@ -62,6 +62,7 @@ object FlightTemplates {
                     "gps_alt",
                     "track",
                     "ground_speed",
+                    "final_gld",
                     "wind_arrow",
                     "polar_ld",
                     "best_ld",

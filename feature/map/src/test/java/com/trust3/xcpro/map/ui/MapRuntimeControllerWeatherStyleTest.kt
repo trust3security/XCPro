@@ -119,4 +119,18 @@ class MapRuntimeControllerWeatherStyleTest {
 
         assertEquals(0, fitCount)
     }
+
+    @Test
+    fun applyExportDiagnostics_invokesDiagnosticsExporterImmediately() {
+        val overlayManager: MapOverlayManager = mock()
+        val reasons = mutableListOf<String>()
+        val controller = MapRuntimeController(
+            overlayManager = overlayManager,
+            exportDiagnostics = reasons::add
+        )
+
+        controller.apply(MapCommand.ExportDiagnostics("debug_export_test"))
+
+        assertEquals(listOf("debug_export_test"), reasons)
+    }
 }

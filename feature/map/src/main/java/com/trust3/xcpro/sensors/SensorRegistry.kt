@@ -30,6 +30,7 @@ internal class SensorRegistry(
     private val sensorManager: SensorManager,
     private val orientationProcessor: OrientationProcessor,
     private val clock: Clock,
+    private val gpsCadenceDiagnostics: LiveGpsCadenceDiagnostics,
     private val updateGps: (GPSData) -> Unit,
     private val updateBaro: (BaroData) -> Unit,
     private val updateCompass: (CompassData) -> Unit,
@@ -84,6 +85,12 @@ internal class SensorRegistry(
                 speedAccuracyMs = speedAccuracyMs,
                 timestamp = location.time,
                 monotonicTimestampMillis = monotonicMillis
+            )
+            gpsCadenceDiagnostics.recordGpsCallback(
+                monotonicTimestampMs = monotonicMillis,
+                accuracyMeters = if (location.hasAccuracy()) location.accuracy else null,
+                bearingAccuracyDeg = bearingAccuracyDeg,
+                speedAccuracyMs = speedAccuracyMs
             )
             updateGps(gpsData)
         }
@@ -200,6 +207,10 @@ internal class SensorRegistry(
 
     fun setGpsUpdateIntervalMs(intervalMs: Long) {
         val clamped = intervalMs.coerceIn(GPS_UPDATE_INTERVAL_MIN_MS, GPS_UPDATE_INTERVAL_MAX_MS)
+        gpsCadenceDiagnostics.recordRequestedInterval(
+            requestedMs = intervalMs,
+            clampedMs = clamped
+        )
         if (gpsUpdateIntervalMs == clamped) return
         gpsUpdateIntervalMs = clamped
         if (isGpsStarted) {

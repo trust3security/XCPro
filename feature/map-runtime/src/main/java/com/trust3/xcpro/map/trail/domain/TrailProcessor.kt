@@ -16,6 +16,7 @@ class TrailProcessor {
     private val varioResolver = ResolveTrailVarioUseCase()
     private val circlingResolver = ResolveCirclingUseCase()
     private val replayInterpolator = ReplayTrailInterpolator()
+    private val liveTurnInterpolator = LiveTrailInterpolator()
     private val replayWindSmoother = TrailWindSmoother(
         tauMs = REPLAY_WIND_SMOOTH_MS,
         minValidSpeedMs = REPLAY_WIND_VALID_MIN_SPEED_MS
@@ -26,31 +27,30 @@ class TrailProcessor {
     )
     private val liveStore = TrailStore(minDeltaMillis = LIVE_MIN_DELTA_MS)
     private val replayStore = TrailStore(minDeltaMillis = 0L)
-    private val syntheticReplayStore = TrailStore(
-        maxSize = SYNTHETIC_REPLAY_MAX_SIZE,
-        minDeltaMillis = 0L,
-        noThinMillis = SYNTHETIC_REPLAY_NO_THIN_MS
-    )
 
     private var lastIsReplay: Boolean? = null
     private var lastLiveTimeBase: TrailTimeBase? = null
-    private var lastReplayRetentionMode: TrailReplayRetentionMode? = null
     private var lastRenderCircling: Boolean? = null
+    private var lastRenderTurnSmoothing: Boolean? = null
+    private var lastLiveBearingEstimateDeg: Double? = null
     private var lastRenderableWind: TrailWindSample? = null
+    private var lastLiveTurnSample: TrailSample? = null
 
     fun resetAll() {
         liveStore.clear()
         replayStore.clear()
-        syntheticReplayStore.clear()
         replayInterpolator.reset()
+        liveTurnInterpolator.reset()
         replayWindSmoother.reset()
         liveWindSmoother.reset()
         circlingResolver.reset()
         lastIsReplay = null
         lastLiveTimeBase = null
-        lastReplayRetentionMode = null
         lastRenderCircling = null
+        lastRenderTurnSmoothing = null
+        lastLiveBearingEstimateDeg = null
         lastRenderableWind = null
+        lastLiveTurnSample = null
     }
 
     fun update(input: TrailUpdateInput): TrailUpdateResult? {
@@ -105,27 +105,20 @@ class TrailProcessor {
             if (liveTimeBaseChanged) {
                 liveStore.clear()
                 liveWindSmoother.reset()
+                liveTurnInterpolator.reset()
+                lastLiveTurnSample = null
                 storeReset = true
             }
             lastLiveTimeBase = sampleTime.timeBase
-            lastReplayRetentionMode = null
         } else {
             lastLiveTimeBase = null
-            val replayRetentionChanged = lastReplayRetentionMode != null &&
-                lastReplayRetentionMode != input.replayRetentionMode
-            if (replayRetentionChanged) {
-                clearReplayState()
-                storeReset = true
-            }
-            lastReplayRetentionMode = input.replayRetentionMode
         }
         val store = when {
-            input.isReplay && input.replayRetentionMode == TrailReplayRetentionMode.SYNTHETIC_VALIDATION ->
-                syntheticReplayStore
             input.isReplay -> replayStore
             else -> liveStore
         }
         var sampleAdded = false
+        var shouldInterpolateLive = false
         if ((input.isFlying || input.isReplay) && timestamp > 0L) {
             val sample = TrailSample(
                 latitude = lat,
@@ -133,8 +126,19 @@ class TrailProcessor {
                 timestampMillis = timestamp,
                 altitudeMeters = altitude,
                 varioMs = vario,
+                trackDegrees = gps.bearing,
                 windSpeedMs = wind.speedMs,
                 windDirectionFromDeg = wind.directionFromDeg
+            )
+            shouldInterpolateLive = shouldInterpolateByTrackTurn(
+                isCircling = isCircling,
+                isTurning = input.data.isTurning,
+                currentSample = sample,
+                previousBearingEstimateDeg = lastLiveBearingEstimateDeg
+            )
+            val liveMinDelta = resolveLiveMinDeltaMillis(
+                isCircling = isCircling,
+                isTurnSmoothing = shouldInterpolateLive
             )
             if (input.isReplay) {
                 if (replayInterpolator.shouldReset(sample)) {
@@ -148,14 +152,52 @@ class TrailProcessor {
                     }
                 }
             } else {
-                sampleAdded = store.addSample(
-                    sample = sample,
-                    minDeltaMillisOverride = resolveLiveMinDeltaMillis(isCircling)
+                if (shouldInterpolateLive && liveTurnInterpolator.shouldReset(sample)) {
+                    liveTurnInterpolator.reset()
+                    liveStore.clear()
+                    storeReset = true
+                }
+                if (shouldInterpolateLive) {
+                    val canAddRaw = liveStore.canAddSample(
+                        sample = sample,
+                        minDeltaMillisOverride = liveMinDelta
+                    )
+                    if (canAddRaw) {
+                        val expanded = liveTurnInterpolator.expand(sample)
+                        for (entry in expanded) {
+                            if (store.addSample(
+                                sample = entry,
+                                minDeltaMillisOverride = 0L
+                            )) {
+                                sampleAdded = true
+                            }
+                        }
+                    }
+                } else {
+                    sampleAdded = store.addSample(
+                        sample = sample,
+                        minDeltaMillisOverride = liveMinDelta
+                    )
+                }
+            }
+            if (!input.isReplay) {
+                val resolvedBearingDeg = resolveCourseBearingFromSample(
+                    from = lastLiveTurnSample,
+                    to = sample
                 )
+                lastLiveTurnSample = sample
+                lastLiveBearingEstimateDeg = if (sample.trackDegrees.isFinite()) {
+                    sample.trackDegrees
+                } else if (resolvedBearingDeg.isFinite()) {
+                    resolvedBearingDeg
+                } else {
+                    null
+                }
             }
         }
 
         val circlingChanged = lastRenderCircling?.let { it != isCircling } ?: false
+        val turnSmoothingChanged = lastRenderTurnSmoothing?.let { it != shouldInterpolateLive } ?: false
         val windChanged = hasMeaningfulWindChange(
             previous = lastRenderableWind,
             current = wind,
@@ -167,11 +209,13 @@ class TrailProcessor {
             storeReset -> TrailRenderInvalidationReason.STORE_RESET
             sampleAdded -> TrailRenderInvalidationReason.SAMPLE_ADDED
             circlingChanged -> TrailRenderInvalidationReason.CIRCLING_CHANGED
+            turnSmoothingChanged -> TrailRenderInvalidationReason.TURN_SMOOTHING_CHANGED
             windChanged -> TrailRenderInvalidationReason.WIND_CHANGED
             else -> null
         }
         val requiresFullRender = invalidationReason != null
         lastRenderCircling = isCircling
+        lastRenderTurnSmoothing = shouldInterpolateLive
         lastRenderableWind = wind
 
         val renderState = TrailRenderState(
@@ -181,6 +225,7 @@ class TrailProcessor {
             windSpeedMs = wind.speedMs,
             windDirectionFromDeg = wind.directionFromDeg,
             isCircling = isCircling,
+            isTurnSmoothing = shouldInterpolateLive,
             isReplay = input.isReplay,
             timeBase = sampleTime.timeBase
         )
@@ -198,16 +243,18 @@ class TrailProcessor {
         liveStore.clear()
         clearReplayState()
         liveWindSmoother.reset()
+        liveTurnInterpolator.reset()
+        lastLiveTurnSample = null
+        lastLiveBearingEstimateDeg = null
         circlingResolver.reset()
         lastLiveTimeBase = null
-        lastReplayRetentionMode = null
         lastRenderCircling = null
+        lastRenderTurnSmoothing = null
         lastRenderableWind = null
     }
 
     private fun clearReplayState() {
         replayStore.clear()
-        syntheticReplayStore.clear()
         replayInterpolator.reset()
         replayWindSmoother.reset()
     }
@@ -263,8 +310,83 @@ class TrailProcessor {
         return TrailWindSample(vector.speed, directionFrom)
     }
 
-    private fun resolveLiveMinDeltaMillis(isCircling: Boolean): Long =
-        if (isCircling) LIVE_CIRCLING_MIN_DELTA_MS else LIVE_MIN_DELTA_MS
+    private fun resolveLiveMinDeltaMillis(
+        isCircling: Boolean,
+        isTurnSmoothing: Boolean
+    ): Long = if (isCircling || isTurnSmoothing) {
+        LIVE_CIRCLING_MIN_DELTA_MS
+    } else {
+        LIVE_MIN_DELTA_MS
+    }
+
+    private fun shouldInterpolateByTrackTurn(
+        isCircling: Boolean,
+        isTurning: Boolean,
+        currentSample: TrailSample,
+        previousBearingEstimateDeg: Double?
+    ): Boolean {
+        if (isCircling || isTurning) {
+            return true
+        }
+        val previous = lastLiveTurnSample ?: return false
+        val dt = currentSample.timestampMillis - previous.timestampMillis
+        if (dt <= LIVE_TURN_MIN_DETECT_DELTA_MS || dt > LIVE_TURN_MAX_DETECT_DELTA_MS) {
+            return false
+        }
+        val distance = TrailGeo.distanceMeters(
+            previous.latitude,
+            previous.longitude,
+            currentSample.latitude,
+            currentSample.longitude
+        )
+        if (distance < LIVE_TURN_MIN_DISTANCE_M) {
+            return false
+        }
+        val speedMetersPerSecond = distance / (dt / 1000.0)
+        if (speedMetersPerSecond < LIVE_TURN_MIN_SPEED_MS) {
+            return false
+        }
+        val currentBearing = resolveCourseBearingFromSample(
+            from = previous,
+            to = currentSample
+        )
+        val turnDegrees = resolveTrackTurnDegrees(
+            fromTrack = previous.trackDegrees,
+            toTrack = currentSample.trackDegrees,
+            fromBearingEstimate = previousBearingEstimateDeg,
+            toBearing = if (currentBearing.isFinite()) currentBearing else null
+        )
+        return turnDegrees >= LIVE_TURN_ANGLE_DEG
+    }
+
+    private fun resolveTrackTurnDegrees(
+        fromTrack: Double,
+        toTrack: Double,
+        fromBearingEstimate: Double?,
+        toBearing: Double?
+    ): Double {
+        val candidates = ArrayList<Double>(3)
+        if (fromTrack.isFinite() && toTrack.isFinite()) {
+            candidates.add(abs(angularDistanceDeg(fromTrack, toTrack)))
+        }
+        if (fromTrack.isFinite() && toBearing != null) {
+            candidates.add(abs(angularDistanceDeg(fromTrack, toBearing)))
+        }
+        if (fromBearingEstimate != null && toBearing != null) {
+            candidates.add(abs(angularDistanceDeg(fromBearingEstimate, toBearing)))
+        }
+        return candidates.maxOrNull() ?: 0.0
+    }
+
+    private fun resolveCourseBearingFromSample(from: TrailSample?, to: TrailSample): Double {
+        if (from == null) return Double.NaN
+        return TrailGeo.bearingDegrees(
+            from.latitude,
+            from.longitude,
+            to.latitude,
+            to.longitude
+        )
+    }
 
     private fun hasMeaningfulWindChange(
         previous: TrailWindSample?,
@@ -308,13 +430,16 @@ class TrailProcessor {
         private const val LIVE_CIRCLING_MIN_DELTA_MS = 500L
         private const val LIVE_WIND_SMOOTH_MS = 1_000L
         private const val REPLAY_WIND_SMOOTH_MS = 4_000L
-        private const val SYNTHETIC_REPLAY_MAX_SIZE = 8_192
-        private const val SYNTHETIC_REPLAY_NO_THIN_MS = 12 * 60_000L
         private const val LIVE_WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
         private const val REPLAY_WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
         private const val WIND_VALID_MIN_SPEED_MS = FlightMetricsConstants.LIVE_WIND_VALID_MIN_SPEED_MS
         private const val WIND_SPEED_CHANGE_EPS_MS = 0.25
         private const val WIND_DIRECTION_CHANGE_EPS_DEG = 5.0
+        private const val LIVE_TURN_MIN_DETECT_DELTA_MS = 400L
+        private const val LIVE_TURN_MAX_DETECT_DELTA_MS = 4_000L
+        private const val LIVE_TURN_MIN_DISTANCE_M = 1.0
+        private const val LIVE_TURN_MIN_SPEED_MS = 0.2
+        private const val LIVE_TURN_ANGLE_DEG = 2.0
     }
 }
 

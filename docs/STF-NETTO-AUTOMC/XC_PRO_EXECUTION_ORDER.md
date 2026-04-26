@@ -42,7 +42,7 @@ STOP if wind confidence is missing or unused.
 
 Glider profile must provide:
 - active polar reference
-- `IAS_min` and `IAS_max` bounds used by speed-to-fly
+- enough polar points and model speed limits to derive speed-to-fly bounds
 
 
 Required outputs:

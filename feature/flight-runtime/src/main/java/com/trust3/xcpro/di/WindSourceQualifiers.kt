@@ -9,3 +9,35 @@ annotation class LiveSource
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class ReplaySource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class PhoneLiveSensorSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CondorLiveSensorSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class PhoneLiveAirspeedSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CondorLiveAirspeedSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DefaultLiveExternalInstrumentSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CondorLiveExternalInstrumentSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DefaultLiveExternalFlightSettingsSource
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CondorLiveExternalFlightSettingsSource

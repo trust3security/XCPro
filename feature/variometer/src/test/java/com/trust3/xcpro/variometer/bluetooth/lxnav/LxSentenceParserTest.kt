@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav
 
-import com.trust3.xcpro.variometer.bluetooth.NmeaLine
+import com.trust3.xcpro.bluetooth.NmeaLine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,17 +20,24 @@ class LxSentenceParserTest {
             LxSentenceId.LXWP1,
             (parseAccepted("LXWP1,S100,123,1.0,2.0").sentence as LxWp1Sentence).sentenceId
         )
-
-        val lxwp2 = parseOutcome("LXWP2,1,1,1") as LxParseOutcome.KnownUnsupported
-        val lxwp3 = parseOutcome("LXWP3,1") as LxParseOutcome.KnownUnsupported
-        val plxvf = parseOutcome("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3") as LxParseOutcome.KnownUnsupported
-        val plxvs = parseOutcome("PLXVS,23.1,0,12.3") as LxParseOutcome.KnownUnsupported
+        assertEquals(
+            LxSentenceId.PLXVF,
+            (parseAccepted("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3").sentence as PlxVfSentence).sentenceId
+        )
+        assertEquals(
+            LxSentenceId.LXWP2,
+            (parseAccepted("LXWP2,1.5,1.2,10,1,2,3,9").sentence as LxWp2Sentence).sentenceId
+        )
+        assertEquals(
+            LxSentenceId.LXWP3,
+            (parseAccepted("LXWP3,100,1,2,3,4,5,6,7,8,9,10,GLIDER,11").sentence as LxWp3Sentence).sentenceId
+        )
+        assertEquals(
+            LxSentenceId.PLXVS,
+            (parseAccepted("PLXVS,23.1,0,12.3").sentence as PlxVsSentence).sentenceId
+        )
         val unknown = parseOutcome("PTEST,1,2,3") as LxParseOutcome.UnknownSentence
 
-        assertEquals(LxSentenceId.LXWP2, lxwp2.sentenceId)
-        assertEquals(LxSentenceId.LXWP3, lxwp3.sentenceId)
-        assertEquals(LxSentenceId.PLXVF, plxvf.sentenceId)
-        assertEquals(LxSentenceId.PLXVS, plxvs.sentenceId)
         assertEquals(LxSentenceId.UNKNOWN, unknown.sentenceId)
         assertEquals("PTEST", unknown.rawSentenceId)
     }
@@ -109,6 +116,56 @@ class LxSentenceParserTest {
     }
 
     @Test
+    fun valid_plxvf_parse_reads_supported_fields_only() {
+        val outcome = parser.parse(line(withChecksum("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3")))
+        val sentence = (outcome as LxParseOutcome.Accepted).sentence as PlxVfSentence
+
+        assertEquals(-0.25, sentence.provisionalVarioMps ?: Double.NaN, 0.0)
+        assertEquals(90.2, sentence.indicatedAirspeedKph ?: Double.NaN, 0.0)
+        assertEquals(244.3, sentence.pressureAltitudeM ?: Double.NaN, 0.0)
+        assertEquals(ChecksumStatus.VALID, sentence.checksumStatus)
+    }
+
+    @Test
+    fun valid_lxwp2_parse_reads_live_overrides_and_config_fields() {
+        val outcome = parser.parse(line(withChecksum("LXWP2,1.5,1.20,12,0.123,0.456,0.789,7")))
+        val sentence = (outcome as LxParseOutcome.Accepted).sentence as LxWp2Sentence
+
+        assertEquals(1.5, sentence.macCreadyMps ?: Double.NaN, 0.0)
+        assertEquals(1.20, sentence.ballastOverloadFactor ?: Double.NaN, 0.0)
+        assertEquals(12, sentence.bugsPercent)
+        assertEquals(0.123, sentence.polarA ?: Double.NaN, 0.0)
+        assertEquals(0.456, sentence.polarB ?: Double.NaN, 0.0)
+        assertEquals(0.789, sentence.polarC ?: Double.NaN, 0.0)
+        assertEquals(7, sentence.audioVolume)
+    }
+
+    @Test
+    fun valid_lxwp3_parse_reads_qnh_and_status_fields() {
+        val outcome = parser.parse(
+            line(withChecksum("LXWP3,100,1,2,3,4,5,6,7,8,9,10,TEST GLIDER,-60"))
+        )
+        val sentence = (outcome as LxParseOutcome.Accepted).sentence as LxWp3Sentence
+
+        assertEquals(100.0, sentence.altitudeOffsetFeet ?: Double.NaN, 0.0)
+        assertTrue((sentence.qnhHpa ?: Double.NaN) > 1013.25)
+        assertEquals(1.0, sentence.scMode ?: Double.NaN, 0.0)
+        assertEquals(10.0, sentence.smartDiff ?: Double.NaN, 0.0)
+        assertEquals("TEST GLIDER", sentence.gliderName)
+        assertEquals(-60, sentence.timeOffsetMinutes)
+    }
+
+    @Test
+    fun valid_plxvs_parse_reads_environment_fields() {
+        val outcome = parser.parse(line(withChecksum("PLXVS,23.1,1,12.3")))
+        val sentence = (outcome as LxParseOutcome.Accepted).sentence as PlxVsSentence
+
+        assertEquals(23.1, sentence.outsideAirTemperatureC ?: Double.NaN, 0.0)
+        assertEquals(1, sentence.mode)
+        assertEquals(12.3, sentence.voltageV ?: Double.NaN, 0.0)
+    }
+
+    @Test
     fun malformed_non_blank_numeric_field_rejects_whole_lxwp0() {
         val outcome = parser.parse(line("\$LXWP0,Y,not-a-number,654.1,1.12"))
 
@@ -124,16 +181,18 @@ class LxSentenceParserTest {
     }
 
     @Test
-    fun known_unsupported_sentences_are_classified_and_ignored_safely() {
-        val outcome = parser.parse(line(withChecksum("PLXVF,,1.00,0.87,-0.12,-0.25,90.2,244.3")))
-
+    fun malformed_numeric_fields_reject_supported_lxwp2_lxwp3_and_plxvs_sentences() {
         assertEquals(
-            LxParseOutcome.KnownUnsupported(
-                sentenceId = LxSentenceId.PLXVF,
-                receivedMonoMs = TEST_RECEIVED_MONO_MS,
-                checksumStatus = ChecksumStatus.VALID
-            ),
-            outcome
+            LxRejectedReason.MALFORMED_FIELDS,
+            (parser.parse(line("\$LXWP2,1.5,not-a-number")) as LxParseOutcome.Rejected).reason
+        )
+        assertEquals(
+            LxRejectedReason.MALFORMED_FIELDS,
+            (parser.parse(line("\$LXWP3,100,1,2,3,4,5,6,7,8,9,10,GLIDER,bad")) as LxParseOutcome.Rejected).reason
+        )
+        assertEquals(
+            LxRejectedReason.MALFORMED_FIELDS,
+            (parser.parse(line("\$PLXVS,23.1,bad,12.3")) as LxParseOutcome.Rejected).reason
         )
     }
 
@@ -189,3 +248,4 @@ class LxSentenceParserTest {
         private const val TEST_RECEIVED_MONO_MS = 1_234L
     }
 }
+

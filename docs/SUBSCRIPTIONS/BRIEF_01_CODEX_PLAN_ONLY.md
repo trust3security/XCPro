@@ -80,16 +80,18 @@ LOCKED CAPABILITY DECISIONS:
   - ADS-B
   - RainViewer
   - WeGlide
-  - SkySight basic/free surfaces
+  - SkySight free/public overlays only
 - Soaring:
   - Add / create / edit Task
   - OGN
   - SkySight credential entry / account linking
-  - SkySight premium surfaces only when a linked paid SkySight account is validated
+  - SkySight premium/full features only when a linked paid SkySight account is validated
 - XC:
   - IGC replay
   - LiveFollow view / watch
   - premium exports / advanced sharing
+  - PureTrack Traffic API fetch when XCPro app-key/config and PureTrack Pro user access are valid
+  - PureTrack Insert API live point publishing when PureTrack Insert API configuration is valid
 - Pro:
   - LiveFollow broadcast / share
   - Scia
@@ -98,6 +100,7 @@ LOCKED CAPABILITY DECISIONS:
 - If Hotspots is ultimately SkySight-backed, require both:
   - plan >= PRO
   - linked paid SkySight account
+- Free and Basic must not expose SkySight credential entry / account linking.
 
 NON-NEGOTIABLES:
 - Preserve MVVM + UDF + SSOT

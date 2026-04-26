@@ -8,6 +8,7 @@ import com.trust3.xcpro.livefollow.data.session.LiveFollowSessionSnapshot
 import com.trust3.xcpro.livefollow.data.session.LiveFollowSessionVisibility
 import com.trust3.xcpro.livefollow.liveFollowTransportLabel
 import com.trust3.xcpro.livefollow.model.LiveOwnshipSnapshot
+import com.trust3.xcpro.livefollow.state.LiveFollowReplayBlockReason
 import com.trust3.xcpro.livefollow.toDisplayLabel
 
 enum class LiveFollowPilotShareIndicatorState {
@@ -144,7 +145,7 @@ private fun pilotStatusMessage(
     actionState.commandMessage?.let { message -> return message }
     session.lastError?.let { error -> return error }
     if (!session.sideEffectsAllowed) {
-        return "LiveFollow sharing is blocked during replay."
+        return blockedStatusMessage(session.replayBlockReason)
     }
     if (!session.transportAvailability.isAvailable) {
         return session.transportAvailability.message
@@ -168,6 +169,19 @@ private fun pilotStatusMessage(
         }
 
         else -> "Ready to share when live data is available."
+    }
+}
+
+private fun blockedStatusMessage(
+    reason: LiveFollowReplayBlockReason
+): String {
+    return when (reason) {
+        LiveFollowReplayBlockReason.NONE ->
+            "LiveFollow sharing is currently blocked."
+        LiveFollowReplayBlockReason.REPLAY_MODE ->
+            "LiveFollow sharing is blocked during replay."
+        LiveFollowReplayBlockReason.SIMULATOR_SOURCE ->
+            "LiveFollow sharing is blocked while a simulator source is active."
     }
 }
 

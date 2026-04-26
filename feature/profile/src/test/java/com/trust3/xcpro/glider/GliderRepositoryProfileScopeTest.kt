@@ -28,10 +28,10 @@ class GliderRepositoryProfileScopeTest {
 
     @Test
     fun profileSwitch_keepsIndependentGliderConfigs() {
-        val repository = GliderRepository(appContext)
+        val repository = repository()
 
         repository.setActiveProfileId("default-profile")
-        repository.selectModelById("js1c-18")
+        repository.selectModelById("js1-18")
         repository.updateConfig { it.copy(waterBallastKg = 12.0) }
 
         repository.setActiveProfileId("pilot-b")
@@ -40,7 +40,7 @@ class GliderRepositoryProfileScopeTest {
         repository.updateConfig { it.copy(waterBallastKg = 3.0) }
 
         repository.setActiveProfileId("default-profile")
-        assertEquals("js1c-18", repository.selectedModel.value?.id)
+        assertEquals("js1-18", repository.selectedModel.value?.id)
         assertEquals(12.0, repository.config.value.waterBallastKg, 0.0)
 
         repository.setActiveProfileId("pilot-b")
@@ -56,9 +56,9 @@ class GliderRepositoryProfileScopeTest {
             .putString("glider_config_json", "{\"waterBallastKg\":8.0}")
             .commit()
 
-        val repository = GliderRepository(appContext)
+        val repository = repository()
 
-        assertEquals("js1c-18", repository.selectedModel.value?.id)
+        assertEquals("js1-18", repository.selectedModel.value?.id)
         assertEquals(8.0, repository.config.value.waterBallastKg, 0.0)
 
         repository.setActiveProfileId("pilot-b")
@@ -69,4 +69,7 @@ class GliderRepositoryProfileScopeTest {
     private companion object {
         const val PREFS_NAME = "glider_prefs"
     }
+
+    private fun repository(): GliderRepository =
+        GliderRepository(appContext, PolarCatalogAssetDataSource(appContext))
 }

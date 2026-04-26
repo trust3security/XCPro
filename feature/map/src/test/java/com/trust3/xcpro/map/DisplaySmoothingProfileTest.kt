@@ -12,6 +12,7 @@ class DisplaySmoothingProfileTest {
         assertEquals(DisplayPoseSmoothingConfig.DEFAULT_HEADING_SMOOTH_MS, config.headingSmoothMs, 1e-6)
         assertEquals(DisplayPoseSmoothingConfig.DEFAULT_DEAD_RECKON_LIMIT_MS, config.deadReckonLimitMs)
         assertEquals(DisplayPoseSmoothingConfig.DEFAULT_STALE_FIX_TIMEOUT_MS, config.staleFixTimeoutMs)
+        assertEquals(null, config.frameActiveWindowMs)
     }
 
     @Test
@@ -24,9 +25,21 @@ class DisplaySmoothingProfileTest {
         assertEquals(250L, responsive.deadReckonLimitMs)
 
         assertEquals(DisplayPoseSmoothingConfig.DEFAULT_STALE_FIX_TIMEOUT_MS, responsive.staleFixTimeoutMs)
+        assertEquals(null, responsive.frameActiveWindowMs)
 
         assertEquals(true, responsive.posSmoothMs < smooth.posSmoothMs)
         assertEquals(true, responsive.headingSmoothMs < smooth.headingSmoothMs)
         assertEquals(true, responsive.deadReckonLimitMs < smooth.deadReckonLimitMs)
+    }
+
+    @Test
+    fun cadenceBridgeProfileExtendsLiveFrameWindow() {
+        val config = DisplaySmoothingProfile.CADENCE_BRIDGE.config
+
+        assertEquals(260.0, config.posSmoothMs, 1e-6)
+        assertEquals(220.0, config.headingSmoothMs, 1e-6)
+        assertEquals(1_200L, config.deadReckonLimitMs)
+        assertEquals(DisplayPoseSmoothingConfig.DEFAULT_STALE_FIX_TIMEOUT_MS, config.staleFixTimeoutMs)
+        assertEquals(1_300L, config.frameActiveWindowMs)
     }
 }

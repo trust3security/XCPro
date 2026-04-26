@@ -41,7 +41,7 @@ class IgcReplayLevoNettoValidationTest {
         }
 
         val helpers = mock<FlightCalculationHelpers>()
-        whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any())).thenReturn(
+        whenever(helpers.calculateNetto(any(), anyOrNull(), any(), any(), any())).thenReturn(
             FlightCalculationHelpers.NettoComputation(0.0, true)
         )
         whenever(helpers.calculateTotalEnergy(any(), any(), any(), any())).thenAnswer { invocation ->
@@ -137,7 +137,7 @@ class IgcReplayLevoNettoValidationTest {
     }
 
     companion object {
-        private const val REPLAY_RESOURCE = "replay/vario-demo-0-10-0-120s.igc"
+        private const val REPLAY_RESOURCE = "replay/levo-netto-validation-0-10-0-120s.igc"
         private const val MAX_ABS_LEVO_MS = 3.0
     }
 }

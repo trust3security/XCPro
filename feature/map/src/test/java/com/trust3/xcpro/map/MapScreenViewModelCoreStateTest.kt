@@ -176,7 +176,7 @@ class MapScreenViewModelCoreStateTest : MapScreenViewModelTestBase() {
         Mockito.verifyNoMoreInteractions(sensorFusionRepository)
         assertEquals(
             FlightModeSelection.CRUISE,
-            viewModel.runtimeDependencies.flightDataManager.effectiveFlightModeSelection
+            viewModel.runtimeInputs.flightDataManager.effectiveFlightModeSelection
         )
     }
 

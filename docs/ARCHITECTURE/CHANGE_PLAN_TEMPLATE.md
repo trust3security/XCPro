@@ -29,6 +29,43 @@ Read first:
 - User-visible impact:
 - Rule class touched: Invariant | Default | Guideline
 
+## 1A) Confirmed Boundaries / Verified Facts (Mandatory)
+
+List verified repo/system facts that shape the plan.
+
+Rules:
+
+- If a fact can be checked in repo docs, code, configs, tests, or local system
+  state, verify it first.
+- Do not create or rely on assumptions. If something is not verified or
+  explicitly decided, list it in unresolved decisions instead.
+- Cite the source of truth when the owner or boundary is non-obvious.
+
+| Fact | Source of Truth | Why It Matters |
+|---|---|---|
+| | | |
+
+## 1B) Explicit Decisions / Defaults Chosen (Mandatory)
+
+List only decisions/defaults backed by the user, repo docs, code contracts, or
+verified local evidence. Do not invent defaults.
+
+If there are none, write `None`.
+
+| Decision / Default | Source of Decision | Impact If Wrong | Follow-up / Owner |
+|---|---|---|---|
+| | | | |
+
+## 1C) Unresolved Decisions / Questions (Mandatory)
+
+List decisions that still need an answer before or during implementation.
+
+If there are none, write `None`.
+
+| Decision / Question | Why It Matters | Owner / Decision Maker | Blocking? | Resolution Plan |
+|---|---|---|---|---|
+| | | | | |
+
 ## 2) Architecture Contract
 
 ### 2.1 SSOT Ownership
@@ -262,6 +299,7 @@ Optional when relevant:
 ## 7) Acceptance Gates
 
 - No rule violations from `ARCHITECTURE.md` and `CODING_RULES.md`
+- No implementation path depends on an unverified fact or undecided product choice
 - No duplicate SSOT ownership introduced
 - Time base handling is explicit in code and tests
 - Replay behavior remains deterministic

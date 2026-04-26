@@ -270,7 +270,7 @@ Gate:
 
 ## Phase 3 — ViewModel and UI Wiring
 Goals:
-- ViewModels consume use-cases only (no direct managers).
+- ViewModels consume stable domain-facing seams only (no direct managers or low-level infra/data types).
 - UI only renders state and emits intents.
 - MapLibre objects live only in UI/runtime controllers.
 

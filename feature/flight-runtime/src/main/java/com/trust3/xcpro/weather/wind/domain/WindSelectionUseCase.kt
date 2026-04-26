@@ -21,8 +21,8 @@ class WindSelectionUseCase {
         val autoNewerThanManual = auto != null && auto.timestampMillis > manualTimestamp
 
         return when {
-            autoNewerThanManual -> auto
             external != null -> external
+            autoNewerThanManual -> auto
             manual != null -> manual
             else -> auto
         }

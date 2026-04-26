@@ -124,8 +124,8 @@ internal fun BallastWidgetContent(
                     Modifier
                 }
             )
-            .pointerInput(isEditMode) {
-                if (!isEditMode) {
+            .pointerInput(isEditMode, ballastState.isReadOnlyExternal) {
+                if (!isEditMode && !latestBallastState.isReadOnlyExternal) {
                     detectTapGestures(onTap = {
                         if (latestBallastState.isAnimating) {
                             onCommand(BallastCommand.Cancel)
@@ -135,8 +135,8 @@ internal fun BallastWidgetContent(
                     })
                 }
             }
-            .pointerInput(isEditMode) {
-                if (!isEditMode) {
+            .pointerInput(isEditMode, ballastState.isReadOnlyExternal) {
+                if (!isEditMode && !latestBallastState.isReadOnlyExternal) {
                     detectVerticalDragGestures(
                         onDragStart = {
                             dragAccumulation = 0f
@@ -174,7 +174,7 @@ internal fun BallastWidgetContent(
             )
 
             AnimatedVisibility(
-                visible = showSwipeHint && !isEditMode,
+                visible = showSwipeHint && !isEditMode && !ballastState.isReadOnlyExternal,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {

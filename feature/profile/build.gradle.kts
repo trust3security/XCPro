@@ -38,7 +38,9 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":dfcards-library"))
     implementation(project(":feature:flight-runtime"))
+    implementation(project(":feature:simulator"))
     implementation(project(":feature:variometer"))
+    implementation(project(":feature:bluetooth-devices"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

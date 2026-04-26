@@ -1,4 +1,6 @@
 param(
+    [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
+    [string[]]$GradleArgs,
     [switch]$NoDaemon,
     [switch]$NoConfigurationCache,
     [switch]$DryRun,
@@ -12,15 +14,41 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath "..") -ChildPath "..")
 Set-Location $repoRoot
 
+function Test-HasConsoleArg {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$CandidateArgs
+    )
+
+    foreach ($arg in $CandidateArgs) {
+        if ($arg -eq "--console" -or $arg.StartsWith("--console=")) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function New-GradleArgs {
-    $args = @("testDebugUnitTest", "--console=plain")
+    $passthroughArgs = @()
+    if ($null -ne $GradleArgs) {
+        $passthroughArgs = @($GradleArgs)
+    }
+
+    [string[]]$gradleArgsList = if ($passthroughArgs.Count -gt 0) {
+        @($passthroughArgs)
+    } else {
+        @("testDebugUnitTest")
+    }
+    if (-not (Test-HasConsoleArg -CandidateArgs $gradleArgsList)) {
+        $gradleArgsList += "--console=plain"
+    }
     if ($NoDaemon) {
-        $args += "--no-daemon"
+        $gradleArgsList += "--no-daemon"
     }
     if ($NoConfigurationCache) {
-        $args += "--no-configuration-cache"
+        $gradleArgsList += "--no-configuration-cache"
     }
-    return ,$args
+    return ,$gradleArgsList
 }
 
 function Invoke-Gradle {

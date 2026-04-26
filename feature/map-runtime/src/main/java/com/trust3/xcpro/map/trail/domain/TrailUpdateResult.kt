@@ -17,5 +17,6 @@ enum class TrailRenderInvalidationReason {
     STORE_RESET,
     MODE_CHANGED,
     CIRCLING_CHANGED,
+    TURN_SMOOTHING_CHANGED,
     WIND_CHANGED
 }

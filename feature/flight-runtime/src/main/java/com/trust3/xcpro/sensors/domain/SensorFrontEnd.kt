@@ -27,6 +27,7 @@ internal class SensorFrontEnd(
         val trueAirspeedMs: Double,
         val airspeedSource: AirspeedSource,
         val tasValid: Boolean,
+        val externalVario: Double,
         val pressureAltitudeVario: Double,
         val pressureVario: Double,
         val baroVario: Double,
@@ -46,6 +47,7 @@ internal class SensorFrontEnd(
         baroResult: BarometricAltitudeData?,
         isQnhCalibrated: Boolean,
         teVario: Double?,
+        externalVarioSample: TimedExternalValue<Double>? = null,
         airspeedEstimate: AirspeedEstimate?,
         currentTime: Long,
         externalPressureAltitudeSample: TimedExternalValue<Double>? = null,
@@ -73,13 +75,17 @@ internal class SensorFrontEnd(
         } else 0.0
         val teAltitude = navAltitude + energyHeight
 
-        val pressureAltitudeVario = when {
+        val externalPressureVario = when {
             externalPressureAltitudeSample?.value?.isFinite() == true -> deriveVario(
                 pressureAltitude = externalPressureAltitudeSample.value,
                 currentTime = externalPressureAltitudeSample.receivedMonoMs,
                 altitudeType = AltitudeType.EXTERNAL_PRESSURE
             )
 
+            else -> Double.NaN
+        }
+
+        val pressureAltitudeVario = when {
             baroResult?.pressureAltitudeMeters?.isFinite() == true -> deriveVario(
                 pressureAltitude = baroResult.pressureAltitudeMeters,
                 currentTime = currentTime,
@@ -92,6 +98,10 @@ internal class SensorFrontEnd(
         val pressureVario = pressureVarioOverride
             ?.takeIf { it.isFinite() }
             ?: pressureAltitudeVario
+        val externalVario = externalVarioSample
+            ?.value
+            ?.takeIf { it.isFinite() }
+            ?: externalPressureVario
 
         val baroVario = baroResult
             ?.let { deriveVario(pressureAltitude = baroAltitude, currentTime = currentTime, altitudeType = AltitudeType.BARO) }
@@ -101,6 +111,7 @@ internal class SensorFrontEnd(
 
         val (bruttoVario, varioSource) = when {
             teVario != null && teVario.isFinite() -> teVario to "TE"
+            externalVario.isFinite() -> externalVario to "EXTERNAL"
             pressureVario.isFinite() -> pressureVario to "PRESSURE"
             baroVario.isFinite() -> baroVario to "BARO"
             gpsVario.isFinite() -> gpsVario to "GPS"
@@ -109,6 +120,7 @@ internal class SensorFrontEnd(
         val varioValid = bruttoVario.isFinite()
 
         val baselineVario = when {
+            externalVario.isFinite() -> externalVario
             pressureVario.isFinite() -> pressureVario
             baroVario.isFinite() -> baroVario
             gpsVario.isFinite() -> gpsVario
@@ -123,6 +135,7 @@ internal class SensorFrontEnd(
             trueAirspeedMs = trueAirspeedMs,
             airspeedSource = airspeedSource,
             tasValid = tasValid,
+            externalVario = externalVario,
             pressureAltitudeVario = pressureAltitudeVario,
             pressureVario = pressureVario,
             baroVario = baroVario,

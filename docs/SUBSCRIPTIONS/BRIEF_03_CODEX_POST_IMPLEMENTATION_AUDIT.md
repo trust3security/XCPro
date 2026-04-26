@@ -38,7 +38,7 @@ MANDATORY CHECKS:
 8. Product IDs and base plan IDs remain stable and centralized
 9. Feature access is capability-based, not scattered tier-name branching
 10. Third-party provider state is not collapsed into `PlanTier`
-11. SkySight premium features require both the allowed XCPro tier and linked paid SkySight state
+11. SkySight credential entry is unavailable to Free/Basic, and premium SkySight features require both the allowed XCPro tier and linked paid SkySight state
 12. No TODOs, temporary shims, or silent fallbacks remain in production paths
 13. No unrelated files were changed without reason
 14. Tests and verification evidence match the claimed behavior

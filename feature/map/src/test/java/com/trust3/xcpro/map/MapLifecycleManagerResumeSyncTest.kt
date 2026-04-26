@@ -7,6 +7,7 @@ import com.trust3.xcpro.replay.SessionState
 import com.trust3.xcpro.replay.SessionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -107,12 +108,39 @@ class MapLifecycleManagerResumeSyncTest {
         verify(locationManager, times(1)).onDisplayFrame()
     }
 
+    @Test
+    fun onStop_emitsDiagnosticsStatusToSink() {
+        val locationManager: MapLocationRuntimePort = mock()
+        val diagnostics = MapRenderSurfaceDiagnostics(nowMonoMs = { 123L })
+        diagnostics.recordDisplayPoseRenderApplied()
+        val emittedStatuses = mutableListOf<String>()
+        val manager = createLifecycleManager(
+            locationManager = locationManager,
+            replayState = SessionState(),
+            renderSurfaceDiagnostics = diagnostics,
+            diagnosticsStatusSink = MapDiagnosticsStatusSink { status ->
+                emittedStatuses += status
+            }
+        )
+
+        manager.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+
+        assertEquals(1, emittedStatuses.size)
+        assertTrue(
+            emittedStatuses.single().startsWith(
+                "${MapRenderSurfaceDiagnostics.LOG_TOKEN} reason=on_stop"
+            )
+        )
+        assertEquals(0L, diagnostics.snapshot().displayPoseRenderAppliedCount)
+    }
+
     private fun createLifecycleManager(
         locationManager: MapLocationRuntimePort,
         replayState: SessionState,
         lifecycleSurface: MapLifecycleSurfacePort = mock<MapLifecycleSurfacePort>(),
         renderSurfaceDiagnostics: MapRenderSurfaceDiagnostics =
-            MapRenderSurfaceDiagnostics(nowMonoMs = { 123L })
+            MapRenderSurfaceDiagnostics(nowMonoMs = { 123L }),
+        diagnosticsStatusSink: MapDiagnosticsStatusSink = MapDiagnosticsStatusSink { }
     ): MapLifecycleManager {
         return MapLifecycleManager(
             lifecycleSurface = lifecycleSurface,
@@ -120,6 +148,7 @@ class MapLifecycleManagerResumeSyncTest {
             locationManager = locationManager,
             locationRenderFrameCleanup = mock<MapRenderFrameCleanupPort>(),
             renderSurfaceDiagnostics = renderSurfaceDiagnostics,
+            diagnosticsStatusSink = diagnosticsStatusSink,
             replaySessionState = MutableStateFlow(replayState)
         )
     }

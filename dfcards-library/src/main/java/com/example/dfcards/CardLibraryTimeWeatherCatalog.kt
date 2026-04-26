@@ -2,12 +2,23 @@ package com.example.dfcards
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Timer
 
 internal val timeWeatherCards = listOf(
+    CardDefinition(
+        id = "oat",
+        title = "OAT",
+        description = "Outside air temperature",
+        category = CardCategory.TIME_WEATHER,
+        icon = Icons.Filled.Air,
+        unit = "C",
+        primaryFontSize = 14,
+        unitFontSize = 9
+    ),
     CardDefinition(
         id = "wind_spd",
         title = "WIND SPD",

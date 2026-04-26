@@ -7,6 +7,7 @@ import com.example.ui1.screens.AdsbSettingsSubSheet
 import com.example.ui1.screens.HotspotsSettingsSubSheet
 import com.example.ui1.screens.OgnSettingsSubSheet
 import com.example.ui1.screens.OrientationSettingsSubSheet
+import com.example.ui1.screens.PureTrackSettingsSubSheet
 import com.example.ui1.screens.ThermallingSettingsSubSheet
 import com.example.ui1.screens.WeatherSettingsSubSheet
 import com.example.ui1.screens.WeGlideSettingsSubSheet
@@ -82,6 +83,13 @@ internal fun GeneralSettingsSubSheetContent(
             onNavigateToDrawer = onNavigateToDrawer,
             onNavigateToMap = onNavigateToMap
         )
+        GeneralSubSheet.CONDOR_BRIDGE -> CondorBridgeSettingsSubSheet(
+            navController = navController,
+            drawerState = drawerState,
+            onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
+            onNavigateToDrawer = onNavigateToDrawer,
+            onNavigateToMap = onNavigateToMap
+        )
         GeneralSubSheet.LAYOUTS -> LayoutSettingsSubSheet(
             navController = navController,
             drawerState = drawerState,
@@ -107,6 +115,11 @@ internal fun GeneralSettingsSubSheetContent(
             onNavigateToMap = onNavigateToMap
         )
         GeneralSubSheet.ADSB -> AdsbSettingsSubSheet(
+            onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
+            onNavigateToDrawer = onNavigateToDrawer,
+            onNavigateToMap = onNavigateToMap
+        )
+        GeneralSubSheet.PURETRACK -> PureTrackSettingsSubSheet(
             onDismiss = { onSubSheetChange(GeneralSubSheet.NONE) },
             onNavigateToDrawer = onNavigateToDrawer,
             onNavigateToMap = onNavigateToMap

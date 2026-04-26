@@ -97,6 +97,61 @@ class ThermallingModeRuntimeWiringTest {
     }
 
     @Test
+    fun turningWithoutConfirmedCircling_entersThermalling() = runTest {
+        val controller = TestRuntimeController()
+        val settings = MutableStateFlow(
+            ThermallingModeSettings(
+                enabled = true,
+                enterDelaySeconds = 0,
+                exitDelaySeconds = 0,
+                thermalZoomLevel = 13.0f
+            )
+        )
+        val flightData = MutableStateFlow<CompleteFlightData?>(flightSample(isCircling = false))
+        val thermalModeVisible = MutableStateFlow(true)
+        val replayActive = MutableStateFlow(false)
+        val currentMode = MutableStateFlow(FlightMode.CRUISE)
+        val currentZoom = MutableStateFlow(10f)
+        val currentBaseStyle = MutableStateFlow(MapStyleCatalog.TOPO)
+        val runtimeOverrideActions = mutableListOf<FlightMode>()
+        val zoomActions = mutableListOf<Float>()
+
+        val wiring = ThermallingModeRuntimeWiring(
+            scope = this,
+            controller = controller,
+            settings = settings,
+            flightData = flightData,
+            thermalModeVisible = thermalModeVisible,
+            replayActive = replayActive,
+            currentMode = currentMode,
+            currentZoom = currentZoom,
+            currentBaseStyle = currentBaseStyle,
+            applyRuntimeFlightMode = { mode ->
+                runtimeOverrideActions += mode
+                currentMode.value = mode
+            },
+            clearRuntimeFlightModeOverride = { currentMode.value = FlightMode.CRUISE },
+            applyZoom = { zoom ->
+                zoomActions += zoom
+                currentZoom.value = zoom
+            },
+            applyContrastMap = {}
+        )
+        try {
+            wiring.bind()
+            advanceUntilIdle()
+
+            flightData.value = flightSample(isCircling = false, isTurning = true)
+            advanceUntilIdle()
+
+            assertEquals(listOf(FlightMode.THERMAL), runtimeOverrideActions)
+            assertEquals(listOf(13.0f), zoomActions)
+        } finally {
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
     fun manualZoom_isForwardedOnlyWhenSessionActive() = runTest {
         val controller = TestRuntimeController()
         val settings = MutableStateFlow(
@@ -385,7 +440,10 @@ class ThermallingModeRuntimeWiringTest {
         }
     }
 
-    private fun flightSample(isCircling: Boolean): CompleteFlightData =
+    private fun flightSample(
+        isCircling: Boolean,
+        isTurning: Boolean = isCircling
+    ): CompleteFlightData =
         CompleteFlightData(
             gps = GPSData(
                 position = GeoPoint(46.0, 7.0),
@@ -411,6 +469,7 @@ class ThermallingModeRuntimeWiringTest {
             currentLD = 0f,
             netto = VerticalSpeedMs(0.0),
             isCircling = isCircling,
+            isTurning = isTurning,
             timestamp = 1_000L,
             dataQuality = "TEST"
         )

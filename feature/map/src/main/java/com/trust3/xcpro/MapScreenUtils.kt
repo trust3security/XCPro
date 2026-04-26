@@ -11,6 +11,7 @@ import com.trust3.xcpro.common.units.UnitsFormatter
 import com.trust3.xcpro.common.units.UnitsPreferences
 import com.trust3.xcpro.glide.GlideSolution
 import com.trust3.xcpro.hawk.HawkVarioUiState
+import com.trust3.xcpro.map.ExternalFlightSettingsCardProjection
 import com.trust3.xcpro.navigation.WaypointNavigationSnapshot
 import com.trust3.xcpro.orientation.HeadingResolver
 import com.trust3.xcpro.orientation.HeadingResolverInput
@@ -67,6 +68,7 @@ internal fun convertToRealTimeFlightData(
     pilotCurrentLd: PilotCurrentLdSnapshot? = null,
     taskPerformance: TaskPerformanceSnapshot? = null,
     hawkVarioUiState: HawkVarioUiState = HawkVarioUiState(),
+    externalFlightSettingsCardProjection: ExternalFlightSettingsCardProjection = ExternalFlightSettingsCardProjection(),
     flightTime: String = "00:00",
     lastUpdateTimeMillis: Long = completeData.timestamp
 ): RealTimeFlightData {
@@ -196,6 +198,14 @@ internal fun convertToRealTimeFlightData(
         teVario = completeData.teVario?.value,
         macCready = completeData.macCready,
         macCreadyRisk = completeData.macCreadyRisk,
+        externalMacCreadyActive = externalFlightSettingsCardProjection.externalMacCreadyActive,
+        externalQnhActive = externalFlightSettingsCardProjection.externalQnhActive,
+        bugsPercent = externalFlightSettingsCardProjection.bugsPercent,
+        bugsValid = externalFlightSettingsCardProjection.bugsValid,
+        ballastOverloadFactor = externalFlightSettingsCardProjection.ballastOverloadFactor,
+        ballastFactorValid = externalFlightSettingsCardProjection.ballastFactorValid,
+        outsideAirTemperatureC = externalFlightSettingsCardProjection.outsideAirTemperatureC,
+        outsideAirTemperatureValid = externalFlightSettingsCardProjection.outsideAirTemperatureValid,
         headingDeg = headingSolution.bearingDeg,
         headingValid = headingSolution.isValid,
         headingSource = headingSolution.source.name,

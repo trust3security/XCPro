@@ -12,14 +12,24 @@ class WindSelectionUseCaseTest {
     private val useCase = WindSelectionUseCase()
 
     @Test
-    fun `auto newer than manual wins over external`() {
+    fun `external wins even when auto is newer than manual`() {
         val auto = candidate(WindSource.EKF, timestamp = 200)
         val manual = candidate(WindSource.MANUAL, timestamp = 100)
         val external = candidate(WindSource.EXTERNAL, timestamp = 150)
 
         val selected = useCase.select(auto = auto, manual = manual, external = external)
 
-        assertEquals(WindSource.EKF, selected?.source)
+        assertEquals(WindSource.EXTERNAL, selected?.source)
+    }
+
+    @Test
+    fun `auto wins when no external and it is newer than manual`() {
+        val auto = candidate(WindSource.CIRCLING, timestamp = 110)
+        val manual = candidate(WindSource.MANUAL, timestamp = 100)
+
+        val selected = useCase.select(auto = auto, manual = manual, external = null)
+
+        assertEquals(WindSource.CIRCLING, selected?.source)
     }
 
     @Test

@@ -13,6 +13,7 @@ data class TrailRenderState(
     val windSpeedMs: Double,
     val windDirectionFromDeg: Double,
     val isCircling: Boolean,
+    val isTurnSmoothing: Boolean,
     val isReplay: Boolean,
     val timeBase: TrailTimeBase
 )

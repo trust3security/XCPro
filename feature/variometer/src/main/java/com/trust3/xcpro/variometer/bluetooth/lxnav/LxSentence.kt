@@ -61,6 +61,61 @@ data class LxWp1Sentence(
     override val sentenceId: LxSentenceId = LxSentenceId.LXWP1
 }
 
+data class PlxVfSentence(
+    val provisionalVarioMps: Double?,
+    val indicatedAirspeedKph: Double?,
+    val pressureAltitudeM: Double?,
+    override val checksumStatus: ChecksumStatus,
+    override val receivedMonoMs: Long
+) : ParsedLxSentence {
+    override val sentenceId: LxSentenceId = LxSentenceId.PLXVF
+}
+
+data class LxWp2Sentence(
+    val macCreadyMps: Double?,
+    val ballastOverloadFactor: Double?,
+    val bugsPercent: Int?,
+    val polarA: Double?,
+    val polarB: Double?,
+    val polarC: Double?,
+    val audioVolume: Int?,
+    override val checksumStatus: ChecksumStatus,
+    override val receivedMonoMs: Long
+) : ParsedLxSentence {
+    override val sentenceId: LxSentenceId = LxSentenceId.LXWP2
+}
+
+data class LxWp3Sentence(
+    val altitudeOffsetFeet: Double?,
+    val qnhHpa: Double?,
+    val scMode: Double?,
+    val varioFilter: Double?,
+    val teFilter: Double?,
+    val teLevel: Double?,
+    val varioAverage: Double?,
+    val varioRange: Double?,
+    val scTab: Double?,
+    val scLow: Double?,
+    val scSpeed: Double?,
+    val smartDiff: Double?,
+    val gliderName: String?,
+    val timeOffsetMinutes: Int?,
+    override val checksumStatus: ChecksumStatus,
+    override val receivedMonoMs: Long
+) : ParsedLxSentence {
+    override val sentenceId: LxSentenceId = LxSentenceId.LXWP3
+}
+
+data class PlxVsSentence(
+    val outsideAirTemperatureC: Double?,
+    val mode: Int?,
+    val voltageV: Double?,
+    override val checksumStatus: ChecksumStatus,
+    override val receivedMonoMs: Long
+) : ParsedLxSentence {
+    override val sentenceId: LxSentenceId = LxSentenceId.PLXVS
+}
+
 sealed interface LxParseOutcome {
     val sentenceId: LxSentenceId
     val receivedMonoMs: Long

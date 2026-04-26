@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.control
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
 
 enum class LxBluetoothReconnectBlockReason {
     PERMISSION_REQUIRED,
@@ -51,3 +51,4 @@ internal fun BluetoothConnectionError.toDisconnectReasonOrNull(): LxBluetoothDis
         BluetoothConnectionError.ALREADY_OPEN,
         BluetoothConnectionError.CANCELLED -> null
     }
+

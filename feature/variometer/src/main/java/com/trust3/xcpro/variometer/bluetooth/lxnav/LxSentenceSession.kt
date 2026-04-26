@@ -1,7 +1,7 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk
-import com.trust3.xcpro.variometer.bluetooth.NmeaLineFramer
+import com.trust3.xcpro.bluetooth.BluetoothReadChunk
+import com.trust3.xcpro.bluetooth.NmeaLineFramer
 
 class LxSentenceSession(
     private val parser: LxSentenceParser = LxSentenceParser(),
@@ -28,3 +28,4 @@ class LxSentenceSession(
         framer.reset()
     }
 }
+

@@ -1,6 +1,6 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothReadChunk
+import com.trust3.xcpro.bluetooth.BluetoothReadChunk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,7 +73,7 @@ class LxSentenceSessionTest {
     }
 
     @Test
-    fun known_unsupported_sentence_does_not_mutate_snapshot() {
+    fun accepted_plxvf_sentence_updates_supported_snapshot_fields() {
         val session = LxSentenceSession()
 
         val outcomes = session.onChunk(
@@ -82,15 +82,30 @@ class LxSentenceSessionTest {
 
         assertEquals(
             listOf(
-                LxParseOutcome.KnownUnsupported(
-                    sentenceId = LxSentenceId.PLXVF,
-                    receivedMonoMs = 400L,
-                    checksumStatus = ChecksumStatus.VALID
+                LxParseOutcome.Accepted(
+                    PlxVfSentence(
+                        provisionalVarioMps = -0.25,
+                        indicatedAirspeedKph = 90.2,
+                        pressureAltitudeM = 244.3,
+                        checksumStatus = ChecksumStatus.VALID,
+                        receivedMonoMs = 400L
+                    )
                 )
             ),
             outcomes
         )
-        assertEquals(LxDeviceSnapshot(), session.currentSnapshot)
+        assertEquals(
+            LxDeviceSnapshot(
+                airspeedKph = 90.2,
+                pressureAltitudeM = 244.3,
+                externalVarioMps = -0.25,
+                totalEnergyVarioMps = null,
+                deviceInfo = null,
+                lastAcceptedSentenceId = LxSentenceId.PLXVF,
+                lastAcceptedMonoMs = 400L
+            ),
+            session.currentSnapshot
+        )
     }
 
     @Test
@@ -188,3 +203,4 @@ class LxSentenceSessionTest {
         return "\$$payloadWithoutDollar*${checksum.toString(16).uppercase().padStart(2, '0')}"
     }
 }
+

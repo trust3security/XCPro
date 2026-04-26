@@ -55,11 +55,15 @@ fun BallastPill(
     val statusText = when (state.mode) {
         BallastMode.Filling -> "filling"
         BallastMode.Draining -> "draining"
-        BallastMode.Idle -> "steady"
+        BallastMode.Idle -> if (state.isReadOnlyExternal) "external" else "steady"
     }
     val percent = (state.snapshot.ratio * 100).roundToInt().coerceIn(0, 100)
-    val contentDescription =
+    val contentDescription = if (state.isReadOnlyExternal) {
+        val factor = state.snapshot.externalFactor ?: 1.0
+        "External ballast factor ${String.format(Locale.US, "%.2f", factor)}x, $statusText"
+    } else {
         "Water ballast $percent percent, $statusText"
+    }
 
     val pillShape = RoundedCornerShape(18.dp)
     val fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
@@ -87,13 +91,16 @@ fun BallastPill(
                 )
             }
 
-            val kgText = if (state.snapshot.hasBallast) {
+            val pillText = if (state.isReadOnlyExternal) {
+                val factor = state.snapshot.externalFactor ?: 1.0
+                String.format(Locale.US, "%.2fx", factor)
+            } else if (state.snapshot.hasBallast) {
                 "${state.snapshot.currentKg.roundToInt()} kg"
             } else {
                 "N/A"
             }
             Text(
-                text = kgText,
+                text = pillText,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
@@ -104,15 +111,19 @@ fun BallastPill(
         }
 
         AnimatedVisibility(
-            visible = state.isAnimating,
+            visible = state.isAnimating || state.isReadOnlyExternal,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            val remainingSeconds = (state.remainingMillis / 1000).coerceAtLeast(0)
-            val minutes = remainingSeconds / 60
-            val seconds = remainingSeconds % 60
             Text(
-                text = String.format(Locale.getDefault(), "%d:%02d", minutes, seconds),
+                text = if (state.isReadOnlyExternal) {
+                    "EXTERNAL"
+                } else {
+                    val remainingSeconds = (state.remainingMillis / 1000).coerceAtLeast(0)
+                    val minutes = remainingSeconds / 60
+                    val seconds = remainingSeconds % 60
+                    String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

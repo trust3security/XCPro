@@ -36,6 +36,29 @@ class FlightTemplatesDefaultsTest {
     }
 
     @Test
+    fun crossCountryDefaultTemplate_includes_finalGlideRequiredRatio() {
+        val crossCountry = FlightTemplates.getDefaultTemplates().find { it.id == "id04" }
+
+        assertNotNull(crossCountry)
+        assertEquals(
+            listOf(
+                "gps_alt",
+                "track",
+                "ground_speed",
+                "final_gld",
+                "wind_arrow",
+                "polar_ld",
+                "best_ld",
+                "mc_speed",
+                "thermal_t_avg",
+                "thermal_tc_avg",
+                "ld_curr"
+            ),
+            crossCountry?.cardIds
+        )
+    }
+
+    @Test
     fun builtInTemplates_do_not_preload_competition_glide_cards_by_default() {
         val competitionGlideCards = setOf(
             "task_spd",

@@ -56,11 +56,12 @@ class DisplayPoseSmoother(
 
     fun pushRawFix(raw: RawFix) {
         val previousRaw = lastRaw
-        if (shouldReanchorForLargeFixGap(previousRaw, raw)) {
-            // Re-anchor after long fix gaps so foreground resume/doze recovery
-            // does not crawl from an old visual pose toward the latest fix.
-            lastDisplay = null
-            lastTickMs = 0L
+        if (shouldReanchorForLargeFixGap(previousRaw, raw) ||
+            shouldReanchorForStaleRenderGap(raw)
+        ) {
+            // Re-anchor after long fix gaps or stale render gaps so foreground
+            // resume/doze recovery does not crawl from an old visual pose.
+            clearVisualContinuity()
         }
         lastRaw = raw
     }
@@ -244,6 +245,26 @@ class DisplayPoseSmoother(
             return false
         }
         return gapMs > LARGE_FIX_GAP_REANCHOR_MS
+    }
+
+    private fun shouldReanchorForStaleRenderGap(current: RawFix): Boolean {
+        if (lastDisplay == null) {
+            return false
+        }
+        val lastRenderedTickMs = lastTickMs
+        if (lastRenderedTickMs <= 0L) {
+            return false
+        }
+        val gapMs = current.timestampMs - lastRenderedTickMs
+        if (gapMs <= 0L) {
+            return false
+        }
+        return gapMs > config.staleFixTimeoutMs
+    }
+
+    private fun clearVisualContinuity() {
+        lastDisplay = null
+        lastTickMs = 0L
     }
 
     private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {

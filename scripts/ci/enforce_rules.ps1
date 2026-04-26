@@ -226,6 +226,9 @@ function Get-BannedViewModelDependencyTypeName {
         return $null
     }
     $simpleTypeName = $TypeName.Split('.')[-1]
+    if ($simpleTypeName -in @("MapFeatureFlags", "CardPreferences")) {
+        return $simpleTypeName
+    }
     if ($simpleTypeName -eq "TaskManagerCoordinator") {
         return $simpleTypeName
     }
@@ -344,6 +347,50 @@ function Get-RememberTaskManagerCoordinatorAuditHits {
     return $hits
 }
 
+function Get-MapScreenRuntimeBundleAuditHits {
+    param(
+        [string[]]$ApprovedPaths
+    )
+    $approvedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($approvedPath in $ApprovedPaths) {
+        if (-not $approvedPath) {
+            continue
+        }
+        [void]$approvedSet.Add($approvedPath.Replace('\', '/'))
+    }
+    $rgArgs = @(
+        "-n",
+        "runtimeInputs|MapScreenRuntimeInputs|runtimeDependencies|MapScreenRuntimeDependencies",
+        "--glob", "**/src/main/java/**/*.kt",
+        "--glob", "**/src/main/kotlin/**/*.kt"
+    )
+    $result = Invoke-Rg -RgArgs $rgArgs
+    if ($result.Code -gt 1) {
+        $details = ($result.ErrorOutput -join "; ")
+        throw "rg failed while auditing MapScreen runtime bundle usage (exit $($result.Code)). $details"
+    }
+    if ($result.Code -eq 1) {
+        return @()
+    }
+
+    $hits = New-Object System.Collections.Generic.List[object]
+    foreach ($line in $result.Output) {
+        if ($line -notmatch '^(?<FilePath>[^:]+):(?<LineNumber>\d+):(?<LineText>.*)$') {
+            continue
+        }
+        $normalizedPath = $Matches["FilePath"].Replace('\', '/')
+        if ($approvedSet.Contains($normalizedPath)) {
+            continue
+        }
+        $hits.Add([pscustomobject]@{
+                FilePath   = $normalizedPath
+                LineNumber = [int]$Matches["LineNumber"]
+                LineText   = $Matches["LineText"].Trim()
+            })
+    }
+    return $hits
+}
+
 function Write-AuditHits {
     param(
         [string]$Title,
@@ -370,21 +417,36 @@ Set-Location $repoRoot
 $approvedRememberTaskManagerCoordinatorPaths = @(
     "feature/map/src/main/java/com/trust3/xcpro/tasks/TaskManagerCompat.kt"
 )
+$approvedMapScreenRuntimeBundlePaths = @(
+    "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt",
+    "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenRuntimeSession.kt",
+    "feature/map/src/main/java/com/trust3/xcpro/map/ui/MapScreenRoot.kt"
+)
 $productionKotlinFiles = @()
 $viewModelConstructorBoundaryHits = @()
 $rememberTaskManagerCoordinatorAuditHits = @()
+$mapScreenRuntimeBundleAuditHits = @()
 
 if ($AuditViewModelBoundariesOnly -or $RuleSet -in @("Full", "RepositoryFull", "ArchitectureFast")) {
     $productionKotlinFiles = Get-ProductionKotlinSourceFiles
     $viewModelConstructorBoundaryHits = Get-ViewModelConstructorBoundaryHits -FilePaths $productionKotlinFiles
     $rememberTaskManagerCoordinatorAuditHits = Get-RememberTaskManagerCoordinatorAuditHits -ApprovedPaths $approvedRememberTaskManagerCoordinatorPaths
+    $mapScreenRuntimeBundleAuditHits = Get-MapScreenRuntimeBundleAuditHits -ApprovedPaths $approvedMapScreenRuntimeBundlePaths
     Write-AuditHits -Title "ViewModel constructor boundary candidates" -Hits $viewModelConstructorBoundaryHits
     Write-AuditHits -Title "rememberTaskManagerCoordinator usage outside approved compat path" -Hits $rememberTaskManagerCoordinatorAuditHits
+    Write-AuditHits -Title "MapScreen runtime bundle exposure" -Hits $mapScreenRuntimeBundleAuditHits
 }
 
 if ($AuditViewModelBoundariesOnly) {
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
     Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
+    Assert-NoAuditHits -Name "MapScreen runtime bundle exposure violations" -Hits $mapScreenRuntimeBundleAuditHits
+    $runtimeInputsVisibilityArgs = @(
+        "-n",
+        "\bval\s+runtimeInputs\b",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt"
+    )
+    Assert-NoMatches -Name "MapScreen runtime bundle must stay internal to map shell" -RgArgs $runtimeInputsVisibilityArgs -Filter { $_ -notmatch '\binternal\s+val\s+runtimeInputs\b' }
     Write-Host ""
     if ($script:HadFailures) {
         Write-Host "ViewModel boundary audit failed."
@@ -425,9 +487,17 @@ if ($runArchitectureRules) {
     )
     Assert-NoMatches -Name "ViewModel purity violations" -RgArgs $vmArgs
 
-    # 2A) ViewModel constructor boundary: no broad dependency bags or TaskManagerCoordinator in ViewModel constructors.
+    # 2A) ViewModel constructor boundary: no broad dependency bags or concrete offender types in ViewModel constructors.
+    # Naming alone is not policy; this audit bans exact known types plus broad bag suffixes.
     Assert-NoAuditHits -Name "ViewModel constructor boundary violations" -Hits $viewModelConstructorBoundaryHits
     Assert-NoAuditHits -Name "rememberTaskManagerCoordinator bypass violations" -Hits $rememberTaskManagerCoordinatorAuditHits
+    Assert-NoAuditHits -Name "MapScreen runtime bundle exposure violations" -Hits $mapScreenRuntimeBundleAuditHits
+    $runtimeInputsVisibilityArgs = @(
+        "-n",
+        "\bval\s+runtimeInputs\b",
+        "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt"
+    )
+    Assert-NoMatches -Name "MapScreen runtime bundle must stay internal to map shell" -RgArgs $runtimeInputsVisibilityArgs -Filter { $_ -notmatch '\binternal\s+val\s+runtimeInputs\b' }
 
     # 3) Compose lifecycle: ban collectAsState without lifecycle awareness.
     $collectArgs = @(
@@ -504,6 +574,22 @@ if ($runArchitectureRules) {
         "--glob", "!app/src/main/java/**/*.kt"
     )
     Assert-NoMatches -Name "Vario runtime boundary bypass via direct foreground-service control outside app" -RgArgs $varioServiceBoundaryBypassArgs
+
+    # 6E) Runtime-control boundary: the public map-facing control seam must not split into source-specific public ports.
+    $sourceSpecificRuntimeControlPortArgs = @(
+        "-n",
+        '\b(interface|class)\s+(PhoneLiveRuntimeControlPort|CondorLiveRuntimeControlPort)\b',
+        "--glob", "**/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Source-specific public runtime control ports are forbidden" -RgArgs $sourceSpecificRuntimeControlPortArgs
+
+    # 6F) Runtime-control boundary: map/replay must not import simulator-owned Condor control seams.
+    $mapSimulatorControlSeamImportArgs = @(
+        "-n",
+        '^\s*import\s+com\.trust3\.xcpro\.simulator\.condor\.(CondorBridgeControlPort|CondorRuntimeSessionPort)\b',
+        "--glob", "feature/map/src/main/java/**/*.kt"
+    )
+    Assert-NoMatches -Name "Map runtime boundary bypass via simulator-owned Condor control seams" -RgArgs $mapSimulatorControlSeamImportArgs
 
     # 7) Task manager boundary: no MapLibre imports in AAT/Racing task managers.
     $taskManagerMapLibreImportsArgs = @(
@@ -952,13 +1038,6 @@ $waypointOnlyHydrateArgs = @(
 Assert-NoMatches -Name "Phase-1 guard: waypoint-only coordinator hydrate path reintroduced" -RgArgs $waypointOnlyHydrateArgs
 
 # 32J) Phase-1 guard: replay helper must use canonical task path (no simple-task mapper bypass).
-$racingReplayHelperSimpleBypassArgs = @(
-    "-n",
-    "toSimpleRacingTask\(",
-    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt"
-)
-Assert-NoMatches -Name "Phase-1 guard: replay helper simple-task bypass reintroduced" -RgArgs $racingReplayHelperSimpleBypassArgs
-
 # 32K) Phase-1 guard: coordinator runtime path must avoid manager simple-task state authority.
 $coordinatorSimpleStateArgs = @(
     "-n",
@@ -972,9 +1051,7 @@ $racingValidatorBypassArgs = @(
     "-n",
     "hasMinimumWaypoints\(",
     "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/racing/RacingTaskManager.kt",
-    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt",
-    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/RacingReplayTaskHelpers.kt",
-    "--glob", "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt"
+    "--glob", "feature/tasks/src/main/java/com/trust3/xcpro/tasks/domain/engine/DefaultRacingTaskEngine.kt"
 )
 Assert-NoMatches -Name "Phase-2 guard: racing validity shortcut bypass reintroduced" -RgArgs $racingValidatorBypassArgs
 
@@ -1233,14 +1310,6 @@ Assert-MaxLines `
 Assert-MaxLines `
     -Name "SectorAreaGeometrySupport line budget" `
     -FilePath "feature/tasks/src/main/java/com/trust3/xcpro/tasks/aat/areas/SectorAreaGeometrySupport.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "RacingReplayLogBuilder line budget" `
-    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayLogBuilder.kt" `
-    -MaxLines 350
-Assert-MaxLines `
-    -Name "RacingReplayAnchorBuilder line budget" `
-    -FilePath "feature/map/src/main/java/com/trust3/xcpro/map/replay/RacingReplayAnchorBuilder.kt" `
     -MaxLines 350
 Assert-MaxLines `
     -Name "RacingTask model line budget" `

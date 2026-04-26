@@ -78,6 +78,7 @@ dependencies {
     implementation(project(":feature:igc"))
     implementation(project(":feature:livefollow"))
     implementation(project(":feature:profile"))
+    implementation(project(":feature:simulator"))
     implementation(project(":feature:map"))
     implementation(project(":feature:tasks"))
     implementation(project(":feature:traffic"))

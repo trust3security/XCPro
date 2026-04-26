@@ -64,6 +64,11 @@ Ownership defaults:
 Implementation expectations:
 - Do not put business logic in Composables, Activities, Fragments, adapters, or
   other UI classes.
+- ViewModels may depend only on stable domain-facing seams: use cases or
+  focused owner/port seams for authoritative reads, narrow flows, and simple
+  authoritative commands. Naming alone is not policy.
+- Do not inject low-level infra/data-source types, broad dependency bags, or
+  thin rename-only forwarding wrappers into ViewModels.
 - Do not bypass layers for convenience.
 - Before touching runtime-heavy code, inspect existing use of `CoroutineScope(`,
   direct `Log.*`, `UUID.randomUUID()`, `TimeBridge.nowWallMs()`, `NoOp`, and
@@ -106,6 +111,27 @@ For autonomous feature/refactor work, start from:
 
 This ensures phased execution, acceptance criteria, required checks, and a mandatory quality rescore.
 
+## Planning Discipline
+
+- Never make assumptions. Before writing a non-trivial plan or implementing,
+  verify discoverable facts from repo docs, code, configs, tests, and local
+  system state first.
+- If a fact, owner, behavior, product intent, file path, API contract, or
+  default cannot be verified locally, get an explicit user decision or record it
+  as an unresolved decision/blocker. Do not proceed on a guessed answer.
+- Non-trivial plans must separate:
+  - `Confirmed Boundaries / Verified Facts`
+  - `Explicit Decisions / Defaults Chosen`
+  - `Unresolved Decisions`
+- `Explicit Decisions / Defaults Chosen` may contain only decisions backed by
+  the user, repo docs, code contracts, or verified local evidence. Anything else
+  belongs in `Unresolved Decisions` and must not drive implementation.
+- For non-trivial refactors, runtime wiring changes, DI changes,
+  ownership/boundary moves, and architecture-sensitive PRs, perform a
+  second-pass architecture integrity review against the repo architecture docs,
+  relevant ADR/change-plan material, actual diff, changed files, and touched
+  tests before considering the work complete.
+
 ## Documentation Sync Rules
 
 - If pipeline wiring changes, update `docs/ARCHITECTURE/PIPELINE.md`.
@@ -116,7 +142,8 @@ This ensures phased execution, acceptance criteria, required checks, and a manda
 - For non-trivial feature/refactor work, start from
   `docs/ARCHITECTURE/PLAN_MODE_START_HERE.md`, then
   `docs/ARCHITECTURE/CHANGE_PLAN_TEMPLATE.md` before implementation.
-- Do not rely on unstated assumptions; document intent in-repo.
+- Do not rely on assumptions; verify facts, get explicit decisions, or document
+  unresolved blockers in-repo.
 
 ## Required Verification
 

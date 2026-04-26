@@ -12,7 +12,7 @@ timebase correctness, and UI/VM isolation.
 
 ## Goals
 - UI renders state only; no repositories, prefs, or file I/O in Compose.
-- ViewModels depend on use-cases only; no Context, MapLibre, or prefs.
+- ViewModels depend on stable domain-facing seams only; no Context, MapLibre, prefs, or low-level infra/data types.
 - Domain/fusion logic uses injected clocks only; no direct SystemClock or wall time.
 - Single SSOT owners for waypoints, home waypoint, flight management, and theme prefs.
 - Task domain decoupled from MapLibre/UI; rendering handled by UI adapters.
@@ -29,11 +29,11 @@ UI / DI violations:
   - `feature/map/src/main/java/com/trust3/xcpro/tasks/racing/RacingManageBTTab.kt:40`
 
 ViewModel contract violations:
-- MapScreenViewModel depends on Context + concrete managers (not use-cases only):
+- MapScreenViewModel depends on Context + concrete managers (not stable domain-facing seams):
   `feature/map/src/main/java/com/trust3/xcpro/map/MapScreenViewModel.kt:61`
 - TaskSheetViewModel depends on MapLibre: `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetViewModel.kt:29`
 - UseCase constructs repository directly (DI violation): `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskSheetUseCase.kt:6`
-- TaskFilesUseCase depends on TaskManagerCoordinator (concrete manager, not use-case only):
+- TaskFilesUseCase depends on TaskManagerCoordinator (concrete manager, not a focused stable seam):
   `feature/map/src/main/java/com/trust3/xcpro/tasks/TaskFilesUseCase.kt:10`
 
 Timebase violations (domain/fusion logic):
@@ -108,7 +108,7 @@ Gate: `./gradlew testDebugUnitTest`
 Deliverables:
 - Remove `Context` from MapScreenViewModel; inject a WaypointRepository/UseCase.
 - Remove MapLibre dependency from TaskSheetViewModel; move map plotting to UI adapter.
-- Ensure ViewModels depend on use-cases only and expose immutable StateFlow.
+- Ensure ViewModels depend on stable domain-facing seams and expose immutable StateFlow.
  - Remove Uri from ViewModel APIs (wrap in domain models or pass via use-case).
  - Remove use-case internal repository construction (inject dependencies).
 

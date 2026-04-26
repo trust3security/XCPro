@@ -34,6 +34,11 @@ run.log
 test-run.log
 logs/
 
+# Local map diagnostics captures
+s22-ultra-*-map-diagnostics*.txt
+test-s22-ultra-*-map-diagnostics*.txt
+xcpro-map-diagnostics*.txt
+
 # Backup files
 *.zip
 *.tar

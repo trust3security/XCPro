@@ -8,6 +8,19 @@ import kotlin.math.ceil
 internal class DisplayPoseFrameActivityGate(
     private val nowMonoMs: () -> Long = TimeBridge::nowMonoMs
 ) {
+    enum class DecisionReason {
+        REPLAY_TIME_BASE,
+        CONFIG_CHANGED,
+        ACTIVE_WINDOW,
+        NO_RENDERABLE_INPUT,
+        ACTIVITY_EXPIRED
+    }
+
+    data class DispatchDecision(
+        val shouldDispatch: Boolean,
+        val reason: DecisionReason
+    )
+
     private var activeUntilMonoMs: Long = 0L
     private var lastOrientation: OrientationData? = null
     private var lastConfigKey: ConfigKey? = null
@@ -42,10 +55,26 @@ internal class DisplayPoseFrameActivityGate(
         timeBase: DisplayClock.TimeBase?,
         mode: DisplayPoseMode,
         smoothingProfile: DisplaySmoothingProfile
-    ): Boolean {
+    ): Boolean =
+        evaluateDispatch(
+            hasRenderableInput = hasRenderableInput,
+            timeBase = timeBase,
+            mode = mode,
+            smoothingProfile = smoothingProfile
+        ).shouldDispatch
+
+    fun evaluateDispatch(
+        hasRenderableInput: Boolean,
+        timeBase: DisplayClock.TimeBase?,
+        mode: DisplayPoseMode,
+        smoothingProfile: DisplaySmoothingProfile
+    ): DispatchDecision {
         if (timeBase == DisplayClock.TimeBase.REPLAY) {
             lastConfigKey = ConfigKey(timeBase, mode, smoothingProfile)
-            return true
+            return DispatchDecision(
+                shouldDispatch = true,
+                reason = DecisionReason.REPLAY_TIME_BASE
+            )
         }
 
         val configKey = ConfigKey(timeBase, mode, smoothingProfile)
@@ -53,13 +82,29 @@ internal class DisplayPoseFrameActivityGate(
         lastConfigKey = configKey
 
         if (!hasRenderableInput) {
-            return false
+            return DispatchDecision(
+                shouldDispatch = false,
+                reason = DecisionReason.NO_RENDERABLE_INPUT
+            )
         }
         if (configChanged) {
             activate(smoothingProfile)
-            return true
+            return DispatchDecision(
+                shouldDispatch = true,
+                reason = DecisionReason.CONFIG_CHANGED
+            )
         }
-        return nowMonoMs() <= activeUntilMonoMs
+        return if (nowMonoMs() <= activeUntilMonoMs) {
+            DispatchDecision(
+                shouldDispatch = true,
+                reason = DecisionReason.ACTIVE_WINDOW
+            )
+        } else {
+            DispatchDecision(
+                shouldDispatch = false,
+                reason = DecisionReason.ACTIVITY_EXPIRED
+            )
+        }
     }
 
     private fun activate(profile: DisplaySmoothingProfile) {
@@ -71,6 +116,7 @@ internal class DisplayPoseFrameActivityGate(
 
     private fun settleWindowMs(profile: DisplaySmoothingProfile): Long {
         val config = profile.config
+        config.frameActiveWindowMs?.let { return it }
         return maxOf(
             ceil(config.posSmoothMs).toLong(),
             ceil(config.headingSmoothMs).toLong(),

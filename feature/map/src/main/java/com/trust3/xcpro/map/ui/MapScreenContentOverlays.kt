@@ -83,18 +83,8 @@ internal fun MapActionButtonsRuntimeLayer(
     renderLocalOwnship: Boolean,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
-    showVarioDemoFab: Boolean,
-    showAatEditFab: Boolean,
-    showRacingReplayFab: Boolean,
     onRecenter: () -> Unit,
     onReturn: () -> Unit,
-    onSyntheticThermalReplayClick: () -> Unit,
-    onSyntheticThermalReplayWindNoisyClick: () -> Unit,
-    onVarioDemoReferenceClick: () -> Unit,
-    onVarioDemoSimClick: () -> Unit,
-    onVarioDemoSim2Click: () -> Unit,
-    onVarioDemoSim3Click: () -> Unit,
-    onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
     val currentLocation = currentLocationFlow.collectAsStateWithLifecycle().value
@@ -108,18 +98,8 @@ internal fun MapActionButtonsRuntimeLayer(
         currentLocation = localOwnshipRenderState.currentLocation,
         showRecenterButton = localOwnshipRenderState.showRecenterButton,
         showReturnButton = localOwnshipRenderState.showReturnButton,
-        showVarioDemoFab = showVarioDemoFab,
-        showAatEditFab = showAatEditFab,
-        showRacingReplayFab = showRacingReplayFab,
         onRecenter = onRecenter,
         onReturn = onReturn,
-        onSyntheticThermalReplayClick = onSyntheticThermalReplayClick,
-        onSyntheticThermalReplayWindNoisyClick = onSyntheticThermalReplayWindNoisyClick,
-        onVarioDemoReferenceClick = onVarioDemoReferenceClick,
-        onVarioDemoSimClick = onVarioDemoSimClick,
-        onVarioDemoSim2Click = onVarioDemoSim2Click,
-        onVarioDemoSim3Click = onVarioDemoSim3Click,
-        onRacingReplayClick = onRacingReplayClick,
         modifier = modifier
     )
 }
@@ -129,18 +109,8 @@ internal fun MapActionButtonsLayer(
     currentLocation: MapLocationUiModel?,
     showRecenterButton: Boolean,
     showReturnButton: Boolean,
-    showVarioDemoFab: Boolean,
-    showAatEditFab: Boolean,
-    showRacingReplayFab: Boolean,
     onRecenter: () -> Unit,
     onReturn: () -> Unit,
-    onSyntheticThermalReplayClick: () -> Unit,
-    onSyntheticThermalReplayWindNoisyClick: () -> Unit,
-    onVarioDemoReferenceClick: () -> Unit,
-    onVarioDemoSimClick: () -> Unit,
-    onVarioDemoSim2Click: () -> Unit,
-    onVarioDemoSim3Click: () -> Unit,
-    onRacingReplayClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
     MapActionButtons(
@@ -149,16 +119,6 @@ internal fun MapActionButtonsLayer(
         showReturnButton = showReturnButton,
         onRecenter = onRecenter,
         onReturn = onReturn,
-        showVarioDemoFab = showVarioDemoFab,
-        showAatEditFab = showAatEditFab,
-        showRacingReplayFab = showRacingReplayFab,
-        onSyntheticThermalReplayClick = onSyntheticThermalReplayClick,
-        onSyntheticThermalReplayWindNoisyClick = onSyntheticThermalReplayWindNoisyClick,
-        onVarioDemoReferenceClick = onVarioDemoReferenceClick,
-        onVarioDemoSimClick = onVarioDemoSimClick,
-        onVarioDemoSim2Click = onVarioDemoSim2Click,
-        onVarioDemoSim3Click = onVarioDemoSim3Click,
-        onRacingReplayClick = onRacingReplayClick,
         modifier = modifier
     )
 }

@@ -154,12 +154,14 @@ It may evolve later, but only through explicit updates.
 | WeGlide sync | No | Yes | Yes | Yes | Yes | Basic and above |
 | Task add / create / edit | No | No | Yes | Yes | Yes | Soaring and above |
 | OGN | No | No | Yes | Yes | Yes | Soaring and above |
-| SkySight basic/free products | Yes | Yes | Yes | Yes | Yes | Free/public/basic SkySight surfaces only |
+| SkySight free/public overlays | Yes | Yes | Yes | Yes | Yes | No credential entry required |
 | SkySight credential entry / account linking | No | No | Yes | Yes | Yes | Soaring and above |
-| SkySight premium products in XCPro | No | No | Yes* | Yes* | Yes* | Requires linked paid SkySight account |
+| SkySight premium/full features in XCPro | No | No | Yes* | Yes* | Yes* | Requires linked paid SkySight account |
 | IGC replay | No | No | No | Yes | Yes | XC differentiator |
 | LiveFollow view / watch | No | No | No | Yes | Yes | XC differentiator |
 | Premium exports / advanced sharing | No | No | No | Yes | Yes | XC differentiator |
+| PureTrack Traffic API fetch | No | No | No | Yes* | Yes* | Requires XCPro app-key/config plus PureTrack Pro user access |
+| PureTrack Insert API live point publish | No | No | No | Yes* | Yes* | Requires PureTrack Insert API configuration; sends live tracking points, not route/turnpoint data |
 | LiveFollow broadcast / share | No | No | No | No | Yes | Pro-only premium/networked surface |
 | Scia | No | No | No | No | Yes | Pro only |
 | Hotspots | No | No | No | No | Yes* | Pro only; if provider-backed, still requires provider entitlement |
@@ -173,6 +175,8 @@ For v1 planning purposes, **XC** uniquely means:
 - IGC replay
 - LiveFollow view/watch
 - premium exports / advanced sharing
+- PureTrack Traffic API fetch, when XCPro app-key/config and PureTrack Pro user access are valid
+- PureTrack Insert API live point publishing, when PureTrack Insert API configuration is valid
 - future reserved slot for advanced XC workflow tools
 
 That is enough to make XC a real product tier and avoid it becoming a vague middle plan.
@@ -191,13 +195,34 @@ Use two parallel state lanes:
 
 #### Rules
 
-- Free and Basic may access SkySight free/basic surfaces exposed in XCPro.
-- Soaring and above may enter/link SkySight credentials.
-- Premium SkySight-backed features require both:
+- Free and Basic may access SkySight free/public overlays exposed in XCPro.
+- Free and Basic must not show SkySight credential entry or account-linking actions.
+- Soaring, XC, and Pro may enter/link SkySight credentials.
+- Premium/full SkySight-backed features require both:
   - XCPro tier = Soaring or above
   - linked SkySight account = paid/validated
 
-### 6.2 Provider-state model
+### 6.2 PureTrack API dual-gate rule
+
+PureTrack API surfaces are **not** unlocked by XCPro subscription state alone.
+Use parallel state lanes:
+
+1. XCPro entitlement tier
+2. PureTrack provider access/config state
+
+#### Rules
+
+- PureTrack Traffic API fetch requires:
+  - XCPro tier = XC or above
+  - XCPro app-key/config present
+  - PureTrack user access = Pro
+- PureTrack Insert API live point publishing requires:
+  - XCPro tier = XC or above
+  - PureTrack Insert API configuration present
+- PureTrack Insert API live point publishing sends live tracking points into PureTrack, not route or turnpoint data.
+- No PureTrack API runtime or subscription code is approved by this documentation update.
+
+### 6.3 Provider-state model
 
 Add a separate provider account state instead of overloading `PlanTier`.
 

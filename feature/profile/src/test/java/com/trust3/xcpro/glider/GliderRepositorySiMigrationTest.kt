@@ -31,7 +31,7 @@ class GliderRepositorySiMigrationTest {
     }
 
     @Test
-    fun load_migratesLegacyKmhFieldsToSi() {
+    fun load_ignoresLegacyIasFieldsAndMigratesLegacyThreePointKmh() {
         val legacyJson = """
             {
               "pilotAndGearKg": 92.0,
@@ -52,13 +52,8 @@ class GliderRepositorySiMigrationTest {
             .putString(KEY_CONFIG_JSON, legacyJson)
             .commit()
 
-        val repository = GliderRepository(appContext)
+        val repository = repository()
         val config = repository.config.value
-
-        assertEquals(UnitsConverter.kmhToMs(85.0), config.iasMinMs ?: Double.NaN, 1e-6)
-        assertEquals(UnitsConverter.kmhToMs(190.0), config.iasMaxMs ?: Double.NaN, 1e-6)
-        assertEquals(85.0, config.iasMinKmh ?: Double.NaN, 1e-6)
-        assertEquals(190.0, config.iasMaxKmh ?: Double.NaN, 1e-6)
 
         val threePointPolar = config.threePointPolar
         assertNotNull(threePointPolar)
@@ -71,8 +66,8 @@ class GliderRepositorySiMigrationTest {
     }
 
     @Test
-    fun save_persistsCanonicalSiFieldsAndRoundTrips() {
-        val repository = GliderRepository(appContext)
+    fun save_persistsCanonicalThreePointSiFieldsAndDoesNotRewriteIasFields() {
+        val repository = repository()
         val targetPolar = ThreePointPolar.fromKmh(
             lowKmh = 70.0,
             lowSinkMs = 0.52,
@@ -84,8 +79,6 @@ class GliderRepositorySiMigrationTest {
 
         repository.updateConfig {
             it.copy(
-                iasMinMs = 22.0,
-                iasMaxMs = 58.0,
                 threePointPolar = targetPolar
             )
         }
@@ -93,20 +86,21 @@ class GliderRepositorySiMigrationTest {
         val persistedJson = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_CONFIG_JSON, null)
         assertNotNull(persistedJson)
-        assertTrue(persistedJson!!.contains("\"iasMinMs\""))
-        assertTrue(persistedJson.contains("\"iasMaxMs\""))
+        assertFalse(persistedJson!!.contains("\"iasMinMs\""))
+        assertFalse(persistedJson.contains("\"iasMaxMs\""))
         assertFalse(persistedJson.contains("\"iasMinKmh\""))
         assertFalse(persistedJson.contains("\"iasMaxKmh\""))
         assertTrue(persistedJson.contains("\"lowMs\""))
         assertFalse(persistedJson.contains("\"lowKmh\""))
 
-        val reloaded = GliderRepository(appContext).config.value
-        assertEquals(22.0, reloaded.iasMinMs ?: Double.NaN, 1e-6)
-        assertEquals(58.0, reloaded.iasMaxMs ?: Double.NaN, 1e-6)
+        val reloaded = repository().config.value
         assertEquals(targetPolar.lowMs, reloaded.threePointPolar?.lowMs ?: Double.NaN, 1e-6)
         assertEquals(targetPolar.midMs, reloaded.threePointPolar?.midMs ?: Double.NaN, 1e-6)
         assertEquals(targetPolar.highMs, reloaded.threePointPolar?.highMs ?: Double.NaN, 1e-6)
     }
+
+    private fun repository(): GliderRepository =
+        GliderRepository(appContext, PolarCatalogAssetDataSource(appContext))
 
     private companion object {
         const val PREFS_NAME = "glider_prefs"

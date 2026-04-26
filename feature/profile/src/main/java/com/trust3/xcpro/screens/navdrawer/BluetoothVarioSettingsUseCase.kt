@@ -1,6 +1,6 @@
 package com.trust3.xcpro.screens.navdrawer
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.BluetoothBondedDeviceItem
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothDisconnectReason
 import com.trust3.xcpro.variometer.bluetooth.lxnav.control.LxBluetoothReconnectBlockReason
@@ -65,6 +65,17 @@ class BluetoothVarioSettingsUseCase @Inject constructor(
             healthText = state.toHealthText(),
             reconnectText = state.toReconnectText(),
             failureText = state.toFailureText(),
+            detailSections = state.detailSections.map { section ->
+                BluetoothVarioDetailSectionUiState(
+                    title = section.title,
+                    rows = section.rows.map { row ->
+                        BluetoothVarioDetailRowUiState(
+                            label = row.label,
+                            value = row.value
+                        )
+                    }
+                )
+            },
             connectEnabled = state.canConnect,
             disconnectEnabled = state.canDisconnect
         )
@@ -205,3 +216,5 @@ class BluetoothVarioSettingsUseCase @Inject constructor(
         }
     }
 }
+
+

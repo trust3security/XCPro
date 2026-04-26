@@ -9,17 +9,9 @@ import com.trust3.xcpro.map.runtime.BuildConfig as RuntimeBuildConfig
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
-import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
-import org.maplibre.android.style.layers.PropertyFactory.circleRadius
-import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
-import org.maplibre.android.style.layers.PropertyFactory.lineCap
-import org.maplibre.android.style.layers.PropertyFactory.lineJoin
-import org.maplibre.android.style.layers.PropertyFactory.lineWidth
-import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
 import org.maplibre.android.style.layers.PropertyFactory.visibility
-import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -35,7 +27,6 @@ class SnailTrailOverlay(
     }
 
     private var isInitialized = false
-    private var currentType: TrailType? = null
     private var renderSequence: Long = 0
     private val verboseLogging = RuntimeBuildConfig.DEBUG
     private val logger = SnailTrailLogger(verboseLogging)
@@ -50,52 +41,19 @@ class SnailTrailOverlay(
         iconSizePx = com.trust3.xcpro.map.BlueLocationOverlay.ICON_SIZE_PX.toFloat(),
         renderSequenceProvider = { renderSequence }
     )
+    private val paletteApplier = SnailTrailPaletteApplier(map)
+    private val styleCacheResolver = SnailTrailStyleCacheResolver(context)
+    private val layerLifecycle = SnailTrailLayerLifecycle(map)
     private var tailCache: SnailTrailStyleCache? = null
 
     fun initialize() {
-        val style = map.style ?: return
         if (isInitialized) return
 
         try {
-            style.addSource(GeoJsonSource(SnailTrailStyle.LINE_SOURCE_ID))
-            style.addSource(GeoJsonSource(SnailTrailStyle.DOT_SOURCE_ID))
-            style.addSource(GeoJsonSource(SnailTrailStyle.TAIL_SOURCE_ID))
-
-            val lineLayer = LineLayer(SnailTrailStyle.LINE_LAYER_ID, SnailTrailStyle.LINE_SOURCE_ID)
-                .withProperties(
-                    lineCap(Property.LINE_CAP_ROUND),
-                    lineJoin(Property.LINE_JOIN_ROUND),
-                    lineWidth(Expression.get(SnailTrailStyle.PROP_WIDTH)),
-                    lineOpacity(1.0f)
-                )
-
-            val tailLayer = LineLayer(SnailTrailStyle.TAIL_LAYER_ID, SnailTrailStyle.TAIL_SOURCE_ID)
-                .withProperties(
-                    lineCap(Property.LINE_CAP_ROUND),
-                    lineJoin(Property.LINE_JOIN_ROUND),
-                    lineWidth(Expression.get(SnailTrailStyle.PROP_WIDTH)),
-                    lineOpacity(1.0f)
-                )
-
-            val dotLayer = CircleLayer(SnailTrailStyle.DOT_LAYER_ID, SnailTrailStyle.DOT_SOURCE_ID)
-                .withProperties(
-                    circleRadius(Expression.get(SnailTrailStyle.PROP_RADIUS)),
-                    circleOpacity(1.0f)
-                )
-
-            val anchorLayerId = com.trust3.xcpro.map.BlueLocationOverlay.LAYER_ID
-            if (style.getLayer(anchorLayerId) != null) {
-                style.addLayerBelow(lineLayer, anchorLayerId)
-                style.addLayerAbove(tailLayer, SnailTrailStyle.LINE_LAYER_ID)
-                style.addLayerAbove(dotLayer, SnailTrailStyle.TAIL_LAYER_ID)
-            } else {
-                style.addLayer(lineLayer)
-                style.addLayerAbove(tailLayer, SnailTrailStyle.LINE_LAYER_ID)
-                style.addLayerAbove(dotLayer, SnailTrailStyle.TAIL_LAYER_ID)
+            if (layerLifecycle.install()) {
+                isInitialized = true
+                AppLogger.d(TAG, "Snail trail overlay initialized")
             }
-
-            isInitialized = true
-            AppLogger.d(TAG, "Snail trail overlay initialized")
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to initialize snail trail overlay: ${e.message}", e)
         }
@@ -115,29 +73,39 @@ class SnailTrailOverlay(
 
     fun clear() {
         val style = map.style ?: return
-        val lineSource = style.getSourceAs<GeoJsonSource>(SnailTrailStyle.LINE_SOURCE_ID) ?: return
-        val dotSource = style.getSourceAs<GeoJsonSource>(SnailTrailStyle.DOT_SOURCE_ID) ?: return
-        val tailSource = style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID)
-        lineSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
-        dotSource.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
-        tailSource?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.LINE_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.DOT_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+    }
+
+    fun clearRawTrail() {
+        val style = map.style ?: return
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.LINE_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.DOT_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+    }
+
+    fun clearTail() {
+        val style = map.style ?: return
+        style.getSourceAs<GeoJsonSource>(SnailTrailStyle.TAIL_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
     }
 
     fun cleanup() {
-        val style = map.style ?: return
         if (!isInitialized) return
         try {
-            style.removeLayer(SnailTrailStyle.DOT_LAYER_ID)
-            style.removeLayer(SnailTrailStyle.TAIL_LAYER_ID)
-            style.removeLayer(SnailTrailStyle.LINE_LAYER_ID)
-            style.removeSource(SnailTrailStyle.DOT_SOURCE_ID)
-            style.removeSource(SnailTrailStyle.TAIL_SOURCE_ID)
-            style.removeSource(SnailTrailStyle.LINE_SOURCE_ID)
+            layerLifecycle.remove()
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to cleanup snail trail overlay: ${e.message}", e)
         } finally {
             isInitialized = false
-            currentType = null
+            paletteApplier.reset()
             tailCache = null
         }
     }
@@ -150,6 +118,7 @@ class SnailTrailOverlay(
         windSpeedMs: Double,
         windDirectionFromDeg: Double,
         isCircling: Boolean,
+        isTurnSmoothing: Boolean,
         currentZoom: Float,
         isReplay: Boolean,
         frameId: Long? = null
@@ -184,7 +153,7 @@ class SnailTrailOverlay(
         }
 
         setVisible(true)
-        updatePaletteIfNeeded(settings.type)
+        paletteApplier.updateIfNeeded(settings.type)
 
         val density = context.resources.displayMetrics.density
         val plan = renderPlanner.plan(
@@ -194,6 +163,7 @@ class SnailTrailOverlay(
                 currentLocation = TrailGeoPoint(currentLocation.latitude, currentLocation.longitude),
                 currentTimeMillis = currentTimeMillis,
                 isCircling = isCircling,
+                isTurnSmoothing = isTurnSmoothing,
                 currentZoom = currentZoom,
                 isReplay = isReplay,
                 useRenderFrameSync = featureFlags.useRenderFrameSync,
@@ -294,19 +264,6 @@ class SnailTrailOverlay(
         logger.logRenderEnd(renderId, lineFeatures.size, dotFeatures.size)
     }
 
-    private fun updatePaletteIfNeeded(type: TrailType) {
-        if (currentType == type) return
-        val style = map.style ?: return
-        val lineLayer = style.getLayerAs<LineLayer>(SnailTrailStyle.LINE_LAYER_ID) ?: return
-        val dotLayer = style.getLayerAs<CircleLayer>(SnailTrailStyle.DOT_LAYER_ID) ?: return
-        val tailLayer = style.getLayerAs<LineLayer>(SnailTrailStyle.TAIL_LAYER_ID)
-        val palette = SnailTrailPalette.colorExpression(type)
-        lineLayer.setProperties(org.maplibre.android.style.layers.PropertyFactory.lineColor(palette))
-        tailLayer?.setProperties(org.maplibre.android.style.layers.PropertyFactory.lineColor(palette))
-        dotLayer.setProperties(org.maplibre.android.style.layers.PropertyFactory.circleColor(palette))
-        currentType = type
-    }
-
     fun renderTail(
         lastPoint: TrailPoint?,
         settings: TrailSettings,
@@ -320,6 +277,7 @@ class SnailTrailOverlay(
         frameId: Long? = null
     ) {
         if (!isInitialized) return
+        val resolvedTailCache = tailCache ?: lastPoint?.let { styleCacheResolver.resolve(settings, it) }
         tailRenderer.renderTail(
             lastPoint = lastPoint,
             settings = settings,
@@ -327,12 +285,11 @@ class SnailTrailOverlay(
             currentTimeMillis = currentTimeMillis,
             isCircling = isCircling,
             currentZoom = currentZoom,
-            tailCache = tailCache,
+            tailCache = resolvedTailCache,
             frameId = frameId,
             updatePalette = {
-                updatePaletteIfNeeded(settings.type)
+                paletteApplier.updateIfNeeded(settings.type)
             }
         )
     }
-
 }

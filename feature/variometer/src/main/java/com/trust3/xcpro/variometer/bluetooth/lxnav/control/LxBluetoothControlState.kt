@@ -1,11 +1,21 @@
 package com.trust3.xcpro.variometer.bluetooth.lxnav.control
 
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionError
-import com.trust3.xcpro.variometer.bluetooth.BluetoothConnectionState
+import com.trust3.xcpro.bluetooth.BluetoothConnectionError
+import com.trust3.xcpro.bluetooth.BluetoothConnectionState
 
 data class BluetoothBondedDeviceItem(
     val address: String,
     val displayName: String?
+)
+
+data class LxBluetoothDetailRow(
+    val label: String,
+    val value: String
+)
+
+data class LxBluetoothDetailSection(
+    val title: String,
+    val rows: List<LxBluetoothDetailRow>
 )
 
 data class LxBluetoothControlState(
@@ -25,6 +35,8 @@ data class LxBluetoothControlState(
     val lastReceivedMonoMs: Long? = null,
     val lastReceivedAgeMs: Long? = null,
     val rollingSentenceRatePerSecond: Double = 0.0,
+    val detailSections: List<LxBluetoothDetailSection> = emptyList(),
     val canConnect: Boolean = false,
     val canDisconnect: Boolean = false
 )
+
