@@ -91,6 +91,13 @@ For the canonical root unit-test gate with Windows lock recovery, use:
 scripts\qa\run_root_unit_tests_reliable.bat
 ```
 
+To use the same Windows lock recovery for targeted JVM unit tests, pass the
+Gradle task and filter args through:
+
+```bat
+scripts\qa\run_root_unit_tests_reliable.bat :feature:map-runtime:testDebugUnitTest --tests "com.trust3.xcpro.map.DisplayPoseSmootherTest"
+```
+
 ## Retired
 
 The dedicated edit-impact benchmark helper and its synthetic benchmark sources
